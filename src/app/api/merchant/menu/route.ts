@@ -1,0 +1,152 @@
+/**
+ * Merchant Menu Items API
+ * GET /api/merchant/menu - List all menus
+ * POST /api/merchant/menu - Create new menu
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import menuService from '@/lib/services/MenuService';
+import prisma from '@/lib/db/client';
+import { withMerchant } from '@/lib/middleware/auth';
+import { ValidationError } from '@/lib/constants/errors';
+import type { AuthContext } from '@/lib/middleware/auth';
+
+/**
+ * GET /api/merchant/menu
+ * Get all menu items for merchant
+ */
+async function handleGet(req: NextRequest, context: AuthContext) {
+  try {
+    // Get merchant from user's merchant_users relationship
+    const merchantUser = await prisma.merchantUser.findFirst({
+      where: { userId: context.userId },
+      include: { merchant: true },
+    });
+    
+    if (!merchantUser) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'MERCHANT_NOT_FOUND',
+          message: 'Merchant not found for this user',
+          statusCode: 404,
+        },
+        { status: 404 }
+      );
+    }
+
+    const { searchParams } = new URL(req.url);
+    const categoryId = searchParams.get('categoryId');
+
+    const menus = await menuService.getMenusByMerchant(
+      merchantUser.merchantId,
+      categoryId ? BigInt(categoryId) : undefined
+    );
+
+    return NextResponse.json({
+      success: true,
+      data: menus,
+      message: 'Menus retrieved successfully',
+      statusCode: 200,
+    });
+  } catch (error) {
+    console.error('Error getting menus:', error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'INTERNAL_ERROR',
+        message: 'Failed to retrieve menus',
+        statusCode: 500,
+      },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * POST /api/merchant/menu
+ * Create new menu item
+ */
+async function handlePost(req: NextRequest, context: AuthContext) {
+  try {
+    // Get merchant from user's merchant_users relationship
+    const merchantUser = await prisma.merchantUser.findFirst({
+      where: { userId: context.userId },
+      include: { merchant: true },
+    });
+    
+    if (!merchantUser) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'MERCHANT_NOT_FOUND',
+          message: 'Merchant not found for this user',
+          statusCode: 404,
+        },
+        { status: 404 }
+      );
+    }
+
+    const body = await req.json();
+
+    // Validate categoryId
+    if (!body.categoryId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'VALIDATION_ERROR',
+          message: 'Category ID is required',
+          statusCode: 400,
+        },
+        { status: 400 }
+      );
+    }
+
+    const menu = await menuService.createMenu({
+      merchantId: merchantUser.merchantId,
+      categoryId: BigInt(body.categoryId),
+      name: body.name,
+      description: body.description,
+      price: body.price,
+      imageUrl: body.imageUrl,
+      isAvailable: body.isAvailable !== undefined ? body.isAvailable : true,
+      hasStock: body.trackStock || false,
+      stockQuantity: body.stockQty,
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: menu,
+      message: 'Menu created successfully',
+      statusCode: 201,
+    });
+  } catch (error) {
+    console.error('Error creating menu:', error);
+
+    if (error instanceof ValidationError) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'VALIDATION_ERROR',
+          message: error.message,
+          statusCode: 400,
+        },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'INTERNAL_ERROR',
+        message: 'Failed to create menu',
+        statusCode: 500,
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export const GET = withMerchant(handleGet);
+export const POST = withMerchant(handlePost);
