@@ -138,6 +138,11 @@ Comprehensive documentation tersedia di folder `docs/`:
 - **[STEP_06_BUSINESS_FLOWS.txt](docs/STEP_06_BUSINESS_FLOWS.txt)** - Business logic & scenarios
 - **[STEP_07_IMPLEMENTATION_CHECKLIST.txt](docs/STEP_07_IMPLEMENTATION_CHECKLIST.txt)** - Implementation guide
 
+### API & Testing Guides ⭐ NEW
+- **[API_DOCUMENTATION.md](docs/API_DOCUMENTATION.md)** - Complete API reference with examples
+- **[TESTING_GUIDE.md](docs/TESTING_GUIDE.md)** - Testing guide with cURL, Postman, unit tests
+- **[IMPLEMENTATION_SUMMARY.md](docs/IMPLEMENTATION_SUMMARY.md)** - Complete implementation summary
+
 ### Setup Guides
 - **[DATABASE_SETUP.md](docs/DATABASE_SETUP.md)** - PostgreSQL setup & troubleshooting
 - **[SMTP_SETUP.md](docs/SMTP_SETUP.md)** - Email provider configuration
@@ -322,15 +327,22 @@ npx prisma studio          # Open Prisma Studio
 - [x] API documentation
 - [x] Test scripts
 
-### 🔄 Phase 3: Admin & Merchant Backend (In Progress)
-- [ ] Merchant Service
-- [ ] Menu Service
-- [ ] Order Service
-- [ ] Admin API endpoints (`/api/admin/*`)
-- [ ] Merchant API endpoints (`/api/merchant/*`)
-- [ ] Public API endpoints (`/api/public/*`)
+### ✅ Phase 3: Admin & Merchant Backend (Complete)
+- [x] MerchantService (11 methods)
+- [x] MenuService (33 methods)
+- [x] OrderService (17 methods)
+- [x] Admin API endpoints (6 endpoints - `/api/admin/*`)
+- [x] Merchant API endpoints (8 endpoints - `/api/merchant/*`)
+- [x] Public API endpoints (4 endpoints - `/api/public/*`)
 
-### 📋 Phase 4: Frontend Development
+### ✅ Phase 4: Testing & Documentation (Complete)
+- [x] Comprehensive API documentation (`docs/API_DOCUMENTATION.md`)
+- [x] Complete testing guide (`docs/TESTING_GUIDE.md`)
+- [x] Implementation summary (`docs/IMPLEMENTATION_SUMMARY.md`)
+- [x] Error verification & fixes
+- [x] Code quality review
+
+### 📋 Phase 5: Frontend Development (Next)
 - [ ] Landing page
 - [ ] Sign in page (universal for all roles)
 - [ ] Super Admin dashboard
@@ -339,7 +351,7 @@ npx prisma studio          # Open Prisma Studio
 - [ ] Cart management
 - [ ] Order tracking
 
-### 🧪 Phase 5: Testing & Deployment
+### 🧪 Phase 6: Testing & Deployment (Future)
 - [ ] Unit tests (services, utilities)
 - [ ] Integration tests (API endpoints)
 - [ ] E2E tests (user flows)

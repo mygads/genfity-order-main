@@ -115,14 +115,14 @@ class AuthService {
     await userRepository.updateLastLogin(user.id);
 
     // Get merchant info if user is merchant owner/staff
-    let merchantId: bigint | undefined;
+    let merchantId: string | undefined;
     if (user.merchantUsers && user.merchantUsers.length > 0) {
-      merchantId = user.merchantUsers[0].merchantId;
+      merchantId = user.merchantUsers[0].merchantId.toString();
     }
 
     return {
       user: {
-        id: user.id,
+        id: user.id.toString(),
         name: user.name,
         email: user.email,
         role: user.role,
