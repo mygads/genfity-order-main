@@ -1,0 +1,72 @@
+================================================================================
+STEP 07: IMPLEMENTATION CHECKLIST & TEST/DEPLOY GUIDELINE
+================================================================================
+
+File Reference: STEP_07_IMPLEMENTATION_CHECKLIST.txt
+Bagian Ini: Checklist tahapan, dependencies, testing, deployment
+
+================================================================================
+1. PERSIAPAN PROJECT
+================================================================================
+□ Siapkan project Next.js + TypeScript
+□ Setup PostgreSQL database, buat .env.local dengan DATABASE_URL
+□ Install dependencies: prisma, bcryptjs, jsonwebtoken, nodemailer
+
+================================================================================
+2. DATABASE SETUP
+================================================================================
+□ Buat database schema (lihat file STEP_01_DATABASE_DESIGN.txt)
+□ Jalankan migration/tulis SQL DDL
+□ Buat seed data super admin (manual/SQL)
+
+================================================================================
+3. AUTHENTICATION
+================================================================================
+□ Implement login/logout/refresh (lihat STEP_02_AUTHENTICATION_JWT.txt)
+□ Session tracking (user_sessions)
+□ Tes multi-device login
+□ Test revoke session/logout dari berbagai device
+
+================================================================================
+4. EMAIL INTEGRATION
+================================================================================
+□ Setup email service (SendGrid/AWS SES/SMTP)
+□ Gunakan HTML template (lihat STEP_03_EMAIL_NOTIFICATIONS.txt)
+□ Uji kirim email password merchant/staff
+
+================================================================================
+5. API ENDPOINTS
+================================================================================
+□ Implement semua endpoint API (lihat STEP_04_API_ENDPOINTS.txt)
+□ Test authorization JWT di seluruh endpoint
+
+================================================================================
+6. BACKEND STRUCTURE
+================================================================================
+□ Organize folder & service sebagaimana STEP_05_BACKEND_STRUCTURE.txt
+□ Asingkan layer business logic (service) dan data (repository)
+□ Middleware wajib ada pada protected route
+
+================================================================================
+7. SCENARIO BUSINESS LOGIC
+================================================================================
+□ Tes seluruh flow bisnis (lihat STEP_06_BUSINESS_FLOWS.txt)
+□ Cek order, status change, stock, revenue, email
+□ Simulasi customer sampai reporting merchant
+
+================================================================================
+8. TESTING & DEPLOYMENT
+================================================================================
+□ Unit test basic logic (auth, order, etc)
+□ Integration test API endpoints
+□ User Acceptance Test (manual test via UI & curl)
+□ Deploy ke hosting production (Vercel, Railway, AWS dsb)
+□ Setup database remote/production env
+□ Pastikan semua env variable & secrets aman
+
+================================================================================
+CATATAN
+================================================================================
+- Checklist ini dibuat urut untuk pemandu AI & developer
+- Lengkapi semua tahapan agar sistem production ready
+- Gunakan urutan step-file saat develop dengan Copilot VSCode

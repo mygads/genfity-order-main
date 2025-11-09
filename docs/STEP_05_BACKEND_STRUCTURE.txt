@@ -1,0 +1,135 @@
+================================================================================
+STEP 05: BACKEND FOLDER STRUCTURE & ARCHITECTURE
+================================================================================
+
+File Reference: STEP_05_BACKEND_STRUCTURE.txt
+Bagian Ini: Struktur folder, arsitektur service/repository, middleware, config
+
+================================================================================
+STRUKTUR FOLDER BACKEND (PROPOSAL UNTUK NEXT.JS API)
+================================================================================
+
+├── genfity-backend/
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── api/
+│   │   │   │   ├── auth/
+│   │   │   │   │   ├── login/
+│   │   │   │   │   │   └── route.ts
+│   │   │   │   │   ├── logout/
+│   │   │   │   │   │   └── route.ts
+│   │   │   │   │   ├── refresh/
+│   │   │   │   │   │   └── route.ts
+│   │   │   │   │   └── me/
+│   │   │   │        └── route.ts
+│   │   │   │   ├── admin/
+│   │   │   │   │   ├── merchants/
+│   │   │   │   │   │   ├── route.ts          # CRUD endpoint
+│   │   │   │   │   │   └── [id]/
+│   │   │   │   │   │       └── route.ts      # GET, PUT, DELETE by id
+│   │   │   │   │   └── stats/
+│   │   │   │           └── route.ts
+│   │   │   │   ├── merchant/
+│   │   │   │   │   ├── profile/
+│   │   │   │   │   │   └── route.ts
+│   │   │   │   │   ├── menu-categories/
+│   │   │   │   │   │   └── route.ts
+│   │   │   │   │   ├── menus/
+│   │   │   │   │   │   ├── route.ts
+│   │   │   │   │   │   └── [id]/
+│   │   │   │   │   │       └── route.ts
+│   │   │   │   │   ├── orders/
+│   │   │   │   │   │   ├── route.ts
+│   │   │   │   │   │   └── [id]/
+│   │   │   │   │   │       ├── route.ts
+│   │   │   │   │   │       └── status/
+│   │   │   │   │   │           └── route.ts
+│   │   │   │   │   └── revenue/
+│   │   │   │   │       └── route.ts
+│   │   │   │   └── public/
+│   │   │       ├── merchants/
+│   │   │       │   ├── [code]/
+│   │   │       │   │   ├── route.ts
+│   │   │       │   │   └── menu/
+│   │   │       │   │       └── route.ts
+│   │   │       │   └── route.ts
+│   │   │       ├── orders/
+│   │   │       │   ├── route.ts
+│   │   │       │   └── [orderNumber]/
+│   │   │       │       └── route.ts
+│   │   │       └── health/
+│   │   │           └── route.ts
+│   │   └── layout.tsx
+│   ├── lib/
+│   │   ├── db/
+│   │   │   ├── client.ts          # Koneksi DB
+│   │   │   ├── schema.ts          # Definisi tipe
+│   │   │   └── migrations/
+│   │   ├── services/
+│   │   │   ├── AuthService.ts
+│   │   │   ├── MerchantService.ts
+│   │   │   ├── MenuService.ts
+│   │   │   ├── OrderService.ts
+│   │   │   ├── PaymentService.ts
+│   │   │   └── EmailService.ts
+│   │   ├── repositories/
+│   │   │   ├── UserRepository.ts
+│   │   │   ├── MerchantRepository.ts
+│   │   │   ├── MenuRepository.ts
+│   │   │   ├── OrderRepository.ts
+│   │   │   └── SessionRepository.ts
+│   │   ├── middleware/
+│   │   │   ├── auth.ts            # Verifikasi JWT
+│   │   │   ├── errorHandler.ts
+│   │   │   ├── rateLimiter.ts
+│   │   │   └── cors.ts
+│   │   ├── utils/
+│   │   │   ├── passwordHasher.ts
+│   │   │   ├── jwtManager.ts
+│   │   │   ├── qrCodeGenerator.ts
+│   │   │   ├── validators.ts
+│   │   │   └── emailTemplates.ts
+│   │   ├── types/
+│   │   │   ├── user.ts
+│   │   │   ├── merchant.ts
+│   │   │   ├── menu.ts
+│   │   │   ├── order.ts
+│   │   │   ├── auth.ts
+│   │   │   └── api.ts
+│   │   └── constants/
+│   │       ├── roles.ts
+│   │       ├── status.ts
+│   │       └── errors.ts
+│   ├── config/
+│   │   ├── database.ts
+│   │   ├── email.ts
+│   │   └── jwt.ts
+│   └── public/
+│       ├── emails/
+│       │   └── password-notification.html
+│       └── images/
+│           └── logo.png
+├── prisma/
+│   ├── schema.prisma           # Prisma schema
+│   └── migrations/
+├── .env.example
+├── .env.local                  # (git-ignored)
+├── package.json
+├── tsconfig.json
+├── next.config.js
+└── README.md
+
+================================================================================
+PRINSIP ARSITEKTUR
+================================================================================
+- Gunakan pattern service & repository untuk business logic separation
+- Semua koneksi DB melalui layer repository
+- Middleware auth wajib di all protected endpoints
+- Modular, folder per fitur, CRUD tersendiri
+- Util & constants jangan digabung di satu file
+- Semua sensitive keys/config di .env.local
+- Email template di /public/emails
+
+================================================================================
+NEXT: Baca STEP_06_BUSINESS_FLOWS.txt
+================================================================================

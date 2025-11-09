@@ -1,0 +1,423 @@
+================================================================================
+STEP 01: DATABASE DESIGN & SCHEMA
+================================================================================
+
+File Reference: STEP_01_DATABASE_DESIGN.txt
+Bagian Ini: Database Schema, Relasi, & SQL Migrations
+
+================================================================================
+OVERVIEW DATABASE
+================================================================================
+
+Total Tables: 13 (terbagi 5 modul utama)
+
+Modul 1: AUTH & ROLES
+  - users
+  - user_sessions
+  - merchant_users
+
+Modul 2: MERCHANT & KONFIGURASI
+  - merchants
+  - merchant_opening_hours
+
+Modul 3: MENU & ADDONS
+  - menu_categories
+  - menus
+  - addon_categories
+  - addon_items
+  - menu_addon_categories
+
+Modul 4: ORDERS & CHECKOUT
+  - orders
+  - order_items
+  - order_item_addons
+  - order_status_history
+
+Modul 5: OPTIONAL
+  - user_password_history (untuk audit)
+
+================================================================================
+DIAGRAM RELASI (ERD)
+================================================================================
+
+users (1) ──→ (N) merchant_users
+                     ↓
+                 merchants
+                     ↓
+    ┌────────┬─────────┬──────────┐
+    ↓        ↓         ↓          ↓
+   OH   Menu Cat   Addon Cat    Orders
+              ↓          ↓          ↓
+            Menu    Addon Itm  Order Items
+              ↓          ↓          ↓
+         Menu-Addon    (↑)    Order Item Addons
+                                   ↓
+                          Order Status History
+
+KEY RELATIONS:
+1. users ↔ merchant_users ↔ merchants
+   - User dapat manage multiple merchants
+   - Merchant dapat punya multiple staff
+
+2. merchants ↔ menu_categories ↔ menus
+   - Setiap merchant punya multiple menu categories
+   - Setiap category punya multiple menus
+
+3. menus ↔ menu_addon_categories ↔ addon_categories ↔ addon_items
+   - Menu dapat punya multiple addon categories
+   - Addon category dapat digunakan di multiple menus
+   - Setiap addon category punya multiple addon items
+
+4. orders ↔ order_items ↔ order_item_addons
+   - Order adalah cart checkout
+   - Order items adalah line items
+   - Order item addons adalah addons untuk setiap line item
+
+5. orders ↔ order_status_history
+   - Track semua perubahan status order
+   - Audit trail untuk merchant
+
+================================================================================
+TABEL DETAIL & SQL
+================================================================================
+
+PERHATIAN: File ini hanya overview!
+Untuk SQL DDL lengkap, lihat di akhir dokumen atau di migrations folder.
+
+─────────────────────────────────────────────────────────────────────────────
+MODUL 1: AUTHENTICATION & ROLES
+─────────────────────────────────────────────────────────────────────────────
+
+TABLE: users
+PURPOSE: Menyimpan semua akun (Super Admin, Merchant Owner, Merchant Staff, Customer)
+COLUMNS:
+  - id (BIGSERIAL PRIMARY KEY)
+  - name (VARCHAR 150)
+  - email (VARCHAR 255 UNIQUE)
+  - phone (VARCHAR 50)
+  - password_hash (VARCHAR 255) - bcrypt hash
+  - role (VARCHAR 30) - SUPER_ADMIN | MERCHANT_OWNER | MERCHANT_STAFF | CUSTOMER
+  - is_active (BOOLEAN) - untuk soft delete
+  - last_login_at (TIMESTAMPTZ)
+  - last_login_ip (VARCHAR 100)
+  - must_change_password (BOOLEAN) - untuk force change password pada login pertama
+  - created_at (TIMESTAMPTZ)
+  - updated_at (TIMESTAMPTZ)
+INDEXES:
+  - idx_users_email (email) - untuk lookup user by email
+  - idx_users_role (role) - untuk query by role
+
+TABLE: user_sessions
+PURPOSE: Track JWT sessions, untuk revocation & multi-device support
+COLUMNS:
+  - id (BIGSERIAL PRIMARY KEY)
+  - user_id (BIGINT FK → users.id)
+  - merchant_id (BIGINT FK → merchants.id) - optional, untuk context
+  - access_jti (VARCHAR 255) - JWT ID untuk tracking
+  - refresh_token_hash (VARCHAR 255) - hash dari refresh token (opsional)
+  - ip_address (VARCHAR 100)
+  - user_agent (TEXT)
+  - device_info (TEXT) - misal: "Chrome on Windows"
+  - status (VARCHAR 20) - ACTIVE | REVOKED | EXPIRED
+  - created_at (TIMESTAMPTZ)
+  - expires_at (TIMESTAMPTZ) - waktu expire JWT
+  - revoked_at (TIMESTAMPTZ)
+  - revoked_reason (TEXT)
+  - refresh_expires_at (TIMESTAMPTZ) - untuk refresh token
+INDEXES:
+  - idx_user_sessions_user_id
+  - idx_user_sessions_status
+  - idx_user_sessions_access_jti
+
+TABLE: merchant_users
+PURPOSE: Relasi many-to-many antara users & merchants (dengan role)
+COLUMNS:
+  - id (BIGSERIAL PRIMARY KEY)
+  - merchant_id (BIGINT FK → merchants.id)
+  - user_id (BIGINT FK → users.id)
+  - role (VARCHAR 30) - OWNER | STAFF
+  - created_at (TIMESTAMPTZ)
+  - updated_at (TIMESTAMPTZ)
+CONSTRAINT:
+  - UNIQUE(merchant_id, user_id)
+INDEXES:
+  - idx_merchant_users_merchant_id
+  - idx_merchant_users_user_id
+
+─────────────────────────────────────────────────────────────────────────────
+MODUL 2: MERCHANT & KONFIGURASI
+─────────────────────────────────────────────────────────────────────────────
+
+TABLE: merchants
+PURPOSE: Profil merchant (store information)
+COLUMNS:
+  - id (BIGSERIAL PRIMARY KEY)
+  - name (VARCHAR 150)
+  - code (VARCHAR 50 UNIQUE) - untuk URL path /[merchantCode]
+  - description (TEXT)
+  - logo_url (TEXT)
+  - cover_image_url (TEXT)
+  - address_line (TEXT)
+  - city (VARCHAR 100)
+  - state (VARCHAR 100)
+  - postcode (VARCHAR 20)
+  - country (VARCHAR 100) - default: 'Australia'
+  - phone (VARCHAR 50)
+  - maps_url (TEXT)
+  - is_open (BOOLEAN) - manual buka/tutup
+  - tax_enabled (BOOLEAN) - apakah pakai tax
+  - tax_rate_percent (NUMERIC 5,2) - misal: 10.00 = 10%
+  - currency_code (VARCHAR 10) - default: 'AUD'
+  - created_by_user_id (BIGINT FK → users.id) - super admin yang buat
+  - created_at (TIMESTAMPTZ)
+  - updated_at (TIMESTAMPTZ)
+INDEXES:
+  - idx_merchants_code
+  - idx_merchants_created_by
+
+TABLE: merchant_opening_hours
+PURPOSE: Jam operasional per hari (Senin-Minggu)
+COLUMNS:
+  - id (BIGSERIAL PRIMARY KEY)
+  - merchant_id (BIGINT FK → merchants.id)
+  - weekday (SMALLINT) - 0=Sunday, 1=Monday, ..., 6=Saturday
+  - open_time (TIME)
+  - close_time (TIME)
+  - is_closed (BOOLEAN) - tutup hari itu
+  - created_at (TIMESTAMPTZ)
+  - updated_at (TIMESTAMPTZ)
+CONSTRAINT:
+  - UNIQUE(merchant_id, weekday)
+
+─────────────────────────────────────────────────────────────────────────────
+MODUL 3: MENU & ADDONS
+─────────────────────────────────────────────────────────────────────────────
+
+TABLE: menu_categories
+PURPOSE: Kategori menu per merchant (misal: Appetizer, Main Course, Dessert)
+COLUMNS:
+  - id (BIGSERIAL PRIMARY KEY)
+  - merchant_id (BIGINT FK → merchants.id)
+  - name (VARCHAR 100)
+  - description (TEXT)
+  - sort_order (INTEGER) - untuk sorting di frontend
+  - is_active (BOOLEAN)
+  - created_at (TIMESTAMPTZ)
+  - updated_at (TIMESTAMPTZ)
+INDEXES:
+  - idx_menu_categories_merchant_id
+
+TABLE: menus
+PURPOSE: Item menu dengan harga & stok
+COLUMNS:
+  - id (BIGSERIAL PRIMARY KEY)
+  - merchant_id (BIGINT FK → merchants.id)
+  - category_id (BIGINT FK → menu_categories.id)
+  - name (VARCHAR 150)
+  - description (TEXT)
+  - price (NUMERIC 10,2) - harga base
+  - photo_url (TEXT)
+  - is_active (BOOLEAN)
+  - is_featured (BOOLEAN) - untuk promo
+  - track_stock (BOOLEAN) - apakah track stok
+  - stock_qty (INTEGER) - nullable = unlimited
+  - created_at (TIMESTAMPTZ)
+  - updated_at (TIMESTAMPTZ)
+INDEXES:
+  - idx_menus_merchant_id
+  - idx_menus_category_id
+  - idx_menus_is_active
+
+TABLE: addon_categories
+PURPOSE: Kategori addon/opsi (misal: Toppings, Sauce Level, Extra Size)
+COLUMNS:
+  - id (BIGSERIAL PRIMARY KEY)
+  - merchant_id (BIGINT FK → merchants.id)
+  - name (VARCHAR 100)
+  - description (TEXT)
+  - min_select (INTEGER) - minimal pilihan yang wajib dipilih
+  - max_select (INTEGER) - maksimal pilihan
+  - is_required (BOOLEAN) - apakah wajib dipilih
+  - sort_order (INTEGER)
+  - created_at (TIMESTAMPTZ)
+  - updated_at (TIMESTAMPTZ)
+INDEXES:
+  - idx_addon_categories_merchant_id
+
+TABLE: addon_items
+PURPOSE: Item opsi addon dengan harga (misal: Cheese, Bacon, Spicy Sauce)
+COLUMNS:
+  - id (BIGSERIAL PRIMARY KEY)
+  - addon_category_id (BIGINT FK → addon_categories.id)
+  - name (VARCHAR 150)
+  - description (TEXT)
+  - price (NUMERIC 10,2)
+  - track_stock (BOOLEAN)
+  - stock_qty (INTEGER)
+  - max_per_order_item (INTEGER) - max qty addon per 1 menu item
+  - is_active (BOOLEAN)
+  - sort_order (INTEGER)
+  - created_at (TIMESTAMPTZ)
+  - updated_at (TIMESTAMPTZ)
+INDEXES:
+  - idx_addon_items_addon_category_id
+
+TABLE: menu_addon_categories
+PURPOSE: Relasi many-to-many (menu bisa punya multiple addon categories)
+COLUMNS:
+  - id (BIGSERIAL PRIMARY KEY)
+  - menu_id (BIGINT FK → menus.id)
+  - addon_category_id (BIGINT FK → addon_categories.id)
+CONSTRAINT:
+  - UNIQUE(menu_id, addon_category_id)
+INDEXES:
+  - idx_menu_addon_categories_menu_id
+  - idx_menu_addon_categories_addon_category_id
+
+─────────────────────────────────────────────────────────────────────────────
+MODUL 4: ORDERS & CHECKOUT
+─────────────────────────────────────────────────────────────────────────────
+
+TABLE: orders
+PURPOSE: Header pesanan (checkout record)
+COLUMNS:
+  - id (BIGSERIAL PRIMARY KEY)
+  - merchant_id (BIGINT FK → merchants.id)
+  - customer_id (BIGINT FK → users.id, role=CUSTOMER)
+  - order_number (VARCHAR 50) - unik per merchant (misal: GF-000001)
+  - order_mode (VARCHAR 20) - DINE_IN | TAKEAWAY
+  - table_number (VARCHAR 20) - required untuk DINE_IN
+  - status (VARCHAR 30) - PENDING | ACCEPTED | IN_PROGRESS | READY | COMPLETED | CANCELLED
+  - payment_status (VARCHAR 30) - UNPAID | PAID | REFUNDED | CANCELLED
+  - payment_method (VARCHAR 30) - PAY_AT_COUNTER (dibatasi hanya kasir)
+  - customer_name (VARCHAR 150)
+  - customer_email (VARCHAR 255)
+  - customer_phone (VARCHAR 50)
+  - subtotal_amount (NUMERIC 10,2)
+  - tax_amount (NUMERIC 10,2)
+  - total_amount (NUMERIC 10,2)
+  - tax_rate_percent (NUMERIC 5,2) - snapshot tax saat order dibuat
+  - currency_code (VARCHAR 10) - default: 'AUD'
+  - notes (TEXT) - catatan customer
+  - internal_note (TEXT) - catatan internal merchant
+  - qr_code_data (TEXT) - encoded QR code
+  - placed_at (TIMESTAMPTZ)
+  - created_at (TIMESTAMPTZ)
+  - updated_at (TIMESTAMPTZ)
+CONSTRAINT:
+  - UNIQUE(merchant_id, order_number)
+INDEXES:
+  - idx_orders_merchant_id
+  - idx_orders_customer_id
+  - idx_orders_order_number
+  - idx_orders_status
+  - idx_orders_placed_at
+
+TABLE: order_items
+PURPOSE: Line items dalam order (yang dipesan customer)
+COLUMNS:
+  - id (BIGSERIAL PRIMARY KEY)
+  - order_id (BIGINT FK → orders.id)
+  - menu_id (BIGINT FK → menus.id) - nullable untuk referensi
+  - menu_name (VARCHAR 150) - snapshot
+  - menu_description (TEXT) - snapshot
+  - unit_price (NUMERIC 10,2) - snapshot harga saat order
+  - quantity (INTEGER) - qty menu
+  - line_subtotal (NUMERIC 10,2) - unit_price * qty (belum addon)
+  - line_total (NUMERIC 10,2) - sudah + addons
+  - notes (TEXT) - catatan khusus item
+  - created_at (TIMESTAMPTZ)
+  - updated_at (TIMESTAMPTZ)
+INDEXES:
+  - idx_order_items_order_id
+  - idx_order_items_menu_id
+
+TABLE: order_item_addons
+PURPOSE: Addon yang dipilih untuk setiap order item
+COLUMNS:
+  - id (BIGSERIAL PRIMARY KEY)
+  - order_item_id (BIGINT FK → order_items.id)
+  - addon_item_id (BIGINT FK → addon_items.id) - nullable
+  - addon_name (VARCHAR 150) - snapshot
+  - unit_price (NUMERIC 10,2) - snapshot harga addon saat order
+  - quantity (INTEGER) - qty addon
+  - line_total (NUMERIC 10,2) - unit_price * qty
+  - created_at (TIMESTAMPTZ)
+  - updated_at (TIMESTAMPTZ)
+INDEXES:
+  - idx_order_item_addons_order_item_id
+  - idx_order_item_addons_addon_item_id
+
+TABLE: order_status_history
+PURPOSE: Audit trail untuk tracking perubahan status order
+COLUMNS:
+  - id (BIGSERIAL PRIMARY KEY)
+  - order_id (BIGINT FK → orders.id)
+  - from_status (VARCHAR 30)
+  - to_status (VARCHAR 30)
+  - changed_by_user_id (BIGINT FK → users.id) - merchant/staff
+  - changed_at (TIMESTAMPTZ)
+  - note (TEXT)
+INDEXES:
+  - idx_order_status_history_order_id
+  - idx_order_status_history_changed_at
+
+─────────────────────────────────────────────────────────────────────────────
+OPTIONAL MODUL: AUDIT
+─────────────────────────────────────────────────────────────────────────────
+
+TABLE: user_password_history
+PURPOSE: Track password changes untuk audit (optional)
+COLUMNS:
+  - id (BIGSERIAL PRIMARY KEY)
+  - user_id (BIGINT FK → users.id)
+  - password_hash (VARCHAR 255) - hash password lama
+  - changed_at (TIMESTAMPTZ)
+
+================================================================================
+PENTING: CURRENCY & MONETARY VALUES
+================================================================================
+
+- Semua nilai uang gunakan tipe NUMERIC(10,2) dalam AUD
+- Format: NUMERIC(10,2) = max 99,999,999.99
+- Jangan gunakan FLOAT/DOUBLE untuk monetary values (precision issues)
+- Snapshot harga di order_items & order_item_addons memastikan
+  history tetap akurat meski harga menu berubah di masa depan
+
+================================================================================
+INDEXING STRATEGY
+================================================================================
+
+PERFORMANCE:
+✓ Semua Foreign Keys harus punya index
+✓ Fields yang sering di-filter harus di-index (status, merchant_id, created_at)
+✓ UNIQUE constraints otomatis create index
+
+COMMON QUERIES:
+1. Get merchant by code:
+   SELECT * FROM merchants WHERE code = 'MERCHANT_CODE'
+   → Index: idx_merchants_code
+
+2. Get menus by merchant & category:
+   SELECT * FROM menus 
+   WHERE merchant_id = ? AND category_id = ? AND is_active = TRUE
+   → Composite index recommended: idx_menus_merchant_category_active
+
+3. Get orders by merchant & date range:
+   SELECT * FROM orders
+   WHERE merchant_id = ? AND placed_at >= ? AND placed_at <= ?
+   ORDER BY placed_at DESC
+   → Index: idx_orders_merchant_placed_at
+
+4. Get pending orders:
+   SELECT * FROM orders
+   WHERE merchant_id = ? AND status IN ('PENDING', 'ACCEPTED')
+   → Index: idx_orders_merchant_status
+
+5. User login by email:
+   SELECT * FROM users WHERE email = ?
+   → Index: idx_users_email
+
+================================================================================
+NEXT: Baca STEP_02_AUTHENTICATION_JWT.txt
+================================================================================

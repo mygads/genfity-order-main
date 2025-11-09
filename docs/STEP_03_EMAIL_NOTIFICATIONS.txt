@@ -1,0 +1,118 @@
+================================================================================
+STEP 03: EMAIL NOTIFICATIONS (PASSWORD NOTIF & EMAIL TEMPLATE)
+================================================================================
+
+File Reference: STEP_03_EMAIL_NOTIFICATIONS.txt
+Bagian Ini: Flow Email Password, Template HTML, Pseudocode, Service Integration
+
+================================================================================
+EMAIL FLOW FOR NEW MERCHANT/STAFF ACCOUNT
+================================================================================
+
+1. Super Admin membuat akun merchant/staff baru
+2. Generate random temporary password (lihat step authentication)
+3. Hash password, simpan ke users (must_change_password = TRUE)
+4. Kirim email dengan template HTML
+5. Merchant login dan diminta ganti password
+
+================================================================================
+TEKNIS FLOW (SEQ DIAGRAM)
+================================================================================
+
+[Super Admin] → [Backend] POST /api/admin/merchants →
+  - Create user
+  - Create merchant / link
+  - Generate temp password
+  - Hash password
+  - Store must_change_password = true
+
+[Backend] → [Email Service]: send notification
+[Email Service] → [Merchant Email]: deliver email
+[Merchant] login ke platform, wajib ganti password
+
+================================================================================
+EMAIL TEMPLATE (HTML SNIPPET)
+================================================================================
+
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f5f5f5; }
+        .container { max-width: 600px; margin: 20px auto; background: white; padding: 20px; }
+        .header { text-align: center; border-bottom: 2px solid #ff9800; padding-bottom: 15px; }
+        .header img { height: 40px; }
+        .content { padding: 20px 0; }
+        .credentials { background: #f9f9f9; padding: 15px; border-left: 4px solid #ff9800; }
+        .credentials .label { font-weight: bold; color: #333; }
+        .credentials .value { font-family: monospace; color: #ff9800; font-weight: bold; }
+        .warning { background: #fff3cd; padding: 12px; border-radius: 4px; margin: 15px 0; }
+        .footer { text-align: center; font-size: 12px; color: #999; border-top: 1px solid #eee; }
+        .button { display: inline-block; background: #ff9800; color: white; padding: 12px 24px; border-radius: 4px; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🍽️ GENFITY</h1>
+            <p>Platform Pemesanan Online untuk Restoran</p>
+        </div>
+        <div class="content">
+            <h2>Selamat! Akun Anda Telah Dibuat</h2>
+            <p>Halo <strong>[NAMA_MERCHANT/STAFF]</strong>,</p>
+            <p>Kami dengan senang hati memberitahu bahwa akun Anda di platform GENFITY telah diaktivasi.</p>
+            <div class="credentials">
+                <p class="label">📧 Email:</p>
+                <p class="value">[EMAIL]</p>
+                <p class="label">🔑 Password Sementara:</p>
+                <p class="value">[TEMP_PASSWORD]</p>
+            </div>
+            <a href="https://genfity.com/dashboard" class="button">Masuk ke Dashboard</a>
+            <div class="warning">
+                <strong>⚠️ PENTING:</strong><br>
+                ✓ Ubah password Anda saat login pertama kali!<br>
+                ✓ Jangan bagikan password ini kepada siapapun.<br>
+                ✓ Simpan email & password ini di tempat yang aman.
+            </div>
+            <h3>Langkah Selanjutnya:</h3>
+            <ol>
+                <li>Buka <a href="https://genfity.com/dashboard">Dashboard Merchant</a></li>
+                <li>Login dengan email dan password sementara di atas</li>
+                <li>Ubah password ke yang lebih kuat</li>
+                <li>Mulai setup menu & konfigurasi merchant Anda</li>
+            </ol>
+            <p>Jika ada pertanyaan, hubungi <strong>support@genfity.com</strong> atau <strong>+61-XXX-XXX-XXXX</strong></p>
+        </div>
+        <div class="footer">
+            &copy; 2024 GENFITY. All rights reserved.<br>
+            Powered by GENFITY | Privacy Policy
+        </div>
+    </div>
+</body>
+</html>
+
+================================================================================
+PSEUDOCODE PENGIRIMAN EMAIL (Node.js/TS)
+================================================================================
+
+async function sendEmailPasswordNotification(params) {
+  const htmlContent = renderEmailTemplate({
+    name: params.name,
+    email: params.email,
+    tempPassword: params.tempPassword,
+    dashboardUrl: params.dashboardUrl,
+    supportEmail: params.supportEmail
+  });
+  await emailService.send({
+    to: params.to,
+    subject: 'GENFITY - Akun Merchant Baru Anda',
+    html: htmlContent
+  });
+}
+
+================================================================================
+PERHATIAN
+================================================================================
+- Password sementara hanya dikirim sekali via email
+- Merchant/staff wajib ganti password pada login pertama
+- Jangan pernah simpan password dalam plain text di DB
+- Email harus templated (pakai HTML)</content>

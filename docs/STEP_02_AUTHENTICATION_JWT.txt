@@ -1,0 +1,387 @@
+================================================================================
+STEP 02: AUTHENTICATION & JWT
+================================================================================
+
+File Reference: STEP_02_AUTHENTICATION_JWT.txt
+Bagian Ini: JWT Flow, Sessions, Password Hashing
+
+================================================================================
+KONSEP AUTHENTICATION
+================================================================================
+
+Modern authentication untuk GENFITY menggunakan:
+1. JWT (JSON Web Token) untuk stateless authentication
+2. user_sessions tracking di database untuk revocation & audit
+3. bcrypt password hashing (10 rounds minimum)
+4. Multi-device support (track per device/IP)
+
+FLOW:
+1. User login (email + password)
+2. Backend: hash password, cek database
+3. Backend: create user_session record
+4. Backend: generate JWT access token (include session ID)
+5. Frontend: store token (localStorage / sessionStorage)
+6. Setiap request: include Authorization: Bearer <token>
+7. Backend: verify JWT + cek session di DB
+8. Logout: update session status = 'REVOKED'
+
+================================================================================
+JWT PAYLOAD STRUCTURE
+================================================================================
+
+Access Token (short-lived, ~15-60 menit):
+{
+  "sub": "123",                      // user_id (subject)
+  "sid": "456",                      // session_id dari user_sessions.id
+  "role": "MERCHANT_OWNER",          // dari users.role
+  "mid": "789",                      // merchant_id (optional, untuk context)
+  "jti": "abc-def-ghi",              // JWT ID (untuk tracking)
+  "iat": 1699500000,                 // issued at (unix timestamp)
+  "exp": 1699503600                  // expires at (unix timestamp)
+}
+
+Refresh Token (long-lived, ~7 hari):
+{
+  "sub": "123",
+  "sid": "456",
+  "type": "refresh",                 // pembeda dari access token
+  "jti": "xyz-uvw",
+  "iat": 1699500000,
+  "exp": 1700100000
+}
+
+================================================================================
+MIDDLEWARE VALIDASI TOKEN (PSEUDOCODE)
+================================================================================
+
+async function authMiddleware(req, res, next) {
+  try {
+    // 1. Extract token dari header
+    const authHeader = req.headers.authorization
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Missing authorization header' })
+    }
+    const token = authHeader.substring(7) // remove "Bearer "
+
+    // 2. Verify JWT signature & expiration
+    const payload = jwt.verify(token, process.env.JWT_SECRET)
+
+    // 3. Extract session ID
+    const sessionId = payload.sid
+
+    // 4. Query DB: cek session masih active
+    const session = await db.user_sessions.findOne({
+      where: {
+        id: sessionId,
+        status: 'ACTIVE',
+        expires_at: { '>': new Date() }
+      }
+    })
+
+    if (!session) {
+      return res.status(401).json({ error: 'Session not found or expired' })
+    }
+
+    // 5. Set request context
+    req.user = {
+      id: payload.sub,
+      role: payload.role,
+      sessionId: payload.sid,
+      merchantId: payload.mid
+    }
+
+    next()
+  } catch (error) {
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Token expired' })
+    }
+    res.status(401).json({ error: 'Invalid token' })
+  }
+}
+
+================================================================================
+LOGIN FLOW (STEP-BY-STEP)
+================================================================================
+
+ENDPOINT: POST /api/auth/login
+REQUEST BODY:
+{
+  "email": "merchant@example.com",
+  "password": "MyPassword123!"
+}
+
+BACKEND LOGIC:
+
+Step 1: Validate input
+  - Check email format
+  - Check password length (min 8 chars)
+  → If invalid, return 400
+
+Step 2: Query user by email
+  const user = await db.users.findOne({ where: { email } })
+  if (!user || !user.is_active) {
+    return 401 { error: 'Invalid credentials' }
+  }
+
+Step 3: Verify password
+  const isPasswordValid = await bcrypt.compare(password, user.password_hash)
+  if (!isPasswordValid) {
+    return 401 { error: 'Invalid credentials' }
+  }
+
+Step 4: Create user_session record
+  const session = await db.user_sessions.create({
+    user_id: user.id,
+    ip_address: req.ip,
+    user_agent: req.headers['user-agent'],
+    device_info: parseUserAgent(req.headers['user-agent']),
+    status: 'ACTIVE',
+    expires_at: addHours(new Date(), 1) // 1 jam
+  })
+
+Step 5: Generate JWT access token
+  const payload = {
+    sub: user.id,
+    sid: session.id,
+    role: user.role,
+    mid: user.merchant_id || null,
+    jti: generateUniqueId(),
+    iat: Math.floor(Date.now() / 1000),
+    exp: Math.floor(Date.now() / 1000) + 3600 // 1 jam
+  }
+  const accessToken = jwt.sign(payload, process.env.JWT_SECRET)
+
+Step 6: Update user last login
+  await db.users.update(
+    { id: user.id },
+    { last_login_at: new Date(), last_login_ip: req.ip }
+  )
+
+Step 7: Return response
+  return 200 {
+    success: true,
+    accessToken,
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role
+    },
+    expiresIn: 3600 // seconds
+  }
+
+================================================================================
+LOGOUT FLOW
+================================================================================
+
+ENDPOINT: POST /api/auth/logout
+HEADERS: Authorization: Bearer <accessToken>
+
+BACKEND LOGIC:
+
+Step 1: Verify token & extract session ID
+  const payload = jwt.verify(token, JWT_SECRET)
+  const sessionId = payload.sid
+
+Step 2: Update session status
+  await db.user_sessions.update(
+    { id: sessionId },
+    { status: 'REVOKED', revoked_at: new Date() }
+  )
+
+Step 3: Return success
+  return 200 { success: true, message: 'Logged out' }
+
+RESULT: Token tidak bisa dipakai lagi (session revoked di DB)
+
+================================================================================
+REFRESH TOKEN FLOW (OPTIONAL, untuk long sessions)
+================================================================================
+
+Jika ingin implement refresh token:
+
+LOGIN RETURNS:
+{
+  "accessToken": "eyJ...",     // short-lived (15 menit)
+  "refreshToken": "xyz...",    // long-lived (7 hari)
+  "expiresIn": 900             // 15 menit dalam detik
+}
+
+ENDPOINT: POST /api/auth/refresh
+REQUEST BODY:
+{
+  "refreshToken": "xyz..."
+}
+
+BACKEND LOGIC:
+
+Step 1: Verify refresh token
+  const payload = jwt.verify(refreshToken, JWT_SECRET)
+  const sessionId = payload.sid
+
+Step 2: Cek session di DB
+  const session = await db.user_sessions.findOne({
+    where: {
+      id: sessionId,
+      status: 'ACTIVE',
+      refresh_expires_at: { '>': new Date() }
+    }
+  })
+  if (!session) return 401
+
+Step 3: Generate new access token
+  const newPayload = {
+    sub: payload.sub,
+    sid: sessionId,
+    role: payload.role,
+    jti: generateUniqueId(),
+    iat: Math.floor(Date.now() / 1000),
+    exp: Math.floor(Date.now() / 1000) + 900 // 15 menit
+  }
+  const newAccessToken = jwt.sign(newPayload, JWT_SECRET)
+
+Step 4: Return new access token
+  return 200 { accessToken: newAccessToken, expiresIn: 900 }
+
+================================================================================
+PASSWORD HASHING (BCRYPT)
+================================================================================
+
+HASHING PASSWORD (saat create/update):
+
+const password = 'MySecurePassword123!'
+const saltRounds = 10 // JANGAN KURANGI! (security risk)
+const hashedPassword = await bcrypt.hash(password, saltRounds)
+
+Simpan hashedPassword ke database, bukan password plain text!
+
+VERIFYING PASSWORD (saat login):
+
+const isValid = await bcrypt.compare(password, storedHash)
+
+⚠️ PENTING:
+- Jangan pernah simpan password plain text
+- Jangan gunakan sha/md5 (outdated & weak)
+- Gunakan bcrypt atau argon2
+- Minimum 10 rounds (lebih tinggi = lebih aman tapi lebih lambat)
+
+================================================================================
+TEMPORARY PASSWORD GENERATION (untuk new accounts)
+================================================================================
+
+Saat super admin membuat akun merchant/staff baru:
+
+Step 1: Generate random password
+  function generateRandomPassword(length = 16) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#\$%^&*'
+    let password = ''
+    for (let i = 0; i < length; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    return password
+  }
+
+  Hasil: "GenF1ty@2024#aBc1"
+
+Step 2: Hash & save
+  const hash = await bcrypt.hash(tempPassword, 10)
+  INSERT INTO users (email, password_hash, must_change_password)
+  VALUES (email, hash, true)
+
+Step 3: Send email dengan plain text password
+  - Email berisi: email & plain text password
+  - Customer login dengan email & temp password
+  - System force change password (must_change_password = true)
+  - Redirect ke halaman change password
+  - Setelah ubah: set must_change_password = false
+
+⚠️ SECURITY NOTES:
+- Plain text password hanya di email (saat create baru)
+- Jangan store plain text password di database
+- Force change password pada login pertama
+- Add flag: must_change_password di users table
+
+================================================================================
+MULTI-DEVICE/MULTI-SESSION SUPPORT
+================================================================================
+
+Database support untuk multi-device (contoh: login dari 2 device berbeda):
+
+Device 1 (Laptop):
+- Login → create session 1
+- Session 1 active dengan IP 192.168.1.1
+
+Device 2 (Phone):
+- Login → create session 2
+- Session 2 active dengan IP 203.0.113.45
+
+Query untuk lihat active sessions:
+  SELECT * FROM user_sessions
+  WHERE user_id = :user_id AND status = 'ACTIVE'
+
+Revoke session tertentu (logout dari device tertentu):
+  UPDATE user_sessions
+  SET status = 'REVOKED'
+  WHERE id = :session_id
+
+Logout dari semua device:
+  UPDATE user_sessions
+  SET status = 'REVOKED'
+  WHERE user_id = :user_id
+
+================================================================================
+ENVIRONMENT VARIABLES (untuk JWT)
+================================================================================
+
+.env.local (jangan commit ke git):
+
+# JWT Configuration
+JWT_SECRET=your_super_secret_key_at_least_32_chars_long_aBcDeFgHiJkLmNoPqRsT
+JWT_EXPIRY=3600                    # 1 jam dalam detik
+JWT_REFRESH_EXPIRY=604800          # 7 hari dalam detik
+
+# Database
+DATABASE_URL=postgresql://user:password@localhost:5432/genfity_db
+
+# Email
+SENDGRID_API_KEY=SG...
+EMAIL_FROM=noreply@genfity.com
+
+⚠️ JWT_SECRET harus:
+- Panjang minimal 32 karakter
+- Random & unik per environment
+- Jangan hardcode di code
+- Rotate regularly (jika dicurigai compromised)
+
+================================================================================
+TESTING AUTHENTICATION
+================================================================================
+
+Manual test dengan curl:
+
+# 1. Login
+curl -X POST http://localhost:3000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "merchant@example.com",
+    "password": "MyPassword123!"
+  }'
+
+# Result:
+{
+  "accessToken": "eyJ0eXAiOiJKV1QiLC...",
+  "expiresIn": 3600
+}
+
+# 2. Use token untuk access protected endpoint
+TOKEN="eyJ0eXAiOiJKV1QiLC..."
+curl -X GET http://localhost:3000/api/auth/me \
+  -H "Authorization: Bearer $TOKEN"
+
+# 3. Test logout
+curl -X POST http://localhost:3000/api/auth/logout \
+  -H "Authorization: Bearer $TOKEN"
+
+================================================================================
+NEXT: Baca STEP_03_EMAIL_NOTIFICATIONS.txt
+================================================================================

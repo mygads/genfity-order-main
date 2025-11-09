@@ -1,0 +1,88 @@
+================================================================================
+STEP 06: BUSINESS FLOWS (SCENARIOS & QUERY EXAMPLES)
+================================================================================
+
+File Reference: STEP_06_BUSINESS_FLOWS.txt
+Bagian Ini: Ilustrasi skenario utama (end-to-end), query SQL/code snippet, real use-case flow
+
+================================================================================
+SCENARIO 1: SUPER ADMIN MEMBUAT MERCHANT BARU
+================================================================================
+1. Super admin mengisi form: nama merchant, email, kode
+2. Backend generate password sementara, hash, buat user
+3. Buat merchant, assign user (role OWNER)
+4. Kirim email password
+5. Merchant login pertama wajib ganti password
+
+Query sample:
+INSERT INTO users (name,email,password_hash,role,is_active,must_change_password)
+VALUES (..., 'MERCHANT_OWNER', true, true)
+INSERT INTO merchants (...)
+INSERT INTO merchant_users (..., 'OWNER')
+
+================================================================================
+SCENARIO 2: MERCHANT SETUP MENU
+================================================================================
+1. Merchant login ke dashboard
+2. Create kategori menu
+3. Create menu items
+4. Create addon categories & items
+5. Link addon ke menu
+
+Sample:
+INSERT INTO menu_categories (merchant_id, name) VALUES (...)
+INSERT INTO menus (merchant_id, category_id, name, price) VALUES (...)
+INSERT INTO addon_categories (merchant_id, name) VALUES (...)
+INSERT INTO addon_items (addon_category_id, name, price) VALUES (...)
+INSERT INTO menu_addon_categories (menu_id, addon_category_id) VALUES (...)
+
+================================================================================
+SCENARIO 3: CUSTOMER BROWSE & ORDER
+================================================================================
+1. Customer akses genfity.com/[merchantCode]
+2. Frontend fetch merchant info & menu
+3. Customer pilih mode (dine_in/takeaway), isi data
+4. Add menu ke cart, pilih addons
+5. Checkout, backend create order
+
+Sample:
+SELECT * FROM merchants WHERE code = :merchantCode
+SELECT * FROM menus WHERE merchant_id = :id AND is_active = TRUE
+POST /api/public/orders
+
+================================================================================
+SCENARIO 4: MERCHANT MANAGE ORDERS
+================================================================================
+1. Merchant login, lihat daftar order terbaru
+2. Klik order → detail order items & addons
+3. Ubah status order (PENDING → ACCEPTED)
+4. Tracking status & audit trail
+
+Sample:
+SELECT * FROM orders WHERE merchant_id = :id AND status IN (...)
+UPDATE orders SET status = 'ACCEPTED', updated_at = NOW() WHERE id = :orderId
+INSERT INTO order_status_history (order_id, from_status, to_status, changed_by_user_id) VALUES (...)
+
+================================================================================
+SCENARIO 5: REVENUE REPORTING
+================================================================================
+1. Merchant filter order by tanggal/status
+2. Hitung total revenue per hari
+3. Export data ke laporan
+
+Sample:
+SELECT DATE(placed_at) as date, COUNT(*) as total_orders, SUM(total_amount) as revenue FROM orders WHERE merchant_id = :id AND status='COMPLETED' AND placed_at BETWEEN :from AND :to GROUP BY DATE(placed_at)
+
+================================================================================
+SCENARIO 6: STOCK MANAGEMENT
+================================================================================
+1. Jika track_stock TRUE, update stock menu/addon saat order sukses
+
+Sample:
+UPDATE menus SET stock_qty = stock_qty - :qty WHERE id = :menu_id AND track_stock = TRUE
+UPDATE addon_items SET stock_qty = stock_qty - :qty WHERE id = :addon_id AND track_stock = TRUE
+SELECT * FROM menus WHERE merchant_id = :id AND track_stock = TRUE AND (stock_qty IS NULL OR stock_qty < 10)
+
+================================================================================
+NEXT: Baca STEP_07_IMPLEMENTATION_CHECKLIST.txt
+================================================================================

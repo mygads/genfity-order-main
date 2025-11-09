@@ -1,0 +1,204 @@
+================================================================================
+GENFITY ONLINE ORDERING SYSTEM - PANDUAN IMPLEMENTASI LENGKAP
+================================================================================
+Created: 2025-11-09
+Project: GENFITY Online Ordering Platform
+Tech Stack: Next.js + PostgreSQL + TypeScript
+Target AI: Copilot di VSCode
+
+================================================================================
+RINGKASAN PROYEK
+================================================================================
+GENFITY adalah platform online ordering untuk restoran dengan fitur:
+- Multi-merchant management
+- User authentication (JWT + Session tracking)
+- Menu & addon management
+- Order processing
+- Revenue reporting
+- Email notifications
+
+================================================================================
+STRUKTUR DOKUMEN
+================================================================================
+Dokumen panduan ini dibagi menjadi beberapa bagian:
+
+1. PANDUAN_KESELURUHAN.txt (file ini)
+   - Overview lengkap sistem
+   - Alur bisnis utama
+   - Teknologi yang digunakan
+
+2. STEP_01_DATABASE_DESIGN.txt
+   - Skema database PostgreSQL
+   - Relasi antar tabel (ERD)
+   - SQL migrations
+   - Indexing strategy
+
+3. STEP_02_AUTHENTICATION_JWT.txt
+   - JWT flow & payload structure
+   - User sessions management
+   - Password hashing (bcrypt)
+   - Session tracking & revocation
+
+4. STEP_03_EMAIL_NOTIFICATIONS.txt
+   - Email template HTML
+   - Password notification flow
+   - Email service integration
+   - Pseudocode implementasi
+
+5. STEP_04_API_ENDPOINTS.txt
+   - Auth endpoints (/api/auth/*)
+   - Admin endpoints (/api/admin/*)
+   - Merchant endpoints (/api/merchant/*)
+   - Public endpoints (/api/public/*)
+
+6. STEP_05_BACKEND_STRUCTURE.txt
+   - Folder architecture
+   - File organization
+   - Service/Repository pattern
+   - Middleware setup
+
+7. STEP_06_BUSINESS_FLOWS.txt
+   - Scenario 1: Super admin membuat merchant
+   - Scenario 2: Merchant setup menu
+   - Scenario 3: Customer browse & order
+   - Scenario 4: Merchant manage orders
+   - Scenario 5: Revenue reporting
+   - Scenario 6: Stock management
+
+8. STEP_07_IMPLEMENTATION_CHECKLIST.txt
+   - Checklist step-by-step
+   - Dependencies yang diperlukan
+   - Testing guidelines
+   - Deployment notes
+
+================================================================================
+ALUR BISNIS UTAMA
+================================================================================
+
+A. SUPER ADMIN MEMBUAT MERCHANT
+   1. Form input: nama, email, kode merchant
+   2. Generate password temporary
+   3. Hash password (bcrypt)
+   4. Buat user + merchant + merchant_users
+   5. Kirim email dengan credentials
+   6. Merchant login pertama kali
+   7. Wajib ubah password
+
+B. MERCHANT SETUP MENU
+   1. Login ke dashboard
+   2. Buat kategori menu
+   3. Buat menu items dengan harga
+   4. Buat addon categories (misal: Toppings, Sauce Level)
+   5. Buat addon items dengan harga
+   6. Link addon ke menu
+
+C. CUSTOMER BROWSE & ORDER
+   1. Akses genfity.com/[merchantCode]
+   2. Pilih mode (DINE_IN / TAKEAWAY)
+   3. Browse menu & pilih addons
+   4. Add to cart (localStorage)
+   5. Checkout
+   6. Isi data customer
+   7. Sistem buat order dengan QR code
+   8. Customer dapat order summary
+
+D. MERCHANT MANAGE ORDERS
+   1. Login ke dashboard
+   2. Lihat pending orders
+   3. Change status (PENDING → ACCEPTED → IN_PROGRESS → READY → COMPLETED)
+   4. Track status changes di database
+   5. Customer melihat update real-time
+
+E. REVENUE REPORTING
+   1. Query orders dengan filter date range
+   2. Group by date
+   3. Sum total revenue
+   4. Export report
+
+================================================================================
+TEKNOLOGI & STACK
+================================================================================
+
+Frontend:
+- Framework: Next.js 14+ (React 18+)
+- Language: TypeScript
+- Styling: TailwindCSS / Material-UI
+- State Management: React Context / Redux
+- HTTP Client: Fetch / Axios
+
+Backend:
+- Framework: Next.js API Routes / Express.js
+- Language: TypeScript
+- Database: PostgreSQL 14+
+- ORM: Prisma / Sequelize / TypeORM
+- Authentication: JWT (jsonwebtoken library)
+- Password Hashing: bcryptjs
+- Email: Nodemailer / SendGrid / AWS SES
+
+Database:
+- PostgreSQL 14+
+- 13 tables terstruktur
+- Proper indexing & constraints
+- NUMERIC(10,2) untuk monetary values
+
+Deployment:
+- Backend: Vercel / Railway / AWS EC2
+- Database: AWS RDS / Heroku PostgreSQL / Railway
+- Email: SendGrid / AWS SES / SMTP
+
+================================================================================
+KEAMANAN (SECURITY CONSIDERATIONS)
+================================================================================
+
+✓ Password: bcrypt dengan 10 rounds (MINIMUM)
+✓ JWT: Gunakan secret key yang kuat & unique per environment
+✓ Sessions: Track & revoke sessions di database
+✓ CORS: Restrict origin hanya ke domain allowed
+✓ Rate Limiting: Implement pada auth endpoints
+✓ HTTPS: Selalu pakai SSL/TLS di production
+✓ Environment Variables: Jangan commit .env ke git
+✓ SQL Injection: Gunakan parameterized queries
+✓ XSS Prevention: Sanitize input & use CSP headers
+✓ Data Privacy: Encrypt sensitive data (PII)
+
+================================================================================
+TAHAPAN IMPLEMENTASI
+================================================================================
+
+PHASE 1: FOUNDATION (Minggu 1-2)
+  □ Setup project (Next.js, TypeScript, database)
+  □ Create database schema & migrations
+  □ Setup authentication (JWT + sessions)
+  □ Create basic API structure
+
+PHASE 2: CORE FEATURES (Minggu 3-4)
+  □ Implement merchant management
+  □ Implement menu & addons management
+  □ Setup email notifications
+  □ Create order processing flow
+
+PHASE 3: FRONTEND (Minggu 5-6)
+  □ Admin dashboard (super admin)
+  □ Merchant dashboard
+  □ Customer storefront
+  □ Order status tracking
+
+PHASE 4: TESTING & DEPLOYMENT (Minggu 7-8)
+  □ Unit testing
+  □ Integration testing
+  □ User acceptance testing
+  □ Deploy ke production
+
+================================================================================
+NEXT STEPS
+================================================================================
+
+1. Baca STEP_01_DATABASE_DESIGN.txt untuk memahami schema database
+2. Baca STEP_02_AUTHENTICATION_JWT.txt untuk flow authentication
+3. Setup project struktur sesuai STEP_05_BACKEND_STRUCTURE.txt
+4. Implementasi step-by-step sesuai checklist di STEP_07_IMPLEMENTATION_CHECKLIST.txt
+5. Use these documents as reference ketika develop dengan AI Copilot
+
+Setiap file dibuat untuk mudah dibaca oleh AI & human!
+
+================================================================================

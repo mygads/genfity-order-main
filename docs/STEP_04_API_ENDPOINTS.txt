@@ -1,0 +1,72 @@
+================================================================================
+STEP 04: API ENDPOINTS
+================================================================================
+
+File Reference: STEP_04_API_ENDPOINTS.txt
+Bagian Ini: Daftar Endpoint API, Method, dan Fungsinya
+
+================================================================================
+AUTH ENDPOINTS
+================================================================================
+POST   /api/auth/login        # Login (email + password)
+POST   /api/auth/logout       # Logout (revoke session)
+POST   /api/auth/refresh      # Refresh access token (optional)
+GET    /api/auth/me           # Get current user profile (protected)
+
+================================================================================
+ADMIN ENDPOINTS
+================================================================================
+POST   /api/admin/merchants           # Create merchant (send password email)
+GET    /api/admin/merchants           # List all merchants
+PUT    /api/admin/merchants/:id       # Update merchant
+DELETE /api/admin/merchants/:id       # Delete merchant
+
+================================================================================
+MERCHANT ENDPOINTS
+================================================================================
+GET    /api/merchant/profile                   # Get merchant profile
+PUT    /api/merchant/profile                   # Update merchant profile
+POST   /api/merchant/menu-categories           # Create menu category
+GET    /api/merchant/menus                     # List menus
+POST   /api/merchant/menus                     # Create menu
+PUT    /api/merchant/menus/:id                 # Update menu
+DELETE /api/merchant/menus/:id                 # Delete menu
+GET    /api/merchant/orders                    # List orders
+PUT    /api/merchant/orders/:id/status         # Update order status
+GET    /api/merchant/revenue                   # Revenue report
+
+================================================================================
+PUBLIC/CUSTOMER ENDPOINTS
+================================================================================
+GET    /api/public/merchants/:code             # Get merchant info
+GET    /api/public/merchants/:code/menu        # Get merchant menu
+POST   /api/public/orders                      # Create new order (checkout)
+GET    /api/public/orders/:orderNumber         # Get order details
+
+================================================================================
+CATATAN IMPLEMENTASI
+================================================================================
+- Semua endpoint POST/PUT/DELETE harus validate input dan cek authentication/role
+- Endpoints public harus rate-limited
+- Gunakan controller dan service terpisah agar code modular
+- Untuk Mercury: gunakan file route.ts sesuai arsitektur Next.js app
+- Protected endpoints: wajib cek JWT dan sesi aktif di database
+
+================================================================================
+EXAMPLE REQUESTS: CURL
+================================================================================
+# Login
+curl -X POST http://localhost:3000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "merchant@example.com", "password": "xxxx"}'
+# Get profile
+curl -X GET http://localhost:3000/api/auth/me \
+     -H "Authorization: Bearer <token>"
+# Create menu category
+curl -X POST http://localhost:3000/api/merchant/menu-categories \
+     -H "Authorization: Bearer <token>" \
+     -d '{"name":"Beverages"}'
+
+================================================================================
+NEXT: Baca STEP_05_BACKEND_STRUCTURE.txt
+================================================================================
