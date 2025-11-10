@@ -1,6 +1,6 @@
 {
   "name": "genfity-online-ordering-system",
-  "version": "2.0.2",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -28,6 +28,7 @@
     "@react-jvectormap/world": "^1.1.2",
     "@tailwindcss/forms": "^0.5.9",
     "@tailwindcss/postcss": "^4.0.9",
+    "@types/pg": "^8.15.6",
     "apexcharts": "^4.3.0",
     "autoprefixer": "^10.4.20",
     "bcryptjs": "^3.0.3",
@@ -36,6 +37,7 @@
     "jsonwebtoken": "^9.0.2",
     "next": "15.2.3",
     "nodemailer": "^7.0.10",
+    "pg": "^8.16.3",
     "prisma": "^6.19.0",
     "qrcode": "^1.5.4",
     "react": "^19.0.0",
