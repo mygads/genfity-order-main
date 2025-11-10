@@ -12,9 +12,9 @@ interface PaymentConfirmationModalProps {
  * 
  * Based on FRONTEND_SPECIFICATION.md:
  * - Center overlay (not bottom sheet)
- * - Question icon 48x48px
- * - Title "Konfirmasi Pesanan"
- * - Buttons: "Batalkan" + "Lanjut"
+ * - Illustration/Icon
+ * - Title "Proses pembayaran sekarang?"
+ * - Buttons: "Cek Lagi" (outline) + "Bayar Sekarang" (primary)
  * - Z-index 300
  */
 export default function PaymentConfirmationModal({
@@ -46,19 +46,19 @@ export default function PaymentConfirmationModal({
 
           {/* Title - 20px/700 */}
           <h2 className="text-[20px] font-bold text-[#1A1A1A] mb-2 text-center">
-            Konfirmasi Pesanan
+            Proses pembayaran sekarang?
           </h2>
 
           {/* Message - 14px/400 */}
           <p className="text-sm text-[#666666] mb-4 text-center">
-            Proses pembayaran sekarang?
+            Pastikan pesanan Anda sudah benar
           </p>
 
           {/* Total Recap - 16px/700 */}
           <div className="bg-[#F9F9F9] rounded-lg p-3 mb-6">
             <div className="flex justify-between items-center">
               <span className="text-sm font-semibold text-[#666666]">Total:</span>
-              <span className="text-base font-bold text-[#FF6B35]">
+              <span className="text-base font-bold text-[#FF6A35]">
                 Rp{totalAmount.toLocaleString('id-ID')}
               </span>
             </div>
@@ -66,20 +66,20 @@ export default function PaymentConfirmationModal({
 
           {/* Buttons */}
           <div className="flex gap-3">
-            {/* Batalkan Button - 44px, transparent */}
+            {/* Cek Lagi Button - 44px, outline */}
             <button
               onClick={onClose}
-              className="flex-1 h-11 bg-white border border-[#E0E0E0] text-[#666666] text-sm font-semibold rounded-lg hover:bg-[#F9F9F9] transition-all duration-200 active:scale-[0.98]"
+              className="flex-1 h-11 bg-white border-2 border-[#FF6A35] text-[#FF6A35] text-sm font-semibold rounded-lg hover:bg-[#FFF5F0] transition-all duration-200 active:scale-[0.98]"
             >
-              Batalkan
+              Cek Lagi
             </button>
 
-            {/* Lanjut Button - 44px, primary */}
+            {/* Bayar Sekarang Button - 44px, primary */}
             <button
               onClick={onConfirm}
-              className="flex-1 h-11 bg-[#FF6B35] text-white text-sm font-semibold rounded-lg hover:bg-[#E55A2B] transition-all duration-200 active:scale-[0.98]"
+              className="flex-1 h-11 bg-[#FF6A35] text-white text-sm font-semibold rounded-lg hover:bg-[#F1592A] transition-all duration-200 active:scale-[0.98]"
             >
-              Lanjut
+              Bayar Sekarang
             </button>
           </div>
         </div>

@@ -41,9 +41,10 @@ function LoginForm() {
     // Skip to cart/menu as guest
     if (ref) {
       router.push(decodeURIComponent(ref));
+    } else if (merchant && mode) {
+      router.push(`/${merchant}/order?mode=${mode}`);
     } else if (merchant) {
-      const modeParam = mode ? `?mode=${mode}` : '';
-      router.push(`/${merchant}/home${modeParam}`);
+      router.push(`/${merchant}`);
     } else {
       router.push('/');
     }
@@ -85,9 +86,10 @@ function LoginForm() {
       // Redirect to ref or merchant home
       if (ref) {
         router.push(decodeURIComponent(ref));
+      } else if (merchant && mode) {
+        router.push(`/${merchant}/order?mode=${mode}`);
       } else if (merchant) {
-        const modeParam = mode ? `?mode=${mode}` : '';
-        router.push(`/${merchant}/order${modeParam}`);
+        router.push(`/${merchant}`);
       } else {
         router.push('/profile');
       }

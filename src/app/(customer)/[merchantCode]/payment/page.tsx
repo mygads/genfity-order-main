@@ -7,7 +7,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { getCart, getCustomerAuth, saveCustomerAuth, clearCart, clearTableNumber } from '@/lib/utils/localStorage';
-import type { Cart, OrderMode } from '@/lib/types/customer';
+import type { OrderMode } from '@/lib/types/customer';
+import type { LocalCart } from '@/lib/types/cart';
 import PaymentConfirmationModal from '@/components/modals/PaymentConfirmationModal';
 
 /**
@@ -31,7 +32,7 @@ export default function PaymentPage() {
   const merchantCode = params.merchantCode as string;
   const mode = (searchParams.get('mode') || 'takeaway') as OrderMode;
   
-  const [cart, setCart] = useState<Cart | null>(null);
+  const [cart, setCart] = useState<LocalCart | null>(null);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -116,7 +117,7 @@ export default function PaymentPage() {
           'Authorization': `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
-          merchantId: cart.merchantId.toString(),
+          merchantCode: cart.merchantCode,
           mode: cart.mode,
           tableNumber: cart.tableNumber,
           customerName: name,
@@ -126,9 +127,9 @@ export default function PaymentPage() {
             menuId: item.menuId.toString(),
             quantity: item.quantity,
             notes: item.notes,
-            addons: item.addons.map((addon) => ({
-              addonItemId: addon.addonItemId.toString(),
-              quantity: addon.quantity,
+            addons: (item.addons || []).map((addon) => ({
+              addonItemId: addon.id.toString(),
+              quantity: 1, // LocalCartAddon doesn't have quantity
             })),
           })),
         }),
@@ -161,7 +162,15 @@ export default function PaymentPage() {
     return null;
   }
 
-  const total = cart.items.reduce((sum: number, item) => sum + item.subtotal, 0);
+  // Calculate item subtotal (price * quantity + addons)
+  const calculateItemSubtotal = (item: LocalCart['items'][0]) => {
+    const basePrice = item.price * item.quantity;
+    const addonsPrice = (item.addons || []).reduce((sum, addon) => sum + addon.price, 0) * item.quantity;
+    return basePrice + addonsPrice;
+  };
+
+  // Calculate total
+  const total = cart.items.reduce((sum, item) => sum + calculateItemSubtotal(item), 0);
 
   return (
     <div className="min-h-screen bg-white pb-6">

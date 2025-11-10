@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
-import Header from '@/components/common/Header';
+import CustomerHeader from '@/components/customer/CustomerHeader';
 import FloatingCartButton from '@/components/cart/FloatingCartButton';
 import MenuDetailModal from '@/components/menu/MenuDetailModal';
 import { formatCurrency } from '@/lib/utils/format';
+import Image from 'next/image';
 
 interface MenuItem {
   id: number;
@@ -44,8 +45,6 @@ export default function MenuBrowsePage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<number | 'all'>('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showSearch, setShowSearch] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMenu, setSelectedMenu] = useState<MenuItem | null>(null);
 
@@ -90,10 +89,7 @@ export default function MenuBrowsePage() {
   }, [merchantCode, selectedCategory]);
 
   // Filter by search
-  const filteredMenuItems = menuItems.filter(item =>
-    item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.description?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredMenuItems = menuItems;
 
   const handleMenuClick = (menu: MenuItem) => {
     if (menu.stock > 0) {
@@ -102,40 +98,24 @@ export default function MenuBrowsePage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-white">
+    <div 
+      className="max-w-[420px] mx-auto bg-white min-h-svh flex flex-col"
+      style={{
+        paddingTop: 'env(safe-area-inset-top)',
+        paddingBottom: 'env(safe-area-inset-bottom)',
+      }}
+    >
       {/* Header */}
-      <Header
+      <CustomerHeader
+        merchantCode={merchantCode}
+        mode={mode as 'dinein' | 'takeaway'}
+        showBackButton={true}
+        onBack={() => {
+          // Back to merchant mode selection if coming from there
+          router.push(`/${merchantCode}`);
+        }}
         title={merchantCode.toUpperCase()}
-        showBack
-        onBack={() => router.back()}
-        rightActions={
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowSearch(!showSearch)}
-              className="p-2 hover:bg-secondary rounded-lg transition-colors"
-              aria-label="Search"
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-secondary">
-                <path d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </button>
-          </div>
-        }
       />
-
-      {/* Search Bar (Slide-in) */}
-      {showSearch && (
-        <div className="px-4 py-3 bg-white border-b border-neutral-200 animate-slide-down">
-          <input
-            type="text"
-            placeholder="Cari menu..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-10 px-4 text-sm border border-primary rounded-lg focus:outline-none focus:ring-2 ring-primary/20"
-            autoFocus
-          />
-        </div>
-      )}
 
       {/* Categories Horizontal Scroll */}
       <div className="sticky top-[56px] z-40 bg-white border-b border-neutral-200">
@@ -168,10 +148,10 @@ export default function MenuBrowsePage() {
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <div className="text-6xl mb-4">🍽️</div>
             <p className="text-base font-semibold text-primary-dark mb-2">
-              {searchQuery ? 'Menu tidak ditemukan' : 'Belum ada menu'}
+              Belum ada menu
             </p>
             <p className="text-sm text-secondary">
-              {searchQuery ? 'Coba kata kunci lain' : 'Menu akan ditambahkan segera'}
+              Menu akan ditambahkan segera
             </p>
           </div>
         ) : (
@@ -189,10 +169,12 @@ export default function MenuBrowsePage() {
                 {/* Image */}
                 <div className="flex-shrink-0">
                   {item.image_url ? (
-                    <img
+                    <Image
                       src={item.image_url}
                       alt={item.name}
-                      className="w-[70px] h-[70px] rounded-lg object-cover bg-secondary"
+                      width={70}
+                      height={70}
+                      className="rounded-lg object-cover bg-secondary"
                     />
                   ) : (
                     <div className="w-[70px] h-[70px] rounded-lg bg-secondary flex items-center justify-center">

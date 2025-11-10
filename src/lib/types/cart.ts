@@ -38,4 +38,5 @@ export interface LocalCart {
   mode: "dinein" | "takeaway";
   tableNumber?: string;
   items: LocalCartItem[];
+  generalNotes?: string; // General notes for the entire order
 }

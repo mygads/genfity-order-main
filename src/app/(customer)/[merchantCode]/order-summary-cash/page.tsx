@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic';
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { clearCart } from '@/lib/utils/localStorage';
 import type { OrderMode } from '@/lib/types/customer';
 
 interface OrderSummaryData {
@@ -90,6 +91,13 @@ export default function OrderSummaryCashPage() {
 
   const formatCurrency = (amount: number) => `Rp${amount.toLocaleString('id-ID')}`;
 
+  const handlePesanBaru = () => {
+    // Clear cart for this merchant and mode
+    clearCart(merchantCode, mode);
+    // Navigate to menu
+    router.push(`/${merchantCode}/order?mode=${mode}`);
+  };
+
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-white">
@@ -130,10 +138,12 @@ export default function OrderSummaryCashPage() {
         
         <h1 className="text-xl font-bold text-[#1A1A1A] mb-2">Pesanan Berhasil!</h1>
         
-        {/* Order Number - 28px/700 */}
-        <p className="text-2xl font-bold text-[#FF6B35] mb-1">
-          #{order.orderNumber}
-        </p>
+        {/* Order Number - Monospace tag */}
+        <div className="flex items-center justify-center gap-2 mb-1">
+          <span className="px-3 py-1 bg-gray-100 rounded-lg text-sm font-mono text-gray-700">
+            {order.orderNumber}
+          </span>
+        </div>
         
         <p className="text-sm text-[#666666]">
           {order.mode === 'dinein' ? `Meja #${order.tableNumber}` : 'Ambil Sendiri'}
@@ -149,7 +159,7 @@ export default function OrderSummaryCashPage() {
             </div>
           </div>
           <p className="mt-3 text-sm font-semibold text-[#1A1A1A]">
-            Tunjukkan QR ke Kasir
+            Tunjukkan QR atau 8 digit kode pesanan ke kasir
           </p>
           <p className="text-xs text-[#666666]">
             untuk melanjutkan pembayaran
@@ -205,17 +215,17 @@ export default function OrderSummaryCashPage() {
         {/* Action Buttons */}
         <div className="space-y-3">
           <button
-            onClick={() => router.push(`/${merchantCode}/home?mode=${mode}`)}
-            className="w-full h-12 bg-[#FF6B35] text-white text-base font-semibold rounded-lg hover:bg-[#E55A2B] transition-all active:scale-[0.98]"
+            onClick={handlePesanBaru}
+            className="w-full h-12 bg-[#FF6A35] text-white text-base font-semibold rounded-lg hover:bg-[#F1592A] transition-all active:scale-[0.98]"
           >
-            Pesan Lagi
+            Pesan Baru
           </button>
           
           <button
-            onClick={() => router.push(`/${merchantCode}/profile`)}
-            className="w-full h-12 border-2 border-[#E0E0E0] text-[#1A1A1A] text-base font-semibold rounded-lg hover:border-[#FF6B35] hover:text-[#FF6B35] transition-all active:scale-[0.98]"
+            onClick={() => router.push(`/${merchantCode}/history?mode=${mode}`)}
+            className="w-full h-12 border-2 border-[#E0E0E0] text-[#1A1A1A] text-base font-semibold rounded-lg hover:border-[#FF6A35] hover:text-[#FF6A35] transition-all active:scale-[0.98]"
           >
-            Lihat Riwayat Pesanan
+            Masuk ke History
           </button>
         </div>
       </main>

@@ -8,8 +8,8 @@
 // ========== COLORS ==========
 export const COLORS = {
   // Primary
-  primary: '#FF6B35',
-  primaryHover: '#E55A2B',
+  primary: '#FF6A35',
+  primaryHover: '#F1592A',
   primaryLight: '#FFF5F0',
   
   // Text
@@ -72,7 +72,7 @@ export const SIZING = {
   buttonIcon: 'w-8 h-8', // 32px
   
   // Inputs
-  input: 'h-12', // 48px
+  input: 'h-11', // 44px
   inputSmall: 'h-10', // 40px
   
   // Images
@@ -127,7 +127,7 @@ export const BORDERS = {
   
   // Border Colors
   borderDefault: 'border-[#E0E0E0]',
-  borderPrimary: 'border-[#FF6B35]',
+  borderPrimary: 'border-[#FF6A35]',
   borderError: 'border-red-500',
 } as const;
 
@@ -136,7 +136,7 @@ export const SHADOWS = {
   small: 'shadow-sm',
   default: 'shadow-md',
   large: 'shadow-lg',
-  floating: 'shadow-[0_4px_12px_rgba(255,107,53,0.3)]',
+  floating: 'shadow-[0_4px_12px_rgba(255,106,53,0.3)]',
 } as const;
 
 // ========== Z-INDEX ==========
@@ -157,13 +157,13 @@ export const PATTERNS = {
   header: `${SIZING.header} bg-white ${BORDERS.borderDefault} border-b px-4 flex items-center justify-between sticky top-0 ${Z_INDEX.header}`,
   
   // Button Primary
-  buttonPrimary: `${SIZING.buttonLarge} bg-[#FF6B35] text-white ${TYPOGRAPHY.body} ${BORDERS.rounded} hover:bg-[#E55A2B] transition-all active:scale-[0.98]`,
+  buttonPrimary: `${SIZING.buttonLarge} bg-[#FF6A35] text-white ${TYPOGRAPHY.body} ${BORDERS.rounded} hover:bg-[#F1592A] transition-all active:scale-[0.98]`,
   
   // Button Secondary
-  buttonSecondary: `${SIZING.buttonLarge} ${BORDERS.border2} ${BORDERS.borderDefault} text-[#1A1A1A] ${TYPOGRAPHY.body} ${BORDERS.rounded} hover:border-[#FF6B35] hover:text-[#FF6B35] transition-all`,
+  buttonSecondary: `${SIZING.buttonLarge} ${BORDERS.border2} ${BORDERS.borderDefault} text-[#1A1A1A] ${TYPOGRAPHY.body} ${BORDERS.rounded} hover:border-[#FF6A35] hover:text-[#FF6A35] transition-all`,
   
   // Input
-  input: `${SIZING.input} px-4 ${BORDERS.border} ${BORDERS.borderDefault} ${BORDERS.rounded} text-sm text-[#1A1A1A] placeholder-[#999999] focus:outline-none focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35]`,
+  input: `${SIZING.input} px-4 ${BORDERS.border} ${BORDERS.borderDefault} ${BORDERS.rounded} text-sm text-[#1A1A1A] placeholder-[#999999] focus:outline-none focus:ring-2 focus:ring-[#FF6A35] focus:border-[#FF6A35]`,
   
   // Card
   card: `${BORDERS.border} ${BORDERS.borderDefault} ${BORDERS.rounded} bg-white ${SPACING.padding}`,
@@ -189,7 +189,7 @@ export const ANIMATIONS = {
   
   // Hover
   hover: 'hover:scale-[1.02]',
-  hoverButton: 'hover:bg-[#E55A2B]',
+  hoverButton: 'hover:bg-[#F1592A]',
   
   // Active
   active: 'active:scale-[0.98]',

@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Header from '@/components/common/Header';
+import CustomerHeader from '@/components/customer/CustomerHeader';
+import TableNumberModal from '@/components/customer/TableNumberModal';
+import Image from 'next/image';
 
 interface MerchantPageProps {
   params: Promise<{
@@ -58,6 +60,7 @@ export default function MerchantModePage({ params }: MerchantPageProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showOutletInfo, setShowOutletInfo] = useState(false);
+  const [showTableModal, setShowTableModal] = useState(false);
 
   useEffect(() => {
     params.then(({ merchantCode: code }) => {
@@ -104,8 +107,19 @@ export default function MerchantModePage({ params }: MerchantPageProps) {
     // Save mode to localStorage
     localStorage.setItem(`mode_${merchantCode}`, mode);
     
-    // Navigate to order page
-    router.push(`/${merchantCode}/order?mode=${mode}`);
+    // For dine-in, show table number modal first
+    if (mode === 'dinein') {
+      setShowTableModal(true);
+    } else {
+      // For takeaway, go directly to order page
+      router.push(`/${merchantCode}/order?mode=${mode}`);
+    }
+  };
+
+  const handleTableNumberConfirm = (_tableNumber: string) => {
+    setShowTableModal(false);
+    // Navigate to order page with dine-in mode
+    router.push(`/${merchantCode}/order?mode=dinein`);
   };
 
   const dayNames = ['MINGGU', 'SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT', 'SABTU'];
@@ -144,11 +158,19 @@ export default function MerchantModePage({ params }: MerchantPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div 
+      className="max-w-[420px] mx-auto bg-white min-h-svh flex flex-col"
+      style={{
+        paddingTop: 'env(safe-area-inset-top)',
+        paddingBottom: 'env(safe-area-inset-bottom)',
+      }}
+    >
       {/* Header - 56px */}
-      <Header
-        title={merchant.name}
+      <CustomerHeader
+        merchantCode={merchantCode}
+        showBackButton={true}
         onBack={() => router.push('/')}
+        title={merchant.name}
       />
 
       {/* Merchant Banner - 200px height */}
@@ -156,10 +178,10 @@ export default function MerchantModePage({ params }: MerchantPageProps) {
         {merchant.coverImageUrl ? (
           <>
             <Image
-              src
               src={merchant.coverImageUrl}
               alt={merchant.name}
-              className="w-full h-full object-cover"
+              fill
+              className="object-cover"
             />
             {/* Gradient overlay */}
             <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-transparent"></div>
@@ -277,6 +299,14 @@ export default function MerchantModePage({ params }: MerchantPageProps) {
           </p>
         </div>
       )}
+
+      {/* Table Number Modal */}
+      <TableNumberModal
+        merchantCode={merchantCode}
+        isOpen={showTableModal}
+        onClose={() => setShowTableModal(false)}
+        onConfirm={handleTableNumberConfirm}
+      />
     </div>
   );
 }

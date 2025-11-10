@@ -5,9 +5,9 @@ import type { NextRequest } from 'next/server';
  * Middleware for route protection and authentication
  * 
  * Protects:
- * - /dashboard/* routes: Require SUPER_ADMIN | MERCHANT_OWNER | MERCHANT_STAFF
- * - Redirects unauthenticated users to /dashboard/signin
- * - Blocks CUSTOMER role from accessing dashboard
+ * - /admin/* routes: Require SUPER_ADMIN | MERCHANT_OWNER | MERCHANT_STAFF
+ * - Redirects unauthenticated users to /admin/login
+ * - Blocks CUSTOMER role from accessing admin dashboard
  * 
  * Note: JWT verification is done in API routes and server components
  * This middleware only checks for token presence and redirects accordingly
@@ -25,27 +25,27 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Dashboard routes protection
-  if (pathname.startsWith('/dashboard')) {
-    // Allow signin page
-    if (pathname === '/dashboard/signin') {
+  // Admin routes protection
+  if (pathname.startsWith('/admin')) {
+    // Allow login page
+    if (pathname === '/admin/login') {
       // If already logged in, redirect to dashboard
       const token = request.cookies.get('auth_token')?.value;
       if (token) {
         const url = request.nextUrl.clone();
-        url.pathname = '/dashboard';
+        url.pathname = '/admin/dashboard';
         return NextResponse.redirect(url);
       }
       return NextResponse.next();
     }
 
-    // Check authentication
+    // Check authentication for all other admin routes
     const token = request.cookies.get('auth_token')?.value;
 
     if (!token) {
-      // Redirect to signin
+      // Redirect to login
       const url = request.nextUrl.clone();
-      url.pathname = '/dashboard/signin';
+      url.pathname = '/admin/login';
       url.searchParams.set('redirect', pathname);
       return NextResponse.redirect(url);
     }
