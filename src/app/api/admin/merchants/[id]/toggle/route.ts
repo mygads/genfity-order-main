@@ -17,11 +17,12 @@ import { NextRequest } from 'next/server';
 import merchantService from '@/lib/services/MerchantService';
 import { successResponse } from '@/lib/middleware/errorHandler';
 import { withSuperAdmin } from '@/lib/middleware/auth';
+import { AuthContext } from '@/lib/types/auth';
 
 async function toggleMerchantHandler(
   request: NextRequest,
-  authContext: unknown,
-  context: { params: Promise<{ id: string }> }
+  authContext: AuthContext,
+  context: { params: Promise<Record<string, string>> }
 ) {
   const params = await context.params;
   const merchantId = BigInt(params.id);

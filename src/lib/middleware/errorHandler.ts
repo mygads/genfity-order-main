@@ -31,7 +31,7 @@ export function handleError(error: unknown): NextResponse<ApiErrorResponse> {
 
   // Handle Prisma errors
   if (error && typeof error === 'object' && 'code' in error) {
-    const prismaError = error as { code: string; meta?: any };
+    const prismaError = error as { code: string; meta?: Record<string, unknown> };
     
     if (prismaError.code === 'P2002') {
       // Unique constraint violation

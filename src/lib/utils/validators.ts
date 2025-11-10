@@ -67,7 +67,7 @@ export function validatePassword(password: string): void {
  * @param fieldName - Field name for error message
  * @throws ValidationError if empty
  */
-export function validateRequired(value: any, fieldName: string): void {
+export function validateRequired(value: unknown, fieldName: string): void {
   if (value === undefined || value === null || value === '') {
     throw new ValidationError(
       `${fieldName} is required`,

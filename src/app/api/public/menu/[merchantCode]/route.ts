@@ -13,7 +13,7 @@ import menuService from '@/lib/services/MenuService';
  */
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<{ merchantCode: string }> }
+  context: { params: Promise<Record<string, string>> }
 ) {
   const params = await context.params;
   try {

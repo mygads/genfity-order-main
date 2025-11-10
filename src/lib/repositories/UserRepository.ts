@@ -4,7 +4,7 @@
  */
 
 import prisma from '@/lib/db/client';
-import { Prisma } from '@prisma/client';
+import { Prisma, UserRole } from '@prisma/client';
 
 export class UserRepository {
   /**
@@ -102,7 +102,7 @@ export class UserRepository {
   async findByRole(role: string) {
     return prisma.user.findMany({
       where: {
-        role: role as any,
+        role: role as UserRole,
         isActive: true,
       },
     });
@@ -130,4 +130,5 @@ export class UserRepository {
   }
 }
 
-export default new UserRepository();
+const userRepository = new UserRepository();
+export default userRepository;

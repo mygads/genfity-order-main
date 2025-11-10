@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import menuService from '@/lib/services/MenuService';
 import { withMerchant } from '@/lib/middleware/auth';
 import { ValidationError, NotFoundError } from '@/lib/constants/errors';
-import type { AuthContext } from '@/lib/middleware/auth';
+import type { AuthContext } from '@/lib/types/auth';
 
 /**
  * PUT /api/merchant/categories/[id]
@@ -17,7 +17,7 @@ import type { AuthContext } from '@/lib/middleware/auth';
 async function handlePut(
   req: NextRequest,
   context: AuthContext,
-  contextParams: { params: Promise<{ id: string }> }
+  contextParams: { params: Promise<Record<string, string>> }
 ) {
   try {
     const params = await contextParams.params;
@@ -82,7 +82,7 @@ async function handlePut(
 async function handleDelete(
   req: NextRequest,
   context: AuthContext,
-  contextParams: { params: Promise<{ id: string }> }
+  contextParams: { params: Promise<Record<string, string>> }
 ) {
   try {
     const params = await contextParams.params;

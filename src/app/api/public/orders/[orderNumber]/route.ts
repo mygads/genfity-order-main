@@ -12,7 +12,7 @@ import orderService from '@/lib/services/OrderService';
  */
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<{ orderNumber: string }> }
+  context: { params: Promise<Record<string, string>> }
 ) {
   const params = await context.params;
   try {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withMerchant } from '@/lib/middleware/auth';
-import type { AuthContext } from '@/lib/middleware/auth';
+import type { AuthContext } from '@/lib/types/auth';
 import orderService from '@/lib/services/OrderService';
 import prisma from '@/lib/db/client';
 import { serializeBigInt } from '@/lib/utils/serializer';
@@ -12,10 +12,10 @@ import { serializeBigInt } from '@/lib/utils/serializer';
 async function handlePut(
   req: NextRequest,
   authContext: AuthContext,
-  context: { params: Promise<{ id: string }> }
+  routeContext: { params: Promise<Record<string, string>> }
 ) {
   try {
-    const params = await context.params;
+    const params = await routeContext.params;
     if (!params?.id) {
       return NextResponse.json(
         {

@@ -3,7 +3,7 @@
  * Standard response format for all API endpoints
  */
 
-export interface ApiSuccessResponse<T = any> {
+export interface ApiSuccessResponse<T = unknown> {
   success: true;
   data: T;
   message: string;
@@ -15,10 +15,10 @@ export interface ApiErrorResponse {
   error: string;
   message: string;
   statusCode: number;
-  details?: any;
+  details?: Record<string, unknown>;
 }
 
-export type ApiResponse<T = any> = ApiSuccessResponse<T> | ApiErrorResponse;
+export type ApiResponse<T = unknown> = ApiSuccessResponse<T> | ApiErrorResponse;
 
 /**
  * Pagination metadata

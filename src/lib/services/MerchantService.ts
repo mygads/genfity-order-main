@@ -257,7 +257,7 @@ class MerchantService {
    * @param merchantId Merchant ID
    * @returns Merchant with details
    */
-  async getMerchantById(merchantId: bigint): Promise<any> {
+  async getMerchantById(merchantId: bigint) {
     return await merchantRepository.findById(merchantId);
   }
 

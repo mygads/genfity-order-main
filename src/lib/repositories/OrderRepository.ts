@@ -4,6 +4,7 @@
  */
 
 import prisma from '@/lib/db/client';
+import { OrderStatus, OrderType } from '@prisma/client';
 
 export class OrderRepository {
   /**
@@ -52,7 +53,7 @@ export class OrderRepository {
           customerPhone: orderData.customerPhone,
           orderType: orderData.orderType,
           tableNumber: orderData.tableNumber,
-          status: orderData.status as any,
+          status: orderData.status as OrderStatus,
           subtotal: orderData.subtotal,
           taxAmount: orderData.taxAmount,
           totalAmount: orderData.totalAmount,
@@ -97,7 +98,7 @@ export class OrderRepository {
         data: {
           orderId: order.id,
           fromStatus: null,
-          toStatus: orderData.status as any,
+          toStatus: orderData.status as OrderStatus,
           note: 'Order placed',
         },
       });
@@ -177,8 +178,8 @@ export class OrderRepository {
     return prisma.order.findMany({
       where: {
         merchantId,
-        ...(filters?.status && { status: filters.status as any }),
-        ...(filters?.orderType && { orderType: filters.orderType as any }),
+        ...(filters?.status && { status: filters.status as OrderStatus }),
+        ...(filters?.orderType && { orderType: filters.orderType as OrderType }),
         ...(filters?.startDate &&
           filters?.endDate && {
             placedAt: {
@@ -256,7 +257,7 @@ export class OrderRepository {
       const updatedOrder = await tx.order.update({
         where: { id: orderId },
         data: {
-          status: newStatus as any,
+          status: newStatus as OrderStatus,
         },
       });
 
@@ -265,7 +266,7 @@ export class OrderRepository {
         data: {
           orderId,
           fromStatus: order.status,
-          toStatus: newStatus as any,
+          toStatus: newStatus as OrderStatus,
           changedByUserId,
           note,
         },

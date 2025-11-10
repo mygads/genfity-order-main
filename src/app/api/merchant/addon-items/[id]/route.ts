@@ -1,36 +1,39 @@
 /**
- * Merchant Single Menu Item API
- * GET /api/merchant/menu/[id] - Get menu details
- * PUT /api/merchant/menu/[id] - Update menu
- * DELETE /api/merchant/menu/[id] - Delete menu
+ * Merchant Addon Item API (by ID)
+ * GET /api/merchant/addon-items/[id] - Get addon item details
+ * PUT /api/merchant/addon-items/[id] - Update addon item
+ * DELETE /api/merchant/addon-items/[id] - Delete addon item
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import menuService from '@/lib/services/MenuService';
+import menuRepository from '@/lib/repositories/MenuRepository';
 import { withMerchant } from '@/lib/middleware/auth';
-import { ValidationError, NotFoundError } from '@/lib/constants/errors';
 import type { AuthContext } from '@/lib/types/auth';
+import { ValidationError, NotFoundError } from '@/lib/constants/errors';
 
 /**
- * GET /api/merchant/menu/[id]
- * Get menu item details
+ * GET /api/merchant/addon-items/[id]
+ * Get addon item details
  */
 async function handleGet(
   req: NextRequest,
-  context: AuthContext,
+  _context: AuthContext,
   contextParams: { params: Promise<Record<string, string>> }
 ) {
   try {
     const params = await contextParams.params;
-    const menuId = BigInt(params?.id || '0');
-    const menu = await menuService.getMenuWithAddons(menuId);
+    const itemId = BigInt(params?.id || '0');
 
-    if (!menu) {
+    // Get addon item from repository
+    const item = await menuRepository.findAddonItemById(itemId);
+
+    if (!item) {
       return NextResponse.json(
         {
           success: false,
           error: 'NOT_FOUND',
-          message: 'Menu not found',
+          message: 'Addon item not found',
           statusCode: 404,
         },
         { status: 404 }
@@ -39,18 +42,18 @@ async function handleGet(
 
     return NextResponse.json({
       success: true,
-      data: menu,
-      message: 'Menu retrieved successfully',
+      data: item,
+      message: 'Addon item retrieved successfully',
       statusCode: 200,
     });
   } catch (error) {
-    console.error('Error getting menu:', error);
+    console.error('Error getting addon item:', error);
 
     return NextResponse.json(
       {
         success: false,
         error: 'INTERNAL_ERROR',
-        message: 'Failed to retrieve menu',
+        message: 'Failed to get addon item',
         statusCode: 500,
       },
       { status: 500 }
@@ -59,38 +62,36 @@ async function handleGet(
 }
 
 /**
- * PUT /api/merchant/menu/[id]
- * Update menu item
+ * PUT /api/merchant/addon-items/[id]
+ * Update addon item
  */
 async function handlePut(
   req: NextRequest,
-  context: AuthContext,
+  _context: AuthContext,
   contextParams: { params: Promise<Record<string, string>> }
 ) {
   try {
     const params = await contextParams.params;
-    const menuId = BigInt(params?.id || '0');
+    const itemId = BigInt(params?.id || '0');
     const body = await req.json();
 
-    const menu = await menuService.updateMenu(menuId, {
+    // Update addon item
+    const item = await menuService.updateAddonItem(itemId, {
       name: body.name,
-      description: body.description,
       price: body.price,
-      imageUrl: body.imageUrl,
       isAvailable: body.isAvailable,
       hasStock: body.hasStock,
       stockQuantity: body.stockQuantity,
-      isPromo: body.isPromo,
     });
 
     return NextResponse.json({
       success: true,
-      data: menu,
-      message: 'Menu updated successfully',
+      data: item,
+      message: 'Addon item updated successfully',
       statusCode: 200,
     });
   } catch (error) {
-    console.error('Error updating menu:', error);
+    console.error('Error updating addon item:', error);
 
     if (error instanceof ValidationError) {
       return NextResponse.json(
@@ -120,7 +121,7 @@ async function handlePut(
       {
         success: false,
         error: 'INTERNAL_ERROR',
-        message: 'Failed to update menu',
+        message: 'Failed to update addon item',
         statusCode: 500,
       },
       { status: 500 }
@@ -129,39 +130,28 @@ async function handlePut(
 }
 
 /**
- * DELETE /api/merchant/menu/[id]
- * Delete menu item
+ * DELETE /api/merchant/addon-items/[id]
+ * Delete addon item
  */
 async function handleDelete(
   req: NextRequest,
-  context: AuthContext,
+  _context: AuthContext,
   contextParams: { params: Promise<Record<string, string>> }
 ) {
   try {
     const params = await contextParams.params;
-    const menuId = BigInt(params?.id || '0');
+    const itemId = BigInt(params?.id || '0');
 
-    await menuService.deleteMenu(menuId);
+    // Delete addon item
+    await menuService.deleteAddonItem(itemId);
 
     return NextResponse.json({
       success: true,
-      message: 'Menu deleted successfully',
+      message: 'Addon item deleted successfully',
       statusCode: 200,
     });
   } catch (error) {
-    console.error('Error deleting menu:', error);
-
-    if (error instanceof ValidationError) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'VALIDATION_ERROR',
-          message: error.message,
-          statusCode: 400,
-        },
-        { status: 400 }
-      );
-    }
+    console.error('Error deleting addon item:', error);
 
     if (error instanceof NotFoundError) {
       return NextResponse.json(
@@ -179,7 +169,7 @@ async function handleDelete(
       {
         success: false,
         error: 'INTERNAL_ERROR',
-        message: 'Failed to delete menu',
+        message: 'Failed to delete addon item',
         statusCode: 500,
       },
       { status: 500 }

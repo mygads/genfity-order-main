@@ -23,7 +23,7 @@ import { AuthContext } from '@/lib/types/auth';
 async function revokeSessionHandler(
   request: NextRequest,
   authContext: AuthContext,
-  context: { params: Promise<{ sessionId: string }> }
+  context: { params: Promise<Record<string, string>> }
 ) {
   const params = await context.params;
   const sessionId = BigInt(params.sessionId);

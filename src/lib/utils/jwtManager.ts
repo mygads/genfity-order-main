@@ -4,7 +4,16 @@
  */
 
 import * as jwt from 'jsonwebtoken';
-import { JWTPayload, RefreshTokenPayload } from '@/lib/types/auth';
+import { JWTPayload, RefreshTokenPayload, UserRole } from '@/lib/types/auth';
+
+interface DecodedToken {
+  userId: string;
+  sessionId: string;
+  role: UserRole;
+  email: string;
+  iat: number;
+  exp: number;
+}
 
 const JWT_SECRET = process.env.JWT_SECRET || '';
 const JWT_EXPIRY = parseInt(process.env.JWT_EXPIRY || '3600'); // 1 hour default
@@ -59,7 +68,7 @@ export function generateRefreshToken(
  */
 export function verifyAccessToken(token: string): JWTPayload | null {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    const decoded = jwt.verify(token, JWT_SECRET) as DecodedToken;
     
     // Convert string IDs back to BigInt
     return {
@@ -70,7 +79,7 @@ export function verifyAccessToken(token: string): JWTPayload | null {
       iat: decoded.iat,
       exp: decoded.exp,
     };
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -82,7 +91,7 @@ export function verifyAccessToken(token: string): JWTPayload | null {
  */
 export function verifyRefreshToken(token: string): RefreshTokenPayload | null {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    const decoded = jwt.verify(token, JWT_SECRET) as Pick<DecodedToken, 'userId' | 'sessionId' | 'iat' | 'exp'>;
     
     // Convert string IDs back to BigInt
     return {
@@ -91,7 +100,7 @@ export function verifyRefreshToken(token: string): RefreshTokenPayload | null {
       iat: decoded.iat,
       exp: decoded.exp,
     };
-  } catch (error) {
+  } catch {
     return null;
   }
 }

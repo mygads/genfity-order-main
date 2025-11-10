@@ -71,11 +71,11 @@ export function withAuth(
   handler: (
     request: NextRequest,
     context: AuthContext,
-    routeContext?: { params: Promise<Record<string, string>> }
+    routeContext: { params: Promise<Record<string, string>> }
   ) => Promise<NextResponse>,
   allowedRoles?: UserRole[]
 ) {
-  return async (request: NextRequest, routeContext?: { params: Promise<Record<string, string>> }) => {
+  return async (request: NextRequest, routeContext: { params: Promise<Record<string, string>> }) => {
     try {
       // Authenticate user
       const authContext = await authenticate(request);
@@ -100,7 +100,7 @@ export function withSuperAdmin(
   handler: (
     request: NextRequest,
     context: AuthContext,
-    routeContext?: { params: Promise<Record<string, string>> }
+    routeContext: { params: Promise<Record<string, string>> }
   ) => Promise<NextResponse>
 ) {
   return withAuth(handler, ['SUPER_ADMIN']);
@@ -113,7 +113,7 @@ export function withMerchant(
   handler: (
     request: NextRequest,
     context: AuthContext,
-    routeContext?: { params: Promise<Record<string, string>> }
+    routeContext: { params: Promise<Record<string, string>> }
   ) => Promise<NextResponse>
 ) {
   return withAuth(handler, ['MERCHANT_OWNER', 'MERCHANT_STAFF']);
@@ -126,7 +126,7 @@ export function withMerchantOwner(
   handler: (
     request: NextRequest,
     context: AuthContext,
-    routeContext?: { params: Promise<Record<string, string>> }
+    routeContext: { params: Promise<Record<string, string>> }
   ) => Promise<NextResponse>
 ) {
   return withAuth(handler, ['MERCHANT_OWNER']);
@@ -139,7 +139,7 @@ export function withCustomer(
   handler: (
     request: NextRequest,
     context: AuthContext,
-    params?: any
+    routeContext: { params: Promise<Record<string, string>> }
   ) => Promise<NextResponse>
 ) {
   return withAuth(handler, ['CUSTOMER']);

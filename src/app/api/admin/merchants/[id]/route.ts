@@ -31,11 +31,12 @@ import merchantService from '@/lib/services/MerchantService';
 import { successResponse } from '@/lib/middleware/errorHandler';
 import { withSuperAdmin } from '@/lib/middleware/auth';
 import type { UpdateMerchantInput } from '@/lib/services/MerchantService';
+import { AuthContext } from '@/lib/types/auth';
 
 async function getMerchantHandler(
   request: NextRequest,
-  authContext: unknown,
-  context: { params: Promise<{ id: string }> }
+  authContext: AuthContext,
+  context: { params: Promise<Record<string, string>> }
 ) {
   const params = await context.params;
   const merchantId = BigInt(params.id);
@@ -48,8 +49,8 @@ async function getMerchantHandler(
 
 async function updateMerchantHandler(
   request: NextRequest,
-  authContext: unknown,
-  context: { params: Promise<{ id: string }> }
+  authContext: AuthContext,
+  context: { params: Promise<Record<string, string>> }
 ) {
   const params = await context.params;
   const merchantId = BigInt(params.id);
@@ -63,8 +64,8 @@ async function updateMerchantHandler(
 
 async function deleteMerchantHandler(
   request: NextRequest,
-  authContext: unknown,
-  context: { params: Promise<{ id: string }> }
+  authContext: AuthContext,
+  context: { params: Promise<Record<string, string>> }
 ) {
   const params = await context.params;
   const merchantId = BigInt(params.id);
