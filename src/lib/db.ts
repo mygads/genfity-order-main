@@ -5,16 +5,35 @@ import { Pool } from 'pg';
  * Using pg Pool for connection pooling
  */
 
-const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5432'),
-  database: process.env.DB_NAME || 'genfity',
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || '',
-  max: 20, // Maximum number of clients in the pool
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
-});
+// Parse DATABASE_URL or use individual env vars
+const getDatabaseConfig = () => {
+  const databaseUrl = process.env.DATABASE_URL;
+  
+  if (databaseUrl) {
+    // Parse DATABASE_URL
+    return {
+      connectionString: databaseUrl,
+      ssl: databaseUrl.includes('sslmode=require') ? { rejectUnauthorized: false } : undefined,
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 2000,
+    };
+  }
+  
+  // Fallback to individual env vars
+  return {
+    host: process.env.DB_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT || '5432'),
+    database: process.env.DB_NAME || 'genfity',
+    user: process.env.DB_USER || 'postgres',
+    password: process.env.DB_PASSWORD || '',
+    max: 20,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 2000,
+  };
+};
+
+const pool = new Pool(getDatabaseConfig());
 
 /**
  * Export the pool as db for query execution
