@@ -319,7 +319,7 @@ class MenuService {
     merchantId: bigint,
     categoryId?: bigint
   ): Promise<Menu[]> {
-    return await menuRepository.findAllMenus(merchantId, categoryId, false);
+    return await menuRepository.findAllMenus(merchantId, categoryId, true);
   }
 
   /**

@@ -5,10 +5,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import menuService from '@/lib/services/MenuService';
+import addonService from '@/lib/services/AddonService';
 import { withMerchant } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/types/auth';
 import { ValidationError } from '@/lib/constants/errors';
+import { serializeBigInt } from '@/lib/utils/serializer';
+import prisma from '@/lib/db/client';
 
 /**
  * GET /api/merchant/addon-categories
@@ -16,35 +18,34 @@ import { ValidationError } from '@/lib/constants/errors';
  */
 async function handleGet(
   req: NextRequest,
-  _context: AuthContext,
+  context: AuthContext,
   _routeContext: { params: Promise<Record<string, string>> }
 ) {
   try {
-    // Get merchant ID from merchant_users table via context
-    // For now, we'll get from query param or use first merchant
-    const { searchParams } = new URL(req.url);
-    const merchantIdParam = searchParams.get('merchantId');
+    // Get merchant from user's merchant_users relationship
+    const merchantUser = await prisma.merchantUser.findFirst({
+      where: { userId: context.userId },
+    });
 
-    if (!merchantIdParam) {
+    if (!merchantUser) {
       return NextResponse.json(
         {
           success: false,
-          error: 'VALIDATION_ERROR',
-          message: 'Merchant ID is required',
-          statusCode: 400,
+          error: 'MERCHANT_NOT_FOUND',
+          message: 'Merchant not found for this user',
+          statusCode: 404,
         },
-        { status: 400 }
+        { status: 404 }
       );
     }
 
-    const merchantId = BigInt(merchantIdParam);
-
-    // Get addon categories
-    const addonCategories = await menuService.getAddonCategoriesByMerchant(merchantId);
+    const categories = await addonService.getAddonCategories(
+      merchantUser.merchantId
+    );
 
     return NextResponse.json({
       success: true,
-      data: addonCategories,
+      data: serializeBigInt(categories),
       message: 'Addon categories retrieved successfully',
       statusCode: 200,
     });
@@ -55,7 +56,7 @@ async function handleGet(
       {
         success: false,
         error: 'INTERNAL_ERROR',
-        message: 'Failed to get addon categories',
+        message: 'Failed to retrieve addon categories',
         statusCode: 500,
       },
       { status: 500 }
@@ -69,40 +70,61 @@ async function handleGet(
  */
 async function handlePost(
   req: NextRequest,
-  _context: AuthContext,
+  context: AuthContext,
   _routeContext: { params: Promise<Record<string, string>> }
 ) {
   try {
+    // Get merchant from user's merchant_users relationship
+    const merchantUser = await prisma.merchantUser.findFirst({
+      where: { userId: context.userId },
+    });
+
+    if (!merchantUser) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'MERCHANT_NOT_FOUND',
+          message: 'Merchant not found for this user',
+          statusCode: 404,
+        },
+        { status: 404 }
+      );
+    }
+
     const body = await req.json();
 
-    // Validate required fields
-    if (!body.merchantId || !body.name) {
+    // Validation
+    if (!body.name || body.name.trim().length === 0) {
       return NextResponse.json(
         {
           success: false,
           error: 'VALIDATION_ERROR',
-          message: 'Merchant ID and name are required',
+          message: 'Category name is required',
           statusCode: 400,
         },
         { status: 400 }
       );
     }
 
-    // Create addon category
-    const addonCategory = await menuService.createAddonCategory({
-      merchantId: BigInt(body.merchantId),
-      name: body.name,
-      description: body.description,
-      minSelection: body.minSelection || 0,
-      maxSelection: body.maxSelection,
-    });
+    const category = await addonService.createAddonCategory(
+      merchantUser.merchantId,
+      {
+        name: body.name,
+        description: body.description,
+        minSelection: body.minSelection,
+        maxSelection: body.maxSelection,
+      }
+    );
 
-    return NextResponse.json({
-      success: true,
-      data: addonCategory,
-      message: 'Addon category created successfully',
-      statusCode: 201,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        data: serializeBigInt(category),
+        message: 'Addon category created successfully',
+        statusCode: 201,
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error('Error creating addon category:', error);
 
@@ -122,7 +144,10 @@ async function handlePost(
       {
         success: false,
         error: 'INTERNAL_ERROR',
-        message: 'Failed to create addon category',
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Failed to create addon category',
         statusCode: 500,
       },
       { status: 500 }

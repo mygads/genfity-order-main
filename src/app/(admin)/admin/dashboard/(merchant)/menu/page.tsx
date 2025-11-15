@@ -56,10 +56,19 @@ export default function MerchantMenuPage() {
   const [success, setSuccess] = useState<string | null>(null);
   
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [filteredMenuItems, setFilteredMenuItems] = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [merchant, setMerchant] = useState<Merchant | null>(null);
   const [selectedPromoMenu, setSelectedPromoMenu] = useState<MenuItem | null>(null);
   const [selectedStockMenu, setSelectedStockMenu] = useState<MenuItem | null>(null);
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+
+  // Pagination & Filter states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterCategory, setFilterCategory] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
 
   const fetchData = async () => {
     try {
@@ -182,6 +191,41 @@ export default function MerchantMenuPage() {
     }
   };
 
+  const handleOutOfStock = async (id: string, name: string) => {
+    if (!confirm(`Set "${name}" as out of stock (stock = 0)?`)) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) {
+        router.push("/admin/login");
+        return;
+      }
+
+      const response = await fetch(`/api/merchant/menu/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ stockQty: 0 }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || "Failed to update stock");
+      }
+
+      setSuccess(`Menu "${name}" marked as out of stock`);
+      setTimeout(() => setSuccess(null), 3000);
+      fetchData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+      setTimeout(() => setError(null), 5000);
+    }
+  };
+
   const formatPrice = (price: string | number, currency?: string): string => {
     const numPrice = typeof price === 'string' ? parseFloat(price) : price;
     if (isNaN(numPrice)) return `${currency || 'AUD'} 0`;
@@ -203,6 +247,48 @@ export default function MerchantMenuPage() {
     const category = categories.find(c => c.id === item.categoryId);
     return category?.name || 'Uncategorized';
   };
+
+  // Filter and search logic
+  useEffect(() => {
+    let filtered = [...menuItems];
+
+    // Search filter
+    if (searchQuery) {
+      filtered = filtered.filter(item =>
+        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+    }
+
+    // Category filter
+    if (filterCategory !== "all") {
+      filtered = filtered.filter(item => {
+        if (item.categories && item.categories.length > 0) {
+          return item.categories.some(c => c.categoryId === filterCategory);
+        }
+        return item.categoryId === filterCategory;
+      });
+    }
+
+    // Status filter - don't filter by default, only when explicitly selected
+    if (filterStatus === "active") {
+      filtered = filtered.filter(item => item.isActive);
+    } else if (filterStatus === "inactive") {
+      filtered = filtered.filter(item => !item.isActive);
+    }
+    // if "all", don't filter - show everything
+
+    setFilteredMenuItems(filtered);
+    setCurrentPage(1); // Reset to first page when filters change
+  }, [menuItems, searchQuery, filterCategory, filterStatus]);
+
+  // Pagination logic
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredMenuItems.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredMenuItems.length / itemsPerPage);
+
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
   if (loading) {
     return (
@@ -246,19 +332,59 @@ export default function MerchantMenuPage() {
               Add Menu Item
             </Link>
           </div>
-          
-          {menuItems.length === 0 ? (
-            <div className="py-10 text-center">
-              <p className="text-sm text-gray-500 dark:text-gray-400">No menu items found</p>
-              <Link
-                href="/admin/dashboard/menu/create"
-                className="mt-4 inline-flex h-11 items-center gap-2 rounded-lg bg-brand-500 px-6 text-sm font-medium text-white hover:bg-brand-600"
+
+          {/* Search and Filters */}
+          <div className="mb-5 grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div>
+              <input
+                type="text"
+                placeholder="Search menu items..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+              />
+            </div>
+            <div>
+              <select
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
               >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Create First Menu Item
-              </Link>
+                <option value="all">All Categories</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
+              >
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+          
+          {filteredMenuItems.length === 0 ? (
+            <div className="py-10 text-center">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {menuItems.length === 0 ? "No menu items found" : "No items match your filters"}
+              </p>
+              {menuItems.length === 0 && (
+                <Link
+                  href="/admin/dashboard/menu/create"
+                  className="mt-4 inline-flex h-11 items-center gap-2 rounded-lg bg-brand-500 px-6 text-sm font-medium text-white hover:bg-brand-600"
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Create First Menu Item
+                </Link>
+              )}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -275,7 +401,7 @@ export default function MerchantMenuPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                  {menuItems.map((item) => (
+                  {currentItems.map((item) => (
                     <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-900/30">
                       <td className="px-4 py-4">
                         {item.imageUrl ? (
@@ -364,51 +490,140 @@ export default function MerchantMenuPage() {
                         </button>
                       </td>
                       <td className="px-4 py-4">
-                        <div className="flex items-center gap-2">
-                          {item.trackStock && (
-                            <button
-                              onClick={() => setSelectedStockMenu(item)}
-                              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-brand-200 bg-brand-50 text-brand-600 hover:bg-brand-100 dark:border-brand-900/50 dark:bg-brand-900/20 dark:text-brand-400 dark:hover:bg-brand-900/30"
-                              title="Add Stock"
-                            >
-                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                              </svg>
-                            </button>
-                          )}
+                        <div className="relative">
                           <button
-                            onClick={() => setSelectedPromoMenu(item)}
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-warning-200 bg-warning-50 text-warning-600 hover:bg-warning-100 dark:border-warning-900/50 dark:bg-warning-900/20 dark:text-warning-400 dark:hover:bg-warning-900/30"
-                            title="Setup Promo"
-                          >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                            </svg>
-                          </button>
-                          <Link
-                            href={`/admin/dashboard/menu/edit/${item.id}`}
+                            onClick={() => setOpenDropdownId(openDropdownId === item.id ? null : item.id)}
                             className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                            title="Edit"
+                            title="Actions"
                           >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                          </Link>
-                          <button
-                            onClick={() => handleDelete(item.id, item.name)}
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-error-200 bg-error-50 text-error-600 hover:bg-error-100 dark:border-error-900/50 dark:bg-error-900/20 dark:text-error-400 dark:hover:bg-error-900/30"
-                            title="Delete"
-                          >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
                             </svg>
                           </button>
+
+                          {openDropdownId === item.id && (
+                            <>
+                              <div 
+                                className="fixed inset-0 z-10" 
+                                onClick={() => setOpenDropdownId(null)}
+                              />
+                              <div className="absolute right-0 z-20 mt-2 w-48 origin-top-right rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                                <div className="py-1">
+                                  {item.trackStock && (item.stockQty || 0) > 0 && (
+                                    <button
+                                      onClick={() => {
+                                        handleOutOfStock(item.id, item.name);
+                                        setOpenDropdownId(null);
+                                      }}
+                                      className="flex w-full items-center gap-3 px-4 py-2 text-sm text-orange-600 hover:bg-orange-50 dark:text-orange-400 dark:hover:bg-orange-900/20"
+                                    >
+                                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                      </svg>
+                                      Out of Stock
+                                    </button>
+                                  )}
+                                  {item.trackStock && (
+                                    <button
+                                      onClick={() => {
+                                        setSelectedStockMenu(item);
+                                        setOpenDropdownId(null);
+                                      }}
+                                      className="flex w-full items-center gap-3 px-4 py-2 text-sm text-brand-600 hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-brand-900/20"
+                                    >
+                                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                      </svg>
+                                      Add Stock
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={() => {
+                                      setSelectedPromoMenu(item);
+                                      setOpenDropdownId(null);
+                                    }}
+                                    className="flex w-full items-center gap-3 px-4 py-2 text-sm text-warning-600 hover:bg-warning-50 dark:text-warning-400 dark:hover:bg-warning-900/20"
+                                  >
+                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                                    </svg>
+                                    Setup Promo
+                                  </button>
+                                  <Link
+                                    href={`/admin/dashboard/menu/edit/${item.id}`}
+                                    className="flex w-full items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
+                                    onClick={() => setOpenDropdownId(null)}
+                                  >
+                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                    Edit Menu
+                                  </Link>
+                                  <div className="border-t border-gray-200 dark:border-gray-700" />
+                                  <button
+                                    onClick={() => {
+                                      handleDelete(item.id, item.name);
+                                      setOpenDropdownId(null);
+                                    }}
+                                    className="flex w-full items-center gap-3 px-4 py-2 text-sm text-error-600 hover:bg-error-50 dark:text-error-400 dark:hover:bg-error-900/20"
+                                  >
+                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                    Delete
+                                  </button>
+                                </div>
+                              </div>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="mt-5 flex items-center justify-between border-t border-gray-200 pt-5 dark:border-gray-800">
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredMenuItems.length)} of {filteredMenuItems.length} items
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => paginate(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <button
+                        key={page}
+                        onClick={() => paginate(page)}
+                        className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border text-sm font-medium ${
+                          currentPage === page
+                            ? 'border-brand-500 bg-brand-500 text-white'
+                            : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => paginate(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

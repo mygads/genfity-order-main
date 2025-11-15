@@ -90,6 +90,18 @@ const merchantNavItems: NavItem[] = [
     roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
   },
   {
+    icon: <BoxCubeIcon />,
+    name: "Addon Categories",
+    path: "/admin/dashboard/addon-categories",
+    roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+  },
+  {
+    icon: <ListIcon />,
+    name: "Addon Items",
+    path: "/admin/dashboard/addon-items",
+    roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+  },
+  {
     icon: <PieChartIcon />,
     name: "Reports",
     path: "/admin/dashboard/reports",

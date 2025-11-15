@@ -3,14 +3,16 @@
  * GET /api/merchant/addon-categories/[id] - Get addon category details
  * PUT /api/merchant/addon-categories/[id] - Update addon category
  * DELETE /api/merchant/addon-categories/[id] - Delete addon category
+ * PATCH /api/merchant/addon-categories/[id]/toggle-active - Toggle active status
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import menuService from '@/lib/services/MenuService';
-import menuRepository from '@/lib/repositories/MenuRepository';
+import addonService from '@/lib/services/AddonService';
 import { withMerchant } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/types/auth';
 import { ValidationError, NotFoundError } from '@/lib/constants/errors';
+import { serializeBigInt } from '@/lib/utils/serializer';
+import prisma from '@/lib/db/client';
 
 /**
  * GET /api/merchant/addon-categories/[id]
@@ -18,36 +20,58 @@ import { ValidationError, NotFoundError } from '@/lib/constants/errors';
  */
 async function handleGet(
   req: NextRequest,
-  _context: AuthContext,
+  context: AuthContext,
   contextParams: { params: Promise<Record<string, string>> }
 ) {
   try {
-    const params = await contextParams.params;
-    const categoryId = BigInt(params?.id || '0');
+    // Get merchant from user's merchant_users relationship
+    const merchantUser = await prisma.merchantUser.findFirst({
+      where: { userId: context.userId },
+    });
 
-    // Get addon category with items from repository
-    const category = await menuRepository.findAddonCategoryById(categoryId);
-
-    if (!category) {
+    if (!merchantUser) {
       return NextResponse.json(
         {
           success: false,
-          error: 'NOT_FOUND',
-          message: 'Addon category not found',
+          error: 'MERCHANT_NOT_FOUND',
+          message: 'Merchant not found for this user',
           statusCode: 404,
         },
         { status: 404 }
       );
     }
 
+    const params = await contextParams.params;
+    const categoryId = BigInt(params?.id || '0');
+
+    const category = await addonService.getAddonCategoryById(
+      categoryId,
+      merchantUser.merchantId
+    );
+
     return NextResponse.json({
       success: true,
-      data: category,
+      data: serializeBigInt(category),
       message: 'Addon category retrieved successfully',
       statusCode: 200,
     });
   } catch (error) {
     console.error('Error getting addon category:', error);
+
+    if (
+      error instanceof Error &&
+      error.message === 'Addon category not found'
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'NOT_FOUND',
+          message: error.message,
+          statusCode: 404,
+        },
+        { status: 404 }
+      );
+    }
 
     return NextResponse.json(
       {
@@ -67,25 +91,46 @@ async function handleGet(
  */
 async function handlePut(
   req: NextRequest,
-  _context: AuthContext,
+  context: AuthContext,
   contextParams: { params: Promise<Record<string, string>> }
 ) {
   try {
+    // Get merchant from user's merchant_users relationship
+    const merchantUser = await prisma.merchantUser.findFirst({
+      where: { userId: context.userId },
+    });
+
+    if (!merchantUser) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'MERCHANT_NOT_FOUND',
+          message: 'Merchant not found for this user',
+          statusCode: 404,
+        },
+        { status: 404 }
+      );
+    }
+
     const params = await contextParams.params;
     const categoryId = BigInt(params?.id || '0');
     const body = await req.json();
 
-    // Update addon category
-    const category = await menuService.updateAddonCategory(categoryId, {
-      name: body.name,
-      description: body.description,
-      minSelection: body.minSelection,
-      maxSelection: body.maxSelection,
-    });
+    const category = await addonService.updateAddonCategory(
+      categoryId,
+      merchantUser.merchantId,
+      {
+        name: body.name,
+        description: body.description,
+        minSelection: body.minSelection,
+        maxSelection: body.maxSelection,
+        isActive: body.isActive,
+      }
+    );
 
     return NextResponse.json({
       success: true,
-      data: category,
+      data: serializeBigInt(category),
       message: 'Addon category updated successfully',
       statusCode: 200,
     });
@@ -104,7 +149,10 @@ async function handlePut(
       );
     }
 
-    if (error instanceof NotFoundError) {
+    if (
+      error instanceof Error &&
+      error.message === 'Addon category not found'
+    ) {
       return NextResponse.json(
         {
           success: false,
@@ -120,7 +168,10 @@ async function handlePut(
       {
         success: false,
         error: 'INTERNAL_ERROR',
-        message: 'Failed to update addon category',
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Failed to update addon category',
         statusCode: 500,
       },
       { status: 500 }
@@ -134,21 +185,84 @@ async function handlePut(
  */
 async function handleDelete(
   req: NextRequest,
-  _context: AuthContext,
+  context: AuthContext,
   contextParams: { params: Promise<Record<string, string>> }
 ) {
   try {
+    // Get merchant from user's merchant_users relationship
+    const merchantUser = await prisma.merchantUser.findFirst({
+      where: { userId: context.userId },
+    });
+
+    if (!merchantUser) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'MERCHANT_NOT_FOUND',
+          message: 'Merchant not found for this user',
+          statusCode: 404,
+        },
+        { status: 404 }
+      );
+    }
+
     const params = await contextParams.params;
     const categoryId = BigInt(params?.id || '0');
 
-    // Delete addon category
-    await menuService.deleteAddonCategory(categoryId);
+    await addonService.deleteAddonCategory(categoryId, merchantUser.merchantId);
 
     return NextResponse.json({
       success: true,
       message: 'Addon category deleted successfully',
       statusCode: 200,
     });
+  } catch (error) {
+    console.error('Error deleting addon category:', error);
+
+    if (error instanceof Error) {
+      if (error.message.includes('not found')) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'NOT_FOUND',
+            message: error.message,
+            statusCode: 404,
+          },
+          { status: 404 }
+        );
+      }
+
+      if (error.message.includes('assigned to menu')) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'CONFLICT',
+            message: error.message,
+            statusCode: 409,
+          },
+          { status: 409 }
+        );
+      }
+    }
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'INTERNAL_ERROR',
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Failed to delete addon category',
+        statusCode: 500,
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export const GET = withMerchant(handleGet);
+export const PUT = withMerchant(handlePut);
+export const DELETE = withMerchant(handleDelete);
   } catch (error) {
     console.error('Error deleting addon category:', error);
 

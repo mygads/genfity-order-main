@@ -32,8 +32,12 @@ export default function EditMenuPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [merchant, setMerchant] = useState<Merchant | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadMessage, setUploadMessage] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   
   const [formData, setFormData] = useState<MenuFormData>({
     name: "",
@@ -114,6 +118,7 @@ export default function EditMenuPage() {
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     if (!validTypes.includes(file.type)) {
       setError('Invalid file type. Only JPEG, PNG, and WebP are allowed.');
+      setTimeout(() => setError(null), 3000);
       return;
     }
 
@@ -121,16 +126,32 @@ export default function EditMenuPage() {
     const maxSizeBytes = maxSizeMB * 1024 * 1024;
     if (file.size > maxSizeBytes) {
       setError(`File size must be less than ${maxSizeMB}MB.`);
+      setTimeout(() => setError(null), 3000);
       return;
     }
 
     try {
       setUploadingImage(true);
       setError(null);
+      setUploadProgress(0);
+      setUploadMessage('Preparing upload...');
 
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('menuId', menuId);
+      // Simulate progress for better UX
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return 90;
+          }
+          return prev + 10;
+        });
+      }, 100);
+
+      const formDataUpload = new FormData();
+      formDataUpload.append('file', file);
+      formDataUpload.append('menuId', menuId);
+
+      setUploadMessage('Uploading image...');
 
       const token = localStorage.getItem('accessToken');
       const response = await fetch('/api/merchant/upload/menu-image', {
@@ -138,8 +159,11 @@ export default function EditMenuPage() {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-        body: formData,
+        body: formDataUpload,
       });
+
+      clearInterval(progressInterval);
+      setUploadProgress(100);
 
       const data = await response.json();
 
@@ -147,12 +171,23 @@ export default function EditMenuPage() {
         throw new Error(data.message || 'Failed to upload image');
       }
 
+      setUploadMessage('Upload complete!');
       setFormData(prev => ({
         ...prev,
         imageUrl: data.data.url,
       }));
+
+      setSuccess('Image uploaded successfully!');
+      setTimeout(() => {
+        setSuccess(null);
+        setUploadMessage(null);
+        setUploadProgress(0);
+      }, 2000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to upload image');
+      setTimeout(() => setError(null), 5000);
+      setUploadMessage(null);
+      setUploadProgress(0);
     } finally {
       setUploadingImage(false);
     }
@@ -237,19 +272,141 @@ export default function EditMenuPage() {
     <div>
       <PageBreadcrumb pageTitle="Edit Menu Item" />
 
-      <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
+      <div className="space-y-6">
+        {/* Toast Notifications */}
         {error && (
-          <div className="mb-6 rounded-lg bg-error-50 p-4 dark:bg-error-900/20">
+          <div className="rounded-lg bg-error-50 p-4 dark:bg-error-900/20">
             <p className="text-sm text-error-600 dark:text-error-400">{error}</p>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="mb-6 rounded-lg bg-blue-50 p-4 dark:bg-blue-900/20">
-            <p className="text-sm text-blue-600 dark:text-blue-400">
-              <strong>Note:</strong> Category management for this menu item can be done via the dedicated Categories page.
-            </p>
+        {success && (
+          <div className="rounded-lg bg-success-50 p-4 dark:bg-success-900/20">
+            <p className="text-sm text-success-600 dark:text-success-400">{success}</p>
           </div>
+        )}
+
+        {/* Upload Progress Toast */}
+        {uploadMessage && (
+          <div className="rounded-lg bg-brand-50 p-4 dark:bg-brand-900/20">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm font-medium text-brand-600 dark:text-brand-400">{uploadMessage}</p>
+              <span className="text-sm font-semibold text-brand-600 dark:text-brand-400">{uploadProgress}%</span>
+            </div>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-brand-100 dark:bg-brand-900/40">
+              <div 
+                className="h-full bg-brand-500 transition-all duration-300"
+                style={{ width: `${uploadProgress}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Image Upload & Preview Card */}
+        <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03] lg:p-5">
+          <h3 className="mb-3 text-lg font-semibold text-gray-800 dark:text-white/90">Menu Image</h3>
+          
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {/* Image Preview */}
+            {formData.imageUrl ? (
+              <div>
+            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Current Image
+            </label>
+            <div className="relative aspect-square w-full max-w-32 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer" onClick={() => setIsModalOpen(true)}>
+              <Image 
+            src={formData.imageUrl} 
+            alt="Menu preview"
+            fill
+            className="object-cover"
+            unoptimized
+              />
+            </div>
+              </div>
+            ) : (
+              <div>
+            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              No Image
+            </label>
+            <div className="flex aspect-square w-full max-w-32 items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 dark:border-gray-700 dark:bg-gray-900">
+              <div className="text-center">
+            <svg className="mx-auto h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">No image uploaded</p>
+              </div>
+            </div>
+              </div>
+            )}
+
+            {/* Upload Controls */}
+            <div>
+              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Upload New Image
+              </label>
+              <div className="space-y-3">
+            <div className="flex items-center justify-center w-full">
+              <label className="flex w-full cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-brand-300 bg-brand-50 px-4 py-6 hover:bg-brand-100 dark:border-brand-700 dark:bg-brand-900/20 dark:hover:bg-brand-900/30">
+            <svg className="mb-2 h-8 w-8 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+            <p className="mb-1 text-sm font-medium text-brand-600 dark:text-brand-400">
+              {uploadingImage ? 'Uploading...' : 'Click to upload'}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              JPEG, PNG, WebP (max 5MB)
+            </p>
+            <input
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/webp"
+              onChange={handleImageUpload}
+              disabled={uploadingImage}
+              className="hidden"
+            />
+              </label>
+            </div>
+            
+            {formData.imageUrl && (
+              <button
+            type="button"
+            onClick={() => setFormData(prev => ({ ...prev, imageUrl: '' }))}
+            className="w-full rounded-lg border border-error-200 bg-error-50 px-3 py-2 text-sm font-medium text-error-600 hover:bg-error-100 dark:border-error-900/50 dark:bg-error-900/20 dark:text-error-400 dark:hover:bg-error-900/30"
+              >
+            Remove Image
+              </button>
+            )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Image Modal */}
+        {isModalOpen && formData.imageUrl && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75" onClick={() => setIsModalOpen(false)}>
+            <div className="relative max-w-4xl max-h-full p-4">
+              <button
+            className="absolute top-2 right-2 text-white text-2xl font-bold"
+            onClick={() => setIsModalOpen(false)}
+              >
+            &times;
+              </button>
+              <Image
+            src={formData.imageUrl}
+            alt="Menu full view"
+            width={800}
+            height={800}
+            className="object-contain"
+            unoptimized
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Form Card */}
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
+          <h3 className="mb-4 text-lg font-semibold text-gray-800 dark:text-white/90">Menu Details</h3>
+          
+          <form onSubmit={handleSubmit} className="space-y-6">
 
           <div>
             <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -302,52 +459,7 @@ export default function EditMenuPage() {
                 />
               </div>
             </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Image Upload
-              </label>
-              <input
-                type="file"
-                accept="image/jpeg,image/jpg,image/png,image/webp"
-                onChange={handleImageUpload}
-                disabled={uploadingImage}
-                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 file:mr-4 file:rounded file:border-0 file:bg-brand-50 file:px-4 file:py-1 file:text-sm file:font-medium file:text-brand-600 hover:file:bg-brand-100 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:file:bg-brand-900/20 dark:file:text-brand-400"
-              />
-              {uploadingImage && (
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Uploading image...</p>
-              )}
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                Supported formats: JPEG, PNG, WebP (max 5MB)
-              </p>
-            </div>
           </div>
-
-          {formData.imageUrl && (
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Image Preview
-              </label>
-              {/* <img 
-                src={formData.imageUrl} 
-                alt="Menu preview"
-                className="h-48 w-48 rounded-lg object-cover"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
-                }}
-              /> */}
-              <Image 
-                src={formData.imageUrl} 
-                alt="Menu preview"
-                width={192}
-                height={192}
-                className="rounded-lg object-cover"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
-                }}
-              />
-            </div>
-          )}
 
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div className="flex items-center gap-3">
@@ -447,6 +559,7 @@ export default function EditMenuPage() {
             </button>
           </div>
         </form>
+      </div>
       </div>
     </div>
   );

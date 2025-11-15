@@ -203,7 +203,9 @@ model AddonItem {
   addonCategoryId BigInt           @map("addon_category_id")
   name            String
   description     String?
-  price           Decimal          @db.Decimal(10, 2)
+  price           Decimal          @default(0) @db.Decimal(10, 2)
+  inputType       AddonInputType   @default(SELECT) @map("input_type")
+  sortOrder       Int              @default(0) @map("sort_order")
   isActive        Boolean          @default(true) @map("is_active")
   trackStock      Boolean          @default(false) @map("track_stock")
   stockQty        Int?             @map("stock_qty")
@@ -213,18 +215,24 @@ model AddonItem {
   orderItemAddons OrderItemAddon[]
 
   @@index([addonCategoryId])
+  @@index([sortOrder])
   @@map("addon_items")
 }
 
 model MenuAddonCategory {
   menuId          BigInt        @map("menu_id")
   addonCategoryId BigInt        @map("addon_category_id")
+  isRequired      Boolean       @default(false) @map("is_required")
+  displayOrder    Int           @default(0) @map("display_order")
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
   addonCategory   AddonCategory @relation(fields: [addonCategoryId], references: [id], onDelete: Cascade)
   menu            Menu          @relation(fields: [menuId], references: [id], onDelete: Cascade)
 
   @@id([menuId, addonCategoryId])
   @@index([menuId])
   @@index([addonCategoryId])
+  @@index([displayOrder])
   @@map("menu_addon_categories")
 }
 
@@ -345,4 +353,9 @@ enum OrderStatus {
   READY
   COMPLETED
   CANCELLED
+}
+
+enum AddonInputType {
+  SELECT
+  QTY
 }

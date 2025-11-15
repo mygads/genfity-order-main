@@ -79,6 +79,14 @@ async function handlePost(req: NextRequest, context: AuthContext) {
       buffer
     );
 
+    // Update menu item with new image URL if menuId provided
+    if (menuId) {
+      await prisma.menu.update({
+        where: { id: BigInt(menuId) },
+        data: { imageUrl: result.url },
+      });
+    }
+
     return NextResponse.json({
       success: true,
       data: result,

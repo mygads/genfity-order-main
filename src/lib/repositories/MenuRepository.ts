@@ -67,7 +67,7 @@ export class MenuRepository {
    * ========================================
    */
 
-  async findAllMenus(merchantId: bigint, categoryId?: bigint, includeInactive = false) {
+  async findAllMenus(merchantId: bigint, categoryId?: bigint, includeInactive = true) {
     const results = await prisma.menu.findMany({
       where: {
         merchantId,
@@ -78,7 +78,7 @@ export class MenuRepository {
             },
           },
         }),
-        ...(includeInactive ? {} : { isActive: true }),
+        ...(!includeInactive && { isActive: true }),
       },
       include: {
         category: true, // Keep for backward compatibility
