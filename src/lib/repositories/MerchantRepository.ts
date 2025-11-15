@@ -57,6 +57,23 @@ export class MerchantRepository {
   async findAll(includeInactive = false) {
     return prisma.merchant.findMany({
       where: includeInactive ? {} : { isActive: true },
+      include: {
+        merchantUsers: {
+          where: {
+            role: 'OWNER',
+          },
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                role: true,
+              },
+            },
+          },
+        },
+      },
       orderBy: {
         createdAt: 'desc',
       },

@@ -14,8 +14,11 @@ import { successResponse } from '@/lib/middleware/errorHandler';
 import { withSuperAdmin } from '@/lib/middleware/auth';
 import { AuthContext } from '@/lib/types/auth';
 import userRepository from '@/lib/repositories/UserRepository';
+import merchantService from '@/lib/services/MerchantService';
 import { validateEmail } from '@/lib/utils/validators';
+import { hashPassword } from '@/lib/utils/passwordHasher';
 import { NotFoundError, ERROR_CODES } from '@/lib/constants/errors';
+import prisma from '@/lib/db/client';
 
 /**
  * GET handler - Get user by ID
@@ -59,7 +62,7 @@ async function updateUserHandler(
     validateEmail(body.email);
   }
 
-  // Update user
+  // Update user basic fields
   const updateData: Record<string, unknown> = {};
   if (body.name !== undefined) updateData.name = body.name;
   if (body.email !== undefined) updateData.email = body.email;
@@ -67,7 +70,29 @@ async function updateUserHandler(
   if (body.role !== undefined) updateData.role = body.role;
   if (body.isActive !== undefined) updateData.isActive = body.isActive;
 
+  // Hash password if provided
+  if (body.password) {
+    updateData.passwordHash = await hashPassword(body.password);
+  }
+
   const updated = await userRepository.update(userId, updateData);
+
+  // Update merchant link if role changed or merchantId changed
+  if (body.merchantId !== undefined || body.role !== undefined) {
+    const targetRole = body.role || user.role;
+    const requiresMerchant = targetRole === 'MERCHANT_OWNER' || targetRole === 'MERCHANT_STAFF';
+
+    // Remove existing merchant links
+    await prisma.merchantUser.deleteMany({
+      where: { userId },
+    });
+
+    // Add new merchant link if required
+    if (requiresMerchant && body.merchantId) {
+      const merchantRole = targetRole === 'MERCHANT_OWNER' ? 'OWNER' : 'STAFF';
+      await merchantService.addStaff(BigInt(body.merchantId), userId, merchantRole);
+    }
+  }
 
   return successResponse({ user: updated }, 'User updated successfully', 200);
 }

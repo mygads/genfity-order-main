@@ -28,7 +28,20 @@ async function getUsersHandler(
   const merchantId = searchParams.get('merchantId'); // Filter by merchant
 
   interface UserWithMerchants {
-    merchantUsers?: Array<{ merchantId: bigint }>;
+    id: bigint;
+    name: string;
+    email: string;
+    phone: string | null;
+    role: string;
+    isActive: boolean;
+    createdAt: Date;
+    merchantUsers?: Array<{ 
+      merchantId: bigint;
+      merchant: {
+        id: bigint;
+        name: string;
+      };
+    }>;
   }
 
   let users: UserWithMerchants[];
@@ -47,7 +60,20 @@ async function getUsersHandler(
     );
   }
 
-  return successResponse({ users }, 'Users retrieved successfully', 200);
+  // Format response with merchant info
+  const formattedUsers = users.map(user => ({
+    id: user.id.toString(),
+    name: user.name,
+    email: user.email,
+    phone: user.phone,
+    role: user.role,
+    isActive: user.isActive,
+    merchantId: user.merchantUsers?.[0]?.merchantId.toString(),
+    merchantName: user.merchantUsers?.[0]?.merchant.name,
+    createdAt: user.createdAt.toISOString(),
+  }));
+
+  return successResponse(formattedUsers, 'Users retrieved successfully', 200);
 }
 
 /**

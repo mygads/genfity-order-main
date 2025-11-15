@@ -49,18 +49,18 @@ const superAdminNavItems: NavItem[] = [
     path: "/admin/dashboard/analytics",
     roles: ["SUPER_ADMIN"],
   },
-  {
-    icon: <UserCircleIcon />,
-    name: "Profile",
-    path: "/admin/dashboard/profile",
-    roles: ["SUPER_ADMIN"],
-  },
-  {
-    icon: <UserCircleIcon />,
-    name: "Settings",
-    path: "/admin/dashboard/settings",
-    roles: ["SUPER_ADMIN"],
-  },
+  // {
+  //   icon: <UserCircleIcon />,
+  //   name: "Profile",
+  //   path: "/admin/dashboard/profile",
+  //   roles: ["SUPER_ADMIN"],
+  // },
+  // {
+  //   icon: <UserCircleIcon />,
+  //   name: "Settings",
+  //   path: "/admin/dashboard/settings",
+  //   roles: ["SUPER_ADMIN"],
+  // },
 ];
 
 // Merchant Owner Menu Items
@@ -107,18 +107,18 @@ const merchantNavItems: NavItem[] = [
     path: "/admin/dashboard/staff",
     roles: ["MERCHANT_OWNER"],
   },
-  {
-    icon: <UserCircleIcon />,
-    name: "Profile",
-    path: "/admin/dashboard/profile",
-    roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
-  },
-  {
-    icon: <UserCircleIcon />,
-    name: "Settings",
-    path: "/admin/dashboard/settings",
-    roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
-  },
+  // {
+  //   icon: <UserCircleIcon />,
+  //   name: "Profile",
+  //   path: "/admin/dashboard/profile",
+  //   roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+  // },
+  // {
+  //   icon: <UserCircleIcon />,
+  //   name: "Settings",
+  //   path: "/admin/dashboard/settings",
+  //   roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+  // },
 ];
 
 const AppSidebar: React.FC = () => {

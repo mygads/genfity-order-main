@@ -6,6 +6,8 @@ import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { useToast } from "@/hooks/useToast";
 import ToastContainer from "@/components/ui/ToastContainer";
 import ConfirmDialog from "@/components/modals/ConfirmDialog";
+import AddOwnerModal from "./AddOwnerModal";
+import ViewUsersModal from "./ViewUsersModal";
 
 interface Merchant {
   id: string;
@@ -16,6 +18,12 @@ interface Merchant {
   address: string;
   isActive: boolean;
   createdAt: string;
+  openingHours?: Array<{
+    dayOfWeek: number;
+    openTime: string | null;
+    closeTime: string | null;
+    isClosed: boolean;
+  }>;
 }
 
 export default function MerchantsPage() {
@@ -29,6 +37,20 @@ export default function MerchantsPage() {
   
   // Delete confirmation state
   const [deleteDialog, setDeleteDialog] = useState({
+    isOpen: false,
+    merchantId: "",
+    merchantName: "",
+  });
+  
+  // Add owner modal state
+  const [addOwnerModal, setAddOwnerModal] = useState({
+    isOpen: false,
+    merchantId: "",
+    merchantName: "",
+  });
+  
+  // View users modal state
+  const [viewUsersModal, setViewUsersModal] = useState({
     isOpen: false,
     merchantId: "",
     merchantName: "",
@@ -88,27 +110,70 @@ export default function MerchantsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeOnly]);
 
-  // Toggle merchant status
-  const handleToggleStatus = async (merchantId: string) => {
+  /**
+   * Check if merchant is currently open based on opening hours
+   */
+  const isMerchantOpen = (merchant: Merchant): boolean => {
+    if (!merchant.isActive || !merchant.openingHours || merchant.openingHours.length === 0) {
+      return false;
+    }
+
+    const now = new Date();
+    const currentDay = now.getDay(); // 0 = Sunday, 6 = Saturday
+    const currentTime = now.toTimeString().slice(0, 5); // "HH:MM"
+
+    const todayHours = merchant.openingHours.find(h => h.dayOfWeek === currentDay);
+    
+    if (!todayHours || todayHours.isClosed || !todayHours.openTime || !todayHours.closeTime) {
+      return false;
+    }
+
+    return currentTime >= todayHours.openTime && currentTime <= todayHours.closeTime;
+  };
+
+  /**
+   * Get store status text
+   */
+  const getStoreStatus = (merchant: Merchant): { text: string; isOpen: boolean } => {
+    if (!merchant.isActive) {
+      return { text: 'Inactive', isOpen: false };
+    }
+
+    const isOpen = isMerchantOpen(merchant);
+    return {
+      text: isOpen ? 'Open Now' : 'Closed',
+      isOpen
+    };
+  };
+
+  // Toggle merchant status (active/inactive)
+  // Toggle merchant active/inactive status
+  const handleToggleStatus = async (merchantId: string, currentStatus: boolean) => {
     try {
       const token = localStorage.getItem("accessToken");
       if (!token) return;
 
-      const response = await fetch(`/api/admin/merchants/${merchantId}/toggle`, {
-        method: "POST",
+      const response = await fetch(`/api/admin/merchants/${merchantId}`, {
+        method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
+        body: JSON.stringify({
+          isActive: !currentStatus,
+        }),
       });
 
       if (!response.ok) {
         throw new Error("Failed to toggle merchant status");
       }
 
+      showSuccess("Success", `Merchant ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
+      
       // Refresh merchants list
       fetchMerchants();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to toggle status");
+      showError("Error", err instanceof Error ? err.message : "Failed to toggle status");
     }
   };
 
@@ -187,7 +252,7 @@ export default function MerchantsPage() {
                 onChange={(e) => setActiveOnly(e.target.checked)}
                 className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 dark:border-gray-700"
               />
-              <span>Active Only</span>
+              <span>View All</span>
             </label>
             <button
               onClick={fetchMerchants}
@@ -239,7 +304,10 @@ export default function MerchantsPage() {
                       Phone
                     </th>
                     <th className="px-5 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
-                      Status
+                      Store Status
+                    </th>
+                    <th className="px-5 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
+                      Active Status
                     </th>
                     <th className="px-5 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
                       Actions
@@ -249,7 +317,7 @@ export default function MerchantsPage() {
                 <tbody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
                   {merchants.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="py-10 text-center">
+                      <td colSpan={7} className="py-10 text-center">
                         <p className="text-sm text-gray-500 dark:text-gray-400">No merchants found</p>
                         <button
                           onClick={() => router.push("/admin/dashboard/merchants/create")}
@@ -260,7 +328,10 @@ export default function MerchantsPage() {
                       </td>
                     </tr>
                   ) : (
-                    merchants.map((merchant) => (
+                    merchants.map((merchant) => {
+                      const storeStatus = getStoreStatus(merchant);
+                      
+                      return (
                       <tr key={merchant.id}>
                         <td className="px-5 py-4">
                           <span className="font-mono text-sm text-gray-600 dark:text-gray-400">
@@ -275,14 +346,28 @@ export default function MerchantsPage() {
                         <td className="px-5 py-4 text-sm text-gray-600 dark:text-gray-400">{merchant.email}</td>
                         <td className="px-5 py-4 text-sm text-gray-600 dark:text-gray-400">{merchant.phone}</td>
                         <td className="px-5 py-4">
+                          {/* Store Open/Closed Status */}
+                          <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
+                            storeStatus.isOpen
+                              ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                              : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
+                          }`}>
+                            <span className={`h-1.5 w-1.5 rounded-full ${storeStatus.isOpen ? 'bg-green-600' : 'bg-gray-600'}`} />
+                            {storeStatus.text}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4">
+                          {/* Active/Inactive Toggle */}
                           <button
-                            onClick={() => handleToggleStatus(merchant.id)}
-                            className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
+                            onClick={() => handleToggleStatus(merchant.id, merchant.isActive)}
+                            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
                               merchant.isActive
-                                ? "bg-success-100 text-success-700 dark:bg-success-900/30 dark:text-success-400"
-                                : "bg-error-100 text-error-700 dark:bg-error-900/30 dark:text-error-400"
+                                ? "bg-success-100 text-success-700 hover:bg-success-200 dark:bg-success-900/30 dark:text-success-400 dark:hover:bg-success-900/50"
+                                : "bg-error-100 text-error-700 hover:bg-error-200 dark:bg-error-900/30 dark:text-error-400 dark:hover:bg-error-900/50"
                             }`}
+                            title={`Click to ${merchant.isActive ? 'deactivate' : 'activate'}`}
                           >
+                            <span className={`h-1.5 w-1.5 rounded-full ${merchant.isActive ? 'bg-success-600' : 'bg-error-600'}`} />
                             {merchant.isActive ? "Active" : "Inactive"}
                           </button>
                         </td>
@@ -351,10 +436,57 @@ export default function MerchantsPage() {
                                 />
                               </svg>
                             </button>
+                            <button
+                              onClick={() => setAddOwnerModal({
+                                isOpen: true,
+                                merchantId: merchant.id,
+                                merchantName: merchant.name,
+                              })}
+                              className="text-purple-500 hover:text-purple-600 dark:text-purple-400"
+                              title="Add Owner"
+                            >
+                              <svg
+                                className="h-5 w-5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
+                                />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => setViewUsersModal({
+                                isOpen: true,
+                                merchantId: merchant.id,
+                                merchantName: merchant.name,
+                              })}
+                              className="text-blue-light-500 hover:text-blue-light-600 dark:text-blue-light-400"
+                              title="View Users"
+                            >
+                              <svg
+                                className="h-5 w-5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                                />
+                              </svg>
+                            </button>
                           </div>
                         </td>
                       </tr>
-                    ))
+                      );
+                    })
                   )}
                 </tbody>
               </table>
@@ -371,6 +503,42 @@ export default function MerchantsPage() {
           </div>
         )}
       </div>
+      
+      {/* Add Owner Modal */}
+      <AddOwnerModal
+        isOpen={addOwnerModal.isOpen}
+        onClose={() => setAddOwnerModal({ isOpen: false, merchantId: "", merchantName: "" })}
+        onSuccess={() => {
+          fetchMerchants();
+        }}
+        merchantId={addOwnerModal.merchantId}
+        merchantName={addOwnerModal.merchantName}
+      />
+      
+      {/* View Users Modal */}
+      <ViewUsersModal
+        isOpen={viewUsersModal.isOpen}
+        onClose={() => setViewUsersModal({ isOpen: false, merchantId: "", merchantName: "" })}
+        onSuccess={() => {
+          fetchMerchants();
+        }}
+        merchantId={viewUsersModal.merchantId}
+        merchantName={viewUsersModal.merchantName}
+      />
+      
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={deleteDialog.isOpen}
+        title="Delete Merchant"
+        message={`Are you sure you want to delete "${deleteDialog.merchantName}"? This action cannot be undone.`}
+        confirmText="Delete"
+        variant="danger"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteDialog({ isOpen: false, merchantId: "", merchantName: "" })}
+      />
+      
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} />
     </div>
   );
 }
