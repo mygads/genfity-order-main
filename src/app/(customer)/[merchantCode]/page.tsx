@@ -86,7 +86,15 @@ export default function MerchantModePage({ params }: MerchantPageProps) {
       const response = await fetch(`/api/public/merchants/${code}`);
 
       if (!response.ok) {
-        throw new Error('Merchant tidak ditemukan');
+        let errorMessage = 'Terjadi kesalahan';
+        if (response.status === 404) {
+          errorMessage = 'Merchant tidak ditemukan';
+        } else if (response.status === 500) {
+          errorMessage = 'Terjadi kesalahan server';
+        } else if (response.status === 403) {
+          errorMessage = 'Akses ditolak';
+        }
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
