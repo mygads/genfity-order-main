@@ -17,6 +17,8 @@ interface AddonItemFormData {
   inputType: "SELECT" | "QTY";
   trackStock: boolean;
   stockQty: string;
+  dailyStockTemplate: string;
+  autoResetStock: boolean;
 }
 
 interface AddonItemFormModalProps {
@@ -167,19 +169,70 @@ export default function AddonItemFormModal({
             </div>
 
             {formData.trackStock && (
-              <div className="mt-3">
-                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Stock Quantity
-                </label>
-                <input
-                  type="number"
-                  name="stockQty"
-                  value={formData.stockQty}
-                  onChange={onChange}
-                  min="0"
-                  placeholder="0"
-                  className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                />
+              <div className="mt-3 space-y-3">
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Stock Quantity
+                  </label>
+                  <input
+                    type="number"
+                    name="stockQty"
+                    value={formData.stockQty}
+                    onChange={onChange}
+                    min="0"
+                    placeholder="0"
+                    className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                  />
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Current stock quantity available
+                  </p>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Daily Stock Template
+                  </label>
+                  <input
+                    type="number"
+                    name="dailyStockTemplate"
+                    value={formData.dailyStockTemplate}
+                    onChange={onChange}
+                    min="0"
+                    placeholder="e.g., 50"
+                    className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                  />
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Starting stock quantity for daily resets (optional)
+                  </p>
+                </div>
+
+                {formData.dailyStockTemplate && (
+                  <div className="flex items-center rounded-lg bg-blue-50 p-3 dark:bg-blue-900/20">
+                    <input
+                      type="checkbox"
+                      id="autoResetStock"
+                      name="autoResetStock"
+                      checked={formData.autoResetStock}
+                      onChange={onChange}
+                      className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+                    />
+                    <label htmlFor="autoResetStock" className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Auto Reset Stock Daily
+                    </label>
+                    <div className="ml-auto">
+                      <svg className="h-5 w-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                  </div>
+                )}
+                {formData.autoResetStock && formData.dailyStockTemplate && (
+                  <div className="rounded-lg bg-yellow-50 p-3 dark:bg-yellow-900/20">
+                    <p className="text-xs text-yellow-700 dark:text-yellow-400">
+                      ℹ️ Stock will automatically reset to {formData.dailyStockTemplate} units daily
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </div>

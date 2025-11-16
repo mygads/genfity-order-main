@@ -334,7 +334,6 @@ export default function PaymentPage() {
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-sm text-gray-600">Memuat data...</p>
         </div>
       </div>
     );
@@ -343,7 +342,7 @@ export default function PaymentPage() {
   return (
     <div className="min-h-screen bg-white pb-6">
       {/* Fixed Header - 56px */}
-      <header className="h-14 bg-white border-b border-[#E0E0E0] px-4 flex items-center justify-between sticky top-0 z-[100]">
+      <header className="h-14 bg-white border-b border-[#E0E0E0] px-4 flex items-center justify-between sticky top-0 z-100">
         <Link href={`/${merchantCode}/view-order?mode=${mode}`} className="flex items-center gap-2 text-[#1A1A1A]">
           <span className="text-xl">←</span>
           <span className="text-sm font-medium">Kembali</span>

@@ -83,6 +83,8 @@ export interface CreateAddonItemDTO {
   displayOrder?: number;
   trackStock?: boolean;
   stockQty?: number;
+  dailyStockTemplate?: number;
+  autoResetStock?: boolean;
 }
 
 export interface UpdateAddonItemDTO {
@@ -94,6 +96,8 @@ export interface UpdateAddonItemDTO {
   isActive?: boolean;
   trackStock?: boolean;
   stockQty?: number;
+  dailyStockTemplate?: number;
+  autoResetStock?: boolean;
 }
 
 export interface AddMenuAddonDTO {

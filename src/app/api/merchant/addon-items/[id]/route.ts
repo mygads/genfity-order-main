@@ -115,6 +115,8 @@ async function handlePut(
         isActive: body.isActive,
         trackStock: body.trackStock,
         stockQty: body.stockQty,
+        dailyStockTemplate: body.dailyStockTemplate,
+        autoResetStock: body.autoResetStock,
       }
     );
 

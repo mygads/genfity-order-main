@@ -25,6 +25,9 @@ interface AddonItem {
   isActive: boolean;
   trackStock: boolean;
   stockQty: number | null;
+  dailyStockTemplate: number | null;
+  autoResetStock: boolean;
+  lastStockResetAt: string | null;
   createdAt: string;
   addonCategory?: AddonCategory;
 }
@@ -37,6 +40,8 @@ interface AddonItemFormData {
   inputType: "SELECT" | "QTY";
   trackStock: boolean;
   stockQty: string;
+  dailyStockTemplate: string;
+  autoResetStock: boolean;
 }
 
 interface StockUpdateModalState {
@@ -73,6 +78,8 @@ export default function AddonItemsPage() {
     inputType: "SELECT",
     trackStock: false,
     stockQty: "",
+    dailyStockTemplate: "",
+    autoResetStock: false,
   });
 
   // Stock update modal
@@ -158,8 +165,8 @@ export default function AddonItemsPage() {
       setFormData(prev => ({
         ...prev,
         [name]: checked,
-        // Reset stock qty if unchecking trackStock
-        ...(name === "trackStock" && !checked ? { stockQty: "" } : {}),
+        // Reset stock fields if unchecking trackStock
+        ...(name === "trackStock" && !checked ? { stockQty: "", dailyStockTemplate: "", autoResetStock: false } : {}),
       }));
     } else {
       setFormData(prev => ({
@@ -196,6 +203,8 @@ export default function AddonItemsPage() {
         inputType: formData.inputType,
         trackStock: formData.trackStock,
         stockQty: formData.trackStock && formData.stockQty ? parseInt(formData.stockQty) : undefined,
+        dailyStockTemplate: formData.trackStock && formData.dailyStockTemplate ? parseInt(formData.dailyStockTemplate) : undefined,
+        autoResetStock: formData.trackStock ? formData.autoResetStock : false,
       };
 
       const response = await fetch(url, {
@@ -236,7 +245,9 @@ export default function AddonItemsPage() {
       price: "0", 
       inputType: "SELECT",
       trackStock: false, 
-      stockQty: "" 
+      stockQty: "",
+      dailyStockTemplate: "",
+      autoResetStock: false,
     });
   };
 
@@ -250,6 +261,8 @@ export default function AddonItemsPage() {
       inputType: item.inputType || "SELECT",
       trackStock: item.trackStock,
       stockQty: item.stockQty !== null ? item.stockQty.toString() : "",
+      dailyStockTemplate: item.dailyStockTemplate !== null ? item.dailyStockTemplate.toString() : "",
+      autoResetStock: item.autoResetStock,
     });
     setShowForm(true);
     setError(null);

@@ -249,6 +249,8 @@ export class AddonRepository {
         isActive: true,
         trackStock: data.trackStock || false,
         stockQty: data.trackStock ? data.stockQty || 0 : null,
+        dailyStockTemplate: data.trackStock && data.dailyStockTemplate ? data.dailyStockTemplate : null,
+        autoResetStock: data.trackStock && data.dailyStockTemplate ? (data.autoResetStock || false) : false,
       },
       include: {
         addonCategory: true,
@@ -283,11 +285,27 @@ export class AddonRepository {
       updateData.trackStock = data.trackStock;
       if (data.trackStock) {
         updateData.stockQty = data.stockQty !== undefined ? data.stockQty : 0;
+        updateData.dailyStockTemplate = data.dailyStockTemplate !== undefined ? data.dailyStockTemplate : null;
+        updateData.autoResetStock = data.dailyStockTemplate !== undefined && data.dailyStockTemplate !== null 
+          ? (data.autoResetStock || false) 
+          : false;
       } else {
         updateData.stockQty = null;
+        updateData.dailyStockTemplate = null;
+        updateData.autoResetStock = false;
       }
     } else if (data.stockQty !== undefined && item.trackStock) {
       updateData.stockQty = data.stockQty;
+    }
+
+    // Handle dailyStockTemplate and autoResetStock updates independently if trackStock is already enabled
+    if (item.trackStock) {
+      if (data.dailyStockTemplate !== undefined) {
+        updateData.dailyStockTemplate = data.dailyStockTemplate;
+      }
+      if (data.autoResetStock !== undefined) {
+        updateData.autoResetStock = data.autoResetStock;
+      }
     }
 
     return await prisma.addonItem.update({

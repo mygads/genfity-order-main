@@ -15,7 +15,10 @@ export class MenuRepository {
 
   async findAllCategories(merchantId: bigint) {
     const results = await prisma.menuCategory.findMany({
-      where: { merchantId },
+      where: {
+        merchantId,
+        deletedAt: null,
+      },
       orderBy: { sortOrder: 'asc' },
     });
     return serializeData(results);
@@ -34,9 +37,13 @@ export class MenuRepository {
     description?: string;
     sortOrder?: number;
     isActive?: boolean;
+    createdByUserId?: bigint;
   }) {
     const result = await prisma.menuCategory.create({
-      data,
+      data: {
+        ...data,
+        updatedByUserId: data.createdByUserId,
+      },
     });
     return serializeData(result);
   }
@@ -46,6 +53,7 @@ export class MenuRepository {
     description?: string;
     sortOrder?: number;
     isActive?: boolean;
+    updatedByUserId?: bigint;
   }) {
     const result = await prisma.menuCategory.update({
       where: { id },
@@ -54,9 +62,13 @@ export class MenuRepository {
     return serializeData(result);
   }
 
-  async deleteCategory(id: bigint) {
-    const result = await prisma.menuCategory.delete({
+  async deleteCategory(id: bigint, deletedByUserId?: bigint) {
+    const result = await prisma.menuCategory.update({
       where: { id },
+      data: {
+        deletedAt: new Date(),
+        deletedByUserId,
+      },
     });
     return serializeData(result);
   }
@@ -71,6 +83,7 @@ export class MenuRepository {
     const results = await prisma.menu.findMany({
       where: {
         merchantId,
+        deletedAt: null,
         ...(categoryId && {
           categories: {
             some: {
@@ -92,7 +105,10 @@ export class MenuRepository {
             addonCategory: {
               include: {
                 addonItems: {
-                  where: { isActive: true },
+                  where: {
+                    isActive: true,
+                    deletedAt: null,
+                  },
                 },
               },
             },
@@ -141,9 +157,13 @@ export class MenuRepository {
     isPromo?: boolean;
     trackStock?: boolean;
     stockQty?: number;
+    createdByUserId?: bigint;
   }) {
     const result = await prisma.menu.create({
-      data,
+      data: {
+        ...data,
+        updatedByUserId: data.createdByUserId,
+      },
     });
     return serializeData(result);
   }
@@ -158,6 +178,7 @@ export class MenuRepository {
     isPromo?: boolean;
     trackStock?: boolean;
     stockQty?: number;
+    updatedByUserId?: bigint;
   }) {
     const result = await prisma.menu.update({
       where: { id },
@@ -166,9 +187,13 @@ export class MenuRepository {
     return serializeData(result);
   }
 
-  async deleteMenu(id: bigint) {
-    const result = await prisma.menu.delete({
+  async deleteMenu(id: bigint, deletedByUserId?: bigint) {
+    const result = await prisma.menu.update({
       where: { id },
+      data: {
+        deletedAt: new Date(),
+        deletedByUserId,
+      },
     });
     return serializeData(result);
   }
@@ -242,9 +267,16 @@ export class MenuRepository {
 
   async findAllAddonCategories(merchantId: bigint) {
     const results = await prisma.addonCategory.findMany({
-      where: { merchantId },
+      where: {
+        merchantId,
+        deletedAt: null,
+      },
       include: {
-        addonItems: true,
+        addonItems: {
+          where: {
+            deletedAt: null,
+          },
+        },
       },
     });
     return serializeData(results);
@@ -267,9 +299,13 @@ export class MenuRepository {
     minSelection?: number;
     maxSelection?: number;
     isActive?: boolean;
+    createdByUserId?: bigint;
   }) {
     const result = await prisma.addonCategory.create({
-      data,
+      data: {
+        ...data,
+        updatedByUserId: data.createdByUserId,
+      },
     });
     return serializeData(result);
   }
@@ -280,6 +316,7 @@ export class MenuRepository {
     minSelection?: number;
     maxSelection?: number;
     isActive?: boolean;
+    updatedByUserId?: bigint;
   }) {
     const result = await prisma.addonCategory.update({
       where: { id },
@@ -288,9 +325,13 @@ export class MenuRepository {
     return serializeData(result);
   }
 
-  async deleteAddonCategory(id: bigint) {
-    const result = await prisma.addonCategory.delete({
+  async deleteAddonCategory(id: bigint, deletedByUserId?: bigint) {
+    const result = await prisma.addonCategory.update({
       where: { id },
+      data: {
+        deletedAt: new Date(),
+        deletedByUserId,
+      },
     });
     return serializeData(result);
   }
@@ -303,7 +344,10 @@ export class MenuRepository {
 
   async findAddonItemsByCategoryId(categoryId: bigint) {
     const results = await prisma.addonItem.findMany({
-      where: { addonCategoryId: categoryId },
+      where: {
+        addonCategoryId: categoryId,
+        deletedAt: null,
+      },
     });
     return serializeData(results);
   }
@@ -323,9 +367,15 @@ export class MenuRepository {
     isActive?: boolean;
     trackStock?: boolean;
     stockQty?: number;
+    dailyStockTemplate?: number;
+    autoResetStock?: boolean;
+    createdByUserId?: bigint;
   }) {
     const result = await prisma.addonItem.create({
-      data,
+      data: {
+        ...data,
+        updatedByUserId: data.createdByUserId,
+      },
     });
     return serializeData(result);
   }
@@ -337,6 +387,9 @@ export class MenuRepository {
     isActive?: boolean;
     trackStock?: boolean;
     stockQty?: number;
+    dailyStockTemplate?: number;
+    autoResetStock?: boolean;
+    updatedByUserId?: bigint;
   }) {
     const result = await prisma.addonItem.update({
       where: { id },
@@ -345,9 +398,13 @@ export class MenuRepository {
     return serializeData(result);
   }
 
-  async deleteAddonItem(id: bigint) {
-    const result = await prisma.addonItem.delete({
+  async deleteAddonItem(id: bigint, deletedByUserId?: bigint) {
+    const result = await prisma.addonItem.update({
       where: { id },
+      data: {
+        deletedAt: new Date(),
+        deletedByUserId,
+      },
     });
     return serializeData(result);
   }
@@ -362,6 +419,108 @@ export class MenuRepository {
       },
     });
     return serializeData(result);
+  }
+
+  /**
+   * Reset stock to daily template for addon item
+   */
+  async resetAddonStockToTemplate(id: bigint, updatedByUserId?: bigint) {
+    const addonItem = await prisma.addonItem.findUnique({
+      where: { id },
+      select: { dailyStockTemplate: true },
+    });
+
+    if (!addonItem || addonItem.dailyStockTemplate === null) {
+      throw new Error('Template stok harian belum diatur');
+    }
+
+    const result = await prisma.addonItem.update({
+      where: { id },
+      data: {
+        stockQty: addonItem.dailyStockTemplate,
+        lastStockResetAt: new Date(),
+        updatedByUserId,
+      },
+    });
+    return serializeData(result);
+  }
+
+  /**
+   * Reset stock to daily template for menu item
+   */
+  async resetMenuStockToTemplate(id: bigint, updatedByUserId?: bigint) {
+    const menu = await prisma.menu.findUnique({
+      where: { id },
+      select: { dailyStockTemplate: true },
+    });
+
+    if (!menu || menu.dailyStockTemplate === null) {
+      throw new Error('Template stok harian belum diatur');
+    }
+
+    const result = await prisma.menu.update({
+      where: { id },
+      data: {
+        stockQty: menu.dailyStockTemplate,
+        lastStockResetAt: new Date(),
+        updatedByUserId,
+      },
+    });
+    return serializeData(result);
+  }
+
+  /**
+   * Get all items with low stock (for Stock Management Dashboard)
+   */
+  async getLowStockItems(merchantId: bigint, threshold = 5) {
+    const menus = await prisma.menu.findMany({
+      where: {
+        merchantId,
+        deletedAt: null,
+        trackStock: true,
+        stockQty: {
+          lte: threshold,
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        stockQty: true,
+        dailyStockTemplate: true,
+        isActive: true,
+      },
+    });
+
+    const addonItems = await prisma.addonItem.findMany({
+      where: {
+        addonCategory: {
+          merchantId,
+          deletedAt: null,
+        },
+        deletedAt: null,
+        trackStock: true,
+        stockQty: {
+          lte: threshold,
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        stockQty: true,
+        dailyStockTemplate: true,
+        isActive: true,
+        addonCategory: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
+
+    return serializeData({
+      menus,
+      addonItems,
+    });
   }
 
   /**

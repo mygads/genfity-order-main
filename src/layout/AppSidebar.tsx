@@ -6,13 +6,16 @@ import { usePathname } from "next/navigation";
 import { useSidebar } from "../context/SidebarContext";
 import { useAuth } from "../hooks/useAuth";
 import {
-  BoxCubeIcon,
   GridIcon,
   HorizontaLDots,
   ListIcon,
   PieChartIcon,
   TableIcon,
   UserCircleIcon,
+  FileIcon,
+  BoxIconLine,
+  FolderIcon,
+  PlusIcon,
 } from "../icons/index";
 import SidebarWidget from "./SidebarWidget";
 import MerchantBanner from "../components/merchants/MerchantBanner";
@@ -95,25 +98,37 @@ const merchantNavGroups: NavGroup[] = [
     title: "Menu Management",
     items: [
       {
+        icon: <FileIcon />,
+        name: "Menu Builder",
+        path: "/admin/dashboard/menu/builder/new",
+        roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+      },
+      {
         icon: <TableIcon />,
-        name: "Menu",
+        name: "Menu Items",
         path: "/admin/dashboard/menu",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
       },
       {
-        icon: <BoxCubeIcon />,
+        icon: <FolderIcon />,
         name: "Categories",
         path: "/admin/dashboard/categories",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
       },
       {
-        icon: <BoxCubeIcon />,
+        icon: <BoxIconLine />,
+        name: "Stock Management",
+        path: "/admin/dashboard/menu/stock-overview",
+        roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+      },
+      {
+        icon: <FolderIcon />,
         name: "Addon Categories",
         path: "/admin/dashboard/addon-categories",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
       },
       {
-        icon: <ListIcon />,
+        icon: <TableIcon />,
         name: "Addon Items",
         path: "/admin/dashboard/addon-items",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
@@ -204,9 +219,17 @@ const AppSidebar: React.FC = () => {
   const navGroups = getMenuGroups();
 
   const isActive = useCallback((path: string) => {
-    // Check exact match
+    // Special handling for menu builder
+    if (path === "/admin/dashboard/menu/builder/new") {
+      return pathname.startsWith("/admin/dashboard/menu/builder");
+    }
+    // Check exact match first
     if (path === pathname) return true;
-    // Check if current path starts with menu path (for nested routes)
+    // For menu path, only activate if exact match (not for nested routes like /menu/create)
+    if (path === "/admin/dashboard/menu") {
+      return pathname === "/admin/dashboard/menu" || pathname === "/admin/dashboard/menu/";
+    }
+    // Check if current path starts with menu path (for other nested routes)
     if (pathname.startsWith(path) && path !== "/admin/dashboard") return true;
     return false;
   }, [pathname]);

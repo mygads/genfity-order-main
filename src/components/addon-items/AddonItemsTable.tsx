@@ -19,6 +19,9 @@ interface AddonItem {
   isActive: boolean;
   trackStock: boolean;
   stockQty: number | null;
+  dailyStockTemplate: number | null;
+  autoResetStock: boolean;
+  lastStockResetAt: string | null;
   createdAt: string;
   addonCategory?: AddonCategory;
 }
@@ -118,25 +121,48 @@ export default function AddonItemsTable({
               </td>
               <td className="px-4 py-4">
                 {item.trackStock ? (
-                  <div className="flex items-center gap-2">
-                    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                      (item.stockQty || 0) > 10
-                        ? 'bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400'
-                        : (item.stockQty || 0) > 0
-                        ? 'bg-warning-100 text-warning-700 dark:bg-warning-900/20 dark:text-warning-400'
-                        : 'bg-error-100 text-error-700 dark:bg-error-900/20 dark:text-error-400'
-                    }`}>
-                      {item.stockQty || 0} pcs
-                    </span>
-                    <button
-                      onClick={() => onOpenStockModal(item)}
-                      className="text-brand-500 hover:text-brand-600"
-                      title="Update stock"
-                    >
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                    </button>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                        (item.stockQty || 0) > 10
+                          ? 'bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400'
+                          : (item.stockQty || 0) > 0
+                          ? 'bg-warning-100 text-warning-700 dark:bg-warning-900/20 dark:text-warning-400'
+                          : 'bg-error-100 text-error-700 dark:bg-error-900/20 dark:text-error-400'
+                      }`}>
+                        {item.stockQty || 0} pcs
+                      </span>
+                      <button
+                        onClick={() => onOpenStockModal(item)}
+                        className="text-brand-500 hover:text-brand-600"
+                        title="Update stock"
+                      >
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                    </div>
+                    {item.dailyStockTemplate !== null && (
+                      <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
+                        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span>Template: {item.dailyStockTemplate}</span>
+                      </div>
+                    )}
+                    {item.autoResetStock && (
+                      <div className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/20 dark:text-blue-400">
+                        <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Auto Reset
+                      </div>
+                    )}
+                    {item.lastStockResetAt && (
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        Reset: {new Date(item.lastStockResetAt).toLocaleDateString()}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <span className="text-xs text-gray-500 dark:text-gray-400">
