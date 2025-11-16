@@ -52,6 +52,10 @@ export default function AddonCategoriesPage() {
     minSelection: 0,
     maxSelection: "",
   });
+  
+  // Bulk selection states
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
   // Pagination & Filter states
   const [currentPage, setCurrentPage] = useState(1);
@@ -228,6 +232,62 @@ export default function AddonCategoriesPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
       setTimeout(() => setError(null), 5000);
+    }
+  };
+
+  // Bulk selection handlers
+  const handleSelectAllCategories = (checked: boolean) => {
+    if (checked) {
+      const allIds = filteredCategories.map(cat => cat.id);
+      setSelectedCategories(allIds);
+    } else {
+      setSelectedCategories([]);
+    }
+  };
+
+  const handleSelectCategory = (id: string, checked: boolean) => {
+    if (checked) {
+      setSelectedCategories(prev => [...prev, id]);
+    } else {
+      setSelectedCategories(prev => prev.filter(catId => catId !== id));
+    }
+  };
+
+  const handleBulkDeleteCategories = async () => {
+    if (selectedCategories.length === 0) return;
+    
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) {
+        router.push("/admin/login");
+        return;
+      }
+
+      const response = await fetch("/api/merchant/addon-categories/bulk-delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          ids: selectedCategories,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || "Failed to delete addon categories");
+      }
+
+      setSuccess(`${selectedCategories.length} addon category(ies) deleted successfully`);
+      setTimeout(() => setSuccess(null), 3000);
+      setSelectedCategories([]);
+      setShowBulkDeleteConfirm(false);
+      fetchCategories();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+      setTimeout(() => setError(null), 5000);
+      setShowBulkDeleteConfirm(false);
     }
   };
 
@@ -458,10 +518,26 @@ export default function AddonCategoriesPage() {
           />
         )}
 
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6">
           <div className="mb-5 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">Addon Categories</h3>
             <div className="flex items-center gap-3">
+              {selectedCategories.length > 0 && (
+                <>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    {selectedCategories.length} selected
+                  </span>
+                  <button
+                    onClick={() => setShowBulkDeleteConfirm(true)}
+                    className="inline-flex h-11 items-center gap-2 rounded-lg border border-error-300 bg-error-50 px-4 text-sm font-medium text-error-700 hover:bg-error-100 dark:border-error-700 dark:bg-error-900/20 dark:text-error-400 dark:hover:bg-error-900/30"
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Delete {selectedCategories.length}
+                  </button>
+                </>
+              )}
               <button
                 onClick={() => {
                   try {
@@ -523,13 +599,24 @@ export default function AddonCategoriesPage() {
               type={categories.length === 0 ? "no-addon" : "no-results"}
               title={categories.length === 0 ? undefined : "No addon categories match your filters"}
               description={categories.length === 0 ? undefined : "Try adjusting your search or filters"}
-              onAction={categories.length === 0 ? () => setShowForm(true) : undefined}
+              action={categories.length === 0 ? {
+                label: "Create Addon Category",
+                onClick: () => setShowForm(true)
+              } : undefined}
             />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full table-auto">
                 <thead>
                   <tr className="bg-gray-50 text-left dark:bg-gray-900/50">
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">
+                      <input
+                        type="checkbox"
+                        checked={selectedCategories.length === currentItems.length && currentItems.length > 0}
+                        onChange={(e) => handleSelectAllCategories(e.target.checked)}
+                        className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                      />
+                    </th>
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Name</th>
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Description</th>
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Selection</th>
@@ -542,6 +629,14 @@ export default function AddonCategoriesPage() {
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                   {currentItems.map((category) => (
                     <tr key={category.id} className="hover:bg-gray-50 dark:hover:bg-gray-900/30">
+                      <td className="px-4 py-4">
+                        <input
+                          type="checkbox"
+                          checked={selectedCategories.includes(category.id)}
+                          onChange={(e) => handleSelectCategory(category.id, e.target.checked)}
+                          className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                        />
+                      </td>
                       <td className="px-4 py-4 text-sm font-medium text-gray-800 dark:text-white/90">{category.name}</td>
                       <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">{category.description || '-'}</td>
                       <td className="px-4 py-4 text-sm text-gray-700 dark:text-gray-300">
@@ -649,6 +744,49 @@ export default function AddonCategoriesPage() {
             </div>
           )}
         </div>
+
+        {/* Bulk Delete Confirmation Modal */}
+        {showBulkDeleteConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-lg dark:border-gray-800 dark:bg-gray-900">
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-error-100 dark:bg-error-900/20">
+                  <svg className="h-6 w-6 text-error-600 dark:text-error-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Delete {selectedCategories.length} Addon Category{selectedCategories.length > 1 ? 's' : ''}
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    This action cannot be undone
+                  </p>
+                </div>
+              </div>
+              
+              <p className="mb-6 text-sm text-gray-700 dark:text-gray-300">
+                Are you sure you want to delete {selectedCategories.length} addon category{selectedCategories.length > 1 ? 's' : ''}? 
+                This will also delete all addon items in {selectedCategories.length > 1 ? 'these categories' : 'this category'}.
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowBulkDeleteConfirm(false)}
+                  className="flex-1 h-11 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleBulkDeleteCategories}
+                  className="flex-1 h-11 rounded-lg bg-error-600 text-sm font-medium text-white hover:bg-error-700"
+                >
+                  Delete {selectedCategories.length} Category{selectedCategories.length > 1 ? 's' : ''}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
