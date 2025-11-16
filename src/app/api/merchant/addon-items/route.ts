@@ -132,7 +132,6 @@ async function handlePost(
         description: body.description,
         price: body.price !== undefined ? parseFloat(body.price) : 0,
         inputType: body.inputType || 'SELECT',
-        sortOrder: body.sortOrder ?? 0,
         trackStock: body.trackStock || false,
         stockQty: body.stockQty,
       }

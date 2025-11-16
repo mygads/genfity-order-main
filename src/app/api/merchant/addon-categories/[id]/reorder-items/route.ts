@@ -55,9 +55,9 @@ async function handlePost(
 
     // Convert IDs to BigInt
     const itemOrders = body.itemOrders.map(
-      (item: { id: string | number; sortOrder: number }) => ({
+      (item: { id: string | number; displayOrder: number }) => ({
         id: BigInt(item.id),
-        sortOrder: item.sortOrder,
+        displayOrder: item.displayOrder,
       })
     );
 

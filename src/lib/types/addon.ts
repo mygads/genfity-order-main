@@ -33,7 +33,7 @@ export interface AddonItem {
   description: string | null;
   price: number | string;
   inputType: AddonInputType;
-  sortOrder: number;
+  displayOrder: number;
   isActive: boolean;
   trackStock: boolean;
   stockQty: number | null;
@@ -80,7 +80,7 @@ export interface CreateAddonItemDTO {
   description?: string;
   price?: number;
   inputType?: AddonInputType;
-  sortOrder?: number;
+  displayOrder?: number;
   trackStock?: boolean;
   stockQty?: number;
 }
@@ -90,7 +90,7 @@ export interface UpdateAddonItemDTO {
   description?: string;
   price?: number;
   inputType?: AddonInputType;
-  sortOrder?: number;
+  displayOrder?: number;
   isActive?: boolean;
   trackStock?: boolean;
   stockQty?: number;

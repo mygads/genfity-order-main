@@ -22,7 +22,7 @@ export class AddonRepository {
       include: {
         addonItems: {
           where: { isActive: true },
-          orderBy: { sortOrder: 'asc' },
+          orderBy: { displayOrder: 'asc' },
         },
         _count: {
           select: {
@@ -46,7 +46,7 @@ export class AddonRepository {
       },
       include: {
         addonItems: {
-          orderBy: { sortOrder: 'asc' },
+          orderBy: { displayOrder: 'asc' },
         },
         _count: {
           select: {
@@ -169,7 +169,7 @@ export class AddonRepository {
           },
         },
       },
-      orderBy: { sortOrder: 'asc' },
+      orderBy: { displayOrder: 'asc' },
     });
   }
 
@@ -192,7 +192,7 @@ export class AddonRepository {
           },
         },
       },
-      orderBy: [{ addonCategory: { name: 'asc' } }, { sortOrder: 'asc' }],
+      orderBy: [{ addonCategory: { name: 'asc' } }, { displayOrder: 'asc' }],
     });
   }
 
@@ -229,6 +229,15 @@ export class AddonRepository {
       throw new Error('Addon category not found');
     }
 
+    // Get the highest displayOrder for this category
+    const highestOrder = await prisma.addonItem.findFirst({
+      where: { addonCategoryId: data.addonCategoryId },
+      orderBy: { displayOrder: 'desc' },
+      select: { displayOrder: true },
+    });
+
+    const nextOrder = (highestOrder?.displayOrder ?? -1) + 1;
+
     return await prisma.addonItem.create({
       data: {
         addonCategoryId: data.addonCategoryId,
@@ -236,7 +245,7 @@ export class AddonRepository {
         description: data.description || null,
         price: data.price ?? 0,
         inputType: data.inputType || 'SELECT',
-        sortOrder: data.sortOrder ?? 0,
+        displayOrder: data.displayOrder ?? nextOrder,
         isActive: true,
         trackStock: data.trackStock || false,
         stockQty: data.trackStock ? data.stockQty || 0 : null,
@@ -266,7 +275,6 @@ export class AddonRepository {
       description: data.description,
       price: data.price !== undefined ? data.price : undefined,
       inputType: data.inputType,
-      sortOrder: data.sortOrder,
       isActive: data.isActive,
     };
 
@@ -380,6 +388,36 @@ export class AddonRepository {
     });
   }
 
+  /**
+   * Reorder addon items within a category
+   */
+  async reorderAddonItems(
+    addonCategoryId: bigint,
+    merchantId: bigint,
+    itemOrders: Array<{ id: bigint; displayOrder: number }>
+  ) {
+    // Verify category belongs to merchant
+    const category = await prisma.addonCategory.findFirst({
+      where: { id: addonCategoryId, merchantId },
+    });
+
+    if (!category) {
+      throw new Error('Addon category not found');
+    }
+
+    // Update all items in a transaction
+    await prisma.$transaction(
+      itemOrders.map((item) =>
+        prisma.addonItem.update({
+          where: { id: item.id },
+          data: { displayOrder: item.displayOrder },
+        })
+      )
+    );
+
+    return true;
+  }
+
   // ==================== MENU-ADDON ASSOCIATIONS ====================
 
   /**
@@ -481,7 +519,7 @@ export class AddonRepository {
           include: {
             addonItems: {
               where: { isActive: true },
-              orderBy: { sortOrder: 'asc' },
+              orderBy: { name: 'asc' },
             },
           },
         },
@@ -560,42 +598,12 @@ export class AddonRepository {
           include: {
             addonItems: {
               where: { isActive: true },
-              orderBy: { sortOrder: 'asc' },
+              orderBy: { name: 'asc' },
             },
           },
         },
       },
     });
-  }
-
-  /**
-   * Reorder addon items within a category
-   */
-  async reorderAddonItems(
-    addonCategoryId: bigint,
-    merchantId: bigint,
-    itemOrders: Array<{ id: bigint; sortOrder: number }>
-  ) {
-    // Verify category belongs to merchant
-    const category = await prisma.addonCategory.findFirst({
-      where: { id: addonCategoryId, merchantId },
-    });
-
-    if (!category) {
-      throw new Error('Addon category not found');
-    }
-
-    // Update all items in a transaction
-    await prisma.$transaction(
-      itemOrders.map((item) =>
-        prisma.addonItem.update({
-          where: { id: item.id },
-          data: { sortOrder: item.sortOrder },
-        })
-      )
-    );
-
-    return true;
   }
 
   /**
@@ -618,7 +626,7 @@ export class AddonRepository {
           include: {
             addonItems: {
               where: { isActive: true },
-              orderBy: { sortOrder: 'asc' },
+              orderBy: { name: 'asc' },
             },
           },
         },

@@ -263,33 +263,3 @@ async function handleDelete(
 export const GET = withMerchant(handleGet);
 export const PUT = withMerchant(handlePut);
 export const DELETE = withMerchant(handleDelete);
-  } catch (error) {
-    console.error('Error deleting addon category:', error);
-
-    if (error instanceof NotFoundError) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'NOT_FOUND',
-          message: error.message,
-          statusCode: 404,
-        },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'INTERNAL_ERROR',
-        message: 'Failed to delete addon category',
-        statusCode: 500,
-      },
-      { status: 500 }
-    );
-  }
-}
-
-export const GET = withMerchant(handleGet);
-export const PUT = withMerchant(handlePut);
-export const DELETE = withMerchant(handleDelete);

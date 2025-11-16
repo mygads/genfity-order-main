@@ -321,6 +321,28 @@ export class AddonService {
   }
 
   /**
+   * Reorder addon items within a category
+   */
+  async reorderAddonItems(
+    addonCategoryId: bigint,
+    merchantId: bigint,
+    itemOrders: Array<{ id: bigint; displayOrder: number }>
+  ) {
+    // Validate display orders are non-negative
+    for (const item of itemOrders) {
+      if (item.displayOrder < 0) {
+        throw new Error('Display order cannot be negative');
+      }
+    }
+
+    return await this.repository.reorderAddonItems(
+      addonCategoryId,
+      merchantId,
+      itemOrders
+    );
+  }
+
+  /**
    * Get addon categories for a menu
    */
   async getAddonCategoriesByMenu(menuId: bigint, merchantId: bigint) {
@@ -345,28 +367,6 @@ export class AddonService {
       addonCategoryId,
       merchantId,
       data
-    );
-  }
-
-  /**
-   * Reorder addon items within a category
-   */
-  async reorderAddonItems(
-    addonCategoryId: bigint,
-    merchantId: bigint,
-    itemOrders: Array<{ id: bigint; sortOrder: number }>
-  ) {
-    // Validate sort orders are non-negative
-    for (const item of itemOrders) {
-      if (item.sortOrder < 0) {
-        throw new Error('Sort order cannot be negative');
-      }
-    }
-
-    return await this.repository.reorderAddonItems(
-      addonCategoryId,
-      merchantId,
-      itemOrders
     );
   }
 }

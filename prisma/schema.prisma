@@ -205,7 +205,7 @@ model AddonItem {
   description     String?
   price           Decimal          @default(0) @db.Decimal(10, 2)
   inputType       AddonInputType   @default(SELECT) @map("input_type")
-  sortOrder       Int              @default(0) @map("sort_order")
+  displayOrder    Int              @default(0) @map("display_order")
   isActive        Boolean          @default(true) @map("is_active")
   trackStock      Boolean          @default(false) @map("track_stock")
   stockQty        Int?             @map("stock_qty")
@@ -215,7 +215,7 @@ model AddonItem {
   orderItemAddons OrderItemAddon[]
 
   @@index([addonCategoryId])
-  @@index([sortOrder])
+  @@index([displayOrder])
   @@map("addon_items")
 }
 

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
+import ViewAddonItemsModal from "@/components/addon-categories/ViewAddonItemsModal";
 
 interface AddonCategory {
   id: string;
@@ -35,7 +36,13 @@ export default function AddonCategoriesPage() {
   const [categories, setCategories] = useState<AddonCategory[]>([]);
   const [filteredCategories, setFilteredCategories] = useState<AddonCategory[]>([]);
   const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [merchant, setMerchant] = useState<{ currency: string }>({ currency: "AUD" });
+  const [viewItemsModal, setViewItemsModal] = useState<{
+    show: boolean;
+    categoryId: string | null;
+    categoryName: string;
+    items: any[];
+  }>({ show: false, categoryId: null, categoryName: "", items: [] });
   
   const [formData, setFormData] = useState<AddonCategoryFormData>({
     name: "",
@@ -59,17 +66,27 @@ export default function AddonCategoriesPage() {
         return;
       }
 
-      const response = await fetch("/api/merchant/addon-categories", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const [categoriesResponse, merchantResponse] = await Promise.all([
+        fetch("/api/merchant/addon-categories", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch("/api/merchant/profile", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
 
-      if (!response.ok) {
+      if (!categoriesResponse.ok) {
         throw new Error("Failed to fetch addon categories");
       }
 
-      const data = await response.json();
+      const data = await categoriesResponse.json();
+
+      if (merchantResponse.ok) {
+        const merchantData = await merchantResponse.json();
+        if (merchantData.success && merchantData.data) {
+          setMerchant({ currency: merchantData.data.currency || "AUD" });
+        }
+      }
       
       if (data.success && Array.isArray(data.data)) {
         setCategories(data.data);
@@ -117,11 +134,8 @@ export default function AddonCategoriesPage() {
         return;
       }
 
-      const url = editingId 
-        ? `/api/merchant/addon-categories/${editingId}`
-        : "/api/merchant/addon-categories";
-      
-      const method = editingId ? "PUT" : "POST";
+      const url = "/api/merchant/addon-categories";
+      const method = "POST";
 
       const payload = {
         name: formData.name,
@@ -142,13 +156,12 @@ export default function AddonCategoriesPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || `Failed to ${editingId ? 'update' : 'create'} addon category`);
+        throw new Error(data.message || 'Failed to create addon category');
       }
 
-      setSuccess(`Addon category ${editingId ? 'updated' : 'created'} successfully!`);
+      setSuccess('Addon category created successfully!');
       setTimeout(() => setSuccess(null), 3000);
       setShowForm(false);
-      setEditingId(null);
       setFormData({ name: "", description: "", minSelection: 0, maxSelection: "" });
       
       fetchCategories();
@@ -160,17 +173,31 @@ export default function AddonCategoriesPage() {
     }
   };
 
-  const handleEdit = (category: AddonCategory) => {
-    setEditingId(category.id);
-    setFormData({
-      name: category.name,
-      description: category.description || "",
-      minSelection: category.minSelection,
-      maxSelection: category.maxSelection !== null ? category.maxSelection : "",
-    });
-    setShowForm(true);
-    setError(null);
-    setSuccess(null);
+  const handleNavigateToEdit = (categoryId: string) => {
+    router.push(`/admin/dashboard/addon-categories/${categoryId}/edit`);
+  };
+
+  const handleViewItems = async (category: AddonCategory) => {
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) return;
+
+      const response = await fetch(`/api/merchant/addon-categories/${category.id}/items`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setViewItemsModal({
+          show: true,
+          categoryId: category.id,
+          categoryName: category.name,
+          items: data.success && Array.isArray(data.data) ? data.data : [],
+        });
+      }
+    } catch (err) {
+      console.error('Failed to fetch items:', err);
+    }
   };
 
   const handleToggleActive = async (id: string, currentStatus: boolean, name: string) => {
@@ -237,7 +264,6 @@ export default function AddonCategoriesPage() {
 
   const handleCancel = () => {
     setShowForm(false);
-    setEditingId(null);
     setFormData({ name: "", description: "", minSelection: 0, maxSelection: "" });
     setError(null);
     setSuccess(null);
@@ -308,7 +334,7 @@ export default function AddonCategoriesPage() {
             <div className="w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-800 dark:bg-gray-900">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-                  {editingId ? "Edit Addon Category" : "Create New Addon Category"}
+                  Create New Addon Category
                 </h3>
                 <button
                   onClick={handleCancel}
@@ -401,12 +427,33 @@ export default function AddonCategoriesPage() {
                     disabled={submitting}
                     className="flex-1 h-11 rounded-lg bg-brand-500 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {submitting ? "Saving..." : editingId ? "Update Category" : "Create Category"}
+                    {submitting ? "Saving..." : "Create Category"}
                   </button>
                 </div>
               </form>
             </div>
           </div>
+        )}
+
+        {/* View Addon Items Modal */}
+        {viewItemsModal.show && viewItemsModal.categoryId && (
+          <ViewAddonItemsModal
+            show={viewItemsModal.show}
+            categoryId={viewItemsModal.categoryId}
+            categoryName={viewItemsModal.categoryName}
+            items={viewItemsModal.items}
+            currency={merchant.currency}
+            onClose={() => setViewItemsModal({ show: false, categoryId: null, categoryName: "", items: [] })}
+            onRefresh={() => handleViewItems({ 
+              id: viewItemsModal.categoryId!, 
+              name: viewItemsModal.categoryName,
+              description: null,
+              minSelection: 0,
+              maxSelection: null,
+              isActive: true,
+              createdAt: new Date().toISOString()
+            })}
+          />
         )}
 
         <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
@@ -510,9 +557,19 @@ export default function AddonCategoriesPage() {
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => handleEdit(category)}
+                            onClick={() => handleViewItems(category)}
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100 dark:border-blue-900/50 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30"
+                            title="View Items"
+                          >
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => handleNavigateToEdit(category.id)}
                             className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                            title="Edit"
+                            title="Edit Category & Manage Items"
                           >
                             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
