@@ -7,6 +7,7 @@ import Image from "next/image";
 import CategoryDnDList from "@/components/ui/CategoryDnDList";
 import EmptyState from "@/components/ui/EmptyState";
 import { HelpTooltip } from "@/components/ui/Tooltip";
+import { exportCategories } from "@/lib/utils/excelExport";
 
 interface Category {
   id: string;
@@ -53,6 +54,8 @@ export default function MerchantCategoriesPage() {
   const [categoryMenus, setCategoryMenus] = useState<MenuItem[]>([]);
   const [sortBy, setSortBy] = useState<string>("manual");
   const [useDragDrop, setUseDragDrop] = useState<boolean>(true);
+  const [hasUnsavedOrder, setHasUnsavedOrder] = useState<boolean>(false);
+  const [pendingReorder, setPendingReorder] = useState<Category[] | null>(null);
   const [formData, setFormData] = useState<CategoryFormData>({
     name: "",
     description: "",
@@ -252,14 +255,22 @@ export default function MerchantCategoriesPage() {
   };
 
   const handleReorder = async (reorderedCategories: Category[]) => {
+    // Store pending changes instead of immediately saving
+    setPendingReorder(reorderedCategories);
+    setHasUnsavedOrder(true);
+    // Update display immediately for UX
+    setCategories(reorderedCategories);
+  };
+
+  const handleSaveOrder = async () => {
+    if (!pendingReorder) return;
+    
     try {
       const token = localStorage.getItem("accessToken");
       if (!token) {
         router.push("/admin/login");
         return;
       }
-
-      setCategories(reorderedCategories);
 
       const response = await fetch("/api/merchant/categories/reorder", {
         method: "POST",
@@ -268,7 +279,7 @@ export default function MerchantCategoriesPage() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          categories: reorderedCategories.map((cat, idx) => ({
+          categories: pendingReorder.map((cat, idx) => ({
             id: cat.id,
             sortOrder: idx,
           })),
@@ -282,10 +293,53 @@ export default function MerchantCategoriesPage() {
 
       setSuccess("Categories reordered successfully!");
       setTimeout(() => setSuccess(null), 3000);
+      setHasUnsavedOrder(false);
+      setPendingReorder(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
       setTimeout(() => setError(null), 5000);
       fetchCategories();
+    }
+  };
+
+  const handleCancelOrder = () => {
+    // Reset to original order
+    fetchCategories();
+    setHasUnsavedOrder(false);
+    setPendingReorder(null);
+  };
+
+  const handleInlineUpdate = async (id: string, field: 'name' | 'description', value: string) => {
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) {
+        router.push("/admin/login");
+        return;
+      }
+
+      const response = await fetch(`/api/merchant/categories/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          [field]: value || undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || `Failed to update ${field}`);
+      }
+
+      setSuccess(`Category ${field} updated successfully!`);
+      setTimeout(() => setSuccess(null), 3000);
+      fetchCategories();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+      setTimeout(() => setError(null), 5000);
+      throw err;
     }
   };
 
@@ -575,15 +629,59 @@ export default function MerchantCategoriesPage() {
         <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
           <div className="mb-5 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">Categories List</h3>
-            <button
-              onClick={() => setShowForm(true)}
-              className="inline-flex h-11 items-center gap-2 rounded-lg bg-brand-500 px-6 text-sm font-medium text-white hover:bg-brand-600 focus:outline-none focus:ring-3 focus:ring-brand-500/20"
-            >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Add Category
-            </button>
+            <div className="flex items-center gap-3">
+              {hasUnsavedOrder && (
+                <>
+                  <button
+                    onClick={handleCancelOrder}
+                    className="inline-flex h-11 items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-3 focus:ring-gray-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveOrder}
+                    className="inline-flex h-11 items-center gap-2 rounded-lg bg-success-600 px-4 text-sm font-medium text-white hover:bg-success-700 focus:outline-none focus:ring-3 focus:ring-success-500/20"
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Save Order
+                  </button>
+                </>
+              )}
+              <button
+                onClick={() => {
+                  try {
+                    exportCategories(categories);
+                    setSuccess('Categories exported successfully!');
+                    setTimeout(() => setSuccess(null), 3000);
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : 'Export failed');
+                    setTimeout(() => setError(null), 5000);
+                  }
+                }}
+                disabled={categories.length === 0}
+                className="inline-flex h-11 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                title="Export to Excel"
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Export
+              </button>
+              <button
+                onClick={() => setShowForm(true)}
+                className="inline-flex h-11 items-center gap-2 rounded-lg bg-brand-500 px-6 text-sm font-medium text-white hover:bg-brand-600 focus:outline-none focus:ring-3 focus:ring-brand-500/20"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Add Category
+              </button>
+            </div>
           </div>
 
           {/* Search and Filters */}
@@ -652,6 +750,7 @@ export default function MerchantCategoriesPage() {
               onDelete={(id, name) => handleDelete(id, name)}
               onToggleActive={(id, isActive, name) => handleToggleActive(id, isActive, name)}
               onManageMenus={handleManageMenus}
+              onInlineUpdate={handleInlineUpdate}
             />
           ) : (
             <div className="overflow-x-auto">

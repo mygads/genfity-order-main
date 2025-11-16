@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import ViewAddonItemsModal from "@/components/addon-categories/ViewAddonItemsModal";
 import EmptyState from "@/components/ui/EmptyState";
+import { exportAddonCategories } from "@/lib/utils/excelExport";
 
 interface AddonCategory {
   id: string;
@@ -460,15 +461,37 @@ export default function AddonCategoriesPage() {
         <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
           <div className="mb-5 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">Addon Categories</h3>
-            <button
-              onClick={() => setShowForm(true)}
-              className="inline-flex h-11 items-center gap-2 rounded-lg bg-brand-500 px-6 text-sm font-medium text-white hover:bg-brand-600 focus:outline-none focus:ring-3 focus:ring-brand-500/20"
-            >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Add Category
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => {
+                  try {
+                    exportAddonCategories(categories);
+                    setSuccess('Addon categories exported successfully!');
+                    setTimeout(() => setSuccess(null), 3000);
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : 'Export failed');
+                    setTimeout(() => setError(null), 5000);
+                  }
+                }}
+                disabled={categories.length === 0}
+                className="inline-flex h-11 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                title="Export to Excel"
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Export
+              </button>
+              <button
+                onClick={() => setShowForm(true)}
+                className="inline-flex h-11 items-center gap-2 rounded-lg bg-brand-500 px-6 text-sm font-medium text-white hover:bg-brand-600 focus:outline-none focus:ring-3 focus:ring-brand-500/20"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Add Addon Category
+              </button>
+            </div>
           </div>
 
           {/* Search and Filters */}

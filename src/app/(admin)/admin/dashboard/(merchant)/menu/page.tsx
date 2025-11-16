@@ -8,6 +8,8 @@ import Image from "next/image";
 import QuickFilterPills, { menuFilterPresets } from "@/components/ui/QuickFilterPills";
 import EmptyState from "@/components/ui/EmptyState";
 import DuplicateMenuButton from "@/components/menu/DuplicateMenuButton";
+import { exportMenuItems } from "@/lib/utils/excelExport";
+import InlineEditField from "@/components/ui/InlineEditField";
 
 interface MenuItem {
   id: string;
@@ -65,6 +67,10 @@ export default function MerchantMenuPage() {
   const [selectedPromoMenu, setSelectedPromoMenu] = useState<MenuItem | null>(null);
   const [selectedStockMenu, setSelectedStockMenu] = useState<MenuItem | null>(null);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  
+  // Bulk selection states
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
   // Pagination & Filter states
   const [currentPage, setCurrentPage] = useState(1);
@@ -231,6 +237,181 @@ export default function MerchantMenuPage() {
     }
   };
 
+  const handleInlineUpdate = async (id: string, field: 'name' | 'price', value: string | number) => {
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) {
+        router.push("/admin/login");
+        return;
+      }
+
+      // Convert value to appropriate type
+      const updateData = field === 'price' 
+        ? { price: parseFloat(String(value)) }
+        : { name: String(value) };
+
+      const response = await fetch(`/api/merchant/menu/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(updateData),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || `Failed to update ${field}`);
+      }
+
+      setSuccess(`Menu ${field} updated successfully`);
+      setTimeout(() => setSuccess(null), 3000);
+      
+      // Update local state immediately for better UX
+      setMenuItems(prev => prev.map(item => 
+        item.id === id ? { ...item, [field]: value } : item
+      ));
+      setFilteredMenuItems(prev => prev.map(item => 
+        item.id === id ? { ...item, [field]: value } : item
+      ));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+      setTimeout(() => setError(null), 5000);
+      // Revert on error
+      fetchData();
+    }
+  };
+
+  // Bulk selection handlers
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const allIds = currentItems.map(item => item.id);
+      setSelectedItems(allIds);
+    } else {
+      setSelectedItems([]);
+    }
+  };
+
+  const handleSelectItem = (id: string, checked: boolean) => {
+    if (checked) {
+      setSelectedItems(prev => [...prev, id]);
+    } else {
+      setSelectedItems(prev => prev.filter(itemId => itemId !== id));
+    }
+  };
+
+  const handleBulkActivate = async () => {
+    if (selectedItems.length === 0) return;
+    
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) {
+        router.push("/admin/login");
+        return;
+      }
+
+      const response = await fetch("/api/merchant/menu/bulk-update-status", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          ids: selectedItems,
+          isActive: true,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || "Failed to activate menu items");
+      }
+
+      setSuccess(`${selectedItems.length} menu item(s) activated successfully`);
+      setTimeout(() => setSuccess(null), 3000);
+      setSelectedItems([]);
+      fetchData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+      setTimeout(() => setError(null), 5000);
+    }
+  };
+
+  const handleBulkDeactivate = async () => {
+    if (selectedItems.length === 0) return;
+    
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) {
+        router.push("/admin/login");
+        return;
+      }
+
+      const response = await fetch("/api/merchant/menu/bulk-update-status", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          ids: selectedItems,
+          isActive: false,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || "Failed to deactivate menu items");
+      }
+
+      setSuccess(`${selectedItems.length} menu item(s) deactivated successfully`);
+      setTimeout(() => setSuccess(null), 3000);
+      setSelectedItems([]);
+      fetchData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+      setTimeout(() => setError(null), 5000);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedItems.length === 0) return;
+    
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) {
+        router.push("/admin/login");
+        return;
+      }
+
+      const response = await fetch("/api/merchant/menu/bulk-delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          ids: selectedItems,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || "Failed to delete menu items");
+      }
+
+      setSuccess(`${selectedItems.length} menu item(s) deleted successfully`);
+      setTimeout(() => setSuccess(null), 3000);
+      setSelectedItems([]);
+      setShowBulkDeleteConfirm(false);
+      fetchData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+      setTimeout(() => setError(null), 5000);
+      setShowBulkDeleteConfirm(false);
+    }
+  };
+
   const formatPrice = (price: string | number, currency?: string): string => {
     const numPrice = typeof price === 'string' ? parseFloat(price) : price;
     if (isNaN(numPrice)) return `${currency || 'AUD'} 0`;
@@ -348,15 +529,71 @@ export default function MerchantMenuPage() {
         <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
           <div className="mb-5 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">Menu Items List</h3>
-            <Link
-              href="/admin/dashboard/menu/create"
-              className="inline-flex h-11 items-center gap-2 rounded-lg bg-brand-500 px-6 text-sm font-medium text-white hover:bg-brand-600 focus:outline-none focus:ring-3 focus:ring-brand-500/20"
-            >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Add Menu Item
-            </Link>
+            <div className="flex items-center gap-3">
+              {selectedItems.length > 0 && (
+                <>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    {selectedItems.length} selected
+                  </span>
+                  <button
+                    onClick={handleBulkActivate}
+                    className="inline-flex h-11 items-center gap-2 rounded-lg border border-success-300 bg-success-50 px-4 text-sm font-medium text-success-700 hover:bg-success-100 dark:border-success-700 dark:bg-success-900/20 dark:text-success-400 dark:hover:bg-success-900/30"
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Activate
+                  </button>
+                  <button
+                    onClick={handleBulkDeactivate}
+                    className="inline-flex h-11 items-center gap-2 rounded-lg border border-warning-300 bg-warning-50 px-4 text-sm font-medium text-warning-700 hover:bg-warning-100 dark:border-warning-700 dark:bg-warning-900/20 dark:text-warning-400 dark:hover:bg-warning-900/30"
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Deactivate
+                  </button>
+                  <button
+                    onClick={() => setShowBulkDeleteConfirm(true)}
+                    className="inline-flex h-11 items-center gap-2 rounded-lg border border-error-300 bg-error-50 px-4 text-sm font-medium text-error-700 hover:bg-error-100 dark:border-error-700 dark:bg-error-900/20 dark:text-error-400 dark:hover:bg-error-900/30"
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Delete
+                  </button>
+                </>
+              )}
+              <button
+                onClick={() => {
+                  try {
+                    exportMenuItems(menuItems, merchant?.currency || 'AUD');
+                    setSuccess('Menu items exported successfully!');
+                    setTimeout(() => setSuccess(null), 3000);
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : 'Export failed');
+                    setTimeout(() => setError(null), 5000);
+                  }
+                }}
+                disabled={menuItems.length === 0}
+                className="inline-flex h-11 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                title="Export to Excel"
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Export
+              </button>
+              <Link
+                href="/admin/dashboard/menu/create"
+                className="inline-flex h-11 items-center gap-2 rounded-lg bg-brand-500 px-6 text-sm font-medium text-white hover:bg-brand-600 focus:outline-none focus:ring-3 focus:ring-brand-500/20"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Add Menu Item
+              </Link>
+            </div>
           </div>
 
           {/* Search and Filters */}
@@ -429,6 +666,14 @@ export default function MerchantMenuPage() {
               <table className="w-full table-auto">
                 <thead>
                   <tr className="bg-gray-50 text-left dark:bg-gray-900/50">
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">
+                      <input
+                        type="checkbox"
+                        checked={selectedItems.length === currentItems.length && currentItems.length > 0}
+                        onChange={(e) => handleSelectAll(e.target.checked)}
+                        className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                      />
+                    </th>
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Image</th>
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Name</th>
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Category</th>
@@ -441,6 +686,14 @@ export default function MerchantMenuPage() {
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                   {currentItems.map((item) => (
                     <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-900/30">
+                      <td className="px-4 py-4">
+                        <input
+                          type="checkbox"
+                          checked={selectedItems.includes(item.id)}
+                          onChange={(e) => handleSelectItem(item.id, e.target.checked)}
+                          className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                        />
+                      </td>
                       <td className="px-4 py-4">
                         {item.imageUrl ? (
                           <Image 
@@ -460,7 +713,11 @@ export default function MerchantMenuPage() {
                       </td>
                       <td className="px-4 py-4">
                         <div>
-                          <p className="text-sm font-medium text-gray-800 dark:text-white/90">{item.name}</p>
+                          <InlineEditField
+                            value={item.name}
+                            onSave={(newValue) => handleInlineUpdate(item.id, 'name', newValue)}
+                            className="text-sm font-medium text-gray-800 dark:text-white/90"
+                          />
                           {item.description && (
                             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 line-clamp-2">{item.description}</p>
                           )}
@@ -486,9 +743,12 @@ export default function MerchantMenuPage() {
                               </span>
                             </>
                           ) : (
-                            <p className="text-sm font-semibold text-gray-800 dark:text-white/90">
-                              {formatPrice(item.price)}
-                            </p>
+                            <InlineEditField
+                              value={String(item.price)}
+                              type="number"
+                              onSave={(newValue) => handleInlineUpdate(item.id, 'price', newValue)}
+                              className="text-sm font-semibold text-gray-800 dark:text-white/90"
+                            />
                           )}
                         </div>
                       </td>
@@ -935,6 +1195,49 @@ export default function MerchantMenuPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Delete Confirmation Modal */}
+      {showBulkDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-lg dark:border-gray-800 dark:bg-gray-900">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-error-100 dark:bg-error-900/20">
+                <svg className="h-6 w-6 text-error-600 dark:text-error-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Delete {selectedItems.length} Item{selectedItems.length > 1 ? 's' : ''}
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  This action cannot be undone
+                </p>
+              </div>
+            </div>
+            
+            <p className="mb-6 text-sm text-gray-700 dark:text-gray-300">
+              Are you sure you want to delete {selectedItems.length} menu item{selectedItems.length > 1 ? 's' : ''}? 
+              This will permanently remove {selectedItems.length > 1 ? 'them' : 'it'} from your menu.
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowBulkDeleteConfirm(false)}
+                className="flex-1 h-11 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                className="flex-1 h-11 rounded-lg bg-error-600 text-sm font-medium text-white hover:bg-error-700"
+              >
+                Delete {selectedItems.length} Item{selectedItems.length > 1 ? 's' : ''}
+              </button>
+            </div>
           </div>
         </div>
       )}

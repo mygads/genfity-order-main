@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import AddonItemFormModal from "@/components/addon-items/AddonItemFormModal";
 import StockUpdateModal from "@/components/addon-items/StockUpdateModal";
+import { FieldLabelWithTooltip } from "@/components/ui/Tooltip";
 
 interface AddonCategory {
   id: string;
@@ -518,9 +519,10 @@ export default function EditAddonCategoryPage() {
                 />
               </div>
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Min Selection
-                </label>
+                <FieldLabelWithTooltip
+                  label="Min Selection"
+                  tooltip="Minimum number of items customer must select from this category. Set to 0 for optional addons."
+                />
                 <input
                   type="number"
                   value={categoryForm.minSelection}
@@ -530,9 +532,11 @@ export default function EditAddonCategoryPage() {
                 />
               </div>
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Max Selection
-                </label>
+                <FieldLabelWithTooltip
+                  label="Max Selection"
+                  tooltip="Maximum number of items customer can select. Leave empty for unlimited selection. Set to 1 for single choice (radio), or higher for multiple choice (checkbox)."
+                  required={false}
+                />
                 <input
                   type="number"
                   value={categoryForm.maxSelection}

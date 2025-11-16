@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { FaGripVertical, FaPencilAlt, FaTrash, FaEye, FaEyeSlash } from 'react-icons/fa';
+import InlineEditField from './InlineEditField';
 
 interface Category {
   id: string;
@@ -23,6 +24,7 @@ interface CategoryDnDListProps {
   onDelete: (categoryId: string, categoryName: string) => void;
   onToggleActive: (categoryId: string, currentStatus: boolean, categoryName: string) => void;
   onManageMenus?: (category: Category) => void;
+  onInlineUpdate?: (id: string, field: 'name' | 'description', value: string) => Promise<void>;
 }
 
 export default function CategoryDnDList({
@@ -32,6 +34,7 @@ export default function CategoryDnDList({
   onDelete,
   onToggleActive,
   onManageMenus,
+  onInlineUpdate,
 }: CategoryDnDListProps) {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
@@ -103,9 +106,24 @@ export default function CategoryDnDList({
           {/* Category Info */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <h4 className="text-sm font-semibold text-gray-800 dark:text-white/90 truncate">
-                {category.name}
-              </h4>
+              {onInlineUpdate ? (
+                <InlineEditField
+                  value={category.name}
+                  onSave={async (newValue: string | number) => {
+                    const stringValue = String(newValue);
+                    if (stringValue.trim() && stringValue !== category.name) {
+                      await onInlineUpdate(category.id, 'name', stringValue);
+                    }
+                  }}
+                  type="text"
+                  className="text-sm font-semibold text-gray-800 dark:text-white/90"
+                  displayClassName="truncate"
+                />
+              ) : (
+                <h4 className="text-sm font-semibold text-gray-800 dark:text-white/90 truncate">
+                  {category.name}
+                </h4>
+              )}
               {!category.isActive && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-error-100 px-2 py-0.5 text-xs font-medium text-error-700 dark:bg-error-900/20 dark:text-error-400">
                   <FaEyeSlash className="h-3 w-3" />
@@ -113,10 +131,26 @@ export default function CategoryDnDList({
                 </span>
               )}
             </div>
-            {category.description && (
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 truncate">
-                {category.description}
-              </p>
+            {onInlineUpdate ? (
+              <InlineEditField
+                value={category.description || ''}
+                onSave={async (newValue: string | number) => {
+                  const stringValue = String(newValue);
+                  if (stringValue !== (category.description || '')) {
+                    await onInlineUpdate(category.id, 'description', stringValue);
+                  }
+                }}
+                type="text"
+                placeholder="Add description..."
+                className="mt-1 text-xs text-gray-500 dark:text-gray-400"
+                displayClassName="truncate"
+              />
+            ) : (
+              category.description && (
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 truncate">
+                  {category.description}
+                </p>
+              )
             )}
             <div className="mt-1 flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
               <span className="inline-flex items-center gap-1">

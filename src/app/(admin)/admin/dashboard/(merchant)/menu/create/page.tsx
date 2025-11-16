@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import Image from "next/image";
+import { FieldLabelWithTooltip } from "@/components/ui/Tooltip";
 
 interface Merchant {
   id: string;
@@ -344,9 +345,11 @@ export default function CreateMenuPage() {
           {formData.trackStock && (
             <div className="space-y-4">
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Stock Quantity <span className="text-error-500">*</span>
-                </label>
+                <FieldLabelWithTooltip
+                  label="Stock Quantity"
+                  tooltip="Current available stock for this menu item. Customers can only order while stock is available."
+                  required
+                />
                 <input
                   type="number"
                   name="stockQty"
@@ -360,9 +363,11 @@ export default function CreateMenuPage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Daily Stock Template <span className="text-xs text-gray-500">(Optional)</span>
-                </label>
+                <FieldLabelWithTooltip
+                  label="Daily Stock Template"
+                  tooltip="Stock will automatically reset to this value every day at midnight when auto-reset is enabled. Perfect for daily fresh items like baked goods or daily specials."
+                  optional
+                />
                 <input
                   type="number"
                   name="dailyStockTemplate"
@@ -372,9 +377,6 @@ export default function CreateMenuPage() {
                   placeholder="e.g., 50 (for auto-reset)"
                   className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
                 />
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Stock will auto-reset to this value daily if enabled
-                </p>
               </div>
 
               <div className="flex items-center gap-3">
