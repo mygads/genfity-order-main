@@ -10,6 +10,15 @@ const nextConfig: NextConfig = {
     // Allow build to succeed even with ESLint warnings
     ignoreDuringBuilds: false,
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**.public.blob.vercel-storage.com',
+        pathname: '/**',
+      },
+    ],
+  },
   webpack(config) {
     config.module.rules.push({
       test: /\.svg$/,

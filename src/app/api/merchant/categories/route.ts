@@ -35,7 +35,16 @@ async function handleGet(req: NextRequest, authContext: AuthContext) {
       );
     }
 
-    const categories = await menuService.getCategoriesByMerchant(merchantUser.merchantId);
+    // Get categories with menu count
+    const categories = await prisma.menuCategory.findMany({
+      where: { merchantId: merchantUser.merchantId },
+      include: {
+        _count: {
+          select: { menus: true },
+        },
+      },
+      orderBy: { sortOrder: 'asc' },
+    });
 
     return NextResponse.json({
       success: true,

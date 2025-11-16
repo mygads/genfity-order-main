@@ -5,7 +5,8 @@
  * Request Body:
  * {
  *   "email": "admin@genfity.com",
- *   "password": "Admin@123456"
+ *   "password": "1234abcd",
+ *   "rememberMe": false // Optional, extends session to 7 days for admin roles
  * }
  * 
  * Response:
@@ -15,11 +16,16 @@
  *     "user": { id, name, email, role },
  *     "accessToken": "jwt-token",
  *     "refreshToken": "refresh-token",
- *     "expiresIn": 3600
+ *     "expiresIn": 86400 // in seconds, varies by role and rememberMe
  *   },
  *   "message": "Login successful",
  *   "statusCode": 200
  * }
+ * 
+ * Session Duration Rules:
+ * - CUSTOMER: 90 days (7,776,000 seconds)
+ * - ADMIN/OWNER/STAFF with rememberMe=true: 7 days (604,800 seconds)
+ * - ADMIN/OWNER/STAFF with rememberMe=false: 1 day (86,400 seconds)
  */
 
 import { NextRequest } from 'next/server';
@@ -31,7 +37,7 @@ export async function POST(request: NextRequest) {
   try {
     // Parse request body
     const body = await request.json();
-    const { email, password } = body;
+    const { email, password, rememberMe = false } = body;
 
     // Validate required fields
     if (!email || !password) {
@@ -48,14 +54,14 @@ export async function POST(request: NextRequest) {
       request.headers.get('x-real-ip') || 
       'Unknown';
 
-    // Call AuthService login
+      // Call AuthService login with remember me flag
     const result = await authService.login(
-      { email, password },
+      { email, password, rememberMe },
       userAgent,
       ipAddress
     );
 
-    // Return success response
+    // Return success response with profile picture
     return successResponse(result, 'Login successful', 200);
   } catch (error) {
     return handleError(error);

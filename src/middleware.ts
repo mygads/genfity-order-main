@@ -9,6 +9,11 @@ import type { NextRequest } from 'next/server';
  * - Redirects unauthenticated users to /admin/login
  * - Blocks CUSTOMER role from accessing admin dashboard
  * 
+ * Public Routes (no auth required):
+ * - /admin/login
+ * - /admin/forgot-password
+ * - /admin/reset-password
+ * 
  * Note: JWT verification is done in API routes and server components
  * This middleware only checks for token presence and redirects accordingly
  */
@@ -27,11 +32,15 @@ export async function middleware(request: NextRequest) {
 
   // Admin routes protection
   if (pathname.startsWith('/admin')) {
-    // Allow login page
-    if (pathname === '/admin/login') {
-      // If already logged in, redirect to dashboard
+    // Allow public auth pages
+    if (
+      pathname === '/admin/login' ||
+      pathname === '/admin/forgot-password' ||
+      pathname === '/admin/reset-password'
+    ) {
+      // If already logged in, redirect to dashboard (except forgot/reset password)
       const token = request.cookies.get('auth_token')?.value;
-      if (token) {
+      if (token && pathname === '/admin/login') {
         const url = request.nextUrl.clone();
         url.pathname = '/admin/dashboard';
         return NextResponse.redirect(url);

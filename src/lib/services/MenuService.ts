@@ -34,15 +34,20 @@ export interface MenuCategoryInput {
  */
 export interface MenuInput {
   merchantId: bigint;
-  categoryId: bigint;
+  categoryId?: bigint;
   name: string;
   description?: string;
   price: number;
   imageUrl?: string;
-  isAvailable?: boolean;
-  hasStock?: boolean;
-  stockQuantity?: number;
+  isActive?: boolean;
   isPromo?: boolean;
+  promoPrice?: number;
+  promoStartDate?: Date;
+  promoEndDate?: Date;
+  trackStock?: boolean;
+  stockQty?: number;
+  dailyStockTemplate?: number;
+  autoResetStock?: boolean;
 }
 
 /**
@@ -63,9 +68,9 @@ export interface AddonItemInput {
   categoryId: bigint;
   name: string;
   price: number;
-  isAvailable?: boolean;
-  hasStock?: boolean;
-  stockQuantity?: number;
+  isActive?: boolean;
+  trackStock?: boolean;
+  stockQty?: number;
 }
 
 /**
@@ -209,9 +214,9 @@ class MenuService {
     }
 
     // Validate stock quantity
-    if (input.hasStock && (input.stockQuantity === undefined || input.stockQuantity < 0)) {
+    if (input.trackStock && (input.stockQty === undefined || input.stockQty < 0)) {
       throw new ValidationError(
-        'Stock quantity is required when hasStock is true',
+        'Stock quantity is required when trackStock is true',
         ERROR_CODES.VALIDATION_FAILED
       );
     }
@@ -223,10 +228,15 @@ class MenuService {
       description: input.description?.trim(),
       price: input.price,
       imageUrl: input.imageUrl,
-      isActive: input.isAvailable ?? true,
-      trackStock: input.hasStock ?? false,
-      stockQty: input.stockQuantity ?? undefined,
+      isActive: input.isActive ?? true,
       isPromo: input.isPromo ?? false,
+      promoPrice: input.promoPrice,
+      promoStartDate: input.promoStartDate,
+      promoEndDate: input.promoEndDate,
+      trackStock: input.trackStock ?? false,
+      stockQty: input.stockQty ?? undefined,
+      dailyStockTemplate: input.dailyStockTemplate,
+      autoResetStock: input.autoResetStock ?? false,
     });
   }
 
@@ -274,10 +284,15 @@ class MenuService {
       description: input.description?.trim(),
       price: input.price,
       imageUrl: input.imageUrl,
-      isActive: input.isAvailable,
-      trackStock: input.hasStock,
-      stockQty: input.stockQuantity,
+      isActive: input.isActive,
       isPromo: input.isPromo,
+      promoPrice: input.promoPrice,
+      promoStartDate: input.promoStartDate,
+      promoEndDate: input.promoEndDate,
+      trackStock: input.trackStock,
+      stockQty: input.stockQty,
+      dailyStockTemplate: input.dailyStockTemplate,
+      autoResetStock: input.autoResetStock,
     });
   }
 
@@ -304,7 +319,7 @@ class MenuService {
     merchantId: bigint,
     categoryId?: bigint
   ): Promise<Menu[]> {
-    return await menuRepository.findAllMenus(merchantId, categoryId, false);
+    return await menuRepository.findAllMenus(merchantId, categoryId, true);
   }
 
   /**
@@ -369,6 +384,126 @@ class MenuService {
     await menuRepository.updateMenu(menuId, {
       stockQty: menu.stockQty - quantity,
       isActive: menu.stockQty - quantity > 0,
+    });
+  }
+
+  /**
+   * Toggle menu active status
+   */
+  async toggleMenuActive(menuId: bigint): Promise<Menu> {
+    const menu = await menuRepository.findMenuById(menuId);
+    if (!menu) {
+      throw new NotFoundError(
+        'Menu item not found',
+        ERROR_CODES.MENU_NOT_FOUND
+      );
+    }
+
+    return await menuRepository.updateMenu(menuId, {
+      isActive: !menu.isActive,
+    });
+  }
+
+  /**
+   * Add stock to menu item
+   */
+  async addMenuStock(menuId: bigint, quantity: number): Promise<Menu> {
+    if (quantity <= 0) {
+      throw new ValidationError(
+        'Quantity must be greater than 0',
+        ERROR_CODES.VALIDATION_FAILED
+      );
+    }
+
+    const menu = await menuRepository.findMenuById(menuId);
+    if (!menu) {
+      throw new NotFoundError(
+        'Menu item not found',
+        ERROR_CODES.MENU_NOT_FOUND
+      );
+    }
+
+    if (!menu.trackStock) {
+      throw new ValidationError(
+        'Menu item does not track stock',
+        ERROR_CODES.VALIDATION_FAILED
+      );
+    }
+
+    const currentStock = menu.stockQty || 0;
+    return await menuRepository.updateMenu(menuId, {
+      stockQty: currentStock + quantity,
+      isActive: true,
+    });
+  }
+
+  /**
+   * Reset daily stock for menu items with autoResetStock enabled
+   */
+  async resetDailyStock(merchantId?: bigint): Promise<number> {
+    const menus = await menuRepository.findAllMenus(merchantId, undefined, false);
+    
+    let resetCount = 0;
+    for (const menu of menus) {
+      if (menu.autoResetStock && menu.dailyStockTemplate !== null) {
+        await menuRepository.updateMenu(menu.id, {
+          stockQty: menu.dailyStockTemplate,
+          isActive: menu.dailyStockTemplate > 0,
+          lastStockResetAt: new Date(),
+        });
+        resetCount++;
+      }
+    }
+
+    return resetCount;
+  }
+
+  /**
+   * Setup promo for menu item
+   */
+  async setupMenuPromo(
+    menuId: bigint,
+    promoData: {
+      isPromo: boolean;
+      promoPrice?: number;
+      promoStartDate?: Date;
+      promoEndDate?: Date;
+    }
+  ): Promise<Menu> {
+    const menu = await menuRepository.findMenuById(menuId);
+    if (!menu) {
+      throw new NotFoundError(
+        'Menu item not found',
+        ERROR_CODES.MENU_NOT_FOUND
+      );
+    }
+
+    // Validate promo price
+    if (promoData.isPromo && promoData.promoPrice) {
+      if (promoData.promoPrice < 0) {
+        throw new ValidationError(
+          'Promo price must be greater than or equal to 0',
+          ERROR_CODES.VALIDATION_FAILED
+        );
+      }
+
+      const originalPrice = typeof menu.price === 'number' 
+        ? menu.price 
+        : parseFloat(menu.price.toString());
+
+      if (promoData.promoPrice >= originalPrice) {
+        throw new ValidationError(
+          'Promo price must be less than original price',
+          ERROR_CODES.VALIDATION_FAILED
+        );
+      }
+    }
+
+    return await menuRepository.updateMenu(menuId, {
+      isPromo: promoData.isPromo,
+      promoPrice: promoData.promoPrice,
+      promoStartDate: promoData.promoStartDate,
+      promoEndDate: promoData.promoEndDate,
     });
   }
 
@@ -543,9 +678,9 @@ class MenuService {
       addonCategoryId: input.categoryId,
       name: input.name.trim(),
       price: input.price,
-      isActive: input.isAvailable ?? true,
-      trackStock: input.hasStock ?? false,
-      stockQty: input.stockQuantity ?? undefined,
+      isActive: input.isActive ?? true,
+      trackStock: input.trackStock ?? false,
+      stockQty: input.stockQty ?? undefined,
     });
   }
 
@@ -576,9 +711,9 @@ class MenuService {
     return await menuRepository.updateAddonItem(itemId, {
       name: input.name?.trim(),
       price: input.price,
-      isActive: input.isAvailable,
-      trackStock: input.hasStock,
-      stockQty: input.stockQuantity,
+      isActive: input.isActive,
+      trackStock: input.trackStock,
+      stockQty: input.stockQty,
     });
   }
 

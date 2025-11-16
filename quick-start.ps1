@@ -24,7 +24,7 @@ Write-Host "-------------------------------" -ForegroundColor Cyan
 
 $loginBody = @{
     email = "admin@genfity.com"
-    password = "Admin@123456"
+    password = "1234abcd"
 } | ConvertTo-Json
 
 try {

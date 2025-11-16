@@ -5,6 +5,7 @@
 
 import prisma from '@/lib/db/client';
 import { OrderStatus, OrderType } from '@prisma/client';
+import { serializeData } from '@/lib/utils/serializer';
 
 class OrderRepository {
   // ✅ CORRECT: Expose Prisma client as readonly property
@@ -106,7 +107,7 @@ class OrderRepository {
         },
       });
 
-      return order;
+      return serializeData(order);
     });
   }
 
@@ -114,7 +115,7 @@ class OrderRepository {
    * Find order by ID
    */
   async findById(id: bigint) {
-    return prisma.order.findUnique({
+    const result = await prisma.order.findUnique({
       where: { id },
       include: {
         merchant: true,
@@ -142,13 +143,14 @@ class OrderRepository {
         },
       },
     });
+    return serializeData(result);
   }
 
   /**
    * Find order by order number
    */
   async findByOrderNumber(orderNumber: string) {
-    return prisma.order.findFirst({
+    const result = await prisma.order.findFirst({
       where: { orderNumber },
       include: {
         merchant: true,
@@ -164,6 +166,7 @@ class OrderRepository {
         },
       },
     });
+    return serializeData(result);
   }
 
   /**
@@ -178,7 +181,7 @@ class OrderRepository {
       endDate?: Date;
     }
   ) {
-    return prisma.order.findMany({
+    const results = await prisma.order.findMany({
       where: {
         merchantId,
         ...(filters?.status && { status: filters.status as OrderStatus }),
@@ -209,13 +212,14 @@ class OrderRepository {
         placedAt: 'desc',
       },
     });
+    return serializeData(results);
   }
 
   /**
    * Find orders by customer
    */
   async findByCustomer(customerId: bigint) {
-    return prisma.order.findMany({
+    const results = await prisma.order.findMany({
       where: { customerId },
       include: {
         merchant: {
@@ -235,6 +239,7 @@ class OrderRepository {
         placedAt: 'desc',
       },
     });
+    return serializeData(results);
   }
 
   /**
@@ -275,7 +280,7 @@ class OrderRepository {
         },
       });
 
-      return updatedOrder;
+      return serializeData(updatedOrder);
     });
   }
 
@@ -283,7 +288,7 @@ class OrderRepository {
    * Get order status history
    */
   async getStatusHistory(orderId: bigint) {
-    return prisma.orderStatusHistory.findMany({
+    const results = await prisma.orderStatusHistory.findMany({
       where: { orderId },
       include: {
         changedBy: {
@@ -298,6 +303,7 @@ class OrderRepository {
         createdAt: 'desc',
       },
     });
+    return serializeData(results);
   }
 
   /**

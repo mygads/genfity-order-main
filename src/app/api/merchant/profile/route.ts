@@ -18,24 +18,11 @@ import { serializeBigInt } from '@/lib/utils/serializer';
  */
 async function handleGet(req: NextRequest, authContext: AuthContext) {
   try {
-    console.log('[PROFILE] AuthContext:', {
-      userId: authContext.userId.toString(),
-      sessionId: authContext.sessionId.toString(),
-      role: authContext.role,
-      email: authContext.email,
-    });
-
     // Get merchant from user's merchant_users relationship
     const merchantUser = await prisma.merchantUser.findFirst({
       where: { userId: authContext.userId },
       include: { merchant: true },
     });
-    
-    console.log('[PROFILE] MerchantUser query result:', merchantUser ? {
-      id: merchantUser.id.toString(),
-      merchantId: merchantUser.merchantId.toString(),
-      userId: merchantUser.userId.toString(),
-    } : 'NOT FOUND');
     
     if (!merchantUser) {
       return NextResponse.json(
@@ -51,8 +38,6 @@ async function handleGet(req: NextRequest, authContext: AuthContext) {
 
     // Get merchant details with opening hours
     const merchant = await merchantService.getMerchantById(merchantUser.merchantId);
-
-    console.log('[PROFILE] Merchant service result:', merchant ? 'Found' : 'NOT FOUND');
 
     if (!merchant) {
       return NextResponse.json(
@@ -73,7 +58,7 @@ async function handleGet(req: NextRequest, authContext: AuthContext) {
       statusCode: 200,
     });
   } catch (error) {
-    console.error('[PROFILE] Error getting merchant profile:', error);
+    console.error('Error getting merchant profile:', error);
 
     return NextResponse.json(
       {

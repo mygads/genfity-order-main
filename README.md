@@ -175,7 +175,7 @@ GENFITY adalah platform online ordering untuk restoran dengan fitur multi-mercha
 
 **Super Admin**:
 - Email: `admin@genfity.com`
-- Password: `Admin@123456`
+- Password: `1234abcd`
 - ⚠️ **Change this password in production!**
 
 ---
@@ -321,7 +321,7 @@ npx tsx test-auth-api.ts
 
 1. Import endpoints from `docs/API_AUTHENTICATION.md`
 2. Set base URL: `http://localhost:3000`
-3. Login with: `admin@genfity.com` / `Admin@123456`
+3. Login with: `admin@genfity.com` / `1234abcd`
 4. Copy `accessToken` from response
 5. Use in Authorization header: `Bearer <token>`
 

@@ -4,7 +4,7 @@
  */
 
 import prisma from '@/lib/db/client';
-import { Prisma, UserRole } from '@prisma/client';
+import type { Prisma, UserRole } from '@prisma/client';
 
 export class UserRepository {
   /**
@@ -105,6 +105,59 @@ export class UserRepository {
         role: role as UserRole,
         isActive: true,
       },
+      include: {
+        merchantUsers: {
+          include: {
+            merchant: true,
+          },
+        },
+      },
+    });
+  }
+
+  /**
+   * Get all users linked to a specific merchant
+   */
+  async findByMerchant(merchantId: bigint) {
+    return prisma.user.findMany({
+      where: {
+        merchantUsers: {
+          some: {
+            merchantId,
+          },
+        },
+      },
+      include: {
+        merchantUsers: {
+          where: {
+            merchantId,
+          },
+          include: {
+            merchant: true,
+          },
+        },
+      },
+      orderBy: {
+        role: 'asc',
+      },
+    });
+  }
+
+  /**
+   * Get all users
+   */
+  async findAll() {
+    return prisma.user.findMany({
+      include: {
+        merchantUsers: {
+          include: {
+            merchant: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
     });
   }
 
@@ -126,6 +179,19 @@ export class UserRepository {
   async delete(id: bigint) {
     return prisma.user.delete({
       where: { id },
+    });
+  }
+
+  /**
+   * Find users with reset token (for password reset validation)
+   */
+  async findByResetToken() {
+    return prisma.user.findMany({
+      where: {
+        resetToken: {
+          not: null,
+        },
+      },
     });
   }
 }

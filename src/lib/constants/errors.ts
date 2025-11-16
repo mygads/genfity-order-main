@@ -29,9 +29,11 @@ export const ERROR_CODES = {
   
   // Merchant
   MERCHANT_NOT_FOUND: 'MERCHANT_NOT_FOUND',
-  MERCHANT_CODE_EXISTS: 'MERCHANT_CODE_EXISTS',
-  MERCHANT_INACTIVE: 'MERCHANT_INACTIVE',
+  MERCHANT_DISABLED: 'MERCHANT_DISABLED',
   MERCHANT_CLOSED: 'MERCHANT_CLOSED',
+  MERCHANT_CODE_EXISTS: 'MERCHANT_CODE_EXISTS',
+  MERCHANT_ALREADY_HAS_OWNER: 'MERCHANT_ALREADY_HAS_OWNER',
+  MERCHANT_INACTIVE: 'MERCHANT_INACTIVE',
   
   // Menu & Addons
   MENU_NOT_FOUND: 'MENU_NOT_FOUND',
@@ -88,7 +90,9 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   
   // Merchant
   MERCHANT_NOT_FOUND: 'Merchant not found',
+  MERCHANT_DISABLED: 'Merchant is currently disabled',
   MERCHANT_CODE_EXISTS: 'Merchant code already exists',
+  MERCHANT_ALREADY_HAS_OWNER: 'This merchant already has an owner',
   MERCHANT_INACTIVE: 'Merchant is currently inactive',
   MERCHANT_CLOSED: 'Merchant is currently closed',
   

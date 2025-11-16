@@ -91,29 +91,18 @@ async function handlePost(req: NextRequest, context: AuthContext) {
 
     const body = await req.json();
 
-    // Validate categoryId
-    if (!body.categoryId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'VALIDATION_ERROR',
-          message: 'Category ID is required',
-          statusCode: 400,
-        },
-        { status: 400 }
-      );
-    }
-
     const menu = await menuService.createMenu({
       merchantId: merchantUser.merchantId,
-      categoryId: BigInt(body.categoryId),
+      categoryId: body.categoryId ? BigInt(body.categoryId) : undefined,
       name: body.name,
       description: body.description,
       price: body.price,
       imageUrl: body.imageUrl,
-      isAvailable: body.isAvailable !== undefined ? body.isAvailable : true,
-      hasStock: body.trackStock || false,
-      stockQuantity: body.stockQty,
+      isActive: body.isActive !== undefined ? body.isActive : true,
+      trackStock: body.trackStock || false,
+      stockQty: body.stockQty,
+      dailyStockTemplate: body.dailyStockTemplate,
+      autoResetStock: body.autoResetStock || false,
     });
 
     return NextResponse.json({

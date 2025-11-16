@@ -10,6 +10,9 @@ import {
   getOrderConfirmationTemplate,
 } from '@/lib/utils/emailTemplates';
 
+// Track initialization to prevent duplicate logs
+let isInitialized = false;
+
 class EmailService {
   private transporter: Transporter | null = null;
 
@@ -28,7 +31,10 @@ class EmailService {
 
     // Skip initialization if SMTP credentials are not configured
     if (!smtpHost || !smtpUser || !smtpPassword) {
-      console.warn('⚠️  SMTP credentials not configured. Email sending will be disabled.');
+      if (!isInitialized) {
+        console.warn('⚠️  SMTP credentials not configured. Email sending will be disabled.');
+        isInitialized = true;
+      }
       return;
     }
 
@@ -43,7 +49,11 @@ class EmailService {
         },
       });
 
-      console.log('✅ Email service initialized with SMTP');
+      // Only log once in development to avoid spam
+      if (!isInitialized) {
+        console.log('✅ Email service initialized with SMTP');
+        isInitialized = true;
+      }
     } catch (error) {
       console.error('❌ Failed to initialize email service:', error);
     }
@@ -88,7 +98,7 @@ class EmailService {
     email: string;
     tempPassword: string;
   }): Promise<boolean> {
-    const dashboardUrl = `${process.env.NEXT_PUBLIC_APP_URL}/auth/signin`;
+    const dashboardUrl = `${process.env.NEXT_PUBLIC_APP_URL}/admin/login`;
     const supportEmail = process.env.EMAIL_FROM || 'support@genfity.com';
 
     const html = getPasswordNotificationTemplate({
@@ -166,6 +176,15 @@ class EmailService {
   }
 }
 
-// Export singleton instance
-const emailService = new EmailService();
+// Singleton pattern with global caching for Next.js dev mode hot reload
+const globalForEmail = globalThis as unknown as {
+  emailService: EmailService | undefined;
+};
+
+const emailService = globalForEmail.emailService ?? new EmailService();
+
+if (process.env.NODE_ENV !== 'production') {
+  globalForEmail.emailService = emailService;
+}
+
 export default emailService;

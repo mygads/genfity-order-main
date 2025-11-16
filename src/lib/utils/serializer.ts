@@ -38,6 +38,24 @@ export function bigIntToString(value: bigint): string {
 }
 
 /**
+ * Check if value is a Prisma Decimal
+ * @param value - Value to check
+ * @returns True if value is Decimal
+ */
+function isDecimal(value: any): boolean {
+  return (
+    value instanceof Decimal ||
+    (typeof value === 'object' &&
+      value !== null &&
+      'constructor' in value &&
+      typeof value.constructor === 'function' &&
+      'd' in value &&
+      's' in value &&
+      'e' in value)
+  );
+}
+
+/**
  * Recursively serialize Prisma types to JSON-safe format
  * 
  * @param obj - Any object (can contain BigInt, Decimal, nested objects)
@@ -59,9 +77,9 @@ export function serializeData<T>(obj: T): T {
     return String(obj) as T;
   }
 
-  // Handle Prisma Decimal
-  if (obj instanceof Decimal) {
-    return obj.toNumber() as T;
+  // Handle Prisma Decimal (both instanceof and duck-typing check)
+  if (isDecimal(obj)) {
+    return parseFloat((obj as any).toString()) as T;
   }
 
   // Handle Date
@@ -94,3 +112,12 @@ export function jsonStringify(data: unknown): string {
     typeof value === 'bigint' ? value.toString() : value
   );
 }
+
+/**
+ * Alias for serializeData - for backward compatibility
+ * Recursively serialize BigInt and Decimal to JSON-safe format
+ * 
+ * @param obj - Any object (can contain BigInt, Decimal, nested objects)
+ * @returns Serialized object safe for JSON.stringify()
+ */
+export const serializeBigInt = serializeData;

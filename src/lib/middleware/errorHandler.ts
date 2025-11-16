@@ -6,7 +6,7 @@
 import { NextResponse } from 'next/server';
 import { CustomError, ERROR_CODES, ERROR_MESSAGES } from '@/lib/constants/errors';
 import { ApiErrorResponse } from '@/lib/types/api';
-import { serializeBigInt } from '@/lib/utils/serializer';
+import { serializeData } from '@/lib/utils/serializer';
 
 /**
  * Handle errors and return standardized API response
@@ -101,7 +101,7 @@ export function successResponse<T>(
   statusCode: number = 200
 ): NextResponse {
   // Serialize BigInt to string to avoid JSON errors
-  const serializedData = serializeBigInt(data);
+  const serializedData = serializeData(data);
   
   return NextResponse.json(
     {

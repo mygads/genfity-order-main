@@ -6,11 +6,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import menuService from '@/lib/services/MenuService';
-import menuRepository from '@/lib/repositories/MenuRepository';
+import addonService from '@/lib/services/AddonService';
 import { withMerchant } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/types/auth';
 import { ValidationError, NotFoundError } from '@/lib/constants/errors';
+import { serializeBigInt } from '@/lib/utils/serializer';
+import prisma from '@/lib/db/client';
 
 /**
  * GET /api/merchant/addon-items/[id]
@@ -18,31 +19,39 @@ import { ValidationError, NotFoundError } from '@/lib/constants/errors';
  */
 async function handleGet(
   req: NextRequest,
-  _context: AuthContext,
+  context: AuthContext,
   contextParams: { params: Promise<Record<string, string>> }
 ) {
   try {
-    const params = await contextParams.params;
-    const itemId = BigInt(params?.id || '0');
+    // Get merchant from user's merchant_users relationship
+    const merchantUser = await prisma.merchantUser.findFirst({
+      where: { userId: context.userId },
+    });
 
-    // Get addon item from repository
-    const item = await menuRepository.findAddonItemById(itemId);
-
-    if (!item) {
+    if (!merchantUser) {
       return NextResponse.json(
         {
           success: false,
-          error: 'NOT_FOUND',
-          message: 'Addon item not found',
+          error: 'MERCHANT_NOT_FOUND',
+          message: 'Merchant not found for this user',
           statusCode: 404,
         },
         { status: 404 }
       );
     }
 
+    const params = await contextParams.params;
+    const itemId = BigInt(params?.id || '0');
+
+    // Get addon item
+    const item = await addonService.getAddonItemById(
+      itemId,
+      merchantUser.merchantId
+    );
+
     return NextResponse.json({
       success: true,
-      data: item,
+      data: serializeBigInt(item),
       message: 'Addon item retrieved successfully',
       statusCode: 200,
     });
@@ -53,7 +62,8 @@ async function handleGet(
       {
         success: false,
         error: 'INTERNAL_ERROR',
-        message: 'Failed to get addon item',
+        message:
+          error instanceof Error ? error.message : 'Failed to get addon item',
         statusCode: 500,
       },
       { status: 500 }
@@ -67,26 +77,50 @@ async function handleGet(
  */
 async function handlePut(
   req: NextRequest,
-  _context: AuthContext,
+  context: AuthContext,
   contextParams: { params: Promise<Record<string, string>> }
 ) {
   try {
+    // Get merchant from user's merchant_users relationship
+    const merchantUser = await prisma.merchantUser.findFirst({
+      where: { userId: context.userId },
+    });
+
+    if (!merchantUser) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'MERCHANT_NOT_FOUND',
+          message: 'Merchant not found for this user',
+          statusCode: 404,
+        },
+        { status: 404 }
+      );
+    }
+
     const params = await contextParams.params;
     const itemId = BigInt(params?.id || '0');
     const body = await req.json();
 
     // Update addon item
-    const item = await menuService.updateAddonItem(itemId, {
-      name: body.name,
-      price: body.price,
-      isAvailable: body.isAvailable,
-      hasStock: body.hasStock,
-      stockQuantity: body.stockQuantity,
-    });
+    const item = await addonService.updateAddonItem(
+      itemId,
+      merchantUser.merchantId,
+      {
+        name: body.name,
+        description: body.description,
+        price: body.price !== undefined ? parseFloat(body.price) : undefined,
+        inputType: body.inputType,
+        sortOrder: body.sortOrder,
+        isActive: body.isActive,
+        trackStock: body.trackStock,
+        stockQty: body.stockQty,
+      }
+    );
 
     return NextResponse.json({
       success: true,
-      data: item,
+      data: serializeBigInt(item),
       message: 'Addon item updated successfully',
       statusCode: 200,
     });
@@ -121,7 +155,10 @@ async function handlePut(
       {
         success: false,
         error: 'INTERNAL_ERROR',
-        message: 'Failed to update addon item',
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Failed to update addon item',
         statusCode: 500,
       },
       { status: 500 }
@@ -135,15 +172,32 @@ async function handlePut(
  */
 async function handleDelete(
   req: NextRequest,
-  _context: AuthContext,
+  context: AuthContext,
   contextParams: { params: Promise<Record<string, string>> }
 ) {
   try {
+    // Get merchant from user's merchant_users relationship
+    const merchantUser = await prisma.merchantUser.findFirst({
+      where: { userId: context.userId },
+    });
+
+    if (!merchantUser) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'MERCHANT_NOT_FOUND',
+          message: 'Merchant not found for this user',
+          statusCode: 404,
+        },
+        { status: 404 }
+      );
+    }
+
     const params = await contextParams.params;
     const itemId = BigInt(params?.id || '0');
 
     // Delete addon item
-    await menuService.deleteAddonItem(itemId);
+    await addonService.deleteAddonItem(itemId, merchantUser.merchantId);
 
     return NextResponse.json({
       success: true,
@@ -169,7 +223,10 @@ async function handleDelete(
       {
         success: false,
         error: 'INTERNAL_ERROR',
-        message: 'Failed to delete addon item',
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Failed to delete addon item',
         statusCode: 500,
       },
       { status: 500 }

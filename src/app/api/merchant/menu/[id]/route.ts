@@ -73,13 +73,14 @@ async function handlePut(
     const body = await req.json();
 
     const menu = await menuService.updateMenu(menuId, {
+      categoryId: body.categoryId ? BigInt(body.categoryId) : undefined,
       name: body.name,
       description: body.description,
       price: body.price,
       imageUrl: body.imageUrl,
-      isAvailable: body.isAvailable,
-      hasStock: body.hasStock,
-      stockQuantity: body.stockQuantity,
+      isActive: body.isActive,
+      trackStock: body.trackStock,
+      stockQty: body.stockQty,
       isPromo: body.isPromo,
     });
 

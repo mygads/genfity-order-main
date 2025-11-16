@@ -4,6 +4,7 @@
  */
 
 import prisma from '@/lib/db/client';
+import { serializeData } from '@/lib/utils/serializer';
 
 export class MenuRepository {
   /**
@@ -13,16 +14,18 @@ export class MenuRepository {
    */
 
   async findAllCategories(merchantId: bigint) {
-    return prisma.menuCategory.findMany({
+    const results = await prisma.menuCategory.findMany({
       where: { merchantId },
       orderBy: { sortOrder: 'asc' },
     });
+    return serializeData(results);
   }
 
   async findCategoryById(id: bigint) {
-    return prisma.menuCategory.findUnique({
+    const result = await prisma.menuCategory.findUnique({
       where: { id },
     });
+    return serializeData(result);
   }
 
   async createCategory(data: {
@@ -32,9 +35,10 @@ export class MenuRepository {
     sortOrder?: number;
     isActive?: boolean;
   }) {
-    return prisma.menuCategory.create({
+    const result = await prisma.menuCategory.create({
       data,
     });
+    return serializeData(result);
   }
 
   async updateCategory(id: bigint, data: {
@@ -43,16 +47,18 @@ export class MenuRepository {
     sortOrder?: number;
     isActive?: boolean;
   }) {
-    return prisma.menuCategory.update({
+    const result = await prisma.menuCategory.update({
       where: { id },
       data,
     });
+    return serializeData(result);
   }
 
   async deleteCategory(id: bigint) {
-    return prisma.menuCategory.delete({
+    const result = await prisma.menuCategory.delete({
       where: { id },
     });
+    return serializeData(result);
   }
 
   /**
@@ -61,15 +67,26 @@ export class MenuRepository {
    * ========================================
    */
 
-  async findAllMenus(merchantId: bigint, categoryId?: bigint, includeInactive = false) {
-    return prisma.menu.findMany({
+  async findAllMenus(merchantId: bigint, categoryId?: bigint, includeInactive = true) {
+    const results = await prisma.menu.findMany({
       where: {
         merchantId,
-        ...(categoryId && { categoryId }),
-        ...(includeInactive ? {} : { isActive: true }),
+        ...(categoryId && {
+          categories: {
+            some: {
+              categoryId,
+            },
+          },
+        }),
+        ...(!includeInactive && { isActive: true }),
       },
       include: {
-        category: true,
+        category: true, // Keep for backward compatibility
+        categories: {
+          include: {
+            category: true,
+          },
+        },
         addonCategories: {
           include: {
             addonCategory: {
@@ -86,13 +103,19 @@ export class MenuRepository {
         createdAt: 'desc',
       },
     });
+    return serializeData(results);
   }
 
   async findMenuById(id: bigint) {
-    return prisma.menu.findUnique({
+    const result = await prisma.menu.findUnique({
       where: { id },
       include: {
-        category: true,
+        category: true, // Keep for backward compatibility
+        categories: {
+          include: {
+            category: true,
+          },
+        },
         addonCategories: {
           include: {
             addonCategory: {
@@ -104,6 +127,7 @@ export class MenuRepository {
         },
       },
     });
+    return serializeData(result);
   }
 
   async createMenu(data: {
@@ -118,9 +142,10 @@ export class MenuRepository {
     trackStock?: boolean;
     stockQty?: number;
   }) {
-    return prisma.menu.create({
+    const result = await prisma.menu.create({
       data,
     });
+    return serializeData(result);
   }
 
   async updateMenu(id: bigint, data: {
@@ -134,20 +159,22 @@ export class MenuRepository {
     trackStock?: boolean;
     stockQty?: number;
   }) {
-    return prisma.menu.update({
+    const result = await prisma.menu.update({
       where: { id },
       data,
     });
+    return serializeData(result);
   }
 
   async deleteMenu(id: bigint) {
-    return prisma.menu.delete({
+    const result = await prisma.menu.delete({
       where: { id },
     });
+    return serializeData(result);
   }
 
   async updateStock(id: bigint, quantity: number) {
-    return prisma.menu.update({
+    const result = await prisma.menu.update({
       where: { id },
       data: {
         stockQty: {
@@ -155,6 +182,56 @@ export class MenuRepository {
         },
       },
     });
+    return serializeData(result);
+  }
+
+  /**
+   * ========================================
+   * MENU CATEGORIES (Many-to-Many)
+   * ========================================
+   */
+
+  async addMenuCategories(menuId: bigint, categoryIds: bigint[]) {
+    const results = await Promise.all(
+      categoryIds.map((categoryId) =>
+        prisma.menuCategoryItem.create({
+          data: {
+            menuId,
+            categoryId,
+          },
+        })
+      )
+    );
+    return serializeData(results);
+  }
+
+  async removeMenuCategory(menuId: bigint, categoryId: bigint) {
+    const result = await prisma.menuCategoryItem.deleteMany({
+      where: {
+        menuId,
+        categoryId,
+      },
+    });
+    return serializeData(result);
+  }
+
+  async removeAllMenuCategories(menuId: bigint) {
+    const result = await prisma.menuCategoryItem.deleteMany({
+      where: { menuId },
+    });
+    return serializeData(result);
+  }
+
+  async setMenuCategories(menuId: bigint, categoryIds: bigint[]) {
+    // Remove all existing categories
+    await this.removeAllMenuCategories(menuId);
+    
+    // Add new categories
+    if (categoryIds.length > 0) {
+      return await this.addMenuCategories(menuId, categoryIds);
+    }
+    
+    return [];
   }
 
   /**
@@ -164,21 +241,23 @@ export class MenuRepository {
    */
 
   async findAllAddonCategories(merchantId: bigint) {
-    return prisma.addonCategory.findMany({
+    const results = await prisma.addonCategory.findMany({
       where: { merchantId },
       include: {
         addonItems: true,
       },
     });
+    return serializeData(results);
   }
 
   async findAddonCategoryById(id: bigint) {
-    return prisma.addonCategory.findUnique({
+    const result = await prisma.addonCategory.findUnique({
       where: { id },
       include: {
         addonItems: true,
       },
     });
+    return serializeData(result);
   }
 
   async createAddonCategory(data: {
@@ -189,9 +268,10 @@ export class MenuRepository {
     maxSelection?: number;
     isActive?: boolean;
   }) {
-    return prisma.addonCategory.create({
+    const result = await prisma.addonCategory.create({
       data,
     });
+    return serializeData(result);
   }
 
   async updateAddonCategory(id: bigint, data: {
@@ -201,16 +281,18 @@ export class MenuRepository {
     maxSelection?: number;
     isActive?: boolean;
   }) {
-    return prisma.addonCategory.update({
+    const result = await prisma.addonCategory.update({
       where: { id },
       data,
     });
+    return serializeData(result);
   }
 
   async deleteAddonCategory(id: bigint) {
-    return prisma.addonCategory.delete({
+    const result = await prisma.addonCategory.delete({
       where: { id },
     });
+    return serializeData(result);
   }
 
   /**
@@ -220,15 +302,17 @@ export class MenuRepository {
    */
 
   async findAddonItemsByCategoryId(categoryId: bigint) {
-    return prisma.addonItem.findMany({
+    const results = await prisma.addonItem.findMany({
       where: { addonCategoryId: categoryId },
     });
+    return serializeData(results);
   }
 
   async findAddonItemById(id: bigint) {
-    return prisma.addonItem.findUnique({
+    const result = await prisma.addonItem.findUnique({
       where: { id },
     });
+    return serializeData(result);
   }
 
   async createAddonItem(data: {
@@ -240,9 +324,10 @@ export class MenuRepository {
     trackStock?: boolean;
     stockQty?: number;
   }) {
-    return prisma.addonItem.create({
+    const result = await prisma.addonItem.create({
       data,
     });
+    return serializeData(result);
   }
 
   async updateAddonItem(id: bigint, data: {
@@ -253,20 +338,22 @@ export class MenuRepository {
     trackStock?: boolean;
     stockQty?: number;
   }) {
-    return prisma.addonItem.update({
+    const result = await prisma.addonItem.update({
       where: { id },
       data,
     });
+    return serializeData(result);
   }
 
   async deleteAddonItem(id: bigint) {
-    return prisma.addonItem.delete({
+    const result = await prisma.addonItem.delete({
       where: { id },
     });
+    return serializeData(result);
   }
 
   async updateAddonStock(id: bigint, quantity: number) {
-    return prisma.addonItem.update({
+    const result = await prisma.addonItem.update({
       where: { id },
       data: {
         stockQty: {
@@ -274,6 +361,7 @@ export class MenuRepository {
         },
       },
     });
+    return serializeData(result);
   }
 
   /**
@@ -283,16 +371,17 @@ export class MenuRepository {
    */
 
   async linkAddonToMenu(menuId: bigint, addonCategoryId: bigint) {
-    return prisma.menuAddonCategory.create({
+    const result = await prisma.menuAddonCategory.create({
       data: {
         menuId,
         addonCategoryId,
       },
     });
+    return serializeData(result);
   }
 
   async unlinkAddonFromMenu(menuId: bigint, addonCategoryId: bigint) {
-    return prisma.menuAddonCategory.delete({
+    const result = await prisma.menuAddonCategory.delete({
       where: {
         menuId_addonCategoryId: {
           menuId,
@@ -300,10 +389,11 @@ export class MenuRepository {
         },
       },
     });
+    return serializeData(result);
   }
 
   async getMenuAddons(menuId: bigint) {
-    return prisma.menuAddonCategory.findMany({
+    const results = await prisma.menuAddonCategory.findMany({
       where: { menuId },
       include: {
         addonCategory: {
@@ -315,6 +405,7 @@ export class MenuRepository {
         },
       },
     });
+    return serializeData(results);
   }
 }
 

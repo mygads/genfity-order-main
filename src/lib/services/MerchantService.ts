@@ -5,8 +5,7 @@
 
 import merchantRepository from '@/lib/repositories/MerchantRepository';
 import userRepository from '@/lib/repositories/UserRepository';
-import emailService from '@/lib/services/EmailService';
-import { hashPassword, generateTempPassword } from '@/lib/utils/passwordHasher';
+import { hashPassword } from '@/lib/utils/passwordHasher';
 import { validateEmail, validateRequired, validateMerchantCode } from '@/lib/utils/validators';
 import {
   ValidationError,
@@ -36,6 +35,7 @@ export interface CreateMerchantInput {
   ownerName: string;
   ownerEmail: string;
   ownerPhone?: string;
+  ownerPassword: string; // Password set by admin
 }
 
 /**
@@ -94,13 +94,13 @@ class MerchantService {
   async createMerchant(input: CreateMerchantInput): Promise<{
     merchant: Merchant;
     owner: User;
-    tempPassword: string;
   }> {
     // Validate required fields
     validateRequired(input.name, 'Merchant name');
     validateRequired(input.code, 'Merchant code');
     validateRequired(input.ownerName, 'Owner name');
     validateRequired(input.ownerEmail, 'Owner email');
+    validateRequired(input.ownerPassword, 'Owner password');
 
     // Validate merchant code format
     validateMerchantCode(input.code);
@@ -136,9 +136,8 @@ class MerchantService {
       );
     }
 
-    // Generate temporary password
-    const tempPassword = generateTempPassword();
-    const hashedPassword = await hashPassword(tempPassword);
+    // Hash password provided by admin
+    const hashedPassword = await hashPassword(input.ownerPassword);
 
     // Create owner user first
     const owner = await userRepository.create({
@@ -148,7 +147,7 @@ class MerchantService {
       passwordHash: hashedPassword,
       role: 'MERCHANT_OWNER',
       isActive: true,
-      mustChangePassword: true, // Force password change on first login
+      mustChangePassword: false, // No need to change password
     });
 
     // Create merchant with owner link
@@ -168,24 +167,9 @@ class MerchantService {
       'OWNER'
     );
 
-    // Send password notification email
-    try {
-      await emailService.sendPasswordNotification({
-        to: input.ownerEmail,
-        name: input.ownerName,
-        email: input.ownerEmail,
-        tempPassword,
-      });
-    } catch (emailError) {
-      // Log error but don't fail merchant creation
-      console.error('Failed to send password notification email:', emailError);
-      // In production, you might want to queue this for retry
-    }
-
     return {
       merchant,
       owner,
-      tempPassword, // Return for admin to display (optional)
     };
   }
 
@@ -436,10 +420,26 @@ class MerchantService {
    * 
    * @param merchantId Merchant ID
    * @param userId User ID
+   * @param role Role (OWNER or STAFF)
    * @returns Updated merchant user link
    */
-  async addStaff(merchantId: bigint, userId: bigint): Promise<void> {
-    await merchantRepository.addUser(merchantId, userId, 'STAFF');
+  async addStaff(merchantId: bigint, userId: bigint, role: 'OWNER' | 'STAFF' = 'STAFF'): Promise<void> {
+    // If adding OWNER, check merchant doesn't already have one
+    if (role === 'OWNER') {
+      const merchant = await merchantRepository.findById(merchantId);
+      const existingOwner = merchant?.merchantUsers?.find(
+        (mu: { role: string }) => mu.role === 'OWNER'
+      );
+      
+      if (existingOwner) {
+        throw new ConflictError(
+          '1 merchant hanya bisa memiliki 1 owner',
+          ERROR_CODES.MERCHANT_ALREADY_HAS_OWNER
+        );
+      }
+    }
+    
+    await merchantRepository.addUser(merchantId, userId, role);
   }
 
   /**

@@ -57,8 +57,32 @@ async function getMerchantsHandler(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const activeOnly = searchParams.get('activeOnly') === 'true';
 
-  // Get all merchants
-  const merchants = await merchantService.getAllMerchants(activeOnly);
+  // Get all merchants with owner info
+  const merchantsData = await merchantService.getAllMerchants(activeOnly);
+  
+  // Transform to include owner information
+  const merchants = merchantsData.map((merchant: any) => {
+    const owner = merchant.merchantUsers?.find((mu: any) => mu.role === 'OWNER')?.user;
+    
+    return {
+      id: merchant.id,
+      code: merchant.code,
+      name: merchant.name,
+      email: merchant.email,
+      phone: merchant.phone,
+      address: merchant.address,
+      city: merchant.city,
+      state: merchant.state,
+      postalCode: merchant.postalCode,
+      logoUrl: merchant.logoUrl,
+      description: merchant.description,
+      isActive: merchant.isActive,
+      createdAt: merchant.createdAt,
+      ownerId: owner?.id || null,
+      ownerName: owner?.name || null,
+      ownerEmail: owner?.email || null,
+    };
+  });
 
   return successResponse(
     { merchants },

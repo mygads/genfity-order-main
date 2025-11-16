@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
+import Image from "next/image";
+import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import ComponentCard from "@/components/common/ComponentCard";
-import PageBreadCrumb from "@/components/common/PageBreadCrumb";
 
 interface MerchantDetails {
   id: string;
@@ -15,8 +16,6 @@ interface MerchantDetails {
   address: string;
   logoUrl: string | null;
   isActive: boolean;
-  enableTax: boolean;
-  taxPercentage: string;
   currency: string;
   createdAt: string;
   openingHours: Array<{
@@ -54,7 +53,7 @@ export default function MerchantDetailsPage() {
 
         const token = localStorage.getItem("accessToken");
         if (!token) {
-          router.push("/auth/signin");
+          router.push("/admin/login");
           return;
         }
 
@@ -66,15 +65,25 @@ export default function MerchantDetailsPage() {
 
         if (!response.ok) {
           if (response.status === 401) {
-            router.push("/auth/signin");
+            router.push("/admin/login");
             return;
           }
           throw new Error("Failed to fetch merchant");
         }
 
         const data = await response.json();
-        setMerchant(data.data);
+        
+        // Handle response format: { success: true, data: { merchant: {...} } }
+        if (data.success && data.data && data.data.merchant) {
+          setMerchant(data.data.merchant);
+        } else if (data.data) {
+          // Fallback if API returns merchant directly
+          setMerchant(data.data);
+        } else {
+          throw new Error("Invalid response format");
+        }
       } catch (err) {
+        console.error("Fetch merchant error:", err);
         setError(err instanceof Error ? err.message : "An error occurred");
       } finally {
         setLoading(false);
@@ -113,172 +122,174 @@ export default function MerchantDetailsPage() {
 
   if (loading) {
     return (
-      <>
-        <PageBreadCrumb pageTitle="Merchant Details" />
+      <div>
+        <PageBreadcrumb pageTitle="Merchant Details" />
         <div className="mt-6 py-10 text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
-          <p className="mt-2 text-sm text-body-color">Loading merchant details...</p>
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-brand-500 border-r-transparent"></div>
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Loading merchant details...</p>
         </div>
-      </>
+      </div>
     );
   }
 
   if (error || !merchant) {
     return (
-      <>
-        <PageBreadCrumb pageTitle="Merchant Details" />
-        <div className="mt-6">
-          <ComponentCard title="Error">
-            <div className="rounded-lg bg-red-50 p-4 dark:bg-red-900/20">
-              <p className="text-sm text-red-600 dark:text-red-400">
-                {error || "Merchant not found"}
-              </p>
-            </div>
-            <button
-              onClick={() => router.push("/admin/merchants")}
-              className="mt-4 text-primary hover:underline"
-            >
-              ← Back to Merchants
-            </button>
-          </ComponentCard>
+      <div>
+        <PageBreadcrumb pageTitle="Merchant Details" />
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
+          <h3 className="mb-4 text-lg font-semibold text-gray-800 dark:text-white/90">Error</h3>
+          <div className="rounded-lg bg-error-50 p-4 dark:bg-error-900/20">
+            <p className="text-sm text-error-600 dark:text-error-400">
+              {error || "Merchant not found"}
+            </p>
+          </div>
+          <button
+            onClick={() => router.push("/admin/dashboard/merchants")}
+            className="mt-4 text-sm text-brand-500 hover:text-brand-600 hover:underline dark:text-brand-400"
+          >
+            ← Back to Merchants
+          </button>
         </div>
-      </>
+      </div>
     );
   }
 
   return (
-    <>
-      <PageBreadCrumb pageTitle={merchant.name} />
+    <div>
+      <PageBreadcrumb pageTitle={merchant.name} />
 
-      <div className="mt-6 space-y-6">
-        {/* Basic Information */}
-        <ComponentCard title="Basic Information">
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <div>
-              <label className="mb-2 block text-sm font-medium text-body-color">
-                Merchant Code
-              </label>
-              <p className="font-mono text-lg font-semibold text-meta-3">
+      <ComponentCard title="Merchant Details" className="space-y-6">
+        {/* Merchant Logo & Header */}
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
+          <div className="flex flex-col items-center gap-4 md:flex-row md:items-start">
+            {/* Logo */}
+            <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-xl border-4 border-gray-200 dark:border-gray-700 md:h-32 md:w-32">
+              {merchant.logoUrl ? (
+                <Image
+                  src={merchant.logoUrl}
+                  alt={merchant.name}
+                  fill
+                  className="object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-brand-100 text-4xl font-bold text-brand-600 dark:bg-brand-900/20 dark:text-brand-400 md:text-5xl">
+                  {merchant.name.charAt(0).toUpperCase()}
+                </div>
+              )}
+            </div>
+
+            {/* Header Info */}
+            <div className="flex-1 text-center md:text-left">
+              <h2 className="mb-2 text-2xl font-bold text-gray-800 dark:text-white/90">
+                {merchant.name}
+              </h2>
+              <p className="mb-3 font-mono text-sm text-gray-500 dark:text-gray-400">
                 {merchant.code}
               </p>
+              <div className="flex flex-wrap items-center justify-center gap-2 md:justify-start">
+                <button
+                  onClick={handleToggleStatus}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium ${
+                    merchant.isActive
+                      ? "bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400"
+                      : "bg-error-100 text-error-700 dark:bg-error-900/20 dark:text-error-400"
+                  }`}
+                >
+                  <span className={`h-2 w-2 rounded-full ${
+                    merchant.isActive ? 'bg-success-500' : 'bg-error-500'
+                  }`}></span>
+                  {merchant.isActive ? "Active" : "Inactive"}
+                </button>
+                <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                  {merchant.currency}
+                </span>
+              </div>
             </div>
+          </div>
+        </div>
 
+        {/* Basic Information */}
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
+          <h3 className="mb-5 text-lg font-semibold text-gray-800 dark:text-white/90">Contact Information</h3>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div>
-              <label className="mb-2 block text-sm font-medium text-body-color">
-                Status
-              </label>
-              <button
-                onClick={handleToggleStatus}
-                className={`inline-flex rounded-full px-4 py-1.5 text-sm font-medium ${
-                  merchant.isActive
-                    ? "bg-success bg-opacity-10 text-success"
-                    : "bg-danger bg-opacity-10 text-danger"
-                }`}
-              >
-                {merchant.isActive ? "Active" : "Inactive"}
-              </button>
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium text-body-color">
+              <label className="mb-2 block text-sm font-medium text-gray-500 dark:text-gray-400">
                 Merchant Name
               </label>
-              <p className="text-black dark:text-white">{merchant.name}</p>
+              <p className="text-gray-800 dark:text-white/90">{merchant.name}</p>
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium text-body-color">
+              <label className="mb-2 block text-sm font-medium text-gray-500 dark:text-gray-400">
                 Email
               </label>
-              <p className="text-black dark:text-white">{merchant.email}</p>
+              <p className="text-gray-800 dark:text-white/90">{merchant.email}</p>
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium text-body-color">
+              <label className="mb-2 block text-sm font-medium text-gray-500 dark:text-gray-400">
                 Phone
               </label>
-              <p className="text-black dark:text-white">{merchant.phone}</p>
+              <p className="text-gray-800 dark:text-white/90">{merchant.phone}</p>
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium text-body-color">
+              <label className="mb-2 block text-sm font-medium text-gray-500 dark:text-gray-400">
                 Currency
               </label>
-              <p className="text-black dark:text-white">{merchant.currency}</p>
+              <p className="text-gray-800 dark:text-white/90">{merchant.currency}</p>
             </div>
 
             <div className="md:col-span-2">
-              <label className="mb-2 block text-sm font-medium text-body-color">
+              <label className="mb-2 block text-sm font-medium text-gray-500 dark:text-gray-400">
                 Address
               </label>
-              <p className="text-black dark:text-white">{merchant.address}</p>
+              <p className="text-gray-800 dark:text-white/90">{merchant.address}</p>
             </div>
 
             {merchant.description && (
               <div className="md:col-span-2">
-                <label className="mb-2 block text-sm font-medium text-body-color">
+                <label className="mb-2 block text-sm font-medium text-gray-500 dark:text-gray-400">
                   Description
                 </label>
-                <p className="text-black dark:text-white">{merchant.description}</p>
+                <p className="text-gray-800 dark:text-white/90">{merchant.description}</p>
               </div>
             )}
           </div>
 
-          <div className="mt-6 flex gap-3 border-t border-stroke pt-6 dark:border-strokedark">
+          <div className="mt-6 flex gap-3 border-t border-gray-200 pt-6 dark:border-gray-800">
             <button
-              onClick={() => router.push(`/admin/merchants/${merchant.id}/edit`)}
-              className="rounded bg-primary px-6 py-2.5 font-medium text-white hover:bg-opacity-90"
+              onClick={() => router.push(`/admin/dashboard/merchants/${merchant.id}/edit`)}
+              className="h-11 rounded-lg bg-brand-500 px-6 text-sm font-medium text-white hover:bg-brand-600 focus:outline-none focus:ring-3 focus:ring-brand-500/20"
             >
               Edit Merchant
             </button>
             <button
-              onClick={() => router.push("/admin/merchants")}
-              className="rounded border border-stroke px-6 py-2.5 font-medium hover:bg-gray-2 dark:border-strokedark dark:hover:bg-meta-4"
+              onClick={() => router.push("/admin/dashboard/merchants")}
+              className="h-11 rounded-lg border border-gray-200 bg-white px-6 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-white/[0.03] dark:text-gray-300 dark:hover:bg-white/[0.05]"
             >
               Back to List
             </button>
           </div>
-        </ComponentCard>
-
-        {/* Tax Settings */}
-        <ComponentCard title="Tax Settings">
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <div>
-              <label className="mb-2 block text-sm font-medium text-body-color">
-                Tax Enabled
-              </label>
-              <p className="text-black dark:text-white">
-                {merchant.enableTax ? "Yes" : "No"}
-              </p>
-            </div>
-
-            {merchant.enableTax && (
-              <div>
-                <label className="mb-2 block text-sm font-medium text-body-color">
-                  Tax Percentage
-                </label>
-                <p className="text-black dark:text-white">{merchant.taxPercentage}%</p>
-              </div>
-            )}
-          </div>
-        </ComponentCard>
+        </div>
 
         {/* Opening Hours */}
-        <ComponentCard title="Opening Hours">
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
+          <h3 className="mb-5 text-lg font-semibold text-gray-800 dark:text-white/90">Opening Hours</h3>
           {merchant.openingHours && merchant.openingHours.length > 0 ? (
             <div className="space-y-3">
               {merchant.openingHours.map((hour) => (
                 <div
                   key={hour.dayOfWeek}
-                  className="flex items-center justify-between border-b border-stroke py-3 last:border-0 dark:border-strokedark"
+                  className="flex items-center justify-between border-b border-gray-100 py-3 last:border-0 dark:border-gray-800"
                 >
-                  <span className="font-medium text-black dark:text-white">
+                  <span className="font-medium text-gray-800 dark:text-white/90">
                     {DAYS[hour.dayOfWeek]}
                   </span>
                   {hour.isClosed ? (
-                    <span className="text-danger">Closed</span>
+                    <span className="text-error-600 dark:text-error-400">Closed</span>
                   ) : (
-                    <span className="text-black dark:text-white">
+                    <span className="text-gray-800 dark:text-white/90">
                       {hour.openTime} - {hour.closeTime}
                     </span>
                   )}
@@ -286,46 +297,44 @@ export default function MerchantDetailsPage() {
               ))}
             </div>
           ) : (
-            <p className="text-body-color">No opening hours configured</p>
+            <p className="text-gray-500 dark:text-gray-400">No opening hours configured</p>
           )}
-        </ComponentCard>
+        </div>
 
         {/* Staff/Owners */}
-        <ComponentCard title="Staff & Owners">
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
+          <h3 className="mb-5 text-lg font-semibold text-gray-800 dark:text-white/90">Staff & Owners</h3>
           {merchant.merchantUsers && merchant.merchantUsers.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full table-auto">
                 <thead>
-                  <tr className="bg-gray-2 text-left dark:bg-meta-4">
-                    <th className="px-4 py-3 font-medium text-black dark:text-white">
+                  <tr className="bg-gray-50 text-left dark:bg-gray-900/50">
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">
                       Name
                     </th>
-                    <th className="px-4 py-3 font-medium text-black dark:text-white">
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">
                       Email
                     </th>
-                    <th className="px-4 py-3 font-medium text-black dark:text-white">
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">
                       Role
                     </th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                   {merchant.merchantUsers.map((mu, index) => (
-                    <tr
-                      key={index}
-                      className="border-b border-stroke dark:border-strokedark"
-                    >
-                      <td className="px-4 py-3 text-black dark:text-white">
+                    <tr key={index}>
+                      <td className="px-4 py-3 text-sm text-gray-800 dark:text-white/90">
                         {mu.user.name}
                       </td>
-                      <td className="px-4 py-3 text-black dark:text-white">
+                      <td className="px-4 py-3 text-sm text-gray-800 dark:text-white/90">
                         {mu.user.email}
                       </td>
                       <td className="px-4 py-3">
                         <span
-                          className={`inline-flex rounded-full px-3 py-1 text-sm font-medium ${
+                          className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
                             mu.role === "OWNER"
-                              ? "bg-primary bg-opacity-10 text-primary"
-                              : "bg-meta-5 bg-opacity-10 text-meta-5"
+                              ? "bg-brand-100 text-brand-700 dark:bg-brand-900/20 dark:text-brand-400"
+                              : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
                           }`}
                         >
                           {mu.role}
@@ -337,27 +346,28 @@ export default function MerchantDetailsPage() {
               </table>
             </div>
           ) : (
-            <p className="text-body-color">No staff members found</p>
+            <p className="text-gray-500 dark:text-gray-400">No staff members found</p>
           )}
-        </ComponentCard>
+        </div>
 
         {/* Metadata */}
-        <ComponentCard title="Metadata">
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
+          <h3 className="mb-5 text-lg font-semibold text-gray-800 dark:text-white/90">Metadata</h3>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div>
-              <label className="mb-2 block text-sm font-medium text-body-color">
+              <label className="mb-2 block text-sm font-medium text-gray-500 dark:text-gray-400">
                 Merchant ID
               </label>
-              <p className="font-mono text-sm text-black dark:text-white">
+              <p className="font-mono text-sm text-gray-800 dark:text-white/90">
                 {merchant.id}
               </p>
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium text-body-color">
+              <label className="mb-2 block text-sm font-medium text-gray-500 dark:text-gray-400">
                 Created At
               </label>
-              <p className="text-black dark:text-white">
+              <p className="text-gray-800 dark:text-white/90">
                 {new Date(merchant.createdAt).toLocaleDateString("en-US", {
                   year: "numeric",
                   month: "long",
@@ -368,8 +378,8 @@ export default function MerchantDetailsPage() {
               </p>
             </div>
           </div>
-        </ComponentCard>
-      </div>
-    </>
+        </div>
+      </ComponentCard>
+    </div>
   );
 }

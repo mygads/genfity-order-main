@@ -2,8 +2,13 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import ComponentCard from "@/components/common/ComponentCard";
-import PageBreadCrumb from "@/components/common/PageBreadCrumb";
+import PageBreadcrumb from "@/components/common/PageBreadCrumb";
+import { useToast } from "@/hooks/useToast";
+import ToastContainer from "@/components/ui/ToastContainer";
+import ConfirmDialog from "@/components/modals/ConfirmDialog";
+import AddOwnerModal from "@/components/merchants/AddOwnerModal";
+import ViewUsersModal from "@/components/merchants/ViewUsersModal";
+import Image from "next/image";
 
 interface Merchant {
   id: string;
@@ -12,18 +17,64 @@ interface Merchant {
   email: string;
   phone: string;
   address: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  logoUrl?: string;
   isActive: boolean;
-  enableTax: boolean;
-  taxPercentage: string;
   createdAt: string;
+  openingHours?: Array<{
+    dayOfWeek: number;
+    openTime: string | null;
+    closeTime: string | null;
+    isClosed: boolean;
+  }>;
+  merchantUsers?: Array<{
+    role: string;
+    user: {
+      id: string;
+      name: string;
+      email: string;
+      role: string;
+    };
+  }>;
 }
 
 export default function MerchantsPage() {
   const router = useRouter();
+  const { toasts, success: showSuccess, error: showError } = useToast();
+  
   const [merchants, setMerchants] = useState<Merchant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeOnly, setActiveOnly] = useState(false);
+  
+  // Delete confirmation state
+  const [deleteDialog, setDeleteDialog] = useState({
+    isOpen: false,
+    merchantId: "",
+    merchantName: "",
+  });
+  
+  // Add owner modal state
+  const [addOwnerModal, setAddOwnerModal] = useState<{
+    isOpen: boolean;
+    merchantId: string;
+    merchantName: string;
+    currentOwner?: { name: string; email: string } | null;
+  }>({
+    isOpen: false,
+    merchantId: "",
+    merchantName: "",
+    currentOwner: null,
+  });
+  
+  // View users modal state
+  const [viewUsersModal, setViewUsersModal] = useState({
+    isOpen: false,
+    merchantId: "",
+    merchantName: "",
+  });
 
   // Fetch merchants from API
   const fetchMerchants = async () => {
@@ -33,7 +84,7 @@ export default function MerchantsPage() {
 
       const token = localStorage.getItem("accessToken");
       if (!token) {
-        router.push("/auth/signin");
+        router.push("/admin/login");
         return;
       }
 
@@ -49,15 +100,25 @@ export default function MerchantsPage() {
 
       if (!response.ok) {
         if (response.status === 401) {
-          router.push("/auth/signin");
+          router.push("/admin/login");
           return;
         }
         throw new Error("Failed to fetch merchants");
       }
 
       const data = await response.json();
-      setMerchants(data.data || []);
+      
+      // Handle response format: { success: true, data: { merchants: [...] } }
+      if (data.success && data.data && Array.isArray(data.data.merchants)) {
+        setMerchants(data.data.merchants);
+      } else if (Array.isArray(data.data)) {
+        // Fallback if API returns data directly
+        setMerchants(data.data);
+      } else {
+        setMerchants([]);
+      }
     } catch (err) {
+      console.error("Fetch merchants error:", err);
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setLoading(false);
@@ -69,41 +130,89 @@ export default function MerchantsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeOnly]);
 
-  // Toggle merchant status
-  const handleToggleStatus = async (merchantId: string) => {
+  /**
+   * Check if merchant is currently open based on opening hours
+   */
+  const isMerchantOpen = (merchant: Merchant): boolean => {
+    if (!merchant.isActive || !merchant.openingHours || merchant.openingHours.length === 0) {
+      return false;
+    }
+
+    const now = new Date();
+    const currentDay = now.getDay(); // 0 = Sunday, 6 = Saturday
+    const currentTime = now.toTimeString().slice(0, 5); // "HH:MM"
+
+    const todayHours = merchant.openingHours.find(h => h.dayOfWeek === currentDay);
+    
+    if (!todayHours || todayHours.isClosed || !todayHours.openTime || !todayHours.closeTime) {
+      return false;
+    }
+
+    return currentTime >= todayHours.openTime && currentTime <= todayHours.closeTime;
+  };
+
+  /**
+   * Get store status text
+   */
+  const getStoreStatus = (merchant: Merchant): { text: string; isOpen: boolean } => {
+    if (!merchant.isActive) {
+      return { text: 'Inactive', isOpen: false };
+    }
+
+    const isOpen = isMerchantOpen(merchant);
+    return {
+      text: isOpen ? 'Open Now' : 'Closed',
+      isOpen
+    };
+  };
+
+  // Toggle merchant status (active/inactive)
+  // Toggle merchant active/inactive status
+  const handleToggleStatus = async (merchantId: string, currentStatus: boolean) => {
     try {
       const token = localStorage.getItem("accessToken");
       if (!token) return;
 
-      const response = await fetch(`/api/admin/merchants/${merchantId}/toggle`, {
-        method: "POST",
+      const response = await fetch(`/api/admin/merchants/${merchantId}`, {
+        method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
+        body: JSON.stringify({
+          isActive: !currentStatus,
+        }),
       });
 
       if (!response.ok) {
         throw new Error("Failed to toggle merchant status");
       }
 
+      showSuccess("Success", `Merchant ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
+      
       // Refresh merchants list
       fetchMerchants();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to toggle status");
+      showError("Error", err instanceof Error ? err.message : "Failed to toggle status");
     }
   };
 
-  // Delete merchant
-  const handleDelete = async (merchantId: string, merchantName: string) => {
-    if (!confirm(`Are you sure you want to delete "${merchantName}"?`)) {
-      return;
-    }
+  // Show delete confirmation dialog
+  const handleDelete = (merchantId: string, merchantName: string) => {
+    setDeleteDialog({
+      isOpen: true,
+      merchantId,
+      merchantName,
+    });
+  };
 
+  // Confirm delete merchant
+  const confirmDelete = async () => {
     try {
       const token = localStorage.getItem("accessToken");
       if (!token) return;
 
-      const response = await fetch(`/api/admin/merchants/${merchantId}`, {
+      const response = await fetch(`/api/admin/merchants/${deleteDialog.merchantId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -114,49 +223,71 @@ export default function MerchantsPage() {
         throw new Error("Failed to delete merchant");
       }
 
-      // Refresh merchants list
+      // Close dialog and refresh list
+      setDeleteDialog({ isOpen: false, merchantId: "", merchantName: "" });
       fetchMerchants();
-      alert("Merchant deleted successfully");
+      showSuccess("Success", "Merchant deleted successfully");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to delete merchant");
+      showError("Error", err instanceof Error ? err.message : "Failed to delete merchant");
+      setDeleteDialog({ isOpen: false, merchantId: "", merchantName: "" });
     }
   };
 
-  return (
-    <>
-      <PageBreadCrumb pageTitle="Merchants Management" />
+  // Cancel delete
+  const cancelDelete = () => {
+    setDeleteDialog({ isOpen: false, merchantId: "", merchantName: "" });
+  };
 
-      <div className="mt-6">
-        <ComponentCard
-          title="All Merchants"
-          desc="Manage restaurant merchants and their settings"
-        >
-          {/* Actions Bar */}
-          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={activeOnly}
-                  onChange={(e) => setActiveOnly(e.target.checked)}
-                  className="h-4 w-4 rounded border-stroke"
-                />
-                <span>Active Only</span>
-              </label>
-              <button
-                onClick={fetchMerchants}
-                className="rounded bg-gray-2 px-4 py-2 text-sm font-medium hover:bg-gray-3 dark:bg-meta-4 dark:hover:bg-opacity-80"
-              >
-                Refresh
-              </button>
-            </div>
+  return (
+    <div>
+      <ToastContainer toasts={toasts} />
+      <ConfirmDialog
+        isOpen={deleteDialog.isOpen}
+        title="Delete Merchant"
+        message={`Are you sure you want to delete "${deleteDialog.merchantName}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+      />
+      <PageBreadcrumb pageTitle="Merchants Management" />
+
+      <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
+        <div className="mb-5">
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
+            All Merchants
+          </h3>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Manage restaurant merchants and their settings
+          </p>
+        </div>
+        {/* Actions Bar */}
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+              <input
+                type="checkbox"
+                checked={activeOnly}
+                onChange={(e) => setActiveOnly(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 dark:border-gray-700"
+              />
+              <span>View All</span>
+            </label>
             <button
-              onClick={() => router.push("/admin/merchants/create")}
-              className="rounded bg-primary px-6 py-2.5 font-medium text-white hover:bg-opacity-90"
+              onClick={fetchMerchants}
+              className="h-9 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-white/[0.03] dark:text-gray-300 dark:hover:bg-white/[0.05]"
             >
-              + Create Merchant
+              Refresh
             </button>
           </div>
+          <button
+            onClick={() => router.push("/admin/dashboard/merchants/create")}
+            className="h-11 rounded-lg bg-brand-500 px-6 text-sm font-medium text-white hover:bg-brand-600 focus:outline-none focus:ring-3 focus:ring-brand-500/20"
+          >
+            + Create Merchant
+          </button>
+        </div>
 
           {/* Loading State */}
           {loading && (
@@ -173,83 +304,118 @@ export default function MerchantsPage() {
             </div>
           )}
 
-          {/* Merchants Table */}
-          {!loading && !error && (
-            <div className="overflow-x-auto">
-              <table className="w-full table-auto">
+        {/* Merchants Table */}
+        {!loading && !error && (
+          <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-white/[0.05]">
+            <div className="max-w-full overflow-x-auto">
+              <table className="w-full">
                 <thead>
-                  <tr className="bg-gray-2 text-left dark:bg-meta-4">
-                    <th className="px-4 py-4 font-medium text-black dark:text-white">
+                  <tr className="border-b border-gray-100 bg-gray-50 text-left dark:border-white/[0.05] dark:bg-white/[0.02]">
+                    <th className="px-5 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
+                      Logo
+                    </th>
+                    <th className="px-5 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
                       Code
                     </th>
-                    <th className="px-4 py-4 font-medium text-black dark:text-white">
+                    <th className="px-5 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
                       Merchant Name
                     </th>
-                    <th className="px-4 py-4 font-medium text-black dark:text-white">
+                    <th className="px-5 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
                       Email
                     </th>
-                    <th className="px-4 py-4 font-medium text-black dark:text-white">
+                    <th className="px-5 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
                       Phone
                     </th>
-                    <th className="px-4 py-4 font-medium text-black dark:text-white">
-                      Tax
+                    <th className="px-5 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
+                      Store Status
                     </th>
-                    <th className="px-4 py-4 font-medium text-black dark:text-white">
-                      Status
+                    <th className="px-5 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
+                      Active Status
                     </th>
-                    <th className="px-4 py-4 font-medium text-black dark:text-white">
+                    <th className="px-5 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
                   {merchants.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="py-10 text-center">
-                        <p className="text-body-color">No merchants found</p>
+                      <td colSpan={8} className="py-10 text-center">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">No merchants found</p>
                         <button
-                          onClick={() => router.push("/admin/merchants/create")}
-                          className="mt-4 text-primary hover:underline"
+                          onClick={() => router.push("/admin/dashboard/merchants/create")}
+                          className="mt-4 text-sm text-brand-500 hover:text-brand-600 hover:underline dark:text-brand-400"
                         >
                           Create your first merchant
                         </button>
                       </td>
                     </tr>
                   ) : (
-                    merchants.map((merchant) => (
-                      <tr key={merchant.id} className="border-b border-stroke dark:border-strokedark">
-                        <td className="px-4 py-4">
-                          <span className="font-mono text-sm text-meta-3">
+                    merchants.map((merchant) => {
+                      const storeStatus = getStoreStatus(merchant);
+                      
+                      return (
+                      <tr key={merchant.id}>
+                        <td className="px-5 py-4">
+                          {/* Merchant Logo */}
+                          <div className="relative h-10 w-10 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+                            {merchant.logoUrl ? (
+                              <Image
+                                src={merchant.logoUrl}
+                                alt={merchant.name}
+                                fill
+                                className="object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center bg-brand-100 text-sm font-bold text-brand-600 dark:bg-brand-900/20 dark:text-brand-400">
+                                {merchant.name.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className="font-mono text-sm text-gray-600 dark:text-gray-400">
                             {merchant.code}
                           </span>
                         </td>
-                        <td className="px-4 py-4">
-                          <p className="font-medium text-black dark:text-white">
+                        <td className="px-5 py-4">
+                          <p className="text-sm font-medium text-gray-800 dark:text-white/90">
                             {merchant.name}
                           </p>
                         </td>
-                        <td className="px-4 py-4 text-sm">{merchant.email}</td>
-                        <td className="px-4 py-4 text-sm">{merchant.phone}</td>
-                        <td className="px-4 py-4 text-sm">
-                          {merchant.enableTax ? `${merchant.taxPercentage}%` : "No Tax"}
+                        <td className="px-5 py-4 text-sm text-gray-600 dark:text-gray-400">{merchant.email}</td>
+                        <td className="px-5 py-4 text-sm text-gray-600 dark:text-gray-400">{merchant.phone}</td>
+                        <td className="px-5 py-4">
+                          {/* Store Open/Closed Status */}
+                          <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
+                            storeStatus.isOpen
+                              ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                              : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
+                          }`}>
+                            <span className={`h-1.5 w-1.5 rounded-full ${storeStatus.isOpen ? 'bg-green-600' : 'bg-gray-600'}`} />
+                            {storeStatus.text}
+                          </span>
                         </td>
-                        <td className="px-4 py-4">
+                        <td className="px-5 py-4">
+                          {/* Active/Inactive Toggle */}
                           <button
-                            onClick={() => handleToggleStatus(merchant.id)}
-                            className={`inline-flex rounded-full px-3 py-1 text-sm font-medium ${
+                            onClick={() => handleToggleStatus(merchant.id, merchant.isActive)}
+                            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
                               merchant.isActive
-                                ? "bg-success bg-opacity-10 text-success"
-                                : "bg-danger bg-opacity-10 text-danger"
+                                ? "bg-success-100 text-success-700 hover:bg-success-200 dark:bg-success-900/30 dark:text-success-400 dark:hover:bg-success-900/50"
+                                : "bg-error-100 text-error-700 hover:bg-error-200 dark:bg-error-900/30 dark:text-error-400 dark:hover:bg-error-900/50"
                             }`}
+                            title={`Click to ${merchant.isActive ? 'deactivate' : 'activate'}`}
                           >
+                            <span className={`h-1.5 w-1.5 rounded-full ${merchant.isActive ? 'bg-success-600' : 'bg-error-600'}`} />
                             {merchant.isActive ? "Active" : "Inactive"}
                           </button>
                         </td>
-                        <td className="px-4 py-4">
+                        <td className="px-5 py-4">
                           <div className="flex items-center gap-2">
                             <button
-                              onClick={() => router.push(`/admin/merchants/${merchant.id}`)}
-                              className="text-primary hover:underline"
+                              onClick={() => router.push(`/admin/dashboard/merchants/${merchant.id}`)}
+                              className="text-brand-500 hover:text-brand-600 dark:text-brand-400"
                               title="View Details"
                             >
                               <svg
@@ -273,9 +439,9 @@ export default function MerchantsPage() {
                               </svg>
                             </button>
                             <button
-                              onClick={() => router.push(`/admin/merchants/${merchant.id}/edit`)}
-                              className="text-meta-5 hover:underline"
-                              title="Edit"
+                              onClick={() => router.push(`/admin/dashboard/merchants/${merchant.id}/edit`)}
+                              className="text-orange-500 hover:text-orange-600 dark:text-orange-400"
+                              title="Edit Merchant"
                             >
                               <svg
                                 className="h-5 w-5"
@@ -293,7 +459,7 @@ export default function MerchantsPage() {
                             </button>
                             <button
                               onClick={() => handleDelete(merchant.id, merchant.name)}
-                              className="text-danger hover:underline"
+                              className="text-error-600 hover:text-error-700 dark:text-error-400"
                               title="Delete"
                             >
                               <svg
@@ -310,26 +476,117 @@ export default function MerchantsPage() {
                                 />
                               </svg>
                             </button>
+                            <button
+                              onClick={() => {
+                                // Find current owner
+                                const owner = merchant.merchantUsers?.find(mu => mu.role === 'OWNER');
+                                setAddOwnerModal({
+                                  isOpen: true,
+                                  merchantId: merchant.id,
+                                  merchantName: merchant.name,
+                                  currentOwner: owner ? {
+                                    name: owner.user.name,
+                                    email: owner.user.email,
+                                  } : null,
+                                });
+                              }}
+                              className="text-purple-500 hover:text-purple-600 dark:text-purple-400"
+                              title="Add Owner"
+                            >
+                              <svg
+                                className="h-5 w-5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
+                                />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => setViewUsersModal({
+                                isOpen: true,
+                                merchantId: merchant.id,
+                                merchantName: merchant.name,
+                              })}
+                              className="text-blue-light-500 hover:text-blue-light-600 dark:text-blue-light-400"
+                              title="View Users"
+                            >
+                              <svg
+                                className="h-5 w-5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                                />
+                              </svg>
+                            </button>
                           </div>
                         </td>
                       </tr>
-                    ))
+                      );
+                    })
                   )}
                 </tbody>
               </table>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* Summary */}
-          {!loading && !error && merchants.length > 0 && (
-            <div className="mt-4 flex items-center justify-between border-t border-stroke pt-4 dark:border-strokedark">
-              <p className="text-sm text-body-color">
-                Showing {merchants.length} merchant{merchants.length !== 1 ? "s" : ""}
-              </p>
-            </div>
-          )}
-        </ComponentCard>
+        {/* Summary */}
+        {!loading && !error && merchants.length > 0 && (
+          <div className="mt-5 flex items-center justify-between border-t border-gray-200 pt-4 dark:border-gray-800">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Showing {merchants.length} merchant{merchants.length !== 1 ? "s" : ""}
+            </p>
+          </div>
+        )}
       </div>
-    </>
+      
+      {/* Add Owner Modal */}
+      <AddOwnerModal
+        isOpen={addOwnerModal.isOpen}
+        onClose={() => setAddOwnerModal({ isOpen: false, merchantId: "", merchantName: "", currentOwner: null })}
+        onSuccess={() => {
+          fetchMerchants();
+        }}
+        merchantId={addOwnerModal.merchantId}
+        merchantName={addOwnerModal.merchantName}
+        currentOwner={addOwnerModal.currentOwner}
+      />
+      
+      {/* View Users Modal */}
+      <ViewUsersModal
+        isOpen={viewUsersModal.isOpen}
+        onClose={() => setViewUsersModal({ isOpen: false, merchantId: "", merchantName: "" })}
+        onSuccess={() => {
+          fetchMerchants();
+        }}
+        merchantId={viewUsersModal.merchantId}
+        merchantName={viewUsersModal.merchantName}
+      />
+      
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={deleteDialog.isOpen}
+        title="Delete Merchant"
+        message={`Are you sure you want to delete "${deleteDialog.merchantName}"? This action cannot be undone.`}
+        confirmText="Delete"
+        variant="danger"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteDialog({ isOpen: false, merchantId: "", merchantName: "" })}
+      />
+      
+      <ToastContainer toasts={toasts} />
+    </div>
   );
 }

@@ -18,6 +18,7 @@ export interface AuthContext {
   sessionId: bigint;
   role: UserRole;
   email: string;
+  merchantId?: bigint; // For MERCHANT_OWNER and MERCHANT_STAFF
 }
 
 /**

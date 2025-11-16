@@ -53,12 +53,11 @@ export default function SignInForm() {
       localStorage.setItem("userId", data.data.user.id);
       
       // Redirect based on role
-      if (data.data.user.role === "SUPER_ADMIN") {
-        router.push("/admin");
-      } else if (data.data.user.role === "MERCHANT_OWNER" || data.data.user.role === "MERCHANT_STAFF") {
-        router.push("/admin/merchant/orders");
+      // All admin roles use /admin/dashboard which handles role-based rendering
+      if (data.data.user.role === "SUPER_ADMIN" || data.data.user.role === "MERCHANT_OWNER" || data.data.user.role === "MERCHANT_STAFF") {
+        router.push("/admin/dashboard");
       } else {
-        router.push("/admin");
+        router.push("/admin/dashboard");
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");

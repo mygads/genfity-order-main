@@ -1,5 +1,6 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { clearAdminAuth } from "@/lib/utils/adminAuth";
 
 interface User {
   id: string;
@@ -28,11 +29,9 @@ export function useAuth() {
   }, []);
 
   const logout = () => {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("userId");
-    localStorage.removeItem("userRole");
+    clearAdminAuth();
     setUser(null);
-    router.push("/signin");
+    router.push("/admin/login");
   };
 
   const requireAuth = (redirectTo = "/signin") => {

@@ -13,6 +13,36 @@ import type { LoginRequest, LoginResponse } from '@/lib/types/auth';
 
 class AuthService {
   /**
+   * Get session duration based on role and rememberMe
+   * 
+   * Duration rules:
+   * - CUSTOMER: 1 year (31536000 seconds / 365 days)
+   * - ADMIN/OWNER/STAFF with rememberMe: 1 week (604800 seconds)
+   * - ADMIN/OWNER/STAFF without rememberMe: 1 day (86400 seconds)
+   */
+  private getSessionDuration(role: string, rememberMe?: boolean): number {
+    // Customer: 1 year
+    if (role === 'CUSTOMER') {
+      return 365 * 24 * 60 * 60; // 31536000 seconds = 365 days = 1 year
+    }
+
+    // Admin, Merchant Owner, Merchant Staff
+    if (rememberMe) {
+      return 7 * 24 * 60 * 60; // 604800 seconds = 7 days (1 week)
+    }
+
+    return 24 * 60 * 60; // 86400 seconds = 1 day
+  }
+
+  /**
+   * Get refresh token duration based on role and rememberMe
+   * Refresh duration is 2x session duration for token refresh capability
+   */
+  private getRefreshDuration(role: string, rememberMe?: boolean): number {
+    return this.getSessionDuration(role, rememberMe) * 2;
+  }
+
+  /**
    * Login user - STEP_02 Flow
    * 1. Validate input
    * 2. Find user by email
@@ -69,13 +99,16 @@ class AuthService {
       );
     }
 
-    // Step 4: Create session in database
+    // Step 4: Calculate session duration based on role and rememberMe
+    const sessionDuration = this.getSessionDuration(user.role, credentials.rememberMe);
+    const refreshDuration = this.getRefreshDuration(user.role, credentials.rememberMe);
+
     const expiresAt = new Date();
-    expiresAt.setSeconds(expiresAt.getSeconds() + parseInt(process.env.JWT_EXPIRY || '3600'));
+    expiresAt.setSeconds(expiresAt.getSeconds() + sessionDuration);
 
     const refreshExpiresAt = new Date();
     refreshExpiresAt.setSeconds(
-      refreshExpiresAt.getSeconds() + parseInt(process.env.JWT_REFRESH_EXPIRY || '604800')
+      refreshExpiresAt.getSeconds() + refreshDuration
     );
 
     // Generate temporary token for session creation
@@ -101,30 +134,31 @@ class AuthService {
     let merchantIdString: string | undefined;
     if (user.merchantUsers && user.merchantUsers.length > 0) {
       merchantId = user.merchantUsers[0].merchantId;
-      merchantIdString = merchantId.toString();
+      merchantIdString = merchantId?.toString();
     }
 
     // Step 5: Generate JWT with session ID and merchantId in payload
+    // Pass sessionDuration to ensure JWT exp matches session expiresAt
     const accessToken = generateAccessToken({
       userId: user.id,
       sessionId: session.id,
       role: user.role,
       email: user.email,
       merchantId,
-    });
+    }, sessionDuration); // ✅ Pass dynamic duration
 
     const refreshToken = generateRefreshToken({
       userId: user.id,
       sessionId: session.id,
-    });
+    }, refreshDuration); // ✅ Pass dynamic duration
 
     // Update session with actual access token
     await sessionRepository.update(session.id, {
       token: accessToken,
     });
 
-    // Calculate expiresIn (in seconds)
-    const expiresIn = parseInt(process.env.JWT_EXPIRY || '3600');
+    // Calculate expiresIn using dynamic session duration
+    const expiresIn = this.getSessionDuration(user.role, credentials.rememberMe);
 
     return {
       user: {
@@ -133,6 +167,7 @@ class AuthService {
         email: user.email,
         role: user.role,
         merchantId: merchantIdString,
+        profilePictureUrl: user.profilePictureUrl,
       },
       accessToken,
       refreshToken,
@@ -172,6 +207,7 @@ class AuthService {
     sessionId: bigint;
     role: string;
     email: string;
+    merchantId?: bigint;
   } | null> {
     // Verify JWT signature and expiry
     const payload = verifyAccessToken(token);
@@ -192,6 +228,7 @@ class AuthService {
       sessionId: payload.sessionId,
       role: payload.role,
       email: payload.email,
+      merchantId: payload.merchantId,
     };
   }
 
@@ -238,12 +275,19 @@ class AuthService {
       );
     }
 
+    // Get merchant info if user is merchant owner/staff
+    let merchantId: bigint | undefined;
+    if (session.user.merchantUsers && session.user.merchantUsers.length > 0) {
+      merchantId = session.user.merchantUsers[0].merchantId;
+    }
+
     // Generate new tokens
     const newAccessToken = generateAccessToken({
       userId: session.userId,
       sessionId: session.id,
       role: session.user.role,
       email: session.user.email,
+      merchantId,
     });
 
     const newRefreshToken = generateRefreshToken({
@@ -482,6 +526,114 @@ class AuthService {
     }
 
     await sessionRepository.revoke(sessionId);
+  }
+
+  /**
+   * Request password reset
+   * Generates reset token and sends email
+   * 
+   * @param email User email
+   * @returns Reset token (for email)
+   */
+  async requestPasswordReset(email: string): Promise<{
+    resetToken: string;
+    expiresAt: Date;
+  }> {
+    // Validate email
+    validateEmail(email);
+
+    // Find user by email
+    const user = await userRepository.findByEmail(email.toLowerCase().trim());
+
+    if (!user) {
+      // Don't reveal if user exists for security
+      throw new NotFoundError(
+        'If this email exists, a reset link has been sent',
+        ERROR_CODES.USER_NOT_FOUND
+      );
+    }
+
+    // Check if user is active
+    if (!user.isActive) {
+      throw new AuthenticationError(
+        'Account is deactivated',
+        ERROR_CODES.USER_INACTIVE
+      );
+    }
+
+    // Generate reset token (random 32 bytes)
+    const crypto = require('crypto');
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenHash = await hashPassword(resetToken); // Hash token for storage
+
+    // Token expires in 1 hour
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 1);
+
+    // Save reset token to user
+    await userRepository.update(user.id, {
+      resetToken: resetTokenHash,
+      resetTokenExpiresAt: expiresAt,
+    });
+
+    return {
+      resetToken, // Return plain token for email
+      expiresAt,
+    };
+  }
+
+  /**
+   * Reset password with token
+   * 
+   * @param token Reset token from email
+   * @param newPassword New password
+   */
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    // Validate new password
+    validatePassword(newPassword);
+
+    // Find user by reset token (check all users with non-null resetToken)
+    const users = await userRepository.findByResetToken();
+
+    let targetUser = null;
+    for (const user of users) {
+      if (user.resetToken) {
+        const isTokenValid = await comparePassword(token, user.resetToken);
+        if (isTokenValid) {
+          targetUser = user;
+          break;
+        }
+      }
+    }
+
+    if (!targetUser) {
+      throw new AuthenticationError(
+        'Invalid or expired reset token',
+        ERROR_CODES.TOKEN_INVALID
+      );
+    }
+
+    // Check if token expired
+    if (!targetUser.resetTokenExpiresAt || targetUser.resetTokenExpiresAt < new Date()) {
+      throw new AuthenticationError(
+        'Reset token has expired',
+        ERROR_CODES.TOKEN_EXPIRED
+      );
+    }
+
+    // Hash new password
+    const newPasswordHash = await hashPassword(newPassword);
+
+    // Update password and clear reset token
+    await userRepository.update(targetUser.id, {
+      passwordHash: newPasswordHash,
+      resetToken: null,
+      resetTokenExpiresAt: null,
+      mustChangePassword: false,
+    });
+
+    // Optionally: Revoke all sessions (force re-login)
+    await sessionRepository.revokeAllByUserId(targetUser.id);
   }
 }
 

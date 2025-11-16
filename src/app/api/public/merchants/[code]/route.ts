@@ -30,6 +30,20 @@ export async function GET(
       );
     }
 
+    // Check if merchant is disabled (isActive = false)
+    // Disabled merchants cannot be accessed at all
+    if (!merchant.isActive) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'MERCHANT_DISABLED',
+          message: 'Merchant is currently disabled',
+          statusCode: 404,
+        },
+        { status: 404 }
+      );
+    }
+
     // Return merchant info (exclude sensitive data)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const merchantData = merchant as unknown as Record<string, any>;

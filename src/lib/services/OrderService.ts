@@ -321,6 +321,23 @@ class OrderService {
       totalAmount: order.totalAmount,
     });
 
+    // ========================================
+    // STEP 9: Decrement stock for tracked items
+    // ========================================
+    for (const item of input.items) {
+      try {
+        await menuService.decrementMenuStock(item.menuId, item.quantity);
+        console.log('📦 [ORDER SERVICE] Stock decremented:', {
+          menuId: item.menuId,
+          quantity: item.quantity,
+        });
+      } catch (stockError) {
+        console.error('⚠️ [ORDER SERVICE] Stock decrement failed (non-critical):', stockError);
+        // Non-blocking: Continue even if stock update fails
+        // In production, you might want to log this for manual reconciliation
+      }
+    }
+
     // ✅ CRITICAL: Serialize before returning
     return serializeData(order) as Order;
   }

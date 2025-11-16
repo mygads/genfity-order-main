@@ -27,9 +27,13 @@ if (!JWT_SECRET) {
 /**
  * Generate access token
  * @param payload - JWT payload with user info and session ID
+ * @param expiresIn - Optional custom expiry duration in seconds (defaults to JWT_EXPIRY)
  * @returns JWT access token
  */
-export function generateAccessToken(payload: Omit<JWTPayload, 'iat' | 'exp'>): string {
+export function generateAccessToken(
+  payload: Omit<JWTPayload, 'iat' | 'exp'>,
+  expiresIn?: number
+): string {
   // Convert BigInt to string for JSON serialization
   const serializedPayload = {
     userId: payload.userId.toString(),
@@ -40,17 +44,19 @@ export function generateAccessToken(payload: Omit<JWTPayload, 'iat' | 'exp'>): s
   };
   
   return jwt.sign(serializedPayload, JWT_SECRET, {
-    expiresIn: JWT_EXPIRY,
+    expiresIn: expiresIn || JWT_EXPIRY,
   });
 }
 
 /**
  * Generate refresh token
  * @param payload - Refresh token payload with user and session ID
+ * @param expiresIn - Optional custom expiry duration in seconds (defaults to JWT_REFRESH_EXPIRY)
  * @returns JWT refresh token
  */
 export function generateRefreshToken(
-  payload: Omit<RefreshTokenPayload, 'iat' | 'exp'>
+  payload: Omit<RefreshTokenPayload, 'iat' | 'exp'>,
+  expiresIn?: number
 ): string {
   // Convert BigInt to string for JSON serialization
   const serializedPayload = {
@@ -59,7 +65,7 @@ export function generateRefreshToken(
   };
   
   return jwt.sign(serializedPayload, JWT_SECRET, {
-    expiresIn: JWT_REFRESH_EXPIRY,
+    expiresIn: expiresIn || JWT_REFRESH_EXPIRY,
   });
 }
 
@@ -82,7 +88,11 @@ export function verifyAccessToken(token: string): JWTPayload | null {
       iat: decoded.iat,
       exp: decoded.exp,
     };
-  } catch {
+  } catch (error) {
+    // Log JWT expiry for debugging
+    if (error instanceof Error && error.message.includes('expired')) {
+      console.warn('[jwtManager] JWT token expired');
+    }
     return null;
   }
 }
