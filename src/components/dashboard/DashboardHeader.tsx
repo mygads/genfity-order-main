@@ -27,7 +27,7 @@ export default function DashboardHeader({ user }: DashboardHeaderProps) {
   const handleLogout = async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
-      router.push('/dashboard/signin');
+      router.push('/admin/login');
     } catch (error) {
       console.error('Logout error:', error);
     }

@@ -79,7 +79,7 @@ export default function MerchantCategoriesPage() {
       setLoading(true);
       const token = localStorage.getItem("accessToken");
       if (!token) {
-        router.push("/signin");
+        router.push("/admin/login");
         return;
       }
 
@@ -138,7 +138,7 @@ export default function MerchantCategoriesPage() {
     try {
       const token = localStorage.getItem("accessToken");
       if (!token) {
-        router.push("/signin");
+        router.push("/admin/login");
         return;
       }
 
@@ -226,7 +226,7 @@ export default function MerchantCategoriesPage() {
     try {
       const token = localStorage.getItem("accessToken");
       if (!token) {
-        router.push("/signin");
+        router.push("/admin/login");
         return;
       }
 

@@ -74,7 +74,7 @@ export default function MerchantRevenuePage() {
       
       const token = localStorage.getItem("accessToken");
       if (!token) {
-        router.push("/signin");
+        router.push("/admin/login");
         return;
       }
 

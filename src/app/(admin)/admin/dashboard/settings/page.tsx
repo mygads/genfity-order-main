@@ -53,7 +53,7 @@ export default function SettingsPage() {
     try {
       const token = localStorage.getItem('accessToken');
       if (!token) {
-        router.push('/signin');
+        router.push('/admin/login');
         return;
       }
 
@@ -65,7 +65,7 @@ export default function SettingsPage() {
 
       if (!response.ok) {
         if (response.status === 401) {
-          router.push('/signin');
+          router.push('/admin/login');
           return;
         }
         throw new Error('Failed to load preferences');
@@ -88,7 +88,7 @@ export default function SettingsPage() {
     try {
       const token = localStorage.getItem('accessToken');
       if (!token) {
-        router.push('/signin');
+        router.push('/admin/login');
         return;
       }
 
@@ -103,7 +103,7 @@ export default function SettingsPage() {
 
       if (!response.ok) {
         if (response.status === 401) {
-          router.push('/signin');
+          router.push('/admin/login');
           return;
         }
         throw new Error('Failed to save preferences');

@@ -32,8 +32,6 @@ interface AddonItemsTableProps {
   currency: string;
   onEdit: (item: AddonItem) => void;
   onToggleActive: (id: string, currentStatus: boolean) => void;
-  onOpenStockModal: (item: AddonItem) => void;
-  onSetOutOfStock: (id: string, name: string) => void;
   onDelete: (id: string, name: string) => void;
 }
 
@@ -43,8 +41,6 @@ export default function AddonItemsTable({
   currency,
   onEdit,
   onToggleActive,
-  onOpenStockModal,
-  onSetOutOfStock,
   onDelete,
 }: AddonItemsTableProps) {
   const formatPrice = (price: string | number): string => {
@@ -122,26 +118,15 @@ export default function AddonItemsTable({
               <td className="px-4 py-4">
                 {item.trackStock ? (
                   <div className="space-y-1.5">
-                    <div className="flex items-center gap-2">
-                      <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                        (item.stockQty || 0) > 10
-                          ? 'bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400'
-                          : (item.stockQty || 0) > 0
-                          ? 'bg-warning-100 text-warning-700 dark:bg-warning-900/20 dark:text-warning-400'
-                          : 'bg-error-100 text-error-700 dark:bg-error-900/20 dark:text-error-400'
-                      }`}>
-                        {item.stockQty || 0} pcs
-                      </span>
-                      <button
-                        onClick={() => onOpenStockModal(item)}
-                        className="text-brand-500 hover:text-brand-600"
-                        title="Update stock"
-                      >
-                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </button>
-                    </div>
+                    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                      (item.stockQty || 0) > 10
+                        ? 'bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400'
+                        : (item.stockQty || 0) > 0
+                        ? 'bg-warning-100 text-warning-700 dark:bg-warning-900/20 dark:text-warning-400'
+                        : 'bg-error-100 text-error-700 dark:bg-error-900/20 dark:text-error-400'
+                    }`}>
+                      {item.stockQty || 0} pcs
+                    </span>
                     {item.dailyStockTemplate !== null && (
                       <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
                         <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -194,18 +179,6 @@ export default function AddonItemsTable({
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                     </svg>
                   </button>
-
-                  {item.trackStock && (item.stockQty || 0) > 0 && (
-                    <button
-                      onClick={() => onSetOutOfStock(item.id, item.name)}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-orange-200 bg-orange-50 text-orange-600 hover:bg-orange-100 dark:border-orange-900/50 dark:bg-orange-900/20 dark:text-orange-400"
-                      title="Set Out of Stock"
-                    >
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                      </svg>
-                    </button>
-                  )}
 
                   <button
                     onClick={() => onDelete(item.id, item.name)}

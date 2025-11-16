@@ -43,14 +43,6 @@ interface AddonItemFormData {
   autoResetStock: boolean;
 }
 
-interface StockUpdateModalState {
-  show: boolean;
-  itemId: string | null;
-  itemName: string;
-  currentStock: number;
-  newStock: string;
-}
-
 interface Merchant {
   currency: string;
 }
@@ -79,15 +71,6 @@ export default function AddonItemsPage() {
     stockQty: "",
     dailyStockTemplate: "",
     autoResetStock: false,
-  });
-
-  // Stock update modal
-  const [stockModal, setStockModal] = useState<StockUpdateModalState>({
-    show: false,
-    itemId: null,
-    itemName: "",
-    currentStock: 0,
-    newStock: "",
   });
 
   // Pagination & Filter states
@@ -297,89 +280,6 @@ export default function AddonItemsPage() {
     }
   };
 
-  const handleOpenStockModal = (item: AddonItem) => {
-    setStockModal({
-      show: true,
-      itemId: item.id,
-      itemName: item.name,
-      currentStock: item.stockQty || 0,
-      newStock: (item.stockQty || 0).toString(),
-    });
-  };
-
-  const handleUpdateStock = async () => {
-    if (!stockModal.itemId) return;
-
-    try {
-      const token = localStorage.getItem("accessToken");
-      if (!token) {
-        router.push("/admin/login");
-        return;
-      }
-
-      const response = await fetch(`/api/merchant/addon-items/${stockModal.itemId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          stockQty: parseInt(stockModal.newStock) || 0,
-        }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || "Failed to update stock");
-      }
-
-      setSuccess("Stock updated successfully!");
-      setTimeout(() => setSuccess(null), 3000);
-      setStockModal({ show: false, itemId: null, itemName: "", currentStock: 0, newStock: "" });
-      fetchData();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-      setTimeout(() => setError(null), 5000);
-    }
-  };
-
-  const handleSetOutOfStock = async (id: string, name: string) => {
-    if (!confirm(`Set "${name}" to out of stock (0 quantity)?`)) {
-      return;
-    }
-
-    try {
-      const token = localStorage.getItem("accessToken");
-      if (!token) {
-        router.push("/admin/login");
-        return;
-      }
-
-      const response = await fetch(`/api/merchant/addon-items/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          stockQty: 0,
-        }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || "Failed to set out of stock");
-      }
-
-      setSuccess("Item set to out of stock!");
-      setTimeout(() => setSuccess(null), 3000);
-      fetchData();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-      setTimeout(() => setError(null), 5000);
-    }
-  };
-
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Are you sure you want to delete "${name}"?`)) {
       return;
@@ -522,6 +422,30 @@ export default function AddonItemsPage() {
             </button>
           </div>
 
+          {/* Stock Management Info Banner */}
+          <div className="mb-5 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/50 dark:bg-blue-900/20">
+            <div className="flex items-start gap-3">
+              <svg className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                  Stock Management Available
+                </p>
+                <p className="mt-1 text-sm text-blue-700 dark:text-blue-400">
+                  To update stock quantities, use the{" "}
+                  <a
+                    href="/admin/dashboard/menu/stock-overview"
+                    className="font-semibold underline hover:text-blue-900 dark:hover:text-blue-200"
+                  >
+                    Stock Management
+                  </a>{" "}
+                  page for centralized control of menu and addon stock.
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Filters Component */}
           <AddonItemsFilters
             searchQuery={searchQuery}
@@ -561,8 +485,6 @@ export default function AddonItemsPage() {
                 currency={merchant.currency}
                 onEdit={handleEdit}
                 onToggleActive={handleToggleActive}
-                onOpenStockModal={handleOpenStockModal}
-                onSetOutOfStock={handleSetOutOfStock}
                 onDelete={handleDelete}
               />
 
