@@ -40,7 +40,10 @@ async function handleGet(req: NextRequest, authContext: AuthContext) {
       where: { merchantId: merchantUser.merchantId },
       include: {
         _count: {
-          select: { menus: true },
+          select: { 
+            menus: true,      // Keep for backward compatibility
+            menuItems: true   // NEW: Many-to-many relation count
+          },
         },
       },
       orderBy: { sortOrder: 'asc' },

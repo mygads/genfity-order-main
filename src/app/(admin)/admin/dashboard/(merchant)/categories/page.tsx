@@ -15,6 +15,7 @@ interface Category {
   createdAt: string;
   _count?: {
     menus: number;
+    menuItems: number;
   };
 }
 
@@ -284,6 +285,15 @@ export default function MerchantCategoriesPage() {
   const handleAddMenuToCategory = async (menuId: string) => {
     if (!selectedCategory) return;
 
+    // Find the menu to add
+    const menuToAdd = availableMenus.find(m => m.id === menuId);
+    if (!menuToAdd) return;
+
+    // Optimistic update - immediately update UI
+    setCategoryMenus(prev => [...prev, menuToAdd]);
+    setSuccess("Menu added to category!");
+    setTimeout(() => setSuccess(null), 3000);
+
     try {
       const token = localStorage.getItem("accessToken");
       if (!token) {
@@ -305,11 +315,11 @@ export default function MerchantCategoriesPage() {
         throw new Error(data.message || "Failed to add menu");
       }
 
-      setSuccess("Menu added to category successfully!");
-      setTimeout(() => setSuccess(null), 3000);
-      handleManageMenus(selectedCategory);
+      // Refresh categories in background to update count
       fetchCategories();
     } catch (err) {
+      // Revert optimistic update on error
+      setCategoryMenus(prev => prev.filter(m => m.id !== menuId));
       setError(err instanceof Error ? err.message : "An error occurred");
       setTimeout(() => setError(null), 5000);
     }
@@ -317,6 +327,14 @@ export default function MerchantCategoriesPage() {
 
   const handleRemoveMenuFromCategory = async (menuId: string) => {
     if (!selectedCategory) return;
+
+    // Store removed menu for potential rollback
+    const removedMenu = categoryMenus.find(m => m.id === menuId);
+    
+    // Optimistic update - immediately update UI
+    setCategoryMenus(prev => prev.filter(m => m.id !== menuId));
+    setSuccess("Menu removed from category!");
+    setTimeout(() => setSuccess(null), 3000);
 
     try {
       const token = localStorage.getItem("accessToken");
@@ -337,11 +355,13 @@ export default function MerchantCategoriesPage() {
         throw new Error(data.message || "Failed to remove menu");
       }
 
-      setSuccess("Menu removed from category successfully!");
-      setTimeout(() => setSuccess(null), 3000);
-      handleManageMenus(selectedCategory);
+      // Refresh categories in background to update count
       fetchCategories();
     } catch (err) {
+      // Revert optimistic update on error
+      if (removedMenu) {
+        setCategoryMenus(prev => [...prev, removedMenu]);
+      }
       setError(err instanceof Error ? err.message : "An error occurred");
       setTimeout(() => setError(null), 5000);
     }
@@ -378,7 +398,7 @@ export default function MerchantCategoriesPage() {
         filtered.sort((a, b) => b.name.localeCompare(a.name));
         break;
       case "menu-count":
-        filtered.sort((a, b) => (b._count?.menus || 0) - (a._count?.menus || 0));
+        filtered.sort((a, b) => (b._count?.menuItems || 0) - (a._count?.menuItems || 0));
         break;
       default:
         break;
@@ -605,7 +625,7 @@ export default function MerchantCategoriesPage() {
                       </td>
                       <td className="px-4 py-4">
                         <span className="inline-flex rounded-full bg-brand-100 px-3 py-1 text-xs font-medium text-brand-700 dark:bg-brand-900/20 dark:text-brand-400">
-                          {category._count?.menus || 0} items
+                          {category._count?.menuItems || 0} items
                         </span>
                       </td>
                       <td className="px-4 py-4">
