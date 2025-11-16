@@ -10,6 +10,31 @@ import EmptyState from "@/components/ui/EmptyState";
 import DuplicateMenuButton from "@/components/menu/DuplicateMenuButton";
 import { exportMenuItems } from "@/lib/utils/excelExport";
 import InlineEditField from "@/components/ui/InlineEditField";
+import ManageMenuAddonCategoriesModal from "@/components/menu/ManageMenuAddonCategoriesModal";
+
+interface MenuAddonCategory {
+  addonCategoryId: string;
+  isRequired: boolean;
+  displayOrder: number;
+  addonCategory: {
+    id: string;
+    name: string;
+    description: string | null;
+    minSelection: number;
+    maxSelection: number | null;
+    addonItems: Array<{
+      id: string;
+      name: string;
+      description: string | null;
+      price: string | number;
+      inputType: string;
+      isActive: boolean;
+      trackStock: boolean;
+      stockQty: number | null;
+      displayOrder: number;
+    }>;
+  };
+}
 
 interface MenuItem {
   id: string;
@@ -34,6 +59,7 @@ interface MenuItem {
       name: string;
     };
   }>;
+  addonCategories?: MenuAddonCategory[];
   isActive: boolean;
   isPromo: boolean;
   trackStock: boolean;
@@ -66,6 +92,8 @@ export default function MerchantMenuPage() {
   const [merchant, setMerchant] = useState<Merchant | null>(null);
   const [selectedPromoMenu, setSelectedPromoMenu] = useState<MenuItem | null>(null);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [selectedMenuForAddons, setSelectedMenuForAddons] = useState<MenuItem | null>(null);
+  const [showManageAddonsModal, setShowManageAddonsModal] = useState(false);
   
   // Bulk selection states
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
@@ -797,6 +825,19 @@ export default function MerchantMenuPage() {
                                     </svg>
                                     Setup Promo
                                   </button>
+                                  <button
+                                    onClick={() => {
+                                      setSelectedMenuForAddons(item);
+                                      setShowManageAddonsModal(true);
+                                      setOpenDropdownId(null);
+                                    }}
+                                    className="flex w-full items-center gap-3 px-4 py-2 text-sm text-purple-600 hover:bg-purple-50 dark:text-purple-400 dark:hover:bg-purple-900/20"
+                                  >
+                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                                    </svg>
+                                    Manage Addons
+                                  </button>
                                   <Link
                                     href={`/admin/dashboard/menu/edit/${item.id}`}
                                     className="flex w-full items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
@@ -1038,6 +1079,25 @@ export default function MerchantMenuPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Manage Addons Modal */}
+      {showManageAddonsModal && selectedMenuForAddons && (
+        <ManageMenuAddonCategoriesModal
+          show={showManageAddonsModal}
+          menuId={selectedMenuForAddons.id}
+          menuName={selectedMenuForAddons.name}
+          currentAddonCategories={selectedMenuForAddons.addonCategories || []}
+          onClose={() => {
+            setShowManageAddonsModal(false);
+            setSelectedMenuForAddons(null);
+          }}
+          onSuccess={() => {
+            setShowManageAddonsModal(false);
+            setSelectedMenuForAddons(null);
+            fetchData();
+          }}
+        />
       )}
 
       {/* Bulk Delete Confirmation Modal */}

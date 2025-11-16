@@ -5,6 +5,32 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import Image from "next/image";
+import ManageMenuAddonCategoriesModal from "@/components/menu/ManageMenuAddonCategoriesModal";
+import ViewMenuAddonCategoriesModal from "@/components/menu/ViewMenuAddonCategoriesModal";
+
+interface MenuAddonCategory {
+  addonCategoryId: string;
+  isRequired: boolean;
+  displayOrder: number;
+  addonCategory: {
+    id: string;
+    name: string;
+    description: string | null;
+    minSelection: number;
+    maxSelection: number | null;
+    addonItems: Array<{
+      id: string;
+      name: string;
+      description: string | null;
+      price: string | number;
+      inputType: string;
+      isActive: boolean;
+      trackStock: boolean;
+      stockQty: number | null;
+      displayOrder: number;
+    }>;
+  };
+}
 
 interface MenuFormData {
   name: string;
@@ -38,6 +64,9 @@ export default function EditMenuPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadMessage, setUploadMessage] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [addonCategories, setAddonCategories] = useState<MenuAddonCategory[]>([]);
+  const [showManageAddonsModal, setShowManageAddonsModal] = useState(false);
+  const [showViewAddonsModal, setShowViewAddonsModal] = useState(false);
   
   const [formData, setFormData] = useState<MenuFormData>({
     name: "",
@@ -94,6 +123,11 @@ export default function EditMenuPage() {
             dailyStockTemplate: menu.dailyStockTemplate ? menu.dailyStockTemplate.toString() : "",
             autoResetStock: menu.autoResetStock !== undefined ? menu.autoResetStock : false,
           });
+          
+          // Set addon categories
+          if (menu.addonCategories) {
+            setAddonCategories(menu.addonCategories);
+          }
         } else {
           throw new Error("Menu item not found");
         }
@@ -109,6 +143,26 @@ export default function EditMenuPage() {
       fetchData();
     }
   }, [menuId, router]);
+
+  const refetchAddonCategories = async () => {
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) return;
+
+      const response = await fetch(`/api/merchant/menu/${menuId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data && data.data.addonCategories) {
+          setAddonCategories(data.data.addonCategories);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to refetch addon categories:", err);
+    }
+  };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -560,7 +614,128 @@ export default function EditMenuPage() {
           </div>
         </form>
       </div>
+
+      {/* Addon Categories Section */}
+      <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
+              Addon Categories
+            </h3>
+            <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
+              {addonCategories.length} linked
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {addonCategories.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowViewAddonsModal(true)}
+                className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 transition-all hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/40"
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                View Details
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setShowManageAddonsModal(true)}
+              className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-3 py-2 text-sm font-medium text-white transition-all hover:bg-brand-600"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              Manage Addons
+            </button>
+          </div>
+        </div>
+
+        <div>
+          {addonCategories.length === 0 ? (
+            <div className="rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 py-12 text-center dark:border-gray-700 dark:bg-gray-900/50">
+              <div className="flex justify-center">
+                <div className="rounded-full bg-gray-200 p-3 dark:bg-gray-800">
+                  <svg className="h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                  </svg>
+                </div>
+              </div>
+              <h4 className="mt-3 text-sm font-semibold text-gray-900 dark:text-white">
+                No Addon Categories
+              </h4>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Click "Manage Addons" to add categories
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {addonCategories.map((mac) => (
+                <div
+                  key={mac.addonCategoryId}
+                  className="rounded-lg border border-gray-200 bg-white p-3.5 dark:border-gray-700 dark:bg-gray-900/50"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <h4 className="flex-1 text-sm font-semibold text-gray-900 dark:text-white">
+                      {mac.addonCategory.name}
+                    </h4>
+                    {mac.isRequired && (
+                      <span className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                        Required
+                      </span>
+                    )}
+                  </div>
+                  
+                  {mac.addonCategory.description && (
+                    <p className="mt-1.5 line-clamp-2 text-xs text-gray-600 dark:text-gray-400">
+                      {mac.addonCategory.description}
+                    </p>
+                  )}
+                  
+                  <div className="mt-2.5 flex items-center justify-between rounded-md bg-gray-50 px-2.5 py-1.5 dark:bg-gray-800/50">
+                    <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                      <span className="font-medium">Min: {mac.addonCategory.minSelection}</span>
+                      <span className="text-gray-400">•</span>
+                      <span className="font-medium">Max: {mac.addonCategory.maxSelection || '∞'}</span>
+                    </div>
+                    <span className="rounded-full bg-brand-100 px-2 py-0.5 text-xs font-bold text-brand-700 dark:bg-brand-900/30 dark:text-brand-400">
+                      {mac.addonCategory.addonItems?.length || 0}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
+      </div>
+
+      {/* Modals */}
+      {showViewAddonsModal && (
+        <ViewMenuAddonCategoriesModal
+          show={showViewAddonsModal}
+          menuName={formData.name}
+          addonCategories={addonCategories}
+          currency={merchant?.currency || "AUD"}
+          onClose={() => setShowViewAddonsModal(false)}
+        />
+      )}
+
+      {showManageAddonsModal && (
+        <ManageMenuAddonCategoriesModal
+          show={showManageAddonsModal}
+          menuId={menuId}
+          menuName={formData.name}
+          currentAddonCategories={addonCategories}
+          onClose={() => setShowManageAddonsModal(false)}
+          onSuccess={() => {
+            setShowManageAddonsModal(false);
+            refetchAddonCategories();
+          }}
+        />
+      )}
     </div>
   );
 }
