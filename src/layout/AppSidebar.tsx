@@ -15,6 +15,7 @@ import {
   UserCircleIcon,
 } from "../icons/index";
 import SidebarWidget from "./SidebarWidget";
+import MerchantBanner from "../components/merchants/MerchantBanner";
 
 type NavItem = {
   name: string;
@@ -119,6 +120,16 @@ const merchantNavItems: NavItem[] = [
     path: "/admin/dashboard/staff",
     roles: ["MERCHANT_OWNER"],
   },
+  {
+    icon: (
+      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+      </svg>
+    ),
+    name: "Edit Merchant",
+    path: "/admin/dashboard/merchant/edit",
+    roles: ["MERCHANT_OWNER"], // Only MERCHANT_OWNER can edit
+  },
   // {
   //   icon: <UserCircleIcon />,
   //   name: "Profile",
@@ -211,12 +222,20 @@ const AppSidebar: React.FC = () => {
           )}
         </Link>
       </div>
+
+      {/* Merchant Banner - Only for MERCHANT_OWNER and MERCHANT_STAFF */}
+      {user && (user.role === "MERCHANT_OWNER" || user.role === "MERCHANT_STAFF") && (
+        <MerchantBanner 
+          isExpanded={isExpanded || isHovered || isMobileOpen}
+        />
+      )}
+
       <div className="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
         <nav className="mb-6">
           <div className="flex flex-col gap-4">
             <div>
               <h2
-                className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${
+                className={`mb-4 text-xs uppercase flex leading-5 text-gray-400 ${
                   !isExpanded && !isHovered
                     ? "lg:justify-center"
                     : "justify-start"

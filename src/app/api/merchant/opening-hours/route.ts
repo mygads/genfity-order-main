@@ -1,0 +1,120 @@
+/**
+ * Merchant Opening Hours API
+ * PUT /api/merchant/opening-hours - Update merchant opening hours
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import prisma from '@/lib/db/client';
+import { withMerchant } from '@/lib/middleware/auth';
+import type { AuthContext } from '@/lib/middleware/auth';
+import { ValidationError } from '@/lib/constants/errors';
+
+interface OpeningHourInput {
+  dayOfWeek: number;
+  openTime: string;
+  closeTime: string;
+  isClosed: boolean;
+}
+
+/**
+ * PUT /api/merchant/opening-hours
+ * Update merchant opening hours
+ */
+async function handlePut(req: NextRequest, authContext: AuthContext) {
+  try {
+    // Get merchant from user's merchant_users relationship
+    const merchantUser = await prisma.merchantUser.findFirst({
+      where: { userId: authContext.userId },
+      include: { merchant: true },
+    });
+    
+    if (!merchantUser) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'MERCHANT_NOT_FOUND',
+          message: 'Merchant not found for this user',
+          statusCode: 404,
+        },
+        { status: 404 }
+      );
+    }
+
+    const body = await req.json();
+    const { openingHours } = body;
+
+    if (!openingHours || !Array.isArray(openingHours)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'VALIDATION_ERROR',
+          message: 'Invalid opening hours data',
+          statusCode: 400,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Validate opening hours
+    for (const hour of openingHours) {
+      if (hour.dayOfWeek < 0 || hour.dayOfWeek > 6) {
+        throw new ValidationError('Invalid day of week');
+      }
+      
+      if (!hour.isClosed) {
+        if (!hour.openTime || !hour.closeTime) {
+          throw new ValidationError('Open time and close time are required when not closed');
+        }
+      }
+    }
+
+    // Delete existing opening hours
+    await prisma.merchantOpeningHour.deleteMany({
+      where: { merchantId: merchantUser.merchantId },
+    });
+
+    // Create new opening hours
+    await prisma.merchantOpeningHour.createMany({
+      data: openingHours.map((hour: OpeningHourInput) => ({
+        merchantId: merchantUser.merchantId,
+        dayOfWeek: hour.dayOfWeek,
+        openTime: hour.isClosed ? '00:00' : hour.openTime,
+        closeTime: hour.isClosed ? '00:00' : hour.closeTime,
+        isClosed: hour.isClosed,
+      })),
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: { openingHours },
+      message: 'Opening hours updated successfully',
+      statusCode: 200,
+    });
+  } catch (error) {
+    console.error('Error updating opening hours:', error);
+
+    if (error instanceof ValidationError) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'VALIDATION_ERROR',
+          message: error.message,
+          statusCode: 400,
+        },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'INTERNAL_ERROR',
+        message: 'Failed to update opening hours',
+        statusCode: 500,
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export const PUT = withMerchant(handlePut);
