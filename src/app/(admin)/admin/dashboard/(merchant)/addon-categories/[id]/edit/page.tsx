@@ -1,11 +1,36 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, lazy, Suspense } from "react";
 import { useRouter, useParams } from "next/navigation";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
-import AddonItemFormModal from "@/components/addon-items/AddonItemFormModal";
-import StockUpdateModal from "@/components/addon-items/StockUpdateModal";
 import { FieldLabelWithTooltip } from "@/components/ui/Tooltip";
+
+// Lazy load heavy modal components
+const AddonItemFormModal = lazy(() => import("@/components/addon-items/AddonItemFormModal"));
+const StockUpdateModal = lazy(() => import("@/components/addon-items/StockUpdateModal"));
+
+// Loading component for modals
+function ModalSkeleton() {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="w-full max-w-2xl rounded-2xl border border-gray-200 bg-white p-6 shadow-lg dark:border-gray-800 dark:bg-gray-900">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 w-3/4 rounded bg-gray-200 dark:bg-gray-800"></div>
+          <div className="h-4 w-1/2 rounded bg-gray-200 dark:bg-gray-800"></div>
+          <div className="space-y-3">
+            <div className="h-11 w-full rounded bg-gray-200 dark:bg-gray-800"></div>
+            <div className="h-11 w-full rounded bg-gray-200 dark:bg-gray-800"></div>
+            <div className="h-11 w-full rounded bg-gray-200 dark:bg-gray-800"></div>
+          </div>
+          <div className="flex gap-3 pt-4">
+            <div className="h-11 flex-1 rounded bg-gray-200 dark:bg-gray-800"></div>
+            <div className="h-11 flex-1 rounded bg-gray-200 dark:bg-gray-800"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface AddonCategory {
   id: string;
@@ -741,43 +766,51 @@ export default function EditAddonCategoryPage() {
       </div>
 
       {/* Item Form Modal */}
-      <AddonItemFormModal
-        show={showItemForm}
-        editingId={editingItemId}
-        formData={itemFormData}
-        categories={[{ id: category.id, name: category.name, minSelection: category.minSelection, maxSelection: category.maxSelection }]}
-        submitting={submitting}
-        onSubmit={handleItemFormSubmit}
-        onChange={(e) => {
-          const { name, value, type } = e.target;
-          if (type === "checkbox") {
-            const checked = (e.target as HTMLInputElement).checked;
-            setItemFormData(prev => ({
-              ...prev,
-              [name]: checked,
-              ...(name === "trackStock" && !checked ? { stockQty: "" } : {}),
-            }));
-          } else {
-            setItemFormData(prev => ({ ...prev, [name]: value }));
-          }
-        }}
-        onCancel={() => {
-          setShowItemForm(false);
-          setEditingItemId(null);
-          resetItemForm();
-        }}
-      />
+      <Suspense fallback={<ModalSkeleton />}>
+        {showItemForm && (
+          <AddonItemFormModal
+            show={showItemForm}
+            editingId={editingItemId}
+            formData={itemFormData}
+            categories={[{ id: category.id, name: category.name, minSelection: category.minSelection, maxSelection: category.maxSelection }]}
+            submitting={submitting}
+            onSubmit={handleItemFormSubmit}
+            onChange={(e) => {
+              const { name, value, type } = e.target;
+              if (type === "checkbox") {
+                const checked = (e.target as HTMLInputElement).checked;
+                setItemFormData(prev => ({
+                  ...prev,
+                  [name]: checked,
+                  ...(name === "trackStock" && !checked ? { stockQty: "" } : {}),
+                }));
+              } else {
+                setItemFormData(prev => ({ ...prev, [name]: value }));
+              }
+            }}
+            onCancel={() => {
+              setShowItemForm(false);
+              setEditingItemId(null);
+              resetItemForm();
+            }}
+          />
+        )}
+      </Suspense>
 
       {/* Stock Modal */}
-      <StockUpdateModal
-        show={stockModal.show}
-        itemName={stockModal.itemName}
-        currentStock={stockModal.currentStock}
-        newStock={stockModal.newStock}
-        onStockChange={(value) => setStockModal(prev => ({ ...prev, newStock: value }))}
-        onUpdate={handleUpdateStock}
-        onClose={() => setStockModal({ show: false, itemId: null, itemName: "", currentStock: 0, newStock: "" })}
-      />
+      <Suspense fallback={<ModalSkeleton />}>
+        {stockModal.show && (
+          <StockUpdateModal
+            show={stockModal.show}
+            itemName={stockModal.itemName}
+            currentStock={stockModal.currentStock}
+            newStock={stockModal.newStock}
+            onStockChange={(value) => setStockModal(prev => ({ ...prev, newStock: value }))}
+            onUpdate={handleUpdateStock}
+            onClose={() => setStockModal({ show: false, itemId: null, itemName: "", currentStock: 0, newStock: "" })}
+          />
+        )}
+      </Suspense>
     </div>
   );
 }

@@ -25,6 +25,11 @@ interface CategoryDnDListProps {
   onToggleActive: (categoryId: string, currentStatus: boolean, categoryName: string) => void;
   onManageMenus?: (category: Category) => void;
   onInlineUpdate?: (id: string, field: 'name' | 'description', value: string) => Promise<void>;
+  // Bulk selection props
+  selectedIds?: string[];
+  onSelectAll?: (checked: boolean) => void;
+  onSelect?: (id: string, checked: boolean) => void;
+  bulkSelectionMode?: boolean;
 }
 
 export default function CategoryDnDList({
@@ -35,6 +40,10 @@ export default function CategoryDnDList({
   onToggleActive,
   onManageMenus,
   onInlineUpdate,
+  selectedIds = [],
+  onSelectAll,
+  onSelect,
+  bulkSelectionMode = false,
 }: CategoryDnDListProps) {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
@@ -73,6 +82,20 @@ export default function CategoryDnDList({
 
   return (
     <div className="space-y-2">
+      {bulkSelectionMode && onSelectAll && (
+        <div className="mb-3 flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800/50">
+          <input
+            type="checkbox"
+            checked={selectedIds.length === categories.length && categories.length > 0}
+            onChange={(e) => onSelectAll(e.target.checked)}
+            className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+          />
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            Select All ({categories.length} categories)
+          </span>
+        </div>
+      )}
+      
       <div className="mb-3 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
         <FaGripVertical className="text-gray-400" />
         <span>Drag to reorder categories</span>
@@ -93,6 +116,17 @@ export default function CategoryDnDList({
               : 'border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600'
           }`}
         >
+          {/* Checkbox for bulk selection */}
+          {bulkSelectionMode && onSelect && (
+            <input
+              type="checkbox"
+              checked={selectedIds.includes(category.id)}
+              onChange={(e) => onSelect(category.id, e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+              onClick={(e) => e.stopPropagation()}
+            />
+          )}
+          
           {/* Drag Handle */}
           <div className="cursor-grab text-gray-400 hover:text-gray-600 active:cursor-grabbing dark:hover:text-gray-300">
             <FaGripVertical className="h-5 w-5" />
