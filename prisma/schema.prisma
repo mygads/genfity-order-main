@@ -26,6 +26,7 @@ model User {
   statusChanges        OrderStatusHistory[]
   ordersAsCustomer     Order[]              @relation("CustomerOrders")
   sessions             UserSession[]
+  preferences          UserPreference?
 
   @@index([email])
   @@index([role])
@@ -49,6 +50,26 @@ model UserSession {
   @@index([token])
   @@index([status])
   @@map("user_sessions")
+}
+
+model UserPreference {
+  id                  BigInt   @id @default(autoincrement())
+  userId              BigInt   @unique @map("user_id")
+  theme               String   @default("light")
+  language            String   @default("en")
+  timezone            String   @default("Asia/Jakarta")
+  dateFormat          String   @default("DD/MM/YYYY") @map("date_format")
+  timeFormat          String   @default("24h") @map("time_format")
+  currency            String   @default("IDR")
+  emailNotifications  Boolean  @default(true) @map("email_notifications")
+  orderNotifications  Boolean  @default(true) @map("order_notifications")
+  marketingEmails     Boolean  @default(false) @map("marketing_emails")
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("user_preferences")
 }
 
 model MerchantUser {
