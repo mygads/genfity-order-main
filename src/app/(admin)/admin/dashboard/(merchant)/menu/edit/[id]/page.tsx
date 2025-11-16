@@ -313,7 +313,7 @@ export default function EditMenuPage() {
   if (loading) {
     return (
       <div>
-        <PageBreadcrumb pageTitle="Edit Menu Item" />
+        <PageBreadcrumb pageTitle="Edit" />
         <div className="mt-6 py-10 text-center">
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-brand-500 border-r-transparent"></div>
           <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Loading...</p>

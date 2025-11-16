@@ -115,7 +115,7 @@ export default function StaffManagementPage() {
   return (
     <div>
       <ToastContainer toasts={toasts} />
-      <PageBreadcrumb pageTitle="Staff Management" />
+      <PageBreadcrumb pageTitle="Staff" />
 
       <div className="mt-6 space-y-5">
         {/* Header Actions */}

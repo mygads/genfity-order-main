@@ -149,7 +149,7 @@ export default function MerchantRevenuePage() {
   if (loading) {
     return (
       <div>
-        <PageBreadcrumb pageTitle="Revenue Analytics" />
+        <PageBreadcrumb pageTitle="Revenue" />
         <div className="flex items-center justify-center py-20">
           <div className="flex items-center gap-3 text-gray-500">
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand-500 border-t-transparent"></div>
@@ -162,7 +162,7 @@ export default function MerchantRevenuePage() {
 
   return (
     <div>
-      <PageBreadcrumb pageTitle="Revenue Analytics" />
+      <PageBreadcrumb pageTitle="Revenue" />
 
       {/* Date Range & Export */}
       <div className="mb-6 flex items-center justify-between">

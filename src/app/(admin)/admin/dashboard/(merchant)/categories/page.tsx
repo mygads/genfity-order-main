@@ -576,7 +576,7 @@ export default function MerchantCategoriesPage() {
   if (loading) {
     return (
       <div>
-        <PageBreadcrumb pageTitle="Menu Categories" />
+        <PageBreadcrumb pageTitle="Categories\" />
         <div className="mt-6 py-10 text-center">
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-brand-500 border-r-transparent"></div>
           <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Loading categories...</p>
@@ -587,7 +587,7 @@ export default function MerchantCategoriesPage() {
 
   return (
     <div>
-      <PageBreadcrumb pageTitle="Menu Categories" />
+      <PageBreadcrumb pageTitle="Categories\" />
 
       <div className="space-y-6">
         {error && (
@@ -1005,9 +1005,18 @@ export default function MerchantCategoriesPage() {
                             </div>
                           )}
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-800 dark:text-white/90 truncate">
-                              {menu.name}
-                            </p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-medium text-gray-800 dark:text-white/90 truncate">
+                                {menu.name}
+                              </p>
+                              <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                                menu.isActive
+                                  ? 'bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400'
+                                  : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                              }`}>
+                                {menu.isActive ? 'Active' : 'Inactive'}
+                              </span>
+                            </div>
                             <p className="text-xs text-gray-500 dark:text-gray-400">
                               {formatPrice(menu.price)}
                             </p>
@@ -1059,9 +1068,18 @@ export default function MerchantCategoriesPage() {
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-800 dark:text-white/90 truncate">
-                            {menu.name}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium text-gray-800 dark:text-white/90 truncate">
+                              {menu.name}
+                            </p>
+                            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                              menu.isActive
+                                ? 'bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400'
+                                : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                            }`}>
+                              {menu.isActive ? 'Active' : 'Inactive'}
+                            </span>
+                          </div>
                           <p className="text-xs text-gray-500 dark:text-gray-400">
                             {formatPrice(menu.price)}
                           </p>

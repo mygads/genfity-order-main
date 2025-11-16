@@ -168,7 +168,7 @@ export default function MenuDetailPage() {
   if (loading) {
     return (
       <div>
-        <PageBreadcrumb pageTitle="Menu Detail" />
+        <PageBreadcrumb pageTitle="View" />
         <div className="mt-6 py-10 text-center">
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-brand-500 border-r-transparent"></div>
           <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Loading menu details...</p>
@@ -180,7 +180,7 @@ export default function MenuDetailPage() {
   if (error || !menu) {
     return (
       <div>
-        <PageBreadcrumb pageTitle="Menu Detail" />
+        <PageBreadcrumb pageTitle="View" />
         <div className="mt-6 rounded-lg bg-error-50 p-4 dark:bg-error-900/20">
           <p className="text-sm text-error-600 dark:text-error-400">{error || "Menu not found"}</p>
           <button

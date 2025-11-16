@@ -29,11 +29,10 @@ const PageBreadcrumb: React.FC<BreadcrumbProps> = ({ pageTitle, customItems }) =
 
     // Route name mapping
     const routeNames: Record<string, string> = {
-      'admin': 'Admin',
       'dashboard': 'Dashboard',
-      'menu': 'Menu Items',
+      'menu': 'Menu',
       'builder': 'Menu Builder',
-      'new': 'Create New',
+      'new': 'Create',
       'edit': 'Edit',
       'categories': 'Categories',
       'orders': 'Orders',
@@ -48,11 +47,16 @@ const PageBreadcrumb: React.FC<BreadcrumbProps> = ({ pageTitle, customItems }) =
       'stock-overview': 'Stock Overview',
       'merchant': 'Merchant Profile',
       'view': 'View',
+      'create': 'Create',
     };
 
     let currentPath = '';
     
-    for (let i = 0; i < segments.length; i++) {
+    // Skip admin and route groups, start from dashboard
+    let startIndex = segments.findIndex(seg => seg === 'dashboard');
+    if (startIndex === -1) startIndex = 0;
+
+    for (let i = startIndex; i < segments.length; i++) {
       const segment = segments[i];
       currentPath += `/${segment}`;
       
@@ -61,27 +65,25 @@ const PageBreadcrumb: React.FC<BreadcrumbProps> = ({ pageTitle, customItems }) =
         continue;
       }
 
-      // Get display name
-      const displayName = routeNames[segment] || segment.charAt(0).toUpperCase() + segment.slice(1);
-      
-      // Don't add dashboard as separate item if it's right after admin
-      if (segment === 'dashboard' && i > 0 && segments[i - 1] === 'admin') {
-        items.push({
-          name: displayName,
-          path: currentPath,
-        });
+      // Skip numeric IDs (dynamic routes)
+      if (/^\d+$/.test(segment)) {
         continue;
       }
 
-      // For last item (current page), don't add path
+      // Get display name
+      const displayName = routeNames[segment] || segment.charAt(0).toUpperCase() + segment.slice(1);
+
+      // For last item (current page), use pageTitle if provided
       if (i === segments.length - 1) {
         items.push({
           name: pageTitle || displayName,
         });
       } else {
+        // Build proper path from root
+        const fullPath = '/' + segments.slice(0, i + 1).join('/');
         items.push({
           name: displayName,
-          path: currentPath,
+          path: fullPath,
         });
       }
     }
@@ -99,45 +101,6 @@ const PageBreadcrumb: React.FC<BreadcrumbProps> = ({ pageTitle, customItems }) =
       </h2>
       <nav>
         <ol className="flex items-center gap-1.5 flex-wrap">
-          {/* Home link */}
-          <li>
-            <Link
-              className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-brand-600 dark:text-gray-400 dark:hover:text-brand-400 transition-colors"
-              href="/admin/dashboard"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-                />
-              </svg>
-              <span className="hidden sm:inline">Home</span>
-              <svg
-                className="stroke-current"
-                width="17"
-                height="16"
-                viewBox="0 0 17 16"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M6.0765 12.667L10.2432 8.50033L6.0765 4.33366"
-                  stroke=""
-                  strokeWidth="1.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </Link>
-          </li>
-          
           {/* Dynamic breadcrumb items */}
           {breadcrumbItems.map((item, index) => {
             const isLast = index === breadcrumbItems.length - 1;

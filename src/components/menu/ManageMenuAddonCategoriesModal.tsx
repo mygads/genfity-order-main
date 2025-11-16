@@ -20,6 +20,7 @@ interface AddonCategory {
   description: string | null;
   minSelection: number;
   maxSelection: number | null;
+  isActive: boolean;
   addonItems: AddonItem[];
 }
 
@@ -325,12 +326,19 @@ export default function ManageMenuAddonCategoriesModal({
                                 onClick={() => toggleCategoryExpand(category.id)}
                                 className="w-full text-left"
                               >
-                                <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
                                   <p className="font-medium text-gray-800 dark:text-white/90">
                                     {category.name}
                                   </p>
+                                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                                    category.isActive
+                                      ? 'bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400'
+                                      : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                                  }`}>
+                                    {category.isActive ? 'Active' : 'Inactive'}
+                                  </span>
                                   <svg
-                                    className={`h-4 w-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                                    className={`h-4 w-4 text-gray-400 transition-transform ml-auto ${isExpanded ? 'rotate-180' : ''}`}
                                     fill="none"
                                     stroke="currentColor"
                                     viewBox="0 0 24 24"
@@ -477,6 +485,13 @@ export default function ManageMenuAddonCategoriesModal({
                                     <p className="font-medium text-gray-800 dark:text-white/90">
                                       {category.name}
                                     </p>
+                                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                                      category.isActive
+                                        ? 'bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400'
+                                        : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                                    }`}>
+                                      {category.isActive ? 'Active' : 'Inactive'}
+                                    </span>
                                     <svg
                                       className={`h-4 w-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
                                       fill="none"
