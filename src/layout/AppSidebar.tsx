@@ -24,137 +24,184 @@ type NavItem = {
   roles?: string[];
 };
 
-// Super Admin Menu Items
-const superAdminNavItems: NavItem[] = [
+type NavGroup = {
+  title: string;
+  items: NavItem[];
+};
+
+// Super Admin Menu Groups
+const superAdminNavGroups: NavGroup[] = [
   {
-    icon: <GridIcon />,
-    name: "Dashboard",
-    path: "/admin/dashboard",
-    roles: ["SUPER_ADMIN"],
+    title: "Main",
+    items: [
+      {
+        icon: <GridIcon />,
+        name: "Dashboard",
+        path: "/admin/dashboard",
+        roles: ["SUPER_ADMIN"],
+      },
+    ],
   },
   {
-    icon: <UserCircleIcon />,
-    name: "Merchants",
-    path: "/admin/dashboard/merchants",
-    roles: ["SUPER_ADMIN"],
+    title: "Management",
+    items: [
+      {
+        icon: <UserCircleIcon />,
+        name: "Merchants",
+        path: "/admin/dashboard/merchants",
+        roles: ["SUPER_ADMIN"],
+      },
+      {
+        icon: <UserCircleIcon />,
+        name: "Users",
+        path: "/admin/dashboard/users",
+        roles: ["SUPER_ADMIN"],
+      },
+    ],
   },
   {
-    icon: <UserCircleIcon />,
-    name: "Users",
-    path: "/admin/dashboard/users",
-    roles: ["SUPER_ADMIN"],
+    title: "Analytics",
+    items: [
+      {
+        icon: <PieChartIcon />,
+        name: "Analytics",
+        path: "/admin/dashboard/analytics",
+        roles: ["SUPER_ADMIN"],
+      },
+    ],
   },
-  {
-    icon: <PieChartIcon />,
-    name: "Analytics",
-    path: "/admin/dashboard/analytics",
-    roles: ["SUPER_ADMIN"],
-  },
-  // {
-  //   icon: <UserCircleIcon />,
-  //   name: "Profile",
-  //   path: "/admin/dashboard/profile",
-  //   roles: ["SUPER_ADMIN"],
-  // },
-  // {
-  //   icon: <UserCircleIcon />,
-  //   name: "Settings",
-  //   path: "/admin/dashboard/settings",
-  //   roles: ["SUPER_ADMIN"],
-  // },
 ];
 
-// Merchant Owner Menu Items
-const merchantNavItems: NavItem[] = [
+// Merchant Menu Groups
+const merchantNavGroups: NavGroup[] = [
   {
-    icon: <GridIcon />,
-    name: "Dashboard",
-    path: "/admin/dashboard",
-    roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+    title: "Main",
+    items: [
+      {
+        icon: <GridIcon />,
+        name: "Dashboard",
+        path: "/admin/dashboard",
+        roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+      },
+      {
+        icon: <ListIcon />,
+        name: "Orders",
+        path: "/admin/dashboard/orders",
+        roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+      },
+    ],
   },
   {
-    icon: <ListIcon />,
-    name: "Orders",
-    path: "/admin/dashboard/orders",
-    roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+    title: "Menu Management",
+    items: [
+      {
+        icon: <TableIcon />,
+        name: "Menu",
+        path: "/admin/dashboard/menu",
+        roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+      },
+      {
+        icon: <BoxCubeIcon />,
+        name: "Categories",
+        path: "/admin/dashboard/categories",
+        roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+      },
+      {
+        icon: <BoxCubeIcon />,
+        name: "Addon Categories",
+        path: "/admin/dashboard/addon-categories",
+        roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+      },
+      {
+        icon: <ListIcon />,
+        name: "Addon Items",
+        path: "/admin/dashboard/addon-items",
+        roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+      },
+    ],
   },
   {
-    icon: <TableIcon />,
-    name: "Menu",
-    path: "/admin/dashboard/menu",
-    roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+    title: "Reports",
+    items: [
+      {
+        icon: <PieChartIcon />,
+        name: "Reports",
+        path: "/admin/dashboard/reports",
+        roles: ["MERCHANT_OWNER"],
+      },
+      {
+        icon: <PieChartIcon />,
+        name: "Revenue",
+        path: "/admin/dashboard/revenue",
+        roles: ["MERCHANT_OWNER"],
+      },
+    ],
   },
   {
-    icon: <BoxCubeIcon />,
-    name: "Categories",
-    path: "/admin/dashboard/categories",
-    roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+    title: "Team",
+    items: [
+      {
+        icon: <UserCircleIcon />,
+        name: "Staff",
+        path: "/admin/dashboard/staff",
+        roles: ["MERCHANT_OWNER"],
+      },
+    ],
   },
-  {
-    icon: <BoxCubeIcon />,
-    name: "Addon Categories",
-    path: "/admin/dashboard/addon-categories",
-    roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
-  },
-  {
-    icon: <ListIcon />,
-    name: "Addon Items",
-    path: "/admin/dashboard/addon-items",
-    roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
-  },
-  {
-    icon: <PieChartIcon />,
-    name: "Reports",
-    path: "/admin/dashboard/reports",
-    roles: ["MERCHANT_OWNER"],
-  },
-  {
-    icon: <PieChartIcon />,
-    name: "Revenue",
-    path: "/admin/dashboard/revenue",
-    roles: ["MERCHANT_OWNER"],
-  },
-  {
-    icon: <UserCircleIcon />,
-    name: "Staff",
-    path: "/admin/dashboard/staff",
-    roles: ["MERCHANT_OWNER"],
-  },
-  // {
-  //   icon: <UserCircleIcon />,
-  //   name: "Profile",
-  //   path: "/admin/dashboard/profile",
-  //   roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
-  // },
-  // {
-  //   icon: <UserCircleIcon />,
-  //   name: "Settings",
-  //   path: "/admin/dashboard/settings",
-  //   roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
-  // },
 ];
 
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const pathname = usePathname();
   const { user } = useAuth();
+  const [hasMerchant, setHasMerchant] = React.useState<boolean | null>(null);
 
-  // Get menu items based on user role
-  const getMenuItems = (): NavItem[] => {
+  // Check if merchant owner/staff has merchant association
+  React.useEffect(() => {
+    if (user && (user.role === "MERCHANT_OWNER" || user.role === "MERCHANT_STAFF")) {
+      const checkMerchant = async () => {
+        try {
+          const token = localStorage.getItem("accessToken");
+          if (!token) return;
+
+          const response = await fetch("/api/merchant/profile", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          setHasMerchant(response.ok);
+        } catch {
+          setHasMerchant(false);
+        }
+      };
+      checkMerchant();
+    } else {
+      setHasMerchant(true); // Super admin always has access
+    }
+  }, [user]);
+
+  // Get menu groups based on user role
+  const getMenuGroups = (): NavGroup[] => {
     if (!user) return [];
     
     if (user.role === "SUPER_ADMIN") {
-      return superAdminNavItems;
+      return superAdminNavGroups;
     } else if (user.role === "MERCHANT_OWNER" || user.role === "MERCHANT_STAFF") {
-      return merchantNavItems.filter(item => 
-        item.roles?.includes(user.role)
-      );
+      // If no merchant, return empty groups
+      if (hasMerchant === false) return [];
+      
+      // Filter groups and items based on user role
+      return merchantNavGroups
+        .map(group => ({
+          ...group,
+          items: group.items.filter(item => item.roles?.includes(user.role))
+        }))
+        .filter(group => group.items.length > 0); // Remove empty groups
     }
     
     return [];
   };
 
-  const navItems = getMenuItems();
+  const navGroups = getMenuGroups();
 
   const isActive = useCallback((path: string) => {
     // Check exact match
@@ -213,8 +260,8 @@ const AppSidebar: React.FC = () => {
         </Link>
       </div>
 
-      {/* Merchant Banner - Only for MERCHANT_OWNER and MERCHANT_STAFF */}
-      {user && (user.role === "MERCHANT_OWNER" || user.role === "MERCHANT_STAFF") && (
+      {/* Merchant Banner - Only for MERCHANT_OWNER and MERCHANT_STAFF who have merchant */}
+      {user && (user.role === "MERCHANT_OWNER" || user.role === "MERCHANT_STAFF") && hasMerchant && (
         <MerchantBanner 
           isExpanded={isExpanded || isHovered || isMobileOpen}
         />
@@ -222,47 +269,67 @@ const AppSidebar: React.FC = () => {
 
       <div className="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
         <nav className="mb-6">
-          <div className="flex flex-col gap-4">
-            <div>
-              <h2
-                className={`mb-4 text-xs uppercase flex leading-5 text-gray-400 ${
-                  !isExpanded && !isHovered
-                    ? "lg:justify-center"
-                    : "justify-start"
-                }`}
-              >
-                {isExpanded || isHovered || isMobileOpen ? (
-                  "Menu"
-                ) : (
-                  <HorizontaLDots />
-                )}
-              </h2>
-              <ul className="flex flex-col gap-4">
-                {navItems.map((nav) => (
-                  <li key={nav.name}>
-                    <Link
-                      href={nav.path}
-                      className={`menu-item group ${
-                        isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
-                      }`}
-                    >
-                      <span
-                        className={`${
-                          isActive(nav.path)
-                            ? "menu-item-icon-active"
-                            : "menu-item-icon-inactive"
-                        }`}
-                      >
-                        {nav.icon}
-                      </span>
-                      {(isExpanded || isHovered || isMobileOpen) && (
-                        <span className="menu-item-text">{nav.name}</span>
-                      )}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
+          <div className="flex flex-col gap-6">
+            {/* No merchant message for merchant owner/staff */}
+            {user && (user.role === "MERCHANT_OWNER" || user.role === "MERCHANT_STAFF") && hasMerchant === false ? (
+              <div className="rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50">
+                <div className="flex flex-col items-center text-center">
+                  <svg className="mb-3 h-12 w-12 text-gray-400 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                  <h3 className="mb-2 text-sm font-semibold text-gray-900 dark:text-white">
+                    No Merchant Connected
+                  </h3>
+                  <p className="text-xs leading-relaxed text-gray-600 dark:text-gray-400">
+                    You are not connected to any merchant. Please contact the merchant owner or super admin for assistance.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              /* Render menu groups */
+              navGroups.map((group, groupIndex) => (
+                <div key={groupIndex}>
+                  <h2
+                    className={`mb-3 text-xs font-semibold uppercase flex leading-5 text-gray-500 dark:text-gray-400 ${
+                      !isExpanded && !isHovered
+                        ? "lg:justify-center"
+                        : "justify-start"
+                    }`}
+                  >
+                    {isExpanded || isHovered || isMobileOpen ? (
+                      group.title
+                    ) : (
+                      <HorizontaLDots />
+                    )}
+                  </h2>
+                  <ul className="flex flex-col gap-2">
+                    {group.items.map((nav) => (
+                      <li key={nav.name}>
+                        <Link
+                          href={nav.path}
+                          className={`menu-item group ${
+                            isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
+                          }`}
+                        >
+                          <span
+                            className={`${
+                              isActive(nav.path)
+                                ? "menu-item-icon-active"
+                                : "menu-item-icon-inactive"
+                            }`}
+                          >
+                            {nav.icon}
+                          </span>
+                          {(isExpanded || isHovered || isMobileOpen) && (
+                            <span className="menu-item-text">{nav.name}</span>
+                          )}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))
+            )}
           </div>
         </nav>
         {isExpanded || isHovered || isMobileOpen ? <SidebarWidget /> : null}

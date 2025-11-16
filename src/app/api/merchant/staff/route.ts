@@ -4,6 +4,9 @@
  * 
  * POST /api/merchant/staff
  * Create new staff account and link to merchant
+ * 
+ * DELETE /api/merchant/staff?userId=123
+ * Remove staff from merchant
  */
 
 import { NextRequest } from 'next/server';
@@ -14,23 +17,72 @@ import userRepository from '@/lib/repositories/UserRepository';
 import merchantService from '@/lib/services/MerchantService';
 import { hashPassword } from '@/lib/utils/passwordHasher';
 import { validateEmail, validateRequired } from '@/lib/utils/validators';
-import { ConflictError, ERROR_CODES } from '@/lib/constants/errors';
+import { ConflictError, ERROR_CODES, ValidationError } from '@/lib/constants/errors';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 /**
- * GET handler - Get all staff for merchant
+ * GET handler - Get all staff for merchant with search
  */
 async function getStaffHandler(
   request: NextRequest,
   authContext: AuthContext
 ) {
   const merchantId = authContext.merchantId!;
+  const { searchParams } = new URL(request.url);
+  const search = searchParams.get('search') || '';
 
-  // Get merchant with staff
-  const merchant = await merchantService.getMerchantById(merchantId);
-  
-  const staff = merchant?.merchantUsers
-    ?.filter((mu: { role: string }) => mu.role === 'STAFF')
-    .map((mu: { user: unknown }) => mu.user) || [];
+  // Get all staff for this merchant
+  const staffMembers = await prisma.merchantUser.findMany({
+    where: {
+      merchantId: BigInt(merchantId),
+      ...(search && {
+        user: {
+          OR: [
+            { name: { contains: search, mode: 'insensitive' } },
+            { email: { contains: search, mode: 'insensitive' } },
+          ],
+        },
+      }),
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          role: true,
+          isActive: true,
+          createdAt: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
+  });
+
+  // Sort staff: MERCHANT_OWNER always at the top
+  const staff = staffMembers
+    .map((ms) => ({
+      id: ms.id.toString(),
+      userId: ms.userId.toString(),
+      name: ms.user.name,
+      email: ms.user.email,
+      phone: ms.user.phone,
+      role: ms.user.role,
+      isActive: ms.user.isActive,
+      joinedAt: ms.createdAt.toISOString(),
+    }))
+    .sort((a, b) => {
+      // MERCHANT_OWNER always first
+      if (a.role === 'MERCHANT_OWNER' && b.role !== 'MERCHANT_OWNER') return -1;
+      if (a.role !== 'MERCHANT_OWNER' && b.role === 'MERCHANT_OWNER') return 1;
+      // Otherwise keep original order
+      return 0;
+    });
 
   return successResponse({ staff }, 'Staff retrieved successfully', 200);
 }
@@ -84,5 +136,54 @@ async function createStaffHandler(
   );
 }
 
+/**
+ * DELETE handler - Remove staff from merchant
+ */
+async function deleteStaffHandler(
+  request: NextRequest,
+  authContext: AuthContext
+) {
+  const merchantId = authContext.merchantId!;
+  const { searchParams } = new URL(request.url);
+  const userIdToRemove = searchParams.get('userId');
+
+  if (!userIdToRemove) {
+    throw new ValidationError('User ID required', ERROR_CODES.VALIDATION_ERROR);
+  }
+
+  // Prevent owner from removing themselves
+  if (BigInt(userIdToRemove) === BigInt(authContext.userId)) {
+    throw new ValidationError('Cannot remove yourself', ERROR_CODES.VALIDATION_ERROR);
+  }
+
+  // Check if user is staff of this merchant
+  const staffToRemove = await prisma.merchantUser.findFirst({
+    where: {
+      userId: BigInt(userIdToRemove),
+      merchantId: BigInt(merchantId),
+    },
+    include: {
+      user: true,
+    },
+  });
+
+  if (!staffToRemove) {
+    throw new ValidationError('Staff member not found', ERROR_CODES.NOT_FOUND);
+  }
+
+  // Prevent removing another owner
+  if (staffToRemove.user.role === 'MERCHANT_OWNER') {
+    throw new ValidationError('Cannot remove another owner', ERROR_CODES.VALIDATION_ERROR);
+  }
+
+  // Remove staff - only delete the relation, not the user
+  await prisma.merchantUser.delete({
+    where: { id: staffToRemove.id },
+  });
+
+  return successResponse(null, 'Staff removed successfully', 200);
+}
+
 export const GET = withMerchantOwner(getStaffHandler);
 export const POST = withMerchantOwner(createStaffHandler);
+export const DELETE = withMerchantOwner(deleteStaffHandler);
