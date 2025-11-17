@@ -5,7 +5,7 @@
  * Reference: /docs/ORDER_MANAGEMENT_SYSTEM_GUIDE.md Section 4
  */
 
-import { OrderStatus, OrderType, PaymentMethod, PaymentStatus } from '@prisma/client';
+import { OrderStatus, PaymentMethod, PaymentStatus } from '@prisma/client';
 
 // ===== ORDER STATUS COLORS & LABELS =====
 export const ORDER_STATUS_COLORS = {
@@ -14,48 +14,42 @@ export const ORDER_STATUS_COLORS = {
     text: 'text-warning-700 dark:text-warning-400',
     border: 'border-warning-300 dark:border-warning-700',
     badge: 'bg-warning-500',
-    label: 'Menunggu',
-    icon: '⏳',
+    label: 'Pending',
   },
   ACCEPTED: {
     bg: 'bg-brand-100 dark:bg-brand-900/20',
     text: 'text-brand-700 dark:text-brand-400',
     border: 'border-brand-300 dark:border-brand-700',
     badge: 'bg-brand-500',
-    label: 'Dikonfirmasi',
-    icon: '✓',
+    label: 'Accepted',
   },
   IN_PROGRESS: {
     bg: 'bg-blue-100 dark:bg-blue-900/20',
     text: 'text-blue-700 dark:text-blue-400',
     border: 'border-blue-300 dark:border-blue-700',
     badge: 'bg-blue-500',
-    label: 'Diproses',
-    icon: '🔥',
+    label: 'In Progress',
   },
   READY: {
     bg: 'bg-success-100 dark:bg-success-900/20',
     text: 'text-success-700 dark:text-success-400',
     border: 'border-success-300 dark:border-success-700',
     badge: 'bg-success-500',
-    label: 'Siap',
-    icon: '✅',
+    label: 'Ready',
   },
   COMPLETED: {
     bg: 'bg-gray-100 dark:bg-gray-800',
     text: 'text-gray-700 dark:text-gray-300',
     border: 'border-gray-300 dark:border-gray-700',
     badge: 'bg-gray-500',
-    label: 'Selesai',
-    icon: '📦',
+    label: 'Completed',
   },
   CANCELLED: {
     bg: 'bg-error-100 dark:bg-error-900/20',
     text: 'text-error-700 dark:text-error-400',
     border: 'border-error-300 dark:border-error-700',
     badge: 'bg-error-500',
-    label: 'Dibatalkan',
-    icon: '❌',
+    label: 'Cancelled',
   },
 } as const satisfies Record<OrderStatus, {
   bg: string;
@@ -63,7 +57,6 @@ export const ORDER_STATUS_COLORS = {
   border: string;
   badge: string;
   label: string;
-  icon: string;
 }>;
 
 // ===== PAYMENT STATUS COLORS & LABELS =====
@@ -72,50 +65,38 @@ export const PAYMENT_STATUS_COLORS = {
     bg: 'bg-warning-100 dark:bg-warning-900/20',
     text: 'text-warning-700 dark:text-warning-400',
     border: 'border-warning-300',
-    label: 'Belum Bayar',
-    icon: '💰',
+    label: 'Unpaid',
   },
   COMPLETED: {
     bg: 'bg-success-100 dark:bg-success-900/20',
     text: 'text-success-700 dark:text-success-400',
     border: 'border-success-300',
-    label: 'Sudah Bayar',
-    icon: '✓',
+    label: 'Paid',
   },
   FAILED: {
     bg: 'bg-error-100 dark:bg-error-900/20',
     text: 'text-error-700 dark:text-error-400',
     border: 'border-error-300',
-    label: 'Gagal',
-    icon: '❌',
+    label: 'Failed',
   },
   REFUNDED: {
     bg: 'bg-blue-100 dark:bg-blue-900/20',
     text: 'text-blue-700 dark:text-blue-400',
     border: 'border-blue-300',
-    label: 'Refund',
-    icon: '↩️',
+    label: 'Refunded',
   },
   CANCELLED: {
     bg: 'bg-gray-100 dark:bg-gray-800',
     text: 'text-gray-700 dark:text-gray-300',
     border: 'border-gray-300',
-    label: 'Dibatalkan',
-    icon: '🚫',
+    label: 'Cancelled',
   },
 } as const satisfies Record<PaymentStatus, {
   bg: string;
   text: string;
   border: string;
   label: string;
-  icon: string;
 }>;
-
-// ===== ORDER TYPE ICONS =====
-export const ORDER_TYPE_ICONS = {
-  DINE_IN: '🍽️',
-  TAKEAWAY: '🥡',
-} as const satisfies Record<OrderType, string>;
 
 // ===== PAYMENT METHOD LABELS =====
 export const PAYMENT_METHOD_LABELS = {

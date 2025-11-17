@@ -3,12 +3,14 @@
  * 
  * Large display card for kitchen staff
  * Shows order items to cook with large, readable text
+ * Professional UI with React Icons FA
  */
 
 'use client';
 
 import React from 'react';
-import { ORDER_STATUS_COLORS, ORDER_TYPE_ICONS } from '@/lib/constants/orderConstants';
+import { FaUtensils, FaShoppingBag, FaChair, FaStickyNote, FaExclamationTriangle, FaFire, FaCheck } from 'react-icons/fa';
+import { ORDER_STATUS_COLORS } from '@/lib/constants/orderConstants';
 import { OrderTimer } from './OrderTimer';
 import type { OrderListItem, OrderWithDetails } from '@/lib/types/order';
 
@@ -26,7 +28,6 @@ export const KitchenOrderCard: React.FC<KitchenOrderCardProps> = ({
   showActions = true,
 }) => {
   const statusConfig = ORDER_STATUS_COLORS[order.status as keyof typeof ORDER_STATUS_COLORS];
-  const orderTypeIcon = ORDER_TYPE_ICONS[order.orderType as keyof typeof ORDER_TYPE_ICONS];
   
   // Check if order has orderItems (OrderWithDetails) or just _count (OrderListItem)
   const hasOrderItems = 'orderItems' in order && Array.isArray(order.orderItems);
@@ -49,15 +50,20 @@ export const KitchenOrderCard: React.FC<KitchenOrderCardProps> = ({
               <h2 className="text-3xl font-black text-gray-900 dark:text-white">
                 #{order.orderNumber}
               </h2>
-              <span className="text-3xl" title={order.orderType}>
-                {orderTypeIcon}
-              </span>
+              {order.orderType === 'DINE_IN' ? (
+                <FaUtensils className="h-8 w-8 text-brand-500" title="Dine In" />
+              ) : (
+                <FaShoppingBag className="h-8 w-8 text-success-500" title="Takeaway" />
+              )}
             </div>
             
             {order.tableNumber && (
-              <p className="text-xl font-semibold text-gray-600 dark:text-gray-400">
-                🪑 Table: {order.tableNumber}
-              </p>
+              <div className="flex items-center gap-2">
+                <FaChair className="h-5 w-5 text-gray-500" />
+                <p className="text-xl font-semibold text-gray-600 dark:text-gray-400">
+                  Table: {order.tableNumber}
+                </p>
+              </div>
             )}
           </div>
 
@@ -73,7 +79,6 @@ export const KitchenOrderCard: React.FC<KitchenOrderCardProps> = ({
                 ${statusConfig.bg} ${statusConfig.text}
               `}
             >
-              <span className="text-xl">{statusConfig.icon}</span>
               <span>{statusConfig.label}</span>
             </span>
           </div>
@@ -125,9 +130,12 @@ export const KitchenOrderCard: React.FC<KitchenOrderCardProps> = ({
                 {/* Item Notes */}
                 {item.notes && (
                   <div className="mt-3 p-3 bg-warning-50 dark:bg-warning-900/20 border border-warning-200 dark:border-warning-800 rounded-lg">
-                    <p className="text-base font-semibold text-warning-800 dark:text-warning-300">
-                      📝 Note: {item.notes}
-                    </p>
+                    <div className="flex items-start gap-2">
+                      <FaStickyNote className="h-5 w-5 text-warning-600 dark:text-warning-400 mt-0.5" />
+                      <p className="text-base font-semibold text-warning-800 dark:text-warning-300">
+                        Note: {item.notes}
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>
@@ -143,9 +151,12 @@ export const KitchenOrderCard: React.FC<KitchenOrderCardProps> = ({
       {/* Order Notes */}
       {order.notes && (
         <div className="mb-6 p-4 bg-error-50 dark:bg-error-900/20 border-2 border-error-200 dark:border-error-800 rounded-xl">
-          <p className="text-lg font-bold text-error-800 dark:text-error-300">
-            ⚠️ Order Note: {order.notes}
-          </p>
+          <div className="flex items-start gap-2">
+            <FaExclamationTriangle className="h-6 w-6 text-error-600 dark:text-error-400 mt-0.5" />
+            <p className="text-lg font-bold text-error-800 dark:text-error-300">
+              Order Note: {order.notes}
+            </p>
+          </div>
         </div>
       )}
 
@@ -161,9 +172,11 @@ export const KitchenOrderCard: React.FC<KitchenOrderCardProps> = ({
                 text-white font-bold text-xl
                 transition-colors duration-150
                 shadow-lg hover:shadow-xl
+                flex items-center justify-center gap-2
               "
             >
-              🔥 Start Cooking
+              <FaFire className="h-6 w-6" />
+              <span>Start Cooking</span>
             </button>
           )}
           
@@ -176,9 +189,11 @@ export const KitchenOrderCard: React.FC<KitchenOrderCardProps> = ({
                 text-white font-bold text-xl
                 transition-colors duration-150
                 shadow-lg hover:shadow-xl
+                flex items-center justify-center gap-2
               "
             >
-              ✅ Mark as Ready
+              <FaCheck className="h-6 w-6" />
+              <span>Mark as Ready</span>
             </button>
           )}
         </div>

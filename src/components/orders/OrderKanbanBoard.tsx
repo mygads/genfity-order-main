@@ -19,11 +19,13 @@ import {
   DragEndEvent,
   DragOverEvent,
 } from '@dnd-kit/core';
+import { FaBan } from 'react-icons/fa';
 import { OrderColumn } from './OrderColumn';
 import { OrderCard } from './OrderCard';
 import type { OrderListItem } from '@/lib/types/order';
 import { OrderStatus, OrderType, PaymentStatus } from '@prisma/client';
 import { playNotificationSound } from '@/lib/utils/soundNotification';
+import { canTransitionStatus } from '@/lib/utils/orderStatusRules';
 
 interface OrderKanbanBoardProps {
   merchantId: bigint;
@@ -40,6 +42,8 @@ interface OrderKanbanBoardProps {
   selectedOrders?: Set<string>;
   bulkMode?: boolean;
   onToggleSelection?: (orderId: string) => void;
+  currency?: string;
+  onRefreshReady?: (refreshFn: () => void) => void;
 }
 
 const ACTIVE_STATUSES: OrderStatus[] = [
@@ -59,6 +63,8 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
   selectedOrders = new Set(),
   bulkMode = false,
   onToggleSelection,
+  currency = 'AUD',
+  onRefreshReady,
 }) => {
   // merchantId is for future use when implementing merchant-specific filtering
   const _merchantId = merchantId;
@@ -108,7 +114,12 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
           playNotificationSound('newOrder');
         }
         
-        setOrders(newOrders);
+        // Only update if data actually changed (prevent unnecessary re-renders)
+        setOrders(prevOrders => {
+          const hasChanged = JSON.stringify(prevOrders) !== JSON.stringify(newOrders);
+          return hasChanged ? newOrders : prevOrders;
+        });
+        
         setPreviousOrderCount(newOrders.length);
         setError(null);
       } else {
@@ -126,6 +137,13 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
   useEffect(() => {
     fetchOrders();
   }, [fetchOrders]);
+
+  // Expose refresh function to parent
+  useEffect(() => {
+    if (onRefreshReady) {
+      onRefreshReady(fetchOrders);
+    }
+  }, [onRefreshReady, fetchOrders]);
 
   // Auto-refresh
   useEffect(() => {
@@ -158,16 +176,13 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
     return acc;
   }, {} as Record<OrderStatus, OrderListItem[]>);
 
-  // Check if drop is valid
+  // Check if drop is valid using proper transition rules
   const isValidDrop = (orderId: string, targetStatus: OrderStatus): boolean => {
     const order = orders.find(o => String(o.id) === orderId);
     if (!order) return false;
 
-    const currentStatusIndex = ACTIVE_STATUSES.indexOf(order.status);
-    const newStatusIndex = ACTIVE_STATUSES.indexOf(targetStatus);
-    
-    // Only allow moving forward or to adjacent statuses
-    return newStatusIndex >= currentStatusIndex - 1;
+    // Use business logic from orderStatusRules
+    return canTransitionStatus(order.status, targetStatus);
   };
 
   // Handle drag start
@@ -198,7 +213,9 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
 
     // Prevent invalid status transitions
     if (!isValidDrop(orderId, newStatus)) {
-      console.warn('Cannot move order backwards more than one step');
+      console.warn(`Invalid status transition: ${order.status} → ${newStatus}`);
+      // Optional: Add toast notification here
+      // toast.error('Invalid status transition. Orders can only move forward or be cancelled.');
       return;
     }
 
@@ -287,7 +304,7 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
       >
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {ACTIVE_STATUSES.map(status => {
-            const isInvalid = activeId && !isValidDrop(activeId, status);
+            const isInvalid = !!(activeId && !isValidDrop(activeId, status));
             return (
               <OrderColumn
                 key={status}
@@ -299,6 +316,7 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
                 selectedOrders={selectedOrders}
                 bulkMode={bulkMode}
                 onToggleSelection={onToggleSelection}
+                currency={currency}
               />
             );
           })}
@@ -306,8 +324,21 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
 
         <DragOverlay>
           {activeOrder ? (
-            <div className="rotate-3 scale-105 shadow-xl">
-              <OrderCard order={activeOrder} draggable />
+            <div className={`rotate-2 scale-105 shadow-2xl ${isCurrentlyOverInvalid ? 'opacity-50' : ''}`}>
+              <OrderCard 
+                order={activeOrder} 
+                draggable 
+                className={isCurrentlyOverInvalid ? 'ring-4 ring-error-400 dark:ring-error-600' : ''}
+                currency={currency}
+              />
+              {isCurrentlyOverInvalid && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
+                  <div className="flex items-center gap-1.5 rounded-full bg-error-500 px-3 py-1.5 shadow-lg">
+                    <FaBan className="h-3 w-3 text-white" />
+                    <span className="text-xs font-bold text-white">Invalid Move</span>
+                  </div>
+                </div>
+              )}
             </div>
           ) : null}
         </DragOverlay>

@@ -17,6 +17,7 @@ interface DraggableOrderCardProps {
   onClick?: () => void;
   isFirst?: boolean;
   isLast?: boolean;
+  currency?: string;
 }
 
 export const DraggableOrderCard: React.FC<DraggableOrderCardProps> = ({
@@ -24,6 +25,7 @@ export const DraggableOrderCard: React.FC<DraggableOrderCardProps> = ({
   onClick,
   isFirst = false,
   isLast = false,
+  currency = 'AUD',
 }) => {
   const {
     attributes,
@@ -57,6 +59,7 @@ export const DraggableOrderCard: React.FC<DraggableOrderCardProps> = ({
         draggable={!dragDisabled}
         onClick={onClick}
         onViewDetails={onClick}
+        currency={currency}
       />
     </div>
   );

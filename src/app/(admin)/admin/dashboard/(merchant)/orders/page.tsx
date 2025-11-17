@@ -40,10 +40,13 @@ export default function MerchantOrdersPage() {
   // State management
   const [selectedOrder, setSelectedOrder] = useState<OrderListItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
   const [merchantId, setMerchantId] = useState<bigint | null>(null);
+  const [merchantCurrency, setMerchantCurrency] = useState<string>('AUD');
   const [loading, setLoading] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  
+  // Ref to trigger manual refresh from OrderKanbanBoard
+  const kanbanRefreshRef = React.useRef<(() => void) | null>(null);
   
   // Filters
   const [filters, setFilters] = useState<OrderFilters>(DEFAULT_FILTERS);
@@ -74,6 +77,9 @@ export default function MerchantOrdersPage() {
       const data = await response.json();
       if (data.success && data.data) {
         setMerchantId(BigInt(data.data.id));
+        if (data.data.currency) {
+          setMerchantCurrency(data.data.currency);
+        }
       }
     } catch (error) {
       console.error('Error fetching merchant:', error);
@@ -102,11 +108,13 @@ export default function MerchantOrdersPage() {
   };
 
   const handleOrderUpdate = () => {
-    setRefreshKey(prev => prev + 1);
+    // Trigger refresh via ref callback
+    kanbanRefreshRef.current?.();
   };
 
   const handleManualRefresh = () => {
-    setRefreshKey(prev => prev + 1);
+    // Trigger refresh via ref callback
+    kanbanRefreshRef.current?.();
   };
 
   const handleResetFilters = () => {
@@ -157,7 +165,7 @@ export default function MerchantOrdersPage() {
       setSelectedOrders(new Set());
       setBulkStatusUpdate('');
       setBulkMode(false);
-      setRefreshKey(prev => prev + 1);
+      kanbanRefreshRef.current?.();
     } catch (error) {
       console.error('Error updating orders:', error);
     }
@@ -280,12 +288,12 @@ export default function MerchantOrdersPage() {
                 className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
               >
                 <option value="">Select status...</option>
-                <option value="PENDING">⏳ Pending</option>
-                <option value="ACCEPTED">✓ Accepted</option>
-                <option value="IN_PROGRESS">🔥 In Progress</option>
-                <option value="READY">✅ Ready</option>
-                <option value="COMPLETED">📦 Completed</option>
-                <option value="CANCELLED">❌ Cancelled</option>
+                <option value="PENDING">Pending</option>
+                <option value="ACCEPTED">Accepted</option>
+                <option value="IN_PROGRESS">In Progress</option>
+                <option value="READY">Ready</option>
+                <option value="COMPLETED">Completed</option>
+                <option value="CANCELLED">Cancelled</option>
               </select>
 
               <button
@@ -300,40 +308,22 @@ export default function MerchantOrdersPage() {
         </div>
       )}
 
-      {/* Info Banner */}
-      {!bulkMode && (
-        <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
-          <div className="flex items-start gap-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/50">
-              <svg className="h-4 w-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <div className="flex-1">
-              <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
-                Drag & Drop to Update Status
-              </h3>
-              <p className="mt-1 text-sm text-blue-700 dark:text-blue-300">
-                Simply drag orders between columns to update their status. Orders can only move forward in the workflow. Click any order to view details.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Kanban Board */}
       {merchantId && (
         <OrderKanbanBoard
-          key={refreshKey}
           merchantId={merchantId}
           autoRefresh={autoRefresh}
-          refreshInterval={10000}
+          refreshInterval={1000}
           enableDragDrop={!bulkMode}
           onOrderClick={handleOrderClick}
           filters={filters}
           selectedOrders={selectedOrders}
           bulkMode={bulkMode}
           onToggleSelection={toggleOrderSelection}
+          currency={merchantCurrency}
+          onRefreshReady={(refreshFn) => {
+            kanbanRefreshRef.current = refreshFn;
+          }}
         />
       )}
 

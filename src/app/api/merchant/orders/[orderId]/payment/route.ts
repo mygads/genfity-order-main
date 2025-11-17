@@ -26,8 +26,20 @@ async function handlePost(
 ) {
   try {
     const params = await contextParams.params;
-    const orderId = BigInt(params?.id || '0');
+    const orderIdString = params?.id || '0';
+    const orderId = BigInt(orderIdString);
     const body = await req.json();
+
+    // Validate orderId
+    if (orderId === BigInt(0)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Invalid order ID',
+        },
+        { status: 400 }
+      );
+    }
 
     // Validate required fields
     if (!body.paymentMethod) {

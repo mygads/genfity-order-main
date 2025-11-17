@@ -3,6 +3,7 @@
  * 
  * Droppable column for Kanban board
  * Displays orders grouped by status
+ * Professional UI with enhanced drag validation
  */
 
 'use client';
@@ -10,6 +11,7 @@
 import React from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { FaBan } from 'react-icons/fa';
 import { ORDER_STATUS_COLORS } from '@/lib/constants/orderConstants';
 import { DraggableOrderCard } from './DraggableOrderCard';
 import type { OrderListItem } from '@/lib/types/order';
@@ -23,6 +25,7 @@ interface OrderColumnProps {
   selectedOrders?: Set<string>;
   bulkMode?: boolean;
   onToggleSelection?: (orderId: string) => void;
+  currency?: string;
 }
 
 export const OrderColumn: React.FC<OrderColumnProps> = ({
@@ -34,6 +37,7 @@ export const OrderColumn: React.FC<OrderColumnProps> = ({
   selectedOrders = new Set(),
   bulkMode = false,
   onToggleSelection,
+  currency = 'AUD',
 }) => {
   const { setNodeRef } = useDroppable({
     id: status,
@@ -52,22 +56,24 @@ export const OrderColumn: React.FC<OrderColumnProps> = ({
         rounded-xl border p-4 min-h-[600px] bg-white dark:bg-white/3
         transition-all duration-200
         ${isInvalidDropZone 
-          ? 'border-error-300 bg-error-50/30 opacity-50 cursor-not-allowed dark:border-error-700 dark:bg-error-900/10' 
+          ? 'border-2 border-error-400 bg-error-50/50 dark:border-error-600 dark:bg-error-900/20 cursor-not-allowed animate-pulse' 
           : isOver 
-            ? 'border-brand-300 bg-brand-50/50 shadow-lg dark:border-brand-700 dark:bg-brand-900/10' 
-            : 'border-gray-200 dark:border-gray-800'
+            ? 'border-2 border-brand-400 bg-brand-50/70 shadow-xl ring-2 ring-brand-200 dark:border-brand-600 dark:bg-brand-900/20 dark:ring-brand-800' 
+            : 'border border-gray-200 dark:border-gray-800'
         }
       `}
     >
       {/* Header */}
       <div className="mb-4 flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800">
         <div className="flex items-center gap-2">
-          <span className="text-xl">{statusConfig.icon}</span>
           <h3 className={`font-semibold text-sm ${statusConfig.text}`}>
             {statusConfig.label}
           </h3>
           {isInvalidDropZone && (
-            <span className="text-xs text-error-600 dark:text-error-400">⛔</span>
+            <div className="flex items-center gap-1.5 rounded-md bg-error-100 px-2 py-1 dark:bg-error-900/40">
+              <FaBan className="h-3 w-3 text-error-600 dark:text-error-400" />
+              <span className="text-xs font-medium text-error-700 dark:text-error-400">Cannot drop here</span>
+            </div>
           )}
         </div>
         <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 px-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
@@ -106,6 +112,7 @@ export const OrderColumn: React.FC<OrderColumnProps> = ({
                 <DraggableOrderCard 
                   order={order}
                   onClick={() => onOrderClick(order)}
+                  currency={currency}
                 />
               </div>
             );
@@ -116,12 +123,14 @@ export const OrderColumn: React.FC<OrderColumnProps> = ({
       {/* Empty State */}
       {orders.length === 0 && (
         <div className="py-12 text-center">
-          <div className="text-4xl mb-3 opacity-10">{statusConfig.icon}</div>
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
+            <div className={`h-6 w-6 rounded-full ${statusConfig.bg}`}></div>
+          </div>
           <p className="text-sm font-medium text-gray-400 dark:text-gray-500">
             No orders
           </p>
           <p className="text-xs text-gray-400 dark:text-gray-600 mt-1">
-            Drag orders here
+            {isInvalidDropZone ? 'Cannot drop here' : 'Drag orders here'}
           </p>
         </div>
       )}

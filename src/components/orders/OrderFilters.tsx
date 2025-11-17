@@ -29,8 +29,6 @@ export const OrderFiltersComponent: React.FC<OrderFiltersProps> = ({
   onChange,
   onReset,
 }) => {
-  const [isExpanded, setIsExpanded] = React.useState(false);
-
   const handleFilterChange = (key: keyof OrderFilters, value: string) => {
     onChange({
       ...filters,
@@ -55,10 +53,7 @@ export const OrderFiltersComponent: React.FC<OrderFiltersProps> = ({
     <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/3">
       {/* Filter Header */}
       <div className="flex items-center justify-between border-b border-gray-200 p-4 dark:border-gray-800">
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="flex items-center gap-2 text-sm font-semibold text-gray-800 dark:text-white/90"
-        >
+        <div className="flex items-center gap-2 text-sm font-semibold text-gray-800 dark:text-white/90">
           <FaFilter className="h-4 w-4" />
           Filters
           {activeFilterCount > 0 && (
@@ -66,7 +61,7 @@ export const OrderFiltersComponent: React.FC<OrderFiltersProps> = ({
               {activeFilterCount}
             </span>
           )}
-        </button>
+        </div>
 
         <div className="flex items-center gap-2">
           {hasActiveFilters && (
@@ -78,25 +73,11 @@ export const OrderFiltersComponent: React.FC<OrderFiltersProps> = ({
               Reset
             </button>
           )}
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
-          >
-            <svg
-              className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
         </div>
       </div>
 
-      {/* Filter Content */}
-      {isExpanded && (
-        <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* Filter Content - Always Visible */}
+      <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-4">
           {/* Order Type Filter */}
           <div>
             <label className="mb-2 flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
@@ -109,8 +90,8 @@ export const OrderFiltersComponent: React.FC<OrderFiltersProps> = ({
               className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
             >
               <option value="ALL">All Types</option>
-              <option value="DINE_IN">🍽️ Dine In</option>
-              <option value="TAKEAWAY">🥡 Takeaway</option>
+              <option value="DINE_IN">Dine In</option>
+              <option value="TAKEAWAY">Takeaway</option>
             </select>
           </div>
 
@@ -126,11 +107,11 @@ export const OrderFiltersComponent: React.FC<OrderFiltersProps> = ({
               className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
             >
               <option value="ALL">All Status</option>
-              <option value="PENDING">💰 Pending</option>
-              <option value="COMPLETED">✓ Paid</option>
-              <option value="FAILED">❌ Failed</option>
-              <option value="REFUNDED">↩️ Refunded</option>
-              <option value="CANCELLED">🚫 Cancelled</option>
+              <option value="PENDING">Pending</option>
+              <option value="COMPLETED">Paid</option>
+              <option value="FAILED">Failed</option>
+              <option value="REFUNDED">Refunded</option>
+              <option value="CANCELLED">Cancelled</option>
             </select>
           </div>
 
@@ -162,7 +143,6 @@ export const OrderFiltersComponent: React.FC<OrderFiltersProps> = ({
             />
           </div>
         </div>
-      )}
     </div>
   );
 };

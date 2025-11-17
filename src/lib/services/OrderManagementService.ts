@@ -184,6 +184,16 @@ export class OrderManagementService {
     data: RecordPaymentData
   ): Promise<{ order: OrderWithDetails; payment: Payment }> {
     const result = await prisma.$transaction(async (tx) => {
+      // Validate order exists first
+      const orderExists = await tx.order.findUnique({
+        where: { id: orderId },
+        select: { id: true },
+      });
+
+      if (!orderExists) {
+        throw new Error(`Order with ID ${orderId} not found`);
+      }
+
       const existingPayment = await tx.payment.findUnique({
         where: { orderId },
       });
@@ -205,7 +215,7 @@ export class OrderManagementService {
       } else {
         payment = await tx.payment.create({
           data: {
-            orderId,
+            orderId: orderId,
             amount: data.amount,
             paymentMethod: data.paymentMethod,
             status: 'COMPLETED',

@@ -3,12 +3,14 @@
  * 
  * Displays order information in a compact card format
  * Used in Kanban board, list view, and modals
+ * Professional UI with React Icons FA
  */
 
 'use client';
 
 import React from 'react';
-import { ORDER_STATUS_COLORS, PAYMENT_STATUS_COLORS, ORDER_TYPE_ICONS } from '@/lib/constants/orderConstants';
+import { FaUser, FaPhone, FaUtensils, FaShoppingBag, FaClock } from 'react-icons/fa';
+import { ORDER_STATUS_COLORS, PAYMENT_STATUS_COLORS } from '@/lib/constants/orderConstants';
 import { formatDistanceToNow } from 'date-fns';
 import type { OrderListItem, OrderWithDetails } from '@/lib/types/order';
 
@@ -20,6 +22,7 @@ interface OrderCardProps {
   onStatusChange?: (newStatus: string) => void;
   onViewDetails?: () => void;
   className?: string;
+  currency?: string;
 }
 
 export const OrderCard: React.FC<OrderCardProps> = ({
@@ -29,13 +32,12 @@ export const OrderCard: React.FC<OrderCardProps> = ({
   onClick,
   onViewDetails,
   className = '',
+  currency = 'AUD',
 }) => {
   const statusConfig = ORDER_STATUS_COLORS[order.status as keyof typeof ORDER_STATUS_COLORS];
   const paymentConfig = order.payment 
     ? PAYMENT_STATUS_COLORS[order.payment.status as keyof typeof PAYMENT_STATUS_COLORS]
     : PAYMENT_STATUS_COLORS.PENDING;
-
-  const orderTypeIcon = ORDER_TYPE_ICONS[order.orderType as keyof typeof ORDER_TYPE_ICONS];
   
   // Check if order has orderItems (OrderWithDetails) or just _count (OrderListItem)
   const hasOrderItems = 'orderItems' in order && Array.isArray(order.orderItems);
@@ -45,10 +47,12 @@ export const OrderCard: React.FC<OrderCardProps> = ({
 
   const formatCurrency = (amount: number | string) => {
     const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-    return new Intl.NumberFormat('id-ID', {
+    const locale = currency === 'AUD' ? 'en-AU' : 
+                   currency === 'USD' ? 'en-US' : 
+                   currency === 'IDR' ? 'id-ID' : 'en-AU';
+    return new Intl.NumberFormat(locale, {
       style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
+      currency: currency,
     }).format(numAmount);
   };
 
@@ -74,22 +78,24 @@ export const OrderCard: React.FC<OrderCardProps> = ({
             <h3 className="text-base font-bold text-gray-800 dark:text-white/90 truncate">
               #{order.orderNumber}
             </h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              {timeAgo}
-            </p>
+            <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 mt-1">
+              <FaClock className="h-3 w-3" />
+              <span>{timeAgo}</span>
+            </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <span className="text-base" title={order.orderType}>
-              {orderTypeIcon}
-            </span>
+            {order.orderType === 'DINE_IN' ? (
+              <FaUtensils className="h-4 w-4 text-brand-500" title="Dine In" />
+            ) : (
+              <FaShoppingBag className="h-4 w-4 text-success-500" title="Takeaway" />
+            )}
             <span
               className={`
-                inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold
+                inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold
                 ${statusConfig.bg} ${statusConfig.text}
               `}
             >
-              <span>{statusConfig.icon}</span>
-              <span className="hidden sm:inline">{statusConfig.label}</span>
+              {statusConfig.label}
             </span>
           </div>
         </div>
@@ -97,20 +103,16 @@ export const OrderCard: React.FC<OrderCardProps> = ({
 
       {/* Customer Info */}
       {order.customer && (
-        <div className="mb-3 space-y-1">
+        <div className="mb-3 space-y-1.5">
           <div className="flex items-center gap-2 text-sm">
-            <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
+            <FaUser className="h-3.5 w-3.5 text-gray-400" />
             <span className="text-gray-800 dark:text-white/90 font-medium truncate">
               {order.customer.name}
             </span>
           </div>
           {order.customer.phone && (
             <div className="flex items-center gap-2 text-sm">
-              <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-              </svg>
+              <FaPhone className="h-3.5 w-3.5 text-gray-400" />
               <span className="text-gray-600 dark:text-gray-400">{order.customer.phone}</span>
             </div>
           )}
@@ -170,12 +172,11 @@ export const OrderCard: React.FC<OrderCardProps> = ({
         <div className="flex items-center justify-between">
           <span
             className={`
-              inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold
+              inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold
               ${paymentConfig.bg} ${paymentConfig.text}
             `}
           >
-            <span>{paymentConfig.icon}</span>
-            <span>{paymentConfig.label}</span>
+            {paymentConfig.label}
           </span>
           {order.payment?.paymentMethod && (
             <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
