@@ -87,7 +87,7 @@ export interface PaymentVerificationResult {
  * Order filters for queries
  */
 export interface OrderFilters {
-  status?: OrderStatus;
+  status?: OrderStatus | OrderStatus[]; // Support single or multiple statuses
   paymentStatus?: PaymentStatus;
   orderType?: OrderType;
   startDate?: string; // ISO date string
@@ -219,8 +219,11 @@ export function buildOrderWhereInput(
     merchantId,
   };
 
+  // Support single status or array of statuses (for kitchen display efficiency)
   if (filters.status) {
-    where.status = filters.status;
+    where.status = Array.isArray(filters.status) 
+      ? { in: filters.status }
+      : filters.status;
   }
 
   if (filters.paymentStatus) {

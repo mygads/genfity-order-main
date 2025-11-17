@@ -45,7 +45,11 @@ async function handleGet(req: NextRequest, context: AuthContext) {
     const { searchParams } = new URL(req.url);
 
     // Parse query parameters
-    const status = searchParams.get('status') as OrderStatus | undefined;
+    // Support comma-separated statuses for efficient kitchen display (e.g., status=ACCEPTED,IN_PROGRESS)
+    const statusParam = searchParams.get('status');
+    const status = statusParam?.includes(',') 
+      ? statusParam.split(',') as OrderStatus[]
+      : (statusParam as OrderStatus | undefined);
     const paymentStatus = searchParams.get('paymentStatus') as PaymentStatus | undefined;
     const orderType = searchParams.get('orderType') as OrderType | undefined;
     const startDate = searchParams.get('startDate') || undefined;
