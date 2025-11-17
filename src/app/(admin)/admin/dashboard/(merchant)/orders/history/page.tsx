@@ -1,20 +1,23 @@
 /**
  * Order History & Analytics Page
  * 
- * Comprehensive analytics dashboard showing order statistics, charts,
- * and detailed order history with export capabilities.
+ * Professional, clean design with minimal colors (gray/white dominant)
+ * Reference: /admin/dashboard/reports page design system
  */
 
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { FaChartLine, FaHistory, FaDownload } from 'react-icons/fa';
+import { FaChartLine, FaHistory, FaDownload, FaUtensils, FaShoppingBag } from 'react-icons/fa';
+import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import OrderStatsCards from '@/components/orders/OrderStatsCards';
 import OrderCharts from '@/components/orders/OrderCharts';
 import OrderHistoryTable from '@/components/orders/OrderHistoryTable';
+import { OrderDetailModal } from '@/components/orders/OrderDetailModal';
 import DateRangeFilter, { DateRange } from '@/components/orders/DateRangeFilter';
 import { exportAnalyticsToExcel } from '@/lib/utils/exportOrders';
+import type { OrderStatus, OrderType } from '@prisma/client';
 
 // ===== TYPES =====
 
@@ -60,8 +63,8 @@ interface AnalyticsData {
 interface Order {
   id: string | number;
   orderNumber: string;
-  orderType: string;
-  status: string;
+  orderType: OrderType;
+  status: OrderStatus;
   totalAmount: number;
   placedAt: string;
   [key: string]: unknown;
@@ -82,6 +85,8 @@ export default function OrderHistoryPage() {
   const [orderData, setOrderData] = useState<OrderData | null>(null);
   const [merchant, setMerchant] = useState<{ currency: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Date range (default: last 30 days)
   const [dateRange, setDateRange] = useState<DateRange>({
@@ -209,7 +214,19 @@ export default function OrderHistoryPage() {
   }, [activeTab, fetchAnalytics, fetchOrders]);
 
   const handleViewOrder = (orderId: string | number) => {
-    router.push(`/admin/dashboard/orders/${orderId}`);
+    setSelectedOrderId(String(orderId));
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedOrderId(null);
+    // Refresh data after modal closes
+    if (activeTab === 'analytics') {
+      fetchAnalytics();
+    } else {
+      fetchOrders();
+    }
   };
 
   const handleExportAnalytics = () => {
@@ -219,64 +236,59 @@ export default function OrderHistoryPage() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-white/90">
-            Order Analytics & History
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            View comprehensive order statistics, trends, and history
-          </p>
+    <div>
+      <PageBreadcrumb pageTitle="Order Analytics & History" />
+
+      {/* Date Range & Export - Professional layout like reports page */}
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          {/* Tabs */}
+          <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1 dark:border-gray-800 dark:bg-gray-900">
+            <button
+              onClick={() => setActiveTab('analytics')}
+              className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all ${
+                activeTab === 'analytics'
+                  ? 'bg-brand-500 text-white shadow-sm'
+                  : 'text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200'
+              }`}
+            >
+              <FaChartLine className="h-3.5 w-3.5" />
+              Analytics
+            </button>
+            <button
+              onClick={() => setActiveTab('history')}
+              className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all ${
+                activeTab === 'history'
+                  ? 'bg-brand-500 text-white shadow-sm'
+                  : 'text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200'
+              }`}
+            >
+              <FaHistory className="h-3.5 w-3.5" />
+              History
+            </button>
+          </div>
         </div>
+
+        {/* Export Button */}
         {activeTab === 'analytics' && analyticsData && (
           <button
             onClick={handleExportAnalytics}
-            className="h-10 px-4 rounded-lg bg-brand-500 text-white font-medium text-sm hover:bg-brand-600 transition-colors flex items-center gap-2"
+            className="flex h-10 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:hover:bg-gray-800"
           >
-            <FaDownload />
+            <FaDownload className="h-4 w-4" />
             Export Analytics
           </button>
         )}
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2 border-b border-gray-200 dark:border-gray-800">
-        <button
-          onClick={() => setActiveTab('analytics')}
-          className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${
-            activeTab === 'analytics'
-              ? 'border-brand-500 text-brand-500'
-              : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <FaChartLine />
-            Analytics & Charts
-          </div>
-        </button>
-        <button
-          onClick={() => setActiveTab('history')}
-          className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${
-            activeTab === 'history'
-              ? 'border-brand-500 text-brand-500'
-              : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <FaHistory />
-            Order History
-          </div>
-        </button>
-      </div>
-
       {/* Date Range Filter */}
-      <DateRangeFilter value={dateRange} onChange={setDateRange} />
+      <div className="mb-6">
+        <DateRangeFilter value={dateRange} onChange={setDateRange} />
+      </div>
 
       {/* Error Message */}
       {error && (
-        <div className="rounded-xl border border-error-300 bg-error-100 dark:bg-error-900/20 p-4">
+        <div className="mb-6 rounded-lg border border-error-200 bg-error-50 p-4 dark:border-error-800 dark:bg-error-900/20">
           <p className="text-sm text-error-700 dark:text-error-400">{error}</p>
         </div>
       )}
@@ -297,7 +309,7 @@ export default function OrderHistoryPage() {
               {[...Array(4)].map((_, i) => (
                 <div
                   key={i}
-                  className="h-32 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] animate-pulse"
+                  className="h-32 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/3 animate-pulse"
                 ></div>
               ))}
             </div>
@@ -316,7 +328,7 @@ export default function OrderHistoryPage() {
               {[...Array(2)].map((_, i) => (
                 <div
                   key={i}
-                  className="h-96 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] animate-pulse"
+                  className="h-96 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/3 animate-pulse"
                 ></div>
               ))}
             </div>
@@ -326,7 +338,7 @@ export default function OrderHistoryPage() {
           {analyticsData && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Orders by Status */}
-              <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] p-6">
+              <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/3 p-6">
                 <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90 mb-4">
                   Orders by Status
                 </h3>
@@ -345,16 +357,23 @@ export default function OrderHistoryPage() {
               </div>
 
               {/* Orders by Type */}
-              <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] p-6">
+              <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/3 p-6">
                 <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90 mb-4">
                   Orders by Type
                 </h3>
                 <div className="space-y-3">
                   {Object.entries(analyticsData.statistics.ordersByType).map(([type, count]: [string, number]) => (
                     <div key={type} className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                        {type === 'DINE_IN' ? '🍽️ Dine In' : '🥡 Takeaway'}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        {type === 'DINE_IN' ? (
+                          <FaUtensils className="h-4 w-4 text-brand-500" />
+                        ) : (
+                          <FaShoppingBag className="h-4 w-4 text-success-500" />
+                        )}
+                        <span className="text-sm text-gray-600 dark:text-gray-400">
+                          {type === 'DINE_IN' ? 'Dine In' : 'Takeaway'}
+                        </span>
+                      </div>
                       <span className="text-sm font-medium text-gray-800 dark:text-white/90">
                         {count}
                       </span>
@@ -364,7 +383,7 @@ export default function OrderHistoryPage() {
               </div>
 
               {/* Payment Methods */}
-              <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] p-6">
+              <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/3 p-6">
                 <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90 mb-4">
                   Payment Methods
                 </h3>
@@ -404,21 +423,44 @@ export default function OrderHistoryPage() {
         />
       )}
 
-      {/* Empty State */}
+      {/* Empty State - Analytics */}
       {!loading && activeTab === 'analytics' && !analyticsData && (
-        <div className="flex flex-col items-center justify-center py-16 text-gray-400 dark:text-gray-600">
-          <FaChartLine size={48} className="mb-4" />
-          <p className="text-lg font-medium">No analytics data available</p>
-          <p className="text-sm">Try selecting a different date range</p>
+        <div className="flex items-center justify-center rounded-2xl border border-gray-200 bg-white p-12 dark:border-gray-800 dark:bg-white/3">
+          <div className="text-center">
+            <FaChartLine className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-600" />
+            <h3 className="mt-4 text-lg font-semibold text-gray-800 dark:text-white/90">
+              No Analytics Data
+            </h3>
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+              There are no orders in the selected date range.
+            </p>
+          </div>
         </div>
       )}
 
+      {/* Empty State - History */}
       {!loading && activeTab === 'history' && (!orderData || orderData.orders.length === 0) && (
-        <div className="flex flex-col items-center justify-center py-16 text-gray-400 dark:text-gray-600">
-          <FaHistory size={48} className="mb-4" />
-          <p className="text-lg font-medium">No orders found</p>
-          <p className="text-sm">Try selecting a different date range</p>
+        <div className="flex items-center justify-center rounded-2xl border border-gray-200 bg-white p-12 dark:border-gray-800 dark:bg-white/3">
+          <div className="text-center">
+            <FaHistory className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-600" />
+            <h3 className="mt-4 text-lg font-semibold text-gray-800 dark:text-white/90">
+              No Orders Found
+            </h3>
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+              Try selecting a different date range.
+            </p>
+          </div>
         </div>
+      )}
+
+      {/* Order Detail Modal */}
+      {selectedOrderId && (
+        <OrderDetailModal
+          orderId={selectedOrderId}
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          onUpdate={handleCloseModal}
+        />
       )}
     </div>
   );
