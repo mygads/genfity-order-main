@@ -20,8 +20,16 @@ interface Merchant {
   city: string;
   state: string;
   postalCode: string;
+  country: string;
   logoUrl?: string;
   isActive: boolean;
+  isOpen: boolean;
+  currency: string;
+  timezone: string;
+  description?: string;
+  latitude?: string | null;
+  longitude?: string | null;
+  mapUrl?: string | null;
   createdAt: string;
   openingHours?: Array<{
     dayOfWeek: number;
@@ -131,38 +139,16 @@ export default function MerchantsPage() {
   }, [activeOnly]);
 
   /**
-   * Check if merchant is currently open based on opening hours
-   */
-  const isMerchantOpen = (merchant: Merchant): boolean => {
-    if (!merchant.isActive || !merchant.openingHours || merchant.openingHours.length === 0) {
-      return false;
-    }
-
-    const now = new Date();
-    const currentDay = now.getDay(); // 0 = Sunday, 6 = Saturday
-    const currentTime = now.toTimeString().slice(0, 5); // "HH:MM"
-
-    const todayHours = merchant.openingHours.find(h => h.dayOfWeek === currentDay);
-    
-    if (!todayHours || todayHours.isClosed || !todayHours.openTime || !todayHours.closeTime) {
-      return false;
-    }
-
-    return currentTime >= todayHours.openTime && currentTime <= todayHours.closeTime;
-  };
-
-  /**
-   * Get store status text
+   * Get store status based on isOpen field
    */
   const getStoreStatus = (merchant: Merchant): { text: string; isOpen: boolean } => {
     if (!merchant.isActive) {
       return { text: 'Inactive', isOpen: false };
     }
 
-    const isOpen = isMerchantOpen(merchant);
     return {
-      text: isOpen ? 'Open Now' : 'Closed',
-      isOpen
+      text: merchant.isOpen ? 'Store Open' : 'Store Closed',
+      isOpen: merchant.isOpen
     };
   };
 
@@ -327,6 +313,12 @@ export default function MerchantsPage() {
                       Phone
                     </th>
                     <th className="px-5 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
+                      Country
+                    </th>
+                    <th className="px-5 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
+                      Currency
+                    </th>
+                    <th className="px-5 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
                       Store Status
                     </th>
                     <th className="px-5 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
@@ -340,7 +332,7 @@ export default function MerchantsPage() {
                 <tbody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
                   {merchants.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="py-10 text-center">
+                      <td colSpan={10} className="py-10 text-center">
                         <p className="text-sm text-gray-500 dark:text-gray-400">No merchants found</p>
                         <button
                           onClick={() => router.push("/admin/dashboard/merchants/create")}
@@ -385,6 +377,16 @@ export default function MerchantsPage() {
                         </td>
                         <td className="px-5 py-4 text-sm text-gray-600 dark:text-gray-400">{merchant.email}</td>
                         <td className="px-5 py-4 text-sm text-gray-600 dark:text-gray-400">{merchant.phone}</td>
+                        <td className="px-5 py-4">
+                          <span className="text-sm text-gray-600 dark:text-gray-400">
+                            {merchant.country || 'Australia'}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                            {merchant.currency || 'AUD'}
+                          </span>
+                        </td>
                         <td className="px-5 py-4">
                           {/* Store Open/Closed Status */}
                           <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
