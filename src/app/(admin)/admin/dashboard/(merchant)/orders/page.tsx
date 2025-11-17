@@ -20,12 +20,19 @@ import {
   FaSquare,
   FaTimes,
   FaFilter,
+  FaTh,
+  FaList,
+  FaTags,
 } from 'react-icons/fa';
 import { OrderKanbanBoard } from '@/components/orders/OrderKanbanBoard';
+import { OrderKanbanListView } from '@/components/orders/OrderKanbanListView';
+import { OrderTabListView } from '@/components/orders/OrderTabListView';
 import { OrderDetailModal } from '@/components/orders/OrderDetailModal';
 import { OrderFiltersComponent, type OrderFilters } from '@/components/orders/OrderFilters';
 import type { OrderListItem } from '@/lib/types/order';
 import { OrderStatus } from '@prisma/client';
+
+type ViewMode = 'kanban-card' | 'kanban-list' | 'tab-list';
 
 const DEFAULT_FILTERS: OrderFilters = {
   orderType: 'ALL',
@@ -38,6 +45,7 @@ export default function MerchantOrdersPage() {
   const router = useRouter();
   
   // State management
+  const [viewMode, setViewMode] = useState<ViewMode>('kanban-card');
   const [selectedOrder, setSelectedOrder] = useState<OrderListItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [merchantId, setMerchantId] = useState<bigint | null>(null);
@@ -196,6 +204,46 @@ export default function MerchantOrdersPage() {
         </div>
         
         <div className="flex flex-wrap items-center gap-3">
+          {/* View Mode Selector */}
+          <div className="flex items-center gap-1 rounded-lg border border-gray-200 bg-white p-1 dark:border-gray-800 dark:bg-gray-900">
+            <button
+              onClick={() => setViewMode('kanban-card')}
+              className={`flex h-8 items-center gap-2 rounded-md px-3 text-xs font-semibold transition-all ${
+                viewMode === 'kanban-card'
+                  ? 'bg-brand-500 text-white shadow-sm'
+                  : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
+              }`}
+              title="Kanban + Card View"
+            >
+              <FaTh className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Card</span>
+            </button>
+            <button
+              onClick={() => setViewMode('kanban-list')}
+              className={`flex h-8 items-center gap-2 rounded-md px-3 text-xs font-semibold transition-all ${
+                viewMode === 'kanban-list'
+                  ? 'bg-brand-500 text-white shadow-sm'
+                  : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
+              }`}
+              title="Kanban + List View"
+            >
+              <FaList className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">List</span>
+            </button>
+            <button
+              onClick={() => setViewMode('tab-list')}
+              className={`flex h-8 items-center gap-2 rounded-md px-3 text-xs font-semibold transition-all ${
+                viewMode === 'tab-list'
+                  ? 'bg-brand-500 text-white shadow-sm'
+                  : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
+              }`}
+              title="Tab + List View"
+            >
+              <FaTags className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Tabs</span>
+            </button>
+          </div>
+
           {/* Filter Toggle */}
           <button
             onClick={() => setShowFilters(!showFilters)}
@@ -244,13 +292,13 @@ export default function MerchantOrdersPage() {
             <span className="hidden sm:inline">Refresh</span>
           </button>
 
-          {/* History & Analytics */}
+          {/* Full Mode (History & Analytics) */}
           <button
             onClick={() => router.push('/admin/dashboard/orders/history')}
             className="flex h-10 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
           >
             <FaHistory />
-            <span className="hidden sm:inline">History</span>
+            <span className="hidden sm:inline">Full Mode</span>
           </button>
         </div>
       </div>
@@ -308,23 +356,62 @@ export default function MerchantOrdersPage() {
         </div>
       )}
 
-      {/* Kanban Board */}
+      {/* Order Views - Conditional Rendering Based on View Mode */}
       {merchantId && (
-        <OrderKanbanBoard
-          merchantId={merchantId}
-          autoRefresh={autoRefresh}
-          refreshInterval={1000}
-          enableDragDrop={!bulkMode}
-          onOrderClick={handleOrderClick}
-          filters={filters}
-          selectedOrders={selectedOrders}
-          bulkMode={bulkMode}
-          onToggleSelection={toggleOrderSelection}
-          currency={merchantCurrency}
-          onRefreshReady={(refreshFn) => {
-            kanbanRefreshRef.current = refreshFn;
-          }}
-        />
+        <>
+          {viewMode === 'kanban-card' && (
+            <OrderKanbanBoard
+              merchantId={merchantId}
+              autoRefresh={autoRefresh}
+              refreshInterval={1000}
+              enableDragDrop={!bulkMode}
+              onOrderClick={handleOrderClick}
+              filters={filters}
+              selectedOrders={selectedOrders}
+              bulkMode={bulkMode}
+              onToggleSelection={toggleOrderSelection}
+              currency={merchantCurrency}
+              onRefreshReady={(refreshFn) => {
+                kanbanRefreshRef.current = refreshFn;
+              }}
+            />
+          )}
+
+          {viewMode === 'kanban-list' && (
+            <OrderKanbanListView
+              merchantId={merchantId}
+              autoRefresh={autoRefresh}
+              refreshInterval={1000}
+              enableDragDrop={!bulkMode}
+              onOrderClick={handleOrderClick}
+              filters={filters}
+              selectedOrders={selectedOrders}
+              bulkMode={bulkMode}
+              onToggleSelection={toggleOrderSelection}
+              currency={merchantCurrency}
+              onRefreshReady={(refreshFn) => {
+                kanbanRefreshRef.current = refreshFn;
+              }}
+            />
+          )}
+
+          {viewMode === 'tab-list' && (
+            <OrderTabListView
+              merchantId={merchantId}
+              autoRefresh={autoRefresh}
+              refreshInterval={1000}
+              onOrderClick={handleOrderClick}
+              filters={filters}
+              selectedOrders={selectedOrders}
+              bulkMode={bulkMode}
+              onToggleSelection={toggleOrderSelection}
+              currency={merchantCurrency}
+              onRefreshReady={(refreshFn) => {
+                kanbanRefreshRef.current = refreshFn;
+              }}
+            />
+          )}
+        </>
       )}
 
       {/* Order Detail Modal */}
