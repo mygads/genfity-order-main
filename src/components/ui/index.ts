@@ -24,6 +24,16 @@ export { default as ActivityLogWidget, ActivityLogCompact } from './ActivityLogW
 // Tooltips
 export { default as Tooltip, HelpTooltip, InfoTooltip, FieldLabelWithTooltip } from './Tooltip';
 
+
+// ✅ NEW EXPORTS - Badge Component
+export { default as Badge } from './badge/Badge';
+export type { BadgeProps } from './badge/Badge';
+
+// ✅ NEW EXPORTS - Alert Component
+export { default as Alert } from './alert/Alert';
+export type { AlertProps } from './alert/Alert';
+
+
 // Existing Components
 export { default as Button } from './Button';
 export { default as Input } from './Input';

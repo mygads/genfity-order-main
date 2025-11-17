@@ -49,22 +49,29 @@ export async function GET(
 
     // Format response
     const formattedMenus = menus.map((menu) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const menuData = menu as any;
+
+      // ✅ Extract all categories from many-to-many relationship
+      const menuCategories = (menuData.categories || []).map((mc: any) => ({
+        id: mc.category.id.toString(),
+        name: mc.category.name,
+      }));
+
       return {
         id: menuData.id.toString(),
-        categoryId: menuData.categoryId.toString(),
+        // ✅ Return first category ID for backward compatibility
+        categoryId: menuCategories[0]?.id || null,
+        // ✅ Return all categories
+        categories: menuCategories,
         name: menuData.name,
-        description: menuData.description,
+        description: menuData.description || null,
         price: menuData.price,
-        imageUrl: menuData.imageUrl,
+        imageUrl: menuData.imageUrl || null,
         isActive: menuData.isActive,
         trackStock: menuData.trackStock,
-        stockQty: menuData.stockQty,
-        category: menuData.category ? {
-          id: menuData.category.id.toString(),
-          name: menuData.category.name,
-        } : null,
+        stockQty: menuData.stockQty || null,
+        // ✅ Return first category for display
+        category: menuCategories[0] || null,
       };
     });
 

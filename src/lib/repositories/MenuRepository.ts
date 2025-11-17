@@ -83,21 +83,26 @@ export class MenuRepository {
     const results = await prisma.menu.findMany({
       where: {
         merchantId,
-        deletedAt: null,
+        // ✅ NEW: Use many-to-many relationship
         ...(categoryId && {
           categories: {
             some: {
-              categoryId,
+              categoryId: categoryId,
             },
           },
         }),
-        ...(!includeInactive && { isActive: true }),
+        ...(includeInactive ? {} : { isActive: true }),
       },
       include: {
-        category: true, // Keep for backward compatibility
+        // ✅ Include all categories (many-to-many)
         categories: {
           include: {
-            category: true,
+            category: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
         addonCategories: {
@@ -107,7 +112,6 @@ export class MenuRepository {
                 addonItems: {
                   where: {
                     isActive: true,
-                    deletedAt: null,
                   },
                 },
               },
@@ -115,11 +119,10 @@ export class MenuRepository {
           },
         },
       },
-      orderBy: {
-        createdAt: 'desc',
-      },
+      orderBy: { createdAt: 'desc' },
     });
-    return serializeData(results);
+
+    return results;
   }
 
   async findMenuById(id: bigint) {

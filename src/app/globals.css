@@ -842,3 +842,51 @@ span.flatpickr-weekday,
   opacity: 0.8;
   cursor: grabbing; /* Changes the cursor to indicate dragging */
 }
+
+/**
+ * ✅ Hide scrollbar for horizontal scroll containers
+ * Cross-browser compatible scrollbar hiding
+ * 
+ * @usage
+ * <div className="overflow-x-auto scrollbar-hide">
+ *   {/* Content */
+ * </div>
+ */
+.scrollbar-hide {
+  /* Firefox */
+  scrollbar-width: none;
+  
+  /* IE 10+ */
+  -ms-overflow-style: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  /* Chrome, Safari, Edge, Opera */
+  display: none;
+}
+
+/**
+ * ✅ Optional: Thin scrollbar variant (if needed elsewhere)
+ */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 163, 175, 0.5);
+  border-radius: 2px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(156, 163, 175, 0.8);
+}
