@@ -136,7 +136,8 @@ async function handlePost(
         stockQty: body.stockQty,
         dailyStockTemplate: body.dailyStockTemplate,
         autoResetStock: body.autoResetStock || false,
-      }
+      },
+      context.userId // ✅ Audit trail: createdByUserId
     );
 
     return NextResponse.json(

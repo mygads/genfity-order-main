@@ -1,63 +1,35 @@
 /**
- * Order Service
- * Business logic for order management, validation, and analytics
+ * Order Service - Phase 1: Order Management System
+ * 
+ * Business logic for Order Management System
+ * Reference: /docs/ORDER_MANAGEMENT_SYSTEM_GUIDE.md Section 12
+ * 
+ * IMPORTANT CHANGES (Phase 1):
+ * - Removed OrderStatusHistory (use timestamps instead)
+ * - Removed customerName/Email/Phone from Order (use customer relation)
+ * - Added Payment table support (1:1 relation)
+ * - orderNumber used for payment verification (no separate payment code)
  */
 
-import orderRepository from '@/lib/repositories/OrderRepository';
-import menuService from '@/lib/services/MenuService';
-import merchantService from '@/lib/services/MerchantService';
-import userRepository from '@/lib/repositories/UserRepository';
-import emailService from '@/lib/services/EmailService';
-import { hashPassword } from '@/lib/utils/passwordHasher';
-import { generateOrderQRCode } from '@/lib/utils/qrCodeGenerator';
-import { validateEmail, validateRequired } from '@/lib/utils/validators';
-import {
-  ValidationError,
-  NotFoundError,
-  ERROR_CODES,
-} from '@/lib/constants/errors';
-import type { Order } from '@/lib/types';
 import prisma from '@/lib/db/client';
-import { Decimal } from '@prisma/client/runtime/library';
-import { serializeData } from '@/lib/utils/serializer'; // ✅ NEW IMPORT
+import { OrderStatus, PaymentMethod, PaymentStatus, Prisma } from '@prisma/client';
+import {
+  OrderFilters,
+  OrderWithDetails,
+  OrderListItem,
+  RecordPaymentData,
+  UpdateOrderStatusData,
+  CancelOrderData,
+  OrderStats,
+  buildOrderWhereInput,
+  ORDER_DETAIL_INCLUDE,
+  ORDER_LIST_INCLUDE,
+  PaymentVerificationResult,
+} from '@/lib/types/order';
+import { canTransitionStatus, validateStatusTransition } from '@/lib/utils/orderStatusRules';
+import { serializeBigInt } from '@/lib/utils/serializer';
 
-/**
- * Order item input
- */
-export interface OrderItemInput {
-  menuId: bigint;
-  quantity: number;
-  selectedAddons: bigint[]; // Array of addon item IDs
-  specialInstructions?: string;
-}
-
-/**
- * Order creation input
- */
-export interface CreateOrderInput {
-  merchantId: bigint;
-  orderType: 'DINE_IN' | 'TAKEAWAY';
-  tableNumber?: string;
-  customerName: string;
-  customerEmail: string;
-  customerPhone?: string;
-  items: OrderItemInput[];
-  notes?: string;
-}
-
-/**
- * Revenue report item
- */
-export interface RevenueReportItem {
-  date: string;
-  totalOrders: number;
-  totalRevenue: number;
-}
-
-/**
- * Order Service Class
- */
-class OrderService {
+export class OrderService {
   /**
    * Create new order with automatic customer registration
    * 

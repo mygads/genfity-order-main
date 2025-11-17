@@ -62,9 +62,13 @@ export async function GET(
       mapUrl: merchantData.mapUrl,
       description: merchantData.description,
       isActive: merchantData.isActive,
+      isOpen: merchantData.isOpen, // ✅ Added isOpen field
       enableTax: merchantData.enableTax,
       taxPercentage: merchantData.taxPercentage,
       currency: merchantData.currency,
+      timezone: merchantData.timezone,
+      latitude: merchantData.latitude,
+      longitude: merchantData.longitude,
       openingHours: merchant.openingHours,
     };
 

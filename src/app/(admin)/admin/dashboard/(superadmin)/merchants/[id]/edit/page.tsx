@@ -20,6 +20,7 @@ interface MerchantFormData {
   email: string;
   phoneNumber: string;
   logoUrl?: string;
+  isOpen: boolean;
   country: string;
   currency: string;
   timezone: string;
@@ -55,6 +56,7 @@ export default function EditMerchantPage() {
     email: "",
     phoneNumber: "",
     logoUrl: "",
+    isOpen: true,
     country: "Australia",
     currency: "AUD",
     timezone: "Australia/Sydney",
@@ -104,6 +106,7 @@ export default function EditMerchantPage() {
           email: merchant.email || "",
           phoneNumber: merchant.phone || "",
           logoUrl: merchant.logoUrl || "",
+          isOpen: merchant.isOpen ?? true,
           country: merchant.country || "Australia",
           currency: merchant.currency || "AUD",
           timezone: merchant.timezone || "Australia/Sydney",
@@ -419,6 +422,46 @@ export default function EditMerchantPage() {
                 rows={3}
                 className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
               />
+            </div>
+
+            {/* Store Open/Close Toggle */}
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Store Open Status
+                  </label>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Toggle whether the store is currently accepting orders
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, isOpen: !prev.isOpen }))}
+                  className={`relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 ${
+                    formData.isOpen ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      formData.isOpen ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+              <div className="mt-3">
+                {formData.isOpen ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700 dark:bg-green-900/20 dark:text-green-400">
+                    <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
+                    Store is Open - Accepting Orders
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-700 dark:bg-red-900/20 dark:text-red-400">
+                    <div className="h-2 w-2 rounded-full bg-red-500"></div>
+                    Store is Closed - Not Accepting Orders
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Location & Settings Section */}

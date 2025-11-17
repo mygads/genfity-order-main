@@ -15,17 +15,21 @@ interface LoginRequestBody {
  * Customer Login/Register Endpoint
  * POST /api/public/auth/customer-login
  * 
+ * ✅ FIXED: Create UserSession record for JWT token tracking
+ * 
  * @specification STEP_02_AUTHENTICATION_JWT.txt - Customer Auth Flow
  * 
  * @description
  * Seamless authentication for customers:
  * - If email exists → login (update name/phone if provided)
  * - If email doesn't exist → auto-register as CUSTOMER
+ * - Create UserSession record for token tracking
  * 
  * @security
  * - Email validation (RFC 5322 format)
  * - Prisma parameterized queries (SQL injection safe)
  * - JWT token with 30-day expiry
+ * - UserSession tracking with device info
  * - No password required for customers
  * 
  * @returns {Object} Standard response format
@@ -74,20 +78,6 @@ export async function POST(request: NextRequest) {
     // DATABASE QUERY (STEP_01 users table)
     // ========================================
     
-    /**
-     * ✅ Check if user exists using Prisma
-     * 
-     * @security Parameterized query (SQL injection safe)
-     * @performance Uses index on email column
-     * 
-     * Replaces:
-     * const existingUser = await db.query(
-     *   `SELECT id, email, name, phone, role, is_active 
-     *    FROM users 
-     *    WHERE email = $1 AND role = 'CUSTOMER'`,
-     *   [emailTrimmed]
-     * );
-     */
     const existingUser = await prisma.user.findFirst({
       where: {
         email: emailTrimmed,
@@ -136,7 +126,14 @@ export async function POST(request: NextRequest) {
           data: {
             name: userName,
             phone: userPhone,
+            lastLoginAt: new Date(), // ✅ Update last login timestamp
           },
+        });
+      } else {
+        // ✅ Just update last login
+        await prisma.user.update({
+          where: { id: userId },
+          data: { lastLoginAt: new Date() },
         });
       }
 
@@ -158,20 +155,15 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      /**
-       * ✅ Create new customer using Prisma
-       * 
-       * @security No password required (email-based auth)
-       * @default role='CUSTOMER', isActive=true
-       */
       const newUser = await prisma.user.create({
         data: {
           email: emailTrimmed,
           name: name.trim(),
           phone: phone?.trim() || null,
-          passwordHash: '', // No password for customers (magic link auth)
+          passwordHash: '', // No password for customers (email-based auth)
           role: 'CUSTOMER',
           isActive: true,
+          lastLoginAt: new Date(), // ✅ Set initial login timestamp
         },
         select: {
           id: true,
@@ -187,32 +179,49 @@ export async function POST(request: NextRequest) {
     // JWT GENERATION (STEP_02 Section 4.2)
     // ========================================
     
-    /**
-     * ✅ FIXED: JWT payload with correct field names
-     * 
-     * @specification STEP_02_AUTHENTICATION_JWT.txt - Token Structure
-     * 
-     * @security
-     * - customerId: string (required by auth.ts verification)
-     * - name: string (required by auth.ts verification)
-     * - email: string (required by auth.ts verification)
-     * - role: CUSTOMER (for authorization)
-     * 
-     * @critical
-     * Field names MUST match CustomerTokenPayload interface in auth.ts:
-     * - customerId (NOT userId)
-     * - name (NOT optional)
-     * - email
-     */
     const payload = {
-      customerId: userId.toString(), // ✅ Match auth.ts interface
+      customerId: userId.toString(),
       email: emailTrimmed,
-      name: userName,                // ✅ Required by auth.ts
+      name: userName,
       role: 'CUSTOMER',
     };
 
     const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
     const expiresAt = Date.now() + 30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
+
+    // ========================================
+    // ✅ NEW: CREATE USER SESSION RECORD
+    // ========================================
+    
+    /**
+     * Create UserSession record for token tracking
+     * 
+     * @specification STEP_02_AUTHENTICATION_JWT.txt - Session Management
+     * 
+     * @benefits
+     * - Track active sessions per user
+     * - Enable session revocation
+     * - Monitor login activity
+     * - Device/IP tracking for security
+     */
+    const userAgent = request.headers.get('user-agent') || 'Unknown';
+    const ipAddress = request.headers.get('x-forwarded-for') || 
+                      request.headers.get('x-real-ip') || 
+                      'Unknown';
+
+    await prisma.userSession.create({
+      data: {
+        userId,
+        token,
+        deviceInfo: userAgent,
+        ipAddress,
+        status: 'ACTIVE',
+        expiresAt: new Date(expiresAt),
+        refreshExpiresAt: null, // No refresh token for customers
+      },
+    });
+
+    console.log('✅ [AUTH] Session created for customer:', userId.toString());
 
     return NextResponse.json(
       {

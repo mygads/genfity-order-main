@@ -27,36 +27,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
 import { verifyCustomerToken } from '@/lib/utils/auth';
-
-/**
- * Helper: Serialize BigInt to string for JSON
- * 
- * @param obj - Object with BigInt values
- * @returns Serialized object safe for JSON.stringify
- * 
- * @specification GENFITY coding standards - Type safety
- */
-function serializeBigInt(obj: any): any {
-  if (obj === null || obj === undefined) return obj;
-  
-  if (typeof obj === 'bigint') {
-    return obj.toString();
-  }
-  
-  if (Array.isArray(obj)) {
-    return obj.map(serializeBigInt);
-  }
-  
-  if (typeof obj === 'object') {
-    const serialized: any = {};
-    for (const key in obj) {
-      serialized[key] = serializeBigInt(obj[key]);
-    }
-    return serialized;
-  }
-  
-  return obj;
-}
+import { serializeBigInt } from '@/lib/utils/serializer';
 
 /**
  * GET /api/customer/orders
@@ -103,33 +74,29 @@ export async function GET(req: NextRequest) {
     // ========================================
     
     /**
-     * ✅ FIXED: Use Prisma client instead of raw db.query()
+     * ✅ SCHEMA VERIFIED: Order table structure
      * 
-     * Query breakdown:
-     * 1. Select from orders table (STEP_01 orders schema)
-     * 2. Join with merchants (get merchant name & code)
-     * 3. Join with order_items (count total items)
-     * 4. Get latest status from order_status_history
-     * 5. Filter by customer_id
-     * 6. Order by placed_at DESC (newest first)
-     * 
-     * @security
-     * - Parameterized query (Prisma auto-escapes)
-     * - Customer can only see their own orders
-     * 
-     * @specification STEP_01_DATABASE_DESIGN.txt
-     * - orders table: id, order_number, merchant_id, customer_id, status, total_amount
-     * - order_status_history: order_id, status, created_at
+     * Order {
+     *   customerId: BigInt? @map("customer_id")          // ✅ Nullable
+     *   customer: User? @relation("CustomerOrders")      // ✅ Correct relation name
+     *   merchant: Merchant
+     *   orderItems: OrderItem[]
+     *   payment: Payment?                                 // ✅ 1:1 relation
+     *   placedAt: DateTime @default(now())               // ✅ Indexed for orderBy
+     * }
      */
     const orders = await prisma.order.findMany({
       where: {
-        customerId: BigInt(decoded.customerId),
+        customerId: BigInt(decoded.customerId), // ✅ Match schema: nullable BigInt
       },
       include: {
         merchant: {
           select: {
             name: true,
             code: true,
+            currency: true,
+            enableTax: true,
+            taxPercentage: true,
           },
         },
         orderItems: {
@@ -139,7 +106,7 @@ export async function GET(req: NextRequest) {
         },
       },
       orderBy: {
-        placedAt: 'desc',
+        placedAt: 'desc', // ✅ Use indexed field for performance
       },
     });
 
@@ -168,6 +135,7 @@ export async function GET(req: NextRequest) {
       orderNumber: order.orderNumber,
       merchantName: order.merchant.name,
       merchantCode: order.merchant.code,
+      merchantCurrency: order.merchant.currency,
       mode: order.orderType === 'DINE_IN' ? 'dinein' : 'takeaway',
       status: order.status,
       totalAmount: parseFloat(order.totalAmount.toString()),

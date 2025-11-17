@@ -87,8 +87,8 @@ async function handleGet(request: NextRequest, context: AuthContext) {
         COALESCE(AVG(total_amount), 0)::FLOAT as avg_order_value
       FROM orders
       WHERE merchant_id = ${merchantId}
-        AND created_at >= ${currentStart}
-        AND created_at <= ${currentEnd}
+        AND placed_at >= ${currentStart}
+        AND placed_at <= ${currentEnd}
         AND status != 'CANCELLED'
     `;
 
@@ -107,8 +107,8 @@ async function handleGet(request: NextRequest, context: AuthContext) {
         COALESCE(AVG(total_amount), 0)::FLOAT as avg_order_value
       FROM orders
       WHERE merchant_id = ${merchantId}
-        AND created_at >= ${previousStart}
-        AND created_at <= ${previousEnd}
+        AND placed_at >= ${previousStart}
+        AND placed_at <= ${previousEnd}
         AND status != 'CANCELLED'
     `;
 
@@ -161,12 +161,12 @@ async function handleGet(request: NextRequest, context: AuthContext) {
       WITH customer_orders AS (
         SELECT
           customer_id,
-          MIN(created_at) as first_order_date,
+          MIN(placed_at) as first_order_date,
           COUNT(*) as order_count
         FROM orders
         WHERE merchant_id = ${merchantId}
-          AND created_at >= ${currentStart}
-          AND created_at <= ${currentEnd}
+          AND placed_at >= ${currentStart}
+          AND placed_at <= ${currentEnd}
           AND status != 'CANCELLED'
         GROUP BY customer_id
       )
@@ -213,14 +213,13 @@ async function handleGet(request: NextRequest, context: AuthContext) {
       }>
     >`
       SELECT
-        COALESCE(AVG(EXTRACT(EPOCH FROM (osh.created_at - o.created_at)) / 60), 0)::FLOAT as avg_prep_time,
+        COALESCE(AVG(EXTRACT(EPOCH FROM (o.completed_at - o.placed_at)) / 60), 0)::FLOAT as avg_prep_time,
         COUNT(DISTINCT o.id)::BIGINT as total_orders,
         COUNT(DISTINCT o.id) FILTER (WHERE o.status = 'COMPLETED')::BIGINT as completed_orders
       FROM orders o
-      LEFT JOIN order_status_history osh ON o.id = osh.order_id AND osh.to_status = 'COMPLETED'
       WHERE o.merchant_id = ${merchantId}
-        AND o.created_at >= ${currentStart}
-        AND o.created_at <= ${currentEnd}
+        AND o.placed_at >= ${currentStart}
+        AND o.placed_at <= ${currentEnd}
     `;
 
     const opData = operationalData[0];
@@ -238,14 +237,13 @@ async function handleGet(request: NextRequest, context: AuthContext) {
       }>
     >`
       SELECT
-        EXTRACT(HOUR FROM o.created_at)::INTEGER as hour,
+        EXTRACT(HOUR FROM o.placed_at)::INTEGER as hour,
         COUNT(DISTINCT o.id)::BIGINT as order_count,
-        COALESCE(AVG(EXTRACT(EPOCH FROM (osh.created_at - o.created_at)) / 60), 0)::FLOAT as avg_prep_time
+        COALESCE(AVG(EXTRACT(EPOCH FROM (o.completed_at - o.placed_at)) / 60), 0)::FLOAT as avg_prep_time
       FROM orders o
-      LEFT JOIN order_status_history osh ON o.id = osh.order_id AND osh.to_status = 'COMPLETED'
       WHERE o.merchant_id = ${merchantId}
-        AND o.created_at >= ${currentStart}
-        AND o.created_at <= ${currentEnd}
+        AND o.placed_at >= ${currentStart}
+        AND o.placed_at <= ${currentEnd}
         AND o.status != 'CANCELLED'
       GROUP BY hour
       ORDER BY hour
@@ -280,15 +278,14 @@ async function handleGet(request: NextRequest, context: AuthContext) {
       }>
     >`
       SELECT
-        EXTRACT(DOW FROM o.created_at)::INTEGER as day_of_week,
-        EXTRACT(HOUR FROM o.created_at)::INTEGER as hour,
+        EXTRACT(DOW FROM o.placed_at)::INTEGER as day_of_week,
+        EXTRACT(HOUR FROM o.placed_at)::INTEGER as hour,
         COUNT(DISTINCT o.id)::BIGINT as order_count,
-        COALESCE(AVG(EXTRACT(EPOCH FROM (osh.created_at - o.created_at)) / 60), 0)::FLOAT as avg_prep_time
+        COALESCE(AVG(EXTRACT(EPOCH FROM (o.completed_at - o.placed_at)) / 60), 0)::FLOAT as avg_prep_time
       FROM orders o
-      LEFT JOIN order_status_history osh ON o.id = osh.order_id AND osh.to_status = 'COMPLETED'
       WHERE o.merchant_id = ${merchantId}
-        AND o.created_at >= ${currentStart}
-        AND o.created_at <= ${currentEnd}
+        AND o.placed_at >= ${currentStart}
+        AND o.placed_at <= ${currentEnd}
         AND o.status != 'CANCELLED'
       GROUP BY day_of_week, hour
       ORDER BY day_of_week, hour
@@ -357,8 +354,8 @@ async function handleGet(request: NextRequest, context: AuthContext) {
       FROM order_items oi
       JOIN orders o ON oi.order_id = o.id
       WHERE o.merchant_id = ${merchantId}
-        AND o.created_at >= ${currentStart}
-        AND o.created_at <= ${currentEnd}
+        AND o.placed_at >= ${currentStart}
+        AND o.placed_at <= ${currentEnd}
         AND o.status != 'CANCELLED'
       GROUP BY oi.menu_id, oi.menu_name
       ORDER BY quantity_sold DESC

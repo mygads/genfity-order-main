@@ -113,7 +113,8 @@ async function handlePost(
         description: body.description,
         minSelection: body.minSelection,
         maxSelection: body.maxSelection,
-      }
+      },
+      context.userId // ✅ Audit trail: createdByUserId
     );
 
     return NextResponse.json(

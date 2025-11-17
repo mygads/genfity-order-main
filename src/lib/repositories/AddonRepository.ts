@@ -61,7 +61,7 @@ export class AddonRepository {
   /**
    * Create new addon category
    */
-  async createAddonCategory(merchantId: bigint, data: CreateAddonCategoryDTO) {
+  async createAddonCategory(merchantId: bigint, data: CreateAddonCategoryDTO, userId?: bigint) {
     return await prisma.addonCategory.create({
       data: {
         merchantId,
@@ -70,6 +70,8 @@ export class AddonRepository {
         minSelection: data.minSelection || 0,
         maxSelection: data.maxSelection || null,
         isActive: true,
+        createdByUserId: userId,
+        updatedByUserId: userId,
       },
       include: {
         addonItems: true,
@@ -83,7 +85,8 @@ export class AddonRepository {
   async updateAddonCategory(
     id: bigint,
     merchantId: bigint,
-    data: UpdateAddonCategoryDTO
+    data: UpdateAddonCategoryDTO,
+    userId?: bigint
   ) {
     return await prisma.addonCategory.updateMany({
       where: {
@@ -96,6 +99,7 @@ export class AddonRepository {
         minSelection: data.minSelection,
         maxSelection: data.maxSelection,
         isActive: data.isActive,
+        updatedByUserId: userId,
       },
     });
   }
@@ -103,23 +107,26 @@ export class AddonRepository {
   /**
    * Toggle addon category active status
    */
-  async toggleAddonCategoryActive(id: bigint, merchantId: bigint) {
+  async toggleAddonCategoryActive(id: bigint, merchantId: bigint, userId?: bigint) {
     const category = await this.getAddonCategoryById(id, merchantId);
     if (!category) return null;
 
     return await prisma.addonCategory.update({
       where: { id },
-      data: { isActive: !category.isActive },
+      data: { 
+        isActive: !category.isActive,
+        updatedByUserId: userId,
+      },
     });
   }
 
   /**
-   * Delete addon category
+   * Delete addon category (soft delete)
    */
-  async deleteAddonCategory(id: bigint, merchantId: bigint) {
-    // Check if category has any menu associations
+  async deleteAddonCategory(id: bigint, merchantId: bigint, userId?: bigint) {
+    // Check if category exists
     const category = await prisma.addonCategory.findFirst({
-      where: { id, merchantId },
+      where: { id, merchantId, deletedAt: null },
       include: {
         _count: {
           select: {
@@ -139,8 +146,13 @@ export class AddonRepository {
       );
     }
 
-    return await prisma.addonCategory.delete({
+    // Soft delete
+    return await prisma.addonCategory.update({
       where: { id },
+      data: {
+        deletedAt: new Date(),
+        deletedByUserId: userId,
+      },
     });
   }
 
@@ -216,7 +228,7 @@ export class AddonRepository {
   /**
    * Create new addon item
    */
-  async createAddonItem(merchantId: bigint, data: CreateAddonItemDTO) {
+  async createAddonItem(merchantId: bigint, data: CreateAddonItemDTO, userId?: bigint) {
     // Verify category belongs to merchant
     const category = await prisma.addonCategory.findFirst({
       where: {
@@ -251,6 +263,8 @@ export class AddonRepository {
         stockQty: data.trackStock ? data.stockQty || 0 : null,
         dailyStockTemplate: data.trackStock && data.dailyStockTemplate ? data.dailyStockTemplate : null,
         autoResetStock: data.trackStock && data.dailyStockTemplate ? (data.autoResetStock || false) : false,
+        createdByUserId: userId,
+        updatedByUserId: userId,
       },
       include: {
         addonCategory: true,
@@ -264,7 +278,8 @@ export class AddonRepository {
   async updateAddonItem(
     id: bigint,
     merchantId: bigint,
-    data: UpdateAddonItemDTO
+    data: UpdateAddonItemDTO,
+    userId?: bigint
   ) {
     // Verify item belongs to merchant's category
     const item = await this.getAddonItemById(id, merchantId);
@@ -278,6 +293,7 @@ export class AddonRepository {
       price: data.price !== undefined ? data.price : undefined,
       inputType: data.inputType,
       isActive: data.isActive,
+      updatedByUserId: userId,
     };
 
     // Handle stock tracking
@@ -320,13 +336,16 @@ export class AddonRepository {
   /**
    * Toggle addon item active status
    */
-  async toggleAddonItemActive(id: bigint, merchantId: bigint) {
+  async toggleAddonItemActive(id: bigint, merchantId: bigint, userId?: bigint) {
     const item = await this.getAddonItemById(id, merchantId);
     if (!item) return null;
 
     return await prisma.addonItem.update({
       where: { id },
-      data: { isActive: !item.isActive },
+      data: { 
+        isActive: !item.isActive,
+        updatedByUserId: userId,
+      },
       include: {
         addonCategory: true,
       },
@@ -381,9 +400,9 @@ export class AddonRepository {
   }
 
   /**
-   * Delete addon item
+   * Delete addon item (soft delete)
    */
-  async deleteAddonItem(id: bigint, merchantId: bigint) {
+  async deleteAddonItem(id: bigint, merchantId: bigint, userId?: bigint) {
     // Verify item belongs to merchant's category
     const item = await this.getAddonItemById(id, merchantId);
     if (!item) {
@@ -401,8 +420,13 @@ export class AddonRepository {
       );
     }
 
-    return await prisma.addonItem.delete({
+    // Soft delete
+    return await prisma.addonItem.update({
       where: { id },
+      data: {
+        deletedAt: new Date(),
+        deletedByUserId: userId,
+      },
     });
   }
 

@@ -17,6 +17,7 @@ import {
   FolderIcon,
   PlusIcon,
 } from "../icons/index";
+import { FaHistory, FaUtensils, FaChartLine } from "react-icons/fa";
 import SidebarWidget from "./SidebarWidget";
 import MerchantBanner from "../components/merchants/MerchantBanner";
 
@@ -86,10 +87,27 @@ const merchantNavGroups: NavGroup[] = [
         path: "/admin/dashboard",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
       },
+    ],
+  },
+  {
+    title: "Order Management",
+    items: [
       {
         icon: <ListIcon />,
-        name: "Orders",
+        name: "Orders (Kanban)",
         path: "/admin/dashboard/orders",
+        roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+      },
+      {
+        icon: <FaUtensils />,
+        name: "Kitchen Display",
+        path: "/admin/dashboard/orders/kitchen",
+        roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+      },
+      {
+        icon: <FaHistory />,
+        name: "Order History",
+        path: "/admin/dashboard/orders/history",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
       },
     ],
@@ -148,6 +166,23 @@ const merchantNavGroups: NavGroup[] = [
         icon: <PieChartIcon />,
         name: "Revenue",
         path: "/admin/dashboard/revenue",
+        roles: ["MERCHANT_OWNER"],
+      },
+    ],
+  },
+  {
+    title: "Settings",
+    items: [
+      {
+        icon: <FileIcon />,
+        name: "Opening Hours",
+        path: "/admin/dashboard/opening-hours",
+        roles: ["MERCHANT_OWNER"],
+      },
+      {
+        icon: <BoxIconLine />,
+        name: "Merchant Settings",
+        path: "/admin/dashboard/settings",
         roles: ["MERCHANT_OWNER"],
       },
     ],
@@ -219,18 +254,37 @@ const AppSidebar: React.FC = () => {
   const navGroups = getMenuGroups();
 
   const isActive = useCallback((path: string) => {
+    // Exact match first (most important)
+    if (path === pathname) return true;
+    
     // Special handling for menu builder
     if (path === "/admin/dashboard/menu/builder/new") {
       return pathname.startsWith("/admin/dashboard/menu/builder");
     }
-    // Check exact match first
-    if (path === pathname) return true;
-    // For menu path, only activate if exact match (not for nested routes like /menu/create)
+    
+    // For orders paths, handle nested routes properly
+    if (path === "/admin/dashboard/orders") {
+      // Only exact match for main orders page
+      return pathname === "/admin/dashboard/orders" || pathname === "/admin/dashboard/orders/";
+    }
+    if (path === "/admin/dashboard/orders/kitchen") {
+      return pathname.startsWith("/admin/dashboard/orders/kitchen");
+    }
+    if (path === "/admin/dashboard/orders/history") {
+      return pathname.startsWith("/admin/dashboard/orders/history");
+    }
+    
+    // For menu path, only activate if exact match
     if (path === "/admin/dashboard/menu") {
       return pathname === "/admin/dashboard/menu" || pathname === "/admin/dashboard/menu/";
     }
-    // Check if current path starts with menu path (for other nested routes)
-    if (pathname.startsWith(path) && path !== "/admin/dashboard") return true;
+    
+    // For other paths, check if current path starts with menu path
+    // But exclude dashboard to prevent it from matching everything
+    if (path !== "/admin/dashboard" && pathname.startsWith(path)) {
+      return true;
+    }
+    
     return false;
   }, [pathname]);
 

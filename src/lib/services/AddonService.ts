@@ -37,7 +37,7 @@ export class AddonService {
   /**
    * Create addon category
    */
-  async createAddonCategory(merchantId: bigint, data: CreateAddonCategoryDTO) {
+  async createAddonCategory(merchantId: bigint, data: CreateAddonCategoryDTO, userId?: bigint) {
     // Validation
     if (!data.name || data.name.trim().length === 0) {
       throw new Error('Category name is required');
@@ -64,7 +64,7 @@ export class AddonService {
       }
     }
 
-    return await this.repository.createAddonCategory(merchantId, data);
+    return await this.repository.createAddonCategory(merchantId, data, userId);
   }
 
   /**
@@ -73,7 +73,8 @@ export class AddonService {
   async updateAddonCategory(
     id: bigint,
     merchantId: bigint,
-    data: UpdateAddonCategoryDTO
+    data: UpdateAddonCategoryDTO,
+    userId?: bigint
   ) {
     // Verify category exists
     await this.getAddonCategoryById(id, merchantId);
@@ -109,7 +110,8 @@ export class AddonService {
     const result = await this.repository.updateAddonCategory(
       id,
       merchantId,
-      data
+      data,
+      userId
     );
 
     if (result.count === 0) {
@@ -122,10 +124,11 @@ export class AddonService {
   /**
    * Toggle addon category status
    */
-  async toggleAddonCategoryActive(id: bigint, merchantId: bigint) {
+  async toggleAddonCategoryActive(id: bigint, merchantId: bigint, userId?: bigint) {
     const result = await this.repository.toggleAddonCategoryActive(
       id,
-      merchantId
+      merchantId,
+      userId
     );
 
     if (!result) {
@@ -138,8 +141,8 @@ export class AddonService {
   /**
    * Delete addon category
    */
-  async deleteAddonCategory(id: bigint, merchantId: bigint) {
-    return await this.repository.deleteAddonCategory(id, merchantId);
+  async deleteAddonCategory(id: bigint, merchantId: bigint, userId?: bigint) {
+    return await this.repository.deleteAddonCategory(id, merchantId, userId);
   }
 
   // ==================== ADDON ITEMS ====================
@@ -172,7 +175,7 @@ export class AddonService {
   /**
    * Create addon item
    */
-  async createAddonItem(merchantId: bigint, data: CreateAddonItemDTO) {
+  async createAddonItem(merchantId: bigint, data: CreateAddonItemDTO, userId?: bigint) {
     // Validation
     if (!data.name || data.name.trim().length === 0) {
       throw new Error('Addon item name is required');
@@ -196,7 +199,7 @@ export class AddonService {
       }
     }
 
-    return await this.repository.createAddonItem(merchantId, data);
+    return await this.repository.createAddonItem(merchantId, data, userId);
   }
 
   /**
@@ -205,7 +208,8 @@ export class AddonService {
   async updateAddonItem(
     id: bigint,
     merchantId: bigint,
-    data: UpdateAddonItemDTO
+    data: UpdateAddonItemDTO,
+    userId?: bigint
   ) {
     // Verify item exists
     await this.getAddonItemById(id, merchantId);
@@ -229,14 +233,14 @@ export class AddonService {
       throw new Error('Stock quantity cannot be negative');
     }
 
-    return await this.repository.updateAddonItem(id, merchantId, data);
+    return await this.repository.updateAddonItem(id, merchantId, data, userId);
   }
 
   /**
    * Toggle addon item status
    */
-  async toggleAddonItemActive(id: bigint, merchantId: bigint) {
-    const result = await this.repository.toggleAddonItemActive(id, merchantId);
+  async toggleAddonItemActive(id: bigint, merchantId: bigint, userId?: bigint) {
+    const result = await this.repository.toggleAddonItemActive(id, merchantId, userId);
 
     if (!result) {
       throw new Error('Addon item not found');
@@ -274,8 +278,8 @@ export class AddonService {
   /**
    * Delete addon item
    */
-  async deleteAddonItem(id: bigint, merchantId: bigint) {
-    return await this.repository.deleteAddonItem(id, merchantId);
+  async deleteAddonItem(id: bigint, merchantId: bigint, userId?: bigint) {
+    return await this.repository.deleteAddonItem(id, merchantId, userId);
   }
 
   // ==================== MENU-ADDON ASSOCIATIONS ====================

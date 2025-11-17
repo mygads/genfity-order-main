@@ -27,6 +27,7 @@ export interface MenuCategoryInput {
   name: string;
   description?: string;
   sortOrder?: number;
+  userId?: bigint; // For audit trail (createdBy/updatedBy)
 }
 
 /**
@@ -48,6 +49,7 @@ export interface MenuInput {
   stockQty?: number;
   dailyStockTemplate?: number;
   autoResetStock?: boolean;
+  userId?: bigint; // For audit trail (createdBy/updatedBy)
 }
 
 /**
@@ -59,6 +61,7 @@ export interface AddonCategoryInput {
   description?: string;
   minSelection?: number;
   maxSelection?: number;
+  userId?: bigint; // For audit trail (createdBy/updatedBy)
 }
 
 /**
@@ -71,6 +74,7 @@ export interface AddonItemInput {
   isActive?: boolean;
   trackStock?: boolean;
   stockQty?: number;
+  userId?: bigint; // For audit trail (createdBy/updatedBy)
 }
 
 /**
@@ -107,6 +111,7 @@ class MenuService {
       name: input.name.trim(),
       description: input.description?.trim(),
       sortOrder: input.sortOrder ?? 0,
+      createdByUserId: input.userId,
     });
   }
 
@@ -130,13 +135,14 @@ class MenuService {
       name: input.name?.trim(),
       description: input.description?.trim(),
       sortOrder: input.sortOrder,
+      updatedByUserId: input.userId,
     });
   }
 
   /**
    * Delete menu category
    */
-  async deleteCategory(categoryId: bigint): Promise<void> {
+  async deleteCategory(categoryId: bigint, userId?: bigint): Promise<void> {
     // Validate category exists
     const existing = await menuRepository.findCategoryById(categoryId);
     if (!existing) {
@@ -155,7 +161,7 @@ class MenuService {
       );
     }
 
-    await menuRepository.deleteCategory(categoryId);
+    await menuRepository.deleteCategory(categoryId, userId);
   }
 
   /**
@@ -237,6 +243,7 @@ class MenuService {
       stockQty: input.stockQty ?? undefined,
       dailyStockTemplate: input.dailyStockTemplate,
       autoResetStock: input.autoResetStock ?? false,
+      createdByUserId: input.userId,
     });
   }
 
@@ -293,13 +300,14 @@ class MenuService {
       stockQty: input.stockQty,
       dailyStockTemplate: input.dailyStockTemplate,
       autoResetStock: input.autoResetStock,
+      updatedByUserId: input.userId,
     });
   }
 
   /**
    * Delete menu item
    */
-  async deleteMenu(menuId: bigint): Promise<void> {
+  async deleteMenu(menuId: bigint, userId?: bigint): Promise<void> {
     // Validate menu exists
     const existing = await menuRepository.findMenuById(menuId);
     if (!existing) {
@@ -309,7 +317,7 @@ class MenuService {
       );
     }
 
-    await menuRepository.deleteMenu(menuId);
+    await menuRepository.deleteMenu(menuId, userId);
   }
 
   /**
@@ -558,6 +566,7 @@ class MenuService {
       description: input.description?.trim(),
       minSelection,
       maxSelection: maxSelection ?? undefined,
+      createdByUserId: input.userId,
     });
   }
 
@@ -602,13 +611,14 @@ class MenuService {
       description: input.description?.trim(),
       minSelection: input.minSelection,
       maxSelection: input.maxSelection,
+      updatedByUserId: input.userId,
     });
   }
 
   /**
    * Delete addon category
    */
-  async deleteAddonCategory(categoryId: bigint): Promise<void> {
+  async deleteAddonCategory(categoryId: bigint, userId?: bigint): Promise<void> {
     // Validate category exists
     const existing = await menuRepository.findAddonCategoryById(categoryId);
     if (!existing) {
@@ -627,7 +637,7 @@ class MenuService {
       );
     }
 
-    await menuRepository.deleteAddonCategory(categoryId);
+    await menuRepository.deleteAddonCategory(categoryId, userId);
   }
 
   /**
@@ -681,6 +691,7 @@ class MenuService {
       isActive: input.isActive ?? true,
       trackStock: input.trackStock ?? false,
       stockQty: input.stockQty ?? undefined,
+      createdByUserId: input.userId,
     });
   }
 
@@ -714,13 +725,14 @@ class MenuService {
       isActive: input.isActive,
       trackStock: input.trackStock,
       stockQty: input.stockQty,
+      updatedByUserId: input.userId,
     });
   }
 
   /**
    * Delete addon item
    */
-  async deleteAddonItem(itemId: bigint): Promise<void> {
+  async deleteAddonItem(itemId: bigint, userId?: bigint): Promise<void> {
     // Validate item exists
     const existing = await menuRepository.findAddonItemById(itemId);
     if (!existing) {
@@ -730,7 +742,7 @@ class MenuService {
       );
     }
 
-    await menuRepository.deleteAddonItem(itemId);
+    await menuRepository.deleteAddonItem(itemId, userId);
   }
 
   /**

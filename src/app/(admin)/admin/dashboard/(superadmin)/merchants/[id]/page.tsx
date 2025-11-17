@@ -20,11 +20,13 @@ interface MerchantDetails {
   address: string;
   logoUrl: string | null;
   isActive: boolean;
+  isOpen: boolean;
   currency: string;
   country: string;
   timezone: string;
   latitude: string | null;
   longitude: string | null;
+  mapUrl: string | null;
   createdAt: string;
   openingHours: Array<{
     dayOfWeek: number;
@@ -52,6 +54,7 @@ export default function MerchantDetailsPage() {
   const [merchant, setMerchant] = useState<MerchantDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isTogglingOpen, setIsTogglingOpen] = useState(false);
 
   useEffect(() => {
     const fetchMerchant = async () => {
@@ -125,6 +128,38 @@ export default function MerchantDetailsPage() {
       setMerchant({ ...merchant, isActive: !merchant.isActive });
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to toggle status");
+    }
+  };
+
+  const toggleStoreOpen = async () => {
+    if (!merchant) return;
+    
+    try {
+      setIsTogglingOpen(true);
+      const token = localStorage.getItem("accessToken");
+      if (!token) return;
+
+      const response = await fetch(`/api/admin/merchants/${merchant.id}/toggle-open`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          isOpen: !merchant.isOpen,
+        }),
+      });
+
+      if (response.ok) {
+        // Update local state
+        setMerchant({ ...merchant, isOpen: !merchant.isOpen });
+      } else {
+        throw new Error("Failed to toggle store open status");
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to toggle store open status");
+    } finally {
+      setIsTogglingOpen(false);
     }
   };
 
@@ -208,6 +243,21 @@ export default function MerchantDetailsPage() {
                   }`}></span>
                   {merchant.isActive ? "Active" : "Inactive"}
                 </button>
+                
+                {merchant.isActive && (
+                  merchant.isOpen ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-success-100 px-3 py-1.5 text-xs font-medium text-success-700 dark:bg-success-900/20 dark:text-success-400">
+                      <div className="h-2 w-2 rounded-full bg-success-500 animate-pulse"></div>
+                      Store Open
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1.5 text-xs font-medium text-red-700 dark:bg-red-900/20 dark:text-red-400">
+                      <div className="h-2 w-2 rounded-full bg-red-500"></div>
+                      Store Closed
+                    </span>
+                  )
+                )}
+                
                 <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
                   {merchant.currency}
                 </span>
@@ -285,6 +335,17 @@ export default function MerchantDetailsPage() {
               className="h-11 rounded-lg bg-brand-500 px-6 text-sm font-medium text-white hover:bg-brand-600 focus:outline-none focus:ring-3 focus:ring-brand-500/20"
             >
               Edit Merchant
+            </button>
+            <button
+              onClick={toggleStoreOpen}
+              disabled={isTogglingOpen || !merchant.isActive}
+              className={`h-11 rounded-lg px-6 text-sm font-medium text-white focus:outline-none focus:ring-3 disabled:cursor-not-allowed disabled:opacity-50 ${
+                merchant.isOpen
+                  ? 'bg-orange-500 hover:bg-orange-600 focus:ring-orange-500/20'
+                  : 'bg-green-500 hover:bg-green-600 focus:ring-green-500/20'
+              }`}
+            >
+              {isTogglingOpen ? 'Processing...' : merchant.isOpen ? 'Close Store' : 'Open Store'}
             </button>
             <button
               onClick={() => router.push("/admin/dashboard/merchants")}

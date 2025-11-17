@@ -2,17 +2,18 @@
  * Public Order Detail API
  * GET /api/public/orders/[orderNumber]
  * 
- * ✅ FIXED: Import default export instead of named export
+ * ✅ FIXED: Use Prisma directly with Payment relation and proper serialization
  * 
  * @specification STEP_04_API_ENDPOINTS.txt - Order Endpoints
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import orderService from '@/lib/services/OrderService'; // ✅ FIXED: Default import
+import prisma from '@/lib/db/client';
+import { serializeBigInt } from '@/lib/utils/serializer';
 
 /**
  * GET /api/public/orders/[orderNumber]
- * Retrieve order details by order number
+ * Retrieve order details by order number with Payment relation
  * @public No authentication required
  */
 export async function GET(
@@ -39,8 +40,53 @@ export async function GET(
 
     console.log('📦 [API] Fetching order:', orderNumber);
 
-    // ✅ FIXED: Now works with default import
-    const order = await orderService.getOrderByNumber(orderNumber);
+    /**
+     * ✅ SCHEMA VERIFIED: Complete Order relations
+     * 
+     * Order {
+     *   customerId: BigInt? @map("customer_id")          // ✅ Nullable customer
+     *   customer: User? @relation("CustomerOrders")      // ✅ Get customer data
+     *   merchant: Merchant                                // ✅ Get merchant data
+     *   orderItems: OrderItem[] {
+     *     addons: OrderItemAddon[]                        // ✅ Nested addons
+     *   }
+     *   payment: Payment? {                               // ✅ 1:1 relation
+     *     orderId: BigInt @unique                         // ✅ Unique constraint
+     *     paidByUserId: BigInt?                           // ✅ Staff who recorded
+     *     paidBy: User? @relation("PaymentRecordedBy")   // ✅ Correct relation
+     *   }
+     * }
+     */
+    // Fetch order with all relations
+    const order = await prisma.order.findFirst({
+      where: { orderNumber },
+      include: {
+        orderItems: {
+          include: {
+            addons: true,
+          },
+        },
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+          },
+        },
+        merchant: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            phone: true,
+            address: true,
+            currency: true,
+          },
+        },
+        payment: true, // ✅ Include Payment relation (1:1)
+      },
+    });
 
     if (!order) {
       return NextResponse.json(
@@ -54,23 +100,16 @@ export async function GET(
       );
     }
 
-    // Fetch order status history
-    const statusHistory = await orderService.getOrderStatusHistory(BigInt(order.id));
-
     console.log('✅ [API] Order fetched successfully:', {
       orderNumber: order.orderNumber,
       status: order.status,
-      totalAmount: order.totalAmount,
+      totalAmount: Number(order.totalAmount),
     });
 
-    // ✅ Return with serviceFeeAmount included
+    // ✅ Return with proper serialization
     return NextResponse.json({
       success: true,
-      data: {
-        ...order,
-        serviceFeeAmount: order.serviceFeeAmount || 0,
-        statusHistory,
-      },
+      data: serializeBigInt(order),
       message: 'Order retrieved successfully',
       statusCode: 200,
     });

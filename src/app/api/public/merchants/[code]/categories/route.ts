@@ -1,15 +1,17 @@
 /**
  * Public Merchant Categories API
  * GET /api/public/merchants/[code]/categories - Get merchant categories
+ * 
+ * ✅ FIXED: Use Prisma directly with soft delete support
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import merchantService from '@/lib/services/MerchantService';
-import menuService from '@/lib/services/MenuService';
+import prisma from '@/lib/db/client';
+import { serializeBigInt } from '@/lib/utils/serializer';
 
 /**
  * GET /api/public/merchants/[code]/categories
- * Public endpoint to get merchant categories
+ * Public endpoint to get merchant categories (exclude soft-deleted)
  */
 export async function GET(
   request: NextRequest,
@@ -18,41 +20,42 @@ export async function GET(
   const params = await context.params;
   try {
     // Get merchant by code
-    const merchant = await merchantService.getMerchantByCode(params.code);
+    const merchant = await prisma.merchant.findUnique({
+      where: { code: params.code },
+      select: { id: true, isActive: true },
+    });
 
-    if (!merchant) {
+    if (!merchant || !merchant.isActive) {
       return NextResponse.json(
         {
           success: false,
           error: 'MERCHANT_NOT_FOUND',
-          message: 'Merchant not found',
+          message: 'Merchant not found or inactive',
           statusCode: 404,
         },
         { status: 404 }
       );
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const merchantData = merchant as unknown as Record<string, any>;
-
-    // Get all categories for this merchant
-    const categories = await menuService.getCategoriesByMerchant(merchantData.id);
-
-    // Format response
-    const formattedCategories = categories.map((category) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const categoryData = category as any;
-      return {
-        id: categoryData.id.toString(),
-        name: categoryData.name,
-        description: categoryData.description,
-        sortOrder: categoryData.sortOrder,
-      };
+    // Get all active categories (exclude soft-deleted)
+    const categories = await prisma.menuCategory.findMany({
+      where: {
+        merchantId: merchant.id,
+        isActive: true,
+        deletedAt: null, // ✅ Exclude soft-deleted categories
+      },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        sortOrder: true,
+      },
+      orderBy: { sortOrder: 'asc' },
     });
 
     return NextResponse.json({
       success: true,
-      data: formattedCategories,
+      data: serializeBigInt(categories),
       message: 'Categories retrieved successfully',
       statusCode: 200,
     });

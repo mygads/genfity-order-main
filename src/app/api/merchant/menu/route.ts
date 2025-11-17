@@ -103,6 +103,7 @@ async function handlePost(req: NextRequest, context: AuthContext) {
       stockQty: body.stockQty,
       dailyStockTemplate: body.dailyStockTemplate,
       autoResetStock: body.autoResetStock || false,
+      userId: context.userId, // ✅ Audit trail: createdByUserId
     });
 
     return NextResponse.json({

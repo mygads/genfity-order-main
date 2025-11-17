@@ -61,6 +61,11 @@ export class MerchantRepository {
     const results = await prisma.merchant.findMany({
       where: includeInactive ? {} : { isActive: true },
       include: {
+        openingHours: {
+          orderBy: {
+            dayOfWeek: 'asc',
+          },
+        },
         merchantUsers: {
           where: {
             role: 'OWNER',

@@ -100,6 +100,7 @@ async function handlePost(req: NextRequest, authContext: AuthContext) {
       name: body.name,
       description: body.description,
       sortOrder: body.sortOrder,
+      userId: authContext.userId, // ✅ Audit trail: createdByUserId
     });
 
     return NextResponse.json({

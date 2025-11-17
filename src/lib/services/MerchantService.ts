@@ -27,6 +27,9 @@ export interface CreateMerchantInput {
   phoneNumber?: string;
   email?: string;
   
+  // Store status
+  isOpen?: boolean;
+  
   // Location settings
   country?: string;
   currency?: string;
@@ -57,6 +60,7 @@ export interface UpdateMerchantInput {
   taxRate?: number;
   taxIncluded?: boolean;
   isActive?: boolean;
+  isOpen?: boolean;
   country?: string;
   currency?: string;
   timezone?: string;
@@ -171,6 +175,7 @@ class MerchantService {
         address: input.address,
         phone: input.phoneNumber, // Map phoneNumber to phone (Prisma field)
         email: input.email || input.ownerEmail, // Use merchant email or owner email as fallback
+        isOpen: input.isOpen ?? true, // Default to open
         country: input.country || 'Australia',
         currency: input.currency || 'AUD',
         timezone: input.timezone || 'Australia/Sydney',
@@ -237,6 +242,7 @@ class MerchantService {
       updateData.taxPercentage = input.taxRate;
     }
     if (input.isActive !== undefined) updateData.isActive = input.isActive;
+    if (input.isOpen !== undefined) updateData.isOpen = input.isOpen;
     if (input.country !== undefined) updateData.country = input.country;
     if (input.currency !== undefined) updateData.currency = input.currency;
     if (input.timezone !== undefined) updateData.timezone = input.timezone;
