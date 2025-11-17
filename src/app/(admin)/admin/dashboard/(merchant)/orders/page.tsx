@@ -1,352 +1,351 @@
-"use client";
+/**
+ * Merchant Orders Page - Professional Redesign
+ * 
+ * Features:
+ * - Advanced filters (order type, payment status, date range)
+ * - Bulk operations (select multiple orders, bulk status update)
+ * - Enhanced drag validation (visual feedback for invalid drops)
+ * - Professional, clean UI with minimal colors
+ * - English labels, icons from react-icons/fa
+ */
 
-import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import PageBreadcrumb from "@/components/common/PageBreadCrumb";
+'use client';
 
-interface OrderItem {
-  itemName: string;
-  quantity: number;
-  price: string;
-}
+import React, { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { 
+  FaSync, 
+  FaHistory, 
+  FaCheckSquare, 
+  FaSquare,
+  FaTimes,
+  FaFilter,
+} from 'react-icons/fa';
+import { OrderKanbanBoard } from '@/components/orders/OrderKanbanBoard';
+import { OrderDetailModal } from '@/components/orders/OrderDetailModal';
+import { OrderFiltersComponent, type OrderFilters } from '@/components/orders/OrderFilters';
+import type { OrderListItem } from '@/lib/types/order';
+import { OrderStatus } from '@prisma/client';
 
-interface Order {
-  id: string;
-  orderNumber: string;
-  customerName: string;
-  customerPhone: string;
-  totalAmount: string;
-  taxAmount: string;
-  grandTotal: string;
-  status: "PENDING" | "CONFIRMED" | "PREPARING" | "READY" | "COMPLETED" | "CANCELLED";
-  createdAt: string;
-  items: OrderItem[];
-}
+const DEFAULT_FILTERS: OrderFilters = {
+  orderType: 'ALL',
+  paymentStatus: 'ALL',
+  dateFrom: '',
+  dateTo: '',
+};
 
 export default function MerchantOrdersPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  // State management
+  const [selectedOrder, setSelectedOrder] = useState<OrderListItem | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [merchantId, setMerchantId] = useState<bigint | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  
+  // Filters
+  const [filters, setFilters] = useState<OrderFilters>(DEFAULT_FILTERS);
+  const [showFilters, setShowFilters] = useState(false);
+  
+  // Bulk operations
+  const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
+  const [bulkMode, setBulkMode] = useState(false);
+  const [bulkStatusUpdate, setBulkStatusUpdate] = useState<OrderStatus | ''>('');
 
-  const fetchOrders = async () => {
+  // Fetch merchant ID
+  const fetchMerchantId = useCallback(async () => {
     try {
-      setLoading(true);
-      const token = localStorage.getItem("accessToken");
+      const token = localStorage.getItem('accessToken');
       if (!token) {
-        router.push("/admin/login");
+        router.push('/admin/login');
         return;
       }
 
-      const url = statusFilter === "all" 
-        ? "/api/merchant/orders"
-        : `/api/merchant/orders?status=${statusFilter}`;
-
-      const response = await fetch(url, {
+      const response = await fetch('/api/merchant/profile', {
         headers: {
-          Authorization: `Bearer ${token}`,
+          'Authorization': `Bearer ${token}`,
         },
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch orders");
-      }
+      if (!response.ok) throw new Error('Failed to fetch merchant');
 
       const data = await response.json();
-      
-      // Handle response format: { success: true, data: [...] }
-      if (data.success && Array.isArray(data.data)) {
-        setOrders(data.data);
-      } else {
-        setOrders([]);
+      if (data.success && data.data) {
+        setMerchantId(BigInt(data.data.id));
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+    } catch (error) {
+      console.error('Error fetching merchant:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
 
   useEffect(() => {
-    fetchOrders();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter]);
+    fetchMerchantId();
+  }, [fetchMerchantId]);
 
-  const updateOrderStatus = async (orderId: string, newStatus: string) => {
+  // Handlers
+  const handleOrderClick = (order: OrderListItem) => {
+    if (bulkMode) {
+      toggleOrderSelection(String(order.id));
+    } else {
+      setSelectedOrder(order);
+      setIsModalOpen(true);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedOrder(null);
+  };
+
+  const handleOrderUpdate = () => {
+    setRefreshKey(prev => prev + 1);
+  };
+
+  const handleManualRefresh = () => {
+    setRefreshKey(prev => prev + 1);
+  };
+
+  const handleResetFilters = () => {
+    setFilters(DEFAULT_FILTERS);
+  };
+
+  // Bulk operations
+  const toggleOrderSelection = (orderId: string) => {
+    setSelectedOrders(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(orderId)) {
+        newSet.delete(orderId);
+      } else {
+        newSet.add(orderId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleBulkMode = () => {
+    setBulkMode(!bulkMode);
+    setSelectedOrders(new Set());
+    setBulkStatusUpdate('');
+  };
+
+  const handleBulkStatusUpdate = async () => {
+    if (!bulkStatusUpdate || selectedOrders.size === 0) return;
+
     try {
-      const token = localStorage.getItem("accessToken");
-      if (!token) {
-        router.push("/admin/login");
-        return;
-      }
+      const token = localStorage.getItem('accessToken');
+      const orderIds = Array.from(selectedOrders);
 
-      const response = await fetch(`/api/merchant/orders/${orderId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
+      // Update each order
+      await Promise.all(
+        orderIds.map(orderId =>
+          fetch(`/api/merchant/orders/${orderId}/status`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({ status: bulkStatusUpdate }),
+          })
+        )
+      );
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || "Failed to update order status");
-      }
-
-      setSuccess(`Order status updated to ${newStatus}`);
-      fetchOrders();
-      setSelectedOrder(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-    }
-  };
-
-  const getStatusBadgeClass = (status: string) => {
-    switch (status) {
-      case "PENDING":
-        return "bg-warning-100 text-warning-700 dark:bg-warning-900/20 dark:text-warning-400";
-      case "CONFIRMED":
-        return "bg-brand-100 text-brand-700 dark:bg-brand-900/20 dark:text-brand-400";
-      case "PREPARING":
-        return "bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400";
-      case "READY":
-        return "bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400";
-      case "COMPLETED":
-        return "bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400";
-      case "CANCELLED":
-        return "bg-error-100 text-error-700 dark:bg-error-900/20 dark:text-error-400";
-      default:
-        return "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300";
-    }
-  };
-
-  const getNextStatuses = (currentStatus: string): string[] => {
-    switch (currentStatus) {
-      case "PENDING":
-        return ["CONFIRMED", "CANCELLED"];
-      case "CONFIRMED":
-        return ["PREPARING", "CANCELLED"];
-      case "PREPARING":
-        return ["READY", "CANCELLED"];
-      case "READY":
-        return ["COMPLETED"];
-      default:
-        return [];
+      // Reset and refresh
+      setSelectedOrders(new Set());
+      setBulkStatusUpdate('');
+      setBulkMode(false);
+      setRefreshKey(prev => prev + 1);
+    } catch (error) {
+      console.error('Error updating orders:', error);
     }
   };
 
   if (loading) {
     return (
-      <div>
-        <PageBreadcrumb pageTitle="Orders" />
-        <div className="mt-6 py-10 text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-brand-500 border-r-transparent"></div>
-          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Loading orders...</p>
+      <div className="flex items-center justify-center py-20">
+        <div className="flex items-center gap-3 text-gray-500 dark:text-gray-400">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand-500 border-t-transparent"></div>
+          <span className="text-sm font-medium">Loading orders...</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div>
-      <PageBreadcrumb pageTitle="Orders" />
-
-      <div className="space-y-6">
-        {error && (
-          <div className="rounded-lg bg-error-50 p-4 dark:bg-error-900/20">
-            <p className="text-sm text-error-600 dark:text-error-400">{error}</p>
-          </div>
-        )}
-
-        {success && (
-          <div className="rounded-lg bg-success-50 p-4 dark:bg-success-900/20">
-            <p className="text-sm text-success-600 dark:text-success-400">{success}</p>
-          </div>
-        )}
-
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
-          <h3 className="mb-5 text-lg font-semibold text-gray-800 dark:text-white/90">Orders List</h3>
-          <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Filter by Status:</label>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="h-11 rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
-              >
-                <option value="all">All Orders</option>
-                <option value="PENDING">Pending</option>
-                <option value="CONFIRMED">Confirmed</option>
-                <option value="PREPARING">Preparing</option>
-                <option value="READY">Ready</option>
-                <option value="COMPLETED">Completed</option>
-                <option value="CANCELLED">Cancelled</option>
-              </select>
-            </div>
-            <button
-              onClick={fetchOrders}
-              className="h-11 rounded-lg bg-brand-500 px-6 text-sm font-medium text-white hover:bg-brand-600 focus:outline-none focus:ring-3 focus:ring-brand-500/20"
-            >
-              Refresh
-            </button>
-          </div>
-          
-          {orders.length === 0 ? (
-            <div className="py-10 text-center">
-              <p className="text-sm text-gray-500 dark:text-gray-400">No orders found</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full table-auto">
-                <thead>
-                  <tr className="bg-gray-50 text-left dark:bg-gray-900/50">
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Order #</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Customer</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Total</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Status</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Date</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                  {orders.map((order) => (
-                    <tr key={order.id}>
-                      <td className="px-4 py-4 text-sm font-medium text-gray-800 dark:text-white/90">{order.orderNumber}</td>
-                      <td className="px-4 py-4">
-                        <div>
-                          <p className="text-sm font-medium text-gray-800 dark:text-white/90">{order.customerName}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">{order.customerPhone}</p>
-                        </div>
-                      </td>
-                      <td className="px-4 py-4 text-sm text-gray-800 dark:text-white/90">Rp {parseFloat(order.grandTotal).toLocaleString('id-ID')}</td>
-                      <td className="px-4 py-4">
-                        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${getStatusBadgeClass(order.status)}`}>
-                          {order.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4 text-sm text-gray-800 dark:text-white/90">{new Date(order.createdAt).toLocaleString('id-ID')}</td>
-                      <td className="px-4 py-4">
-                        <button
-                          onClick={() => setSelectedOrder(order)}
-                          className="text-sm text-brand-500 hover:text-brand-600 hover:underline dark:text-brand-400"
-                        >
-                          View Details
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-white/90">
+            Order Management
+          </h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Manage and track orders in real-time with drag & drop
+          </p>
         </div>
+        
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Filter Toggle */}
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`flex h-10 items-center gap-2 rounded-lg border px-4 text-sm font-medium transition-colors ${
+              showFilters
+                ? 'border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-800 dark:bg-brand-900/20 dark:text-brand-400'
+                : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800'
+            }`}
+          >
+            <FaFilter />
+            <span className="hidden sm:inline">Filters</span>
+          </button>
 
-        {/* Order Details Modal */}
-        {selectedOrder && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-800 dark:bg-gray-900">
-              <div className="mb-6 flex items-center justify-between">
-                <h3 className="text-xl font-bold text-gray-800 dark:text-white/90">Order Details</h3>
-                <button
-                  onClick={() => setSelectedOrder(null)}
-                  className="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white/90"
-                >
-                  ✕
-                </button>
-              </div>
+          {/* Bulk Mode Toggle */}
+          <button
+            onClick={toggleBulkMode}
+            className={`flex h-10 items-center gap-2 rounded-lg border px-4 text-sm font-medium transition-colors ${
+              bulkMode
+                ? 'border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-800 dark:bg-brand-900/20 dark:text-brand-400'
+                : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800'
+            }`}
+          >
+            {bulkMode ? <FaCheckSquare /> : <FaSquare />}
+            <span className="hidden sm:inline">Bulk Select</span>
+          </button>
 
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Order Number</p>
-                    <p className="mt-1 font-medium text-gray-800 dark:text-white/90">{selectedOrder.orderNumber}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Status</p>
-                    <span className={`mt-1 inline-flex rounded-full px-3 py-1 text-xs font-medium ${getStatusBadgeClass(selectedOrder.status)}`}>
-                      {selectedOrder.status}
-                    </span>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Customer Name</p>
-                    <p className="mt-1 text-gray-800 dark:text-white/90">{selectedOrder.customerName}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Customer Phone</p>
-                    <p className="mt-1 text-gray-800 dark:text-white/90">{selectedOrder.customerPhone}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Order Date</p>
-                    <p className="mt-1 text-gray-800 dark:text-white/90">{new Date(selectedOrder.createdAt).toLocaleString('id-ID')}</p>
-                  </div>
-                </div>
+          {/* Auto Refresh Toggle */}
+          <button
+            onClick={() => setAutoRefresh(!autoRefresh)}
+            className={`flex h-10 items-center gap-2 rounded-lg border px-4 text-sm font-medium transition-colors ${
+              autoRefresh
+                ? 'border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-800 dark:bg-brand-900/20 dark:text-brand-400'
+                : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800'
+            }`}
+          >
+            <FaSync className={autoRefresh ? 'animate-spin' : ''} />
+            <span className="hidden sm:inline">Auto Refresh</span>
+          </button>
 
-                <div className="border-t border-gray-200 pt-4 dark:border-gray-800">
-                  <p className="mb-3 text-sm font-semibold text-gray-800 dark:text-white/90">Order Items</p>
-                  <div className="space-y-2">
-                    {selectedOrder.items.map((item, index) => (
-                      <div key={index} className="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-900/50">
-                        <div>
-                          <p className="text-sm font-medium text-gray-800 dark:text-white/90">{item.itemName}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">Qty: {item.quantity}</p>
-                        </div>
-                        <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                          Rp {parseFloat(item.price).toLocaleString('id-ID')}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+          {/* Manual Refresh */}
+          <button
+            onClick={handleManualRefresh}
+            className="flex h-10 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+          >
+            <FaSync />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
 
-                <div className="border-t border-gray-200 pt-4 dark:border-gray-800">
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Subtotal</p>
-                      <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                        Rp {parseFloat(selectedOrder.totalAmount).toLocaleString('id-ID')}
-                      </p>
-                    </div>
-                    <div className="flex justify-between">
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Tax</p>
-                      <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                        Rp {parseFloat(selectedOrder.taxAmount).toLocaleString('id-ID')}
-                      </p>
-                    </div>
-                    <div className="flex justify-between border-t border-gray-200 pt-2 dark:border-gray-800">
-                      <p className="font-bold text-gray-800 dark:text-white/90">Grand Total</p>
-                      <p className="font-bold text-gray-800 dark:text-white/90">
-                        Rp {parseFloat(selectedOrder.grandTotal).toLocaleString('id-ID')}
-                      </p>
-                    </div>
-                  </div>
-                </div>
+          {/* History & Analytics */}
+          <button
+            onClick={() => router.push('/admin/dashboard/orders/history')}
+            className="flex h-10 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+          >
+            <FaHistory />
+            <span className="hidden sm:inline">History</span>
+          </button>
+        </div>
+      </div>
 
-                {getNextStatuses(selectedOrder.status).length > 0 && (
-                  <div className="border-t border-gray-200 pt-4 dark:border-gray-800">
-                    <p className="mb-3 text-sm font-semibold text-gray-800 dark:text-white/90">Update Status</p>
-                    <div className="flex gap-3">
-                      {getNextStatuses(selectedOrder.status).map((status) => (
-                        <button
-                          key={status}
-                          onClick={() => updateOrderStatus(selectedOrder.id, status)}
-                          className="h-11 rounded-lg bg-brand-500 px-6 text-sm font-medium text-white hover:bg-brand-600 focus:outline-none focus:ring-3 focus:ring-brand-500/20"
-                        >
-                          Mark as {status}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
+      {/* Filters Section */}
+      {showFilters && (
+        <OrderFiltersComponent
+          filters={filters}
+          onChange={setFilters}
+          onReset={handleResetFilters}
+        />
+      )}
+
+      {/* Bulk Operations Bar */}
+      {bulkMode && selectedOrders.size > 0 && (
+        <div className="rounded-xl border border-brand-200 bg-brand-50 p-4 dark:border-brand-800 dark:bg-brand-900/20">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-semibold text-brand-700 dark:text-brand-400">
+                {selectedOrders.size} order{selectedOrders.size !== 1 ? 's' : ''} selected
+              </span>
+              <button
+                onClick={() => setSelectedOrders(new Set())}
+                className="flex h-8 items-center gap-1.5 rounded-lg border border-brand-300 bg-white px-3 text-xs font-medium text-brand-700 hover:bg-brand-50 dark:border-brand-700 dark:bg-brand-900 dark:text-brand-400 dark:hover:bg-brand-800"
+              >
+                <FaTimes className="h-3 w-3" />
+                Clear
+              </button>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <select
+                value={bulkStatusUpdate}
+                onChange={(e) => setBulkStatusUpdate(e.target.value as OrderStatus)}
+                className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
+              >
+                <option value="">Select status...</option>
+                <option value="PENDING">⏳ Pending</option>
+                <option value="ACCEPTED">✓ Accepted</option>
+                <option value="IN_PROGRESS">🔥 In Progress</option>
+                <option value="READY">✅ Ready</option>
+                <option value="COMPLETED">📦 Completed</option>
+                <option value="CANCELLED">❌ Cancelled</option>
+              </select>
+
+              <button
+                onClick={handleBulkStatusUpdate}
+                disabled={!bulkStatusUpdate}
+                className="h-9 rounded-lg bg-brand-500 px-4 text-sm font-semibold text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-brand-600 dark:hover:bg-brand-700"
+              >
+                Update Status
+              </button>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* Info Banner */}
+      {!bulkMode && (
+        <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
+          <div className="flex items-start gap-3">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/50">
+              <svg className="h-4 w-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                Drag & Drop to Update Status
+              </h3>
+              <p className="mt-1 text-sm text-blue-700 dark:text-blue-300">
+                Simply drag orders between columns to update their status. Orders can only move forward in the workflow. Click any order to view details.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Kanban Board */}
+      {merchantId && (
+        <OrderKanbanBoard
+          key={refreshKey}
+          merchantId={merchantId}
+          autoRefresh={autoRefresh}
+          refreshInterval={10000}
+          enableDragDrop={!bulkMode}
+          onOrderClick={handleOrderClick}
+          filters={filters}
+          selectedOrders={selectedOrders}
+          bulkMode={bulkMode}
+          onToggleSelection={toggleOrderSelection}
+        />
+      )}
+
+      {/* Order Detail Modal */}
+      {selectedOrder && (
+        <OrderDetailModal
+          orderId={String(selectedOrder.id)}
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          onUpdate={handleOrderUpdate}
+        />
+      )}
     </div>
   );
 }

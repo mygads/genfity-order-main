@@ -1,78 +1,84 @@
 /**
- * Merchant Orders API
- * GET /api/merchant/orders - List orders with filters
+ * Merchant Orders API - Phase 1
+ * GET /api/merchant/orders - List orders with filters & pagination
+ * 
+ * Supports:
+ * - Filter by status, paymentStatus, orderType
+ * - Date range filtering
+ * - Pagination
+ * - Real-time polling via 'since' parameter
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import orderService from '@/lib/services/OrderService';
-import prisma from '@/lib/db/client';
 import { withMerchant } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/middleware/auth';
+import { OrderManagementService } from '@/lib/services/OrderManagementService';
 import { serializeBigInt } from '@/lib/utils/serializer';
+import { OrderStatus, PaymentStatus, OrderType } from '@prisma/client';
 
 /**
  * GET /api/merchant/orders
- * Get orders with filters: status, orderType, startDate, endDate
+ * Query Params:
+ * - status?: OrderStatus
+ * - paymentStatus?: PaymentStatus
+ * - orderType?: 'DINE_IN' | 'TAKEAWAY'
+ * - startDate?: string (ISO date)
+ * - endDate?: string (ISO date)
+ * - page?: number (default: 1)
+ * - limit?: number (default: 20)
+ * - since?: number (timestamp for real-time polling)
  */
 async function handleGet(req: NextRequest, context: AuthContext) {
   try {
-    // Get merchant from user's merchant_users relationship
-    const merchantUser = await prisma.merchantUser.findFirst({
-      where: { userId: context.userId },
-      include: { merchant: true },
-    });
-    
-    if (!merchantUser) {
+    const { merchantId } = context;
+
+    if (!merchantId) {
       return NextResponse.json(
         {
           success: false,
-          error: 'MERCHANT_NOT_FOUND',
-          message: 'Merchant not found for this user',
-          statusCode: 404,
+          error: 'Merchant ID is required',
         },
-        { status: 404 }
+        { status: 400 }
       );
     }
 
     const { searchParams } = new URL(req.url);
-    const status = searchParams.get('status');
-    const orderType = searchParams.get('orderType');
-    const startDate = searchParams.get('startDate');
-    const endDate = searchParams.get('endDate');
+
+    // Parse query parameters
+    const status = searchParams.get('status') as OrderStatus | undefined;
+    const paymentStatus = searchParams.get('paymentStatus') as PaymentStatus | undefined;
+    const orderType = searchParams.get('orderType') as OrderType | undefined;
+    const startDate = searchParams.get('startDate') || undefined;
+    const endDate = searchParams.get('endDate') || undefined;
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '20');
+    const since = searchParams.get('since') ? parseInt(searchParams.get('since')!) : undefined;
 
     // Build filters
-    const filters: {
-      status?: string;
-      orderType?: string;
-      startDate?: Date;
-      endDate?: Date;
-    } = {};
+    const filters = {
+      status,
+      paymentStatus,
+      orderType,
+      dateRange: startDate && endDate ? { start: startDate, end: endDate } : undefined,
+      page,
+      limit,
+      since,
+    };
 
-    if (status) filters.status = status;
-    if (orderType) filters.orderType = orderType;
-    if (startDate) filters.startDate = new Date(startDate);
-    if (endDate) filters.endDate = new Date(endDate);
-
-    const orders = await orderService.getOrdersByMerchant(
-      merchantUser.merchantId,
-      filters
-    );
+    // Fetch orders using OrderManagementService
+    const result = await OrderManagementService.getOrders(merchantId, filters);
 
     return NextResponse.json({
       success: true,
-      data: serializeBigInt(orders),
-      message: 'Orders retrieved successfully',
-      statusCode: 200,
+      data: serializeBigInt(result.orders),
+      total: result.total,
     });
   } catch (error) {
-    console.error('Error getting orders:', error);
-
+    console.error('[GET /api/merchant/orders] Error:', error);
     return NextResponse.json(
       {
         success: false,
-        error: 'INTERNAL_ERROR',
-        message: 'Failed to retrieve orders',
-        statusCode: 500,
+        error: error instanceof Error ? error.message : 'Failed to fetch orders',
       },
       { status: 500 }
     );

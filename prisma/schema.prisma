@@ -23,7 +23,6 @@ model User {
   createdAt            DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt            DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
   merchantUsers        MerchantUser[]
-  statusChanges        OrderStatusHistory[]
   ordersAsCustomer     Order[]              @relation("CustomerOrders")
   sessions             UserSession[]
   preferences          UserPreference?
@@ -39,6 +38,7 @@ model User {
   addonItemsCreated    AddonItem[]          @relation("AddonItemCreatedBy")
   addonItemsUpdated    AddonItem[]          @relation("AddonItemUpdatedBy")
   addonItemsDeleted    AddonItem[]          @relation("AddonItemDeletedBy")
+  paymentsRecorded     Payment[]            @relation("PaymentRecordedBy")
 
   @@index([email])
   @@index([role])
@@ -310,28 +310,29 @@ model MenuAddonCategory {
 }
 
 model Order {
-  id            BigInt               @id @default(autoincrement())
-  merchantId    BigInt               @map("merchant_id")
-  customerId    BigInt?              @map("customer_id")
-  orderNumber   String               @map("order_number")
-  customerName  String               @map("customer_name")
-  customerEmail String               @map("customer_email")
-  customerPhone String?              @map("customer_phone")
-  orderType     OrderType            @map("order_type")
-  tableNumber   String?              @map("table_number")
-  status        OrderStatus          @default(PENDING)
-  subtotal      Decimal              @db.Decimal(10, 2)
-  taxAmount     Decimal              @default(0) @map("tax_amount") @db.Decimal(10, 2)
-  totalAmount   Decimal              @map("total_amount") @db.Decimal(10, 2)
-  notes         String?
-  qrCodeUrl     String?              @map("qr_code_url")
-  placedAt      DateTime             @default(now()) @map("placed_at") @db.Timestamptz(6)
-  createdAt     DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
-  orderItems    OrderItem[]
-  statusHistory OrderStatusHistory[]
-  customer      User?                @relation("CustomerOrders", fields: [customerId], references: [id])
-  merchant      Merchant             @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  id                BigInt               @id @default(autoincrement())
+  merchantId        BigInt               @map("merchant_id")
+  customerId        BigInt?              @map("customer_id")
+  orderNumber       String               @map("order_number")
+  orderType         OrderType            @map("order_type")
+  tableNumber       String?              @map("table_number")
+  status            OrderStatus          @default(PENDING)
+  subtotal          Decimal              @db.Decimal(10, 2)
+  taxAmount         Decimal              @default(0) @map("tax_amount") @db.Decimal(10, 2)
+  totalAmount       Decimal              @map("total_amount") @db.Decimal(10, 2)
+  notes             String?
+  estimatedReadyAt  DateTime?            @map("estimated_ready_at") @db.Timestamptz(6)
+  actualReadyAt     DateTime?            @map("actual_ready_at") @db.Timestamptz(6)
+  completedAt       DateTime?            @map("completed_at") @db.Timestamptz(6)
+  cancelledAt       DateTime?            @map("cancelled_at") @db.Timestamptz(6)
+  cancelReason      String?              @map("cancel_reason")
+  placedAt          DateTime             @default(now()) @map("placed_at") @db.Timestamptz(6)
+  createdAt         DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
+  orderItems        OrderItem[]
+  payment           Payment?
+  customer          User?                @relation("CustomerOrders", fields: [customerId], references: [id])
+  merchant          Merchant             @relation(fields: [merchantId], references: [id], onDelete: Cascade)
 
   @@unique([merchantId, orderNumber])
   @@index([merchantId])
@@ -339,6 +340,7 @@ model Order {
   @@index([orderNumber])
   @@index([status])
   @@index([placedAt])
+  @@index([estimatedReadyAt])
   @@map("orders")
 }
 
@@ -380,20 +382,32 @@ model OrderItemAddon {
   @@map("order_item_addons")
 }
 
-model OrderStatusHistory {
-  id              BigInt       @id @default(autoincrement())
-  orderId         BigInt       @map("order_id")
-  fromStatus      OrderStatus? @map("from_status")
-  toStatus        OrderStatus  @map("to_status")
-  changedByUserId BigInt?      @map("changed_by_user_id")
-  note            String?
-  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
-  changedBy       User?        @relation(fields: [changedByUserId], references: [id])
-  order           Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+model Payment {
+  id                    BigInt         @id @default(autoincrement())
+  orderId               BigInt         @unique @map("order_id")
+  amount                Decimal        @db.Decimal(10, 2)
+  paymentMethod         PaymentMethod  @map("payment_method")
+  status                PaymentStatus  @default(PENDING)
+  paidByUserId          BigInt?        @map("paid_by_user_id")
+  paidAt                DateTime?      @map("paid_at") @db.Timestamptz(6)
+  gatewayProvider       String?        @map("gateway_provider")
+  gatewayTransactionId  String?        @map("gateway_transaction_id")
+  gatewayStatus         String?        @map("gateway_status")
+  gatewayResponse       Json?          @map("gateway_response")
+  gatewayCallbackAt     DateTime?      @map("gateway_callback_at") @db.Timestamptz(6)
+  notes                 String?
+  metadata              Json?
+  createdAt             DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  order                 Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  paidBy                User?          @relation("PaymentRecordedBy", fields: [paidByUserId], references: [id])
 
   @@index([orderId])
-  @@index([createdAt])
-  @@map("order_status_history")
+  @@index([status])
+  @@index([paymentMethod])
+  @@index([gatewayTransactionId])
+  @@index([paidAt])
+  @@map("payments")
 }
 
 enum UserRole {
@@ -431,4 +445,21 @@ enum OrderStatus {
 enum AddonInputType {
   SELECT
   QTY
+}
+
+enum PaymentMethod {
+  CASH_ON_COUNTER
+  CARD_ON_COUNTER
+  BANK_TRANSFER
+  E_WALLET
+  QRIS
+  CREDIT_CARD
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+  CANCELLED
 }
