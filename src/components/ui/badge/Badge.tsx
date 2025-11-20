@@ -1,117 +1,79 @@
 import React from "react";
 
-export interface BadgeProps {
-  /**
-   * Badge content (text, icons, numbers)
-   */
-  children: React.ReactNode;
-  
-  /**
-   * Semantic variant for color scheme
-   * @default 'default'
-   */
-  variant?: 'default' | 'danger' | 'warning' | 'success' | 'info' | 'secondary';
-  
-  /**
-   * Size preset
-   * @default 'md'
-   */
-  size?: 'sm' | 'md' | 'lg';
-  
-  /**
-   * Additional Tailwind classes for customization
-   */
-  className?: string;
+type BadgeVariant = "light" | "solid";
+type BadgeSize = "sm" | "md";
+type BadgeColor =
+  | "primary"
+  | "success"
+  | "error"
+  | "warning"
+  | "info"
+  | "light"
+  | "dark";
+
+interface BadgeProps {
+  variant?: BadgeVariant; // Light or solid variant
+  size?: BadgeSize; // Badge size
+  color?: BadgeColor; // Badge color
+  startIcon?: React.ReactNode; // Icon at the start
+  endIcon?: React.ReactNode; // Icon at the end
+  children: React.ReactNode; // Badge content
 }
 
-/**
- * Badge Component
- * 
- * A versatile badge component for displaying labels, status, and counts.
- * Follows GENFITY design system with minimal color palette and professional styling.
- * 
- * @specification copilot-instructions.md - UI/UX Standards
- * @reference /admin/dashboard/revenue - Professional design patterns
- * 
- * @features
- * - Minimal color palette (gray/white dominant with semantic colors)
- * - Full dark mode support
- * - Three sizes: sm (12px), md (14px), lg (16px)
- * - Six semantic variants: default, danger, warning, success, info, secondary
- * - Custom className support for overrides
- * - Smooth transitions (150ms)
- * - Rounded pill shape
- * 
- * @example Basic usage
- * ```tsx
- * <Badge variant="danger" size="sm">PROMO</Badge>
- * ```
- * 
- * @example With custom styles
- * ```tsx
- * <Badge variant="warning" className="animate-pulse">3 left</Badge>
- * ```
- * 
- * @example Custom override
- * ```tsx
- * <Badge variant="secondary" className="bg-red-500 text-white">
- *   Sold Out
- * </Badge>
- * ```
- */
-export default function Badge({ 
-  children, 
-  variant = 'default', 
-  size = 'md',
-  className = '' 
-}: BadgeProps) {
-  // ========================================
-  // VARIANT STYLES - Minimal Palette
-  // ========================================
-  // Uses light backgrounds with darker text for readability
-  // Dark mode: Semi-transparent backgrounds with lighter text
-  const variantClasses: Record<string, string> = {
-    // Gray for neutral/default states
-    default: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
-    
-    // Red for errors, urgent, promo
-    danger: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
-    
-    // Yellow for warnings, low stock
-    warning: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300',
-    
-    // Green for success, available
-    success: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
-    
-    // Blue for informational
-    info: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
-    
-    // Purple for secondary/alternate
-    secondary: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
+const Badge: React.FC<BadgeProps> = ({
+  variant = "light",
+  color = "primary",
+  size = "md",
+  startIcon,
+  endIcon,
+  children,
+}) => {
+  const baseStyles =
+    "inline-flex items-center px-2.5 py-0.5 justify-center gap-1 rounded-full font-medium";
+
+  // Define size styles
+  const sizeStyles = {
+    sm: "text-theme-xs", // Smaller padding and font size
+    md: "text-sm", // Default padding and font size
   };
 
-  // ========================================
-  // SIZE STYLES - Consistent Spacing
-  // ========================================
-  // Follows 4px/8px spacing system
-  const sizeClasses: Record<string, string> = {
-    sm: 'px-2 py-0.5 text-xs',      // Small: 8px/2px padding, 12px font
-    md: 'px-2.5 py-1 text-sm',      // Medium: 10px/4px padding, 14px font
-    lg: 'px-3 py-1.5 text-base',    // Large: 12px/6px padding, 16px font
+  // Define color styles for variants
+  const variants = {
+    light: {
+      primary:
+        "bg-brand-50 text-brand-500 dark:bg-brand-500/15 dark:text-brand-400",
+      success:
+        "bg-success-50 text-success-600 dark:bg-success-500/15 dark:text-success-500",
+      error:
+        "bg-error-50 text-error-600 dark:bg-error-500/15 dark:text-error-500",
+      warning:
+        "bg-warning-50 text-warning-600 dark:bg-warning-500/15 dark:text-orange-400",
+      info: "bg-blue-light-50 text-blue-light-500 dark:bg-blue-light-500/15 dark:text-blue-light-500",
+      light: "bg-gray-100 text-gray-700 dark:bg-white/5 dark:text-white/80",
+      dark: "bg-gray-500 text-white dark:bg-white/5 dark:text-white",
+    },
+    solid: {
+      primary: "bg-brand-500 text-white dark:text-white",
+      success: "bg-success-500 text-white dark:text-white",
+      error: "bg-error-500 text-white dark:text-white",
+      warning: "bg-warning-500 text-white dark:text-white",
+      info: "bg-blue-light-500 text-white dark:text-white",
+      light: "bg-gray-400 dark:bg-white/5 text-white dark:text-white/80",
+      dark: "bg-gray-700 text-white dark:text-white",
+    },
   };
+
+  // Get styles based on size and color variant
+  const sizeClass = sizeStyles[size];
+  const colorStyles = variants[variant][color];
 
   return (
-    <span 
-      className={`
-        inline-flex items-center justify-center
-        rounded-full font-medium
-        transition-colors duration-150
-        ${variantClasses[variant]}
-        ${sizeClasses[size]}
-        ${className}
-      `.trim().replace(/\s+/g, ' ')}
-    >
+    <span className={`${baseStyles} ${sizeClass} ${colorStyles}`}>
+      {startIcon && <span className="mr-1">{startIcon}</span>}
       {children}
+      {endIcon && <span className="ml-1">{endIcon}</span>}
     </span>
   );
-}
+};
+
+export default Badge;

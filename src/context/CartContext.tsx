@@ -29,49 +29,22 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
  * - Persist to localStorage
  * - Sync across tabs via storage events
  * - Calculate totals automatically
- * 
- * ✅ PRICE TYPE HANDLING:
- * All prices stored as `number` type after API conversion:
- * - API returns: decimalToNumber(Decimal) → number
- * - Cart stores: number (JavaScript calculations)
- * - Display: formatCurrency(number, currency) → string
- * 
- * @specification copilot-instructions.md - Type Safety & Decimal Handling
  */
 
-/**
- * Cart item interface
- * 
- * @property {string} cartItemId - Unique cart item ID (generated client-side)
- * @property {string} menuId - Menu item ID (from database, as string)
- * @property {string} menuName - Menu item name
- * @property {number} price - Menu price (already converted from Decimal)
- * @property {number} quantity - Item quantity
- * @property {string} [notes] - Optional customer notes
- * @property {Array} [addons] - Optional selected addons
- */
 export interface CartItem {
   cartItemId: string;
   menuId: string;
   menuName: string;
-  price: number; // ✅ Always number (from API decimalToNumber conversion)
+  price: number; // ✅ FIXED: Force number type
   quantity: number;
   addons?: Array<{
     id: string;
     name: string;
-    price: number; // ✅ Always number (from API decimalToNumber conversion)
+    price: number; // ✅ FIXED: Force number type
   }>;
   notes?: string;
 }
 
-/**
- * Cart interface
- * 
- * @property {string} merchantCode - Merchant code (e.g., "KOPI001")
- * @property {"dinein" | "takeaway"} mode - Order type
- * @property {string} [tableNumber] - Table number (dine-in only)
- * @property {CartItem[]} items - Cart items
- */
 export interface Cart {
   merchantCode: string;
   mode: "dinein" | "takeaway";
@@ -214,8 +187,7 @@ export function CartProvider({ children }: CartProviderProps) {
       price: item.price,
       priceType: typeof item.price,
       quantity: item.quantity,
-      addonsCount: item.addons?.length || 0,
-      addons: item.addons,
+      addons: item.addons?.length || 0,
     });
 
     setCart((prev) => {
@@ -237,8 +209,6 @@ export function CartProvider({ children }: CartProviderProps) {
       console.log("🔧 [ADD ITEM] Sanitized item:", {
         price: sanitizedItem.price,
         priceType: typeof sanitizedItem.price,
-        addonsCount: sanitizedItem.addons.length,
-        addonsDetail: sanitizedItem.addons.map(a => `${a.name} (+$${a.price})`),
       });
 
       // Check if item already exists (same menu + addons)
@@ -256,7 +226,6 @@ export function CartProvider({ children }: CartProviderProps) {
           currentQty: prev.items[existingItemIndex].quantity,
           addQty: sanitizedItem.quantity,
           newQty: prev.items[existingItemIndex].quantity + sanitizedItem.quantity,
-          addonsCount: prev.items[existingItemIndex].addons?.length || 0,
         });
 
         const updatedItems = [...prev.items];
@@ -278,8 +247,6 @@ export function CartProvider({ children }: CartProviderProps) {
           price: newItem.price,
           quantity: newItem.quantity,
           subtotal: newItem.price * newItem.quantity,
-          addonsCount: newItem.addons?.length || 0,
-          addonsDetail: newItem.addons?.map(a => `${a.name} (+$${a.price})`) || [],
         });
 
         updatedCart = { ...prev, items: [...prev.items, newItem] };
@@ -352,19 +319,13 @@ export function CartProvider({ children }: CartProviderProps) {
 
     const total = cart.items.reduce((sum, item) => {
       const itemPrice = item.price * item.quantity;
-
-      // Calculate addons price - each addon entry is already duplicated for quantity > 1
-      const addonsPrice = (item.addons || []).reduce((addonSum, addon) => {
-        console.log(`💵 [ADDON PRICE] ${addon.name}: ${addon.price}`);
-        return addonSum + addon.price;
-      }, 0) * item.quantity;
+      const addonsPrice =
+        (item.addons || []).reduce((addonSum, addon) => addonSum + addon.price, 0) * item.quantity;
 
       console.log("💰 [GET TOTAL] Item calculation:", {
         name: item.menuName,
         basePrice: item.price,
         quantity: item.quantity,
-        addons: item.addons?.length || 0,
-        addonsList: item.addons?.map(a => `${a.name} ($${a.price})`),
         itemSubtotal: itemPrice,
         addonsSubtotal: addonsPrice,
         itemTotal: itemPrice + addonsPrice,

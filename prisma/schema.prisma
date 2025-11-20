@@ -8,37 +8,37 @@ datasource db {
 }
 
 model User {
-  id                  BigInt          @id @default(autoincrement())
-  name                String
-  email               String          @unique
-  phone               String?
-  passwordHash        String          @map("password_hash")
-  profilePictureUrl   String?         @map("profile_picture_url")
-  role                UserRole        @default(CUSTOMER)
-  isActive            Boolean         @default(true) @map("is_active")
-  mustChangePassword  Boolean         @default(false) @map("must_change_password")
-  resetToken          String?         @map("reset_token")
-  resetTokenExpiresAt DateTime?       @map("reset_token_expires_at") @db.Timestamptz(6)
-  lastLoginAt         DateTime?       @map("last_login_at") @db.Timestamptz(6)
-  createdAt           DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt           DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
-  addonCatsCreated    AddonCategory[] @relation("AddonCatCreatedBy")
-  addonCatsDeleted    AddonCategory[] @relation("AddonCatDeletedBy")
-  addonCatsUpdated    AddonCategory[] @relation("AddonCatUpdatedBy")
-  addonItemsCreated   AddonItem[]     @relation("AddonItemCreatedBy")
-  addonItemsDeleted   AddonItem[]     @relation("AddonItemDeletedBy")
-  addonItemsUpdated   AddonItem[]     @relation("AddonItemUpdatedBy")
-  categoriesCreated   MenuCategory[]  @relation("CategoryCreatedBy")
-  categoriesDeleted   MenuCategory[]  @relation("CategoryDeletedBy")
-  categoriesUpdated   MenuCategory[]  @relation("CategoryUpdatedBy")
-  menusCreated        Menu[]          @relation("MenuCreatedBy")
-  menusDeleted        Menu[]          @relation("MenuDeletedBy")
-  menusUpdated        Menu[]          @relation("MenuUpdatedBy")
-  merchantUsers       MerchantUser[]
-  ordersAsCustomer    Order[]         @relation("CustomerOrders")
-  paymentsRecorded    Payment[]       @relation("PaymentRecordedBy")
-  preferences         UserPreference?
-  sessions            UserSession[]
+  id                   BigInt               @id @default(autoincrement())
+  name                 String
+  email                String               @unique
+  phone                String?
+  passwordHash         String               @map("password_hash")
+  profilePictureUrl    String?              @map("profile_picture_url")
+  role                 UserRole             @default(CUSTOMER)
+  isActive             Boolean              @default(true) @map("is_active")
+  mustChangePassword   Boolean              @default(false) @map("must_change_password")
+  resetToken           String?              @map("reset_token")
+  resetTokenExpiresAt  DateTime?            @map("reset_token_expires_at") @db.Timestamptz(6)
+  lastLoginAt          DateTime?            @map("last_login_at") @db.Timestamptz(6)
+  createdAt            DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
+  merchantUsers        MerchantUser[]
+  ordersAsCustomer     Order[]              @relation("CustomerOrders")
+  sessions             UserSession[]
+  preferences          UserPreference?
+  menusCreated         Menu[]               @relation("MenuCreatedBy")
+  menusUpdated         Menu[]               @relation("MenuUpdatedBy")
+  menusDeleted         Menu[]               @relation("MenuDeletedBy")
+  categoriesCreated    MenuCategory[]       @relation("CategoryCreatedBy")
+  categoriesUpdated    MenuCategory[]       @relation("CategoryUpdatedBy")
+  categoriesDeleted    MenuCategory[]       @relation("CategoryDeletedBy")
+  addonCatsCreated     AddonCategory[]      @relation("AddonCatCreatedBy")
+  addonCatsUpdated     AddonCategory[]      @relation("AddonCatUpdatedBy")
+  addonCatsDeleted     AddonCategory[]      @relation("AddonCatDeletedBy")
+  addonItemsCreated    AddonItem[]          @relation("AddonItemCreatedBy")
+  addonItemsUpdated    AddonItem[]          @relation("AddonItemUpdatedBy")
+  addonItemsDeleted    AddonItem[]          @relation("AddonItemDeletedBy")
+  paymentsRecorded     Payment[]            @relation("PaymentRecordedBy")
 
   @@index([email])
   @@index([role])
@@ -65,20 +65,20 @@ model UserSession {
 }
 
 model UserPreference {
-  id                 BigInt   @id @default(autoincrement())
-  userId             BigInt   @unique @map("user_id")
-  theme              String   @default("light")
-  language           String   @default("en")
-  timezone           String   @default("Asia/Jakarta")
-  dateFormat         String   @default("DD/MM/YYYY") @map("date_format")
-  timeFormat         String   @default("24h") @map("time_format")
-  currency           String   @default("IDR")
-  emailNotifications Boolean  @default(true) @map("email_notifications")
-  orderNotifications Boolean  @default(true) @map("order_notifications")
-  marketingEmails    Boolean  @default(false) @map("marketing_emails")
-  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                  BigInt   @id @default(autoincrement())
+  userId              BigInt   @unique @map("user_id")
+  theme               String   @default("light")
+  language            String   @default("en")
+  timezone            String   @default("Asia/Jakarta")
+  dateFormat          String   @default("DD/MM/YYYY") @map("date_format")
+  timeFormat          String   @default("24h") @map("time_format")
+  currency            String   @default("IDR")
+  emailNotifications  Boolean  @default(true) @map("email_notifications")
+  orderNotifications  Boolean  @default(true) @map("order_notifications")
+  marketingEmails     Boolean  @default(false) @map("marketing_emails")
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("user_preferences")
@@ -115,15 +115,15 @@ model Merchant {
   mapUrl          String?               @map("map_url")
   description     String?
   isActive        Boolean               @default(true) @map("is_active")
+  isOpen          Boolean               @default(true) @map("is_open")
   enableTax       Boolean               @default(false) @map("enable_tax")
   taxPercentage   Decimal?              @map("tax_percentage") @db.Decimal(5, 2)
   currency        String                @default("AUD")
-  createdAt       DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
-  isOpen          Boolean               @default(true) @map("is_open")
+  timezone        String                @default("Australia/Sydney")
   latitude        Decimal?              @db.Decimal(10, 8)
   longitude       Decimal?              @db.Decimal(11, 8)
-  timezone        String                @default("Australia/Sydney")
+  createdAt       DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
   addonCategories AddonCategory[]
   menuCategories  MenuCategory[]
   menus           Menu[]
@@ -152,24 +152,24 @@ model MerchantOpeningHour {
 }
 
 model MenuCategory {
-  id              BigInt             @id @default(autoincrement())
-  merchantId      BigInt             @map("merchant_id")
-  name            String
-  description     String?
-  sortOrder       Int                @default(0) @map("sort_order")
-  isActive        Boolean            @default(true) @map("is_active")
-  createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
-  createdByUserId BigInt?            @map("created_by_user_id")
-  deletedAt       DateTime?          @map("deleted_at") @db.Timestamptz(6)
-  deletedByUserId BigInt?            @map("deleted_by_user_id")
-  updatedByUserId BigInt?            @map("updated_by_user_id")
-  createdBy       User?              @relation("CategoryCreatedBy", fields: [createdByUserId], references: [id])
-  deletedBy       User?              @relation("CategoryDeletedBy", fields: [deletedByUserId], references: [id])
-  merchant        Merchant           @relation(fields: [merchantId], references: [id], onDelete: Cascade)
-  updatedBy       User?              @relation("CategoryUpdatedBy", fields: [updatedByUserId], references: [id])
-  menuItems       MenuCategoryItem[]
-  menus           Menu[]
+  id                BigInt             @id @default(autoincrement())
+  merchantId        BigInt             @map("merchant_id")
+  name              String
+  description       String?
+  sortOrder         Int                @default(0) @map("sort_order")
+  isActive          Boolean            @default(true) @map("is_active")
+  createdByUserId   BigInt?            @map("created_by_user_id")
+  updatedByUserId   BigInt?            @map("updated_by_user_id")
+  deletedAt         DateTime?          @map("deleted_at") @db.Timestamptz(6)
+  deletedByUserId   BigInt?            @map("deleted_by_user_id")
+  createdAt         DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  merchant          Merchant           @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  menus             Menu[]             // Keep for backward compatibility
+  menuItems         MenuCategoryItem[] // Many-to-many relation
+  createdBy         User?              @relation("CategoryCreatedBy", fields: [createdByUserId], references: [id])
+  updatedBy         User?              @relation("CategoryUpdatedBy", fields: [updatedByUserId], references: [id])
+  deletedBy         User?              @relation("CategoryDeletedBy", fields: [deletedByUserId], references: [id])
 
   @@index([merchantId])
   @@index([sortOrder])
@@ -177,13 +177,14 @@ model MenuCategory {
   @@map("menu_categories")
 }
 
+// Junction table for many-to-many Menu <-> Category
 model MenuCategoryItem {
   id         BigInt       @id @default(autoincrement())
   menuId     BigInt       @map("menu_id")
   categoryId BigInt       @map("category_id")
   createdAt  DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
-  category   MenuCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   menu       Menu         @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  category   MenuCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   @@unique([menuId, categoryId])
   @@index([menuId])
@@ -192,37 +193,37 @@ model MenuCategoryItem {
 }
 
 model Menu {
-  id                 BigInt              @id @default(autoincrement())
-  merchantId         BigInt              @map("merchant_id")
-  categoryId         BigInt?             @map("category_id")
-  name               String
-  description        String?
-  price              Decimal             @db.Decimal(10, 2)
-  imageUrl           String?             @map("image_url")
-  isActive           Boolean             @default(true) @map("is_active")
-  isPromo            Boolean             @default(false) @map("is_promo")
-  trackStock         Boolean             @default(false) @map("track_stock")
-  stockQty           Int?                @map("stock_qty")
-  createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt          DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
-  autoResetStock     Boolean             @default(false) @map("auto_reset_stock")
-  dailyStockTemplate Int?                @map("daily_stock_template")
-  lastStockResetAt   DateTime?           @map("last_stock_reset_at") @db.Timestamptz(6)
-  promoEndDate       DateTime?           @map("promo_end_date") @db.Timestamptz(6)
-  promoPrice         Decimal?            @map("promo_price") @db.Decimal(10, 2)
-  promoStartDate     DateTime?           @map("promo_start_date") @db.Timestamptz(6)
-  createdByUserId    BigInt?             @map("created_by_user_id")
-  deletedAt          DateTime?           @map("deleted_at") @db.Timestamptz(6)
-  deletedByUserId    BigInt?             @map("deleted_by_user_id")
-  updatedByUserId    BigInt?             @map("updated_by_user_id")
-  addonCategories    MenuAddonCategory[]
-  categories         MenuCategoryItem[]
-  category           MenuCategory?       @relation(fields: [categoryId], references: [id])
-  createdBy          User?               @relation("MenuCreatedBy", fields: [createdByUserId], references: [id])
-  deletedBy          User?               @relation("MenuDeletedBy", fields: [deletedByUserId], references: [id])
-  merchant           Merchant            @relation(fields: [merchantId], references: [id], onDelete: Cascade)
-  updatedBy          User?               @relation("MenuUpdatedBy", fields: [updatedByUserId], references: [id])
-  orderItems         OrderItem[]
+  id                  BigInt              @id @default(autoincrement())
+  merchantId          BigInt              @map("merchant_id")
+  categoryId          BigInt?             @map("category_id") // Keep for backward compatibility
+  name                String
+  description         String?
+  price               Decimal             @db.Decimal(10, 2)
+  imageUrl            String?             @map("image_url")
+  isActive            Boolean             @default(true) @map("is_active")
+  isPromo             Boolean             @default(false) @map("is_promo")
+  promoPrice          Decimal?            @map("promo_price") @db.Decimal(10, 2)
+  promoStartDate      DateTime?           @map("promo_start_date") @db.Timestamptz(6)
+  promoEndDate        DateTime?           @map("promo_end_date") @db.Timestamptz(6)
+  trackStock          Boolean             @default(false) @map("track_stock")
+  stockQty            Int?                @map("stock_qty")
+  dailyStockTemplate  Int?                @map("daily_stock_template")
+  autoResetStock      Boolean             @default(false) @map("auto_reset_stock")
+  lastStockResetAt    DateTime?           @map("last_stock_reset_at") @db.Timestamptz(6)
+  createdByUserId     BigInt?             @map("created_by_user_id")
+  updatedByUserId     BigInt?             @map("updated_by_user_id")
+  deletedAt           DateTime?           @map("deleted_at") @db.Timestamptz(6)
+  deletedByUserId     BigInt?             @map("deleted_by_user_id")
+  createdAt           DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  addonCategories     MenuAddonCategory[]
+  category            MenuCategory?       @relation(fields: [categoryId], references: [id]) // Keep for backward compatibility
+  merchant            Merchant            @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  orderItems          OrderItem[]
+  categories          MenuCategoryItem[]  // Many-to-many relation
+  createdBy           User?               @relation("MenuCreatedBy", fields: [createdByUserId], references: [id])
+  updatedBy           User?               @relation("MenuUpdatedBy", fields: [updatedByUserId], references: [id])
+  deletedBy           User?               @relation("MenuDeletedBy", fields: [deletedByUserId], references: [id])
 
   @@index([merchantId])
   @@index([categoryId])
@@ -240,18 +241,18 @@ model AddonCategory {
   minSelection        Int                 @default(0) @map("min_selection")
   maxSelection        Int?                @map("max_selection")
   isActive            Boolean             @default(true) @map("is_active")
-  createdAt           DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt           DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
   createdByUserId     BigInt?             @map("created_by_user_id")
+  updatedByUserId     BigInt?             @map("updated_by_user_id")
   deletedAt           DateTime?           @map("deleted_at") @db.Timestamptz(6)
   deletedByUserId     BigInt?             @map("deleted_by_user_id")
-  updatedByUserId     BigInt?             @map("updated_by_user_id")
-  createdBy           User?               @relation("AddonCatCreatedBy", fields: [createdByUserId], references: [id])
-  deletedBy           User?               @relation("AddonCatDeletedBy", fields: [deletedByUserId], references: [id])
+  createdAt           DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
   merchant            Merchant            @relation(fields: [merchantId], references: [id], onDelete: Cascade)
-  updatedBy           User?               @relation("AddonCatUpdatedBy", fields: [updatedByUserId], references: [id])
   addonItems          AddonItem[]
   menuAddonCategories MenuAddonCategory[]
+  createdBy           User?               @relation("AddonCatCreatedBy", fields: [createdByUserId], references: [id])
+  updatedBy           User?               @relation("AddonCatUpdatedBy", fields: [updatedByUserId], references: [id])
+  deletedBy           User?               @relation("AddonCatDeletedBy", fields: [deletedByUserId], references: [id])
 
   @@index([merchantId])
   @@index([deletedAt])
@@ -259,30 +260,30 @@ model AddonCategory {
 }
 
 model AddonItem {
-  id                 BigInt           @id @default(autoincrement())
-  addonCategoryId    BigInt           @map("addon_category_id")
-  name               String
-  description        String?
-  price              Decimal          @default(0) @db.Decimal(10, 2)
-  isActive           Boolean          @default(true) @map("is_active")
-  trackStock         Boolean          @default(false) @map("track_stock")
-  stockQty           Int?             @map("stock_qty")
-  createdAt          DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt          DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
-  inputType          AddonInputType   @default(SELECT) @map("input_type")
-  displayOrder       Int              @default(0) @map("display_order")
-  autoResetStock     Boolean          @default(false) @map("auto_reset_stock")
-  createdByUserId    BigInt?          @map("created_by_user_id")
-  dailyStockTemplate Int?             @map("daily_stock_template")
-  deletedAt          DateTime?        @map("deleted_at") @db.Timestamptz(6)
-  deletedByUserId    BigInt?          @map("deleted_by_user_id")
-  lastStockResetAt   DateTime?        @map("last_stock_reset_at") @db.Timestamptz(6)
-  updatedByUserId    BigInt?          @map("updated_by_user_id")
-  addonCategory      AddonCategory    @relation(fields: [addonCategoryId], references: [id], onDelete: Cascade)
-  createdBy          User?            @relation("AddonItemCreatedBy", fields: [createdByUserId], references: [id])
-  deletedBy          User?            @relation("AddonItemDeletedBy", fields: [deletedByUserId], references: [id])
-  updatedBy          User?            @relation("AddonItemUpdatedBy", fields: [updatedByUserId], references: [id])
-  orderItemAddons    OrderItemAddon[]
+  id                  BigInt           @id @default(autoincrement())
+  addonCategoryId     BigInt           @map("addon_category_id")
+  name                String
+  description         String?
+  price               Decimal          @default(0) @db.Decimal(10, 2)
+  inputType           AddonInputType   @default(SELECT) @map("input_type")
+  displayOrder        Int              @default(0) @map("display_order")
+  isActive            Boolean          @default(true) @map("is_active")
+  trackStock          Boolean          @default(false) @map("track_stock")
+  stockQty            Int?             @map("stock_qty")
+  dailyStockTemplate  Int?             @map("daily_stock_template")
+  autoResetStock      Boolean          @default(false) @map("auto_reset_stock")
+  lastStockResetAt    DateTime?        @map("last_stock_reset_at") @db.Timestamptz(6)
+  createdByUserId     BigInt?          @map("created_by_user_id")
+  updatedByUserId     BigInt?          @map("updated_by_user_id")
+  deletedAt           DateTime?        @map("deleted_at") @db.Timestamptz(6)
+  deletedByUserId     BigInt?          @map("deleted_by_user_id")
+  createdAt           DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  addonCategory       AddonCategory    @relation(fields: [addonCategoryId], references: [id], onDelete: Cascade)
+  orderItemAddons     OrderItemAddon[]
+  createdBy           User?            @relation("AddonItemCreatedBy", fields: [createdByUserId], references: [id])
+  updatedBy           User?            @relation("AddonItemUpdatedBy", fields: [updatedByUserId], references: [id])
+  deletedBy           User?            @relation("AddonItemDeletedBy", fields: [deletedByUserId], references: [id])
 
   @@index([addonCategoryId])
   @@index([displayOrder])
@@ -294,9 +295,9 @@ model AddonItem {
 model MenuAddonCategory {
   menuId          BigInt        @map("menu_id")
   addonCategoryId BigInt        @map("addon_category_id")
-  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
-  displayOrder    Int           @default(0) @map("display_order")
   isRequired      Boolean       @default(false) @map("is_required")
+  displayOrder    Int           @default(0) @map("display_order")
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
   addonCategory   AddonCategory @relation(fields: [addonCategoryId], references: [id], onDelete: Cascade)
   menu            Menu          @relation(fields: [menuId], references: [id], onDelete: Cascade)
@@ -309,29 +310,29 @@ model MenuAddonCategory {
 }
 
 model Order {
-  id               BigInt      @id @default(autoincrement())
-  merchantId       BigInt      @map("merchant_id")
-  customerId       BigInt?     @map("customer_id")
-  orderNumber      String      @map("order_number")
-  orderType        OrderType   @map("order_type")
-  tableNumber      String?     @map("table_number")
-  status           OrderStatus @default(PENDING)
-  subtotal         Decimal     @db.Decimal(10, 2)
-  taxAmount        Decimal     @default(0) @map("tax_amount") @db.Decimal(10, 2)
-  totalAmount      Decimal     @map("total_amount") @db.Decimal(10, 2)
-  notes            String?
-  placedAt         DateTime    @default(now()) @map("placed_at") @db.Timestamptz(6)
-  createdAt        DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
-  actualReadyAt    DateTime?   @map("actual_ready_at") @db.Timestamptz(6)
-  cancelReason     String?     @map("cancel_reason")
-  cancelledAt      DateTime?   @map("cancelled_at") @db.Timestamptz(6)
-  completedAt      DateTime?   @map("completed_at") @db.Timestamptz(6)
-  estimatedReadyAt DateTime?   @map("estimated_ready_at") @db.Timestamptz(6)
-  orderItems       OrderItem[]
-  customer         User?       @relation("CustomerOrders", fields: [customerId], references: [id])
-  merchant         Merchant    @relation(fields: [merchantId], references: [id], onDelete: Cascade)
-  payment          Payment?
+  id                BigInt               @id @default(autoincrement())
+  merchantId        BigInt               @map("merchant_id")
+  customerId        BigInt?              @map("customer_id")
+  orderNumber       String               @map("order_number")
+  orderType         OrderType            @map("order_type")
+  tableNumber       String?              @map("table_number")
+  status            OrderStatus          @default(PENDING)
+  subtotal          Decimal              @db.Decimal(10, 2)
+  taxAmount         Decimal              @default(0) @map("tax_amount") @db.Decimal(10, 2)
+  totalAmount       Decimal              @map("total_amount") @db.Decimal(10, 2)
+  notes             String?
+  estimatedReadyAt  DateTime?            @map("estimated_ready_at") @db.Timestamptz(6)
+  actualReadyAt     DateTime?            @map("actual_ready_at") @db.Timestamptz(6)
+  completedAt       DateTime?            @map("completed_at") @db.Timestamptz(6)
+  cancelledAt       DateTime?            @map("cancelled_at") @db.Timestamptz(6)
+  cancelReason      String?              @map("cancel_reason")
+  placedAt          DateTime             @default(now()) @map("placed_at") @db.Timestamptz(6)
+  createdAt         DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
+  orderItems        OrderItem[]
+  payment           Payment?
+  customer          User?                @relation("CustomerOrders", fields: [customerId], references: [id])
+  merchant          Merchant             @relation(fields: [merchantId], references: [id], onDelete: Cascade)
 
   @@unique([merchantId, orderNumber])
   @@index([merchantId])
@@ -382,24 +383,24 @@ model OrderItemAddon {
 }
 
 model Payment {
-  id                   BigInt        @id @default(autoincrement())
-  orderId              BigInt        @unique @map("order_id")
-  amount               Decimal       @db.Decimal(10, 2)
-  paymentMethod        PaymentMethod @map("payment_method")
-  status               PaymentStatus @default(PENDING)
-  paidByUserId         BigInt?       @map("paid_by_user_id")
-  paidAt               DateTime?     @map("paid_at") @db.Timestamptz(6)
-  gatewayProvider      String?       @map("gateway_provider")
-  gatewayTransactionId String?       @map("gateway_transaction_id")
-  gatewayStatus        String?       @map("gateway_status")
-  gatewayResponse      Json?         @map("gateway_response")
-  gatewayCallbackAt    DateTime?     @map("gateway_callback_at") @db.Timestamptz(6)
-  notes                String?
-  metadata             Json?
-  createdAt            DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt            DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
-  order                Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  paidBy               User?         @relation("PaymentRecordedBy", fields: [paidByUserId], references: [id])
+  id                    BigInt         @id @default(autoincrement())
+  orderId               BigInt         @unique @map("order_id")
+  amount                Decimal        @db.Decimal(10, 2)
+  paymentMethod         PaymentMethod  @map("payment_method")
+  status                PaymentStatus  @default(PENDING)
+  paidByUserId          BigInt?        @map("paid_by_user_id")
+  paidAt                DateTime?      @map("paid_at") @db.Timestamptz(6)
+  gatewayProvider       String?        @map("gateway_provider")
+  gatewayTransactionId  String?        @map("gateway_transaction_id")
+  gatewayStatus         String?        @map("gateway_status")
+  gatewayResponse       Json?          @map("gateway_response")
+  gatewayCallbackAt     DateTime?      @map("gateway_callback_at") @db.Timestamptz(6)
+  notes                 String?
+  metadata              Json?
+  createdAt             DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  order                 Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  paidBy                User?          @relation("PaymentRecordedBy", fields: [paidByUserId], references: [id])
 
   @@index([orderId])
   @@index([status])

@@ -37,7 +37,7 @@ export class OrderService {
    */
   async createOrder(input: CreateOrderInput): Promise<Order> {
     console.log('🔄 [ORDER SERVICE] Creating order:', {
-      merchantId: input.merchantId.toString(), // ✅ Always log as string
+      merchantCode: input.merchantCode,
       orderType: input.orderType,
       itemCount: input.items.length,
     });
@@ -52,7 +52,7 @@ export class OrderService {
     }
 
     console.log('✅ [ORDER SERVICE] Merchant validated:', {
-      merchantId: merchantData.id.toString(), // ✅ Log as string
+      merchantId: merchantData.id,
       name: merchantData.name,
       taxEnabled: merchantData.enableTax,
       taxPercentage: merchantData.taxPercentage,
@@ -107,13 +107,13 @@ export class OrderService {
     // ========================================
     // STEP 3: Check if merchant is open
     // ========================================
-    // const isOpen = await merchantService.isMerchantOpen(input.merchantId);
-    // if (!isOpen) {
-    //   throw new ValidationError(
-    //     'Merchant is currently closed',
-    //     ERROR_CODES.MERCHANT_CLOSED
-    //   );
-    // }
+    const isOpen = await merchantService.isMerchantOpen(input.merchantId);
+    if (!isOpen) {
+      throw new ValidationError(
+        'Merchant is currently closed',
+        ERROR_CODES.MERCHANT_CLOSED
+      );
+    }
 
     // ========================================
     // STEP 4: Validate required fields
@@ -166,21 +166,10 @@ export class OrderService {
         );
       }
 
-      // ✅ FIXED: String comparison for BigInt values
-      const menuMerchantId = menu.merchantId.toString();
-      const inputMerchantId = input.merchantId.toString();
-
-      console.log('🔍 [ORDER SERVICE] Menu-Merchant validation:', {
-        menuId: menu.id.toString(),
-        menuName: menu.name,
-        menuMerchantId,
-        inputMerchantId,
-        matches: menuMerchantId === inputMerchantId,
-      });
-
-      if (menuMerchantId !== inputMerchantId) {
+      // Check if menu belongs to merchant
+      if (menu.merchantId !== input.merchantId) {
         throw new ValidationError(
-          `Menu item "${menu.name}" does not belong to this merchant (Menu Merchant: ${menuMerchantId}, Order Merchant: ${inputMerchantId})`,
+          'Menu item does not belong to this merchant',
           ERROR_CODES.VALIDATION_FAILED
         );
       }
@@ -220,6 +209,18 @@ export class OrderService {
       const itemTotal = itemPrice * item.quantity;
       subtotal += itemTotal;
 
+      // Build addon details for order item (simplified - in production, fetch each addon)
+      const addonDetails: Array<{
+        addonItemId: bigint;
+        addonName: string;
+        addonPrice: number;
+        quantity: number;
+        subtotal: number;
+      }> = [];
+      
+      // Note: For simplicity, addons are tracked but details would need to be fetched
+      // In production, you'd loop through selectedAddons and get each addon's details
+      
       validatedItems.push({
         menuId: item.menuId,
         menuName: menu.name,
@@ -227,7 +228,7 @@ export class OrderService {
         quantity: item.quantity,
         subtotal: itemTotal,
         notes: item.specialInstructions,
-        addons: [], // Simplified for now
+        addons: addonDetails.length > 0 ? addonDetails : undefined,
       });
     }
 

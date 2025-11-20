@@ -174,17 +174,14 @@ export function clearTableNumber(merchantCode: string): void {
 // ============================================================================
 
 /**
- * Get customer auth data with debug logging
+ * Get customer auth data
  */
 export function getCustomerAuth(): CustomerAuth | null {
   if (typeof window === 'undefined') return null;
 
   try {
     const data = localStorage.getItem(STORAGE_KEYS.AUTH);
-    if (!data) {
-      console.log('🔐 [AUTH] No auth data in localStorage');
-      return null;
-    }
+    if (!data) return null;
 
     const auth = JSON.parse(data) as CustomerAuth;
     
@@ -193,26 +190,19 @@ export function getCustomerAuth(): CustomerAuth | null {
 
     // Check if token expired
     if (new Date(auth.expiresAt) < new Date()) {
-      console.log('🔐 [AUTH] Token expired, clearing auth');
       clearCustomerAuth();
       return null;
     }
 
-    console.log('🔐 [AUTH] Valid auth found:', {
-      userId: auth.user.id.toString(),
-      email: auth.user.email,
-      expiresAt: new Date(auth.expiresAt).toISOString(),
-    });
-
     return auth;
   } catch (error) {
-    console.error('🔐 [AUTH ERROR] Error getting customer auth:', error);
+    console.error('Error getting customer auth:', error);
     return null;
   }
 }
 
 /**
- * Save customer auth data with debug logging
+ * Save customer auth data
  */
 export function saveCustomerAuth(auth: CustomerAuth): void {
   if (typeof window === 'undefined') return;
@@ -228,35 +218,21 @@ export function saveCustomerAuth(auth: CustomerAuth): void {
     };
 
     localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(serializable));
-    
-    console.log('🔐 [AUTH] Auth saved to localStorage:', {
-      userId: auth.user.id.toString(),
-      email: auth.user.email,
-      expiresAt: new Date(auth.expiresAt).toISOString(),
-    });
-
-    // Dispatch custom event for auth change
-    window.dispatchEvent(new Event('customerAuthChange'));
   } catch (error) {
-    console.error('🔐 [AUTH ERROR] Error saving customer auth:', error);
+    console.error('Error saving customer auth:', error);
   }
 }
 
 /**
- * Clear customer auth data with debug logging and event dispatch
+ * Clear customer auth data
  */
 export function clearCustomerAuth(): void {
   if (typeof window === 'undefined') return;
 
   try {
-    console.log('🔐 [AUTH] Clearing customer auth from localStorage');
     localStorage.removeItem(STORAGE_KEYS.AUTH);
-    
-    // Dispatch custom event for auth change (logout)
-    window.dispatchEvent(new Event('customerAuthChange'));
-    console.log('🔐 [AUTH] Auth cleared and event dispatched');
   } catch (error) {
-    console.error('🔐 [AUTH ERROR] Error clearing customer auth:', error);
+    console.error('Error clearing customer auth:', error);
   }
 }
 

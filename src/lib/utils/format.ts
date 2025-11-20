@@ -8,29 +8,15 @@
 // ============================================================================
 
 /**
- * Format number to currency based on merchant settings
- * @param amount - Amount to format
- * @param currency - Currency code (default: 'IDR')
- * @example formatCurrency(10000) => "Rp10,000.00"
- * @example formatCurrency(10, 'AUD') => "$10.00"
+ * Format number to Indonesian Rupiah currency
+ * @example formatCurrency(10000) => "Rp10.000"
  */
-export function formatCurrency(amount: number, currency: string = 'IDR'): string {
-  // Map currency to appropriate locale
-  const localeMap: Record<string, string> = {
-    'IDR': 'id-ID',
-    'AUD': 'en-AU',
-    'USD': 'en-US',
-    'SGD': 'en-SG',
-    'MYR': 'ms-MY',
-  };
-  
-  const locale = localeMap[currency] || 'en-US';
-  
-  return new Intl.NumberFormat(locale, {
+export function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('id-ID', {
     style: 'currency',
-    currency: currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    currency: 'IDR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(amount);
 }
 
