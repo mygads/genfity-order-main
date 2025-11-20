@@ -357,23 +357,6 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
           ) : null}
         </DragOverlay>
       </DndContext>
-
-      {/* Empty State */}
-      {!loading && orders.length === 0 && (
-        <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 bg-white py-16 dark:border-gray-800 dark:bg-white/3">
-          <div className="text-center">
-            <svg className="mx-auto h-16 w-16 text-gray-400 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-            </svg>
-            <h3 className="mt-4 text-lg font-semibold text-gray-800 dark:text-white/90">
-              No Active Orders
-            </h3>
-            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-              All orders have been completed or cancelled.
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

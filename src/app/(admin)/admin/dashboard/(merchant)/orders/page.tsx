@@ -5,6 +5,10 @@
  * - Advanced filters (order type, payment status, date range)
  * - Bulk operations (select multiple orders, bulk status update)
  * - Enhanced drag validation (visual feedback for invalid drops)
+ * - Progressive Display Mode (single button):
+ *   1. Normal → Click → Clean Mode (hide breadcrumb, navbar, sidebar)
+ *   2. Clean Mode → Click → Full Screen (browser fullscreen)
+ *   3. Full Screen → Click → Normal (exit and show all UI)
  * - Professional, clean UI with minimal colors
  * - English labels, icons from react-icons/fa
  */
@@ -19,10 +23,13 @@ import {
   FaCheckSquare, 
   FaSquare,
   FaTimes,
+  FaEye,
   FaFilter,
   FaTh,
   FaList,
   FaTags,
+  FaExpand,
+  FaCompress,
 } from 'react-icons/fa';
 import { OrderKanbanBoard } from '@/components/orders/OrderKanbanBoard';
 import { OrderKanbanListView } from '@/components/orders/OrderKanbanListView';
@@ -52,6 +59,7 @@ export default function MerchantOrdersPage() {
   const [merchantCurrency, setMerchantCurrency] = useState<string>('AUD');
   const [loading, setLoading] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [displayMode, setDisplayMode] = useState<'normal' | 'clean' | 'fullscreen'>('normal');
   
   // Ref to trigger manual refresh from OrderKanbanBoard
   const kanbanRefreshRef = React.useRef<(() => void) | null>(null);
@@ -99,6 +107,50 @@ export default function MerchantOrdersPage() {
   useEffect(() => {
     fetchMerchantId();
   }, [fetchMerchantId]);
+
+  // Handle display mode changes
+  useEffect(() => {
+    const sidebar = document.querySelector('[data-sidebar]') as HTMLElement;
+    const header = document.querySelector('[data-header]') as HTMLElement;
+    const breadcrumb = document.querySelector('[data-breadcrumb]') as HTMLElement;
+
+    if (displayMode === 'clean' || displayMode === 'fullscreen') {
+      // Hide UI elements
+      document.body.classList.add('clean-mode');
+      if (sidebar) sidebar.style.display = 'none';
+      if (header) header.style.display = 'none';
+      if (breadcrumb) breadcrumb.style.display = 'none';
+    } else {
+      // Show UI elements
+      document.body.classList.remove('clean-mode');
+      if (sidebar) sidebar.style.display = '';
+      if (header) header.style.display = '';
+      if (breadcrumb) breadcrumb.style.display = '';
+    }
+
+    // Cleanup on unmount
+    return () => {
+      document.body.classList.remove('clean-mode');
+      if (sidebar) sidebar.style.display = '';
+      if (header) header.style.display = '';
+      if (breadcrumb) breadcrumb.style.display = '';
+    };
+  }, [displayMode]);
+
+  // Listen to fullscreen changes (ESC key)
+  useEffect(() => {
+    const handleFullScreenChange = () => {
+      if (!document.fullscreenElement && displayMode === 'fullscreen') {
+        // User pressed ESC, go back to clean mode
+        setDisplayMode('clean');
+      }
+    };
+
+    document.addEventListener('fullscreenchange', handleFullScreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullScreenChange);
+    };
+  }, [displayMode]);
 
   // Handlers
   const handleOrderClick = (order: OrderListItem) => {
@@ -191,7 +243,7 @@ export default function MerchantOrdersPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 ${displayMode !== 'normal' ? 'fixed inset-0 z-50 overflow-auto bg-white p-6 dark:bg-gray-950' : ''}`}>
       {/* Header */}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
@@ -292,13 +344,51 @@ export default function MerchantOrdersPage() {
             <span className="hidden sm:inline">Refresh</span>
           </button>
 
-          {/* Full Mode (History & Analytics) */}
+          {/* Progressive Display Mode: Normal → Clean → Fullscreen */}
           <button
-            onClick={() => router.push('/admin/dashboard/orders/history')}
-            className="flex h-10 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+            onClick={async () => {
+              if (displayMode === 'normal') {
+                // Go to clean mode
+                setDisplayMode('clean');
+              } else if (displayMode === 'clean') {
+                // Go to fullscreen mode
+                try {
+                  await document.documentElement.requestFullscreen();
+                  setDisplayMode('fullscreen');
+                } catch (err) {
+                  console.error('Error entering fullscreen:', err);
+                }
+              } else {
+                // Exit fullscreen, back to normal
+                try {
+                  if (document.fullscreenElement) {
+                    await document.exitFullscreen();
+                  }
+                  setDisplayMode('normal');
+                } catch (err) {
+                  console.error('Error exiting fullscreen:', err);
+                }
+              }
+            }}
+            className={`flex h-10 items-center gap-2 rounded-lg border px-4 text-sm font-medium transition-colors ${
+              displayMode !== 'normal'
+                ? 'border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-800 dark:bg-brand-900/20 dark:text-brand-400'
+                : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800'
+            }`}
+            title={
+              displayMode === 'normal' ? 'Enter Clean Mode' :
+              displayMode === 'clean' ? 'Enter Full Screen' :
+              'Exit Full Screen'
+            }
           >
-            <FaHistory />
-            <span className="hidden sm:inline">Full Mode</span>
+            {displayMode === 'normal' ? <FaEye /> :
+             displayMode === 'clean' ? <FaExpand /> :
+             <FaCompress />}
+            <span className="hidden sm:inline">
+              {displayMode === 'normal' ? 'Clean Mode' :
+               displayMode === 'clean' ? 'Full Screen' :
+               'Exit'}
+            </span>
           </button>
         </div>
       </div>

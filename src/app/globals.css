@@ -842,3 +842,28 @@ span.flatpickr-weekday,
   opacity: 0.8;
   cursor: grabbing; /* Changes the cursor to indicate dragging */
 }
+
+/* Full Screen Mode for Orders Page */
+body.full-screen-mode {
+  overflow: hidden;
+}
+
+body.full-screen-mode main {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+  width: 100vw !important;
+  max-width: 100vw !important;
+}
+
+/* Clean Mode for Kitchen Display */
+body.clean-mode {
+  overflow: hidden;
+}
+
+body.clean-mode main {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+  padding-top: 0 !important;
+  width: 100vw !important;
+  max-width: 100vw !important;
+}

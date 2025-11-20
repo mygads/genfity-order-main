@@ -95,7 +95,7 @@ const PageBreadcrumb: React.FC<BreadcrumbProps> = ({ pageTitle, customItems }) =
   const currentTitle = breadcrumbItems[breadcrumbItems.length - 1]?.name || pageTitle || 'Page';
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+    <div data-breadcrumb className="flex flex-wrap items-center justify-between gap-3 mb-6">
       <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">
         {currentTitle}
       </h2>
