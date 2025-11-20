@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams, useParams } from 'next/navigation';
 import CustomerHeader from '@/components/customer/CustomerHeader';
 import { getCustomerAuth } from '@/lib/utils/localStorage';
+import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';
 
 interface OrderHistoryItem {
   id: bigint;
@@ -43,16 +44,17 @@ export default function OrderHistoryPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const params = useParams();
-  
+
   const merchantCode = params.merchantCode as string | undefined;
   const mode = searchParams.get('mode') as 'dinein' | 'takeaway' | null;
   const ref = searchParams.get('ref');
-  
+
   const [orders, setOrders] = useState<OrderHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [auth, setAuth] = useState<ReturnType<typeof getCustomerAuth> | null>(null);
   const [filter, setFilter] = useState<'all' | 'pending' | 'completed' | 'cancelled'>('all');
-  
+  const [merchantCurrency, setMerchantCurrency] = useState('AUD'); // ✅ NEW: Dynamic currency
+
   // ✅ FIX: Add hydration guard to prevent SSR/CSR mismatch
   const [isMounted, setIsMounted] = useState(false);
 
@@ -74,11 +76,11 @@ export default function OrderHistoryPage() {
   useEffect(() => {
     // ✅ 1. Mark component as mounted (client-side only)
     setIsMounted(true);
-    
+
     // ✅ 2. Load auth from localStorage (safe now)
     const customerAuth = getCustomerAuth();
     setAuth(customerAuth);
-    
+
     // ✅ 3. Redirect if not authenticated
     if (!customerAuth) {
       const currentPath = window.location.pathname + window.location.search;
@@ -89,10 +91,37 @@ export default function OrderHistoryPage() {
       return;
     }
 
-    // ✅ 4. Fetch orders if authenticated
+    // ✅ 4. Fetch merchant info if merchantCode available
+    if (merchantCode) {
+      fetchMerchantInfo(merchantCode);
+    }
+
+    // ✅ 5. Fetch orders if authenticated
     fetchOrders(customerAuth);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router, merchantCode, mode]);
+
+  /**
+   * ✅ NEW: Fetch merchant info to get currency
+   * 
+   * @param code - Merchant code
+   * 
+   * @specification STEP_04_API_ENDPOINTS.txt - Merchant Endpoints
+   */
+  const fetchMerchantInfo = async (code: string) => {
+    try {
+      const response = await fetch(`/api/public/merchants/${code}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data.currency) {
+          setMerchantCurrency(data.data.currency);
+          console.log('✅ [ORDER HISTORY] Merchant currency:', data.data.currency);
+        }
+      }
+    } catch (error) {
+      console.error('❌ [ORDER HISTORY] Failed to fetch merchant info:', error);
+    }
+  };
 
   /**
    * Fetch orders from API
@@ -124,12 +153,16 @@ export default function OrderHistoryPage() {
   const handleBack = () => {
     if (ref) {
       router.push(decodeURIComponent(ref));
-    } else if (merchantCode && mode) {
-      router.push(`/${merchantCode}/profile?mode=${mode}`);
     } else if (merchantCode) {
-      router.push(`/${merchantCode}/profile`);
+      router.push(`/${merchantCode}`);
     } else {
-      router.push('/profile');
+      // Fallback: get last merchant from localStorage
+      const lastMerchant = localStorage.getItem('lastMerchantCode');
+      if (lastMerchant) {
+        router.push(`/${lastMerchant}`);
+      } else {
+        router.push('/');
+      }
     }
   };
 
@@ -139,15 +172,15 @@ export default function OrderHistoryPage() {
 
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
-      pending: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Menunggu' },
-      confirmed: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Dikonfirmasi' },
-      ready: { bg: 'bg-purple-100', text: 'text-purple-800', label: 'Siap Diambil' },
-      completed: { bg: 'bg-green-100', text: 'text-green-800', label: 'Selesai' },
-      cancelled: { bg: 'bg-red-100', text: 'text-red-800', label: 'Dibatalkan' },
+      pending: { bg: 'bg-yellow-100 dark:bg-yellow-900/20', text: 'text-yellow-800 dark:text-yellow-400', label: 'Pending' },
+      confirmed: { bg: 'bg-blue-100 dark:bg-blue-900/20', text: 'text-blue-800 dark:text-blue-400', label: 'Confirmed' },
+      ready: { bg: 'bg-purple-100 dark:bg-purple-900/20', text: 'text-purple-800 dark:text-purple-400', label: 'Ready' },
+      completed: { bg: 'bg-green-100 dark:bg-green-900/20', text: 'text-green-800 dark:text-green-400', label: 'Completed' },
+      cancelled: { bg: 'bg-red-100 dark:bg-red-900/20', text: 'text-red-800 dark:text-red-400', label: 'Cancelled' },
     };
 
     const config = statusConfig[status.toLowerCase()] || statusConfig.pending;
-    
+
     return (
       <span className={`px-3 py-1 rounded-full text-xs font-semibold ${config.bg} ${config.text}`}>
         {config.label}
@@ -155,7 +188,18 @@ export default function OrderHistoryPage() {
     );
   };
 
-  const formatCurrency = (amount: number) => `Rp${amount.toLocaleString('id-ID')}`;
+  /**
+   * ✅ FIXED: Format currency using merchant's currency setting
+   * 
+   * @param amount - Amount to format
+   * @returns Formatted currency string
+   */
+  const formatCurrency = (amount: number): string => {
+    return new Intl.NumberFormat('en-AU', {
+      style: 'currency',
+      currency: merchantCurrency,
+    }).format(amount);
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -179,103 +223,94 @@ export default function OrderHistoryPage() {
 
   // ✅ HYDRATION FIX: Show loading during SSR → CSR transition
   if (!isMounted || !auth) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-sm text-gray-600">Memuat halaman...</p>
-        </div>
-      </div>
-    );
+    return <LoadingState type="page" message={LOADING_MESSAGES.LOADING} />;
   }
 
   return (
-    <div
-      className="max-w-[420px] mx-auto bg-white min-h-svh flex flex-col"
-      style={{
-        paddingTop: 'env(safe-area-inset-top)',
-        paddingBottom: 'env(safe-area-inset-bottom)',
-      }}
-    >
-      {/* Header */}
-      <CustomerHeader
-        merchantCode={merchantCode}
-        mode={mode || undefined}
-        showBackButton={true}
-        onBack={handleBack}
-        title="Riwayat Pesanan"
-      />
+    <div className="flex flex-col min-h-screen max-w-[420px] mx-auto bg-white dark:bg-gray-900">
+      {/* Fixed Header */}
+      <div className="sticky top-0 z-50 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between px-4 h-14">
+          {/* Back Button */}
+          <button
+            onClick={handleBack}
+            className="flex items-center gap-2 text-gray-900 dark:text-white hover:text-orange-500 transition-colors"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M19 12H5M12 19l-7-7 7-7" />
+            </svg>
+            <span className="text-sm font-medium">Back</span>
+          </button>
 
-      {/* Filter Tabs */}
-      <div className="sticky top-14 z-40 bg-white border-b border-gray-200">
-        <div className="flex overflow-x-auto scrollbar-hide">
+          {/* Title */}
+          <h1 className="text-base font-bold text-gray-900 dark:text-white">Order History</h1>
+
+          {/* Placeholder */}
+          <div className="w-16" />
+        </div>
+
+        {/* Filter Tabs */}
+        <div className="flex overflow-x-auto scrollbar-hide border-t border-gray-200 dark:border-gray-700">
           <button
             onClick={() => setFilter('all')}
-            className={`flex-shrink-0 px-4 py-3 text-sm font-semibold transition-all ${
-              filter === 'all'
-                ? 'text-orange-500 border-b-2 border-orange-500'
-                : 'text-gray-600 border-b-2 border-transparent hover:text-gray-900'
-            }`}
+            className={`flex-shrink-0 px-4 py-3 text-xs font-semibold uppercase tracking-wide whitespace-nowrap transition-colors ${filter === 'all'
+              ? 'text-orange-500 border-b-2 border-orange-500'
+              : 'text-gray-500 dark:text-gray-400 border-b-2 border-transparent hover:text-gray-900 dark:hover:text-white'
+              }`}
           >
-            Semua
+            All
           </button>
           <button
             onClick={() => setFilter('pending')}
-            className={`flex-shrink-0 px-4 py-3 text-sm font-semibold transition-all ${
-              filter === 'pending'
-                ? 'text-orange-500 border-b-2 border-orange-500'
-                : 'text-gray-600 border-b-2 border-transparent hover:text-gray-900'
-            }`}
+            className={`flex-shrink-0 px-4 py-3 text-xs font-semibold uppercase tracking-wide whitespace-nowrap transition-colors ${filter === 'pending'
+              ? 'text-orange-500 border-b-2 border-orange-500'
+              : 'text-gray-500 dark:text-gray-400 border-b-2 border-transparent hover:text-gray-900 dark:hover:text-white'
+              }`}
           >
-            Berlangsung
+            Active
           </button>
           <button
             onClick={() => setFilter('completed')}
-            className={`flex-shrink-0 px-4 py-3 text-sm font-semibold transition-all ${
-              filter === 'completed'
-                ? 'text-orange-500 border-b-2 border-orange-500'
-                : 'text-gray-600 border-b-2 border-transparent hover:text-gray-900'
-            }`}
+            className={`flex-shrink-0 px-4 py-3 text-xs font-semibold uppercase tracking-wide whitespace-nowrap transition-colors ${filter === 'completed'
+              ? 'text-orange-500 border-b-2 border-orange-500'
+              : 'text-gray-500 dark:text-gray-400 border-b-2 border-transparent hover:text-gray-900 dark:hover:text-white'
+              }`}
           >
-            Selesai
+            Completed
           </button>
           <button
             onClick={() => setFilter('cancelled')}
-            className={`flex-shrink-0 px-4 py-3 text-sm font-semibold transition-all ${
-              filter === 'cancelled'
-                ? 'text-orange-500 border-b-2 border-orange-500'
-                : 'text-gray-600 border-b-2 border-transparent hover:text-gray-900'
-            }`}
+            className={`flex-shrink-0 px-4 py-3 text-xs font-semibold uppercase tracking-wide whitespace-nowrap transition-colors ${filter === 'cancelled'
+              ? 'text-orange-500 border-b-2 border-orange-500'
+              : 'text-gray-500 dark:text-gray-400 border-b-2 border-transparent hover:text-gray-900 dark:hover:text-white'
+              }`}
           >
-            Dibatalkan
+            Cancelled
           </button>
         </div>
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 p-4">
+      <main className="flex-1 overflow-y-auto p-4 pb-24">
         {isLoading ? (
-          <div className="text-center py-16">
-            <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-sm text-gray-600">Memuat riwayat...</p>
-          </div>
+          <LoadingState type="inline" message={LOADING_MESSAGES.ORDER_HISTORY} />
         ) : filteredOrders.length === 0 ? (
-          <div className="text-center py-16">
+          <div className="text-center py-20">
             <div className="text-6xl mb-4">📋</div>
-            <p className="text-base font-semibold text-gray-900 mb-2">
-              {filter === 'all' ? 'Belum Ada Pesanan' : 'Tidak Ada Pesanan'}
+            <p className="text-base font-semibold text-gray-900 dark:text-white mb-2">
+              {filter === 'all' ? 'No Orders Yet' : 'No Orders Found'}
             </p>
-            <p className="text-sm text-gray-600 mb-6">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
               {filter === 'all'
-                ? 'Riwayat pesanan Anda akan muncul di sini'
-                : `Tidak ada pesanan dengan status ${filter === 'pending' ? 'berlangsung' : filter === 'completed' ? 'selesai' : 'dibatalkan'}`}
+                ? 'Your order history will appear here'
+                : `No ${filter === 'pending' ? 'active' : filter} orders found`}
             </p>
             {filter === 'all' && (
               <button
                 onClick={() => router.push('/')}
                 className="px-6 py-3 bg-orange-500 text-white text-sm font-semibold rounded-xl hover:bg-orange-600 transition-all active:scale-[0.98]"
               >
-                Mulai Pesan
+                Start Ordering
               </button>
             )}
           </div>
@@ -285,15 +320,15 @@ export default function OrderHistoryPage() {
               <div
                 key={order.id.toString()}
                 onClick={() => handleOrderClick(order)}
-                className="p-4 border border-gray-200 rounded-xl bg-white hover:shadow-lg transition-shadow cursor-pointer active:scale-[0.98]"
+                className="p-4 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 hover:shadow-lg transition-all cursor-pointer active:scale-[0.98]"
               >
                 {/* Order Header */}
                 <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <p className="text-sm font-bold text-gray-900 mb-1">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-gray-900 dark:text-white mb-1 truncate">
                       {order.merchantName}
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
                       {formatDate(order.placedAt)}
                     </p>
                   </div>
@@ -301,31 +336,23 @@ export default function OrderHistoryPage() {
                 </div>
 
                 {/* Order Number */}
-                <div className="mb-3 p-2 bg-gray-50 rounded-lg">
-                  <p className="text-xs text-gray-600">Nomor Pesanan</p>
-                  <p className="text-sm font-bold text-gray-900 font-mono">
+                <div className="mb-3 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <p className="text-xs text-gray-600 dark:text-gray-400">Order Number</p>
+                  <p className="text-sm font-bold text-gray-900 dark:text-white font-mono">
                     #{order.orderNumber}
                   </p>
                 </div>
 
                 {/* Order Details */}
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2 text-xs text-gray-600">
+                <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
                     <span>{order.mode === 'dinein' ? '🍽️ Dine-in' : '🛍️ Takeaway'}</span>
                     <span>•</span>
-                    <span>{order.itemsCount || 0} item</span>
+                    <span>{order.itemsCount || 0} items</span>
                   </div>
-                  <p className="text-base font-bold text-orange-500">
+                  <span className="text-base font-bold text-orange-500">
                     {formatCurrency(order.totalAmount)}
-                  </p>
-                </div>
-
-                {/* Action Hint */}
-                <div className="flex items-center justify-between pt-3 border-t border-gray-200">
-                  <span className="text-xs text-orange-500 font-medium">
-                    Lihat Detail
                   </span>
-                  <span className="text-gray-400">›</span>
                 </div>
               </div>
             ))}

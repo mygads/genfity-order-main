@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
-import { serializeBigInt } from '@/lib/utils/serializer';
+import { serializeBigInt, decimalToNumber } from '@/lib/utils/serializer';
 
 /**
  * GET /api/public/menu/[merchantCode]
@@ -105,11 +105,11 @@ export async function GET(
           id: menu.id.toString(),
           name: menu.name,
           description: menu.description,
-          price: Number(menu.price),
+          price: decimalToNumber(menu.price),
           imageUrl: menu.imageUrl,
           isActive: menu.isActive,
           isPromo: menu.isPromo,
-          promoPrice: menu.promoPrice ? Number(menu.promoPrice) : null,
+          promoPrice: menu.promoPrice ? decimalToNumber(menu.promoPrice) : null,
           promoStartDate: menu.promoStartDate?.toISOString(),
           promoEndDate: menu.promoEndDate?.toISOString(),
           trackStock: menu.trackStock,
@@ -126,7 +126,7 @@ export async function GET(
               id: item.id.toString(),
               name: item.name,
               description: item.description,
-              price: Number(item.price),
+              price: decimalToNumber(item.price),
               inputType: item.inputType,
               displayOrder: item.displayOrder,
               trackStock: item.trackStock,

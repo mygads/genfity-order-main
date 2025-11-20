@@ -53,20 +53,32 @@ export default function CustomerHeader({
   const [isMounted, setIsMounted] = useState(false);
 
   /**
-   * ✅ Hydration-safe auth detection
+   * ✅ Hydration-safe auth detection with debug logging
    * 
    * @specification copilot-instructions.md - Emergency Troubleshooting
    */
   useEffect(() => {
     setIsMounted(true);
-    setIsAuthenticated(isCustomerAuthenticated());
+    const authStatus = isCustomerAuthenticated();
+    setIsAuthenticated(authStatus);
+    console.log('🔐 [CUSTOMER HEADER] Initial auth check:', authStatus);
 
     const handleAuthChange = () => {
-      setIsAuthenticated(isCustomerAuthenticated());
+      const newAuthStatus = isCustomerAuthenticated();
+      console.log('🔐 [CUSTOMER HEADER] Auth state changed:', newAuthStatus);
+      setIsAuthenticated(newAuthStatus);
     };
 
+    // Listen for storage changes (logout from another tab)
     window.addEventListener('storage', handleAuthChange);
-    return () => window.removeEventListener('storage', handleAuthChange);
+
+    // Listen for custom auth events (logout from same tab)
+    window.addEventListener('customerAuthChange', handleAuthChange);
+
+    return () => {
+      window.removeEventListener('storage', handleAuthChange);
+      window.removeEventListener('customerAuthChange', handleAuthChange);
+    };
   }, []);
 
   /**
@@ -123,9 +135,11 @@ export default function CustomerHeader({
     const encodedRef = encodeURIComponent(refUrl);
     
     // Start with ? for first query param
+
     let url = `/${merchantCode}/profile`;
     
     // Add mode if available
+
     if (mode) {
       url += `?mode=${mode}`;
       // Use & for subsequent params
@@ -164,11 +178,9 @@ export default function CustomerHeader({
     // ✅ Build URL with proper query string format
     const refUrl = buildRefUrl();
     const encodedRef = encodeURIComponent(refUrl);
-    
-    // Start with ? for first query param
+
     let url = `/${merchantCode}/history`;
-    
-    // Add mode if available
+
     if (mode) {
       url += `?mode=${mode}`;
       // Use & for subsequent params
@@ -206,15 +218,81 @@ export default function CustomerHeader({
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-neutral-200 h-14">
-      <div className="flex items-center justify-between h-full px-4">
-        {/* Left: Back Button or Logo */}
-        <div className="flex items-center gap-2">
-          {showBackButton && (
+    <header className="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+      {/* ========================================
+          LEFT: Back Button (Conditional)
+      ======================================== */}
+      {showBackButton && (
+        <button
+          onClick={handleBackClick}
+          className="p-2 -ml-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+          aria-label="Go back"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M15 18L9 12L15 6"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+      )}
+
+      {/* ========================================
+          CENTER: Merchant Info
+      ======================================== */}
+      <div className="flex-1 flex items-center gap-3 ml-2">
+        {/* Merchant Logo */}
+        {merchantInfo?.logoUrl && (
+          <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-orange-500 shrink-0 relative">
+            <Image
+              src={merchantInfo.logoUrl}
+              alt={merchantInfo.name}
+              fill
+              className="object-cover"
+            />
+          </div>
+        )}
+
+        {/* Merchant Name & Status */}
+        <div className="flex-1 min-w-0">
+          <h1 className="text-base font-bold text-gray-900 dark:text-white truncate">
+            {title || merchantInfo?.name || (merchantCode ? merchantCode.toUpperCase() : 'GENFITY')}
+          </h1>
+          {merchantInfo && (() => {
+            const { isOpen, statusText } = getMerchantStatus();
+            return (
+              <div className="flex items-center gap-1.5 text-xs">
+                <span className={`w-1.5 h-1.5 rounded-full ${isOpen ? 'bg-green-500' : 'bg-red-500'}`} />
+                <span className={`truncate ${isOpen ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
+                  {merchantInfo.city}, {merchantInfo.state} • {statusText}
+                </span>
+              </div>
+            );
+          })()}
+        </div>
+      </div>
+
+      {/* ========================================
+          RIGHT: Action Buttons
+      ======================================== */}
+      <div className="flex items-center gap-2 ml-2">
+        {!isMounted ? (
+          /* ✅ Loading placeholder during hydration */
+          <div className="flex gap-2">
+            <div className="w-20 h-9 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
+          </div>
+        ) : merchantCode && isAuthenticated ? (
+          /* ✅ AUTHENTICATED WITH MERCHANT: Show History & Profile buttons */
+          <>
+            {/* History Button */}
             <button
-              onClick={handleBackClick}
-              className="p-2 -ml-2 rounded-lg hover:bg-secondary transition-colors"
-              aria-label="Kembali"
+              onClick={handleHistoryClick}
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-all duration-200"
+              aria-label="Order History"
+              title="Order History"
             >
               <svg
                 width="20"
@@ -223,81 +301,47 @@ export default function CustomerHeader({
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2"
-                className="text-primary-dark"
               >
                 <path d="M19 12H5M12 19l-7-7 7-7" />
               </svg>
             </button>
-          )}
-          
-          {!showBackButton && (
-            <span className="text-2xl">🍽️</span>
-          )}
-          
-          <span className="text-lg font-bold text-primary-dark">
-            {title || merchantCode?.toUpperCase() || 'GENFITY'}
-          </span>
-        </div>
 
-        {/* Right: Auth Buttons */}
-        <div className="flex items-center gap-2">
-          {!isMounted ? (
-            /* Loading placeholder during hydration */
-            <div className="w-20 h-8 bg-secondary rounded-lg animate-pulse" />
-          ) : isAuthenticated ? (
-            <>
-              {/* History Icon */}
-              <button
-                onClick={handleHistoryClick}
-                className="p-2 rounded-lg hover:bg-secondary transition-colors"
-                aria-label="Riwayat"
-                title="Riwayat Pesanan"
-              >
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  className="text-primary-dark"
-                >
-                  <circle cx="12" cy="12" r="10" />
-                  <polyline points="12 6 12 12 16 14" />
-                </svg>
-              </button>
-
-              {/* Profile Icon */}
-              <button
-                onClick={handleProfileClick}
-                className="p-2 rounded-lg hover:bg-secondary transition-colors"
-                aria-label="Akun"
-                title="Profil Saya"
-              >
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  className="text-primary-dark"
-                >
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                  <circle cx="12" cy="7" r="4" />
-                </svg>
-              </button>
-            </>
-          ) : (
-            /* Sign In Button */
+            {/* Profile Button */}
             <button
-              onClick={handleSignInClick}
-              className="text-sm font-medium text-primary hover:text-primary-dark px-3 py-1.5 rounded-lg hover:bg-primary-light transition-colors"
+              onClick={handleProfileClick}
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-all duration-200"
+              aria-label="Profile"
+              title="Profile"
             >
-              Masuk
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
             </button>
-          )}
-        </div>
+          </>
+        ) : merchantCode && !isAuthenticated ? (
+          /* ✅ NOT AUTHENTICATED WITH MERCHANT: Show Sign In button */
+          <button
+            onClick={() => {
+              const refUrl = buildRefUrl();
+              const encodedRef = encodeURIComponent(refUrl);
+              const loginUrl = `/login?merchant=${merchantCode}${mode ? `&mode=${mode}` : ''}&ref=${encodedRef}`;
+              console.log('🔗 [CUSTOMER HEADER] Navigate to login:', loginUrl);
+              router.push(loginUrl);
+            }}
+            className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200"
+            aria-label="Sign In"
+          >
+            Sign In
+          </button>
+        ) : null}
       </div>
     </header>
   );

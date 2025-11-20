@@ -10,8 +10,8 @@ import { getCustomerAuth, getTableNumber, saveCustomerAuth } from '@/lib/utils/l
 import type { OrderMode } from '@/lib/types/customer';
 import PaymentConfirmationModal from '@/components/modals/PaymentConfirmationModal';
 import { useCart } from '@/context/CartContext';
-import { formatCurrency } from '@/lib/utils/format';
-import { calculateCartSubtotal, calculatePriceBreakdown } from '@/lib/utils/priceCalculator';
+import { calculateCartSubtotal } from '@/lib/utils/priceCalculator';
+import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';
 
 /**
  * Payment Page - Customer Order Payment
@@ -21,22 +21,24 @@ import { calculateCartSubtotal, calculatePriceBreakdown } from '@/lib/utils/pric
  * @description
  * Payment form with customer info collection:
  * - Order mode badge (Dine-in/Takeaway)
- * - Customer form (Name*, Phone, Email)
+ * - Customer form (Name*, Email*, Phone, Table Number*)
  * - Payment instructions card
  * - Total summary display
  * - Confirmation modal before order creation
  * 
  * @flow
- * 1. User fills form → Click "Proses Pesanan"
- * 2. Confirmation modal → Click "Bayar Sekarang"
- * 3. Auto-register customer (if not logged in)
- * 4. Create order via POST /api/public/orders
- * 5. Clear cart → Navigate to order summary
+ * 1. User fills form → Click "Process Order"
+ * 2. Validation: Email required + format check
+ * 3. Confirmation modal → Click "Pay Now"
+ * 4. Create order via POST /api/public/orders (API auto-registers customer)
+ * 5. Auto-login guest customer (get JWT token for order tracking)
+ * 6. Clear cart → Navigate to order summary
  * 
  * @security
+ * - Email validation (required + format)
  * - JWT token from customer-login endpoint
- * - Bearer auth for order creation
- * - Guest email fallback: guest_[timestamp]@genfity.com
+ * - Optional Bearer auth for order creation
+ * - Auto-login after order for guest users
  */
 export default function PaymentPage() {
   const params = useParams();
@@ -55,13 +57,23 @@ export default function PaymentPage() {
   const [error, setError] = useState('');
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [isProcessingOrder, setIsProcessingOrder] = useState(false);
-  const [showPaymentDetails, setShowPaymentDetails] = useState(false);
 
-  // ✅ NEW: State untuk table number dari localStorage
+  // ✅ NEW: State untuk table number dan merchant data
   const [tableNumber, setTableNumber] = useState<string>('');
-  const [merchantTaxPercentage, setMerchantTaxPercentage] = useState(10); // ✅ NEW
+  const [merchantTaxPercentage, setMerchantTaxPercentage] = useState(10);
+  const [merchantCurrency, setMerchantCurrency] = useState('AUD');
 
   const auth = getCustomerAuth();
+
+  /**
+   * ✅ Format currency using merchant's currency
+   */
+  const formatCurrency = (amount: number): string => {
+    return new Intl.NumberFormat('en-AU', {
+      style: 'currency',
+      currency: merchantCurrency,
+    }).format(amount);
+  };
 
   // Initialize cart on mount
   useEffect(() => {
@@ -87,9 +99,15 @@ export default function PaymentPage() {
         const response = await fetch(`/api/public/merchants/${merchantCode}`);
         const data = await response.json();
 
-        if (data.success && data.data.enableTax) {
-          setMerchantTaxPercentage(Number(data.data.taxPercentage) || 10);
-          console.log('✅ [PAYMENT] Merchant tax %:', data.data.taxPercentage);
+        if (data.success) {
+          // ✅ Set tax percentage
+          if (data.data.enableTax) {
+            setMerchantTaxPercentage(Number(data.data.taxPercentage) || 10);
+            console.log('✅ [PAYMENT] Merchant tax %:', data.data.taxPercentage);
+          }
+          // ✅ Set currency
+          setMerchantCurrency(data.data.currency || 'AUD');
+          console.log('✅ [PAYMENT] Merchant currency:', data.data.currency);
         }
       } catch (error) {
         console.error('❌ [PAYMENT] Failed to fetch merchant settings:', error);
@@ -149,13 +167,26 @@ export default function PaymentPage() {
 
     // Validate required fields
     if (!name.trim()) {
-      setError('Nama lengkap wajib diisi');
+      setError('Full name is required');
       return;
     }
 
-    // ✅ FIXED: Validasi table number dari state (bukan cart)
+    // ✅ NEW: Validate email is required for all users
+    if (!email.trim()) {
+      setError('Email is required');
+      return;
+    }
+
+    // ✅ Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
+    // ✅ FIXED: Validate table number from state (not cart)
     if (mode === 'dinein' && !tableNumber) {
-      setError('Nomor meja wajib diisi untuk pesanan dine-in');
+      setError('Table number is required for dine-in orders');
       return;
     }
 
@@ -168,15 +199,15 @@ export default function PaymentPage() {
    * 
    * @flow
    * 1. Set isProcessingOrder flag (prevents redirect)
-   * 2. Auto-register customer (if needed)
-   * 3. Create order via API
+   * 2. Create order via API (API auto-registers customer if needed)
+   * 3. Auto-login guest customer (if not logged in) to get JWT token
    * 4. Clear localStorage (mode + cart cache)
    * 5. Navigate to order-summary-cash
    * 6. Clear cart context AFTER navigation (100ms delay)
    * 
    * @security
-   * - JWT Bearer token authentication
-   * - Guest email fallback
+   * - JWT Bearer token authentication (optional for guests)
+   * - Auto-login after order for guest tracking
    * 
    * @specification STEP_06_BUSINESS_FLOWS.txt - Order creation
    */
@@ -190,37 +221,9 @@ export default function PaymentPage() {
 
     try {
       // ========================================
-      // STEP 1: Customer Authentication
+      // STEP 1: Get Access Token (if logged in)
       // ========================================
-      let accessToken = auth?.accessToken;
-
-      if (!auth) {
-        console.log('🔐 Registering guest customer...');
-
-        const authResponse = await fetch('/api/public/auth/customer-login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: email.trim() || `guest_${Date.now()}@genfity.com`,
-            name: name.trim(),
-            phone: phone.trim() || undefined,
-          }),
-        });
-
-        const authData = await authResponse.json();
-        if (!authResponse.ok) {
-          throw new Error(authData.message || 'Login gagal');
-        }
-
-        saveCustomerAuth({
-          accessToken: authData.data.accessToken,
-          user: authData.data.user,
-          expiresAt: authData.data.expiresAt,
-        });
-
-        accessToken = authData.data.accessToken;
-        console.log('✅ Customer registered:', authData.data.user.email);
-      }
+      const accessToken = auth?.accessToken;
 
       // ========================================
       // STEP 2: Prepare Order Payload
@@ -242,7 +245,7 @@ export default function PaymentPage() {
           notes: item.notes || undefined,
           addons: (item.addons || []).map((addon) => ({
             addonItemId: addon.id.toString(),
-            quantity: 1,
+            quantity: addon.quantity || 1, // ✅ Use actual addon quantity from cart
           })),
         })),
       };
@@ -257,7 +260,7 @@ export default function PaymentPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
+          ...(accessToken && { 'Authorization': `Bearer ${accessToken}` }), // ✅ Optional auth header
         },
         body: JSON.stringify(orderPayload),
       });
@@ -273,13 +276,66 @@ export default function PaymentPage() {
 
       if (!orderResponse.ok) {
         console.error('❌ Order creation failed:', orderData);
-        throw new Error(orderData.message || 'Gagal membuat pesanan');
+        throw new Error(orderData.message || 'Failed to create order');
       }
 
       console.log('✅ Order created:', orderData.data.orderNumber);
 
       // ========================================
-      // STEP 4: Clear localStorage ONLY (not cart context yet)
+      // STEP 4: Auto-login guest customer (if not logged in)
+      // ========================================
+
+      /**
+       * ✅ GUEST AUTO-LOGIN AFTER ORDER
+       * 
+       * @description
+       * If user is not logged in (guest), auto-login them after successful order
+       * so they can view order history and track their order.
+       * 
+       * @flow
+       * 1. Check if user is NOT logged in (no accessToken)
+       * 2. Call customer-login API with email, name, phone
+       * 3. Save auth data to localStorage
+       * 4. User can now access order history
+       */
+      if (!accessToken) {
+        console.log('🔐 Auto-login guest customer after order...');
+
+        try {
+          const loginResponse = await fetch('/api/public/auth/customer-login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: email.trim(),
+              name: name.trim(),
+              phone: phone.trim() || undefined,
+            }),
+          });
+
+          if (loginResponse.ok) {
+            const loginData = await loginResponse.json();
+
+            if (loginData.success) {
+              // ✅ Save auth data to localStorage
+              saveCustomerAuth({
+                accessToken: loginData.data.accessToken,
+                user: loginData.data.user,
+                expiresAt: loginData.data.expiresAt,
+              });
+
+              console.log('✅ Guest customer logged in:', loginData.data.user.email);
+            }
+          } else {
+            console.warn('⚠️ Guest auto-login failed (non-critical)');
+          }
+        } catch (loginError) {
+          // Non-critical error - order is already created
+          console.warn('⚠️ Guest auto-login error (non-critical):', loginError);
+        }
+      }
+
+      // ========================================
+      // STEP 5: Clear localStorage ONLY (not cart context yet)
       // ========================================
 
       // ✅ 2. Clear mode cache
@@ -315,192 +371,275 @@ export default function PaymentPage() {
 
     } catch (err) {
       console.error('❌ Payment error:', err);
-      setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
+      setError(err instanceof Error ? err.message : 'An error occurred');
       setIsLoading(false);
       setIsProcessingOrder(false);
     }
   };
-
-  // ✅ UNIFIED: Calculate order total using utility
-  const subtotal = cart ? calculateCartSubtotal(cart.items) : 0;
-  const { total } = calculatePriceBreakdown(subtotal);
 
   // ✅ FIXED: Calculate with merchant's tax percentage
   const priceBreakdown = cart ? calculateCartSubtotal(cart.items, merchantTaxPercentage) : { subtotal: 0, serviceCharge: 0, tax: 0, total: 0 };
 
   // Loading state while cart initializes
   if (cart === null) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-        </div>
-      </div>
-    );
+    return <LoadingState type="page" message={LOADING_MESSAGES.LOADING_CART} />;
   }
 
   return (
-    <div className="min-h-screen bg-white pb-6">
+    <div className="flex flex-col min-h-screen max-w-[420px] mx-auto bg-white dark:bg-gray-900">
       {/* Fixed Header - 56px */}
-      <header className="h-14 bg-white border-b border-[#E0E0E0] px-4 flex items-center justify-between sticky top-0 z-100">
-        <Link href={`/${merchantCode}/view-order?mode=${mode}`} className="flex items-center gap-2 text-[#1A1A1A]">
+      <header className="h-14 bg-white dark:bg-gray-800 border-b border-[#E0E0E0] dark:border-gray-700 px-4 flex items-center justify-between sticky top-0 z-50">
+        <Link href={`/${merchantCode}/view-order?mode=${mode}`} className="flex items-center gap-2 text-[#1A1A1A] dark:text-white">
           <span className="text-xl">←</span>
-          <span className="text-sm font-medium">Kembali</span>
+          <span className="text-sm font-medium">Back</span>
         </Link>
 
-        <h1 className="text-base font-bold text-[#1A1A1A]">Pembayaran</h1>
+        <h1 className="text-base font-bold text-[#1A1A1A] dark:text-white">Payment</h1>
 
         <div className="w-16" />
       </header>
 
-      <main className="px-4 py-4">
+      <main className="flex-1 overflow-y-auto px-4 py-4 pb-6">
         {/* Order Mode Badge */}
-        <div className="mb-4 p-3 bg-[#FFF5F0] border border-[#FF6B35] rounded-lg flex items-center gap-3">
+        <div className="mb-4 p-3 bg-[#FFF5F0] dark:bg-orange-900/20 border border-[#FF6B35] rounded-lg flex items-center gap-3">
           <span className="text-2xl">{mode === 'dinein' ? '🍽️' : '🛍️'}</span>
           <div className="flex-1">
-            <p className="text-sm font-semibold text-[#1A1A1A]">
-              {mode === 'dinein' ? 'Makan di Tempat' : 'Ambil Sendiri'}
+            <p className="text-sm font-semibold text-[#1A1A1A] dark:text-white">
+              {mode === 'dinein' ? 'Dine In' : 'Takeaway'}
             </p>
-            {/* ✅ FIXED: Gunakan tableNumber dari state */}
+            {/* ✅ FIXED: Use tableNumber from state */}
             {tableNumber && mode === 'dinein' && (
-              <p className="text-xs text-[#666666]">Meja #{tableNumber}</p>
+              <p className="text-xs text-[#666666] dark:text-gray-400">Table #{tableNumber}</p>
             )}
+          </div>
+        </div>
+
+        {/* ✅ NEW: Order Items Summary */}
+        <div className="mb-4">
+          <h2 className="text-base font-semibold text-gray-900 dark:text-white mb-3">
+            Order Items
+          </h2>
+          <div className="space-y-3">
+            {cart?.items.map((item, index) => {
+              // Calculate addon total
+              const addonTotal = (item.addons || []).reduce((sum, addon) => {
+                const addonPrice = typeof addon.price === 'number' ? addon.price : 0;
+                const addonQty = addon.quantity || 1;
+                return sum + (addonPrice * addonQty);
+              }, 0);
+
+              const itemSubtotal = (item.quantity * item.price) + addonTotal;
+
+              return (
+                <div key={index} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800">
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                        {item.quantity}x {item.menuName}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        {formatCurrency(item.price)} each
+                      </p>
+                    </div>
+                    <p className="text-sm font-semibold text-orange-500">
+                      {formatCurrency(itemSubtotal)}
+                    </p>
+                  </div>
+
+                  {/* Display Addons */}
+                  {item.addons && item.addons.length > 0 && (
+                    <div className="ml-4 space-y-1 mb-2">
+                      {item.addons.map((addon, addonIndex) => {
+                        const addonPrice = typeof addon.price === 'number' ? addon.price : 0;
+                        const addonQty = addon.quantity || 1;
+                        const addonSubtotal = addonPrice * addonQty;
+
+                        return (
+                          <div key={addonIndex} className="flex justify-between items-center text-xs text-gray-600 dark:text-gray-400">
+                            <span>
+                              + {addon.name}
+                              {addonQty > 1 && ` x${addonQty}`}
+                              {addonPrice > 0 && ` (+${formatCurrency(addonPrice)})`}
+                            </span>
+                            {addonSubtotal > 0 && (
+                              <span className="text-gray-500 dark:text-gray-400">
+                                {formatCurrency(addonSubtotal)}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Item Notes */}
+                  {item.notes && (
+                    <div className="ml-4 text-xs text-gray-500 dark:text-gray-400 flex items-start gap-1">
+                      <span>📝</span>
+                      <span>{item.notes}</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 
         {/* Error Message */}
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-sm text-red-600">⚠️ {error}</p>
+          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+            <p className="text-sm text-red-600 dark:text-red-400">⚠️ {error}</p>
           </div>
         )}
 
         {/* Customer Info Form */}
         <div className="mb-4">
-          <h2 className="text-base font-semibold text-[#1A1A1A] mb-3">
-            Informasi Pemesan
+          <h2 className="text-base font-semibold text-[#1A1A1A] dark:text-white mb-3">
+            Customer Information
           </h2>
 
-          <form onSubmit={handleFormSubmit} className="space-y-4">
-            {/* ✅ FIXED: Table Number Input menggunakan state */}
-            {mode === 'dinein' && (
-              <div>
-                <label htmlFor="tableNumber" className="block text-sm font-semibold text-[#1A1A1A] mb-2">
-                  Nomor Meja <span className="text-red-500">*</span>
-                </label>
-                <input
-                  id="tableNumber"
-                  type="text"
-                  disabled
-                  value={tableNumber ? `Meja #${tableNumber}` : 'Belum dipilih'}
-                  className="w-full h-12 px-4 border border-[#E0E0E0] rounded-lg text-sm text-[#666666] bg-[#F9F9F9] cursor-not-allowed"
-                />
-                <p className="mt-1 text-xs text-[#999999]">
-                  📍 Nomor meja dipilih saat memulai pesanan
-                </p>
+          <form onSubmit={handleFormSubmit} className="space-y-3">
+            {/* Name Input with Icon */}
+            <div className="relative">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#999999] dark:text-gray-500">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
               </div>
-            )}
-
-            {/* Name Input */}
-            <div>
-              <label htmlFor="name" className="block text-sm font-semibold text-[#1A1A1A] mb-2">
-                Nama Lengkap <span className="text-red-500">*</span>
-              </label>
               <input
                 id="name"
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full h-12 px-4 border border-[#E0E0E0] rounded-lg text-sm text-[#1A1A1A] placeholder-[#999999] focus:outline-none focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35]"
-                placeholder="Contoh: Muhammad Yoga Adi Saputra"
+                disabled={!!(auth && auth.user.name)}
+                className={`w-full h-12 pl-11 pr-4 border border-[#E0E0E0] dark:border-gray-700 rounded-lg text-sm text-[#1A1A1A] dark:text-white placeholder-[#999999] dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35] ${(auth && auth.user.name) ? 'bg-gray-100 dark:bg-gray-700 cursor-not-allowed' : 'dark:bg-gray-800'}`}
+                placeholder="Full Name *"
               />
             </div>
 
-            {/* Phone Input */}
-            <div>
-              <label htmlFor="phone" className="block text-sm font-semibold text-[#1A1A1A] mb-2">
-                Nomor Ponsel
-              </label>
+            {/* Phone Input with Icon */}
+            <div className="relative">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#999999] dark:text-gray-500">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                </svg>
+              </div>
               <input
                 id="phone"
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="w-full h-12 px-4 border border-[#E0E0E0] rounded-lg text-sm text-[#1A1A1A] placeholder-[#999999] focus:outline-none focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35]"
-                placeholder="Contoh: 0896-6817-6764"
+                disabled={!!(auth && auth.user.phone)}
+                className={`w-full h-12 pl-11 pr-4 border border-[#E0E0E0] dark:border-gray-700 rounded-lg text-sm text-[#1A1A1A] dark:text-white placeholder-[#999999] dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35] ${(auth && auth.user.phone) ? 'bg-gray-100 dark:bg-gray-700 cursor-not-allowed' : 'dark:bg-gray-800'}`}
+                placeholder="Phone Number (optional)"
               />
-              <p className="mt-1 text-xs text-[#999999]">Opsional - untuk info promo</p>
             </div>
 
-            {/* Email Input */}
-            <div>
-              <label htmlFor="email" className="block text-sm font-semibold text-[#1A1A1A] mb-2">
-                Email
-              </label>
+            {/* Email Input with Icon */}
+            <div className="relative">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#999999] dark:text-gray-500">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+              </div>
               <input
                 id="email"
                 type="email"
+                required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full h-12 px-4 border border-[#E0E0E0] rounded-lg text-sm text-[#1A1A1A] placeholder-[#999999] focus:outline-none focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35]"
-                placeholder="Contoh: m.yogaadi1234@gmail.com"
+                disabled={!!(auth && auth.user.email)}
+                className={`w-full h-12 pl-11 pr-4 border border-[#E0E0E0] dark:border-gray-700 rounded-lg text-sm text-[#1A1A1A] dark:text-white placeholder-[#999999] dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35] ${(auth && auth.user.email) ? 'bg-gray-100 dark:bg-gray-700 cursor-not-allowed' : 'dark:bg-gray-800'}`}
+                placeholder="Email *"
               />
-              <p className="mt-1 text-xs text-[#999999]">Opsional - untuk struk digital</p>
             </div>
+
+            {/* ✅ EDITABLE Table Number Input with Icon */}
+            {mode === 'dinein' && (
+              <div className="relative">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#999999] dark:text-gray-500">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                </div>
+                <input
+                  id="tableNumber"
+                  type="text"
+                  required
+                  value={tableNumber}
+                  onChange={(e) => setTableNumber(e.target.value)}
+                  className="w-full h-12 pl-11 pr-4 border border-[#E0E0E0] dark:border-gray-700 rounded-lg text-sm text-[#1A1A1A] dark:text-white dark:bg-gray-800 placeholder-[#999999] dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35]"
+                  placeholder="Table Number *"
+                />
+              </div>
+            )}
           </form>
         </div>
 
         {/* Payment Instructions Card */}
-        <div className="mb-4 p-4 bg-[#FFF5F0] rounded-lg border border-[#FF6B35]">
-          <div className="flex gap-3">
-            <span className="text-2xl flex-shrink-0">💡</span>
-            <div>
-              <h3 className="text-sm font-semibold text-[#1A1A1A] mb-1">
-                Cara Pembayaran
+        <div className="mb-4 p-4 bg-[#FFF5F0] dark:bg-orange-900/20 rounded-lg border border-[#FF6B35]">
+          <div className="flex items-start gap-3">
+            <div className="shrink-0 w-10 h-10 bg-[#FF6B35] rounded-full flex items-center justify-center">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-semibold text-[#1A1A1A] dark:text-white mb-1">
+                Pay at Cashier
               </h3>
-              <p className="text-xs text-[#666666] leading-relaxed">
-                Klik &quot;Proses Pesanan&quot; lalu tunjukkan kode QR ke kasir untuk pembayaran.
+              <p className="text-xs text-[#666666] dark:text-gray-400 leading-relaxed">
+                Click &quot;Process Order&quot; then show the QR code to the cashier for payment.
               </p>
             </div>
           </div>
         </div>
 
         {/* Total Summary Card */}
-        <div className="mb-4 p-4 bg-[#F9F9F9] rounded-lg border border-[#E0E0E0]">
+        <div className="mb-4 p-4 bg-white dark:bg-gray-800 rounded-lg border border-[#E0E0E0] dark:border-gray-700">
+          {/* Subtotal */}
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-[#666666] dark:text-gray-400">Subtotal ({cart?.items.length || 0} item{cart && cart.items.length !== 1 ? 's' : ''})</span>
+            <span className="text-sm text-[#1A1A1A] dark:text-white font-medium">
+              {new Intl.NumberFormat('en-AU', {
+                style: 'currency',
+                currency: merchantCurrency,
+              }).format(Number(priceBreakdown.subtotal))}
+            </span>
+          </div>
+
+          {/* Tax */}
+          <div className="flex items-center justify-between pb-3 mb-3 border-b border-[#E0E0E0] dark:border-gray-700">
+            <span className="text-sm text-[#666666] dark:text-gray-400">Tax ({merchantTaxPercentage}%)</span>
+            <span className="text-sm text-[#1A1A1A] dark:text-white font-medium">
+              {new Intl.NumberFormat('en-AU', {
+                style: 'currency',
+                currency: merchantCurrency,
+              }).format(Number(priceBreakdown.tax))}
+            </span>
+          </div>
+
+          {/* Total */}
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-[#666666]">Total Pembayaran</p>
-              <p className="text-xs text-[#999999] mt-0.5">{cart?.items.length || 0} item</p>
-            </div>
+            <span className="text-base font-semibold text-[#1A1A1A] dark:text-white">Total Payment</span>
             <span className="text-xl font-bold text-[#FF6B35]">
-              {formatCurrency(Number(total))}
+              {new Intl.NumberFormat('en-AU', {
+                style: 'currency',
+                currency: merchantCurrency,
+              }).format(Number(priceBreakdown.total))}
             </span>
           </div>
         </div>
-
-        {/* Expanded Details */}
-        {showPaymentDetails && (
-          <div className="pl-4 space-y-2 pt-2 border-t border-gray-300">
-            <div className="flex justify-between text-xs">
-              <span className="text-gray-500">Biaya Layanan (5%)</span>
-              <span className="text-gray-700">{formatCurrency(Number(priceBreakdown.serviceCharge))}</span>
-            </div>
-            <div className="flex justify-between text-xs">
-              <span className="text-gray-500">Pajak ({merchantTaxPercentage}%)</span> {/* ✅ Show actual % */}
-              <span className="text-gray-700">{formatCurrency(Number(priceBreakdown.tax))}</span>
-            </div>
-          </div>
-        )}
 
         {/* Submit Button */}
         <button
           type="button"
           onClick={handleFormSubmit}
           disabled={isLoading}
-          className="w-full h-12 bg-[#FF6B35] text-white text-base font-semibold rounded-lg hover:bg-[#E55A2B] disabled:bg-[#E0E0E0] disabled:text-[#999999] disabled:cursor-not-allowed transition-all active:scale-[0.98]"
+          className="w-full h-12 bg-[#FF6B35] text-white text-base font-semibold rounded-lg hover:bg-[#E55A2B] disabled:bg-[#E0E0E0] dark:disabled:bg-gray-700 disabled:text-[#999999] dark:disabled:text-gray-500 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
         >
-          {isLoading ? 'Memproses...' : 'Proses Pesanan'}
+          {isLoading ? 'Processing...' : 'Process Order'}
         </button>
       </main>
 
@@ -510,6 +649,7 @@ export default function PaymentPage() {
         onClose={() => setShowConfirmModal(false)}
         onConfirm={handleConfirmPayment}
         totalAmount={Number(priceBreakdown.total)}
+        currency={merchantCurrency}
         breakdown={{
           subtotal: Number(priceBreakdown.subtotal),
           serviceCharge: Number(priceBreakdown.serviceCharge),

@@ -1,7 +1,7 @@
 /**
  * GENFITY - Unified Price Calculation Utility
  * 
- * @specification copilot-instructions.md - Code Quality Standards
+ * @specification copilot-instructions.md - Code Quality Standards & Type Safety
  * 
  * @description
  * Centralized price calculation to ensure consistency across all pages:
@@ -11,32 +11,58 @@
  * 
  * Formula:
  * 1. subtotal = sum of (item.price + addons) * quantity
- * 2. serviceCharge = subtotal * 5%
- * 3. tax = (subtotal + serviceCharge) * merchantTaxPercentage%
- * 4. total = subtotal + serviceCharge + tax
+ * 2. tax = subtotal * merchantTaxPercentage%
+ * 3. total = subtotal + tax
+ * 
+ * ✅ PRICE TYPE HANDLING:
+ * - Input: number (already converted from Decimal by API)
+ * - Calculation: Decimal.js (for precision)
+ * - Output: string (2 decimal places, ready for display)
+ * 
+ * Why Decimal.js?
+ * - JavaScript number has floating point precision issues
+ * - Example: 0.1 + 0.2 !== 0.3 in JavaScript
+ * - Decimal.js ensures accurate currency calculations
+ * 
+ * @example
+ * ```typescript
+ * // Items from cart (prices already converted to number)
+ * const items = [
+ *   { price: 5.50, quantity: 2, addons: [{ price: 1.00 }] }
+ * ];
+ * 
+ * const subtotal = calculateCartSubtotal(items); // 13.00
+ * const breakdown = calculatePriceBreakdown(subtotal, 10); // { subtotal: "13.00", tax: "1.30", total: "14.30" }
+ * ```
  */
 
 import Decimal from 'decimal.js';
 
 export interface PriceBreakdown {
   subtotal: string;
-  serviceCharge: string;
   tax: string;
   total: string;
 }
 
+/**
+ * Cart item interface for price calculations
+ * 
+ * @property {number} price - Item base price (from API, already number)
+ * @property {number} quantity - Item quantity
+ * @property {Array} [addons] - Optional addons with prices
+ */
 interface CartItem {
-  price: number;
+  price: number; // ✅ Always number (from API decimalToNumber conversion)
   quantity: number;
-  addons?: Array<{ price: number }>;
+  addons?: Array<{ price: number }>; // ✅ Always number
 }
 
 /**
- * ✅ FIXED: Single function with merchant tax percentage parameter
+ * ✅ Calculate price breakdown with tax only (no service charge)
  * 
  * @param subtotal - Base subtotal amount
  * @param merchantTaxPercentage - Tax % from merchant settings (default 10%)
- * @returns Price breakdown with service charge, tax, and total
+ * @returns Price breakdown with tax and total
  */
 export function calculatePriceBreakdown(
   subtotal: number,
@@ -45,20 +71,15 @@ export function calculatePriceBreakdown(
   // Convert to Decimal for precise calculations
   const subtotalDecimal = new Decimal(subtotal);
 
-  // 1. Service Charge (5%)
-  const serviceCharge = subtotalDecimal.times(0.05);
-
-  // 2. Tax (merchant-specific percentage on subtotal + service charge)
-  const taxableAmount = subtotalDecimal.plus(serviceCharge);
+  // 1. Tax (merchant-specific percentage on subtotal)
   const taxRate = new Decimal(merchantTaxPercentage).dividedBy(100);
-  const tax = taxableAmount.times(taxRate);
+  const tax = subtotalDecimal.times(taxRate);
 
-  // 3. Total Amount
-  const total = subtotalDecimal.plus(serviceCharge).plus(tax);
+  // 2. Total Amount
+  const total = subtotalDecimal.plus(tax);
 
   console.log('💰 [PRICE CALC] Breakdown:', {
     subtotal: subtotalDecimal.toFixed(2),
-    serviceCharge: serviceCharge.toFixed(2),
     taxPercentage: `${merchantTaxPercentage}%`,
     tax: tax.toFixed(2),
     total: total.toFixed(2),
@@ -66,7 +87,6 @@ export function calculatePriceBreakdown(
 
   return {
     subtotal: subtotalDecimal.toFixed(2),
-    serviceCharge: serviceCharge.toFixed(2),
     tax: tax.toFixed(2),
     total: total.toFixed(2),
   };

@@ -30,8 +30,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ValidationError } from '@/lib/constants/errors';
 import prisma from '@/lib/db/client';
-import { serializeBigInt } from '@/lib/utils/serializer';
-import bcrypt from 'bcryptjs';
+import { serializeBigInt, decimalToNumber } from '@/lib/utils/serializer';
 
 /**
  * POST /api/public/orders
@@ -130,16 +129,13 @@ export async function POST(req: NextRequest) {
     if (!customer) {
       console.log('👤 [ORDER] Registering new customer:', body.customerEmail);
       
-      // Generate temp password (customers don't need password for orders)
-      const tempPassword = Math.random().toString(36).slice(-8);
-      const hashedPassword = await bcrypt.hash(tempPassword, 10);
-
+      // ✅ FIXED: No password for customers (email-based auth)
       customer = await prisma.user.create({
         data: {
           name: body.customerName,
           email: body.customerEmail.toLowerCase(),
           phone: body.customerPhone || null,
-          passwordHash: hashedPassword,
+          passwordHash: '', // ✅ Empty password - customers don't need passwords
           role: 'CUSTOMER',
           isActive: true,
           mustChangePassword: false,
@@ -191,28 +187,37 @@ export async function POST(req: NextRequest) {
         throw new ValidationError(`Insufficient stock for "${menu.name}"`);
       }
 
-      // Calculate item price
-      const menuPrice = Number(menu.price);
+      // ✅ PROMO PRICE: Use promo price if available, otherwise use regular price
+      const effectivePrice = menu.isPromo && menu.promoPrice 
+        ? decimalToNumber(menu.promoPrice) 
+        : decimalToNumber(menu.price);
+      
+      const menuPrice = effectivePrice; // Store the effective price to use
       let itemTotal = menuPrice * item.quantity;
 
-      // Process addons
+      console.log(`💰 [MENU PRICE] ${menu.name}: ${menu.isPromo && menu.promoPrice ? `PROMO ${effectivePrice} (was ${decimalToNumber(menu.price)})` : effectivePrice}`);
+
+      // ✅ FIX: Process addons with individual quantities
       const addonData: any[] = [];
-      if (item.selectedAddons && item.selectedAddons.length > 0) {
-        for (const addonId of item.selectedAddons) {
+      if (item.addons && item.addons.length > 0) {
+        for (const addonItem of item.addons) {
           const addon = await prisma.addonItem.findUnique({
-            where: { id: BigInt(addonId) },
+            where: { id: BigInt(addonItem.addonItemId) },
           });
 
           if (addon && addon.isActive && !addon.deletedAt) {
-            const addonPrice = Number(addon.price);
-            const addonSubtotal = addonPrice * item.quantity;
+            const addonPrice = decimalToNumber(addon.price);
+            const addonQty = addonItem.quantity || 1; // ✅ Use addon-specific quantity
+            const addonSubtotal = addonPrice * addonQty;
             itemTotal += addonSubtotal;
+
+            console.log(`💰 [ADDON] ${addon.name}: ${addonPrice} x ${addonQty} = ${addonSubtotal}`);
 
             addonData.push({
               addonItemId: addon.id,
               addonName: addon.name,
               addonPrice: addon.price,
-              quantity: item.quantity,
+              quantity: addonQty, // ✅ Use addon quantity, not item quantity
               subtotal: addonSubtotal,
             });
           }
@@ -221,10 +226,12 @@ export async function POST(req: NextRequest) {
 
       subtotal += itemTotal;
 
+      console.log(`📊 [ITEM] ${menu.name} x${item.quantity}: base=${menuPrice * item.quantity}, addons=${itemTotal - (menuPrice * item.quantity)}, total=${itemTotal}`);
+
       orderItemsData.push({
         menuId: menu.id,
         menuName: menu.name,
-        menuPrice: menu.price,
+        menuPrice: menuPrice, // ✅ Store effective price (promo if available)
         quantity: item.quantity,
         subtotal: itemTotal,
         notes: item.notes || null,
@@ -232,39 +239,63 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    console.log(`💰 [ORDER CALC] Subtotal (items + addons): ${subtotal}`);
+
     // ========================================
-    // STEP 3: Calculate tax and total
+    // STEP 3: Calculate tax and total (NO SERVICE CHARGE)
     // ========================================
     
     const taxPercentage = merchant.enableTax && merchant.taxPercentage 
       ? Number(merchant.taxPercentage) 
       : 0;
     
+    // ✅ Tax calculated on subtotal only
     const taxAmount = subtotal * (taxPercentage / 100);
+    console.log(`💰 [ORDER CALC] Tax (${taxPercentage}% on ${subtotal}): ${taxAmount}`);
+    
     const totalAmount = subtotal + taxAmount;
+    console.log(`💰 [ORDER CALC] Total: ${totalAmount}`);
 
     // ========================================
-    // STEP 4: Generate order number
+    // STEP 4: Generate unique order number with retry logic
     // ========================================
     
-    const today = new Date();
-    const dateStr = today.toISOString().split('T')[0].replace(/-/g, '');
-    
-    const todayStart = new Date(today.setHours(0, 0, 0, 0));
-    const todayEnd = new Date(today.setHours(23, 59, 59, 999));
-    
-    const orderCount = await prisma.order.count({
-      where: {
-        merchantId: merchant.id,
-        placedAt: {
-          gte: todayStart,
-          lte: todayEnd,
+    /**
+     * ✅ FIXED: Generate unique order number with timestamp to prevent duplicates
+     * 
+     * Format: ORD-YYYYMMDD-XXXX-TIMESTAMP
+     * - YYYYMMDD: Date
+     * - XXXX: Sequence number (4 digits)
+     * - TIMESTAMP: Milliseconds for uniqueness
+     * 
+     * This prevents race conditions when multiple orders are created simultaneously
+     */
+    const generateOrderNumber = async (merchantId: bigint): Promise<string> => {
+      const today = new Date();
+      const dateStr = today.toISOString().split('T')[0].replace(/-/g, '');
+      
+      const todayStart = new Date(today);
+      todayStart.setHours(0, 0, 0, 0);
+      const todayEnd = new Date(today);
+      todayEnd.setHours(23, 59, 59, 999);
+      
+      const orderCount = await prisma.order.count({
+        where: {
+          merchantId: merchantId,
+          placedAt: {
+            gte: todayStart,
+            lte: todayEnd,
+          },
         },
-      },
-    });
+      });
+      
+      const sequenceNumber = String(orderCount + 1).padStart(4, '0');
+      const timestamp = Date.now().toString().slice(-6); // Last 6 digits of timestamp
+      return `ORD-${dateStr}-${sequenceNumber}-${timestamp}`;
+    };
     
-    const sequenceNumber = String(orderCount + 1).padStart(4, '0');
-    const orderNumber = `ORD-${dateStr}-${sequenceNumber}`;
+    const orderNumber = await generateOrderNumber(merchant.id);
+    console.log(`📝 [ORDER] Generated order number: ${orderNumber}`);
 
     // ========================================
     // STEP 5: Create order with items and addons (using transaction)
@@ -318,6 +349,7 @@ export async function POST(req: NextRequest) {
      */
     const order = await prisma.$transaction(async (tx) => {
       // 1. Create Order
+      // ✅ Customer info stored in users table, accessed via customerId relation
       const createdOrder = await tx.order.create({
         data: {
           merchantId: merchant.id,

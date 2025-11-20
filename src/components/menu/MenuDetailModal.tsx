@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useCart } from '@/context/CartContext';
+import type { CartItem } from '@/context/CartContext';
 import { formatCurrency } from '@/lib/utils/format';
 import Image from 'next/image';
 
@@ -9,15 +10,16 @@ interface Addon {
   id: number;
   name: string;
   price: number;
-  category_id: number;
+  categoryId: number;
+  isAvailable: boolean;
 }
 
 interface AddonCategory {
   id: number;
   name: string;
   type: 'required' | 'optional';
-  min_selections: number;
-  max_selections: number;
+  minSelections: number;
+  maxSelections: number;
   addons: Addon[];
 }
 
@@ -25,32 +27,49 @@ interface MenuItem {
   id: number;
   name: string;
   description: string;
-  price: number; // ✅ Sudah benar
-  image_url: string | null;
+  price: number;
+  imageUrl: string | null;
   stockQty: number;
+  isActive: boolean;
+  trackStock: boolean;
+  isPromo?: boolean;
+  promoPrice?: number;
+  addonCategories?: AddonCategory[];
 }
 
 interface MenuDetailModalProps {
   menu: MenuItem;
   merchantCode: string;
   mode: string;
+  currency?: string;
+  editMode?: boolean;
+  existingCartItem?: CartItem | null;
   onClose: () => void;
 }
 
 /**
  * GENFITY - Menu Detail Modal
- * BottomSheet presentation for menu details with addons
+ * Mobile-first bottom sheet matching reference design
  * 
- * Features:
- * - Menu image, name, description, base price
- * - Addon categories (required vs optional)
- * - Min/max selection enforcement
- * - Quantity stepper
+ * @specification copilot-instructions.md - Mobile First Design
+ * 
+ * Layout Structure (max-w-[420px]):
+ * - Image banner with close/expand buttons
+ * - Menu info section (name, price, description, icons)
+ * - Add-ons section with quantity controls
  * - Notes textarea
- * - Real-time price calculation: (basePrice + addons) * quantity
+ * - Fixed bottom bar with total order quantity and add button
  */
-export default function MenuDetailModal({ menu, merchantCode, mode, onClose }: MenuDetailModalProps) {
-  const { addItem, initializeCart, cart } = useCart();
+export default function MenuDetailModal({
+  menu,
+  merchantCode,
+  mode,
+  currency = 'AUD',
+  editMode = false,
+  existingCartItem = null,
+  onClose
+}: MenuDetailModalProps) {
+  const { addItem, updateItem, initializeCart, cart } = useCart();
 
   // Initialize cart if not exists
   useEffect(() => {
@@ -59,12 +78,13 @@ export default function MenuDetailModal({ menu, merchantCode, mode, onClose }: M
     }
   }, [cart, merchantCode, mode, initializeCart]);
 
-  const [quantity, setQuantity] = useState(1);
-  const [notes, setNotes] = useState('');
-  const [selectedAddons, setSelectedAddons] = useState<Addon[]>([]);
+  const [quantity, setQuantity] = useState(editMode && existingCartItem ? existingCartItem.quantity : 1);
+  const [notes, setNotes] = useState(editMode && existingCartItem ? existingCartItem.notes || '' : '');
+  const [selectedAddons, setSelectedAddons] = useState<Record<number, number>>({});
   const [addonCategories, setAddonCategories] = useState<AddonCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const isAddingRef = useRef(false);
 
   // Fetch addon categories
   useEffect(() => {
@@ -75,15 +95,37 @@ export default function MenuDetailModal({ menu, merchantCode, mode, onClose }: M
         const data = await response.json();
 
         if (data.success) {
-          // ✅ Sanitize addon prices
           const sanitized = (data.data || []).map((category: AddonCategory) => ({
             ...category,
-            addons: category.addons.map((addon) => ({
+            addons: category.addons.map((addon: Addon) => ({
               ...addon,
               price: typeof addon.price === 'string' ? parseFloat(addon.price) : addon.price,
             })),
           }));
+
+          console.log('📋 [FETCH ADDONS] Categories loaded:', {
+            categoriesCount: sanitized.length,
+            categories: sanitized.map((cat: AddonCategory) => ({
+              id: cat.id,
+              name: cat.name,
+              addonsCount: cat.addons.length,
+              addonIds: cat.addons.map((a: Addon) => a.id),
+            })),
+          });
+
           setAddonCategories(sanitized);
+
+          // Pre-fill addons in edit mode
+          if (editMode && existingCartItem && existingCartItem.addons) {
+            const addonQtyMap: Record<number, number> = {};
+            existingCartItem.addons.forEach((addon: { id: string; name: string; price: number }) => {
+              const addonIdNum = parseInt(addon.id); // Convert string id to number
+              // Aggregate quantities (duplicate entries represent quantity > 1)
+              addonQtyMap[addonIdNum] = (addonQtyMap[addonIdNum] || 0) + 1;
+            });
+            console.log('🔄 [EDIT MODE] Pre-filled addons:', addonQtyMap);
+            setSelectedAddons(addonQtyMap);
+          }
         }
       } catch (err) {
         console.error('Error fetching addons:', err);
@@ -93,281 +135,576 @@ export default function MenuDetailModal({ menu, merchantCode, mode, onClose }: M
     };
 
     fetchAddons();
-  }, [merchantCode, menu.id]);
+  }, [merchantCode, menu.id, editMode, existingCartItem]);
 
-  // Calculate total price
+  // Calculate total price - Use promoPrice if available
   const calculateTotal = () => {
-    // ✅ FORCE menu.price to number
-    const basePrice = typeof menu.price === 'string' ? parseFloat(menu.price) : menu.price;
-    const addonsTotal = selectedAddons.reduce((sum, addon) => sum + addon.price, 0);
+    // ✅ Use promo price if item is on promo, otherwise use regular price
+    const basePrice = menu.isPromo && menu.promoPrice
+      ? (typeof menu.promoPrice === 'string' ? parseFloat(menu.promoPrice) : menu.promoPrice)
+      : (typeof menu.price === 'string' ? parseFloat(menu.price) : menu.price);
+
+    let addonsTotal = 0;
+
+    addonCategories.forEach(category => {
+      category.addons.forEach(addon => {
+        const qty = selectedAddons[addon.id] || 0;
+        addonsTotal += addon.price * qty;
+      });
+    });
+
     return (basePrice + addonsTotal) * quantity;
   };
 
-  // Handle addon selection
-  const handleAddonToggle = (addon: Addon, category: AddonCategory) => {
-    const isSelected = selectedAddons.some(a => a.id === addon.id);
+  // Handle addon quantity change with validation
+  const handleAddonQtyChange = (addonId: number, delta: number) => {
+    setSelectedAddons(prev => {
+      const currentQty = prev[addonId] || 0;
+      const newQty = Math.max(0, currentQty + delta);
 
-    if (isSelected) {
-      // Remove addon
-      setSelectedAddons(prev => prev.filter(a => a.id !== addon.id));
-    } else {
-      // Check max selections for this category
-      const currentCategoryAddons = selectedAddons.filter(a => a.category_id === category.id);
+      // Find addon's category to check maxSelections
+      const addon = addonCategories
+        .flatMap(cat => cat.addons.map(a => ({ ...a, category: cat })))
+        .find(a => a.id === addonId);
 
-      if (currentCategoryAddons.length >= category.max_selections) {
-        // Replace first one if radio (max = 1)
-        if (category.max_selections === 1) {
-          setSelectedAddons(prev => [
-            ...prev.filter(a => a.category_id !== category.id),
-            addon
-          ]);
+      if (!addon) return prev;
+
+      // Calculate total selections in this category (excluding current addon)
+      const categoryAddons = addonCategories
+        .find(cat => cat.id === addon.category.id)
+        ?.addons.map(a => a.id) || [];
+
+      const totalInCategory = categoryAddons.reduce((sum, id) => {
+        if (id === addonId) return sum; // Exclude current addon
+        return sum + (prev[id] || 0);
+      }, 0);
+
+      // Check maxSelections limit when increasing
+      if (delta > 0 && addon.category.maxSelections > 0) {
+        const totalAfterChange = totalInCategory + newQty;
+        if (totalAfterChange > addon.category.maxSelections) {
+          console.warn(`⚠️ [MODAL] Max selections (${addon.category.maxSelections}) reached for ${addon.category.name}`);
+          return prev; // Don't allow increase
         }
-        return;
       }
 
-      // Add addon
-      setSelectedAddons(prev => [...prev, addon]);
-    }
+      if (newQty === 0) {
+        const { [addonId]: _, ...rest } = prev;
+        return rest;
+      }
+
+      return { ...prev, [addonId]: newQty };
+    });
   };
 
-  // Validate selections
-  const validateSelections = (): string | null => {
+  // Validate required addons before adding to cart
+  const validateRequiredAddons = (): { valid: boolean; message?: string } => {
     for (const category of addonCategories) {
-      const categoryAddons = selectedAddons.filter(a => a.category_id === category.id);
+      if (category.type === 'required') {
+        // Count total selections in this category
+        const totalSelected = category.addons.reduce((sum, addon) => {
+          return sum + (selectedAddons[addon.id] || 0);
+        }, 0);
 
-      if (category.type === 'required' && categoryAddons.length < category.min_selections) {
-        return `Pilih minimal ${category.min_selections} ${category.name}`;
+        if (totalSelected < category.minSelections) {
+          return {
+            valid: false,
+            message: `Please select at least ${category.minSelections} option(s) from "${category.name}"`,
+          };
+        }
+
+        if (category.maxSelections > 0 && totalSelected > category.maxSelections) {
+          return {
+            valid: false,
+            message: `Please select at most ${category.maxSelections} option(s) from "${category.name}"`,
+          };
+        }
       }
     }
-    return null;
+
+    return { valid: true };
   };
 
-  // ✅ NEW: Prevent double-add in React Strict Mode
-  const isAddingRef = useRef(false);
-
-  /**
-   * ✅ FIXED: Prevent double-add in React Strict Mode
-   * 
-   * @description
-   * React Strict Mode intentionally double-invokes functions in development.
-   * Use ref flag to prevent addItem from being called twice.
-   * 
-   * @specification copilot-instructions.md - React Development Best Practices
-   */
+  // Handle add to cart
   const handleAddToCart = () => {
-    // ✅ Guard against double-invocation
     if (isAddingRef.current) {
       console.warn('⚠️ [MODAL] Add to cart already in progress, skipping');
       return;
     }
 
+    // Validate required addons
+    const validation = validateRequiredAddons();
+    if (!validation.valid) {
+      setErrorMessage(validation.message || 'Please complete required selections');
+      return;
+    }
+
     isAddingRef.current = true;
 
-    console.log('🛒 [MODAL] Adding to cart:', {
+    console.log('🛒 [MODAL] Building cart item...', {
+      menuId: menu.id,
       menuName: menu.name,
-      price: menu.price,
-      priceType: typeof menu.price,
       quantity,
-      addons: selectedAddons.length,
+      selectedAddons,
     });
 
-    addItem({
-      menuId: menu.id.toString(),
-      menuName: menu.name,
-      price: menu.price, // ✅ Pass as number
-      quantity,
-      addons: selectedAddons,
-      notes: notes.trim() || undefined,
+    // Build addons array - duplicate entries for quantity > 1
+    const addons: Array<{ id: string; name: string; price: number }> = [];
+
+    console.log('🔍 [MODAL] Available addon categories:', {
+      categoriesCount: addonCategories.length,
+      allAddonIds: addonCategories.flatMap(cat => cat.addons.map(a => a.id)),
     });
 
-    console.log('✅ [MODAL] Item added successfully');
+    Object.entries(selectedAddons).forEach(([addonId, qty]) => {
+      if (qty <= 0) return;
 
-    // ✅ Reset flag after 500ms (enough time for state update)
+      const addonIdNum = parseInt(addonId);
+      console.log(`🔎 [MODAL] Searching for addon ID: ${addonIdNum} (qty: ${qty})`);
+
+      // ✅ FIX: Convert addon.id to number for comparison (API returns strings)
+      const addon = addonCategories
+        .flatMap(cat => cat.addons)
+        .find(a => {
+          const numericAddonId = typeof a.id === 'string' ? parseInt(a.id) : a.id;
+          return numericAddonId === addonIdNum;
+        });
+
+      if (!addon) {
+        console.error(`❌ [MODAL] Addon not found: ${addonIdNum}`, {
+          searchedIn: addonCategories.flatMap(cat => cat.addons.map(a => ({ id: a.id, name: a.name }))),
+          selectedAddons,
+        });
+        return;
+      } console.log(`✅ [MODAL] Adding addon: ${addon.name} x${qty} (+${formatCurrency(addon.price * qty, currency)})`, {
+        addonId: addon.id,
+        name: addon.name,
+        price: addon.price,
+        priceType: typeof addon.price,
+        qty,
+      });
+
+      // Add addon multiple times based on quantity
+      // This matches the CartItem interface which doesn't have quantity field per addon
+      for (let i = 0; i < qty; i++) {
+        addons.push({
+          id: addon.id.toString(), // CartContext expects string
+          name: addon.name,
+          price: addon.price, // Make sure this is number, not string
+        });
+      }
+    });
+
+    console.log('📦 [MODAL] Final addons array:', {
+      totalAddons: addons.length,
+      addons: addons.map(a => `${a.name} (${formatCurrency(a.price, currency)})`),
+    });
+
+    if (editMode && existingCartItem) {
+      // Update existing cart item
+      console.log('✏️ [MODAL] Updating cart item:', existingCartItem.cartItemId);
+      updateItem(existingCartItem.cartItemId, {
+        quantity,
+        addons,
+        notes: notes.trim() || undefined,
+      });
+    } else {
+      // Add new cart item - ✅ Use promo price if available
+      const effectivePrice = menu.isPromo && menu.promoPrice ? menu.promoPrice : menu.price;
+      const newItem = {
+        menuId: menu.id.toString(),
+        menuName: menu.name,
+        price: effectivePrice, // ✅ Use promo price if item is on promo
+        quantity,
+        addons: addons,
+        notes: notes.trim() || undefined,
+      };
+      console.log('➕ [MODAL] Adding new cart item:', {
+        ...newItem,
+        isPromo: menu.isPromo,
+        originalPrice: menu.price,
+        effectivePrice,
+        totalAddons: addons.length,
+        addonPrice: addons.reduce((sum, a) => sum + a.price, 0),
+      });
+      addItem(newItem);
+    }
+
     setTimeout(() => {
       isAddingRef.current = false;
       onClose();
     }, 100);
   };
 
+  const isAvailable = menu.isActive && (!menu.trackStock || menu.stockQty > 0);
+
   return (
-    <div className="fixed inset-0 z-[300] flex items-end">
+    <div className="fixed inset-0 z-300 flex items-end justify-center">
       {/* Overlay */}
       <div
-        className="absolute inset-0 bg-black/50"
+        className="absolute inset-0 bg-black/40"
         onClick={onClose}
       />
 
-      {/* Modal */}
-      <div className="relative w-full max-h-[90vh] bg-white rounded-t-2xl overflow-hidden flex flex-col animate-slide-up">
+      {/* Modal Container - Mobile First max-w-[420px] */}
+      <div className="relative w-full max-w-[420px] bg-white dark:bg-gray-800 rounded-t-2xl shadow-2xl animate-slide-up flex flex-col max-h-[90vh]">
         {/* Drag Handle */}
         <div className="flex justify-center pt-3 pb-2">
-          <div className="w-10 h-1 bg-neutral-300 rounded-full" />
+          <div className="w-12 h-1 bg-gray-300 dark:bg-gray-600 rounded-full" />
         </div>
 
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 z-10 p-2 bg-white/80 rounded-full shadow-md hover:bg-white transition-colors"
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <path d="M18 6L6 18M6 6L18 18" stroke="#1A1A1A" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-        </button>
-
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto">
-          {/* Image */}
-          <div className="relative w-full h-[200px] bg-secondary">
-            {menu.image_url ? (
+        <div className="flex-1 overflow-y-auto scrollbar-hide">
+          {/* Image Banner with Buttons */}
+          <div className="relative w-full h-[200px] bg-gray-200 dark:bg-gray-700">
+            {menu.imageUrl ? (
               <Image
-                src={menu.image_url}
+                src={menu.imageUrl}
                 alt={menu.name}
                 fill
                 className="object-cover"
+                sizes="420px"
               />
             ) : (
               <div className="flex items-center justify-center h-full">
-                <span className="text-6xl">🍽️</span>
+                <span className="text-7xl">🍽️</span>
+              </div>
+            )}
+
+            {/* Close Button */}
+            <button
+              onClick={onClose}
+              className="absolute top-3 right-3 w-10 h-10 bg-white/90 dark:bg-gray-800/90 rounded-full flex items-center justify-center shadow-md hover:bg-white dark:hover:bg-gray-800 transition-colors"
+              aria-label="Close"
+            >
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M15 5L5 15M5 5L15 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            </button>
+
+            {/* Expand Button (optional) */}
+            <button
+              className="absolute top-3 left-3 w-10 h-10 bg-white/90 dark:bg-gray-800/90 rounded-full flex items-center justify-center shadow-md hover:bg-white dark:hover:bg-gray-800 transition-colors"
+              aria-label="Expand image"
+            >
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M3 3L8 3M3 3L3 8M3 3L8 8M17 17L12 17M17 17L17 12M17 17L12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+
+            {/* Unavailable Badge */}
+            {!isAvailable && (
+              <div className="absolute top-3 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-red-500 text-white text-sm font-semibold rounded-full shadow-lg">
+                Sold Out
               </div>
             )}
           </div>
 
-          {/* Info Section */}
-          <div className="p-4">
-            <h2 className="text-xl font-bold text-primary-dark mb-2">
+          {/* Menu Info Section */}
+          <section className="px-4 py-3">
+            {/* Menu Icons (e.g., Recommended badge) */}
+            <div className="flex gap-2 mb-2">
+              {/* Placeholder for menu icons/badges */}
+            </div>
+
+            {/* Menu Name */}
+            <h1 className="text-lg font-bold text-gray-900 dark:text-white mb-1">
               {menu.name}
-            </h2>
-            <p className="text-lg font-bold text-primary mb-3">
-              {formatCurrency(menu.price)}
-            </p>
+            </h1>
+
+            {/* Price Display - Show promo price with strikethrough if available */}
+            {menu.isPromo && menu.promoPrice ? (
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-lg font-bold text-orange-500 dark:text-orange-400">
+                  {formatCurrency(menu.promoPrice, currency)}
+                </span>
+                <span className="text-sm text-gray-400 line-through">
+                  {formatCurrency(menu.price, currency)}
+                </span>
+                <span className="text-xs font-semibold text-white bg-red-500 px-2 py-0.5 rounded">
+                  PROMO
+                </span>
+              </div>
+            ) : (
+              <div className="text-base font-bold text-orange-500 dark:text-orange-400 mb-2">
+                {formatCurrency(menu.price, currency)}
+              </div>
+            )}
+
+            {/* Description */}
             {menu.description && (
-              <p className="text-sm text-secondary leading-relaxed mb-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed m-0">
                 {menu.description}
               </p>
             )}
-          </div>
+          </section>
 
-          {/* Error Message */}
-          {error && (
-            <div className="mx-4 mb-4 p-3 bg-danger/10 border-l-4 border-danger rounded text-sm text-danger">
-              {error}
-            </div>
-          )}
+          {/* Thin Divider */}
+          <hr className="border-t-4 border-gray-200 dark:border-gray-700" style={{ margin: 0 }} />
 
-          {/* Addon Categories */}
+          {/* Add-ons Section */}
           {isLoading ? (
             <div className="flex justify-center py-8">
-              <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+              <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
             </div>
           ) : addonCategories.length > 0 ? (
-            <div className="px-4 pb-4 space-y-6">
-              {addonCategories.map((category) => (
-                <div key={category.id} className="border-t border-neutral-200 pt-4">
-                  {/* Category Header */}
-                  <div className="mb-3">
-                    <h3 className="text-sm font-semibold text-primary-dark">
-                      {category.name}
-                    </h3>
-                    <p className="text-xs text-tertiary mt-1">
-                      {category.type === 'required' ? '(Wajib)' : '(Opsional)'}
-                      {category.max_selections > 1 && ` - Pilih maksimal ${category.max_selections}`}
-                    </p>
-                  </div>
+            <section>
+              {addonCategories.map((category, index) => {
+                // Calculate total selections in this category
+                const totalSelected = category.addons.reduce((sum, addon) => {
+                  return sum + (selectedAddons[addon.id] || 0);
+                }, 0);
 
-                  {/* Addon Items */}
-                  <div className="space-y-2">
-                    {category.addons.map((addon) => {
-                      const isSelected = selectedAddons.some(a => a.id === addon.id);
-                      const inputType = category.max_selections === 1 ? 'radio' : 'checkbox';
+                // Check if required category is incomplete
+                const isIncomplete = category.type === 'required' && totalSelected < category.minSelections;
 
-                      return (
-                        <label
-                          key={addon.id}
-                          className="flex items-center gap-3 py-3 border-b border-neutral-100 last:border-0 cursor-pointer"
-                        >
-                          <input
-                            type={inputType}
-                            name={`category-${category.id}`}
-                            checked={isSelected}
-                            onChange={() => handleAddonToggle(addon, category)}
-                            className="w-5 h-5 text-primary focus:ring-primary border-neutral-300 rounded"
-                          />
-                          <span className="flex-1 text-sm text-primary-dark">
-                            {addon.name}
-                          </span>
-                          <span className="text-xs font-semibold text-primary">
-                            + {formatCurrency(addon.price)}
-                          </span>
-                        </label>
-                      );
-                    })}
+                return (
+                  <div key={category.id}>
+                    <div
+                      className={`px-4 py-3 ${isIncomplete ? 'bg-red-50 dark:bg-red-900/10' : ''}`}
+                      style={{ position: 'relative' }}
+                    >
+                      {/* Category Header */}
+                      <div className="flex flex-row justify-content-between align-items-start w-full mb-2">
+                        <div className="grow">
+                          <h2 className="text-base font-bold text-gray-900 dark:text-white m-0">
+                            {category.name}
+                          </h2>
+                          <div className={`text-xs mt-1 ${isIncomplete ? 'text-orange-500 dark:text-orange-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                            {category.type === 'required' ? (
+                              <span className="font-semibold">Must be selected</span>
+                            ) : (
+                              <span>Optional</span>
+                            )}
+                            {category.minSelections > 0 && category.maxSelections > 0 && (
+                              <>
+                                <span className="mx-1">•</span>
+                                <span>max {category.maxSelections}</span>
+                              </>
+                            )}
+                            {category.minSelections === 0 && category.maxSelections > 0 && (
+                              <>
+                                <span className="mx-1">•</span>
+                                <span>max {category.maxSelections}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        {/* Checkmark icon if complete */}
+                        {category.type === 'required' && !isIncomplete && (
+                          <div className="flex items-center justify-center w-6 h-6 bg-green-500 rounded-full">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                              <path d="M5 12l5 5L20 7" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Addon Items with Quantity Controls */}
+                      <div>
+                        {category.addons.map((addon) => {
+                          const addonQty = selectedAddons[addon.id] || 0;
+
+                          // Calculate total selections in this category
+                          const totalInCategory = category.addons.reduce((sum, a) => {
+                            return sum + (selectedAddons[a.id] || 0);
+                          }, 0);
+
+                          // Disable plus button if max reached
+                          const isMaxReached = category.maxSelections > 0 && totalInCategory >= category.maxSelections && addonQty === 0;
+
+                          return (
+                            <div key={addon.id} className="flex items-center justify-between px-4 py-2">
+                              {/* Addon Name & Price */}
+                              <div className="flex-1">
+                                <div className={`text-sm ${!addon.isAvailable ? 'text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-white'}`}>
+                                  {addon.name}{' '}
+                                  {addon.price > 0 && (
+                                    <strong className="text-orange-500 dark:text-orange-400">
+                                      (+{formatCurrency(addon.price, currency)})
+                                    </strong>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Quantity Counter or Sold Out */}
+                              {!addon.isAvailable ? (
+                                <span className="text-xs font-bold text-red-500 dark:text-red-400 text-center" style={{ width: '88px' }}>
+                                  Sold out
+                                </span>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => handleAddonQtyChange(addon.id, -1)}
+                                    disabled={addonQty === 0}
+                                    className="w-7 h-7 rounded-md border border-gray-300 dark:border-gray-600 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-gray-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                                    aria-label="Decrease quantity"
+                                  >
+                                    <svg className="w-4 h-4 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
+                                    </svg>
+                                  </button>
+
+                                  <span className="text-base font-semibold text-gray-900 dark:text-white min-w-6 text-center">
+                                    {addonQty}
+                                  </span>
+
+                                  <button
+                                    onClick={() => handleAddonQtyChange(addon.id, 1)}
+                                    disabled={isMaxReached}
+                                    className="w-7 h-7 rounded-md border border-gray-300 dark:border-gray-600 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-gray-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                                    aria-label="Increase quantity"
+                                    title={isMaxReached ? `Max ${category.maxSelections} selections reached` : undefined}
+                                  >
+                                    <svg className="w-4 h-4 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Dashed Divider between categories */}
+                    {index < addonCategories.length - 1 && (
+                      <hr className="border-t border-dashed border-gray-300 dark:border-gray-600" style={{ margin: 0 }} />
+                    )}
                   </div>
-                </div>
-              ))}
-            </div>
+                );
+              })}
+
+              {/* Thick Divider after all addons */}
+              <hr className="border-t-4 border-gray-200 dark:border-gray-700" style={{ margin: 0 }} />
+            </section>
           ) : null}
 
-          {/* Notes */}
-          <div className="px-4 pb-4">
-            <label className="block text-sm font-semibold text-primary-dark mb-2">
-              Catatan
-            </label>
+          {/* Notes Section */}
+          <div className="px-4 py-3">
+            <div className="flex flex-col items-start mb-2">
+              <h2 className="text-base font-bold text-gray-900 dark:text-white m-0">
+                Notes
+              </h2>
+              <span className="text-xs text-gray-500 dark:text-gray-400">Optional</span>
+            </div>
             <textarea
               value={notes}
-              onChange={(e) => setNotes(e.target.value.slice(0, 200))}
-              placeholder="Contoh: Sedikit gula, tidak pedas"
-              maxLength={200}
-              rows={3}
-              className="w-full px-3 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 ring-primary/20 focus:border-primary resize-none"
+              onChange={(e) => setNotes(e.target.value.slice(0, 100))}
+              placeholder="Example: Make my dish delicious!"
+              maxLength={100}
+              rows={4}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500 dark:focus:ring-orange-400 resize-none"
             />
-            <p className="text-xs text-tertiary text-right mt-1">
-              {notes.length}/200
-            </p>
           </div>
 
-          {/* Quantity */}
-          <div className="px-4 pb-6">
-            <label className="block text-sm font-semibold text-primary-dark mb-3">
-              Jumlah Pesanan
-            </label>
-            <div className="flex items-center justify-center gap-4">
+          {/* Spacer for fixed footer */}
+          <div className="h-24" />
+        </div>
+
+        {/* Fixed Bottom Bar */}
+        <div className="sticky bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg">
+          {/* Total Order Row */}
+          <div className="flex items-center justify-between px-4 py-3">
+            <div className="text-sm font-medium text-gray-900 dark:text-gray-300">
+              Total Order
+            </div>
+
+            {/* Quantity Counter */}
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
                 disabled={quantity === 1}
-                className="w-10 h-10 flex items-center justify-center border border-neutral-200 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-7 h-7 rounded-md border border-gray-300 dark:border-gray-600 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-gray-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                aria-label="Decrease order quantity"
               >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path d="M3 8H13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                <svg className="w-4 h-4 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
                 </svg>
               </button>
 
-              <span className="w-16 text-center text-base font-semibold text-primary-dark">
+              <span className="text-base font-semibold text-gray-900 dark:text-white min-w-6 text-center">
                 {quantity}
               </span>
 
               <button
                 onClick={() => setQuantity(quantity + 1)}
-                className="w-10 h-10 flex items-center justify-center border border-neutral-200 rounded-lg hover:bg-secondary transition-colors"
+                className="w-7 h-7 rounded-md border border-gray-300 dark:border-gray-600 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-gray-400 transition-all"
+                aria-label="Increase order quantity"
               >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path d="M8 3V13M3 8H13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                <svg className="w-4 h-4 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                 </svg>
               </button>
             </div>
           </div>
-        </div>
 
-        {/* Sticky Bottom Button */}
-        <div className="sticky bottom-0 p-4 bg-white border-t border-neutral-200 shadow-lg">
-          <button
-            onClick={handleAddToCart}
-            className="w-full h-12 bg-primary text-white text-base font-semibold rounded-lg hover:bg-primary-hover transition-all active:scale-[0.98] flex items-center justify-between px-6"
-          >
-            <span>Tambah Pesanan</span>
-            <span>{formatCurrency(calculateTotal())}</span>
-          </button>
+          {/* Add Order Button */}
+          <div className="px-4 pb-4">
+            <button
+              onClick={handleAddToCart}
+              disabled={!isAvailable}
+              className="w-full h-11 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-lg disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:text-gray-500 dark:disabled:text-gray-400 disabled:cursor-not-allowed transition-all active:scale-[0.98] flex items-center justify-between px-5"
+            >
+              <span className="text-sm">{editMode ? 'Update Order' : 'Add Orders'}</span>
+              <span className="flex items-center gap-2 text-sm">
+                <span>-</span>
+                <strong>{formatCurrency(calculateTotal(), currency)}</strong>
+              </span>
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Error Modal */}
+      {errorMessage && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/50 z-[400]"
+            onClick={() => setErrorMessage('')}
+          />
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-32px)] max-w-[320px] bg-white dark:bg-gray-800 rounded-xl z-[400] p-6 shadow-2xl">
+            <div className="text-center mb-6">
+              <div className="text-4xl mb-3">⚠️</div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                Required Selection
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {errorMessage}
+              </p>
+            </div>
+            <button
+              onClick={() => setErrorMessage('')}
+              className="w-full h-11 bg-orange-500 text-white font-semibold rounded-lg hover:bg-orange-600 transition-colors"
+            >
+              OK
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* Animation CSS */}
+      <style jsx>{`
+        @keyframes slide-up {
+          from {
+            transform: translateY(100%);
+          }
+          to {
+            transform: translateY(0);
+          }
+        }
+        .animate-slide-up {
+          animation: slide-up 0.3s ease-out;
+        }
+        .scrollbar-hide {
+          -ms-overflow-style: none;  /* IE and Edge */
+          scrollbar-width: none;  /* Firefox */
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;  /* Chrome, Safari, Opera */
+        }
+      `}</style>
     </div>
   );
 }

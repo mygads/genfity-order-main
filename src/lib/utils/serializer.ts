@@ -16,10 +16,35 @@
 import { Decimal } from '@prisma/client/runtime/library';
 
 /**
- * Convert Decimal to number
+ * Convert Prisma Decimal to JavaScript number
  * 
- * @param value - Decimal, number, or string
- * @returns Number (2 decimal precision)
+ * ✅ USAGE: Always use this for price conversions from database
+ * 
+ * @description
+ * Prisma returns `Decimal` objects for DECIMAL(10,2) database fields.
+ * This utility converts them to JavaScript numbers with proper precision.
+ * 
+ * Database Schema:
+ * - Menu.price: DECIMAL(10, 2)
+ * - Menu.promoPrice: DECIMAL(10, 2)
+ * - AddonItem.price: DECIMAL(10, 2)
+ * - OrderItem.menuPrice: DECIMAL(10, 2)
+ * - OrderItemAddon.addonPrice: DECIMAL(10, 2)
+ * 
+ * @example
+ * ```typescript
+ * // ✅ CORRECT - Use decimalToNumber()
+ * const menu = await prisma.menu.findUnique({ where: { id } });
+ * const price = decimalToNumber(menu.price); // 5.50
+ * 
+ * // ❌ WRONG - Direct Number() may lose precision
+ * const price = Number(menu.price); // Not recommended
+ * ```
+ * 
+ * @param value - Decimal from Prisma, number, or string
+ * @returns Number with 2 decimal places (currency precision)
+ * 
+ * @specification copilot-instructions.md - Database Schema & Type Safety
  */
 export function decimalToNumber(value: Decimal | number | string): number {
   if (typeof value === 'number') return value;
