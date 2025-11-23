@@ -357,19 +357,13 @@ export default function MenuDetailModal({
         <div className="flex-1 overflow-y-auto scrollbar-hide">
           {/* Image Banner with Buttons */}
           <div className="relative w-full h-[200px] bg-gray-200 dark:bg-gray-700">
-            {menu.imageUrl ? (
-              <Image
-                src={menu.imageUrl}
-                alt={menu.name}
-                fill
-                className="object-cover"
-                sizes="420px"
-              />
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <span className="text-7xl">🍽️</span>
-              </div>
-            )}
+            <Image
+              src={menu.imageUrl || '/images/default-menu.png'}
+              alt={menu.name}
+              fill
+              className="object-cover"
+              sizes="420px"
+            />
 
             {/* Close Button */}
             <button
@@ -415,18 +409,15 @@ export default function MenuDetailModal({
             {/* Price Display - Show promo price with strikethrough if available */}
             {menu.isPromo && menu.promoPrice ? (
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-lg font-bold text-orange-500 dark:text-orange-400">
+                <span className="text-lg font-bold text-gray-900 dark:text-white">
                   {formatCurrency(menu.promoPrice, currency)}
                 </span>
                 <span className="text-sm text-gray-400 line-through">
                   {formatCurrency(menu.price, currency)}
                 </span>
-                <span className="text-xs font-semibold text-white bg-red-500 px-2 py-0.5 rounded">
-                  PROMO
-                </span>
               </div>
             ) : (
-              <div className="text-base font-bold text-orange-500 dark:text-orange-400 mb-2">
+              <div className="text-base font-bold text-gray-900 dark:text-white mb-2">
                 {formatCurrency(menu.price, currency)}
               </div>
             )}
@@ -520,7 +511,7 @@ export default function MenuDetailModal({
                                 <div className={`text-sm ${!addon.isAvailable ? 'text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-white'}`}>
                                   {addon.name}{' '}
                                   {addon.price > 0 && (
-                                    <strong className="text-orange-500 dark:text-orange-400">
+                                    <strong className="text-gray-900 dark:text-white">
                                       (+{formatCurrency(addon.price, currency)})
                                     </strong>
                                   )}

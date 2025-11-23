@@ -74,19 +74,13 @@ export default function DetailedMenuSection({
                         >
                             {/* Image */}
                             <div className="relative w-20 h-20 shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
-                                {item.imageUrl ? (
-                                    <Image
-                                        src={item.imageUrl}
-                                        alt={item.name}
-                                        fill
-                                        className="object-cover"
-                                        sizes="80px"
-                                    />
-                                ) : (
-                                    <div className="flex items-center justify-center h-full">
-                                        <span className="text-2xl">🍽️</span>
-                                    </div>
-                                )}
+                                <Image
+                                    src={item.imageUrl || '/images/default-menu.png'}
+                                    alt={item.name}
+                                    fill
+                                    className="object-cover"
+                                    sizes="80px"
+                                />
                                 {/* Quantity Badge - Show when item is in cart */}
                                 {isInCart && (
                                     <div className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-lg border-2 border-white dark:border-gray-800">
@@ -102,7 +96,7 @@ export default function DetailedMenuSection({
                                         {item.name}
                                     </h4>
                                     {item.description && (
-                                        <p className="text-xs text-orange-600 dark:text-orange-400 mt-1 line-clamp-2">
+                                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
                                             {item.description}
                                         </p>
                                     )}
@@ -115,7 +109,7 @@ export default function DetailedMenuSection({
                                 {/* Price Display - Check for Promo */}
                                 {item.isPromo && item.promoPrice ? (
                                     <div className="flex items-center gap-2 mt-2">
-                                        <span className="text-sm font-bold text-orange-500">
+                                        <span className="text-sm font-bold text-gray-900 dark:text-white">
                                             {formatPrice(item.promoPrice)}
                                         </span>
                                         <span className="text-xs text-gray-400 line-through">

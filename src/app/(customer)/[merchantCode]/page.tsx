@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import TableNumberModal from '@/components/customer/TableNumberModal';
-import Image from 'next/image';
+import OutletInfoModal from '@/components/customer/OutletInfoModal';
 import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';
 
 interface MerchantPageProps {
@@ -19,6 +18,7 @@ interface MerchantData {
   description?: string;
   address?: string;
   phone?: string;
+  logoUrl?: string | null;
   coverImageUrl?: string;
   openingHours: {
     id: bigint;
@@ -58,7 +58,6 @@ export default function MerchantModePage({ params }: MerchantPageProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showOutletInfo, setShowOutletInfo] = useState(false);
-  const [showTableModal, setShowTableModal] = useState(false);
 
   useEffect(() => {
     params.then(({ merchantCode: code }) => {
@@ -112,22 +111,10 @@ export default function MerchantModePage({ params }: MerchantPageProps) {
     // Save mode to localStorage
     localStorage.setItem(`mode_${merchantCode}`, selectedMode);
 
-    // For dine-in, show table number modal first
-    if (selectedMode === 'dinein') {
-      setShowTableModal(true);
-    } else {
-      // For takeaway, go directly to order page
-      router.replace(`/${merchantCode}/order?mode=${selectedMode}`);
-    }
+    // Go directly to order page for both modes
+    // Table number modal will appear in order page if needed
+    router.replace(`/${merchantCode}/order?mode=${selectedMode}`);
   };
-
-  const handleTableNumberConfirm = (_tableNumber: string) => {
-    setShowTableModal(false);
-    // Navigate to order page with dine-in mode
-    router.push(`/${merchantCode}/order?mode=dinein`);
-  };
-
-  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
   if (isLoading) {
     return <LoadingState type="page" message={LOADING_MESSAGES.MERCHANT} />;
@@ -157,167 +144,183 @@ export default function MerchantModePage({ params }: MerchantPageProps) {
 
   return (
     <div className="flex flex-col min-h-screen max-w-[420px] mx-auto bg-white dark:bg-gray-900">
-      {/* Minimal Header */}
-      <header className="sticky top-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-800">
-        <div className="flex items-center justify-between h-14 px-6">
-          <button
-            onClick={() => router.push('/')}
-            className="text-gray-600 dark:text-gray-400 hover:text-orange-500 dark:hover:text-orange-400 transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <h1 className="text-sm font-semibold text-gray-900 dark:text-white truncate max-w-[200px]">
-            {merchant.name}
-          </h1>
-          <div className="w-5" /> {/* Spacer for centering */}
+
+      {/* BANNER 1 - WITH HEADER (Transparent & Overlay) */}
+      <div className="relative w-full h-32 mb-4">
+        {/* Banner Image */}
+        <div className="relative w-full h-full">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={merchant.coverImageUrl || '/images/no-outlet.png'}
+            alt={merchant.name}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.src = '/images/no-outlet.png';
+            }}
+          />
         </div>
-      </header>
 
-      {/* Merchant Banner - Minimal Height */}
-      <div className="relative h-40 w-full overflow-hidden">
-        {merchant.coverImageUrl ? (
-          <>
-            <Image
-              src={merchant.coverImageUrl}
-              alt={merchant.name}
-              fill
-              className="object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-transparent"></div>
-          </>
-        ) : (
-          <div className="w-full h-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-            <span className="text-5xl">🍽️</span>
-          </div>
-        )}
-      </div>
-
-      {/* Merchant Info - Clean & Minimal */}
-      <div className="px-6 pt-6 pb-4 border-b border-gray-200 dark:border-gray-800">
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-3">
-          {merchant.name}
-        </h2>
-
-        <div className="space-y-2">
-          {merchant.address && (
-            <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 flex items-start gap-2">
-              <span className="text-base shrink-0">📍</span>
-              <span>{merchant.address}</span>
-            </p>
-          )}
-
-          {merchant.phone && (
-            <a
-              href={`tel:${merchant.phone}`}
-              className="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-orange-500 dark:hover:text-orange-400 transition-colors"
+        {/* Header Overlay - Transparent & Absolute */}
+        <header className="absolute top-0 left-0 right-0 z-50 bg-transparent">
+          <div className="flex items-center justify-between px-4 py-2">
+            {/* Back Button */}
+            <button
+              onClick={() => router.push('/')}
+              className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              aria-label="Go back"
             >
-              <span className="text-base">📞</span>
-              <span>{merchant.phone}</span>
-            </a>
-          )}
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 12H5M12 19l-7-7 7-7" />
+              </svg>
+            </button>
 
-          <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
-            <span className="text-base">🕐</span>
-            <span>
-              {merchant.openingHours?.[0]?.is24Hours
-                ? 'Open 24 Hours'
-                : merchant.openingHours?.[0]?.isClosed
-                  ? 'Closed'
-                  : `${merchant.openingHours?.[0]?.openTime || '08:00'} - ${merchant.openingHours?.[0]?.closeTime || '22:00'}`}
-            </span>
-          </p>
-        </div>
+            {/* Title (Empty in original design) */}
+            <div className="grow text-center font-semibold text-gray-900 dark:text-white" style={{ fontSize: '1.2rem' }}>
+            </div>
+          </div>
+        </header>
 
-        {/* View Details Toggle */}
-        <button
-          onClick={() => setShowOutletInfo(!showOutletInfo)}
-          className="mt-4 text-sm font-medium text-orange-500 dark:text-orange-400 flex items-center gap-1 hover:text-orange-600 dark:hover:text-orange-300 transition-colors"
-        >
-          View Operating Hours
-          <svg
-            className={`w-4 h-4 transition-transform ${showOutletInfo ? 'rotate-90' : ''}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+        {/* Merchant Info Section - Floating Card */}
+        <div className="absolute left-4 right-4 -bottom-8">
+          <div
+            className="flex items-center px-4 py-3 cursor-pointer bg-white dark:bg-gray-800 rounded-lg shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1)]"
+            onClick={() => setShowOutletInfo(!showOutletInfo)}
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
-      </div>
+            {/* Merchant Logo */}
+            <div className="w-12 h-12 rounded overflow-hidden shrink-0 mr-3 bg-gray-100 dark:bg-gray-700">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={merchant.logoUrl || '/images/no-outlet.png'}
+                alt={merchant.name}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.src = '/images/no-outlet.png';
+                }}
+              />
+            </div>
 
-      {/* Operating Hours (Expandable) */}
-      {showOutletInfo && merchant.openingHours && (
-        <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-800">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Operating Hours</h3>
-          <div className="space-y-2">
-            {merchant.openingHours
-              .sort((a, b) => a.dayOfWeek - b.dayOfWeek)
-              .map((hours) => (
-                <div
-                  key={hours.id.toString()}
-                  className="flex items-center justify-between py-1"
-                >
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {dayNames[hours.dayOfWeek]}
-                  </span>
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
-                    {hours.isClosed
-                      ? 'Closed'
-                      : hours.is24Hours
-                        ? 'Open 24 Hours'
-                        : `${hours.openTime} - ${hours.closeTime}`}
-                  </span>
-                </div>
-              ))}
+            {/* Merchant Name */}
+            <div className="grow font-medium text-gray-900 dark:text-white">
+              {merchant.name}
+            </div>
+
+            {/* Chevron Right Icon */}
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="text-gray-400">
+              <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
+            </svg>
           </div>
         </div>
-      )}
 
-      {/* Mode Selection - Centered Content */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-8">
-        <div className="w-full max-w-sm space-y-4">
-          <h2 className="text-base font-semibold text-gray-900 dark:text-white text-center mb-6">
-            Choose Order Type
-          </h2>
+      </div>
 
-          {/* Dine In Button */}
-          <button
-            onClick={() => handleModeSelect('dinein')}
-            className="w-full h-14 bg-orange-500 text-white rounded-lg font-semibold text-base hover:bg-orange-600 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-sm"
-          >
-            <span className="text-xl">🍽️</span>
-            Dine In
-          </button>
+      {/* How to use ESB Order Section */}
+      <div className="px-3 my-4">
+        <div className="text-center">
+          <h3 className="my-4 mb-2 text-base font-semibold text-gray-900 dark:text-white">
+            How to use ESB Order
+          </h3>
 
-          {/* Takeaway Button */}
-          <button
-            onClick={() => handleModeSelect('takeaway')}
-            className="w-full h-14 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg font-semibold text-base hover:bg-gray-200 dark:hover:bg-gray-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2 border border-gray-200 dark:border-gray-700"
-          >
-            <span className="text-xl">🛍️</span>
-            Takeaway
-          </button>
+          {/* Steps: Order → Pay → Eat */}
+          <div className="flex items-center justify-center gap-3 mb-4">
+            {/* Step 1: Order */}
+            <div className="flex flex-col items-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/images/step-order.png"
+                alt="Order"
+                className="w-14 h-14 mb-1"
+              />
+              <span className="text-xs text-gray-700 dark:text-gray-300 font-medium">Order</span>
+            </div>
+
+            {/* Arrow */}
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400 shrink-0">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+
+            {/* Step 2: Pay */}
+            <div className="flex flex-col items-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/images/step-pay.png"
+                alt="Pay"
+                className="w-14 h-14 mb-1"
+              />
+              <span className="text-xs text-gray-700 dark:text-gray-300 font-medium">Pay</span>
+            </div>
+
+            {/* Arrow */}
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400 shrink-0">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+
+            {/* Step 3: Eat */}
+            <div className="flex flex-col items-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/images/step-eat.png"
+                alt="Eat"
+                className="w-14 h-14 mb-1"
+              />
+              <span className="text-xs text-gray-700 dark:text-gray-300 font-medium">Eat</span>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Description (Optional) */}
-      {merchant.description && (
-        <div className="px-6 py-6 border-t border-gray-200 dark:border-gray-800">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">About Us</h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-            {merchant.description}
-          </p>
-        </div>
-      )}
+      {/* Mode Selection Section */}
+      <div className="px-3 mb-6">
+        <div className="text-center">
+          <h3 className="my-4 mb-4 text-base font-semibold text-gray-900 dark:text-white">
+            How would you like to eat today?
+          </h3>
 
-      {/* Table Number Modal */}
-      <TableNumberModal
-        merchantCode={merchantCode}
-        isOpen={showTableModal}
-        onClose={() => setShowTableModal(false)}
-        onConfirm={handleTableNumberConfirm}
+          {/* Mode Selection Buttons */}
+          <div className="space-y-3">
+            {/* Dine In Button */}
+            <button
+              id="mode-dinein"
+              onClick={() => handleModeSelect('dinein')}
+              className="w-full h-12 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white text-base font-medium shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-200"
+            >
+              Dine In
+            </button>
+
+            {/* Pick Up Button */}
+            <button
+              id="mode-takeaway"
+              onClick={() => handleModeSelect('takeaway')}
+              className="w-full h-12 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white text-base font-medium shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-200"
+            >
+              Pick Up
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer - Powered by ESB */}
+      <div className="mt-auto px-4 py-4 text-center">
+        <div className="flex items-center justify-center gap-2 text-sm">
+          <span className="text-gray-600 dark:text-gray-400">Powered by</span>
+          <span className="font-semibold text-gray-900 dark:text-white">ESB</span>
+        </div>
+      </div>
+
+
+
+
+      {/* Outlet Info Modal */}
+      <OutletInfoModal
+        isOpen={showOutletInfo}
+        onClose={() => setShowOutletInfo(false)}
+        merchant={{
+          name: merchant.name,
+          address: merchant.address,
+          phone: merchant.phone,
+          openingHours: merchant.openingHours,
+        }}
       />
     </div>
   );

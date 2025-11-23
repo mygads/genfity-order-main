@@ -41,15 +41,17 @@ export default function PromoMenuSection({ items, currency = 'AUD', onItemClick,
     };
 
     return (
-        <div className="space-y-3">
+        <div className="space-y-4">
             {/* Header */}
-            <h2 className="text-sm font-bold uppercase tracking-wide text-gray-900 dark:text-white px-4">
-                Promo
-            </h2>
+            <div className="flex items-center justify-between px-4">
+                <h2 className="text-lg font-bold uppercase tracking-wide text-gray-900 dark:text-white">
+                    Promo
+                </h2>
+            </div>
 
-            {/* Horizontal Scroll Container */}
-            <div className="overflow-x-auto scrollbar-hide">
-                <div className="flex gap-3 px-4 pb-2">
+            {/* Menu Items Horizontal Scroll */}
+            <div className="px-4 overflow-x-auto scrollbar-hide">
+                <div className="flex gap-3 pb-2">
                     {items.map((item) => {
                         const quantityInCart = getItemQuantityInCart ? getItemQuantityInCart(item.id) : 0;
                         const isInCart = quantityInCart > 0;
@@ -58,64 +60,60 @@ export default function PromoMenuSection({ items, currency = 'AUD', onItemClick,
                             <div
                                 key={item.id}
                                 onClick={() => onItemClick?.(item)}
-                                className="flex-shrink-0 w-[280px] cursor-pointer active:scale-[0.98] transition-transform"
+                                className={`shrink-0 w-40 bg-white dark:bg-gray-800 rounded-lg transition-all p-3 ${isInCart
+                                    ? 'ring-2 ring-orange-500'
+                                    : ''
+                                    } cursor-pointer`}
+                                style={{
+                                    boxShadow: isInCart
+                                        ? '0 8px 16px -4px rgba(0, 0, 0, 0.1), 0 4px 8px -2px rgba(0, 0, 0, 0.06)'
+                                        : '0 4px 12px -2px rgba(0, 0, 0, 0.08), 0 2px 6px -1px rgba(0, 0, 0, 0.04)',
+                                    border: '0.5px solid',
+                                    borderColor: 'rgb(229 231 235 / 1)', // gray-200
+                                }}
+                                role="button"
+                                tabIndex={0}
                             >
-                                {/* Card */}
-                                <div className={`relative overflow-hidden rounded-xl border-2 ${isInCart
-                                        ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/10'
-                                        : 'border-red-500 bg-white dark:bg-gray-800'
-                                    }`}>
-                                    {/* Image */}
-                                    <div className="relative w-full h-36 bg-gray-100 dark:bg-gray-700 overflow-hidden">
-                                        {item.imageUrl ? (
-                                            <Image
-                                                src={item.imageUrl}
-                                                alt={item.name}
-                                                fill
-                                                className="object-cover"
-                                                sizes="280px"
-                                            />
-                                        ) : (
-                                            <div className="flex items-center justify-center h-full">
-                                                <span className="text-4xl">🎉</span>
-                                            </div>
-                                        )}
+                                {/* Image - Contained within card with rounded corners */}
+                                <div className="relative w-full aspect-square bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden">
+                                    <Image
+                                        src={item.imageUrl || '/images/default-menu.png'}
+                                        alt={item.name}
+                                        fill
+                                        className="object-cover"
+                                        sizes="160px"
+                                    />
 
-                                        {/* Promo Badge */}
-                                        <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-0.5 rounded-md font-bold text-xs">
-                                            PROMO
+                                    {/* Quantity Badge */}
+                                    {isInCart && (
+                                        <div className="absolute top-2 right-2 bg-orange-500 text-white text-sm font-bold rounded-full w-7 h-7 flex items-center justify-center shadow-lg border-2 border-white dark:border-gray-800">
+                                            {quantityInCart}
                                         </div>
+                                    )}
+                                </div>
 
-                                        {/* Quantity Badge */}
-                                        {isInCart && (
-                                            <div className="absolute top-2 right-2 bg-orange-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center shadow-lg">
-                                                {quantityInCart}
-                                            </div>
-                                        )}
-                                    </div>
+                                {/* Content */}
+                                <div className="flex flex-col gap-2 mt-2">
+                                    <h3 className="font-semibold text-sm line-clamp-2 text-gray-900 dark:text-white">
+                                        {item.name}
+                                    </h3>
 
-                                    {/* Content */}
-                                    <div className="p-3">
-                                        <div className="flex items-start justify-between gap-2 mb-2">
-                                            <h3 className="font-semibold text-sm text-gray-900 dark:text-white line-clamp-2 flex-1">
-                                                {item.name}
-                                            </h3>
-                                            {isInCart && (
-                                                <span className="text-[10px] font-semibold text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/30 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                                                    In Cart
+                                    {/* Price */}
+                                    <div>
+                                        {item.promoPrice ? (
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-base font-bold text-gray-900 dark:text-white">
+                                                    {formatPrice(item.promoPrice)}
                                                 </span>
-                                            )}
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <p className="text-base font-bold text-orange-500">
-                                                {formatPrice(item.promoPrice || item.price)}
-                                            </p>
-                                            {item.promoPrice && (
-                                                <p className="text-xs text-gray-400 line-through">
+                                                <span className="text-xs text-gray-400 line-through">
                                                     {formatPrice(item.price)}
-                                                </p>
-                                            )}
-                                        </div>
+                                                </span>
+                                            </div>
+                                        ) : (
+                                            <p className="text-gray-900 dark:text-white font-semibold">
+                                                {formatPrice(item.price)}
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -123,17 +121,6 @@ export default function PromoMenuSection({ items, currency = 'AUD', onItemClick,
                     })}
                 </div>
             </div>
-
-            {/* Custom scrollbar hide styles */}
-            <style jsx>{`
-                .scrollbar-hide::-webkit-scrollbar {
-                    display: none;
-                }
-                .scrollbar-hide {
-                    -ms-overflow-style: none;
-                    scrollbar-width: none;
-                }
-            `}</style>
         </div>
     );
 }

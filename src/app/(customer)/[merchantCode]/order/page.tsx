@@ -13,8 +13,10 @@ import FloatingCartButton from '@/components/cart/FloatingCartButton';
 import MenuDetailModal from '@/components/menu/MenuDetailModal';
 import { Alert, EmptyState } from '@/components/ui';
 import { useCart } from '@/context/CartContext';
+import OutletInfoModal from '@/components/customer/OutletInfoModal';
 import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';
 import { getTableNumber } from '@/lib/utils/localStorage';
+import TableNumberModal from '@/components/customer/TableNumberModal';
 
 interface MenuItem {
   id: number;
@@ -106,6 +108,8 @@ export default function MenuBrowsePage() {
   const [selectedMenu, setSelectedMenu] = useState<MenuItem | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isScrolled, setIsScrolled] = useState(false); // Track scroll position
+  const [showTableModal, setShowTableModal] = useState(false); // Table number modal state
+  const [showOutletInfo, setShowOutletInfo] = useState(false); // Outlet info modal state
   const { initializeCart, cart } = useCart();
 
   /**
@@ -119,7 +123,7 @@ export default function MenuBrowsePage() {
   };
 
   // ========================================
-  // Load Table Number
+  // Load Table Number & Always Show Modal for Dinein
   // ========================================
   useEffect(() => {
     console.log('🔍 Loading table number...');
@@ -131,6 +135,10 @@ export default function MenuBrowsePage() {
 
       console.log('📋 Table Data:', tableData);
 
+      // Always show modal for dinein mode (even if table number exists)
+      // This allows users to check/change their table number
+      setShowTableModal(true);
+
       if (tableData?.tableNumber) {
         setTableNumber(tableData.tableNumber);
         console.log('✅ Table number set:', tableData.tableNumber);
@@ -141,6 +149,15 @@ export default function MenuBrowsePage() {
       console.log('⚠️ Not dinein mode, skipping table number');
     }
   }, [merchantCode, mode]);
+
+  // ========================================
+  // Handle Outlet Info Modal via URL
+  // ========================================
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const showInfo = params.get('outlet-info') === 'true';
+    setShowOutletInfo(showInfo);
+  }, [searchParams]);
 
   // ========================================
   // Fetch Merchant Info
@@ -259,8 +276,8 @@ export default function MenuBrowsePage() {
           HEADER (STICKY)
       ======================================== */}
       <div className={`sticky top-0 z-50 transition-all duration-300 ${isScrolled
-        ? 'bg-white dark:bg-gray-800 shadow-md'
-        : 'bg-white dark:bg-gray-800'
+        ? 'bg-gray-50 dark:bg-gray-800 shadow-md'
+        : 'bg-gray-50 dark:bg-gray-800'
         }`}>
         {/* Table Number Badge (Shown when scrolled in dinein mode) */}
         {isScrolled && mode === 'dinein' && tableNumber && (
@@ -353,7 +370,11 @@ export default function MenuBrowsePage() {
                   name={merchantInfo.name}
                   openingHours={merchantInfo.openingHours}
                   onClick={() => {
-                    // TODO: Open merchant details modal
+                    // Update URL without page reload
+                    const params = new URLSearchParams(window.location.search);
+                    params.set('outlet-info', 'true');
+                    window.history.pushState({}, '', `?${params.toString()}`);
+                    setShowOutletInfo(true);
                   }}
                 />
               )}
@@ -512,6 +533,46 @@ export default function MenuBrowsePage() {
           mode={mode}
           currency={merchantInfo?.currency || 'AUD'}
           onClose={() => setSelectedMenu(null)}
+        />
+      )}
+
+      {/* ========================================
+          TABLE NUMBER MODAL (Dinein Only)
+      ======================================== */}
+      <TableNumberModal
+        merchantCode={merchantCode}
+        isOpen={showTableModal}
+        onClose={() => {
+          // Allow closing modal - user can cancel if they want
+          setShowTableModal(false);
+        }}
+        onConfirm={(number: string) => {
+          setTableNumber(number);
+          setShowTableModal(false);
+          console.log('✅ Table number confirmed:', number);
+        }}
+      />
+
+      {/* ========================================
+          OUTLET INFO MODAL
+      ======================================== */}
+      {merchantInfo && (
+        <OutletInfoModal
+          isOpen={showOutletInfo}
+          onClose={() => {
+            // Remove URL param when closing
+            const params = new URLSearchParams(window.location.search);
+            params.delete('outlet-info');
+            const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
+            window.history.pushState({}, '', newUrl);
+            setShowOutletInfo(false);
+          }}
+          merchant={{
+            name: merchantInfo.name,
+            address: merchantInfo.address,
+            phone: merchantInfo.phone,
+            openingHours: merchantInfo.openingHours,
+          }}
         />
       )}
     </div>

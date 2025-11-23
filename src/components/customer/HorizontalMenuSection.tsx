@@ -85,29 +85,30 @@ export default function HorizontalMenuSection({
                             <div
                                 key={item.id}
                                 onClick={() => isAvailable && onItemClick?.(item)}
-                                className={`shrink-0 w-40 bg-white dark:bg-gray-800 rounded-lg overflow-hidden border-2 transition-all ${isInCart
-                                    ? 'border-orange-500 shadow-md'
-                                    : 'border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md'
+                                className={`shrink-0 w-40 bg-white dark:bg-gray-800 rounded-lg transition-all p-3 ${isInCart
+                                    ? 'ring-2 ring-orange-500'
+                                    : ''
                                     } ${isAvailable ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed'
                                     }`}
+                                style={{
+                                    boxShadow: isInCart
+                                        ? '0 8px 16px -4px rgba(0, 0, 0, 0.1), 0 4px 8px -2px rgba(0, 0, 0, 0.06)'
+                                        : '0 4px 12px -2px rgba(0, 0, 0, 0.08), 0 2px 6px -1px rgba(0, 0, 0, 0.04)',
+                                    border: '0.5px solid',
+                                    borderColor: 'rgb(229 231 235 / 1)', // gray-200
+                                }}
                                 role="button"
                                 tabIndex={isAvailable ? 0 : -1}
                             >
-                                {/* Image */}
-                                <div className="relative w-full aspect-square bg-gray-100 dark:bg-gray-700">
-                                    {item.imageUrl ? (
-                                        <Image
-                                            src={item.imageUrl}
-                                            alt={item.name}
-                                            fill
-                                            className="object-cover"
-                                            sizes="160px"
-                                        />
-                                    ) : (
-                                        <div className="flex items-center justify-center h-full">
-                                            <span className="text-4xl">🍽️</span>
-                                        </div>
-                                    )}
+                                {/* Image - Contained within card with rounded corners */}
+                                <div className="relative w-full aspect-square bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden">
+                                    <Image
+                                        src={item.imageUrl || '/images/default-menu.png'}
+                                        alt={item.name}
+                                        fill
+                                        className="object-cover"
+                                        sizes="160px"
+                                    />
 
                                     {/* Quantity Badge - Priority over stock badge */}
                                     {isInCart ? (
@@ -122,7 +123,7 @@ export default function HorizontalMenuSection({
                                 </div>
 
                                 {/* Content */}
-                                <div className="flex flex-col gap-2 p-3">
+                                <div className="flex flex-col gap-2 mt-2">
                                     <h3 className="font-semibold text-sm line-clamp-2 text-gray-900 dark:text-white">
                                         {item.name}
                                     </h3>
@@ -133,7 +134,7 @@ export default function HorizontalMenuSection({
                                             <p className="text-red-500 font-medium text-sm">Sold out</p>
                                         ) : item.isPromo && item.promoPrice ? (
                                             <div className="flex items-center gap-2">
-                                                <span className="text-base font-bold text-orange-500">
+                                                <span className="text-base font-bold text-gray-900 dark:text-white">
                                                     {formatPrice(item.promoPrice)}
                                                 </span>
                                                 <span className="text-xs text-gray-400 line-through">
