@@ -23,6 +23,7 @@ interface MenuAddonCategory {
     description: string | null;
     minSelection: number;
     maxSelection: number | null;
+    isActive: boolean;
     addonItems: Array<{
       id: string;
       name: string;

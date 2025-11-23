@@ -500,7 +500,7 @@ export default function EditMerchantPage() {
               Store Location
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Set your store's location for customers to find and navigate to your store.
+              Set your store&apos;s location for customers to find and navigate to your store.
             </p>
             <MapLocationPicker
               latitude={formData.latitude}

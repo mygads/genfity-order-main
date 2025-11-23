@@ -562,8 +562,8 @@ class AuthService {
     }
 
     // Generate reset token (random 32 bytes)
-    const crypto = require('crypto');
-    const resetToken = crypto.randomBytes(32).toString('hex');
+    const { randomBytes } = await import('crypto');
+    const resetToken = randomBytes(32).toString('hex');
     const resetTokenHash = await hashPassword(resetToken); // Hash token for storage
 
     // Token expires in 1 hour

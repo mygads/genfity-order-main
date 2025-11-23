@@ -351,7 +351,7 @@ export default function CreateMerchantPage() {
                 Store Location on Map
               </h4>
               <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">
-                Set the merchant's exact location. This helps customers find and navigate to the store.
+                Set the merchant&apos;s exact location. This helps customers find and navigate to the store.
               </p>
               <MapLocationPicker
                 latitude={formData.latitude}

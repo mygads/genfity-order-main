@@ -16,10 +16,9 @@ interface Category {
   displayOrder: number;
   sortOrder: number;
   isActive: boolean;
-  createdAt: string;
   _count?: {
-    menus: number;
-    menuItems: number;
+    menuItems?: number;
+    menus?: number;
   };
 }
 
@@ -166,7 +165,7 @@ export default function MerchantCategoriesPage() {
       setSuccess(`Category ${editingId ? 'updated' : 'created'} successfully!`);
       setShowForm(false);
       setEditingId(null);
-      setFormData({ name: "", description: "", displayOrder: 1 });
+      setFormData({ name: "", description: "", displayOrder: 1, sortOrder: 0 });
       
       fetchCategories();
     } catch (err) {
@@ -816,8 +815,7 @@ export default function MerchantCategoriesPage() {
               type={categories.length === 0 ? "no-category" : "no-results"}
               title={categories.length === 0 ? undefined : "No categories match your filters"}
               description={categories.length === 0 ? undefined : "Try adjusting your filters"}
-              actionLabel={categories.length === 0 ? "Create First Category" : undefined}
-              onAction={categories.length === 0 ? () => setShowForm(true) : undefined}
+              action={categories.length === 0 ? { label: "Create First Category", onClick: () => setShowForm(true) } : undefined}
             />
           ) : useDragDrop ? (
             <CategoryDnDList

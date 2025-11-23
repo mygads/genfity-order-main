@@ -366,7 +366,7 @@ export default function CreateMenuPage() {
                 <FieldLabelWithTooltip
                   label="Daily Stock Template"
                   tooltip="Stock will automatically reset to this value every day at midnight when auto-reset is enabled. Perfect for daily fresh items like baked goods or daily specials."
-                  optional
+                  required={false}
                 />
                 <input
                   type="number"

@@ -18,6 +18,7 @@ interface MenuAddonCategory {
     description: string | null;
     minSelection: number;
     maxSelection: number | null;
+    isActive: boolean;
     addonItems: Array<{
       id: string;
       name: string;
@@ -667,7 +668,7 @@ export default function EditMenuPage() {
                 No Addon Categories
               </h4>
               <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Click "Manage Addons" to add categories
+                Click &quot;Manage Addons&quot; to add categories
               </p>
             </div>
           ) : (
