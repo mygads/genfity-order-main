@@ -190,12 +190,12 @@ export default function RecentOrders() {
                 <TableCell className="py-3 text-gray-500 text-theme-sm dark:text-gray-400">
                   <Badge
                     size="sm"
-                    color={
+                    variant={
                       product.status === "Delivered"
                         ? "success"
                         : product.status === "Pending"
                         ? "warning"
-                        : "error"
+                        : "danger"
                     }
                   >
                     {product.status}

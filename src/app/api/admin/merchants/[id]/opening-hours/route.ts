@@ -74,7 +74,7 @@ async function updateOpeningHoursHandler(
     });
 
     // Use transaction to update opening hours
-    await prisma.$transaction(async (tx: typeof prisma) => {
+    await prisma.$transaction(async (tx) => {
       // Delete existing opening hours for this merchant
       await tx.merchantOpeningHour.deleteMany({
         where: { merchantId },

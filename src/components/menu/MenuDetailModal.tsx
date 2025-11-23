@@ -29,7 +29,7 @@ interface MenuItem {
   description: string;
   price: number;
   imageUrl: string | null;
-  stockQty: number;
+  stockQty: number | null;
   isActive: boolean;
   trackStock: boolean;
   isPromo?: boolean;

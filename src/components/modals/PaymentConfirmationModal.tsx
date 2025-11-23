@@ -8,6 +8,7 @@ interface PaymentConfirmationModalProps {
   currency?: string; // ✅ NEW: Dynamic currency (AUD, IDR, USD, etc.)
   breakdown?: {
     subtotal: number;
+    serviceCharge?: number;
     tax: number;
   };
 }
@@ -78,6 +79,12 @@ export default function PaymentConfirmationModal({
                   <span className="text-[#666666] dark:text-gray-400">Subtotal</span>
                   <span className="text-[#1A1A1A] dark:text-white">{formatPrice(breakdown.subtotal)}</span>
                 </div>
+                {typeof breakdown.serviceCharge === 'number' && (
+                  <div className="flex justify-between text-xs">
+                    <span className="text-[#666666] dark:text-gray-400">Service charge</span>
+                    <span className="text-[#1A1A1A] dark:text-white">{formatPrice(breakdown.serviceCharge)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-xs">
                   <span className="text-[#666666] dark:text-gray-400">Tax</span>
                   <span className="text-[#1A1A1A] dark:text-white">{formatPrice(breakdown.tax)}</span>

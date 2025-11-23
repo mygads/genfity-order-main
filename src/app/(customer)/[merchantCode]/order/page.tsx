@@ -51,6 +51,7 @@ interface OpeningHour {
   openTime: string; // "09:00"
   closeTime: string; // "22:00"
   isClosed: boolean;
+  is24Hours: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -408,7 +409,27 @@ export default function MenuBrowsePage() {
                       <PromoMenuSection
                         items={promoItems}
                         currency={merchantInfo?.currency || 'AUD'}
-                        onItemClick={(item) => setSelectedMenu(item)}
+                        // Promo items have a smaller shape. Convert to the page's MenuItem
+                        // shape before setting as selected menu so MenuDetailModal receives
+                        // the expected properties.
+                        onItemClick={(item) => {
+                          const menuLike = {
+                            id: item.id,
+                            name: item.name,
+                            description: '',
+                            price: item.price,
+                            imageUrl: item.imageUrl,
+                            stockQty: null,
+                            categoryId: null,
+                            categories: [] as { id: string; name: string }[],
+                            isActive: true,
+                            trackStock: false,
+                            isPromo: !!item.promoPrice,
+                            promoPrice: item.promoPrice,
+                          };
+
+                          setSelectedMenu(menuLike as unknown as MenuItem);
+                        }}
                         getItemQuantityInCart={getMenuQuantityInCart}
                       />
                     </div>
@@ -427,7 +448,22 @@ export default function MenuBrowsePage() {
                         title="New Menu"
                         items={newMenuItems}
                         currency={merchantInfo?.currency || 'AUD'}
-                        onItemClick={(item) => setSelectedMenu(item)}
+                        onItemClick={(item) =>
+                          setSelectedMenu({
+                            id: item.id,
+                            name: item.name,
+                            description: item.description || '',
+                            price: item.price,
+                            imageUrl: item.imageUrl,
+                            stockQty: item.stockQty ?? null,
+                            categoryId: null,
+                            categories: [],
+                            isActive: item.isActive,
+                            trackStock: item.trackStock,
+                            isPromo: item.isPromo,
+                            promoPrice: item.promoPrice,
+                          })
+                        }
                         getItemQuantityInCart={getMenuQuantityInCart}
                       />
                     </div>
@@ -446,7 +482,22 @@ export default function MenuBrowsePage() {
                         title="Best Seller"
                         items={bestSellerItems}
                         currency={merchantInfo?.currency || 'AUD'}
-                        onItemClick={(item) => setSelectedMenu(item)}
+                        onItemClick={(item) =>
+                          setSelectedMenu({
+                            id: item.id,
+                            name: item.name,
+                            description: item.description || '',
+                            price: item.price,
+                            imageUrl: item.imageUrl,
+                            stockQty: item.stockQty ?? null,
+                            categoryId: null,
+                            categories: [],
+                            isActive: item.isActive,
+                            trackStock: item.trackStock,
+                            isPromo: item.isPromo,
+                            promoPrice: item.promoPrice,
+                          })
+                        }
                         getItemQuantityInCart={getMenuQuantityInCart}
                       />
                     </div>
@@ -472,7 +523,20 @@ export default function MenuBrowsePage() {
                           title={category.name.toUpperCase()}
                           items={categoryItems}
                           currency={merchantInfo?.currency || 'AUD'}
-                          onAddItem={(item) => setSelectedMenu(item)}
+                          onAddItem={(item) => setSelectedMenu({
+                            id: item.id,
+                            name: item.name,
+                            description: item.description || '',
+                            price: item.price,
+                            imageUrl: item.imageUrl,
+                            stockQty: item.stockQty ?? null,
+                            categoryId: null,
+                            categories: [],
+                            isActive: item.isActive,
+                            trackStock: item.trackStock,
+                            isPromo: item.isPromo,
+                            promoPrice: item.promoPrice,
+                          })}
                           getItemQuantityInCart={getMenuQuantityInCart}
                         />
                       </div>
@@ -497,7 +561,20 @@ export default function MenuBrowsePage() {
                     title={categories.find(c => c.id === selectedCategory)?.name.toUpperCase() || ''}
                     items={displayedItems}
                     currency={merchantInfo?.currency || 'AUD'}
-                    onAddItem={(item) => setSelectedMenu(item)}
+                    onAddItem={(item) => setSelectedMenu({
+                      id: item.id,
+                      name: item.name,
+                      description: item.description || '',
+                      price: item.price,
+                      imageUrl: item.imageUrl,
+                      stockQty: item.stockQty ?? null,
+                      categoryId: null,
+                      categories: [],
+                      isActive: item.isActive,
+                      trackStock: item.trackStock,
+                      isPromo: item.isPromo,
+                      promoPrice: item.promoPrice,
+                    })}
                     getItemQuantityInCart={getMenuQuantityInCart}
                   />
                 </div>
@@ -508,7 +585,7 @@ export default function MenuBrowsePage() {
             {displayedItems.length === 0 && !isLoading && selectedCategory !== 'all' && (
               <div className="px-4 mt-6">
                 <EmptyState
-                  icon="🍽️"
+                  illustration={<span className="text-4xl">🍽️</span>}
                   title="No Menu Items"
                   description="No items available in this category"
                 />

@@ -239,14 +239,17 @@ export default function PaymentPage() {
         customerName: name.trim(),
         customerEmail: email.trim() || undefined,
         customerPhone: phone.trim() || undefined,
-        items: cart.items.map((item) => ({
+          items: cart.items.map((item) => ({
           menuId: item.menuId.toString(),
           quantity: item.quantity,
           notes: item.notes || undefined,
-          addons: (item.addons || []).map((addon) => ({
-            addonItemId: addon.id.toString(),
-            quantity: addon.quantity || 1, // ✅ Use actual addon quantity from cart
-          })),
+            // Aggregate duplicate addon entries into counts (cart stores duplicates to represent qty)
+            addons: Object.values((item.addons || []).reduce((acc: Record<string, any>, addon: any) => {
+              const key = addon.id.toString();
+              if (!acc[key]) acc[key] = { addonItemId: key, quantity: 0 };
+              acc[key].quantity += 1;
+              return acc;
+            }, {} as Record<string, any>)).map((s: any) => ({ addonItemId: s.addonItemId, quantity: s.quantity })),
         })),
       };
 
@@ -421,11 +424,21 @@ export default function PaymentPage() {
           </h2>
           <div className="space-y-3">
             {cart?.items.map((item, index) => {
-              // Calculate addon total
-              const addonTotal = (item.addons || []).reduce((sum, addon) => {
+              // Build aggregated addon list — cart stores addons as duplicated entries
+              const addonAggregatedMap = (item.addons || []).reduce((acc: Record<string, any>, addon) => {
+                const key = addon.id.toString();
+                if (!acc[key]) acc[key] = { ...addon, quantity: 0 };
+                acc[key].quantity += 1;
+                return acc;
+              }, {} as Record<string, any>);
+
+              const addonAggregated = Object.values(addonAggregatedMap);
+
+              // Calculate addon total using aggregated quantities
+              const addonTotal = addonAggregated.reduce((sum, addon) => {
                 const addonPrice = typeof addon.price === 'number' ? addon.price : 0;
                 const addonQty = addon.quantity || 1;
-                return sum + (addonPrice * addonQty);
+                return sum + addonPrice * addonQty;
               }, 0);
 
               const itemSubtotal = (item.quantity * item.price) + addonTotal;
@@ -449,7 +462,7 @@ export default function PaymentPage() {
                   {/* Display Addons */}
                   {item.addons && item.addons.length > 0 && (
                     <div className="ml-4 space-y-1 mb-2">
-                      {item.addons.map((addon, addonIndex) => {
+                      {addonAggregated.map((addon, addonIndex) => {
                         const addonPrice = typeof addon.price === 'number' ? addon.price : 0;
                         const addonQty = addon.quantity || 1;
                         const addonSubtotal = addonPrice * addonQty;
@@ -652,7 +665,8 @@ export default function PaymentPage() {
         currency={merchantCurrency}
         breakdown={{
           subtotal: Number(priceBreakdown.subtotal),
-          serviceCharge: Number(priceBreakdown.serviceCharge),
+          // Service charge is calculated on server at 5% of subtotal. Mirror that here for display.
+          serviceCharge: Number(priceBreakdown.subtotal) * 0.05,
           tax: Number(priceBreakdown.tax),
         }}
       />

@@ -65,7 +65,8 @@ async function handlePost(req: NextRequest, context: AuthContext) {
 
     // Delete old image if exists and menuId provided
     if (menuId) {
-      await BlobService.deleteOldMenuImage(merchantUser.merchantId, BigInt(menuId));
+      // BlobService expects string|number for IDs; convert bigint to string where needed
+      await BlobService.deleteOldMenuImage(String(merchantUser.merchantId), menuId);
     }
 
     // Convert File to Buffer
@@ -74,8 +75,8 @@ async function handlePost(req: NextRequest, context: AuthContext) {
 
     // Upload to Vercel Blob
     const result = await BlobService.uploadMenuImage(
-      merchantUser.merchantId,
-      menuId ? BigInt(menuId) : BigInt(Date.now()),
+      String(merchantUser.merchantId),
+      menuId ? String(menuId) : String(Date.now()),
       buffer
     );
 

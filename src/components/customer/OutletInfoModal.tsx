@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 
 interface OpeningHour {
-    id: bigint;
+    id: string | bigint;
     dayOfWeek: number;
     isClosed: boolean;
     is24Hours: boolean;

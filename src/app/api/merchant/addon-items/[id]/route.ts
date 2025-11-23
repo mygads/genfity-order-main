@@ -111,7 +111,7 @@ async function handlePut(
         description: body.description,
         price: body.price !== undefined ? parseFloat(body.price) : undefined,
         inputType: body.inputType,
-        sortOrder: body.sortOrder,
+        displayOrder: body.displayOrder,
         isActive: body.isActive,
         trackStock: body.trackStock,
         stockQty: body.stockQty,

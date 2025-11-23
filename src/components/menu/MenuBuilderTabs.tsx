@@ -93,7 +93,7 @@ export default function MenuBuilderTabs({
     watch,
     setValue,
     formState: { errors },
-  } = useForm<MenuBuilderFormData>({
+  } = useForm({
     resolver: zodResolver(menuBuilderSchema),
     mode: 'onChange',
     reValidateMode: 'onChange',
