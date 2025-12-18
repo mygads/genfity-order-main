@@ -25,7 +25,19 @@ async function handlePut(
 ) {
   try {
     const params = await contextParams.params;
-    const orderId = BigInt(params?.orderId || '0');
+    const orderIdStr = params?.orderId;
+    
+    if (!orderIdStr) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Order ID is required',
+        },
+        { status: 400 }
+      );
+    }
+
+    const orderId = BigInt(orderIdStr);
     const body = await req.json();
 
     if (!body.status) {

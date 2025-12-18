@@ -67,7 +67,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
         bg-white dark:bg-white/3 
         p-4 shadow-sm hover:shadow-md 
         transition-all duration-200
-        ${onClick ? 'cursor-pointer hover:border-brand-200 dark:hover:border-brand-800' : ''}
+        ${onClick ? 'cursor-pointer hover:border-primary-300 hover:shadow-lg dark:hover:border-primary-700' : ''}
         ${draggable ? 'cursor-move touch-none' : ''}
         ${className}
       `}
@@ -86,7 +86,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {order.orderType === 'DINE_IN' ? (
-              <FaUtensils className="h-4 w-4 text-brand-500" title="Dine In" />
+              <FaUtensils className="h-4 w-4 text-primary-500" title="Dine In" />
             ) : (
               <FaShoppingBag className="h-4 w-4 text-success-500" title="Takeaway" />
             )}
@@ -221,7 +221,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
               e.stopPropagation();
               onViewDetails();
             }}
-            className="w-full h-9 px-4 rounded-lg bg-brand-500 text-white font-semibold text-sm hover:bg-brand-600 transition-colors duration-150 flex items-center justify-center gap-2"
+            className="w-full h-9 px-4 rounded-lg bg-primary-500 text-white font-semibold text-sm hover:bg-primary-600 transition-colors duration-150 flex items-center justify-center gap-2"
           >
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />

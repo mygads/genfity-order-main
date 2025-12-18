@@ -2,12 +2,13 @@
  * DraggableOrderCard Component
  * 
  * Wrapper around OrderCard with drag & drop functionality
+ * Uses useDraggable for cross-column drag support
  */
 
 'use client';
 
 import React from 'react';
-import { useSortable } from '@dnd-kit/sortable';
+import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { OrderCard } from './OrderCard';
 import type { OrderListItem } from '@/lib/types/order';
@@ -34,14 +35,13 @@ export const DraggableOrderCard: React.FC<DraggableOrderCardProps> = ({
     listeners,
     setNodeRef,
     transform,
-    transition,
     isDragging,
-  } = useSortable({ id: String(order.id) });
+  } = useDraggable({ id: String(order.id) });
 
   const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
+    transform: CSS.Translate.toString(transform),
     opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 1000 : 'auto',
   };
 
   // Disable dragging if it's first status and trying to go back
@@ -51,10 +51,10 @@ export const DraggableOrderCard: React.FC<DraggableOrderCardProps> = ({
   return (
     <div
       ref={setNodeRef}
-      style={style}
+      style={style as React.CSSProperties}
       {...attributes}
       {...listeners}
-      className={dragDisabled ? 'opacity-50 cursor-not-allowed' : ''}
+      className={`${dragDisabled ? 'opacity-50 cursor-not-allowed' : ''} ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
     >
       <OrderCard 
         order={order}

@@ -230,9 +230,9 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                       Order #{order.orderNumber}
                     </h2>
                     {order.orderType === 'DINE_IN' ? (
-                      <div className="flex items-center gap-1.5 rounded-md bg-brand-100 px-2 py-1 dark:bg-brand-900/30">
-                        <FaUtensils className="h-3 w-3 text-brand-600 dark:text-brand-400" />
-                        <span className="text-xs font-semibold text-brand-700 dark:text-brand-400">
+                      <div className="flex items-center gap-1.5 rounded-md bg-primary-100 px-2 py-1 dark:bg-primary-900/30">
+                        <FaUtensils className="h-3 w-3 text-primary-600 dark:text-primary-400" />
+                        <span className="text-xs font-semibold text-primary-700 dark:text-primary-400">
                           {order.tableNumber ? `Table ${order.tableNumber}` : 'Dine In'}
                         </span>
                       </div>
@@ -308,7 +308,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                     <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">Customer</p>
                     <button
                       onClick={() => setShowCustomerDetails(!showCustomerDetails)}
-                      className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-brand-600 hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-brand-900/20"
+                      className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-primary-600 hover:bg-primary-50 dark:text-primary-400 dark:hover:bg-primary-900/20"
                     >
                       <span>{showCustomerDetails ? 'Hide Details' : 'View Details'}</span>
                       <FaChevronDown className={`h-3 w-3 transition-transform ${showCustomerDetails ? 'rotate-180' : ''}`} />
@@ -370,10 +370,10 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
               </div>
 
               {/* Total - Compact */}
-              <div className="mb-4 rounded-lg border-2 border-brand-200 bg-brand-50 p-3 dark:border-brand-800 dark:bg-brand-900/20">
+              <div className="mb-4 rounded-lg border-2 border-primary-200 bg-primary-50 p-3 dark:border-primary-800 dark:bg-primary-900/20">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Total</span>
-                  <span className="text-xl font-bold text-brand-600 dark:text-brand-400">
+                  <span className="text-xl font-bold text-primary-600 dark:text-primary-400">
                     {formatCurrency(Number(order.totalAmount))}
                   </span>
                 </div>
@@ -430,7 +430,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                           ? 'bg-error-500 hover:bg-error-600' 
                           : isCompleted
                           ? 'bg-success-500 hover:bg-success-600'
-                          : 'bg-brand-500 hover:bg-brand-600';
+                          : 'bg-primary-500 hover:bg-primary-600';
                         
                         return (
                           <button
@@ -484,7 +484,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                     <button
                       onClick={() => handleRecordPayment('CARD_ON_COUNTER', Number(order.totalAmount))}
                       disabled={updating}
-                      className="flex h-12 w-full items-center justify-center gap-2.5 rounded-lg bg-brand-500 text-sm font-semibold text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="flex h-12 w-full items-center justify-center gap-2.5 rounded-lg bg-primary-500 text-sm font-semibold text-white hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <FaCreditCard className="h-4 w-4" />
                       <div className="text-left">

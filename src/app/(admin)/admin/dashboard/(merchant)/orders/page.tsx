@@ -136,8 +136,8 @@ export default function MerchantOrdersPage() {
   useEffect(() => {
     const handleFullScreenChange = () => {
       if (!document.fullscreenElement && displayMode === 'fullscreen') {
-        // User pressed ESC, go back to clean mode
-        setDisplayMode('clean');
+        // User pressed ESC or exited fullscreen, go back to normal mode (completes the cycle)
+        setDisplayMode('normal');
       }
     };
 
@@ -189,6 +189,24 @@ export default function MerchantOrdersPage() {
     });
   };
 
+  // Select all orders in a column
+  const selectAllInColumn = (_status: string, orderIds: string[]) => {
+    setSelectedOrders(prev => {
+      const newSet = new Set(prev);
+      orderIds.forEach(id => newSet.add(id));
+      return newSet;
+    });
+  };
+
+  // Deselect all orders from a column
+  const deselectAllInColumn = (orderIds: string[]) => {
+    setSelectedOrders(prev => {
+      const newSet = new Set(prev);
+      orderIds.forEach(id => newSet.delete(id));
+      return newSet;
+    });
+  };
+
   const toggleBulkMode = () => {
     setBulkMode(!bulkMode);
     setSelectedOrders(new Set());
@@ -230,7 +248,7 @@ export default function MerchantOrdersPage() {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="flex items-center gap-3 text-gray-500 dark:text-gray-400">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand-500 border-t-transparent"></div>
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary-500 border-t-transparent"></div>
           <span className="text-sm font-medium">Loading orders...</span>
         </div>
       </div>
@@ -238,26 +256,27 @@ export default function MerchantOrdersPage() {
   }
 
   return (
-    <div className={`space-y-6 ${displayMode !== 'normal' ? 'fixed inset-0 z-50 overflow-auto bg-white p-6 dark:bg-gray-950' : ''}`}>
-      {/* Header */}
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-white/90">
-            Order Management
-          </h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Manage and track orders in real-time with drag & drop
-          </p>
-        </div>
+    <div className={`${displayMode !== 'normal' ? 'fixed inset-0 z-50 overflow-auto bg-white dark:bg-gray-950' : ''}`}>
+      {/* Header - Sticky when in clean/fullscreen mode */}
+      <div className={`${displayMode !== 'normal' ? 'sticky top-0 z-40 bg-white/95 backdrop-blur-sm dark:bg-gray-950/95 px-6 pt-6 pb-4 border-b border-gray-200 dark:border-gray-800 shadow-sm' : ''}`}>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800 dark:text-white/90">
+              Order Management
+            </h1>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Manage and track orders in real-time with drag & drop
+            </p>
+          </div>
         
-        <div className="flex flex-wrap items-center gap-3">
-          {/* View Mode Selector */}
-          <div className="flex items-center gap-1 rounded-lg border border-gray-200 bg-white p-1 dark:border-gray-800 dark:bg-gray-900">
-            <button
-              onClick={() => setViewMode('kanban-card')}
-              className={`flex h-8 items-center gap-2 rounded-md px-3 text-xs font-semibold transition-all ${
-                viewMode === 'kanban-card'
-                  ? 'bg-brand-500 text-white shadow-sm'
+          <div className="flex flex-wrap items-center gap-3">
+            {/* View Mode Selector */}
+            <div className="flex items-center gap-1 rounded-lg border border-gray-200 bg-white p-1 dark:border-gray-800 dark:bg-gray-900">
+              <button
+                onClick={() => setViewMode('kanban-card')}
+                className={`flex h-8 items-center gap-2 rounded-md px-3 text-xs font-semibold transition-all ${
+                  viewMode === 'kanban-card'
+                  ? 'bg-primary-500 text-white shadow-sm'
                   : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
               }`}
               title="Kanban + Card View"
@@ -269,7 +288,7 @@ export default function MerchantOrdersPage() {
               onClick={() => setViewMode('kanban-list')}
               className={`flex h-8 items-center gap-2 rounded-md px-3 text-xs font-semibold transition-all ${
                 viewMode === 'kanban-list'
-                  ? 'bg-brand-500 text-white shadow-sm'
+                  ? 'bg-primary-500 text-white shadow-sm'
                   : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
               }`}
               title="Kanban + List View"
@@ -281,7 +300,7 @@ export default function MerchantOrdersPage() {
               onClick={() => setViewMode('tab-list')}
               className={`flex h-8 items-center gap-2 rounded-md px-3 text-xs font-semibold transition-all ${
                 viewMode === 'tab-list'
-                  ? 'bg-brand-500 text-white shadow-sm'
+                  ? 'bg-primary-500 text-white shadow-sm'
                   : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
               }`}
               title="Tab + List View"
@@ -296,7 +315,7 @@ export default function MerchantOrdersPage() {
             onClick={() => setShowFilters(!showFilters)}
             className={`flex h-10 items-center gap-2 rounded-lg border px-4 text-sm font-medium transition-colors ${
               showFilters
-                ? 'border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-800 dark:bg-brand-900/20 dark:text-brand-400'
+                ? 'border-primary-200 bg-primary-50 text-primary-700 dark:border-primary-800 dark:bg-primary-900/20 dark:text-primary-400'
                 : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800'
             }`}
           >
@@ -309,7 +328,7 @@ export default function MerchantOrdersPage() {
             onClick={toggleBulkMode}
             className={`flex h-10 items-center gap-2 rounded-lg border px-4 text-sm font-medium transition-colors ${
               bulkMode
-                ? 'border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-800 dark:bg-brand-900/20 dark:text-brand-400'
+                ? 'border-primary-200 bg-primary-50 text-primary-700 dark:border-primary-800 dark:bg-primary-900/20 dark:text-primary-400'
                 : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800'
             }`}
           >
@@ -322,7 +341,7 @@ export default function MerchantOrdersPage() {
             onClick={() => setAutoRefresh(!autoRefresh)}
             className={`flex h-10 items-center gap-2 rounded-lg border px-4 text-sm font-medium transition-colors ${
               autoRefresh
-                ? 'border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-800 dark:bg-brand-900/20 dark:text-brand-400'
+                ? 'border-primary-200 bg-primary-50 text-primary-700 dark:border-primary-800 dark:bg-primary-900/20 dark:text-primary-400'
                 : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800'
             }`}
           >
@@ -367,7 +386,7 @@ export default function MerchantOrdersPage() {
             }}
             className={`flex h-10 items-center gap-2 rounded-lg border px-4 text-sm font-medium transition-colors ${
               displayMode !== 'normal'
-                ? 'border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-800 dark:bg-brand-900/20 dark:text-brand-400'
+                ? 'border-primary-200 bg-primary-50 text-primary-700 dark:border-primary-800 dark:bg-primary-900/20 dark:text-primary-400'
                 : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800'
             }`}
             title={
@@ -386,57 +405,60 @@ export default function MerchantOrdersPage() {
             </span>
           </button>
         </div>
+        </div>
       </div>
 
-      {/* Filters Section */}
-      {showFilters && (
-        <OrderFiltersComponent
-          filters={filters}
-          onChange={setFilters}
-          onReset={handleResetFilters}
-        />
-      )}
+      {/* Content Area */}
+      <div className={`space-y-6 ${displayMode !== 'normal' ? 'px-6 pb-6' : ''}`}>
+        {/* Filters Section */}
+        {showFilters && (
+          <OrderFiltersComponent
+            filters={filters}
+            onChange={setFilters}
+            onReset={handleResetFilters}
+          />
+        )}
 
-      {/* Bulk Operations Bar */}
-      {bulkMode && selectedOrders.size > 0 && (
-        <div className="rounded-xl border border-brand-200 bg-brand-50 p-4 dark:border-brand-800 dark:bg-brand-900/20">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-semibold text-brand-700 dark:text-brand-400">
-                {selectedOrders.size} order{selectedOrders.size !== 1 ? 's' : ''} selected
-              </span>
-              <button
-                onClick={() => setSelectedOrders(new Set())}
-                className="flex h-8 items-center gap-1.5 rounded-lg border border-brand-300 bg-white px-3 text-xs font-medium text-brand-700 hover:bg-brand-50 dark:border-brand-700 dark:bg-brand-900 dark:text-brand-400 dark:hover:bg-brand-800"
-              >
-                <FaTimes className="h-3 w-3" />
-                Clear
-              </button>
-            </div>
+        {/* Bulk Operations Bar */}
+        {bulkMode && selectedOrders.size > 0 && (
+          <div className="rounded-xl border border-primary-200 bg-primary-50 p-4 dark:border-primary-800 dark:bg-primary-900/20">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-semibold text-primary-700 dark:text-primary-400">
+                  {selectedOrders.size} order{selectedOrders.size !== 1 ? 's' : ''} selected
+                </span>
+                <button
+                  onClick={() => setSelectedOrders(new Set())}
+                  className="flex h-8 items-center gap-1.5 rounded-lg border border-primary-300 bg-white px-3 text-xs font-medium text-primary-700 hover:bg-primary-50 dark:border-primary-700 dark:bg-primary-900 dark:text-primary-400 dark:hover:bg-primary-800"
+                >
+                  <FaTimes className="h-3 w-3" />
+                  Clear
+                </button>
+              </div>
 
-            <div className="flex items-center gap-3">
-              <select
-                value={bulkStatusUpdate}
-                onChange={(e) => setBulkStatusUpdate(e.target.value as OrderStatus)}
-                className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
-              >
-                <option value="">Select status...</option>
-                <option value="PENDING">Pending</option>
-                <option value="ACCEPTED">Accepted</option>
-                <option value="IN_PROGRESS">In Progress</option>
-                <option value="READY">Ready</option>
-                <option value="COMPLETED">Completed</option>
-                <option value="CANCELLED">Cancelled</option>
-              </select>
+              <div className="flex items-center gap-3">
+                <select
+                  value={bulkStatusUpdate}
+                  onChange={(e) => setBulkStatusUpdate(e.target.value as OrderStatus)}
+                  className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
+                >
+                  <option value="">Select status...</option>
+                  <option value="PENDING">Pending</option>
+                  <option value="ACCEPTED">Accepted</option>
+                  <option value="IN_PROGRESS">In Progress</option>
+                  <option value="READY">Ready</option>
+                  <option value="COMPLETED">Completed</option>
+                  <option value="CANCELLED">Cancelled</option>
+                </select>
 
-              <button
-                onClick={handleBulkStatusUpdate}
-                disabled={!bulkStatusUpdate}
-                className="h-9 rounded-lg bg-brand-500 px-4 text-sm font-semibold text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-brand-600 dark:hover:bg-brand-700"
-              >
-                Update Status
-              </button>
-            </div>
+                <button
+                  onClick={handleBulkStatusUpdate}
+                  disabled={!bulkStatusUpdate}
+                  className="h-9 rounded-lg bg-primary-500 px-4 text-sm font-semibold text-white hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-primary-600 dark:hover:bg-primary-700"
+                >
+                  Update Status
+                </button>
+              </div>
           </div>
         </div>
       )}
@@ -455,6 +477,8 @@ export default function MerchantOrdersPage() {
               selectedOrders={selectedOrders}
               bulkMode={bulkMode}
               onToggleSelection={toggleOrderSelection}
+              onSelectAllInColumn={selectAllInColumn}
+              onDeselectAllInColumn={deselectAllInColumn}
               currency={merchantCurrency}
               onRefreshReady={(refreshFn) => {
                 kanbanRefreshRef.current = refreshFn;
@@ -508,6 +532,7 @@ export default function MerchantOrdersPage() {
           onUpdate={handleOrderUpdate}
         />
       )}
+      </div>
     </div>
   );
 }

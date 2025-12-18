@@ -11,7 +11,7 @@ interface StoreToggleButtonProps {
  * Store Open/Close Toggle Button
  * Client component for quick access to toggle store status
  */
-export default function StoreToggleButton({ initialIsOpen, merchantId }: StoreToggleButtonProps) {
+export default function StoreToggleButton({ initialIsOpen, merchantId: _merchantId }: StoreToggleButtonProps) {
   const [isOpen, setIsOpen] = useState(initialIsOpen);
   const [isToggling, setIsToggling] = useState(false);
 

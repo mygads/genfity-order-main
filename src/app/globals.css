@@ -52,6 +52,20 @@
   --color-brand-900: #262e89;
   --color-brand-950: #161950;
 
+  /* Primary Orange Color Scale (GENFITY Brand - #FF6B35) */
+  --color-primary-25: #fffbf8;
+  --color-primary-50: #fff5f0;
+  --color-primary-100: #ffe8dd;
+  --color-primary-200: #ffd4c2;
+  --color-primary-300: #ffb899;
+  --color-primary-400: #ff9066;
+  --color-primary-500: #ff6b35;
+  --color-primary-600: #e55a2b;
+  --color-primary-700: #cc4a22;
+  --color-primary-800: #a33d1c;
+  --color-primary-900: #7a2e15;
+  --color-primary-950: #4d1c0d;
+
   --color-blue-light-25: #f5fbff;
   --color-blue-light-50: #f0f9ff;
   --color-blue-light-100: #e0f2fe;

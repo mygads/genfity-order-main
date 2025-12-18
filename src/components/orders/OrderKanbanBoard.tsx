@@ -42,6 +42,8 @@ interface OrderKanbanBoardProps {
   selectedOrders?: Set<string>;
   bulkMode?: boolean;
   onToggleSelection?: (orderId: string) => void;
+  onSelectAllInColumn?: (status: string, orderIds: string[]) => void;
+  onDeselectAllInColumn?: (orderIds: string[]) => void;
   currency?: string;
   onRefreshReady?: (refreshFn: () => void) => void;
 }
@@ -63,6 +65,8 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
   selectedOrders = new Set(),
   bulkMode = false,
   onToggleSelection,
+  onSelectAllInColumn,
+  onDeselectAllInColumn,
   currency = 'AUD',
   onRefreshReady,
 }) => {
@@ -195,7 +199,13 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
 
   // Handle drag over - for visual feedback
   const handleDragOver = (event: DragOverEvent) => {
-    setOverId(event.over ? String(event.over.id) : null);
+    const overId = event.over ? String(event.over.id) : null;
+    // Only set overId if it's a valid status column
+    if (overId && ACTIVE_STATUSES.includes(overId as OrderStatus)) {
+      setOverId(overId);
+    } else {
+      setOverId(null);
+    }
   };
 
   // Handle drag end
@@ -208,7 +218,22 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
     if (!over || !enableDragDrop) return;
 
     const orderId = String(active.id);
-    const newStatus = over.id as OrderStatus;
+    let targetStatus = String(over.id);
+
+    // Check if the target is a valid status column
+    // If not, it might be another order card - in that case, find the column it belongs to
+    if (!ACTIVE_STATUSES.includes(targetStatus as OrderStatus)) {
+      // The drop target is an order card, find which column it belongs to
+      const targetOrder = orders.find(o => String(o.id) === targetStatus);
+      if (targetOrder) {
+        targetStatus = targetOrder.status;
+      } else {
+        console.warn('Invalid drop target:', targetStatus);
+        return;
+      }
+    }
+
+    const newStatus = targetStatus as OrderStatus;
 
     // Find the order
     const order = orders.find(o => String(o.id) === orderId);
@@ -217,8 +242,6 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
     // Prevent invalid status transitions
     if (!isValidDrop(orderId, newStatus)) {
       console.warn(`Invalid status transition: ${order.status} → ${newStatus}`);
-      // Optional: Add toast notification here
-      // toast.error('Invalid status transition. Orders can only move forward or be cancelled.');
       return;
     }
 
@@ -282,7 +305,7 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-500 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
           <p className="text-gray-600 dark:text-gray-400">Loading orders...</p>
         </div>
       </div>
@@ -296,7 +319,7 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
           <p className="text-red-600 dark:text-red-400 mb-4">{error}</p>
           <button
             onClick={fetchOrders}
-            className="px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600"
+            className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600"
           >
             Retry
           </button>
@@ -330,6 +353,8 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
                 selectedOrders={selectedOrders}
                 bulkMode={bulkMode}
                 onToggleSelection={onToggleSelection}
+                onSelectAllInColumn={onSelectAllInColumn}
+                onDeselectAllInColumn={onDeselectAllInColumn}
                 currency={currency}
               />
             );
@@ -338,13 +363,38 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
 
         <DragOverlay>
           {activeOrder ? (
-            <div className={`rotate-2 scale-105 shadow-2xl ${isCurrentlyOverInvalid ? 'opacity-50' : ''}`}>
-              <OrderCard 
-                order={activeOrder} 
-                draggable 
-                className={isCurrentlyOverInvalid ? 'ring-4 ring-error-400 dark:ring-error-600' : ''}
-                currency={currency}
-              />
+            <div className={`relative rotate-2 scale-105 shadow-2xl ${isCurrentlyOverInvalid ? 'opacity-50' : ''}`}>
+              {/* Stacked cards effect for bulk selection */}
+              {bulkMode && selectedOrders.size > 1 && selectedOrders.has(String(activeOrder.id)) && (
+                <>
+                  {/* Background cards to show stack effect */}
+                  <div className="absolute -top-1 -left-1 h-full w-full rounded-xl border border-gray-200 bg-white shadow-lg rotate-[-4deg] dark:border-gray-700 dark:bg-gray-800" />
+                  {selectedOrders.size > 2 && (
+                    <div className="absolute -top-2 -left-2 h-full w-full rounded-xl border border-gray-200 bg-white shadow-md rotate-[-8deg] dark:border-gray-700 dark:bg-gray-800" />
+                  )}
+                </>
+              )}
+              
+              {/* Main dragged card */}
+              <div className="relative">
+                <OrderCard 
+                  order={activeOrder} 
+                  draggable 
+                  className={isCurrentlyOverInvalid ? 'ring-4 ring-error-400 dark:ring-error-600' : ''}
+                  currency={currency}
+                />
+              </div>
+              
+              {/* Bulk count badge */}
+              {bulkMode && selectedOrders.size > 1 && selectedOrders.has(String(activeOrder.id)) && (
+                <div className="absolute -top-3 -right-3 z-20">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-500 text-white shadow-lg ring-2 ring-white dark:ring-gray-900">
+                    <span className="text-sm font-bold">{selectedOrders.size}</span>
+                  </div>
+                </div>
+              )}
+              
+              {/* Invalid drop indicator */}
               {isCurrentlyOverInvalid && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
                   <div className="flex items-center gap-1.5 rounded-full bg-error-500 px-3 py-1.5 shadow-lg">
