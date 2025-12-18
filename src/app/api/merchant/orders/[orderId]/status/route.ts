@@ -24,8 +24,15 @@ async function handlePut(
   contextParams: { params: Promise<Record<string, string>> }
 ) {
   try {
-    const params = await contextParams.params;
-    const orderIdStr = params?.orderId;
+    // Handle params - Next.js 15 uses Promise for params
+    let orderIdStr: string | undefined;
+    
+    if (contextParams?.params) {
+      const resolvedParams = await contextParams.params;
+      orderIdStr = resolvedParams?.orderId;
+    }
+    
+    console.log('[Order Status API] Received request:', { orderIdStr, hasParams: !!contextParams?.params });
     
     if (!orderIdStr) {
       return NextResponse.json(

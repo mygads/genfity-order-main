@@ -274,12 +274,15 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
         body: JSON.stringify({ status: newStatus }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to update order status');
-      }
-
       const data = await response.json();
-      if (!data.success) {
+      
+      if (!response.ok || !data.success) {
+        console.error('Order status update failed:', {
+          status: response.status,
+          error: data.error,
+          orderId,
+          newStatus,
+        });
         throw new Error(data.error || 'Failed to update order status');
       }
 

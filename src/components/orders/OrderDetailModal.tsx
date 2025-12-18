@@ -37,6 +37,8 @@ interface OrderDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   onUpdate?: () => void;
+  initialOrder?: OrderWithDetails | null;
+  currency?: string;
 }
 
 export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
@@ -44,9 +46,11 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   isOpen,
   onClose,
   onUpdate,
+  initialOrder = null,
+  currency,
 }) => {
-  const [order, setOrder] = useState<OrderWithDetails | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [order, setOrder] = useState<OrderWithDetails | null>(initialOrder);
+  const [loading, setLoading] = useState(!initialOrder);
   const [updating, setUpdating] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [merchantCurrency, setMerchantCurrency] = useState<string>('AUD');
@@ -82,9 +86,34 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
 
   useEffect(() => {
     if (isOpen && orderId) {
-      fetchOrderDetails();
+      // Check if initialOrder has orderItems (is OrderWithDetails, not OrderListItem)
+      const hasOrderItems = initialOrder && 'orderItems' in initialOrder && Array.isArray(initialOrder.orderItems);
+      
+      if (hasOrderItems) {
+        // Use initialOrder directly without fetching
+        setOrder(initialOrder as OrderWithDetails);
+        setLoading(false);
+        // Still fetch merchant currency if not provided
+        if (!currency) {
+          const token = localStorage.getItem('accessToken');
+          fetch('/api/merchant/profile', {
+            headers: { 'Authorization': `Bearer ${token}` },
+          })
+            .then(res => res.json())
+            .then(data => {
+              if (data.success && data.data?.currency) {
+                setMerchantCurrency(data.data.currency);
+              }
+            })
+            .catch(console.error);
+        } else {
+          setMerchantCurrency(currency);
+        }
+      } else {
+        fetchOrderDetails();
+      }
     }
-  }, [isOpen, orderId, fetchOrderDetails]);
+  }, [isOpen, orderId, initialOrder, currency, fetchOrderDetails]);
 
   const handleStatusUpdate = async (newStatus: OrderStatus) => {
     if (!order) return;
@@ -343,7 +372,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
               <div className="mb-4">
                 <p className="mb-2 text-xs font-semibold text-gray-700 dark:text-gray-300">Items</p>
                 <div className="space-y-1.5">
-                  {order.orderItems.map((item, idx) => (
+                  {order.orderItems && order.orderItems.length > 0 ? order.orderItems.map((item, idx) => (
                     <div key={idx} className="rounded-lg border border-gray-200 bg-white p-2.5 dark:border-gray-800 dark:bg-gray-900">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
@@ -365,7 +394,9 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                         </p>
                       </div>
                     </div>
-                  ))}
+                  )) : (
+                    <p className="text-sm text-gray-500 dark:text-gray-400 italic py-2">Loading items...</p>
+                  )}
                 </div>
               </div>
 

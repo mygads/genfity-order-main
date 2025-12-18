@@ -133,21 +133,15 @@ export class OrderManagementService {
             name: true,
           },
         },
-        user: {
-          select: {
-            name: true,
-            email: true,
-          },
-        },
       },
     });
 
     // Send email notification when order is completed
-    if (data.status === 'COMPLETED' && updated.user?.email) {
+    if (data.status === 'COMPLETED' && updated.customer?.email) {
       try {
         await emailService.sendOrderCompleted({
-          to: updated.user.email,
-          customerName: updated.customerName || updated.user.name || 'Customer',
+          to: updated.customer.email,
+          customerName: updated.customerName || updated.customer.name || 'Customer',
           orderNumber: updated.orderNumber,
           merchantName: updated.merchant?.name || 'Restaurant',
           orderType: updated.orderType as 'DINE_IN' | 'TAKEAWAY',
@@ -159,7 +153,7 @@ export class OrderManagementService {
           total: Number(updated.totalAmount),
           completedAt: updated.completedAt || new Date(),
         });
-        console.log(`✅ Order completed email sent to ${updated.user.email}`);
+        console.log(`✅ Order completed email sent to ${updated.customer.email}`);
       } catch (emailError) {
         console.error('❌ Failed to send order completed email:', emailError);
         // Don't throw - email failure shouldn't block the status update

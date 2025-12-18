@@ -530,6 +530,8 @@ export default function MerchantOrdersPage() {
           isOpen={isModalOpen}
           onClose={handleCloseModal}
           onUpdate={handleOrderUpdate}
+          initialOrder={selectedOrder as unknown as import('@/lib/types/order').OrderWithDetails}
+          currency={merchantCurrency}
         />
       )}
       </div>
