@@ -1,4 +1,6 @@
 // Custom types based on Prisma schema
+import StoreToggleButton from './StoreToggleButton';
+
 type Merchant = {
   id: bigint;
   code: string;
@@ -9,6 +11,7 @@ type Merchant = {
   city?: string | null;
   logoUrl?: string | null;
   isActive: boolean;
+  isOpen?: boolean;
 };
 
 type Menu = {
@@ -111,12 +114,32 @@ export default function MerchantOwnerDashboard({
     <div className="space-y-6">
       {/* Merchant Info */}
       <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-          {merchant.name}
-        </h2>
-        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-          {merchant.code} • {merchant.city || 'No city'}
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+              {merchant.name}
+            </h2>
+            <div className="mt-1 flex items-center gap-2">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {merchant.code} • {merchant.city || 'No city'}
+              </p>
+              {merchant.isOpen !== undefined && (
+                <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${
+                  merchant.isOpen
+                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                    : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                }`}>
+                  <div className={`h-1.5 w-1.5 rounded-full ${merchant.isOpen ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+                  {merchant.isOpen ? 'Store Open' : 'Store Closed'}
+                </span>
+              )}
+            </div>
+          </div>
+          <StoreToggleButton 
+            initialIsOpen={merchant.isOpen ?? true}
+            merchantId={merchant.id.toString()}
+          />
+        </div>
       </div>
 
       {/* Stats Grid */}

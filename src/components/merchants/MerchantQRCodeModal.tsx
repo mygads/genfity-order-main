@@ -72,12 +72,12 @@ const MerchantQRCodeModal: React.FC<MerchantQRCodeModalProps> = ({
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-60 bg-black/50 backdrop-blur-sm"
+        className="fixed inset-0 z-99998 bg-black/50 backdrop-blur-sm"
         onClick={onClose}
       />
 
       {/* Modal */}
-      <div className="fixed left-1/2 top-1/2 z-60 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-800 dark:bg-gray-900">
+      <div className="fixed left-1/2 top-1/2 z-99999 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-800 dark:bg-gray-900">
         {/* Header */}
         <div className="mb-6 flex items-start justify-between">
           <div>

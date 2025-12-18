@@ -27,6 +27,7 @@ import {
   PaymentVerificationResult,
 } from '@/lib/types/order';
 import { validateStatusTransition } from '@/lib/utils/orderStatusRules';
+import emailService from '@/lib/services/EmailService';
 
 export class OrderManagementService {
   /**
@@ -125,8 +126,45 @@ export class OrderManagementService {
         ...(data.status === 'CANCELLED' && { cancelledAt: new Date() }),
         ...(data.status === 'READY' && { actualReadyAt: new Date() }),
       },
-      include: ORDER_DETAIL_INCLUDE,
+      include: {
+        ...ORDER_DETAIL_INCLUDE,
+        merchant: {
+          select: {
+            name: true,
+          },
+        },
+        user: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
+      },
     });
+
+    // Send email notification when order is completed
+    if (data.status === 'COMPLETED' && updated.user?.email) {
+      try {
+        await emailService.sendOrderCompleted({
+          to: updated.user.email,
+          customerName: updated.customerName || updated.user.name || 'Customer',
+          orderNumber: updated.orderNumber,
+          merchantName: updated.merchant?.name || 'Restaurant',
+          orderType: updated.orderType as 'DINE_IN' | 'TAKEAWAY',
+          items: updated.orderItems?.map((item: { menuName: string; quantity: number; menuPrice: { toNumber: () => number } }) => ({
+            name: item.menuName,
+            quantity: item.quantity,
+            price: Number(item.menuPrice),
+          })) || [],
+          total: Number(updated.totalAmount),
+          completedAt: updated.completedAt || new Date(),
+        });
+        console.log(`✅ Order completed email sent to ${updated.user.email}`);
+      } catch (emailError) {
+        console.error('❌ Failed to send order completed email:', emailError);
+        // Don't throw - email failure shouldn't block the status update
+      }
+    }
 
     return updated as unknown as OrderWithDetails;
   }

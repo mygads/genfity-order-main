@@ -262,3 +262,100 @@ export function getOrderConfirmationTemplate(params: {
 </html>
   `.trim();
 }
+
+/**
+ * Order completed email template
+ * Sent to customer when order status changes to COMPLETED
+ */
+export function getOrderCompletedTemplate(params: {
+  customerName: string;
+  orderNumber: string;
+  merchantName: string;
+  orderType: string;
+  items: Array<{ name: string; quantity: number; price: number }>;
+  total: number;
+  completedAt: string;
+}): string {
+  const itemsHtml = params.items
+    .map(
+      (item) => `
+    <tr>
+        <td style="padding: 8px; border-bottom: 1px solid #eee;">${item.name}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">x${item.quantity}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">$${item.price.toFixed(2)}</td>
+    </tr>
+  `
+    )
+    .join('');
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 20px auto; background-color: white; padding: 20px; border-radius: 8px; }
+        .header { text-align: center; border-bottom: 2px solid #22c55e; padding-bottom: 15px; }
+        .success-icon { font-size: 48px; margin-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="success-icon">✅</div>
+            <h1 style="color: #22c55e; margin: 0;">Order Completed!</h1>
+        </div>
+        
+        <div style="padding: 20px 0;">
+            <h2 style="color: #333;">Thank you, ${params.customerName}!</h2>
+            <p style="color: #666;">Your order at <strong>${params.merchantName}</strong> has been completed successfully.</p>
+            
+            <div style="background-color: #f0fdf4; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #22c55e;">
+                <p style="margin: 0; color: #166534;">
+                    <strong>Order Number:</strong> ${params.orderNumber}<br>
+                    <strong>Order Type:</strong> ${params.orderType}<br>
+                    <strong>Completed At:</strong> ${params.completedAt}
+                </p>
+            </div>
+            
+            <h3 style="color: #333;">Order Summary:</h3>
+            <table>
+                <thead>
+                    <tr style="background-color: #f9f9f9;">
+                        <th style="padding: 10px; text-align: left;">Item</th>
+                        <th style="padding: 10px; text-align: center;">Qty</th>
+                        <th style="padding: 10px; text-align: right;">Price</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${itemsHtml}
+                </tbody>
+                <tfoot>
+                    <tr style="background-color: #f0fdf4;">
+                        <td colspan="2" style="padding: 12px; text-align: right;"><strong>Total Paid:</strong></td>
+                        <td style="padding: 12px; text-align: right; font-size: 18px; color: #22c55e;"><strong>$${params.total.toFixed(2)}</strong></td>
+                    </tr>
+                </tfoot>
+            </table>
+            
+            <div style="background-color: #fef9c3; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                <p style="margin: 0; color: #854d0e;">
+                    <strong>💬 We'd love your feedback!</strong><br>
+                    Thank you for ordering with us. We hope you enjoyed your meal!
+                </p>
+            </div>
+        </div>
+        
+        <div style="text-align: center; border-top: 1px solid #eee; padding-top: 20px; color: #666; font-size: 12px;">
+            <p style="margin: 0;">
+                Powered by <strong style="color: #ff9800;">GENFITY</strong><br>
+                &copy; 2025 GENFITY. All rights reserved.
+            </p>
+        </div>
+    </div>
+</body>
+</html>
+  `.trim();
+}

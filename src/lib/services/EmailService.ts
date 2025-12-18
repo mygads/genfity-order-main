@@ -8,6 +8,7 @@ import type { Transporter } from 'nodemailer';
 import {
   getPasswordNotificationTemplate,
   getOrderConfirmationTemplate,
+  getOrderCompletedTemplate,
 } from '@/lib/utils/emailTemplates';
 
 // Track initialization to prevent duplicate logs
@@ -172,6 +173,39 @@ class EmailService {
           </p>
         </div>
       `,
+    });
+  }
+
+  /**
+   * Send order completed email to customer
+   */
+  async sendOrderCompleted(params: {
+    to: string;
+    customerName: string;
+    orderNumber: string;
+    merchantName: string;
+    orderType: 'DINE_IN' | 'TAKEAWAY';
+    items: Array<{ name: string; quantity: number; price: number }>;
+    total: number;
+    completedAt: Date;
+  }): Promise<boolean> {
+    const html = getOrderCompletedTemplate({
+      customerName: params.customerName,
+      orderNumber: params.orderNumber,
+      merchantName: params.merchantName,
+      orderType: params.orderType === 'DINE_IN' ? 'Dine In' : 'Takeaway',
+      items: params.items,
+      total: params.total,
+      completedAt: new Intl.DateTimeFormat('en-AU', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      }).format(params.completedAt),
+    });
+
+    return this.sendEmail({
+      to: params.to,
+      subject: `Order Completed - ${params.orderNumber} | Thank you!`,
+      html,
     });
   }
 }
