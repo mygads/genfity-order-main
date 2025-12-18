@@ -5,7 +5,6 @@ export const dynamic = 'force-dynamic';
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
 import { getCustomerAuth, getTableNumber, saveCustomerAuth } from '@/lib/utils/localStorage';
 import type { OrderMode } from '@/lib/types/customer';
 import PaymentConfirmationModal from '@/components/modals/PaymentConfirmationModal';
@@ -239,17 +238,17 @@ export default function PaymentPage() {
         customerName: name.trim(),
         customerEmail: email.trim() || undefined,
         customerPhone: phone.trim() || undefined,
-          items: cart.items.map((item) => ({
+        items: cart.items.map((item) => ({
           menuId: item.menuId.toString(),
           quantity: item.quantity,
           notes: item.notes || undefined,
-            // Aggregate duplicate addon entries into counts (cart stores duplicates to represent qty)
-            addons: Object.values((item.addons || []).reduce((acc: Record<string, any>, addon: any) => {
-              const key = addon.id.toString();
-              if (!acc[key]) acc[key] = { addonItemId: key, quantity: 0 };
-              acc[key].quantity += 1;
-              return acc;
-            }, {} as Record<string, any>)).map((s: any) => ({ addonItemId: s.addonItemId, quantity: s.quantity })),
+          // Aggregate duplicate addon entries into counts (cart stores duplicates to represent qty)
+          addons: Object.values((item.addons || []).reduce((acc: Record<string, any>, addon: any) => {
+            const key = addon.id.toString();
+            if (!acc[key]) acc[key] = { addonItemId: key, quantity: 0 };
+            acc[key].quantity += 1;
+            return acc;
+          }, {} as Record<string, any>)).map((s: any) => ({ addonItemId: s.addonItemId, quantity: s.quantity })),
         })),
       };
 
@@ -390,113 +389,31 @@ export default function PaymentPage() {
 
   return (
     <div className="flex flex-col min-h-screen max-w-[420px] mx-auto bg-white dark:bg-gray-900">
-      {/* Fixed Header - 56px */}
-      <header className="h-14 bg-white dark:bg-gray-800 border-b border-[#E0E0E0] dark:border-gray-700 px-4 flex items-center justify-between sticky top-0 z-50">
-        <Link href={`/${merchantCode}/view-order?mode=${mode}`} className="flex items-center gap-2 text-[#1A1A1A] dark:text-white">
-          <span className="text-xl">←</span>
-          <span className="text-sm font-medium">Back</span>
-        </Link>
+      {/* Header */}
+      <div className="sticky top-0 z-50 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between px-4 h-14">
+          {/* Back Button */}
+          <button
+            onClick={() => router.push(`/${merchantCode}/view-order?mode=${mode}`)}
+            className="p-2 -ml-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+            aria-label="Go back"
+          >
+            <svg className="w-6 h-6 text-gray-900 dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
 
-        <h1 className="text-base font-bold text-[#1A1A1A] dark:text-white">Payment</h1>
+          {/* Title */}
+          <h1 className="text-base font-bold text-gray-900 dark:text-white">Payment</h1>
 
-        <div className="w-16" />
-      </header>
+          {/* Placeholder for symmetry */}
+          <div className="w-10" />
+        </div>
+      </div>
 
       <main className="flex-1 overflow-y-auto px-4 py-4 pb-6">
-        {/* Order Mode Badge */}
-        <div className="mb-4 p-3 bg-[#FFF5F0] dark:bg-orange-900/20 border border-[#FF6B35] rounded-lg flex items-center gap-3">
-          <span className="text-2xl">{mode === 'dinein' ? '🍽️' : '🛍️'}</span>
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-[#1A1A1A] dark:text-white">
-              {mode === 'dinein' ? 'Dine In' : 'Takeaway'}
-            </p>
-            {/* ✅ FIXED: Use tableNumber from state */}
-            {tableNumber && mode === 'dinein' && (
-              <p className="text-xs text-[#666666] dark:text-gray-400">Table #{tableNumber}</p>
-            )}
-          </div>
-        </div>
 
-        {/* ✅ NEW: Order Items Summary */}
-        <div className="mb-4">
-          <h2 className="text-base font-semibold text-gray-900 dark:text-white mb-3">
-            Order Items
-          </h2>
-          <div className="space-y-3">
-            {cart?.items.map((item, index) => {
-              // Build aggregated addon list — cart stores addons as duplicated entries
-              const addonAggregatedMap = (item.addons || []).reduce((acc: Record<string, any>, addon) => {
-                const key = addon.id.toString();
-                if (!acc[key]) acc[key] = { ...addon, quantity: 0 };
-                acc[key].quantity += 1;
-                return acc;
-              }, {} as Record<string, any>);
-
-              const addonAggregated = Object.values(addonAggregatedMap);
-
-              // Calculate addon total using aggregated quantities
-              const addonTotal = addonAggregated.reduce((sum, addon) => {
-                const addonPrice = typeof addon.price === 'number' ? addon.price : 0;
-                const addonQty = addon.quantity || 1;
-                return sum + addonPrice * addonQty;
-              }, 0);
-
-              const itemSubtotal = (item.quantity * item.price) + addonTotal;
-
-              return (
-                <div key={index} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                        {item.quantity}x {item.menuName}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        {formatCurrency(item.price)} each
-                      </p>
-                    </div>
-                    <p className="text-sm font-semibold text-orange-500">
-                      {formatCurrency(itemSubtotal)}
-                    </p>
-                  </div>
-
-                  {/* Display Addons */}
-                  {item.addons && item.addons.length > 0 && (
-                    <div className="ml-4 space-y-1 mb-2">
-                      {addonAggregated.map((addon, addonIndex) => {
-                        const addonPrice = typeof addon.price === 'number' ? addon.price : 0;
-                        const addonQty = addon.quantity || 1;
-                        const addonSubtotal = addonPrice * addonQty;
-
-                        return (
-                          <div key={addonIndex} className="flex justify-between items-center text-xs text-gray-600 dark:text-gray-400">
-                            <span>
-                              + {addon.name}
-                              {addonQty > 1 && ` x${addonQty}`}
-                              {addonPrice > 0 && ` (+${formatCurrency(addonPrice)})`}
-                            </span>
-                            {addonSubtotal > 0 && (
-                              <span className="text-gray-500 dark:text-gray-400">
-                                {formatCurrency(addonSubtotal)}
-                              </span>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {/* Item Notes */}
-                  {item.notes && (
-                    <div className="ml-4 text-xs text-gray-500 dark:text-gray-400 flex items-start gap-1">
-                      <span>📝</span>
-                      <span>{item.notes}</span>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        
 
         {/* Error Message */}
         {error && (
@@ -609,6 +526,87 @@ export default function PaymentPage() {
           </div>
         </div>
 
+        {/* ✅ NEW: Order Items Summary */}
+        <div className="mb-4">
+          <h2 className="text-base font-semibold text-gray-900 dark:text-white mb-3">
+            Order Items
+          </h2>
+          <div className="space-y-3">
+            {cart?.items.map((item, index) => {
+              // Build aggregated addon list — cart stores addons as duplicated entries
+              const addonAggregatedMap = (item.addons || []).reduce((acc: Record<string, any>, addon) => {
+                const key = addon.id.toString();
+                if (!acc[key]) acc[key] = { ...addon, quantity: 0 };
+                acc[key].quantity += 1;
+                return acc;
+              }, {} as Record<string, any>);
+
+              const addonAggregated = Object.values(addonAggregatedMap);
+
+              // Calculate addon total using aggregated quantities
+              const addonTotal = addonAggregated.reduce((sum, addon) => {
+                const addonPrice = typeof addon.price === 'number' ? addon.price : 0;
+                const addonQty = addon.quantity || 1;
+                return sum + addonPrice * addonQty;
+              }, 0);
+
+              const itemSubtotal = (item.quantity * item.price) + addonTotal;
+
+              return (
+                <div key={index} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800">
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                        {item.quantity}x {item.menuName}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        {formatCurrency(item.price)} each
+                      </p>
+                    </div>
+                    <p className="text-sm font-semibold text-orange-500">
+                      {formatCurrency(itemSubtotal)}
+                    </p>
+                  </div>
+
+                  {/* Display Addons */}
+                  {item.addons && item.addons.length > 0 && (
+                    <div className="ml-4 space-y-1 mb-2">
+                      {addonAggregated.map((addon, addonIndex) => {
+                        const addonPrice = typeof addon.price === 'number' ? addon.price : 0;
+                        const addonQty = addon.quantity || 1;
+                        const addonSubtotal = addonPrice * addonQty;
+
+                        return (
+                          <div key={addonIndex} className="flex justify-between items-center text-xs text-gray-600 dark:text-gray-400">
+                            <span>
+                              + {addon.name}
+                              {addonQty > 1 && ` x${addonQty}`}
+                              {addonPrice > 0 && ` (+${formatCurrency(addonPrice)})`}
+                            </span>
+                            {addonSubtotal > 0 && (
+                              <span className="text-gray-500 dark:text-gray-400">
+                                {formatCurrency(addonSubtotal)}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Item Notes */}
+                  {item.notes && (
+                    <div className="ml-4 text-xs text-gray-500 dark:text-gray-400 flex items-start gap-1">
+                      <span>📝</span>
+                      <span>{item.notes}</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        
         {/* Total Summary Card */}
         <div className="mb-4 p-4 bg-white dark:bg-gray-800 rounded-lg border border-[#E0E0E0] dark:border-gray-700">
           {/* Subtotal */}

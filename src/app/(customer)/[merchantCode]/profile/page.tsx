@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, useParams } from 'next/navigation';
 import { getCustomerAuth, clearCustomerAuth } from '@/lib/utils/localStorage';
 import type { OrderHistoryItem } from '@/lib/types/customer';
 import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';
@@ -18,6 +18,7 @@ import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState
 
 function ProfileContent() {
   const router = useRouter();
+  const params = useParams();
   const searchParams = useSearchParams();
 
   const [auth, setAuth] = useState(getCustomerAuth());
@@ -28,7 +29,7 @@ function ProfileContent() {
   const [hasPassword, setHasPassword] = useState<boolean>(true);
   const [merchantCurrency, setMerchantCurrency] = useState('AUD'); // ✅ NEW: Dynamic currency
 
-  const merchant = searchParams.get('merchant');
+  const merchantCode = params.merchantCode as string;
   const ref = searchParams.get('ref');
 
   const fetchOrderHistory = async () => {
@@ -66,8 +67,8 @@ function ProfileContent() {
     }
 
     // ✅ Fetch merchant info to get currency
-    if (merchant) {
-      fetchMerchantInfo(merchant);
+    if (merchantCode) {
+      fetchMerchantInfo(merchantCode);
     }
 
     // ✅ Check if user has password
@@ -125,9 +126,9 @@ function ProfileContent() {
     if (ref) {
       console.log('🔐 [PROFILE] Redirecting to ref:', decodeURIComponent(ref));
       router.push(decodeURIComponent(ref));
-    } else if (merchant) {
-      console.log('🔐 [PROFILE] Redirecting to merchant home:', `/${merchant}`);
-      router.push(`/${merchant}`);
+    } else if (merchantCode) {
+      console.log('🔐 [PROFILE] Redirecting to merchant home:', `/${merchantCode}`);
+      router.push(`/${merchantCode}`);
     } else {
       // Fallback: get last merchant from localStorage
       const lastMerchant = localStorage.getItem('lastMerchantCode');
@@ -197,8 +198,8 @@ function ProfileContent() {
             onClick={() => {
               if (ref) {
                 router.push(decodeURIComponent(ref));
-              } else if (merchant) {
-                router.push(`/${merchant}`);
+              } else if (merchantCode) {
+                router.push(`/${merchantCode}`);
               } else {
                 // Fallback: get last merchant from localStorage
                 const lastMerchant = localStorage.getItem('lastMerchantCode');
@@ -209,19 +210,19 @@ function ProfileContent() {
                 }
               }
             }}
-            className="flex items-center gap-2 text-gray-900 dark:text-white hover:text-orange-500 transition-colors"
+            className="p-2 -ml-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+            aria-label="Go back"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M19 12H5M12 19l-7-7 7-7" />
+            <svg className="w-6 h-6 text-gray-900 dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            <span className="text-sm font-medium">Back</span>
           </button>
 
           {/* Title */}
           <h1 className="text-base font-bold text-gray-900 dark:text-white">Profile</h1>
 
           {/* Placeholder */}
-          <div className="w-16" />
+          <div className="w-10" />
         </div>
 
         {/* Tab Navigation */}

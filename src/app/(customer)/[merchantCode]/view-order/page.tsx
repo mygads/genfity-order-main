@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
-import CustomerHeader from '@/components/customer/CustomerHeader';
 import MenuDetailModal from '@/components/menu/MenuDetailModal';
 import { useCart } from '@/context/CartContext'; // ✅ ADD THIS
 import type { CartItem } from '@/context/CartContext';
@@ -169,13 +168,26 @@ export default function ViewOrderPage() {
   return (
     <div className="max-w-[420px] mx-auto bg-white dark:bg-gray-900 min-h-svh flex flex-col">
       {/* Header */}
-      <CustomerHeader
-        merchantCode={merchantCode}
-        mode={mode}
-        showBackButton={true}
-        onBack={() => router.push(`/${merchantCode}/order?mode=${mode}`)}
-        title="Order"
-      />
+      <div className="sticky top-0 z-50 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between px-4 h-14">
+          {/* Back Button */}
+          <button
+            onClick={() => router.push(`/${merchantCode}/order?mode=${mode}`)}
+            className="p-2 -ml-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+            aria-label="Go back"
+          >
+            <svg className="w-6 h-6 text-gray-900 dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+
+          {/* Title */}
+          <h1 className="text-base font-bold text-gray-900 dark:text-white">Order</h1>
+
+          {/* Placeholder for symmetry */}
+          <div className="w-10" />
+        </div>
+      </div>
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto pb-32">

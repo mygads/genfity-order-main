@@ -215,11 +215,11 @@ export default function MerchantModePage({ params }: MerchantPageProps) {
 
       </div>
 
-      {/* How to use ESB Order Section */}
+      {/* How to use Genfity Order Section */}
       <div className="px-3 my-4">
         <div className="text-center">
           <h3 className="my-4 mb-2 text-base font-semibold text-gray-900 dark:text-white">
-            How to use ESB Order
+            How to use Genfity Order
           </h3>
 
           {/* Steps: Order → Pay → Eat */}
@@ -300,11 +300,11 @@ export default function MerchantModePage({ params }: MerchantPageProps) {
         </div>
       </div>
 
-      {/* Footer - Powered by ESB */}
+      {/* Footer - Powered by Genfity */}
       <div className="mt-auto px-4 py-4 text-center">
         <div className="flex items-center justify-center gap-2 text-sm">
           <span className="text-gray-600 dark:text-gray-400">Powered by</span>
-          <span className="font-semibold text-gray-900 dark:text-white">ESB</span>
+          <span className="font-semibold text-gray-900 dark:text-white">Genfity</span>
         </div>
       </div>
 

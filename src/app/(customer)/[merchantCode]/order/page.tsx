@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
-import CustomerHeader from '@/components/customer/CustomerHeader';
+import OrderPageHeader from '@/components/customer/OrderPageHeader';
+import CategoryTabs from '@/components/customer/CategoryTabs';
 import RestaurantBanner from '@/components/customer/RestaurantBanner';
 import RestaurantInfoCard from '@/components/customer/RestaurantInfoCard';
 import TableNumberCard from '@/components/customer/TableNumberCard';
@@ -51,7 +52,6 @@ interface OpeningHour {
   openTime: string; // "09:00"
   closeTime: string; // "22:00"
   isClosed: boolean;
-  is24Hours: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -108,9 +108,12 @@ export default function MenuBrowsePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMenu, setSelectedMenu] = useState<MenuItem | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isScrolled, setIsScrolled] = useState(false); // Track scroll position
   const [showTableModal, setShowTableModal] = useState(false); // Table number modal state
   const [showOutletInfo, setShowOutletInfo] = useState(false); // Outlet info modal state
+  const [isSticky, setIsSticky] = useState(false); // Track if header should be sticky
+  const [isCategoryTabsSticky, setIsCategoryTabsSticky] = useState(false); // Track if category tabs should be sticky
+  const [showTableBadge, setShowTableBadge] = useState(false); // Track if table badge should be shown in header
+  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({}); // References to category sections
   const { initializeCart, cart } = useCart();
 
   /**
@@ -232,22 +235,66 @@ export default function MenuBrowsePage() {
   }, [merchantCode, mode, initializeCart]);
 
   // ========================================
-  // Scroll Detection for Sticky Header Effect
+  // Sticky Header & Tabs Logic (Matches Reference Exactly)
   // ========================================
   useEffect(() => {
-    const handleScroll = () => {
-      const scrollContainer = document.getElementById('scroll-container');
-      if (scrollContainer) {
-        // Show sticky header when scrolled more than 50px
-        setIsScrolled(scrollContainer.scrollTop > 50);
+    const updateHeaderHeight = () => {
+      const header = document.querySelector('[data-header]') as HTMLElement;
+      if (header) {
+        const height = header.offsetHeight;
+        document.documentElement.style.setProperty('--header-height', `${height}px`);
       }
     };
 
-    const scrollContainer = document.getElementById('scroll-container');
-    if (scrollContainer) {
-      scrollContainer.addEventListener('scroll', handleScroll);
-      return () => scrollContainer.removeEventListener('scroll', handleScroll);
-    }
+    const handleScroll = () => {
+      // Check if 75% of banner has been scrolled past (for header)
+      const bannerElement = document.querySelector('[data-banner]');
+      if (bannerElement) {
+        const rect = bannerElement.getBoundingClientRect();
+        const bannerHeight = rect.height;
+        const scrolledPastBanner = rect.top + (bannerHeight * 0.75);
+
+        // Header becomes sticky when 75% of banner has been scrolled past
+        setIsSticky(scrolledPastBanner <= 0);
+      }
+
+      // Check if CategoryTabs should be sticky (separate detection)
+      const categoryTabsElement = document.querySelector('[data-category-tabs-trigger]');
+      if (categoryTabsElement) {
+        const rect = categoryTabsElement.getBoundingClientRect();
+        // CategoryTabs become sticky when top of trigger reaches header bottom
+        const headerHeight = 56; // Height of header
+        setIsCategoryTabsSticky(rect.top <= headerHeight);
+      }
+
+      // Check if TableNumberCard has been scrolled past (for showing table badge in header)
+      const tableNumberElement = document.querySelector('[data-table-number-card]');
+      if (tableNumberElement) {
+        const rect = tableNumberElement.getBoundingClientRect();
+        const headerHeight = 56; // Height of header
+        // Show table badge when TableNumberCard starts being covered by header OR has scrolled past
+        setShowTableBadge(rect.top <= headerHeight);
+      }
+
+      // Update active tab based on scroll position
+      for (const [categoryId, element] of Object.entries(sectionRefs.current)) {
+        if (element) {
+          const rect = element.getBoundingClientRect();
+          if (rect.top <= 100 && rect.bottom > 100) {
+            setSelectedCategory(categoryId);
+            break;
+          }
+        }
+      }
+    };    // Update header height on mount and window resize
+    updateHeaderHeight();
+    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('resize', updateHeaderHeight);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', updateHeaderHeight);
+    };
   }, []);
 
   // Filter items by selected category
@@ -273,71 +320,40 @@ export default function MenuBrowsePage() {
   // ========================================
   return (
     <div className="flex flex-col min-h-screen max-w-[420px] mx-auto bg-white dark:bg-gray-900">
-      {/* ========================================
-          HEADER (STICKY)
+      {/* ======================================== 
+          ORDER PAGE HEADER (New Component - Matches Reference)
+          Positioned absolutely above banner when not sticky
       ======================================== */}
-      <div className={`sticky top-0 z-50 transition-all duration-300 ${isScrolled
-        ? 'bg-gray-50 dark:bg-gray-800 shadow-md'
-        : 'bg-gray-50 dark:bg-gray-800'
-        }`}>
-        {/* Table Number Badge (Shown when scrolled in dinein mode) */}
-        {isScrolled && mode === 'dinein' && tableNumber && (
-          <div className="absolute left-1/2 -translate-x-1/2 -top-3 z-60">
-            <div className="bg-orange-500 text-white px-4 py-1 rounded-full text-xs font-semibold shadow-lg">
-              Table {tableNumber}
-            </div>
-          </div>
-        )}
+      <OrderPageHeader
+        merchantName={merchantInfo?.name || merchantCode}
+        merchantLogo={merchantInfo?.logoUrl || null}
+        isSticky={isSticky}
+        tableNumber={tableNumber}
+        mode={mode as 'dinein' | 'takeaway'}
+        showTableBadge={showTableBadge}
+        onBackClick={() => {
+          localStorage.removeItem(`mode_${merchantCode}`);
+          router.push(`/${merchantCode}`);
+        }}
+      />
 
-        <CustomerHeader
-          merchantCode={merchantCode}
-          mode={mode as 'dinein' | 'takeaway'}
-          showBackButton={true}
-          onBack={() => {
-            localStorage.removeItem(`mode_${merchantCode}`);
-            router.push(`/${merchantCode}`);
-          }}
-        />
-
-        {/* ========================================
-            STICKY CATEGORY TABS (Below Header)
-        ======================================== */}
-        {!isLoading && categories.length > 0 && (
-          <div className="border-b border-gray-200 dark:border-gray-700">
-            <div className="flex gap-6 overflow-x-auto scrollbar-hide px-4">
-              {/* ALL MENU Tab */}
-              <button
-                onClick={() => setSelectedCategory('all')}
-                className={`px-2 py-3 text-xs font-semibold whitespace-nowrap transition-colors ${selectedCategory === 'all'
-                  ? 'text-orange-500 border-b-2 border-orange-500'
-                  : 'text-gray-500 dark:text-gray-400 border-b-2 border-transparent hover:text-gray-900 dark:hover:text-white'
-                  }`}
-              >
-                ALL MENU
-              </button>
-
-              {/* Category Tabs */}
-              {categories.map((category) => (
-                <button
-                  key={category.id}
-                  onClick={() => setSelectedCategory(category.id)}
-                  className={`px-2 py-3 text-xs font-semibold whitespace-nowrap transition-colors ${selectedCategory === category.id
-                    ? 'text-orange-500 border-b-2 border-orange-500'
-                    : 'text-gray-500 dark:text-gray-400 border-b-2 border-transparent hover:text-gray-900 dark:hover:text-white'
-                    }`}
-                >
-                  {category.name.toUpperCase()}
-                </button>
-              ))}
-            </div>
-          </div>
+      {/* Hero Section (Restaurant Banner) - Header overlays on top */}
+      <div className="relative" data-banner>
+        {isLoading ? (
+          /* Banner Loading Skeleton */
+          <div className="w-full h-48 bg-gray-200 dark:bg-gray-800 animate-pulse" />
+        ) : (
+          <RestaurantBanner
+            imageUrl={merchantInfo?.logoUrl}
+            merchantName={merchantInfo?.name || merchantCode}
+          />
         )}
       </div>
 
       {/* ========================================
-          SCROLLABLE CONTENT
+          MAIN CONTENT
       ======================================== */}
-      <div id="scroll-container" className="flex-1 overflow-y-auto">
+      <div className="pb-24">
         {/* Error Alert */}
         {error && (
           <div className="px-4 pt-4">
@@ -352,13 +368,7 @@ export default function MenuBrowsePage() {
         {isLoading ? (
           <LoadingState type="inline" message={LOADING_MESSAGES.MENU} />
         ) : (
-          <div className="pb-24">
-            {/* Restaurant Banner */}
-            <RestaurantBanner
-              imageUrl={merchantInfo?.logoUrl}
-              merchantName={merchantInfo?.name || merchantCode}
-            />
-
+          <>
             {/* Divider */}
             <div className="px-4 mt-4">
               <hr className="border-gray-200 dark:border-gray-700" />
@@ -389,7 +399,7 @@ export default function MenuBrowsePage() {
             {/* Table Number (Dinein Only) */}
             {mode === 'dinein' && tableNumber && (
               <>
-                <div className="px-4 mt-4">
+                <div className="px-4 mt-4" data-table-number-card>
                   <TableNumberCard tableNumber={tableNumber} />
                 </div>
                 {/* Divider */}
@@ -398,6 +408,35 @@ export default function MenuBrowsePage() {
                 </div>
               </>
             )}
+
+            {/* ========================================
+                CATEGORY TABS (Sticky independently when scrolled to)
+            ======================================== */}
+            {/* Trigger point for CategoryTabs sticky detection */}
+            <div data-category-tabs-trigger className="h-0" />
+
+            {/* Placeholder spacer - shown when CategoryTabs is fixed to prevent content jump */}
+            {isCategoryTabsSticky && (
+              <div className="h-[57px]" aria-hidden="true" />
+            )}
+
+            {/* CategoryTabs - Always rendered, positioned based on its own sticky state */}
+            <div
+              data-category-tabs
+              className={`transition-all duration-300 ${isCategoryTabsSticky
+                  ? 'fixed top-14 left-0 right-0 z-40'
+                  : 'relative'
+                } max-w-[420px] mx-auto bg-white dark:bg-gray-900`}
+            >
+              <CategoryTabs
+                categories={categories}
+                activeTab={selectedCategory}
+                onTabClick={(categoryId) => {
+                  setSelectedCategory(categoryId);
+                  sectionRefs.current[categoryId]?.scrollIntoView({ behavior: 'smooth' });
+                }}
+              />
+            </div>
 
             {/* Show ALL sections when 'all' is selected */}
             {selectedCategory === 'all' ? (
@@ -409,27 +448,7 @@ export default function MenuBrowsePage() {
                       <PromoMenuSection
                         items={promoItems}
                         currency={merchantInfo?.currency || 'AUD'}
-                        // Promo items have a smaller shape. Convert to the page's MenuItem
-                        // shape before setting as selected menu so MenuDetailModal receives
-                        // the expected properties.
-                        onItemClick={(item) => {
-                          const menuLike = {
-                            id: item.id,
-                            name: item.name,
-                            description: '',
-                            price: item.price,
-                            imageUrl: item.imageUrl,
-                            stockQty: null,
-                            categoryId: null,
-                            categories: [] as { id: string; name: string }[],
-                            isActive: true,
-                            trackStock: false,
-                            isPromo: !!item.promoPrice,
-                            promoPrice: item.promoPrice,
-                          };
-
-                          setSelectedMenu(menuLike as unknown as MenuItem);
-                        }}
+                        onItemClick={(item) => setSelectedMenu(item as MenuItem)}
                         getItemQuantityInCart={getMenuQuantityInCart}
                       />
                     </div>
@@ -448,22 +467,7 @@ export default function MenuBrowsePage() {
                         title="New Menu"
                         items={newMenuItems}
                         currency={merchantInfo?.currency || 'AUD'}
-                        onItemClick={(item) =>
-                          setSelectedMenu({
-                            id: item.id,
-                            name: item.name,
-                            description: item.description || '',
-                            price: item.price,
-                            imageUrl: item.imageUrl,
-                            stockQty: item.stockQty ?? null,
-                            categoryId: null,
-                            categories: [],
-                            isActive: item.isActive,
-                            trackStock: item.trackStock,
-                            isPromo: item.isPromo,
-                            promoPrice: item.promoPrice,
-                          })
-                        }
+                        onItemClick={(item) => setSelectedMenu(item as MenuItem)}
                         getItemQuantityInCart={getMenuQuantityInCart}
                       />
                     </div>
@@ -482,22 +486,7 @@ export default function MenuBrowsePage() {
                         title="Best Seller"
                         items={bestSellerItems}
                         currency={merchantInfo?.currency || 'AUD'}
-                        onItemClick={(item) =>
-                          setSelectedMenu({
-                            id: item.id,
-                            name: item.name,
-                            description: item.description || '',
-                            price: item.price,
-                            imageUrl: item.imageUrl,
-                            stockQty: item.stockQty ?? null,
-                            categoryId: null,
-                            categories: [],
-                            isActive: item.isActive,
-                            trackStock: item.trackStock,
-                            isPromo: item.isPromo,
-                            promoPrice: item.promoPrice,
-                          })
-                        }
+                        onItemClick={(item) => setSelectedMenu(item as MenuItem)}
                         getItemQuantityInCart={getMenuQuantityInCart}
                       />
                     </div>
@@ -523,20 +512,7 @@ export default function MenuBrowsePage() {
                           title={category.name.toUpperCase()}
                           items={categoryItems}
                           currency={merchantInfo?.currency || 'AUD'}
-                          onAddItem={(item) => setSelectedMenu({
-                            id: item.id,
-                            name: item.name,
-                            description: item.description || '',
-                            price: item.price,
-                            imageUrl: item.imageUrl,
-                            stockQty: item.stockQty ?? null,
-                            categoryId: null,
-                            categories: [],
-                            isActive: item.isActive,
-                            trackStock: item.trackStock,
-                            isPromo: item.isPromo,
-                            promoPrice: item.promoPrice,
-                          })}
+                          onAddItem={(item) => setSelectedMenu(item as MenuItem)}
                           getItemQuantityInCart={getMenuQuantityInCart}
                         />
                       </div>
@@ -561,20 +537,7 @@ export default function MenuBrowsePage() {
                     title={categories.find(c => c.id === selectedCategory)?.name.toUpperCase() || ''}
                     items={displayedItems}
                     currency={merchantInfo?.currency || 'AUD'}
-                    onAddItem={(item) => setSelectedMenu({
-                      id: item.id,
-                      name: item.name,
-                      description: item.description || '',
-                      price: item.price,
-                      imageUrl: item.imageUrl,
-                      stockQty: item.stockQty ?? null,
-                      categoryId: null,
-                      categories: [],
-                      isActive: item.isActive,
-                      trackStock: item.trackStock,
-                      isPromo: item.isPromo,
-                      promoPrice: item.promoPrice,
-                    })}
+                    onAddItem={(item) => setSelectedMenu(item as MenuItem)}
                     getItemQuantityInCart={getMenuQuantityInCart}
                   />
                 </div>
@@ -585,13 +548,12 @@ export default function MenuBrowsePage() {
             {displayedItems.length === 0 && !isLoading && selectedCategory !== 'all' && (
               <div className="px-4 mt-6">
                 <EmptyState
-                  illustration={<span className="text-4xl">🍽️</span>}
                   title="No Menu Items"
                   description="No items available in this category"
                 />
               </div>
             )}
-          </div>
+          </>
         )}
       </div>
 
@@ -648,7 +610,7 @@ export default function MenuBrowsePage() {
             name: merchantInfo.name,
             address: merchantInfo.address,
             phone: merchantInfo.phone,
-            openingHours: merchantInfo.openingHours,
+            openingHours: merchantInfo.openingHours.map(h => ({ ...h, is24Hours: (h as { is24Hours?: boolean }).is24Hours ?? false })),
           }}
         />
       )}
