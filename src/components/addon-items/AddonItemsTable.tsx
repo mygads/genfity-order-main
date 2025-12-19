@@ -56,13 +56,13 @@ export default function AddonItemsTable({
   };
 
   const getInputTypeLabel = (type: string): string => {
-    return type === "SELECT" ? "Single Select" : "Quantity Input";
+    return type === "SELECT" ? "Checkbox / Radio" : "Quantity (+/-)";
   };
 
   const getInputTypeBadgeColor = (type: string): string => {
     return type === "SELECT" 
       ? "bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400"
-      : "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-400";
+      : "bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400";
   };
 
   if (items.length === 0) {

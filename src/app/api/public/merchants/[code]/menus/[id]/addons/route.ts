@@ -157,6 +157,7 @@ export async function GET(
           name: item.name,
           description: item.description,
           price: decimalToNumber(item.price),
+          inputType: item.inputType, // SELECT = single/multi select, QTY = quantity input
           isAvailable: isAvailable,
           trackStock: item.trackStock,
           stockQty: item.stockQty,

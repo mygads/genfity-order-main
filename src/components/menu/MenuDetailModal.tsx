@@ -12,6 +12,7 @@ interface Addon {
   price: number;
   categoryId: number;
   isAvailable: boolean;
+  inputType: 'SELECT' | 'QTY'; // SELECT = checkbox/radio, QTY = quantity input
 }
 
 interface AddonCategory {
@@ -84,7 +85,16 @@ export default function MenuDetailModal({
   const [addonCategories, setAddonCategories] = useState<AddonCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
+  const [missingCategoryId, setMissingCategoryId] = useState<number | null>(null);
+  const addonCategoryRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const isAddingRef = useRef(false);
+
+  const scrollToAddonCategory = (categoryId: number) => {
+    const element = addonCategoryRefs.current[categoryId];
+    if (!element) return;
+
+    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   // Fetch addon categories
   useEffect(() => {
@@ -158,6 +168,9 @@ export default function MenuDetailModal({
 
   // Handle addon quantity change with validation
   const handleAddonQtyChange = (addonId: number, delta: number) => {
+    if (errorMessage) setErrorMessage('');
+    if (missingCategoryId !== null) setMissingCategoryId(null);
+
     setSelectedAddons(prev => {
       const currentQty = prev[addonId] || 0;
       const newQty = Math.max(0, currentQty + delta);
@@ -197,8 +210,59 @@ export default function MenuDetailModal({
     });
   };
 
+  // Handle radio button selection (single choice - maxSelections = 1)
+  const handleRadioSelect = (categoryId: number, addonId: number) => {
+    if (errorMessage) setErrorMessage('');
+    if (missingCategoryId !== null) setMissingCategoryId(null);
+
+    const category = addonCategories.find(c => c.id === categoryId);
+    if (!category) return;
+
+    setSelectedAddons(prev => {
+      // Remove all selections from this category first
+      const newState = { ...prev };
+      category.addons.forEach(a => {
+        delete newState[a.id];
+      });
+      // Then add the selected one
+      newState[addonId] = 1;
+      return newState;
+    });
+  };
+
+  // Handle checkbox toggle (multiple choice)
+  const handleCheckboxToggle = (categoryId: number, addonId: number) => {
+    if (errorMessage) setErrorMessage('');
+    if (missingCategoryId !== null) setMissingCategoryId(null);
+
+    const category = addonCategories.find(c => c.id === categoryId);
+    if (!category) return;
+
+    setSelectedAddons(prev => {
+      const currentQty = prev[addonId] || 0;
+      
+      if (currentQty > 0) {
+        // Uncheck - remove this addon
+        const { [addonId]: _, ...rest } = prev;
+        return rest;
+      } else {
+        // Check - add this addon (if max not reached)
+        const totalInCategory = category.addons.reduce((sum, a) => {
+          return sum + (prev[a.id] || 0);
+        }, 0);
+
+        if (category.maxSelections > 0 && totalInCategory >= category.maxSelections) {
+          console.warn(`⚠️ [MODAL] Max selections (${category.maxSelections}) reached for ${category.name}`);
+          return prev;
+        }
+
+        return { ...prev, [addonId]: 1 };
+      }
+    });
+  };
+
   // Validate required addons before adding to cart
-  const validateRequiredAddons = (): { valid: boolean; message?: string } => {
+  const validateRequiredAddons = (): { valid: boolean; message?: string; missingCategoryId?: number } => {
     for (const category of addonCategories) {
       if (category.type === 'required') {
         // Count total selections in this category
@@ -209,7 +273,8 @@ export default function MenuDetailModal({
         if (totalSelected < category.minSelections) {
           return {
             valid: false,
-            message: `Please select at least ${category.minSelections} option(s) from "${category.name}"`,
+            message: `Please select required add-ons in "${category.name}"`,
+            missingCategoryId: category.id,
           };
         }
 
@@ -236,6 +301,11 @@ export default function MenuDetailModal({
     const validation = validateRequiredAddons();
     if (!validation.valid) {
       setErrorMessage(validation.message || 'Please complete required selections');
+      if (validation.missingCategoryId) {
+        setMissingCategoryId(validation.missingCategoryId);
+        // Ensure scroll runs after state updates settle
+        setTimeout(() => scrollToAddonCategory(validation.missingCategoryId as number), 50);
+      }
       return;
     }
 
@@ -336,7 +406,7 @@ export default function MenuDetailModal({
     }, 100);
   };
 
-  const isAvailable = menu.isActive && (!menu.trackStock || menu.stockQty > 0);
+  const isAvailable = menu.isActive && (!menu.trackStock || (menu.stockQty !== null && menu.stockQty > 0));
 
   return (
     <div className="fixed inset-0 z-300 flex items-end justify-center">
@@ -452,106 +522,141 @@ export default function MenuDetailModal({
                 return (
                   <div key={category.id}>
                     <div
-                      className={`px-4 py-3 ${isIncomplete ? 'bg-red-50 dark:bg-red-900/10' : ''}`}
+                      ref={(el) => {
+                        addonCategoryRefs.current[category.id] = el;
+                      }}
+                      id={`addon-category-${category.id}`}
+                      className={`px-4 py-3 ${missingCategoryId === category.id ? 'bg-orange-50 dark:bg-orange-900/10' : ''}`}
                       style={{ position: 'relative' }}
                     >
                       {/* Category Header */}
-                      <div className="flex flex-row justify-content-between align-items-start w-full mb-2">
-                        <div className="grow">
-                          <h2 className="text-base font-bold text-gray-900 dark:text-white m-0">
-                            {category.name}
-                          </h2>
-                          <div className={`text-xs mt-1 ${isIncomplete ? 'text-orange-500 dark:text-orange-400' : 'text-gray-500 dark:text-gray-400'}`}>
-                            {category.type === 'required' ? (
-                              <span className="font-semibold">Must be selected</span>
-                            ) : (
-                              <span>Optional</span>
-                            )}
-                            {category.minSelections > 0 && category.maxSelections > 0 && (
-                              <>
-                                <span className="mx-1">•</span>
-                                <span>max {category.maxSelections}</span>
-                              </>
-                            )}
-                            {category.minSelections === 0 && category.maxSelections > 0 && (
-                              <>
-                                <span className="mx-1">•</span>
-                                <span>max {category.maxSelections}</span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                        {/* Checkmark icon if complete */}
-                        {category.type === 'required' && !isIncomplete && (
-                          <div className="flex items-center justify-center w-6 h-6 bg-green-500 rounded-full">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
-                              <path d="M5 12l5 5L20 7" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                          </div>
+                      <div className="w-full mb-2">
+                        <h2 className="text-base font-bold text-gray-900 dark:text-white m-0">
+                          {category.name}
+                        </h2>
+                        {category.type === 'required' ? (
+                          <p className={`mt-1 text-xs font-medium ${isIncomplete ? 'text-orange-600 dark:text-orange-400' : 'text-orange-600/90 dark:text-orange-400/90'}`}>
+                            Required
+                            {category.maxSelections > 0 ? ` • max ${category.maxSelections}` : ''}
+                          </p>
+                        ) : (
+                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            Optional
+                            {category.maxSelections > 0 ? ` • max ${category.maxSelections}` : ''}
+                          </p>
                         )}
                       </div>
 
-                      {/* Addon Items with Quantity Controls */}
-                      <div>
+                      {/* Addon Items - Different UI based on input type and maxSelections */}
+                      <div className="space-y-1">
                         {category.addons.map((addon) => {
                           const addonQty = selectedAddons[addon.id] || 0;
+                          const isSelected = addonQty > 0;
 
                           // Calculate total selections in this category
                           const totalInCategory = category.addons.reduce((sum, a) => {
                             return sum + (selectedAddons[a.id] || 0);
                           }, 0);
 
-                          // Disable plus button if max reached
-                          const isMaxReached = category.maxSelections > 0 && totalInCategory >= category.maxSelections && addonQty === 0;
+                          // Determine input type to render:
+                          // 1. Radio: maxSelections === 1 (single choice)
+                          // 2. Checkbox: inputType === 'SELECT' and maxSelections > 1 (multiple choice)
+                          // 3. Quantity: inputType === 'QTY' (can select multiple of same item)
+                          const isSingleChoice = category.maxSelections === 1;
+                          const isQuantityType = addon.inputType === 'QTY';
+                          
+                          // Disable checkbox if max reached and not already selected
+                          const isMaxReached = category.maxSelections > 0 && 
+                            totalInCategory >= category.maxSelections && !isSelected;
 
                           return (
-                            <div key={addon.id} className="flex items-center justify-between px-4 py-2">
-                              {/* Addon Name & Price */}
-                              <div className="flex-1">
-                                <div className={`text-sm ${!addon.isAvailable ? 'text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-white'}`}>
-                                  {addon.name}{' '}
-                                  {addon.price > 0 && (
-                                    <strong className="text-gray-900 dark:text-white">
-                                      (+{formatCurrency(addon.price, currency)})
-                                    </strong>
-                                  )}
-                                </div>
+                            <div key={addon.id} className="flex items-center justify-between py-2.5 px-4">
+                              {/* Left side: Name + Price */}
+                              <div className="flex-1 min-w-0">
+                                <span className={`text-sm ${!addon.isAvailable ? 'text-gray-400 dark:text-gray-500 line-through' : 'text-gray-900 dark:text-white'}`}>
+                                  {addon.name}
+                                </span>
+                                {addon.price > 0 && (
+                                  <span className={`text-sm font-semibold ml-1 ${!addon.isAvailable ? 'text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-white'}`}>
+                                    (+{formatCurrency(addon.price, currency)})
+                                  </span>
+                                )}
                               </div>
 
-                              {/* Quantity Counter or Sold Out */}
+                              {/* Right side: Input controls */}
                               {!addon.isAvailable ? (
-                                <span className="text-xs font-bold text-red-500 dark:text-red-400 text-center" style={{ width: '88px' }}>
+                                /* Sold Out */
+                                <span className="text-xs font-semibold text-red-500 dark:text-red-400 px-2 py-1 bg-red-50 dark:bg-red-900/20 rounded">
                                   Sold out
                                 </span>
-                              ) : (
-                                <div className="flex items-center gap-2">
+                              ) : isSingleChoice ? (
+                                /* Single Choice (maxSelections = 1) - checkbox style but exclusive behavior */
+                                <button
+                                  type="button"
+                                  onClick={() => handleRadioSelect(category.id, addon.id)}
+                                  className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-all shrink-0 ${
+                                    isSelected
+                                      ? 'border-orange-500 bg-orange-500'
+                                      : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
+                                  }`}
+                                  aria-label={`Select ${addon.name}`}
+                                >
+                                  {isSelected ? (
+                                    <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                  ) : null}
+                                </button>
+                              ) : isQuantityType ? (
+                                /* Quantity Input - Can add multiple of same item */
+                                <div className="flex items-center gap-2 shrink-0">
                                   <button
+                                    type="button"
                                     onClick={() => handleAddonQtyChange(addon.id, -1)}
                                     disabled={addonQty === 0}
-                                    className="w-7 h-7 rounded-md border border-gray-300 dark:border-gray-600 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-gray-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                                    className="w-7 h-7 rounded-full border border-gray-300 dark:border-gray-600 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                                     aria-label="Decrease quantity"
                                   >
-                                    <svg className="w-4 h-4 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+                                    <svg className="w-4 h-4 text-gray-500 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
                                     </svg>
                                   </button>
-
-                                  <span className="text-base font-semibold text-gray-900 dark:text-white min-w-6 text-center">
+                                  <span className="text-sm font-semibold text-gray-900 dark:text-white min-w-6 text-center">
                                     {addonQty}
                                   </span>
-
                                   <button
+                                    type="button"
                                     onClick={() => handleAddonQtyChange(addon.id, 1)}
                                     disabled={isMaxReached}
-                                    className="w-7 h-7 rounded-md border border-gray-300 dark:border-gray-600 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-gray-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                                    className="w-7 h-7 rounded-full border border-orange-500 text-orange-500 flex items-center justify-center hover:bg-orange-50 dark:hover:bg-orange-900/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                                     aria-label="Increase quantity"
-                                    title={isMaxReached ? `Max ${category.maxSelections} selections reached` : undefined}
                                   >
-                                    <svg className="w-4 h-4 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                                     </svg>
                                   </button>
                                 </div>
+                              ) : (
+                                /* Checkbox - Multiple Choice (inputType = SELECT, maxSelections > 1) */
+                                <button
+                                  type="button"
+                                  onClick={() => handleCheckboxToggle(category.id, addon.id)}
+                                  disabled={isMaxReached}
+                                      className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-all shrink-0 ${
+                                    isSelected 
+                                      ? 'border-orange-500 bg-orange-500' 
+                                      : isMaxReached
+                                        ? 'border-gray-200 dark:border-gray-700 opacity-50 cursor-not-allowed'
+                                            : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
+                                  }`}
+                                  aria-label={`${isSelected ? 'Deselect' : 'Select'} ${addon.name}`}
+                                >
+                                  {isSelected && (
+                                    <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                  )}
+                                </button>
                               )}
                             </div>
                           );
@@ -559,9 +664,9 @@ export default function MenuDetailModal({
                       </div>
                     </div>
 
-                    {/* Dashed Divider between categories */}
+                    {/* Divider between categories */}
                     {index < addonCategories.length - 1 && (
-                      <hr className="border-t border-dashed border-gray-300 dark:border-gray-600" style={{ margin: 0 }} />
+                      <hr className="border-t border-gray-200 dark:border-gray-700" style={{ margin: 0 }} />
                     )}
                   </div>
                 );
@@ -652,10 +757,10 @@ export default function MenuDetailModal({
       {errorMessage && (
         <>
           <div
-            className="fixed inset-0 bg-black/50 z-[400]"
+            className="fixed inset-0 bg-black/50 z-400"
             onClick={() => setErrorMessage('')}
           />
-          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-32px)] max-w-[320px] bg-white dark:bg-gray-800 rounded-xl z-[400] p-6 shadow-2xl">
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-32px)] max-w-[320px] bg-white dark:bg-gray-800 rounded-xl z-400 p-6 shadow-2xl">
             <div className="text-center mb-6">
               <div className="text-4xl mb-3">⚠️</div>
               <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">

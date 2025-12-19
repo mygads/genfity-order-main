@@ -36,8 +36,8 @@ export default function AddonInputTypeSelector({
     {
       type: 'checkbox',
       icon: <FaCheckSquare className="h-5 w-5" />,
-      label: 'Checkbox',
-      description: 'Customer can select multiple options',
+      label: 'Checkbox / Radio',
+      description: 'If max=1 shows radio, if max>1 shows checkbox. Customer picks options.',
       recommended: suggestedType === 'checkbox',
     },
     {
@@ -49,8 +49,8 @@ export default function AddonInputTypeSelector({
           <FaPlus className="h-3 w-3" />
         </div>
       ),
-      label: 'Quantity Selector',
-      description: 'Customer can specify quantity for each option',
+      label: 'Quantity (+/-)',
+      description: 'Customer can add multiple of this item (e.g., Extra Cheese x3)',
     },
   ];
 
@@ -133,10 +133,10 @@ export default function AddonInputTypeSelector({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <div className="text-xs text-blue-700 dark:text-blue-300">
-            <p className="font-medium">Input Type Guide:</p>
+            <p className="font-medium">How input types work:</p>
             <ul className="mt-1 space-y-0.5 text-blue-600 dark:text-blue-400">
-              <li>• <strong>Checkbox:</strong> For single or multiple selection (use Max Selection to control). Set Max=1 for single choice like &quot;Size&quot; (S/M/L)</li>
-              <li>• <strong>Quantity:</strong> Best for &quot;Extra Cheese (x2)&quot; where customers specify exact amounts</li>
+              <li>• <strong>Checkbox/Radio:</strong> Use with category Max Selection. Max=1 shows radio buttons (choose 1), Max&gt;1 shows checkboxes.</li>
+              <li>• <strong>Quantity (+/-):</strong> Shows +/- buttons. Customer can add multiple of the same item (e.g., Extra Cheese x3).</li>
             </ul>
           </div>
         </div>
