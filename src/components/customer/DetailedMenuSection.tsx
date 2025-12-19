@@ -119,24 +119,56 @@ export default function DetailedMenuSection({
                                     {(item.isSpicy || item.isBestSeller || item.isSignature || item.isRecommended) && (
                                         <div className="flex flex-wrap gap-1 mt-1">
                                             {item.isSpicy && (
-                                                <span>
-                                                    🌶️
-                                                </span>
+                                                <div 
+                                                    className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-orange-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
+                                                    title="Spicy"
+                                                >
+                                                    <Image
+                                                        src="/images/menu-badges/spicy.png"
+                                                        alt="Spicy"
+                                                        fill
+                                                        className="object-cover transition-opacity duration-300 group-hover:opacity-80"
+                                                    />
+                                                </div>
                                             )}
                                             {item.isBestSeller && (
-                                                <span>
-                                                    ⭐
-                                                </span>
+                                                <div 
+                                                    className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-amber-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
+                                                    title="Best Seller"
+                                                >
+                                                    <Image
+                                                        src="/images/menu-badges/best-seller.png"
+                                                        alt="Best Seller"
+                                                        fill
+                                                        className="object-cover transition-opacity duration-300 group-hover:opacity-80"
+                                                    />
+                                                </div>
                                             )}
                                             {item.isSignature && (
-                                                <span>
-                                                    👑
-                                                </span>
+                                                <div 
+                                                    className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-purple-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
+                                                    title="Signature"
+                                                >
+                                                    <Image
+                                                        src="/images/menu-badges/signature.png"
+                                                        alt="Signature"
+                                                        fill
+                                                        className="object-cover transition-opacity duration-300 group-hover:opacity-80"
+                                                    />
+                                                </div>
                                             )}
                                             {item.isRecommended && (
-                                                <span>
-                                                    👍
-                                                </span>
+                                                <div 
+                                                    className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-green-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
+                                                    title="Recommended"
+                                                >
+                                                    <Image
+                                                        src="/images/menu-badges/recommended.png"
+                                                        alt="Recommended"
+                                                        fill
+                                                        className="object-cover transition-opacity duration-300 group-hover:opacity-80"
+                                                    />
+                                                </div>
                                             )}
                                         </div>
                                     )}

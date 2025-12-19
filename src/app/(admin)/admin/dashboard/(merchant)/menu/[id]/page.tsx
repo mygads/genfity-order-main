@@ -46,6 +46,10 @@ interface MenuDetail {
   stockQty: number | null;
   dailyStockTemplate: number | null;
   autoResetStock: boolean;
+  isSpicy: boolean;
+  isBestSeller: boolean;
+  isSignature: boolean;
+  isRecommended: boolean;
   category?: {
     id: string;
     name: string;
@@ -106,7 +110,7 @@ export default function MenuDetailPage() {
       }
 
       const menuData = await menuResponse.json();
-      
+
       if (merchantResponse.ok) {
         const merchantData = await merchantResponse.json();
         if (merchantData.success && merchantData.data) {
@@ -170,7 +174,7 @@ export default function MenuDetailPage() {
       <div>
         <PageBreadcrumb pageTitle="View" />
         <div className="mt-6 py-10 text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-brand-500 border-r-transparent"></div>
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary-500 border-r-transparent"></div>
           <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Loading menu details...</p>
         </div>
       </div>
@@ -185,7 +189,7 @@ export default function MenuDetailPage() {
           <p className="text-sm text-error-600 dark:text-error-400">{error || "Menu not found"}</p>
           <button
             onClick={() => router.push("/admin/dashboard/menu")}
-            className="mt-3 inline-flex h-10 items-center rounded-lg bg-brand-500 px-4 text-sm font-medium text-white hover:bg-brand-600"
+            className="mt-3 inline-flex h-10 items-center rounded-lg bg-primary-500 px-4 text-sm font-medium text-white hover:bg-primary-600"
           >
             Back to Menu List
           </button>
@@ -216,7 +220,7 @@ export default function MenuDetailPage() {
           </button>
           <button
             onClick={() => router.push(`/admin/dashboard/menu/edit/${menuId}`)}
-            className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:bg-brand-600"
+            className="inline-flex items-center gap-2 rounded-lg bg-primary-500 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:bg-primary-600"
           >
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -231,7 +235,7 @@ export default function MenuDetailPage() {
             <div className="grid gap-6 lg:grid-cols-[200px_1fr]">
               {/* Image - Smaller and cleaner */}
               <div>
-                <div 
+                <div
                   className="group relative aspect-square w-full cursor-pointer overflow-hidden rounded-lg border border-gray-200 bg-gray-50 shadow-sm transition-all hover:shadow-md dark:border-gray-700 dark:bg-gray-800"
                   onClick={() => menu.imageUrl && setShowImageModal(true)}
                 >
@@ -269,17 +273,75 @@ export default function MenuDetailPage() {
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                       {menu.name}
                     </h1>
-                    <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
-                      menu.isActive 
-                        ? 'bg-success-100 text-success-700 dark:bg-success-900/30 dark:text-success-400' 
-                        : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                    }`}>
+                    <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${menu.isActive
+                      ? 'bg-success-100 text-success-700 dark:bg-success-900/30 dark:text-success-400'
+                      : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                      }`}>
                       <span className={`h-1.5 w-1.5 rounded-full ${menu.isActive ? 'bg-success-500' : 'bg-gray-400'}`}></span>
                       {menu.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </div>
+
+                  {/* Menu Badges */}
+                  {(menu.isSpicy || menu.isBestSeller || menu.isSignature || menu.isRecommended) && (
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      {menu.isSpicy && (
+                        <div className="group flex items-center gap-2 rounded-full border-2 border-orange-200 bg-orange-50 px-3 py-1.5 transition-all hover:border-orange-400 hover:shadow-md dark:border-orange-800 dark:bg-orange-900/20">
+                          <div className="relative h-6 w-6 overflow-hidden rounded-full">
+                            <Image
+                              src="/images/menu-badges/spicy.png"
+                              alt="Spicy"
+                              fill
+                              className="object-cover"
+                            />
+                          </div>
+                          <span className="text-sm font-medium text-orange-700 dark:text-orange-400">Spicy</span>
+                        </div>
+                      )}
+                      {menu.isBestSeller && (
+                        <div className="group flex items-center gap-2 rounded-full border-2 border-amber-200 bg-amber-50 px-3 py-1.5 transition-all hover:border-amber-400 hover:shadow-md dark:border-amber-800 dark:bg-amber-900/20">
+                          <div className="relative h-6 w-6 overflow-hidden rounded-full">
+                            <Image
+                              src="/images/menu-badges/best-seller.png"
+                              alt="Best Seller"
+                              fill
+                              className="object-cover"
+                            />
+                          </div>
+                          <span className="text-sm font-medium text-amber-700 dark:text-amber-400">Best Seller</span>
+                        </div>
+                      )}
+                      {menu.isSignature && (
+                        <div className="group flex items-center gap-2 rounded-full border-2 border-purple-200 bg-purple-50 px-3 py-1.5 transition-all hover:border-purple-400 hover:shadow-md dark:border-purple-800 dark:bg-purple-900/20">
+                          <div className="relative h-6 w-6 overflow-hidden rounded-full">
+                            <Image
+                              src="/images/menu-badges/signature.png"
+                              alt="Signature"
+                              fill
+                              className="object-cover"
+                            />
+                          </div>
+                          <span className="text-sm font-medium text-purple-700 dark:text-purple-400">Signature</span>
+                        </div>
+                      )}
+                      {menu.isRecommended && (
+                        <div className="group flex items-center gap-2 rounded-full border-2 border-green-200 bg-green-50 px-3 py-1.5 transition-all hover:border-green-400 hover:shadow-md dark:border-green-800 dark:bg-green-900/20">
+                          <div className="relative h-6 w-6 overflow-hidden rounded-full">
+                            <Image
+                              src="/images/menu-badges/recommended.png"
+                              alt="Recommended"
+                              fill
+                              className="object-cover"
+                            />
+                          </div>
+                          <span className="text-sm font-medium text-green-700 dark:text-green-400">Recommended</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {menu.description && (
-                    <p className="mt-2 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
+                    <p className="mt-3 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
                       {menu.description}
                     </p>
                   )}
@@ -295,13 +357,12 @@ export default function MenuDetailPage() {
                       {formatPrice(menu.price)}
                     </p>
                   </div>
-                  
+
                   {menu.isPromo && menu.promoPrice && (
-                    <div className={`rounded-lg px-4 py-2 ${
-                      isPromoActive()
-                        ? 'bg-orange-50 dark:bg-orange-900/20'
-                        : 'bg-gray-50 dark:bg-gray-800/50'
-                    }`}>
+                    <div className={`rounded-lg px-4 py-2 ${isPromoActive()
+                      ? 'bg-orange-50 dark:bg-orange-900/20'
+                      : 'bg-gray-50 dark:bg-gray-800/50'
+                      }`}>
                       <div className="flex items-center gap-2">
                         <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
                           Promo Price
@@ -325,8 +386,8 @@ export default function MenuDetailPage() {
                 {/* Info Grid - Compact */}
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 dark:border-gray-700 dark:bg-gray-800/50">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-100 dark:bg-brand-900/30">
-                      <svg className="h-4 w-4 text-brand-600 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-100 dark:bg-primary-900/30">
+                      <svg className="h-4 w-4 text-primary-600 dark:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                       </svg>
                     </div>
@@ -352,13 +413,12 @@ export default function MenuDetailPage() {
                           Stock
                         </p>
                         <div className="flex items-center gap-2">
-                          <span className={`text-sm font-bold ${
-                            (menu.stockQty || 0) > 10
-                              ? 'text-success-600 dark:text-success-400'
-                              : (menu.stockQty || 0) > 0
+                          <span className={`text-sm font-bold ${(menu.stockQty || 0) > 10
+                            ? 'text-success-600 dark:text-success-400'
+                            : (menu.stockQty || 0) > 0
                               ? 'text-warning-600 dark:text-warning-400'
                               : 'text-error-600 dark:text-error-400'
-                          }`}>
+                            }`}>
                             {menu.stockQty || 0} pcs
                           </span>
                           {menu.autoResetStock && (
@@ -437,13 +497,13 @@ export default function MenuDetailPage() {
                         </span>
                       )}
                     </div>
-                    
+
                     {mac.addonCategory.description && (
                       <p className="mt-1.5 line-clamp-2 text-xs text-gray-600 dark:text-gray-400">
                         {mac.addonCategory.description}
                       </p>
                     )}
-                    
+
                     <div className="mt-2.5 flex items-center justify-between rounded-md bg-gray-50 px-2.5 py-1.5 dark:bg-gray-800/50">
                       <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
                         <span className="font-medium">Min: {mac.addonCategory.minSelection}</span>

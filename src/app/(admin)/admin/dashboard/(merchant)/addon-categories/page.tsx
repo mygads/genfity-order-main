@@ -9,6 +9,7 @@ import EmptyState from "@/components/ui/EmptyState";
 import { exportAddonCategories } from "@/lib/utils/excelExport";
 import { useSWRStatic } from "@/hooks/useSWRWithAuth";
 import { CategoriesPageSkeleton } from "@/components/common/SkeletonLoaders";
+import { useMerchant } from "@/context/MerchantContext";
 
 interface AddonCategory {
   id: string;
@@ -88,15 +89,13 @@ export default function AddonCategoriesPage() {
     mutate: mutateCategories 
   } = useSWRStatic<AddonCategoriesApiResponse>('/api/merchant/addon-categories');
 
-  const { 
-    data: merchantResponse, 
-    isLoading: merchantLoading 
-  } = useSWRStatic<MerchantApiResponse>('/api/merchant/profile');
+  // Use MerchantContext instead of fetching
+  const { merchant: merchantData, isLoading: merchantLoading } = useMerchant();
 
   // Extract data from SWR responses
   const categories = categoriesResponse?.success ? categoriesResponse.data : [];
-  const merchant = merchantResponse?.success 
-    ? { currency: merchantResponse.data.currency || "AUD" }
+  const merchant = merchantData 
+    ? { currency: merchantData.currency || "AUD" }
     : { currency: "AUD" };
   const loading = categoriesLoading || merchantLoading;
 

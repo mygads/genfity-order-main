@@ -1,6 +1,7 @@
 "use client";
 
 import { useSidebar } from "@/context/SidebarContext";
+import { MerchantProvider } from "@/context/MerchantContext";
 import AppHeader from "@/layout/AppHeader";
 import AppSidebar from "@/layout/AppSidebar";
 import Backdrop from "@/layout/Backdrop";
@@ -47,27 +48,29 @@ export default function AdminDashboardLayout({
 
   return (
     <SWRProvider>
-      <div className="min-h-screen xl:flex">
-        {/* Session Guard - Auto logout on token expiry */}
-        <SessionGuard />
-        
-        {/* Sidebar and Backdrop */}
-        <AppSidebar />
-        <Backdrop />
-        
-        {/* Main Content Area */}
-        <div
-          className={`flex-1 transition-all duration-300 ease-in-out ${mainContentMargin}`}
-        >
-          {/* Header */}
-          <AppHeader />
+      <MerchantProvider>
+        <div className="min-h-screen xl:flex">
+          {/* Session Guard - Auto logout on token expiry */}
+          <SessionGuard />
           
-          {/* Page Content */}
-          <div className="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6">
-            {children}
+          {/* Sidebar and Backdrop */}
+          <AppSidebar />
+          <Backdrop />
+          
+          {/* Main Content Area */}
+          <div
+            className={`flex-1 transition-all duration-300 ease-in-out ${mainContentMargin}`}
+          >
+            {/* Header */}
+            <AppHeader />
+            
+            {/* Page Content */}
+            <div className="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6">
+              {children}
+            </div>
           </div>
         </div>
-      </div>
+      </MerchantProvider>
     </SWRProvider>
   );
 }

@@ -7,6 +7,7 @@ import AddonItemFormModal from "@/components/addon-items/AddonItemFormModal";
 import AddonItemsTable from "@/components/addon-items/AddonItemsTable";
 import AddonItemsFilters from "@/components/addon-items/AddonItemsFilters";
 import { AddonItemsPageSkeleton } from "@/components/common/SkeletonLoaders";
+import { useMerchant } from "@/context/MerchantContext";
 
 interface AddonCategory {
   id: string;
@@ -50,6 +51,7 @@ interface Merchant {
 
 export default function AddonItemsPage() {
   const router = useRouter();
+  const { merchant: merchantData } = useMerchant();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,7 +60,7 @@ export default function AddonItemsPage() {
   const [items, setItems] = useState<AddonItem[]>([]);
   const [filteredItems, setFilteredItems] = useState<AddonItem[]>([]);
   const [categories, setCategories] = useState<AddonCategory[]>([]);
-  const [merchant, setMerchant] = useState<Merchant>({ currency: "AUD" });
+  const merchant = { currency: merchantData?.currency || "AUD" };
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   
@@ -91,14 +93,11 @@ export default function AddonItemsPage() {
         return;
       }
 
-      const [itemsResponse, categoriesResponse, merchantResponse] = await Promise.all([
+      const [itemsResponse, categoriesResponse] = await Promise.all([
         fetch("/api/merchant/addon-items", {
           headers: { Authorization: `Bearer ${token}` },
         }),
         fetch("/api/merchant/addon-categories", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch("/api/merchant/profile", {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);
@@ -120,13 +119,6 @@ export default function AddonItemsPage() {
         setCategories(categoriesData.data);
       } else {
         setCategories([]);
-      }
-
-      if (merchantResponse.ok) {
-        const merchantData = await merchantResponse.json();
-        if (merchantData.success && merchantData.data) {
-          setMerchant({ currency: merchantData.data.currency || "AUD" });
-        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");

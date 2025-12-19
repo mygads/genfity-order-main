@@ -33,6 +33,7 @@ import { OrderDetailModal } from '@/components/orders/OrderDetailModal';
 import { OrderFiltersComponent, type OrderFilters } from '@/components/orders/OrderFilters';
 import { KitchenDisplaySkeleton } from '@/components/common/SkeletonLoaders';
 import type { OrderListItem } from '@/lib/types/order';
+import { useMerchant } from '@/context/MerchantContext';
 import { OrderStatus } from '@prisma/client';
 
 type ViewMode = 'kanban-card' | 'kanban-list' | 'tab-list';
@@ -69,33 +70,22 @@ export default function MerchantOrdersPage() {
   const [bulkMode, setBulkMode] = useState(false);
   const [bulkStatusUpdate, setBulkStatusUpdate] = useState<OrderStatus | ''>('');
 
-  // Fetch merchant ID
+  // Use MerchantContext
+  const { merchant: merchantData, isLoading: merchantLoading } = useMerchant();
+  
+  useEffect(() => {
+    if (!merchantLoading && merchantData) {
+      setMerchantId(BigInt(merchantData.id));
+      setMerchantCurrency(merchantData.currency || 'AUD');
+      setLoading(false);
+    }
+  }, [merchantData, merchantLoading]);
+
   const fetchMerchantId = useCallback(async () => {
-    try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) {
-        router.push('/admin/login');
-        return;
-      }
-
-      const response = await fetch('/api/merchant/profile', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) throw new Error('Failed to fetch merchant');
-
-      const data = await response.json();
-      if (data.success && data.data) {
-        setMerchantId(BigInt(data.data.id));
-        if (data.data.currency) {
-          setMerchantCurrency(data.data.currency);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching merchant:', error);
-    } finally {
+    // Kept for backwards compatibility, but now uses context data
+    if (merchantData) {
+      setMerchantId(BigInt(merchantData.id));
+      setMerchantCurrency(merchantData.currency || 'AUD');
       setLoading(false);
     }
   }, [router]);

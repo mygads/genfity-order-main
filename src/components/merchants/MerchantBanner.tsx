@@ -82,7 +82,7 @@ const MerchantBanner: React.FC<MerchantBannerProps> = ({ isExpanded }) => {
 
   if (loading) {
     return (
-      <div className="mb-6 animate-pulse">
+      <div className="mb-2 animate-pulse">
         <div className={`flex items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-900/50 ${isExpanded ? '' : 'justify-center'}`}>
           <div className="h-12 w-12 rounded-xl bg-gray-200 dark:bg-gray-700"></div>
           {isExpanded && (
@@ -135,7 +135,7 @@ const MerchantBanner: React.FC<MerchantBannerProps> = ({ isExpanded }) => {
   const statusConfig = getStatusConfig();
 
   return (
-    <div className="mb-6">
+    <div className="mb-2">
       <button
         onClick={handleClick}
         className={`group relative w-full transition-all duration-200 ${

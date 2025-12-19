@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import Image from "next/image";
-import QuickFilterPills, { menuFilterPresets } from "@/components/ui/QuickFilterPills";
+// Removed QuickFilterPills - replaced with dropdown selects for minimalist design
 import EmptyState from "@/components/ui/EmptyState";
 import DuplicateMenuButton from "@/components/menu/DuplicateMenuButton";
 import { exportMenuItems } from "@/lib/utils/excelExport";
@@ -14,6 +14,7 @@ import ManageMenuAddonCategoriesModal from "@/components/menu/ManageMenuAddonCat
 import ManageMenuCategoriesModal from "@/components/menu/ManageMenuCategoriesModal";
 import { useSWRWithAuth, useSWRStatic } from "@/hooks/useSWRWithAuth";
 import { MenuPageSkeleton } from "@/components/common/SkeletonLoaders";
+import { useMerchant } from "@/context/MerchantContext";
 
 interface MenuAddonCategory {
   addonCategoryId: string;
@@ -70,6 +71,10 @@ interface MenuItem {
   stockQty: number | null;
   dailyStockTemplate: number | null;
   autoResetStock: boolean;
+  isSpicy: boolean;
+  isBestSeller: boolean;
+  isSignature: boolean;
+  isRecommended: boolean;
   createdAt: string;
 }
 
@@ -104,15 +109,15 @@ export default function MerchantMenuPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  
-  const [filteredMenuItems, setFilteredMenuItems] = useState<MenuItem[]>([]);
+
+
   const [selectedPromoMenu, setSelectedPromoMenu] = useState<MenuItem | null>(null);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [selectedMenuForAddons, setSelectedMenuForAddons] = useState<MenuItem | null>(null);
   const [showManageAddonsModal, setShowManageAddonsModal] = useState(false);
   const [selectedMenuForCategories, setSelectedMenuForCategories] = useState<MenuItem | null>(null);
   const [showManageCategoriesModal, setShowManageCategoriesModal] = useState(false);
-  
+
   // Bulk selection states
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
@@ -125,34 +130,35 @@ export default function MerchantMenuPage() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterStock, setFilterStock] = useState<string[]>([]);
   const [filterPromo, setFilterPromo] = useState<string[]>([]);
+  
+  // Dropdown open states for multi-select filters
+  const [isStockDropdownOpen, setIsStockDropdownOpen] = useState(false);
+  const [isPromoDropdownOpen, setIsPromoDropdownOpen] = useState(false);
 
   // SWR hooks for data fetching with caching
-  const { 
-    data: menuResponse, 
-    error: menuError, 
+  const {
+    data: menuResponse,
+    error: menuError,
     isLoading: menuLoading,
-    mutate: mutateMenu 
+    mutate: mutateMenu
   } = useSWRWithAuth<MenuApiResponse>('/api/merchant/menu', {
     refreshInterval: 30000, // Refresh every 30 seconds
   });
 
-  const { 
-    data: categoriesResponse, 
+  const {
+    data: categoriesResponse,
     error: categoriesError,
-    isLoading: categoriesLoading 
+    isLoading: categoriesLoading
   } = useSWRStatic<CategoriesApiResponse>('/api/merchant/categories');
 
-  const { 
-    data: merchantResponse, 
-    error: merchantError,
-    isLoading: merchantLoading 
-  } = useSWRStatic<MerchantApiResponse>('/api/merchant/profile');
+  // Use MerchantContext instead of fetching
+  const { merchant: merchantData, isLoading: merchantLoading } = useMerchant();
 
   // Extract data from SWR responses
   const menuItems = menuResponse?.success ? menuResponse.data : [];
   const categories = categoriesResponse?.success ? categoriesResponse.data : [];
-  const merchant = merchantResponse?.success ? merchantResponse.data : null;
-  
+  const merchant = merchantData;
+
   // Combined loading state
   const loading = menuLoading || categoriesLoading || merchantLoading;
 
@@ -164,8 +170,8 @@ export default function MerchantMenuPage() {
   // Refs to track previous filter values for page reset
   const prevFiltersRef = useRef({ searchQuery, filterCategory, filterStatus, filterStock, filterPromo });
 
-  // Filter and search logic - MUST be before any conditional returns
-  useEffect(() => {
+  // Use useMemo for filtered items to avoid infinite loop
+  const filteredMenuItems = useMemo(() => {
     let filtered = [...menuItems];
 
     // Search filter
@@ -209,17 +215,19 @@ export default function MerchantMenuPage() {
     // Promo filters
     if (filterPromo.length > 0) {
       filtered = filtered.filter(item => {
-        if (filterPromo.includes('promo') && item.isPromo) return true;
-        if (filterPromo.includes('no-promo') && !item.isPromo) return true;
+        if (filterPromo.includes('on-promo') && item.isPromo) return true;
+        if (filterPromo.includes('regular-price') && !item.isPromo) return true;
         return false;
       });
     }
 
-    setFilteredMenuItems(filtered);
+    return filtered;
+  }, [menuItems, searchQuery, filterCategory, filterStatus, filterStock, filterPromo]);
 
-    // Only reset page when filters actually change, not when menuItems data updates
+  // Reset page when filters change
+  useEffect(() => {
     const prev = prevFiltersRef.current;
-    const filtersChanged = 
+    const filtersChanged =
       prev.searchQuery !== searchQuery ||
       prev.filterCategory !== filterCategory ||
       prev.filterStatus !== filterStatus ||
@@ -230,7 +238,23 @@ export default function MerchantMenuPage() {
       setCurrentPage(1);
       prevFiltersRef.current = { searchQuery, filterCategory, filterStatus, filterStock, filterPromo };
     }
-  }, [menuItems, searchQuery, filterCategory, filterStatus, filterStock, filterPromo]);
+  }, [searchQuery, filterCategory, filterStatus, filterStock, filterPromo]);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.dropdown-container')) {
+        setIsStockDropdownOpen(false);
+        setIsPromoDropdownOpen(false);
+      }
+    };
+
+    if (isStockDropdownOpen || isPromoDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isStockDropdownOpen, isPromoDropdownOpen]);
 
   // Pagination logic
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -244,7 +268,7 @@ export default function MerchantMenuPage() {
   }
 
   // Show error state if any fetch failed
-  if (menuError || categoriesError || merchantError) {
+  if (menuError || categoriesError) {
     return (
       <div className="flex min-h-[calc(100vh-200px)] items-center justify-center p-6">
         <div className="w-full max-w-md rounded-2xl border-2 border-red-200 bg-white p-8 text-center shadow-sm dark:border-red-800 dark:bg-gray-900">
@@ -257,7 +281,7 @@ export default function MerchantMenuPage() {
             Error Loading Menu
           </h2>
           <p className="mb-6 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
-            {menuError?.message || categoriesError?.message || merchantError?.message || 'Failed to load data'}
+            {menuError?.message || categoriesError?.message || 'Failed to load data'}
           </p>
           <button
             onClick={() => fetchData()}
@@ -332,7 +356,7 @@ export default function MerchantMenuPage() {
     }
   };
 
-  const handleInlineUpdate = async (id: string, field: 'name' | 'price', value: string | number) => {
+  const handleInlineUpdate = async (id: string, field: 'name' | 'price' | 'description', value: string | number) => {
     try {
       const token = localStorage.getItem("accessToken");
       if (!token) {
@@ -341,9 +365,12 @@ export default function MerchantMenuPage() {
       }
 
       // Convert value to appropriate type
-      const updateData = field === 'price' 
-        ? { price: parseFloat(String(value)) }
-        : { name: String(value) };
+      let updateData: Record<string, string | number>;
+      if (field === 'price') {
+        updateData = { price: parseFloat(String(value)) };
+      } else {
+        updateData = { [field]: String(value) };
+      }
 
       const response = await fetch(`/api/merchant/menu/${id}`, {
         method: "PUT",
@@ -361,7 +388,7 @@ export default function MerchantMenuPage() {
 
       setSuccess(`Menu ${field} updated successfully`);
       setTimeout(() => setSuccess(null), 3000);
-      
+
       // Use SWR optimistic update
       await mutateMenu(
         (current) => {
@@ -403,7 +430,7 @@ export default function MerchantMenuPage() {
 
   const handleBulkActivate = async () => {
     if (selectedItems.length === 0) return;
-    
+
     try {
       const token = localStorage.getItem("accessToken");
       if (!token) {
@@ -440,7 +467,7 @@ export default function MerchantMenuPage() {
 
   const handleBulkDeactivate = async () => {
     if (selectedItems.length === 0) return;
-    
+
     try {
       const token = localStorage.getItem("accessToken");
       if (!token) {
@@ -477,7 +504,7 @@ export default function MerchantMenuPage() {
 
   const handleBulkDelete = async () => {
     if (selectedItems.length === 0) return;
-    
+
     try {
       const token = localStorage.getItem("accessToken");
       if (!token) {
@@ -516,18 +543,22 @@ export default function MerchantMenuPage() {
   const formatPrice = (price: string | number, currency?: string): string => {
     const numPrice = typeof price === 'string' ? parseFloat(price) : price;
     if (isNaN(numPrice)) return `${currency || 'AUD'} 0`;
-    
+
     const curr = currency || merchant?.currency || 'AUD';
     const symbol = curr === 'IDR' ? 'Rp' : curr === 'AUD' ? 'A$' : curr;
     const locale = curr === 'IDR' ? 'id-ID' : 'en-AU';
-    
+
     return `${symbol} ${numPrice.toLocaleString(locale, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
   };
 
   const getCategoryNames = (item: MenuItem): string => {
     // First check many-to-many categories
     if (item.categories && item.categories.length > 0) {
-      return item.categories.map(c => c.category.name).join(', ');
+      const categoryNames = item.categories.map(c => c.category.name);
+      if (categoryNames.length > 2) {
+        return categoryNames.slice(0, 2).join(', ') + ', ...';
+      }
+      return categoryNames.join(', ');
     }
     // Fallback to single category for backward compatibility
     if (item.category?.name) return item.category.name;
@@ -624,64 +655,231 @@ export default function MerchantMenuPage() {
             </div>
           </div>
 
-          {/* Search and Filters */}
+          {/* Search and Filters - Minimalist Dropdown Design */}
           <div className="mb-5 space-y-4">
-            <div>
+            {/* Search Bar */}
+            <div className="relative">
+              <svg className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
               <input
                 type="text"
-                placeholder="Search menu items..."
+                placeholder="Search menu items by name or description..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                className="h-11 w-full rounded-lg border border-gray-200 bg-white pl-11 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
               />
-            </div>
-            
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="flex-1 min-w-[200px]">
-                <select
-                  value={filterCategory}
-                  onChange={(e) => setFilterCategory(e.target.value)}
-                  className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                 >
-                  <option value="all">All Categories</option>
-                  {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                  ))}
-                </select>
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+
+            {/* Filter Dropdowns - Compact Layout */}
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Category Filter */}
+              <select
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                className="h-10 rounded-lg border border-gray-200 bg-white px-3 pr-8 text-sm text-gray-700 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+              >
+                <option value="all">All Categories</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+
+              {/* Status Filter */}
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="h-10 rounded-lg border border-gray-200 bg-white px-3 pr-8 text-sm text-gray-700 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+              >
+                <option value="all">All Status</option>
+                <option value="active">✓ Active</option>
+                <option value="inactive">✕ Inactive</option>
+              </select>
+
+              {/* Stock Filter - Multi-select via checkboxes in dropdown */}
+              <div className="dropdown-container relative">
+                <button
+                  type="button"
+                  onClick={() => setIsStockDropdownOpen(!isStockDropdownOpen)}
+                  className="flex h-10 min-w-[140px] items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 hover:bg-gray-50 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                >
+                  <span>
+                    {filterStock.length === 0 
+                      ? 'Stock Status' 
+                      : filterStock.length === 1
+                      ? filterStock[0] === 'in-stock' 
+                        ? 'In Stock'
+                        : filterStock[0] === 'low-stock'
+                        ? 'Low Stock'
+                        : 'Out of Stock'
+                      : `${filterStock.length} selected`
+                    }
+                  </span>
+                  <svg className={`h-4 w-4 transition-transform ${isStockDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {isStockDropdownOpen && (
+                  <div className="absolute left-0 top-full z-50 mt-1 w-48 rounded-lg border border-gray-200 bg-white py-2 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                    <label className="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={filterStock.includes('in-stock')}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setFilterStock([...filterStock, 'in-stock']);
+                          } else {
+                            setFilterStock(filterStock.filter(s => s !== 'in-stock'));
+                          }
+                        }}
+                        className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                      />
+                      <span className="flex-1 text-sm text-gray-700 dark:text-gray-300">In Stock</span>
+                    </label>
+                    <label className="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={filterStock.includes('low-stock')}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setFilterStock([...filterStock, 'low-stock']);
+                          } else {
+                            setFilterStock(filterStock.filter(s => s !== 'low-stock'));
+                          }
+                        }}
+                        className="h-4 w-4 rounded border-gray-300 text-yellow-600 focus:ring-yellow-500"
+                      />
+                      <span className="flex-1 text-sm text-gray-700 dark:text-gray-300">Low Stock</span>
+                    </label>
+                    <label className="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={filterStock.includes('out-of-stock')}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setFilterStock([...filterStock, 'out-of-stock']);
+                          } else {
+                            setFilterStock(filterStock.filter(s => s !== 'out-of-stock'));
+                          }
+                        }}
+                        className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                      />
+                      <span className="flex-1 text-sm text-gray-700 dark:text-gray-300">Out of Stock</span>
+                    </label>
+                    {filterStock.length > 0 && (
+                      <>
+                        <div className="my-1 border-t border-gray-200 dark:border-gray-700"></div>
+                        <button
+                          onClick={() => setFilterStock([])}
+                          className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-gray-50 dark:text-red-400 dark:hover:bg-gray-700"
+                        >
+                          Clear Stock Filters
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
 
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
-                <QuickFilterPills
-                  filters={menuFilterPresets.status}
-                  activeFilters={filterStatus === 'all' ? [] : [filterStatus]}
-                  onChange={(values) => setFilterStatus(values.length > 0 ? values[0] : 'all')}
-                  multiSelect={false}
-                />
+              {/* Promo Filter - Multi-select via checkboxes in dropdown */}
+              <div className="dropdown-container relative">
+                <button
+                  type="button"
+                  onClick={() => setIsPromoDropdownOpen(!isPromoDropdownOpen)}
+                  className="flex h-10 min-w-[140px] items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 hover:bg-gray-50 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                >
+                  <span>
+                    {filterPromo.length === 0 
+                      ? 'Promo Status' 
+                      : filterPromo.length === 1
+                      ? filterPromo[0] === 'on-promo' 
+                        ? 'On Promo'
+                        : 'Regular Price'
+                      : `${filterPromo.length} selected`
+                    }
+                  </span>
+                  <svg className={`h-4 w-4 transition-transform ${isPromoDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {isPromoDropdownOpen && (
+                  <div className="absolute left-0 top-full z-50 mt-1 w-48 rounded-lg border border-gray-200 bg-white py-2 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                    <label className="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={filterPromo.includes('on-promo')}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setFilterPromo([...filterPromo, 'on-promo']);
+                          } else {
+                            setFilterPromo(filterPromo.filter(p => p !== 'on-promo'));
+                          }
+                        }}
+                        className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                      />
+                      <span className="flex-1 text-sm text-gray-700 dark:text-gray-300">On Promo</span>
+                    </label>
+                    <label className="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={filterPromo.includes('regular-price')}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setFilterPromo([...filterPromo, 'regular-price']);
+                          } else {
+                            setFilterPromo(filterPromo.filter(p => p !== 'regular-price'));
+                          }
+                        }}
+                        className="h-4 w-4 rounded border-gray-300 text-gray-600 focus:ring-gray-500"
+                      />
+                      <span className="flex-1 text-sm text-gray-700 dark:text-gray-300">Regular Price</span>
+                    </label>
+                    {filterPromo.length > 0 && (
+                      <>
+                        <div className="my-1 border-t border-gray-200 dark:border-gray-700"></div>
+                        <button
+                          onClick={() => setFilterPromo([])}
+                          className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-gray-50 dark:text-red-400 dark:hover:bg-gray-700"
+                        >
+                          Clear Promo Filters
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
 
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Stock</label>
-                <QuickFilterPills
-                  filters={menuFilterPresets.stock}
-                  activeFilters={filterStock}
-                  onChange={setFilterStock}
-                  multiSelect={true}
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Promo</label>
-                <QuickFilterPills
-                  filters={menuFilterPresets.promo}
-                  activeFilters={filterPromo}
-                  onChange={setFilterPromo}
-                  multiSelect={true}
-                />
-              </div>
+              {/* Clear All Filters Button */}
+              {(searchQuery || filterCategory !== 'all' || filterStatus !== 'all' || filterStock.length > 0 || filterPromo.length > 0) && (
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setFilterCategory('all');
+                    setFilterStatus('all');
+                    setFilterStock([]);
+                    setFilterPromo([]);
+                  }}
+                  className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Clear All Filters
+                </button>
+              )}
             </div>
           </div>
-          
+
           {filteredMenuItems.length === 0 ? (
             <EmptyState
               type={menuItems.length === 0 ? "no-menu" : "no-results"}
@@ -708,7 +906,8 @@ export default function MerchantMenuPage() {
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Image</th>
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Name</th>
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Category</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Price</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Attributes</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Price (A$)</th>
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Stock</th>
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Status</th>
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Actions</th>
@@ -727,8 +926,8 @@ export default function MerchantMenuPage() {
                       </td>
                       <td className="px-4 py-4">
                         {item.imageUrl ? (
-                          <Image 
-                            src={item.imageUrl} 
+                          <Image
+                            src={item.imageUrl}
                             alt={item.name}
                             width={64}
                             height={64}
@@ -743,21 +942,91 @@ export default function MerchantMenuPage() {
                         )}
                       </td>
                       <td className="px-4 py-4">
-                        <div>
-                          <InlineEditField
-                            value={item.name}
-                            onSave={(newValue) => handleInlineUpdate(item.id, 'name', newValue)}
-                            className="text-sm font-medium text-gray-800 dark:text-white/90"
-                          />
-                          {item.description && (
-                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 line-clamp-2">{item.description}</p>
-                          )}
+                        <div className="max-w-[200px] space-y-1">
+                          <div className="truncate">
+                            <InlineEditField
+                              value={item.name}
+                              onSave={(newValue) => handleInlineUpdate(item.id, 'name', newValue)}
+                              className="text-sm font-semibold text-gray-800 dark:text-white/90"
+                              displayClassName="block truncate max-w-[180px]"
+                            />
+                          </div>
+                          <div className="truncate">
+                            <InlineEditField
+                              value={item.description || ''}
+                              onSave={(newValue) => handleInlineUpdate(item.id, 'description', newValue)}
+                              placeholder="Add description..."
+                              className="text-xs text-gray-500 dark:text-gray-400"
+                              displayClassName="block truncate max-w-[180px]"
+                            />
+                          </div>
                         </div>
                       </td>
                       <td className="px-4 py-4">
-                        <span className="inline-flex rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                          {getCategoryNames(item)}
-                        </span>
+                        <div className="max-w-[150px]" title={getCategoryNames(item)}>
+                          <span className="inline-flex truncate text-xs text-gray-700 dark:text-gray-300">
+                            {getCategoryNames(item)}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="flex flex-wrap gap-1.5">
+                          {item.isSpicy && (
+                            <div 
+                              className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-orange-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
+                              title="Spicy"
+                            >
+                              <Image
+                                src="/images/menu-badges/spicy.png"
+                                alt="Spicy"
+                                fill
+                                className="object-cover transition-opacity duration-300 group-hover:opacity-80"
+                              />
+                            </div>
+                          )}
+                          {item.isBestSeller && (
+                            <div 
+                              className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-amber-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
+                              title="Best Seller"
+                            >
+                              <Image
+                                src="/images/menu-badges/best-seller.png"
+                                alt="Best Seller"
+                                fill
+                                className="object-cover transition-opacity duration-300 group-hover:opacity-80"
+                              />
+                            </div>
+                          )}
+                          {item.isSignature && (
+                            <div 
+                              className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-purple-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
+                              title="Signature"
+                            >
+                              <Image
+                                src="/images/menu-badges/signature.png"
+                                alt="Signature"
+                                fill
+                                className="object-cover transition-opacity duration-300 group-hover:opacity-80"
+                              />
+                            </div>
+                          )}
+                          {item.isRecommended && (
+                            <div 
+                              className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-green-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
+                              title="Recommended"
+                            >
+                              <Image
+                                src="/images/menu-badges/recommended.png"
+                                alt="Recommended"
+                                fill
+                                className="object-cover transition-opacity duration-300 group-hover:opacity-80"
+                              />
+                            </div>
+                          )}
+                          {!item.isSpicy && !item.isBestSeller && !item.isSignature && !item.isRecommended && (
+                            <span className="text-xs text-gray-400 dark:text-gray-500">-</span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-4">
                         <div className="space-y-1">
@@ -774,30 +1043,31 @@ export default function MerchantMenuPage() {
                               </span>
                             </>
                           ) : (
-                            <InlineEditField
-                              value={String(item.price)}
-                              type="number"
-                              onSave={(newValue) => handleInlineUpdate(item.id, 'price', newValue)}
-                              className="text-sm font-semibold text-gray-800 dark:text-white/90"
-                            />
+                            <div className="flex items-center gap-1">
+                              <InlineEditField
+                                value={String(item.price)}
+                                type="number"
+                                onSave={(newValue) => handleInlineUpdate(item.id, 'price', newValue)}
+                                className="text-sm font-semibold text-gray-800 dark:text-white/90"
+                              />
+                            </div>
                           )}
                         </div>
                       </td>
                       <td className="px-4 py-4">
                         {item.trackStock ? (
                           <div className="space-y-1">
-                            <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                              (item.stockQty || 0) > 10
-                                ? 'bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400'
-                                : (item.stockQty || 0) > 0
+                            <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${(item.stockQty || 0) > 10
+                              ? 'bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400'
+                              : (item.stockQty || 0) > 0
                                 ? 'bg-warning-100 text-warning-700 dark:bg-warning-900/20 dark:text-warning-400'
                                 : 'bg-error-100 text-error-700 dark:bg-error-900/20 dark:text-error-400'
-                            }`}>
+                              }`}>
                               {item.stockQty || 0} pcs
                             </span>
                             {item.autoResetStock && item.dailyStockTemplate && (
                               <p className="text-xs text-gray-500 dark:text-gray-400">
-                                Auto: {item.dailyStockTemplate}/day
+                                {item.dailyStockTemplate}/day
                               </p>
                             )}
                           </div>
@@ -810,11 +1080,10 @@ export default function MerchantMenuPage() {
                       <td className="px-4 py-4">
                         <button
                           onClick={() => handleToggleActive(item.id, item.isActive, item.name)}
-                          className={`inline-flex rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                            item.isActive 
-                              ? 'bg-success-100 text-success-700 hover:bg-success-200 dark:bg-success-900/20 dark:text-success-400 dark:hover:bg-success-900/30' 
-                              : 'bg-error-100 text-error-700 hover:bg-error-200 dark:bg-error-900/20 dark:text-error-400 dark:hover:bg-error-900/30'
-                          }`}>
+                          className={`inline-flex rounded-full px-3 py-1 text-xs font-medium transition-colors ${item.isActive
+                            ? 'bg-success-100 text-success-700 hover:bg-success-200 dark:bg-success-900/20 dark:text-success-400 dark:hover:bg-success-900/30'
+                            : 'bg-error-100 text-error-700 hover:bg-error-200 dark:bg-error-900/20 dark:text-error-400 dark:hover:bg-error-900/30'
+                            }`}>
                           {item.isActive ? '● Active' : '○ Inactive'}
                         </button>
                       </td>
@@ -832,8 +1101,8 @@ export default function MerchantMenuPage() {
 
                           {openDropdownId === item.id && (
                             <>
-                              <div 
-                                className="fixed inset-0 z-10" 
+                              <div
+                                className="fixed inset-0 z-10"
                                 onClick={() => setOpenDropdownId(null)}
                               />
                               <div className="absolute right-0 z-20 mt-2 w-48 origin-top-right rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
@@ -957,11 +1226,10 @@ export default function MerchantMenuPage() {
                       <button
                         key={page}
                         onClick={() => paginate(page)}
-                        className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border text-sm font-medium ${
-                          currentPage === page
-                            ? 'border-primary-500 bg-primary-500 text-white'
-                            : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
-                        }`}
+                        className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border text-sm font-medium ${currentPage === page
+                          ? 'border-primary-500 bg-primary-500 text-white'
+                          : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                          }`}
                       >
                         {page}
                       </button>
@@ -1187,9 +1455,9 @@ export default function MerchantMenuPage() {
                 </p>
               </div>
             </div>
-            
+
             <p className="mb-6 text-sm text-gray-700 dark:text-gray-300">
-              Are you sure you want to delete {selectedItems.length} menu item{selectedItems.length > 1 ? 's' : ''}? 
+              Are you sure you want to delete {selectedItems.length} menu item{selectedItems.length > 1 ? 's' : ''}?
               This will permanently remove {selectedItems.length > 1 ? 'them' : 'it'} from your menu.
             </p>
 

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import Image from 'next/image';
 import { FileIcon, FolderIcon, PlusIcon, EyeIcon } from '@/icons';
 
 /**
@@ -85,6 +86,7 @@ export default function MenuBuilderTabs({
 }: MenuBuilderTabsProps) {
   const [activeTab, setActiveTab] = useState<TabKey>('basic');
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedCategories, setSelectedCategories] = useState<number[]>(
     initialData?.categoryIds || []
   );
@@ -97,7 +99,7 @@ export default function MenuBuilderTabs({
     handleSubmit,
     watch,
     setValue,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm({
     resolver: zodResolver(menuBuilderSchema),
     mode: 'onChange',
@@ -130,6 +132,9 @@ export default function MenuBuilderTabs({
   const watchIsPromo = watch('isPromo');
   const watchTrackStock = watch('trackStock');
 
+  // Track the uploaded image URL (only for newly uploaded images, not initial data)
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
+
   // Update form values when selections change
   useEffect(() => {
     setValue('categoryIds', selectedCategories, { shouldValidate: true, shouldDirty: true });
@@ -139,6 +144,36 @@ export default function MenuBuilderTabs({
     setValue('addonCategoryIds', selectedAddonCategories, { shouldValidate: true, shouldDirty: true });
   }, [selectedAddonCategories, setValue]);
 
+  // Cleanup function to delete orphaned uploaded image
+  const deleteUploadedImage = async (imageUrl: string) => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token || !imageUrl) return;
+
+      // Extract the file path from the URL for deletion
+      await fetch('/api/merchant/upload/delete-image', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ imageUrl }),
+      });
+    } catch (error) {
+      console.error('Failed to delete orphaned image:', error);
+    }
+  };
+
+  // Cleanup on unmount if image was uploaded but menu not saved
+  useEffect(() => {
+    return () => {
+      // Only cleanup if a new image was uploaded and form is dirty (not saved)
+      if (uploadedImageUrl && isDirty) {
+        deleteUploadedImage(uploadedImageUrl);
+      }
+    };
+  }, [uploadedImageUrl, isDirty]);
+
   const handleFormSubmit = async (data: MenuBuilderFormData) => {
     // Manually set categoryIds and addonCategoryIds from state, convert to numbers
     const submissionData = {
@@ -146,9 +181,11 @@ export default function MenuBuilderTabs({
       categoryIds: selectedCategories.map(id => typeof id === 'string' ? parseInt(id) : id),
       addonCategoryIds: selectedAddonCategories.map(id => typeof id === 'string' ? parseInt(id) : id),
     };
-    
+
     try {
       await onSubmit(submissionData);
+      // Clear the uploaded image tracking since it's now saved with the menu
+      setUploadedImageUrl(null);
     } catch (error) {
       console.error('Error submitting form:', error);
     }
@@ -172,26 +209,53 @@ export default function MenuBuilderTabs({
 
     try {
       setUploadingImage(true);
+      setUploadProgress(0);
+
       const formData = new FormData();
       formData.append('file', file);
-
       const token = localStorage.getItem('accessToken');
-      const response = await fetch('/api/merchant/upload/menu-image', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
+
+      // Use XMLHttpRequest for progress tracking
+      const xhr = new XMLHttpRequest();
+
+      await new Promise<void>((resolve, reject) => {
+        xhr.upload.addEventListener('progress', (event) => {
+          if (event.lengthComputable) {
+            const percentComplete = Math.round((event.loaded / event.total) * 100);
+            setUploadProgress(percentComplete);
+          }
+        });
+
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            const data = JSON.parse(xhr.responseText);
+            const imageUrl = data.data.url;
+            setValue('imageUrl', imageUrl);
+            // Track the uploaded image for cleanup if user cancels
+            setUploadedImageUrl(imageUrl);
+            resolve();
+          } else {
+            try {
+              const data = JSON.parse(xhr.responseText);
+              reject(new Error(data.message || 'Failed to upload image'));
+            } catch {
+              reject(new Error('Failed to upload image'));
+            }
+          }
+        });
+
+        xhr.addEventListener('error', () => reject(new Error('Network error')));
+        xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')));
+
+        xhr.open('POST', '/api/merchant/upload/menu-image');
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+        xhr.send(formData);
       });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to upload image');
-      }
-
-      setValue('imageUrl', data.data.url);
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Failed to upload image');
     } finally {
       setUploadingImage(false);
+      setUploadProgress(0);
     }
   };
 
@@ -235,42 +299,70 @@ export default function MenuBuilderTabs({
   };
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/3">
-      {/* Tab Navigation */}
-      <div className="border-b border-gray-200 dark:border-gray-800">
-        <div className="flex overflow-x-auto">
-          {tabs.map((tab) => {
+    <div className="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-950">
+      {/* Step Progress Indicator */}
+      <div className="border-b border-gray-200 bg-gray-50/50 px-6 py-4 dark:border-gray-800 dark:bg-gray-900/50">
+        <div className="flex items-center justify-between">
+          {tabs.map((tab, index) => {
             const Icon = tab.Icon;
             const isCompleted = isTabComplete(tab.key);
-            const tabIndex = tabs.findIndex((t) => t.key === tab.key);
-            const isPreviousTabIncomplete = tabIndex > 0 && !isTabComplete(tabs[tabIndex - 1].key);
+            const isPreviousTabIncomplete = index > 0 && !isTabComplete(tabs[index - 1].key);
             const isDisabled = isPreviousTabIncomplete && tab.key !== activeTab;
-            
+            const isActive = activeTab === tab.key;
+            const isPast = tabs.findIndex((t) => t.key === activeTab) > index;
+
             return (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => !isDisabled && setActiveTab(tab.key)}
-                disabled={isDisabled}
-                className={`relative flex items-center gap-2 px-6 py-4 text-sm font-medium transition-colors whitespace-nowrap ${
-                  isDisabled
-                    ? 'cursor-not-allowed text-gray-400 dark:text-gray-600'
-                    : activeTab === tab.key
-                    ? 'text-brand-600 dark:text-brand-400'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300'
-                }`}
-              >
-                <Icon className="h-5 w-5" />
-                <span>{tab.label}</span>
-                {isCompleted && activeTab !== tab.key && (
-                  <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-success-100 text-xs text-success-700 dark:bg-success-900/20 dark:text-success-400">
-                    ✓
-                  </span>
+              <div key={tab.key} className="flex flex-1 items-center">
+                <button
+                  type="button"
+                  onClick={() => !isDisabled && setActiveTab(tab.key)}
+                  disabled={isDisabled}
+                  className={`group flex flex-col items-center gap-2 ${isDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                >
+                  {/* Step Circle */}
+                  <div className={`relative flex h-10 w-10 items-center justify-center rounded-full transition-all ${isActive
+                    ? 'bg-brand-500 text-white shadow-lg shadow-brand-500/30 ring-4 ring-brand-100 dark:ring-brand-900/30'
+                    : isPast || isCompleted
+                      ? 'bg-success-500 text-white'
+                      : isDisabled
+                        ? 'bg-gray-200 text-gray-400 dark:bg-gray-800 dark:text-gray-600'
+                        : 'bg-white text-gray-600 border-2 border-gray-300 group-hover:border-brand-400 dark:bg-gray-900 dark:border-gray-600 dark:text-gray-400'
+                    }`}>
+                    {isPast || (isCompleted && !isActive) ? (
+                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    ) : (
+                      <span className="text-sm font-semibold">{index + 1}</span>
+                    )}
+                  </div>
+
+                  {/* Step Label */}
+                  <div className="flex items-center gap-1.5">
+                    <Icon className={`h-4 w-4 ${isActive ? 'text-brand-600 dark:text-brand-400'
+                      : isDisabled ? 'text-gray-400 dark:text-gray-600'
+                        : 'text-gray-500 dark:text-gray-400'
+                      }`} />
+                    <span className={`text-xs font-medium ${isActive ? 'text-brand-600 dark:text-brand-400'
+                      : isDisabled ? 'text-gray-400 dark:text-gray-600'
+                        : 'text-gray-600 dark:text-gray-400'
+                      }`}>
+                      {tab.label}
+                    </span>
+                  </div>
+                </button>
+
+                {/* Connector Line */}
+                {index < tabs.length - 1 && (
+                  <div className="mx-2 h-1 flex-1 rounded-full bg-gray-200 dark:bg-gray-800">
+                    <div
+                      className={`h-full rounded-full transition-all duration-300 ${isPast || isCompleted ? 'bg-success-500' : isActive ? 'bg-brand-300 dark:bg-brand-700' : ''
+                        }`}
+                      style={{ width: isPast || isCompleted ? '100%' : isActive ? '50%' : '0%' }}
+                    />
+                  </div>
                 )}
-                {activeTab === tab.key && !isDisabled && (
-                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-500" />
-                )}
-              </button>
+              </div>
             );
           })}
         </div>
@@ -281,201 +373,296 @@ export default function MenuBuilderTabs({
         {/* Basic Info Tab */}
         {activeTab === 'basic' && (
           <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">Basic Information</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Essential details about your menu item</p>
+            {/* Section Header */}
+            <div className="mb-6">
+              <h3 className="text-xl font-bold text-gray-800 dark:text-white">Basic Information</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                Enter the essential details about your menu item
+              </p>
             </div>
 
-            {/* Name */}
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Menu Name <span className="text-error-600">*</span>
-              </label>
-              <input
-                type="text"
-                {...register('name')}
-                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                placeholder="e.g., Fried Rice Special"
-              />
-              {errors.name && (
-                <p className="mt-1.5 text-sm text-error-600 dark:text-error-400">{errors.name.message}</p>
-              )}
-            </div>
+            {/* Main Content Grid - Name/Description on left, Image on right */}
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+              {/* Left Column - Name, Description, Price */}
+              <div className="space-y-5 lg:col-span-2">
+                {/* Name Input with Icon */}
+                <div>
+                  <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <svg className="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" />
+                    </svg>
+                    Menu Name <span className="text-error-600">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    {...register('name')}
+                    className="h-12 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                    placeholder="e.g., Fried Rice Special"
+                  />
+                  {errors.name && (
+                    <p className="mt-1.5 flex items-center gap-1 text-sm text-error-600 dark:text-error-400">
+                      <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                      {errors.name.message}
+                    </p>
+                  )}
+                </div>
 
-            {/* Description */}
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
-              <textarea
-                {...register('description')}
-                rows={3}
-                className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                placeholder="Describe your menu item..."
-              />
-            </div>
-
-            {/* Price & Image */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Price <span className="text-error-600">*</span>
-                </label>
-                <input
-                  type="number"
-                  {...register('price', { valueAsNumber: true })}
-                  className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
-                  placeholder="0"
-                  min="0"
-                  step="0.01"
-                />
-                {errors.price && (
-                  <p className="mt-1.5 text-sm text-error-600 dark:text-error-400">{errors.price.message}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Image Upload</label>
-                <input
-                  type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/webp"
-                  onChange={handleImageUpload}
-                  disabled={uploadingImage}
-                  className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 file:mr-4 file:rounded file:border-0 file:bg-brand-50 file:px-4 file:py-1 file:text-sm file:font-medium file:text-brand-600 hover:file:bg-brand-100 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:file:bg-brand-900/20 dark:file:text-brand-400"
-                />
-                {uploadingImage && (
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Uploading image...</p>
-                )}
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Supported: JPEG, PNG, WebP (max 5MB)
-                </p>
-              </div>
-            </div>
-
-            {watch('imageUrl') && (
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Image Preview
-                </label>
-                <div className="overflow-hidden rounded-lg">
-                  <img
-                    src={watch('imageUrl') || ''}
-                    alt="Preview"
-                    className="h-48 w-48 object-cover"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                    }}
+                {/* Description */}
+                <div>
+                  <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <svg className="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
+                    </svg>
+                    Description <span className="text-xs text-gray-400">(Optional)</span>
+                  </label>
+                  <textarea
+                    {...register('description')}
+                    rows={4}
+                    className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 resize-none"
+                    placeholder="Describe your menu item, ingredients, serving size..."
                   />
                 </div>
-              </div>
-            )}
 
-            {/* Promo Section */}
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
-              <div className="mb-3 flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  {...register('isPromo')}
-                  id="isPromo"
-                  className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
-                />
-                <label htmlFor="isPromo" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Enable Promotional Pricing
-                </label>
-              </div>
-
-              {watchIsPromo && (
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Promo Price
-                    </label>
+                {/* Price */}
+                <div>
+                  <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <svg className="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Price <span className="text-error-600">*</span>
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-gray-500">A$</span>
                     <input
                       type="number"
-                      {...register('promoPrice', { valueAsNumber: true })}
-                      className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
-                      placeholder="0"
+                      {...register('price', { valueAsNumber: true })}
+                      className="h-12 w-full rounded-xl border border-gray-200 bg-white pl-10 pr-4 text-sm text-gray-800 focus:border-brand-400 focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                      placeholder="0.00"
                       min="0"
                       step="0.01"
                     />
                   </div>
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Start Date
-                    </label>
-                    <input
-                      type="datetime-local"
-                      {...register('promoStartDate')}
-                      className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      End Date
-                    </label>
-                    <input
-                      type="datetime-local"
-                      {...register('promoEndDate')}
-                      className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
-                    />
-                  </div>
+                  {errors.price && (
+                    <p className="mt-1.5 flex items-center gap-1 text-sm text-error-600 dark:text-error-400">
+                      <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                      {errors.price.message}
+                    </p>
+                  )}
                 </div>
-              )}
-            </div>
-
-            {/* Stock Management */}
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
-              <div className="mb-3 flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  {...register('trackStock')}
-                  id="trackStock"
-                  className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
-                />
-                <label htmlFor="trackStock" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Track Stock Inventory
-                </label>
               </div>
 
-              {watchTrackStock && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <div>
-                      <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Current Stock
-                      </label>
-                      <input
-                        type="number"
-                        {...register('stockQty', { valueAsNumber: true })}
-                        className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
-                        placeholder="0"
-                        min="0"
+              {/* Right Column - Image Upload */}
+              <div className="lg:col-span-1">
+                <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <svg className="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Menu Image
+                </label>
+
+                {/* Image Upload Area */}
+                <div className={`relative rounded-2xl border-2 border-dashed transition-all ${watch('imageUrl')
+                  ? 'border-success-300 bg-success-50/50 dark:border-success-700 dark:bg-success-900/10'
+                  : 'border-gray-300 bg-gray-50 hover:border-brand-400 hover:bg-brand-50/50 dark:border-gray-700 dark:bg-gray-900 dark:hover:border-brand-600'
+                  }`}>
+                  {watch('imageUrl') ? (
+                    <div className="relative aspect-square overflow-hidden rounded-xl">
+                      <img
+                        src={watch('imageUrl') || ''}
+                        alt="Preview"
+                        className="h-full w-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
                       />
+                      <button
+                        type="button"
+                        onClick={() => setValue('imageUrl', '')}
+                        className="absolute right-2 top-2 rounded-full bg-white/90 p-2 text-gray-600 shadow-lg transition-all hover:bg-error-100 hover:text-error-600 dark:bg-gray-800/90 dark:text-gray-300"
+                      >
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="flex aspect-square cursor-pointer flex-col items-center justify-center p-6">
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/jpg,image/png,image/webp"
+                        onChange={handleImageUpload}
+                        disabled={uploadingImage}
+                        className="sr-only"
+                      />
+
+                      {uploadingImage ? (
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="relative h-16 w-16">
+                            <svg className="h-16 w-16 animate-spin text-brand-500" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                            <span className="absolute inset-0 flex items-center justify-center text-lg font-bold text-brand-600">{uploadProgress}%</span>
+                          </div>
+                          <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Uploading...</p>
+                          <div className="h-2 w-32 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                            <div
+                              className="h-full rounded-full bg-brand-500 transition-all duration-200"
+                              style={{ width: `${uploadProgress}%` }}
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-brand-100 text-brand-600 dark:bg-brand-900/30 dark:text-brand-400">
+                            <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                          <p className="mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Click to upload image
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            JPG, PNG, WebP up to 5MB
+                          </p>
+                        </>
+                      )}
+                    </label>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="border-t border-gray-100 dark:border-gray-800" />
+
+            {/* Additional Settings Grid */}
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              {/* Promo Section */}
+              <div className={`rounded-2xl border-2 p-5 transition-all ${watchIsPromo
+                  ? 'border-error-300 bg-error-50/50 dark:border-error-700 dark:bg-error-900/10'
+                  : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-800 dark:bg-gray-900/50 dark:hover:border-gray-700'
+                }`}>
+                <div className="mb-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${watchIsPromo ? 'bg-error-100 text-error-600 dark:bg-error-900/30 dark:text-error-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+                      }`}>
+                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" />
+                      </svg>
                     </div>
                     <div>
-                      <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Daily Stock Template
-                      </label>
-                      <input
-                        type="number"
-                        {...register('dailyStockTemplate', { valueAsNumber: true })}
-                        className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
-                        placeholder="0"
-                        min="0"
-                      />
+                      <h4 className="text-sm font-semibold text-gray-800 dark:text-white">Promotional Pricing</h4>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Set a special discounted price</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      {...register('autoResetStock')}
-                      id="autoResetStock"
-                      className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
-                    />
-                    <label htmlFor="autoResetStock" className="text-sm text-gray-600 dark:text-gray-400">
-                      Automatically reset stock daily
+                  <label className="relative inline-flex cursor-pointer items-center">
+                    <input type="checkbox" {...register('isPromo')} className="peer sr-only" />
+                    <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-error-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-error-300/20 dark:bg-gray-700 dark:peer-focus:ring-error-800/20" />
+                  </label>
+                </div>
+
+                {watchIsPromo && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                      <div>
+                        <label className="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">Promo Price</label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-gray-500">A$</span>
+                          <input
+                            type="number"
+                            {...register('promoPrice', { valueAsNumber: true })}
+                            className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-8 pr-3 text-sm text-gray-800 focus:border-error-400 focus:outline-none focus:ring-2 focus:ring-error-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                            placeholder="0.00"
+                            min="0"
+                            step="0.01"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">Start Date</label>
+                        <input
+                          type="datetime-local"
+                          {...register('promoStartDate')}
+                          className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 focus:border-error-400 focus:outline-none focus:ring-2 focus:ring-error-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">End Date</label>
+                        <input
+                          type="datetime-local"
+                          {...register('promoEndDate')}
+                          className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 focus:border-error-400 focus:outline-none focus:ring-2 focus:ring-error-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Stock Management */}
+              <div className={`rounded-2xl border-2 p-5 transition-all ${watchTrackStock
+                  ? 'border-warning-300 bg-warning-50/50 dark:border-warning-700 dark:bg-warning-900/10'
+                  : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-800 dark:bg-gray-900/50 dark:hover:border-gray-700'
+                }`}>
+                <div className="mb-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${watchTrackStock ? 'bg-warning-100 text-warning-600 dark:bg-warning-900/30 dark:text-warning-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+                      }`}>
+                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-800 dark:text-white">Stock Tracking</h4>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Monitor inventory levels</p>
+                    </div>
+                  </div>
+                  <label className="relative inline-flex cursor-pointer items-center">
+                    <input type="checkbox" {...register('trackStock')} className="peer sr-only" />
+                    <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-warning-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-warning-300/20 dark:bg-gray-700 dark:peer-focus:ring-warning-800/20" />
+                  </label>
+                </div>
+
+                {watchTrackStock && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <div>
+                        <label className="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">Current Stock</label>
+                        <input
+                          type="number"
+                          {...register('stockQty', { valueAsNumber: true })}
+                          className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 focus:border-warning-400 focus:outline-none focus:ring-2 focus:ring-warning-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                          placeholder="0"
+                          min="0"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">Daily Reset Template</label>
+                        <input
+                          type="number"
+                          {...register('dailyStockTemplate', { valueAsNumber: true })}
+                          className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 focus:border-warning-400 focus:outline-none focus:ring-2 focus:ring-warning-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                          placeholder="0"
+                          min="0"
+                        />
+                      </div>
+                    </div>
+                    <label className="flex cursor-pointer items-center gap-2 rounded-lg bg-warning-100/50 p-3 transition-colors hover:bg-warning-100 dark:bg-warning-900/20 dark:hover:bg-warning-900/30">
+                      <input
+                        type="checkbox"
+                        {...register('autoResetStock')}
+                        className="h-4 w-4 rounded border-warning-400 text-warning-500 focus:ring-warning-500"
+                      />
+                      <span className="text-sm text-warning-700 dark:text-warning-300">Auto-reset stock daily at midnight</span>
                     </label>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
             {/* Menu Attributes */}
@@ -499,7 +686,15 @@ export default function MenuBuilderTabs({
                     className="h-4 w-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
                   />
                   <div className="flex items-center gap-2">
-                    <span className="text-lg">🌶️</span>
+                    <div className="group relative h-5 w-5 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-orange-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800">
+                      <Image
+                        src="/images/menu-badges/spicy.png"
+                        alt="Spicy"
+                        width={20}
+                        height={20}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Spicy</span>
                   </div>
                 </label>
@@ -516,7 +711,15 @@ export default function MenuBuilderTabs({
                     className="h-4 w-4 rounded border-gray-300 text-amber-500 focus:ring-amber-500"
                   />
                   <div className="flex items-center gap-2">
-                    <span className="text-lg">⭐</span>
+                    <div className="group relative h-5 w-5 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-amber-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800">
+                      <Image
+                        src="/images/menu-badges/best-seller.png"
+                        alt="Best Seller"
+                        width={20}
+                        height={20}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Best Seller</span>
                   </div>
                 </label>
@@ -533,7 +736,15 @@ export default function MenuBuilderTabs({
                     className="h-4 w-4 rounded border-gray-300 text-purple-500 focus:ring-purple-500"
                   />
                   <div className="flex items-center gap-2">
-                    <span className="text-lg">✨</span>
+                    <div className="group relative h-5 w-5 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-purple-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800">
+                      <Image
+                        src="/images/menu-badges/signature.png"
+                        alt="Signature"
+                        width={20}
+                        height={20}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Signature</span>
                   </div>
                 </label>
@@ -550,7 +761,15 @@ export default function MenuBuilderTabs({
                     className="h-4 w-4 rounded border-gray-300 text-green-500 focus:ring-green-500"
                   />
                   <div className="flex items-center gap-2">
-                    <span className="text-lg">👍</span>
+                    <div className="group relative h-5 w-5 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-green-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800">
+                      <Image
+                        src="/images/menu-badges/recommended.png"
+                        alt="Recommended"
+                        width={20}
+                        height={20}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Recommended</span>
                   </div>
                 </label>
@@ -588,11 +807,10 @@ export default function MenuBuilderTabs({
                   key={category.id}
                   type="button"
                   onClick={() => toggleCategory(category.id)}
-                  className={`group relative rounded-lg border-2 p-4 text-left transition-all ${
-                    selectedCategories.includes(category.id)
-                      ? 'border-brand-500 bg-brand-50 dark:border-brand-500 dark:bg-brand-900/10'
-                      : 'border-gray-200 bg-white hover:border-brand-300 dark:border-gray-800 dark:bg-gray-900/50 dark:hover:border-brand-600'
-                  }`}
+                  className={`group relative rounded-lg border-2 p-4 text-left transition-all ${selectedCategories.includes(category.id)
+                    ? 'border-brand-500 bg-brand-50 dark:border-brand-500 dark:bg-brand-900/10'
+                    : 'border-gray-200 bg-white hover:border-brand-300 dark:border-gray-800 dark:bg-gray-900/50 dark:hover:border-brand-600'
+                    }`}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -646,11 +864,10 @@ export default function MenuBuilderTabs({
                     key={addonCat.id}
                     type="button"
                     onClick={() => toggleAddonCategory(addonCat.id)}
-                    className={`group w-full rounded-lg border-2 p-4 text-left transition-all ${
-                      selectedAddonCategories.includes(addonCat.id)
-                        ? 'border-brand-500 bg-brand-50 dark:border-brand-500 dark:bg-brand-900/10'
-                        : 'border-gray-200 bg-white hover:border-brand-300 dark:border-gray-800 dark:bg-gray-900/50 dark:hover:border-brand-600'
-                    }`}
+                    className={`group w-full rounded-lg border-2 p-4 text-left transition-all ${selectedAddonCategories.includes(addonCat.id)
+                      ? 'border-brand-500 bg-brand-50 dark:border-brand-500 dark:bg-brand-900/10'
+                      : 'border-gray-200 bg-white hover:border-brand-300 dark:border-gray-800 dark:bg-gray-900/50 dark:hover:border-brand-600'
+                      }`}
                   >
                     <div className="flex items-start gap-3">
                       <div className="flex-1">
@@ -729,6 +946,64 @@ export default function MenuBuilderTabs({
                   {watch('name') || 'Menu Name'}
                 </h2>
 
+                {/* Menu Attribute Badges */}
+                {(watch('isSpicy') || watch('isBestSeller') || watch('isSignature') || watch('isRecommended')) && (
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {watch('isSpicy') && (
+                      <div 
+                        className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-orange-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
+                        title="Spicy"
+                      >
+                        <Image
+                          src="/images/menu-badges/spicy.png"
+                          alt="Spicy"
+                          fill
+                          className="object-cover transition-opacity duration-300 group-hover:opacity-80"
+                        />
+                      </div>
+                    )}
+                    {watch('isBestSeller') && (
+                      <div 
+                        className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-amber-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
+                        title="Best Seller"
+                      >
+                        <Image
+                          src="/images/menu-badges/best-seller.png"
+                          alt="Best Seller"
+                          fill
+                          className="object-cover transition-opacity duration-300 group-hover:opacity-80"
+                        />
+                      </div>
+                    )}
+                    {watch('isSignature') && (
+                      <div 
+                        className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-purple-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
+                        title="Signature"
+                      >
+                        <Image
+                          src="/images/menu-badges/signature.png"
+                          alt="Signature"
+                          fill
+                          className="object-cover transition-opacity duration-300 group-hover:opacity-80"
+                        />
+                      </div>
+                    )}
+                    {watch('isRecommended') && (
+                      <div 
+                        className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-green-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
+                        title="Recommended"
+                      >
+                        <Image
+                          src="/images/menu-badges/recommended.png"
+                          alt="Recommended"
+                          fill
+                          className="object-cover transition-opacity duration-300 group-hover:opacity-80"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {watch('description') && (
                   <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
                     {watch('description')}
@@ -800,13 +1075,12 @@ export default function MenuBuilderTabs({
                 {watch('trackStock') && watch('stockQty') !== undefined && watch('stockQty') !== null && (
                   <div className="mt-4 border-t border-gray-200 pt-4 dark:border-gray-800">
                     <div className="flex items-center gap-2">
-                      <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
-                        (watch('stockQty') || 0) > 10
-                          ? 'bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400'
-                          : (watch('stockQty') || 0) > 0
+                      <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${(watch('stockQty') || 0) > 10
+                        ? 'bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400'
+                        : (watch('stockQty') || 0) > 0
                           ? 'bg-warning-100 text-warning-700 dark:bg-warning-900/20 dark:text-warning-400'
                           : 'bg-error-100 text-error-700 dark:bg-error-900/20 dark:text-error-400'
-                      }`}>
+                        }`}>
                         {(watch('stockQty') || 0) > 0 ? '● In Stock' : '● Out of Stock'}
                       </span>
                       <span className="text-sm text-gray-600 dark:text-gray-400">
@@ -822,14 +1096,23 @@ export default function MenuBuilderTabs({
 
         {/* Action Buttons */}
         <div className="mt-8 flex items-center justify-between border-t border-gray-200 pt-6 dark:border-gray-800">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="inline-flex h-11 items-center rounded-lg border border-gray-200 bg-white px-6 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-            disabled={isLoading}
-          >
-            Cancel
-          </button>
+          {(isDirty || menuId) ? (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="inline-flex h-11 items-center rounded-lg border border-gray-200 bg-white px-6 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+              disabled={isLoading}
+            >
+              Cancel
+            </button>
+          ) : (
+            <a
+              href="/admin/dashboard/menu"
+              className="inline-flex h-11 items-center rounded-lg border border-gray-200 bg-white px-6 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+            >
+              ← Back to Menu
+            </a>
+          )}
 
           <div className="flex gap-3">
             {activeTab !== 'basic' && (

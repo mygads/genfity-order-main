@@ -284,7 +284,7 @@ const AppSidebar: React.FC = () => {
   return (
     <aside
       data-sidebar
-      className={`fixed mt-16 flex flex-col lg:mt-0 top-0 px-5 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-50 border-r border-gray-200 
+      className={`fixed mt-10 flex flex-col lg:mt-0 top-0 px-5 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-50 border-r border-gray-200 
         ${isExpanded || isMobileOpen
           ? "w-[290px]"
           : isHovered
@@ -297,7 +297,7 @@ const AppSidebar: React.FC = () => {
       onMouseLeave={() => setIsHovered(false)}
     >
       <div
-        className={`py-8 flex  ${!isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
+        className={`pt-4 pb-2 flex  ${!isExpanded && !isHovered ? "lg:justify-center" : "justify-center"
           }`}
       >
         <Link href="/admin/dashboard">
@@ -413,7 +413,30 @@ const AppSidebar: React.FC = () => {
             )}
           </div>
         </nav>
-        {isExpanded || isHovered || isMobileOpen ? <SidebarWidget /> : null}
+        {/* {isExpanded || isHovered || isMobileOpen ? <SidebarWidget /> : null} */}
+      </div>
+      
+      {/* Dashboard Version - Fixed at bottom */}
+      <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+        <div className={`flex items-center justify-center ${!(isExpanded || isHovered || isMobileOpen) ? 'lg:flex-col lg:gap-1' : ''}`}>
+          {isExpanded || isHovered || isMobileOpen ? (
+            <div className="text-center">
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                Dashboard Version
+              </p>
+              <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                1.0.0
+              </p>
+            </div>
+          ) : (
+            <div className="text-center">
+              <div className="w-2 h-2 bg-green-500 rounded-full mx-auto mb-1" title="Version 1.0.0"></div>
+              <p className="text-[10px] font-semibold text-gray-600 dark:text-gray-400 transform rotate-0">
+                v1.0
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </aside>
   );

@@ -32,6 +32,10 @@ interface MenuPreviewCardProps {
   stockQty?: number;
   addonCategories?: AddonCategory[];
   isActive?: boolean;
+  isSpicy?: boolean;
+  isBestSeller?: boolean;
+  isSignature?: boolean;
+  isRecommended?: boolean;
 }
 
 export default function MenuPreviewCard({
@@ -45,6 +49,10 @@ export default function MenuPreviewCard({
   stockQty,
   addonCategories = [],
   isActive = true,
+  isSpicy = false,
+  isBestSeller = false,
+  isSignature = false,
+  isRecommended = false,
 }: MenuPreviewCardProps) {
   const displayPrice = isPromo && promoPrice ? promoPrice : price;
   const hasDiscount = isPromo && promoPrice && promoPrice < price;
@@ -99,6 +107,64 @@ export default function MenuPreviewCard({
       <div className="p-4">
         {/* Name */}
         <h3 className="text-lg font-bold mb-2 line-clamp-2">{name}</h3>
+
+        {/* Menu Attribute Badges */}
+        {(isSpicy || isBestSeller || isSignature || isRecommended) && (
+          <div className="mb-2 flex flex-wrap gap-1.5">
+            {isSpicy && (
+              <div 
+                className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-orange-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
+                title="Spicy"
+              >
+                <Image
+                  src="/images/menu-badges/spicy.png"
+                  alt="Spicy"
+                  fill
+                  className="object-cover transition-opacity duration-300 group-hover:opacity-80"
+                />
+              </div>
+            )}
+            {isBestSeller && (
+              <div 
+                className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-amber-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
+                title="Best Seller"
+              >
+                <Image
+                  src="/images/menu-badges/best-seller.png"
+                  alt="Best Seller"
+                  fill
+                  className="object-cover transition-opacity duration-300 group-hover:opacity-80"
+                />
+              </div>
+            )}
+            {isSignature && (
+              <div 
+                className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-purple-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
+                title="Signature"
+              >
+                <Image
+                  src="/images/menu-badges/signature.png"
+                  alt="Signature"
+                  fill
+                  className="object-cover transition-opacity duration-300 group-hover:opacity-80"
+                />
+              </div>
+            )}
+            {isRecommended && (
+              <div 
+                className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-green-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
+                title="Recommended"
+              >
+                <Image
+                  src="/images/menu-badges/recommended.png"
+                  alt="Recommended"
+                  fill
+                  className="object-cover transition-opacity duration-300 group-hover:opacity-80"
+                />
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Description */}
         {description && (

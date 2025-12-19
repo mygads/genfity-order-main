@@ -18,6 +18,7 @@ import { OrderDetailModal } from '@/components/orders/OrderDetailModal';
 import DateRangeFilter, { DateRange } from '@/components/orders/DateRangeFilter';
 import { exportAnalyticsToExcel } from '@/lib/utils/exportOrders';
 import type { OrderStatus, OrderType } from '@prisma/client';
+import { useMerchant } from '@/context/MerchantContext';
 
 // ===== TYPES =====
 
@@ -94,29 +95,19 @@ export default function OrderHistoryPage() {
     end: new Date(),
   });
 
-  // Fetch merchant data
+  // Use MerchantContext
+  const { merchant: merchantData } = useMerchant();
+  
+  React.useEffect(() => {
+    if (merchantData) {
+      setMerchant(merchantData);
+    }
+  }, [merchantData]);
+
+  // Fetch merchant data (kept for backwards compatibility)
   const fetchMerchant = React.useCallback(async () => {
-    try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) {
-        router.push('/admin/login');
-        return;
-      }
-
-      const response = await fetch('/api/merchant/profile', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) throw new Error('Failed to fetch merchant');
-
-      const data = await response.json();
-      if (data.success && data.data) {
-        setMerchant(data.data);
-      }
-    } catch (error) {
-      console.error('Error fetching merchant:', error);
+    if (merchantData) {
+      setMerchant(merchantData);
     }
   }, [router]);
 

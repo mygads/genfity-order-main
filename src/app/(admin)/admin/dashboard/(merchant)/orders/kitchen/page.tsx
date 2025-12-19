@@ -20,18 +20,20 @@ import { KitchenDisplaySkeleton } from '@/components/common/SkeletonLoaders';
 import type { OrderWithDetails } from '@/lib/types/order';
 import { OrderStatus } from '@prisma/client';
 import { playNotificationSound } from '@/lib/utils/soundNotification';
+import { useMerchant } from '@/context/MerchantContext';
 
 const KITCHEN_STATUSES: OrderStatus[] = ['ACCEPTED', 'IN_PROGRESS'];
 
 export default function KitchenDisplayPage() {
   const router = useRouter();
+  const { merchant } = useMerchant();
 
   const [orders, setOrders] = useState<OrderWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [displayMode, setDisplayMode] = useState<'normal' | 'clean' | 'fullscreen'>('normal');
-  const [merchantCurrency, setMerchantCurrency] = useState('AUD');
+  const merchantCurrency = merchant?.currency || 'AUD';
 
   // Use ref to track previous order IDs without triggering re-renders
   const previousOrderIdsRef = React.useRef<Set<string>>(new Set());
@@ -39,27 +41,6 @@ export default function KitchenDisplayPage() {
   // Modal state
   const [selectedOrder, setSelectedOrder] = useState<OrderWithDetails | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // Fetch merchant profile once on mount
-  useEffect(() => {
-    const fetchMerchant = async () => {
-      try {
-        const token = localStorage.getItem('accessToken');
-        if (!token) return;
-
-        const response = await fetch('/api/merchant/profile', {
-          headers: { 'Authorization': `Bearer ${token}` },
-        });
-        const data = await response.json();
-        if (data.success && data.data?.currency) {
-          setMerchantCurrency(data.data.currency);
-        }
-      } catch (err) {
-        console.error('Error fetching merchant:', err);
-      }
-    };
-    fetchMerchant();
-  }, []);
 
   // Fetch kitchen orders
   const fetchOrders = useCallback(async () => {

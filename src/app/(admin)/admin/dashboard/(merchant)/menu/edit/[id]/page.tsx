@@ -67,12 +67,12 @@ export default function EditMenuPage() {
   const [merchant, setMerchant] = useState<Merchant | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadMessage, setUploadMessage] = useState<string | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [addonCategories, setAddonCategories] = useState<MenuAddonCategory[]>([]);
   const [showManageAddonsModal, setShowManageAddonsModal] = useState(false);
   const [showViewAddonsModal, setShowViewAddonsModal] = useState(false);
-  
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [originalFormData, setOriginalFormData] = useState<MenuFormData | null>(null);
+
   const [formData, setFormData] = useState<MenuFormData>({
     name: "",
     description: "",
@@ -88,6 +88,26 @@ export default function EditMenuPage() {
     dailyStockTemplate: "",
     autoResetStock: false,
   });
+
+  // Check if form has changes compared to original data
+  const hasChanges = (): boolean => {
+    if (!originalFormData) return false;
+    return (
+      formData.name !== originalFormData.name ||
+      formData.description !== originalFormData.description ||
+      formData.price !== originalFormData.price ||
+      formData.imageUrl !== originalFormData.imageUrl ||
+      formData.isActive !== originalFormData.isActive ||
+      formData.isSpicy !== originalFormData.isSpicy ||
+      formData.isBestSeller !== originalFormData.isBestSeller ||
+      formData.isSignature !== originalFormData.isSignature ||
+      formData.isRecommended !== originalFormData.isRecommended ||
+      formData.trackStock !== originalFormData.trackStock ||
+      formData.stockQty !== originalFormData.stockQty ||
+      formData.dailyStockTemplate !== originalFormData.dailyStockTemplate ||
+      formData.autoResetStock !== originalFormData.autoResetStock
+    );
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -114,14 +134,14 @@ export default function EditMenuPage() {
 
         const menuData = await menuResponse.json();
         const merchantData = await merchantResponse.json();
-        
+
         if (merchantData.success && merchantData.data) {
           setMerchant(merchantData.data);
         }
-        
+
         if (menuData.success && menuData.data) {
           const menu = menuData.data;
-          setFormData({
+          const initialFormData = {
             name: menu.name || "",
             description: menu.description || "",
             price: menu.price ? menu.price.toString() : "",
@@ -135,9 +155,10 @@ export default function EditMenuPage() {
             stockQty: menu.stockQty ? menu.stockQty.toString() : "",
             dailyStockTemplate: menu.dailyStockTemplate ? menu.dailyStockTemplate.toString() : "",
             autoResetStock: menu.autoResetStock !== undefined ? menu.autoResetStock : false,
-          });
-          
-          // Set addon categories
+          };
+          setFormData(initialFormData);
+          setOriginalFormData(initialFormData); // Store original data for comparison
+
           if (menu.addonCategories) {
             setAddonCategories(menu.addonCategories);
           }
@@ -181,7 +202,6 @@ export default function EditMenuPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     if (!validTypes.includes(file.type)) {
       setError('Invalid file type. Only JPEG, PNG, and WebP are allowed.');
@@ -201,68 +221,58 @@ export default function EditMenuPage() {
       setUploadingImage(true);
       setError(null);
       setUploadProgress(0);
-      setUploadMessage('Preparing upload...');
 
-      // Simulate progress for better UX
-      const progressInterval = setInterval(() => {
-        setUploadProgress(prev => {
-          if (prev >= 90) {
-            clearInterval(progressInterval);
-            return 90;
-          }
-          return prev + 10;
-        });
-      }, 100);
-
-      const formDataUpload = new FormData();
-      formDataUpload.append('file', file);
-      formDataUpload.append('menuId', menuId);
-
-      setUploadMessage('Uploading image...');
-
+      const uploadFormData = new FormData();
+      uploadFormData.append('file', file);
+      uploadFormData.append('menuId', menuId);
       const token = localStorage.getItem('accessToken');
-      const response = await fetch('/api/merchant/upload/menu-image', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formDataUpload,
+
+      const xhr = new XMLHttpRequest();
+
+      await new Promise<void>((resolve, reject) => {
+        xhr.upload.addEventListener('progress', (event) => {
+          if (event.lengthComputable) {
+            const percentComplete = Math.round((event.loaded / event.total) * 100);
+            setUploadProgress(percentComplete);
+          }
+        });
+
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            const data = JSON.parse(xhr.responseText);
+            setFormData(prev => ({ ...prev, imageUrl: data.data.url }));
+            setSuccess('Image uploaded successfully!');
+            setTimeout(() => setSuccess(null), 2000);
+            resolve();
+          } else {
+            try {
+              const data = JSON.parse(xhr.responseText);
+              reject(new Error(data.message || 'Failed to upload image'));
+            } catch {
+              reject(new Error('Failed to upload image'));
+            }
+          }
+        });
+
+        xhr.addEventListener('error', () => reject(new Error('Network error')));
+        xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')));
+
+        xhr.open('POST', '/api/merchant/upload/menu-image');
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+        xhr.send(uploadFormData);
       });
-
-      clearInterval(progressInterval);
-      setUploadProgress(100);
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to upload image');
-      }
-
-      setUploadMessage('Upload complete!');
-      setFormData(prev => ({
-        ...prev,
-        imageUrl: data.data.url,
-      }));
-
-      setSuccess('Image uploaded successfully!');
-      setTimeout(() => {
-        setSuccess(null);
-        setUploadMessage(null);
-        setUploadProgress(0);
-      }, 2000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to upload image');
       setTimeout(() => setError(null), 5000);
-      setUploadMessage(null);
-      setUploadProgress(0);
     } finally {
       setUploadingImage(false);
+      setUploadProgress(0);
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
-    
+
     if (type === "checkbox") {
       const checked = (e.target as HTMLInputElement).checked;
       setFormData(prev => ({
@@ -330,9 +340,9 @@ export default function EditMenuPage() {
   if (loading) {
     return (
       <div>
-        <PageBreadcrumb pageTitle="Edit" />
+        <PageBreadcrumb pageTitle="Edit Menu Item" />
         <div className="mt-6 py-10 text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-brand-500 border-r-transparent"></div>
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary-500 border-r-transparent"></div>
           <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Loading...</p>
         </div>
       </div>
@@ -343,452 +353,464 @@ export default function EditMenuPage() {
     <div>
       <PageBreadcrumb pageTitle="Edit Menu Item" />
 
-      <div className="space-y-6">
-        {/* Toast Notifications */}
+      <div className="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-950">
+        {/* Header */}
+        <div className="border-b border-gray-200 bg-gray-50/50 px-6 py-5 dark:border-gray-800 dark:bg-gray-900/50">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400">
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Edit Menu Item</h1>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Update your menu item details</p>
+            </div>
+          </div>
+        </div>
+
         {error && (
-          <div className="rounded-lg bg-error-50 p-4 dark:bg-error-900/20">
-            <p className="text-sm text-error-600 dark:text-error-400">{error}</p>
+          <div className="mx-6 mt-6 flex items-center gap-3 rounded-xl border border-error-200 bg-error-50 p-4 dark:border-error-800 dark:bg-error-900/20">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-error-100 text-error-600 dark:bg-error-900/30 dark:text-error-400">
+              <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <p className="text-sm font-medium text-error-700 dark:text-error-300">{error}</p>
           </div>
         )}
 
         {success && (
-          <div className="rounded-lg bg-success-50 p-4 dark:bg-success-900/20">
-            <p className="text-sm text-success-600 dark:text-success-400">{success}</p>
+          <div className="mx-6 mt-6 flex items-center gap-3 rounded-xl border border-success-200 bg-success-50 p-4 dark:border-success-800 dark:bg-success-900/20">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-success-100 text-success-600 dark:bg-success-900/30 dark:text-success-400">
+              <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <p className="text-sm font-medium text-success-700 dark:text-success-300">{success}</p>
           </div>
         )}
 
-        {/* Upload Progress Toast */}
-        {uploadMessage && (
-          <div className="rounded-lg bg-brand-50 p-4 dark:bg-brand-900/20">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-medium text-brand-600 dark:text-brand-400">{uploadMessage}</p>
-              <span className="text-sm font-semibold text-brand-600 dark:text-brand-400">{uploadProgress}%</span>
-            </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-brand-100 dark:bg-brand-900/40">
-              <div 
-                className="h-full bg-brand-500 transition-all duration-300"
-                style={{ width: `${uploadProgress}%` }}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Image Upload & Preview Card */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03] lg:p-5">
-          <h3 className="mb-3 text-lg font-semibold text-gray-800 dark:text-white/90">Menu Image</h3>
-          
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            {/* Image Preview */}
-            {formData.imageUrl ? (
+        <form onSubmit={handleSubmit} className="p-6 lg:p-8">
+          {/* Main Content Grid */}
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+            {/* Left Column - Basic Info */}
+            <div className="space-y-6 lg:col-span-2">
+              {/* Name Input */}
               <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Current Image
-            </label>
-            <div className="relative aspect-square w-full max-w-32 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer" onClick={() => setIsModalOpen(true)}>
-              <Image 
-            src={formData.imageUrl} 
-            alt="Menu preview"
-            fill
-            className="object-cover"
-            unoptimized
-              />
-            </div>
-              </div>
-            ) : (
-              <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              No Image
-            </label>
-            <div className="flex aspect-square w-full max-w-32 items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 dark:border-gray-700 dark:bg-gray-900">
-              <div className="text-center">
-            <svg className="mx-auto h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">No image uploaded</p>
-              </div>
-            </div>
-              </div>
-            )}
-
-            {/* Upload Controls */}
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Upload New Image
-              </label>
-              <div className="space-y-3">
-            <div className="flex items-center justify-center w-full">
-              <label className="flex w-full cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-brand-300 bg-brand-50 px-4 py-6 hover:bg-brand-100 dark:border-brand-700 dark:bg-brand-900/20 dark:hover:bg-brand-900/30">
-            <svg className="mb-2 h-8 w-8 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-            </svg>
-            <p className="mb-1 text-sm font-medium text-brand-600 dark:text-brand-400">
-              {uploadingImage ? 'Uploading...' : 'Click to upload'}
-            </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              JPEG, PNG, WebP (max 5MB)
-            </p>
-            <input
-              type="file"
-              accept="image/jpeg,image/jpg,image/png,image/webp"
-              onChange={handleImageUpload}
-              disabled={uploadingImage}
-              className="hidden"
-            />
-              </label>
-            </div>
-            
-            {formData.imageUrl && (
-              <button
-            type="button"
-            onClick={() => setFormData(prev => ({ ...prev, imageUrl: '' }))}
-            className="w-full rounded-lg border border-error-200 bg-error-50 px-3 py-2 text-sm font-medium text-error-600 hover:bg-error-100 dark:border-error-900/50 dark:bg-error-900/20 dark:text-error-400 dark:hover:bg-error-900/30"
-              >
-            Remove Image
-              </button>
-            )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Image Modal */}
-        {isModalOpen && formData.imageUrl && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75" onClick={() => setIsModalOpen(false)}>
-            <div className="relative max-w-4xl max-h-full p-4">
-              <button
-            className="absolute top-2 right-2 text-white text-2xl font-bold"
-            onClick={() => setIsModalOpen(false)}
-              >
-            &times;
-              </button>
-              <Image
-            src={formData.imageUrl}
-            alt="Menu full view"
-            width={800}
-            height={800}
-            className="object-contain"
-            unoptimized
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Form Card */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
-          <h3 className="mb-4 text-lg font-semibold text-gray-800 dark:text-white/90">Menu Details</h3>
-          
-          <form onSubmit={handleSubmit} className="space-y-6">
-
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Item Name <span className="text-error-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              required
-              placeholder="e.g. Espresso"
-              className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-            />
-          </div>
-
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Description
-            </label>
-            <textarea
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              rows={3}
-              placeholder="Describe your menu item..."
-              className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Price <span className="text-error-500">*</span>
-              </label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-gray-500">
-                  {merchant?.currency === 'IDR' ? 'Rp' : merchant?.currency === 'AUD' ? 'A$' : 'AUD'}
-                </span>
+                <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <svg className="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" />
+                  </svg>
+                  Item Name <span className="text-error-500">*</span>
+                </label>
                 <input
-                  type="number"
-                  name="price"
-                  value={formData.price}
+                  type="text"
+                  name="name"
+                  value={formData.name}
                   onChange={handleChange}
                   required
-                  min="0"
-                  step="0.01"
-                  placeholder="0.00"
-                  className="h-11 w-full rounded-lg border border-gray-200 bg-white pl-12 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                  placeholder="e.g., Nasi Goreng Special"
+                  className="h-12 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
                 />
               </div>
-            </div>
-          </div>
 
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                id="isActive"
-                name="isActive"
-                checked={formData.isActive}
-                onChange={handleChange}
-                className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
-              />
-              <label htmlFor="isActive" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Active (available for order)
-              </label>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                id="trackStock"
-                name="trackStock"
-                checked={formData.trackStock}
-                onChange={handleChange}
-                className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
-              />
-              <label htmlFor="trackStock" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Track stock quantity
-              </label>
-            </div>
-          </div>
-
-          {/* Menu Badges */}
-          <div>
-            <label className="mb-3 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Menu Badges
-            </label>
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  id="isSpicy"
-                  name="isSpicy"
-                  checked={formData.isSpicy}
-                  onChange={handleChange}
-                  className="h-4 w-4 rounded border-gray-300 text-red-500 focus:ring-red-500"
-                />
-                <label htmlFor="isSpicy" className="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-                  <span>🌶️</span> Spicy
-                </label>
-              </div>
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  id="isBestSeller"
-                  name="isBestSeller"
-                  checked={formData.isBestSeller}
-                  onChange={handleChange}
-                  className="h-4 w-4 rounded border-gray-300 text-yellow-500 focus:ring-yellow-500"
-                />
-                <label htmlFor="isBestSeller" className="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-                  <span>⭐</span> Best Seller
-                </label>
-              </div>
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  id="isSignature"
-                  name="isSignature"
-                  checked={formData.isSignature}
-                  onChange={handleChange}
-                  className="h-4 w-4 rounded border-gray-300 text-purple-500 focus:ring-purple-500"
-                />
-                <label htmlFor="isSignature" className="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-                  <span>👑</span> Signature
-                </label>
-              </div>
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  id="isRecommended"
-                  name="isRecommended"
-                  checked={formData.isRecommended}
-                  onChange={handleChange}
-                  className="h-4 w-4 rounded border-gray-300 text-green-500 focus:ring-green-500"
-                />
-                <label htmlFor="isRecommended" className="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-                  <span>👍</span> Recommended
-                </label>
-              </div>
-            </div>
-          </div>
-
-          {formData.trackStock && (
-            <div className="space-y-4">
+              {/* Description */}
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Stock Quantity <span className="text-error-500">*</span>
+                <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <svg className="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
+                  </svg>
+                  Description <span className="text-xs text-gray-400">(Optional)</span>
                 </label>
-                <input
-                  type="number"
-                  name="stockQty"
-                  value={formData.stockQty}
+                <textarea
+                  name="description"
+                  value={formData.description}
                   onChange={handleChange}
-                  required={formData.trackStock}
-                  min="0"
-                  placeholder="0"
-                  className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                  rows={4}
+                  placeholder="Describe your menu item, ingredients, serving size..."
+                  className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 resize-none"
                 />
               </div>
 
+              {/* Price */}
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Daily Stock Template <span className="text-xs text-gray-500">(Optional)</span>
+                <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <svg className="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Price <span className="text-error-500">*</span>
                 </label>
-                <input
-                  type="number"
-                  name="dailyStockTemplate"
-                  value={formData.dailyStockTemplate}
-                  onChange={handleChange}
-                  min="0"
-                  placeholder="e.g., 50 (for auto-reset)"
-                  className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                />
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Stock will auto-reset to this value daily if enabled
-                </p>
+                <div className="relative max-w-xs">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-gray-500">
+                    {merchant?.currency === 'IDR' ? 'Rp' : 'A$'}
+                  </span>
+                  <input
+                    type="number"
+                    name="price"
+                    value={formData.price}
+                    onChange={handleChange}
+                    required
+                    min="0"
+                    step="0.01"
+                    placeholder="0.00"
+                    className="h-12 w-full rounded-xl border border-gray-200 bg-white pl-10 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                  />
+                </div>
               </div>
 
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  id="autoResetStock"
-                  name="autoResetStock"
-                  checked={formData.autoResetStock}
-                  onChange={handleChange}
-                  className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
-                />
-                <label htmlFor="autoResetStock" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Auto-reset stock daily (requires template)
+              {/* Status Toggle */}
+              <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/50">
+                <div className="flex items-center gap-3">
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${formData.isActive ? 'bg-success-100 text-success-600 dark:bg-success-900/30 dark:text-success-400' : 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}>
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800 dark:text-white">Active Status</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Available for customers to order</p>
+                  </div>
+                </div>
+                <label className="relative inline-flex cursor-pointer items-center">
+                  <input type="checkbox" name="isActive" checked={formData.isActive} onChange={handleChange} className="peer sr-only" />
+                  <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-success-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-success-300/20 dark:bg-gray-700 dark:peer-focus:ring-success-800/20" />
                 </label>
               </div>
             </div>
-          )}
 
-          <div className="flex items-center justify-end gap-4 border-t border-gray-200 pt-6 dark:border-gray-800">
+            {/* Right Column - Image Upload */}
+            <div className="lg:col-span-1">
+              <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                <svg className="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Menu Image
+              </label>
+
+              <div className={`relative rounded-2xl border-2 border-dashed transition-all ${formData.imageUrl
+                ? 'border-success-300 bg-success-50/50 dark:border-success-700 dark:bg-success-900/10'
+                : 'border-gray-300 bg-gray-50 hover:border-primary-400 hover:bg-primary-50/50 dark:border-gray-700 dark:bg-gray-900 dark:hover:border-primary-600'
+                }`}>
+                {formData.imageUrl ? (
+                  <div className="relative aspect-square overflow-hidden rounded-xl">
+                    <Image
+                      src={formData.imageUrl}
+                      alt="Preview"
+                      fill
+                      className="object-cover cursor-pointer"
+                      onClick={() => setIsModalOpen(true)}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, imageUrl: '' }))}
+                      className="absolute right-2 top-2 rounded-full bg-white/90 p-2 text-gray-600 shadow-lg transition-all hover:bg-error-100 hover:text-error-600 dark:bg-gray-800/90 dark:text-gray-300"
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex aspect-square cursor-pointer flex-col items-center justify-center p-6">
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png,image/webp"
+                      onChange={handleImageUpload}
+                      disabled={uploadingImage}
+                      className="sr-only"
+                    />
+
+                    {uploadingImage ? (
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="relative h-16 w-16">
+                          <svg className="h-16 w-16 animate-spin text-primary-500" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                          <span className="absolute inset-0 flex items-center justify-center text-lg font-bold text-primary-600">{uploadProgress}%</span>
+                        </div>
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Uploading...</p>
+                        <div className="h-2 w-32 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                          <div
+                            className="h-full rounded-full bg-primary-500 transition-all duration-200"
+                            style={{ width: `${uploadProgress}%` }}
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400">
+                          <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                        <p className="mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Click to upload</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">JPG, PNG, WebP up to 5MB</p>
+                      </>
+                    )}
+                  </label>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="my-8 border-t border-gray-100 dark:border-gray-800" />
+
+          {/* Settings Cards Row */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {/* Stock Management Card */}
+            <div className={`rounded-2xl border-2 p-5 transition-all ${formData.trackStock
+              ? 'border-warning-300 bg-warning-50/50 dark:border-warning-700 dark:bg-warning-900/10'
+              : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-800 dark:bg-gray-900/50 dark:hover:border-gray-700'
+              }`}>
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${formData.trackStock ? 'bg-warning-100 text-warning-600 dark:bg-warning-900/30 dark:text-warning-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'}`}>
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-800 dark:text-white">Stock Tracking</h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Monitor inventory levels</p>
+                  </div>
+                </div>
+                <label className="relative inline-flex cursor-pointer items-center">
+                  <input type="checkbox" name="trackStock" checked={formData.trackStock} onChange={handleChange} className="peer sr-only" />
+                  <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-warning-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-warning-300/20 dark:bg-gray-700 dark:peer-focus:ring-warning-800/20" />
+                </label>
+              </div>
+
+              {formData.trackStock && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">Current Stock</label>
+                      <input
+                        type="number"
+                        name="stockQty"
+                        value={formData.stockQty}
+                        onChange={handleChange}
+                        required={formData.trackStock}
+                        min="0"
+                        placeholder="0"
+                        className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 focus:border-warning-400 focus:outline-none focus:ring-2 focus:ring-warning-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">Daily Reset</label>
+                      <input
+                        type="number"
+                        name="dailyStockTemplate"
+                        value={formData.dailyStockTemplate}
+                        onChange={handleChange}
+                        min="0"
+                        placeholder="0"
+                        className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 focus:border-warning-400 focus:outline-none focus:ring-2 focus:ring-warning-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                      />
+                    </div>
+                  </div>
+                  <label className="flex cursor-pointer items-center gap-2 rounded-lg bg-warning-100/50 p-3 transition-colors hover:bg-warning-100 dark:bg-warning-900/20 dark:hover:bg-warning-900/30">
+                    <input
+                      type="checkbox"
+                      name="autoResetStock"
+                      checked={formData.autoResetStock}
+                      onChange={handleChange}
+                      className="h-4 w-4 rounded border-warning-400 text-warning-500 focus:ring-warning-500"
+                    />
+                    <span className="text-sm text-warning-700 dark:text-warning-300">Auto-reset stock daily at midnight</span>
+                  </label>
+                </div>
+              )}
+            </div>
+
+            {/* Menu Badges Card */}
+            <div className="rounded-2xl border-2 border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900/50">
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                  </svg>
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-800 dark:text-white">Menu Badges</h4>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Highlight special attributes</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <label htmlFor="isSpicy" className={`flex cursor-pointer items-center gap-3 rounded-xl border-2 p-3 transition-all ${formData.isSpicy ? 'border-orange-400 bg-orange-50 dark:border-orange-600 dark:bg-orange-900/20' : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800/50 dark:hover:border-gray-600'}`}>
+                  <input type="checkbox" id="isSpicy" name="isSpicy" checked={formData.isSpicy} onChange={handleChange} className="sr-only" />
+                  <div className="group relative h-5 w-5 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-orange-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800">
+                    <Image src="/images/menu-badges/spicy.png" alt="Spicy" width={20} height={20} className="h-full w-full object-cover" />
+                  </div>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Spicy</span>
+                </label>
+
+                <label htmlFor="isBestSeller" className={`flex cursor-pointer items-center gap-3 rounded-xl border-2 p-3 transition-all ${formData.isBestSeller ? 'border-amber-400 bg-amber-50 dark:border-amber-600 dark:bg-amber-900/20' : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800/50 dark:hover:border-gray-600'}`}>
+                  <input type="checkbox" id="isBestSeller" name="isBestSeller" checked={formData.isBestSeller} onChange={handleChange} className="sr-only" />
+                  <div className="group relative h-5 w-5 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-amber-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800">
+                    <Image src="/images/menu-badges/best-seller.png" alt="Best Seller" width={20} height={20} className="h-full w-full object-cover" />
+                  </div>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Best Seller</span>
+                </label>
+
+                <label htmlFor="isSignature" className={`flex cursor-pointer items-center gap-3 rounded-xl border-2 p-3 transition-all ${formData.isSignature ? 'border-purple-400 bg-purple-50 dark:border-purple-600 dark:bg-purple-900/20' : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800/50 dark:hover:border-gray-600'}`}>
+                  <input type="checkbox" id="isSignature" name="isSignature" checked={formData.isSignature} onChange={handleChange} className="sr-only" />
+                  <div className="group relative h-5 w-5 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-purple-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800">
+                    <Image src="/images/menu-badges/signature.png" alt="Signature" width={20} height={20} className="h-full w-full object-cover" />
+                  </div>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Signature</span>
+                </label>
+
+                <label htmlFor="isRecommended" className={`flex cursor-pointer items-center gap-3 rounded-xl border-2 p-3 transition-all ${formData.isRecommended ? 'border-green-400 bg-green-50 dark:border-green-600 dark:bg-green-900/20' : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800/50 dark:hover:border-gray-600'}`}>
+                  <input type="checkbox" id="isRecommended" name="isRecommended" checked={formData.isRecommended} onChange={handleChange} className="sr-only" />
+                  <div className="group relative h-5 w-5 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-green-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800">
+                    <Image src="/images/menu-badges/recommended.png" alt="Recommended" width={20} height={20} className="h-full w-full object-cover" />
+                  </div>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Recommended</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Addon Categories Section - EDIT PAGE ONLY */}
+          <div className="mt-8 rounded-2xl border-2 border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900/50">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                  </svg>
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-800 dark:text-white">Addon Categories</h4>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{addonCategories.length} linked categories</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {addonCategories.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowViewAddonsModal(true)}
+                    className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 transition-all hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/40"
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                    View
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setShowManageAddonsModal(true)}
+                  className="inline-flex items-center gap-2 rounded-lg bg-primary-500 px-3 py-2 text-sm font-medium text-white transition-all hover:bg-primary-600"
+                >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  Manage
+                </button>
+              </div>
+            </div>
+
+            {addonCategories.length === 0 ? (
+              <div className="rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 py-8 text-center dark:border-gray-700 dark:bg-gray-900/50">
+                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-800">
+                  <svg className="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                  </svg>
+                </div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">No addon categories linked</p>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">Click &quot;Manage&quot; to add categories</p>
+              </div>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {addonCategories.map((mac) => (
+                  <div key={mac.addonCategoryId} className="rounded-lg border border-gray-200 bg-gray-50/50 p-3.5 dark:border-gray-700 dark:bg-gray-800/30">
+                    <div className="flex items-start justify-between gap-2">
+                      <h4 className="flex-1 text-sm font-semibold text-gray-900 dark:text-white">{mac.addonCategory.name}</h4>
+                      {mac.isRequired && (
+                        <span className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700 dark:bg-red-900/30 dark:text-red-400">Required</span>
+                      )}
+                    </div>
+                    {mac.addonCategory.description && (
+                      <p className="mt-1.5 line-clamp-2 text-xs text-gray-600 dark:text-gray-400">{mac.addonCategory.description}</p>
+                    )}
+                    <div className="mt-2.5 flex items-center justify-between rounded-md bg-white px-2.5 py-1.5 dark:bg-gray-900/50">
+                      <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                        <span className="font-medium">Min: {mac.addonCategory.minSelection}</span>
+                        <span className="text-gray-400">•</span>
+                        <span className="font-medium">Max: {mac.addonCategory.maxSelection || '∞'}</span>
+                      </div>
+                      <span className="rounded-full bg-primary-100 px-2 py-0.5 text-xs font-bold text-primary-700 dark:bg-primary-900/30 dark:text-primary-400">
+                        {mac.addonCategory.addonItems?.length || 0}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Action Buttons */}
+          <div className="mt-8 flex items-center justify-end gap-4 border-t border-gray-200 pt-6 dark:border-gray-800">
             <Link
               href="/admin/dashboard/menu"
-              className="h-11 rounded-lg border border-gray-200 bg-white px-6 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-white/[0.03] dark:text-gray-300 dark:hover:bg-white/[0.05] inline-flex items-center justify-center"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-6 text-sm font-medium text-gray-700 transition-all hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
             >
-              Cancel
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Back
             </Link>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="h-11 rounded-lg bg-brand-500 px-6 text-sm font-medium text-white hover:bg-brand-600 focus:outline-none focus:ring-3 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {submitting ? "Updating..." : "Update Menu Item"}
-            </button>
+            {hasChanges() ? (
+              <button
+                type="submit"
+                disabled={submitting}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary-500 px-6 text-sm font-medium text-white shadow-lg shadow-primary-500/25 transition-all hover:bg-primary-600 hover:shadow-primary-500/30 focus:outline-none focus:ring-4 focus:ring-primary-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {submitting ? (
+                  <>
+                    <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Updating...
+                  </>
+                ) : (
+                  <>
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Update Menu Item
+                  </>
+                )}
+              </button>
+            ) : (
+              <span className="inline-flex h-11 items-center gap-2 rounded-xl bg-gray-100 px-6 text-sm font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                No changes
+              </span>
+            )}
           </div>
         </form>
       </div>
 
-      {/* Addon Categories Section */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-              Addon Categories
-            </h3>
-            <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
-              {addonCategories.length} linked
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {addonCategories.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setShowViewAddonsModal(true)}
-                className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 transition-all hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/40"
-              >
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-                View Details
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => setShowManageAddonsModal(true)}
-              className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-3 py-2 text-sm font-medium text-white transition-all hover:bg-brand-600"
-            >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              Manage Addons
-            </button>
+      {/* Image Modal */}
+      {isModalOpen && formData.imageUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75" onClick={() => setIsModalOpen(false)}>
+          <div className="relative max-w-4xl max-h-full p-4">
+            <button className="absolute top-2 right-2 text-white text-2xl font-bold" onClick={() => setIsModalOpen(false)}>&times;</button>
+            <Image src={formData.imageUrl} alt="Menu full view" width={800} height={800} className="object-contain" unoptimized />
           </div>
         </div>
-
-        <div>
-          {addonCategories.length === 0 ? (
-            <div className="rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 py-12 text-center dark:border-gray-700 dark:bg-gray-900/50">
-              <div className="flex justify-center">
-                <div className="rounded-full bg-gray-200 p-3 dark:bg-gray-800">
-                  <svg className="h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                  </svg>
-                </div>
-              </div>
-              <h4 className="mt-3 text-sm font-semibold text-gray-900 dark:text-white">
-                No Addon Categories
-              </h4>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Click &quot;Manage Addons&quot; to add categories
-              </p>
-            </div>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {addonCategories.map((mac) => (
-                <div
-                  key={mac.addonCategoryId}
-                  className="rounded-lg border border-gray-200 bg-white p-3.5 dark:border-gray-700 dark:bg-gray-900/50"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <h4 className="flex-1 text-sm font-semibold text-gray-900 dark:text-white">
-                      {mac.addonCategory.name}
-                    </h4>
-                    {mac.isRequired && (
-                      <span className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700 dark:bg-red-900/30 dark:text-red-400">
-                        Required
-                      </span>
-                    )}
-                  </div>
-                  
-                  {mac.addonCategory.description && (
-                    <p className="mt-1.5 line-clamp-2 text-xs text-gray-600 dark:text-gray-400">
-                      {mac.addonCategory.description}
-                    </p>
-                  )}
-                  
-                  <div className="mt-2.5 flex items-center justify-between rounded-md bg-gray-50 px-2.5 py-1.5 dark:bg-gray-800/50">
-                    <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-                      <span className="font-medium">Min: {mac.addonCategory.minSelection}</span>
-                      <span className="text-gray-400">•</span>
-                      <span className="font-medium">Max: {mac.addonCategory.maxSelection || '∞'}</span>
-                    </div>
-                    <span className="rounded-full bg-brand-100 px-2 py-0.5 text-xs font-bold text-brand-700 dark:bg-brand-900/30 dark:text-brand-400">
-                      {mac.addonCategory.addonItems?.length || 0}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-      </div>
+      )}
 
       {/* Modals */}
       {showViewAddonsModal && (
