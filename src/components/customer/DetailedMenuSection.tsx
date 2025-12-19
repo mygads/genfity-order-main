@@ -22,6 +22,10 @@ interface MenuItem {
     isActive: boolean;
     trackStock: boolean;
     isPromo?: boolean;
+    isSpicy?: boolean;
+    isBestSeller?: boolean;
+    isSignature?: boolean;
+    isRecommended?: boolean;
     promoPrice?: number;
     addonCategories?: Array<{
         id: string;
@@ -74,7 +78,7 @@ export default function DetailedMenuSection({
                     return (
                         <div
                             key={item.id}
-                            className={`flex gap-4 pb-4 ${isInCart ? 'border-l-4 border-l-orange-500 pl-3 -ml-4 bg-orange-50/50 dark:bg-orange-900/10 rounded-r-lg' : ''} ${index < items.length - 1 ? 'border-b border-gray-200 dark:border-gray-700 mb-4' : ''
+                            className={`flex gap-4 pb-4 ${isInCart ? 'border-l-4 border-l-orange-500 pl-3 -ml-4' : ''} ${index < items.length - 1 ? 'border-b border-gray-200 dark:border-gray-700 mb-4' : ''
                                 }`}
                         >
                             {/* Image */}
@@ -111,10 +115,30 @@ export default function DetailedMenuSection({
                                             {item.description}
                                         </p>
                                     )}
-                                    {hasAddons && (
-                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                            Customizable
-                                        </p>
+                                    {/* Menu Badges */}
+                                    {(item.isSpicy || item.isBestSeller || item.isSignature || item.isRecommended) && (
+                                        <div className="flex flex-wrap gap-1 mt-1">
+                                            {item.isSpicy && (
+                                                <span>
+                                                    🌶️
+                                                </span>
+                                            )}
+                                            {item.isBestSeller && (
+                                                <span>
+                                                    ⭐
+                                                </span>
+                                            )}
+                                            {item.isSignature && (
+                                                <span>
+                                                    👑
+                                                </span>
+                                            )}
+                                            {item.isRecommended && (
+                                                <span>
+                                                    👍
+                                                </span>
+                                            )}
+                                        </div>
                                     )}
                                 </div>
                                 {/* Price Display - Check for Promo */}
@@ -146,12 +170,12 @@ export default function DetailedMenuSection({
                                                 e.stopPropagation();
                                                 onDecreaseQty?.(item.id);
                                             }}
-                                            className="w-8 h-8 flex items-center justify-center text-orange-600 dark:text-orange-400 border border-orange-300 dark:border-orange-700 rounded-full hover:bg-orange-50 dark:hover:bg-orange-900/40 transition-colors"
+                                            className="w-5 h-5 flex items-center justify-center text-black border border-black dark:border-orange-700 rounded-full hover:bg-gray-200 dark:hover:bg-orange-900/40 transition-colors"
                                             aria-label="Decrease quantity"
                                         >
-                                            −
+                                            -
                                         </button>
-                                        <span className="w-8 text-center text-sm font-bold text-gray-900 dark:text-white">
+                                        <span className="w-5 h-5 text-center text-sm font-bold text-gray-900 dark:text-white">
                                             {quantityInCart}
                                         </span>
                                         <button
@@ -159,7 +183,7 @@ export default function DetailedMenuSection({
                                                 e.stopPropagation();
                                                 onIncreaseQty?.(item.id);
                                             }}
-                                            className="w-8 h-8 flex items-center justify-center text-orange-600 dark:text-orange-400 border border-orange-300 dark:border-orange-700 rounded-full hover:bg-orange-50 dark:hover:bg-orange-900/40 transition-colors"
+                                            className="w-5 h-5 flex items-center justify-center text-black border border-black dark:border-orange-700 rounded-full hover:bg-gray-200 dark:hover:bg-orange-900/40 transition-colors"
                                             aria-label="Increase quantity"
                                         >
                                             +
@@ -168,7 +192,7 @@ export default function DetailedMenuSection({
                                 ) : (
                                     <button
                                         onClick={() => onAddItem?.(item)}
-                                        className="px-4 py-1.5 text-sm font-medium rounded-lg transition-all border border-orange-500 text-orange-500 dark:border-orange-400 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                                        className="px-4 py-0.5 text-sm font-medium rounded-md transition-all border border-orange-500 text-orange-500 dark:border-orange-400 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20"
                                         title="Add to cart"
                                     >
                                         Add

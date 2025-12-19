@@ -39,6 +39,10 @@ interface MenuFormData {
   price: string;
   imageUrl: string;
   isActive: boolean;
+  isSpicy: boolean;
+  isBestSeller: boolean;
+  isSignature: boolean;
+  isRecommended: boolean;
   trackStock: boolean;
   stockQty: string;
   dailyStockTemplate: string;
@@ -75,6 +79,10 @@ export default function EditMenuPage() {
     price: "",
     imageUrl: "",
     isActive: true,
+    isSpicy: false,
+    isBestSeller: false,
+    isSignature: false,
+    isRecommended: false,
     trackStock: false,
     stockQty: "",
     dailyStockTemplate: "",
@@ -119,6 +127,10 @@ export default function EditMenuPage() {
             price: menu.price ? menu.price.toString() : "",
             imageUrl: menu.imageUrl || "",
             isActive: menu.isActive !== undefined ? menu.isActive : true,
+            isSpicy: menu.isSpicy !== undefined ? menu.isSpicy : false,
+            isBestSeller: menu.isBestSeller !== undefined ? menu.isBestSeller : false,
+            isSignature: menu.isSignature !== undefined ? menu.isSignature : false,
+            isRecommended: menu.isRecommended !== undefined ? menu.isRecommended : false,
             trackStock: menu.trackStock !== undefined ? menu.trackStock : false,
             stockQty: menu.stockQty ? menu.stockQty.toString() : "",
             dailyStockTemplate: menu.dailyStockTemplate ? menu.dailyStockTemplate.toString() : "",
@@ -283,6 +295,10 @@ export default function EditMenuPage() {
         price: parseFloat(formData.price),
         imageUrl: formData.imageUrl || undefined,
         isActive: formData.isActive,
+        isSpicy: formData.isSpicy,
+        isBestSeller: formData.isBestSeller,
+        isSignature: formData.isSignature,
+        isRecommended: formData.isRecommended,
         trackStock: formData.trackStock,
         stockQty: formData.trackStock && formData.stockQty ? parseInt(formData.stockQty) : undefined,
         dailyStockTemplate: formData.trackStock && formData.dailyStockTemplate ? parseInt(formData.dailyStockTemplate) : undefined,
@@ -543,6 +559,67 @@ export default function EditMenuPage() {
               <label htmlFor="trackStock" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 Track stock quantity
               </label>
+            </div>
+          </div>
+
+          {/* Menu Badges */}
+          <div>
+            <label className="mb-3 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Menu Badges
+            </label>
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="isSpicy"
+                  name="isSpicy"
+                  checked={formData.isSpicy}
+                  onChange={handleChange}
+                  className="h-4 w-4 rounded border-gray-300 text-red-500 focus:ring-red-500"
+                />
+                <label htmlFor="isSpicy" className="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                  <span>🌶️</span> Spicy
+                </label>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="isBestSeller"
+                  name="isBestSeller"
+                  checked={formData.isBestSeller}
+                  onChange={handleChange}
+                  className="h-4 w-4 rounded border-gray-300 text-yellow-500 focus:ring-yellow-500"
+                />
+                <label htmlFor="isBestSeller" className="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                  <span>⭐</span> Best Seller
+                </label>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="isSignature"
+                  name="isSignature"
+                  checked={formData.isSignature}
+                  onChange={handleChange}
+                  className="h-4 w-4 rounded border-gray-300 text-purple-500 focus:ring-purple-500"
+                />
+                <label htmlFor="isSignature" className="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                  <span>👑</span> Signature
+                </label>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="isRecommended"
+                  name="isRecommended"
+                  checked={formData.isRecommended}
+                  onChange={handleChange}
+                  className="h-4 w-4 rounded border-gray-300 text-green-500 focus:ring-green-500"
+                />
+                <label htmlFor="isRecommended" className="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                  <span>👍</span> Recommended
+                </label>
+              </div>
             </div>
           </div>
 

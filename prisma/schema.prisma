@@ -215,6 +215,10 @@ model Menu {
   deletedAt          DateTime?           @map("deleted_at") @db.Timestamptz(6)
   deletedByUserId    BigInt?             @map("deleted_by_user_id")
   updatedByUserId    BigInt?             @map("updated_by_user_id")
+  isSpicy            Boolean             @default(false) @map("is_spicy")
+  isBestSeller       Boolean             @default(false) @map("is_best_seller")
+  isSignature        Boolean             @default(false) @map("is_signature")
+  isRecommended      Boolean             @default(false) @map("is_recommended")
   addonCategories    MenuAddonCategory[]
   categories         MenuCategoryItem[]
   category           MenuCategory?       @relation(fields: [categoryId], references: [id])

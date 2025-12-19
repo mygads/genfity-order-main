@@ -79,8 +79,14 @@ async function handlePut(
       price: body.price,
       imageUrl: body.imageUrl,
       isActive: body.isActive,
+      isSpicy: body.isSpicy,
+      isBestSeller: body.isBestSeller,
+      isSignature: body.isSignature,
+      isRecommended: body.isRecommended,
       trackStock: body.trackStock,
       stockQty: body.stockQty,
+      dailyStockTemplate: body.dailyStockTemplate,
+      autoResetStock: body.autoResetStock,
       isPromo: body.isPromo,
     });
 

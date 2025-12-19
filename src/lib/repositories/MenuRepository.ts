@@ -138,44 +138,9 @@ export class MenuRepository {
         addonCategories: {
           include: {
             addonCategory: {
-              select: {
-                id: true,
-                merchantId: true,
-                name: true,
-                description: true,
-                minSelection: true,
-                maxSelection: true,
-                isActive: true,
-                createdAt: true,
-                updatedAt: true,
-                createdByUserId: true,
-                deletedAt: true,
-                deletedByUserId: true,
-                updatedByUserId: true,
-              },
               include: {
                 addonItems: {
-                  select: {
-                    id: true,
-                    addonCategoryId: true,
-                    name: true,
-                    description: true,
-                    price: true,
-                    isActive: true,
-                    trackStock: true,
-                    stockQty: true,
-                    inputType: true,
-                    displayOrder: true,
-                    createdAt: true,
-                    updatedAt: true,
-                    autoResetStock: true,
-                    createdByUserId: true,
-                    dailyStockTemplate: true,
-                    deletedAt: true,
-                    deletedByUserId: true,
-                    lastStockResetAt: true,
-                    updatedByUserId: true,
-                  },
+                  orderBy: { displayOrder: 'asc' },
                 },
               },
             },
@@ -195,8 +160,14 @@ export class MenuRepository {
     imageUrl?: string;
     isActive?: boolean;
     isPromo?: boolean;
+    isSpicy?: boolean;
+    isBestSeller?: boolean;
+    isSignature?: boolean;
+    isRecommended?: boolean;
     trackStock?: boolean;
     stockQty?: number;
+    dailyStockTemplate?: number;
+    autoResetStock?: boolean;
     createdByUserId?: bigint;
   }) {
     const result = await prisma.menu.create({
@@ -216,8 +187,14 @@ export class MenuRepository {
     imageUrl?: string;
     isActive?: boolean;
     isPromo?: boolean;
+    isSpicy?: boolean;
+    isBestSeller?: boolean;
+    isSignature?: boolean;
+    isRecommended?: boolean;
     trackStock?: boolean;
     stockQty?: number;
+    dailyStockTemplate?: number;
+    autoResetStock?: boolean;
     updatedByUserId?: bigint;
   }) {
     const result = await prisma.menu.update({

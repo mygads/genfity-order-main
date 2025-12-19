@@ -22,6 +22,10 @@ interface MenuItem {
     isActive: boolean;
     trackStock: boolean;
     isPromo?: boolean;
+    isSpicy?: boolean;
+    isBestSeller?: boolean;
+    isSignature?: boolean;
+    isRecommended?: boolean;
     promoPrice?: number;
 }
 
@@ -130,6 +134,32 @@ export default function HorizontalMenuSection({
                                         <h3 className="font-semibold text-sm line-clamp-2 text-gray-900 dark:text-white">
                                             {item.name}
                                         </h3>
+
+                                        {/* Menu Badges */}
+                                        {(item.isSpicy || item.isBestSeller || item.isSignature || item.isRecommended) && (
+                                            <div className="flex flex-wrap gap-1">
+                                                {item.isSpicy && (
+                                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" title="Spicy">
+                                                        🌶️
+                                                    </span>
+                                                )}
+                                                {item.isBestSeller && (
+                                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" title="Best Seller">
+                                                        ⭐
+                                                    </span>
+                                                )}
+                                                {item.isSignature && (
+                                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" title="Signature">
+                                                        👑
+                                                    </span>
+                                                )}
+                                                {item.isRecommended && (
+                                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" title="Recommended">
+                                                        👍
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
 
                                         {/* Price or Status */}
                                         <div>

@@ -42,6 +42,10 @@ export interface MenuInput {
   imageUrl?: string;
   isActive?: boolean;
   isPromo?: boolean;
+  isSpicy?: boolean;
+  isBestSeller?: boolean;
+  isSignature?: boolean;
+  isRecommended?: boolean;
   promoPrice?: number;
   promoStartDate?: Date;
   promoEndDate?: Date;
@@ -236,6 +240,10 @@ class MenuService {
       imageUrl: input.imageUrl,
       isActive: input.isActive ?? true,
       isPromo: input.isPromo ?? false,
+      isSpicy: input.isSpicy ?? false,
+      isBestSeller: input.isBestSeller ?? false,
+      isSignature: input.isSignature ?? false,
+      isRecommended: input.isRecommended ?? false,
       promoPrice: input.promoPrice,
       promoStartDate: input.promoStartDate,
       promoEndDate: input.promoEndDate,
@@ -293,6 +301,10 @@ class MenuService {
       imageUrl: input.imageUrl,
       isActive: input.isActive,
       isPromo: input.isPromo,
+      isSpicy: input.isSpicy,
+      isBestSeller: input.isBestSeller,
+      isSignature: input.isSignature,
+      isRecommended: input.isRecommended,
       promoPrice: input.promoPrice,
       promoStartDate: input.promoStartDate,
       promoEndDate: input.promoEndDate,

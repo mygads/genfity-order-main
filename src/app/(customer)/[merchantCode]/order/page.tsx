@@ -33,6 +33,10 @@ interface MenuItem {
   isActive: boolean;
   trackStock: boolean;
   isPromo?: boolean;
+  isSpicy?: boolean;
+  isBestSeller?: boolean;
+  isSignature?: boolean;
+  isRecommended?: boolean;
   promoPrice?: number; // ✅ From API: decimalToNumber(Decimal) → number with 2 decimal precision
 }
 
