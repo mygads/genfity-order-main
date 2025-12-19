@@ -604,8 +604,6 @@ export default function MerchantCategoriesPage() {
 
   return (
     <div>
-      <PageBreadcrumb pageTitle="Categories\" />
-
       <div className="space-y-6">
         {error && (
           <div className="rounded-lg bg-error-50 p-4 dark:bg-error-900/20">

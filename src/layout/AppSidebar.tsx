@@ -422,10 +422,7 @@ const AppSidebar: React.FC = () => {
           {isExpanded || isHovered || isMobileOpen ? (
             <div className="text-center">
               <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                Dashboard Version
-              </p>
-              <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                1.0.0
+                Dashboard Version 1.0.0
               </p>
             </div>
           ) : (

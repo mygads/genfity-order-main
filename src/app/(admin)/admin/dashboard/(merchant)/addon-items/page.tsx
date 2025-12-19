@@ -376,8 +376,6 @@ export default function AddonItemsPage() {
 
   return (
     <div>
-      <PageBreadcrumb pageTitle="Addon Items" />
-
       <div className="space-y-6">
         {error && (
           <div className="rounded-lg bg-error-50 p-4 dark:bg-error-900/20">

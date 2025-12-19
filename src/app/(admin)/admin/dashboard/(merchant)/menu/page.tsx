@@ -570,8 +570,6 @@ export default function MerchantMenuPage() {
 
   return (
     <div>
-      <PageBreadcrumb pageTitle="Menu Items" />
-
       <div className="space-y-6">
         {error && (
           <div className="rounded-lg bg-error-50 p-4 dark:bg-error-900/20">
