@@ -24,6 +24,7 @@ import {
   buildOrderWhereInput,
   ORDER_DETAIL_INCLUDE,
   ORDER_LIST_INCLUDE,
+  ORDER_KITCHEN_INCLUDE,
   PaymentVerificationResult,
 } from '@/lib/types/order';
 import { validateStatusTransition } from '@/lib/utils/orderStatusRules';
@@ -32,17 +33,22 @@ import emailService from '@/lib/services/EmailService';
 export class OrderManagementService {
   /**
    * Fetch merchant orders with filters and pagination
+   * @param merchantId - Merchant ID
+   * @param filters - Order filters including optional includeItems for kitchen display
    */
   static async getOrders(
     merchantId: bigint,
     filters: OrderFilters = {}
-  ): Promise<{ orders: OrderListItem[]; total: number }> {
+  ): Promise<{ orders: OrderListItem[] | OrderWithDetails[]; total: number }> {
     const where = buildOrderWhereInput(merchantId, filters);
+    
+    // Use kitchen include if includeItems is true (for kitchen display)
+    const includeConfig = filters.includeItems ? ORDER_KITCHEN_INCLUDE : ORDER_LIST_INCLUDE;
 
     const [orders, total] = await Promise.all([
       prisma.order.findMany({
         where,
-        include: ORDER_LIST_INCLUDE,
+        include: includeConfig,
         orderBy: {
           placedAt: 'desc',
         },
@@ -55,7 +61,7 @@ export class OrderManagementService {
     ]);
 
     return {
-      orders: orders as OrderListItem[],
+      orders: orders as (OrderListItem[] | OrderWithDetails[]),
       total,
     };
   }

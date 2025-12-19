@@ -209,7 +209,7 @@ export default function CreateMenuPage() {
       <div>
         <PageBreadcrumb pageTitle="Create Menu Item" />
         <div className="mt-6 py-10 text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-brand-500 border-r-transparent"></div>
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary-500 border-r-transparent"></div>
           <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Loading...</p>
         </div>
       </div>
@@ -245,7 +245,7 @@ export default function CreateMenuPage() {
               onChange={handleChange}
               required
               placeholder="e.g. Espresso"
-              className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+              className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
             />
           </div>
 
@@ -259,7 +259,7 @@ export default function CreateMenuPage() {
               onChange={handleChange}
               rows={3}
               placeholder="Describe your menu item..."
-              className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+              className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
             />
           </div>
 
@@ -281,7 +281,7 @@ export default function CreateMenuPage() {
                   min="0"
                   step="0.01"
                   placeholder="0.00"
-                  className="h-11 w-full rounded-lg border border-gray-200 bg-white pl-12 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                  className="h-11 w-full rounded-lg border border-gray-200 bg-white pl-12 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
                 />
               </div>
             </div>
@@ -295,7 +295,7 @@ export default function CreateMenuPage() {
                 accept="image/jpeg,image/jpg,image/png,image/webp"
                 onChange={handleImageUpload}
                 disabled={uploadingImage}
-                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 file:mr-4 file:rounded file:border-0 file:bg-brand-50 file:px-4 file:py-1 file:text-sm file:font-medium file:text-brand-600 hover:file:bg-brand-100 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:file:bg-brand-900/20 dark:file:text-brand-400"
+                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 file:mr-4 file:rounded file:border-0 file:bg-primary-50 file:px-4 file:py-1 file:text-sm file:font-medium file:text-primary-600 hover:file:bg-brand-100 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:file:bg-brand-900/20 dark:file:text-brand-400"
               />
               {uploadingImage && (
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Uploading image...</p>
@@ -332,7 +332,7 @@ export default function CreateMenuPage() {
                 name="isActive"
                 checked={formData.isActive}
                 onChange={handleChange}
-                className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+                className="h-4 w-4 rounded border-gray-300 text-primary-500 focus:ring-primary-500"
               />
               <label htmlFor="isActive" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 Active (available for order)
@@ -346,7 +346,7 @@ export default function CreateMenuPage() {
                 name="trackStock"
                 checked={formData.trackStock}
                 onChange={handleChange}
-                className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+                className="h-4 w-4 rounded border-gray-300 text-primary-500 focus:ring-primary-500"
               />
               <label htmlFor="trackStock" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 Track stock quantity
@@ -431,7 +431,7 @@ export default function CreateMenuPage() {
                   required={formData.trackStock}
                   min="0"
                   placeholder="0"
-                  className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                  className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
                 />
               </div>
 
@@ -448,7 +448,7 @@ export default function CreateMenuPage() {
                   onChange={handleChange}
                   min="0"
                   placeholder="e.g., 50 (for auto-reset)"
-                  className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                  className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
                 />
               </div>
 
@@ -459,7 +459,7 @@ export default function CreateMenuPage() {
                   name="autoResetStock"
                   checked={formData.autoResetStock}
                   onChange={handleChange}
-                  className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+                  className="h-4 w-4 rounded border-gray-300 text-primary-500 focus:ring-primary-500"
                 />
                 <label htmlFor="autoResetStock" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   Auto-reset stock daily (requires template)
@@ -478,7 +478,7 @@ export default function CreateMenuPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="h-11 rounded-lg bg-brand-500 px-6 text-sm font-medium text-white hover:bg-brand-600 focus:outline-none focus:ring-3 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+              className="h-11 rounded-lg bg-primary-500 px-6 text-sm font-medium text-white hover:bg-primary-600 focus:outline-none focus:ring-3 focus:ring-primary-500/20 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {submitting ? "Creating..." : "Create Menu Item"}
             </button>
@@ -488,3 +488,4 @@ export default function CreateMenuPage() {
     </div>
   );
 }
+

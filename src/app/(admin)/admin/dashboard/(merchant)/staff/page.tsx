@@ -1,12 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { useToast } from "@/hooks/useToast";
 import ToastContainer from "@/components/ui/ToastContainer";
 import InviteStaffModal from "@/components/staff/InviteStaffModal";
 import AddStaffModal from "@/components/staff/AddStaffModal";
+import { useSWRStatic } from "@/hooks/useSWRWithAuth";
+import { StaffPageSkeleton } from "@/components/common/SkeletonLoaders";
 
 interface Staff {
   id: string;
@@ -19,51 +21,38 @@ interface Staff {
   joinedAt: string;
 }
 
+interface StaffApiResponse {
+  success: boolean;
+  data: {
+    staff: Staff[];
+  };
+}
+
 export default function StaffManagementPage() {
   const router = useRouter();
   const { toasts, success: showSuccess, error: showError } = useToast();
 
-  const [staff, setStaff] = useState<Staff[]>([]);
   const [filteredStaff, setFilteredStaff] = useState<Staff[]>([]);
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
 
-  const fetchStaff = React.useCallback(async () => {
-    try {
-      setLoading(true);
+  // SWR hook for data fetching with caching
+  const { 
+    data: staffResponse, 
+    error: staffError, 
+    isLoading,
+    mutate: mutateStaff 
+  } = useSWRStatic<StaffApiResponse>('/api/merchant/staff');
 
-      const token = localStorage.getItem("accessToken");
-      if (!token) {
-        router.push("/admin/login");
-        return;
-      }
+  // Extract data from SWR response
+  const staff = staffResponse?.data?.staff || [];
+  const loading = isLoading;
 
-      const response = await fetch("/api/merchant/staff", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch staff");
-      }
-
-      const data = await response.json();
-      const staffData = data.data.staff || [];
-      setStaff(staffData);
-      setFilteredStaff(staffData);
-    } catch (err) {
-      showError("Error", err instanceof Error ? err.message : "Failed to load staff");
-    } finally {
-      setLoading(false);
-    }
-  }, [router, showError]);
-
-  useEffect(() => {
-    fetchStaff();
-  }, [fetchStaff]);
+  // Function to refetch data (for backwards compatibility)
+  const fetchStaff = useCallback(async () => {
+    await mutateStaff();
+  }, [mutateStaff]);
 
   // Search filter
   useEffect(() => {
@@ -82,6 +71,38 @@ export default function StaffManagementPage() {
 
     return () => clearTimeout(timer);
   }, [search, staff]);
+
+  // Show skeleton loader during initial load
+  if (loading) {
+    return <StaffPageSkeleton />;
+  }
+
+  // Show error state if fetch failed
+  if (staffError) {
+    return (
+      <div className="flex min-h-[calc(100vh-200px)] items-center justify-center p-6">
+        <div className="w-full max-w-md rounded-2xl border-2 border-red-200 bg-white p-8 text-center shadow-sm dark:border-red-800 dark:bg-gray-900">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
+            <svg className="h-8 w-8 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h2 className="mb-2 text-xl font-bold text-gray-900 dark:text-white">
+            Error Loading Staff
+          </h2>
+          <p className="mb-6 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
+            {staffError?.message || 'Failed to load staff members'}
+          </p>
+          <button
+            onClick={() => fetchStaff()}
+            className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const handleDeleteStaff = async (staffMember: Staff) => {
     if (!window.confirm(`Remove ${staffMember.name} from your staff?`)) {

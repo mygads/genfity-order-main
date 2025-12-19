@@ -32,6 +32,11 @@ const menuBuilderSchema = z.object({
   stockQty: z.number().int().min(0).optional().nullable(),
   dailyStockTemplate: z.number().int().min(0).optional().nullable(),
   autoResetStock: z.boolean(),
+  // Menu attributes
+  isSpicy: z.boolean().default(false),
+  isBestSeller: z.boolean().default(false),
+  isSignature: z.boolean().default(false),
+  isRecommended: z.boolean().default(false),
   categoryIds: z.any().default([]), // Skip validation - akan di-override di handleFormSubmit
   addonCategoryIds: z.any().default([]), // Skip validation - akan di-override di handleFormSubmit
 }).passthrough();
@@ -112,6 +117,11 @@ export default function MenuBuilderTabs({
       stockQty: initialData?.stockQty || null,
       dailyStockTemplate: initialData?.dailyStockTemplate || null,
       autoResetStock: initialData?.autoResetStock || false,
+      // Menu attributes
+      isSpicy: initialData?.isSpicy || false,
+      isBestSeller: initialData?.isBestSeller || false,
+      isSignature: initialData?.isSignature || false,
+      isRecommended: initialData?.isRecommended || false,
       categoryIds: initialData?.categoryIds || [],
       addonCategoryIds: initialData?.addonCategoryIds || [],
     },
@@ -466,6 +476,85 @@ export default function MenuBuilderTabs({
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* Menu Attributes */}
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
+              <h4 className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                Menu Attributes
+              </h4>
+              <p className="mb-4 text-xs text-gray-500 dark:text-gray-400">
+                These badges will be displayed on the menu item to highlight special characteristics
+              </p>
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                {/* Spicy */}
+                <label
+                  htmlFor="isSpicy"
+                  className="flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 bg-white p-3 transition-all hover:border-orange-300 hover:shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:hover:border-orange-500"
+                >
+                  <input
+                    type="checkbox"
+                    {...register('isSpicy')}
+                    id="isSpicy"
+                    className="h-4 w-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                  />
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">🌶️</span>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Spicy</span>
+                  </div>
+                </label>
+
+                {/* Best Seller */}
+                <label
+                  htmlFor="isBestSeller"
+                  className="flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 bg-white p-3 transition-all hover:border-amber-300 hover:shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:hover:border-amber-500"
+                >
+                  <input
+                    type="checkbox"
+                    {...register('isBestSeller')}
+                    id="isBestSeller"
+                    className="h-4 w-4 rounded border-gray-300 text-amber-500 focus:ring-amber-500"
+                  />
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">⭐</span>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Best Seller</span>
+                  </div>
+                </label>
+
+                {/* Signature */}
+                <label
+                  htmlFor="isSignature"
+                  className="flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 bg-white p-3 transition-all hover:border-purple-300 hover:shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:hover:border-purple-500"
+                >
+                  <input
+                    type="checkbox"
+                    {...register('isSignature')}
+                    id="isSignature"
+                    className="h-4 w-4 rounded border-gray-300 text-purple-500 focus:ring-purple-500"
+                  />
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">✨</span>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Signature</span>
+                  </div>
+                </label>
+
+                {/* Recommended */}
+                <label
+                  htmlFor="isRecommended"
+                  className="flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 bg-white p-3 transition-all hover:border-green-300 hover:shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:hover:border-green-500"
+                >
+                  <input
+                    type="checkbox"
+                    {...register('isRecommended')}
+                    id="isRecommended"
+                    className="h-4 w-4 rounded border-gray-300 text-green-500 focus:ring-green-500"
+                  />
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">👍</span>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Recommended</span>
+                  </div>
+                </label>
+              </div>
             </div>
 
             {/* Active Status */}

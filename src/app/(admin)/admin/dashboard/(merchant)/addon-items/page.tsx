@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import AddonItemFormModal from "@/components/addon-items/AddonItemFormModal";
 import AddonItemsTable from "@/components/addon-items/AddonItemsTable";
 import AddonItemsFilters from "@/components/addon-items/AddonItemsFilters";
+import { AddonItemsPageSkeleton } from "@/components/common/SkeletonLoaders";
 
 interface AddonCategory {
   id: string;
@@ -321,6 +322,9 @@ export default function AddonItemsPage() {
     setSuccess(null);
   };
 
+  // Refs to track previous filter values for page reset
+  const prevFiltersRef = useRef({ searchQuery, filterCategory, filterStatus, filterInputType });
+
   // Filter and search logic
   useEffect(() => {
     let filtered = [...items];
@@ -351,7 +355,19 @@ export default function AddonItemsPage() {
     }
 
     setFilteredItems(filtered);
-    setCurrentPage(1);
+
+    // Only reset page when filters actually change, not when items data updates
+    const prev = prevFiltersRef.current;
+    const filtersChanged = 
+      prev.searchQuery !== searchQuery ||
+      prev.filterCategory !== filterCategory ||
+      prev.filterStatus !== filterStatus ||
+      prev.filterInputType !== filterInputType;
+
+    if (filtersChanged) {
+      setCurrentPage(1);
+      prevFiltersRef.current = { searchQuery, filterCategory, filterStatus, filterInputType };
+    }
   }, [items, searchQuery, filterCategory, filterStatus, filterInputType]);
 
   // Pagination logic
@@ -363,15 +379,7 @@ export default function AddonItemsPage() {
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
   if (loading) {
-    return (
-      <div>
-        <PageBreadcrumb pageTitle="Addon Items" />
-        <div className="mt-6 py-10 text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-brand-500 border-r-transparent"></div>
-          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Loading addon items...</p>
-        </div>
-      </div>
-    );
+    return <AddonItemsPageSkeleton />;
   }
 
   return (
@@ -413,7 +421,7 @@ export default function AddonItemsPage() {
             </div>
             <button
               onClick={() => setShowForm(true)}
-              className="inline-flex h-11 items-center gap-2 rounded-lg bg-brand-500 px-6 text-sm font-medium text-white hover:bg-brand-600 focus:outline-none focus:ring-3 focus:ring-brand-500/20"
+              className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary-500 px-6 text-sm font-medium text-white hover:bg-primary-600 focus:outline-none focus:ring-3 focus:ring-primary-500/20"
             >
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -443,7 +451,7 @@ export default function AddonItemsPage() {
               {items.length === 0 && (
                 <button
                   onClick={() => setShowForm(true)}
-                  className="mt-4 inline-flex h-11 items-center gap-2 rounded-lg bg-brand-500 px-6 text-sm font-medium text-white hover:bg-brand-600"
+                  className="mt-4 inline-flex h-11 items-center gap-2 rounded-lg bg-primary-500 px-6 text-sm font-medium text-white hover:bg-primary-600"
                 >
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -486,7 +494,7 @@ export default function AddonItemsPage() {
                         onClick={() => paginate(page)}
                         className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border text-sm font-medium ${
                           currentPage === page
-                            ? 'border-brand-500 bg-brand-500 text-white'
+                            ? 'border-primary-500 bg-primary-500 text-white'
                             : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
                         }`}
                       >

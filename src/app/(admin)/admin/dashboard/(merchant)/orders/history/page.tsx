@@ -246,22 +246,20 @@ export default function OrderHistoryPage() {
           <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1 dark:border-gray-800 dark:bg-gray-900">
             <button
               onClick={() => setActiveTab('analytics')}
-              className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all ${
-                activeTab === 'analytics'
-                  ? 'bg-brand-500 text-white shadow-sm'
+              className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all ${activeTab === 'analytics'
+                  ? 'bg-primary-500 text-white shadow-sm'
                   : 'text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200'
-              }`}
+                }`}
             >
               <FaChartLine className="h-3.5 w-3.5" />
               Analytics
             </button>
             <button
               onClick={() => setActiveTab('history')}
-              className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all ${
-                activeTab === 'history'
-                  ? 'bg-brand-500 text-white shadow-sm'
+              className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all ${activeTab === 'history'
+                  ? 'bg-primary-500 text-white shadow-sm'
                   : 'text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200'
-              }`}
+                }`}
             >
               <FaHistory className="h-3.5 w-3.5" />
               History

@@ -7,6 +7,7 @@ import RevenueSummaryCards from "@/components/revenue/RevenueSummaryCards";
 import DailyRevenueChart from "@/components/revenue/DailyRevenueChart";
 import DailyRevenueTable from "@/components/revenue/DailyRevenueTable";
 import OrderBreakdownCards from "@/components/revenue/OrderBreakdownCards";
+import { RevenuePageSkeleton } from "@/components/common/SkeletonLoaders";
 
 interface RevenueAnalytics {
   dateRange: {
@@ -147,17 +148,7 @@ export default function MerchantRevenuePage() {
   };
 
   if (loading) {
-    return (
-      <div>
-        <PageBreadcrumb pageTitle="Revenue" />
-        <div className="flex items-center justify-center py-20">
-          <div className="flex items-center gap-3 text-gray-500">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand-500 border-t-transparent"></div>
-            Loading analytics data...
-          </div>
-        </div>
-      </div>
-    );
+    return <RevenuePageSkeleton />;
   }
 
   return (

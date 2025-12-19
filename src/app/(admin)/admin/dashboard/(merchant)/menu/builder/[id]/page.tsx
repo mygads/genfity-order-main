@@ -48,6 +48,11 @@ interface MenuFormData {
   stockQty?: number | null;
   dailyStockTemplate?: number | null;
   autoResetStock: boolean;
+  // Menu attributes
+  isSpicy?: boolean;
+  isBestSeller?: boolean;
+  isSignature?: boolean;
+  isRecommended?: boolean;
   categoryIds?: number[];
   addonCategoryIds?: number[];
 }
@@ -117,6 +122,11 @@ export default function MenuBuilderPage() {
             stockQty: menuData.data.stockQty,
             dailyStockTemplate: menuData.data.dailyStockTemplate,
             autoResetStock: menuData.data.autoResetStock,
+            // Menu attributes
+            isSpicy: menuData.data.isSpicy || false,
+            isBestSeller: menuData.data.isBestSeller || false,
+            isSignature: menuData.data.isSignature || false,
+            isRecommended: menuData.data.isRecommended || false,
             categoryIds: menuData.data.categories?.map((c: { category: { id: string } }) => parseInt(c.category.id)) || [],
             addonCategoryIds: menuData.data.addonCategories?.map((ac: { addonCategory: { id: string } }) => parseInt(ac.addonCategory.id)) || [],
           };

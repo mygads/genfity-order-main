@@ -26,6 +26,12 @@ export interface MenuBuilderInput {
   dailyStockTemplate?: number | null;
   autoResetStock?: boolean;
   
+  // Menu Attributes
+  isSpicy?: boolean;
+  isBestSeller?: boolean;
+  isSignature?: boolean;
+  isRecommended?: boolean;
+  
   // Categories (many-to-many)
   categoryIds?: number[];
   
@@ -75,6 +81,11 @@ export class MenuBuilderService {
           stockQty: input.stockQty,
           dailyStockTemplate: input.dailyStockTemplate,
           autoResetStock: input.autoResetStock ?? false,
+          // Menu attributes
+          isSpicy: input.isSpicy ?? false,
+          isBestSeller: input.isBestSeller ?? false,
+          isSignature: input.isSignature ?? false,
+          isRecommended: input.isRecommended ?? false,
           createdByUserId: userId,
           updatedByUserId: userId,
         },
@@ -217,6 +228,11 @@ export class MenuBuilderService {
           stockQty: input.stockQty,
           dailyStockTemplate: input.dailyStockTemplate,
           autoResetStock: input.autoResetStock,
+          // Menu attributes
+          isSpicy: input.isSpicy,
+          isBestSeller: input.isBestSeller,
+          isSignature: input.isSignature,
+          isRecommended: input.isRecommended,
           updatedByUserId: userId,
         },
       });

@@ -3,6 +3,7 @@
 import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ChevronLeftIcon, EyeIcon, EyeCloseIcon } from '@/icons';
 import Label from '@/components/form/Label';
 import Checkbox from '@/components/form/input/Checkbox';
@@ -28,7 +29,7 @@ import { saveAdminAuth } from '@/lib/utils/adminAuth';
  */
 function AdminLoginForm() {
   const searchParams = useSearchParams();
-  
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -85,7 +86,7 @@ function AdminLoginForm() {
       // Call admin login API
       const response = await fetch('/api/auth/login', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -163,6 +164,28 @@ function AdminLoginForm() {
 
         <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto px-4">
           <div>
+            {/* Logo */}
+            <div className="mb-6 flex justify-center">
+              <Link href="/">
+                <Image
+                  className="dark:hidden"
+                  src="/images/logo/logo.png"
+                  alt="Genfity"
+                  width={180}
+                  height={48}
+                  priority
+                />
+                <Image
+                  className="hidden dark:block"
+                  src="/images/logo/logo-dark-mode.png"
+                  alt="Genfity"
+                  width={180}
+                  height={48}
+                  priority
+                />
+              </Link>
+            </div>
+
             {/* Header */}
             <div className="mb-5 sm:mb-8">
               <h1 className="mb-2 font-semibold text-gray-800 text-title-sm dark:text-white/90 sm:text-title-md">

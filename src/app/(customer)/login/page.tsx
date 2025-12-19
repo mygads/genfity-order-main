@@ -3,6 +3,7 @@
 import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { saveCustomerAuth } from '@/lib/utils/localStorage';
 import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';
 
@@ -142,7 +143,22 @@ function LoginForm() {
       <div className="sticky top-0 z-50 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between px-4 h-14">
           <Link href="/" className="flex items-center gap-2">
-            <span className="text-2xl">🍽️</span>
+            <Image
+              className="dark:hidden"
+              src="/images/logo/icon.png"
+              alt="Genfity"
+              width={32}
+              height={32}
+              priority
+            />
+            <Image
+              className="hidden dark:block"
+              src="/images/logo/icon-dark-mode.png"
+              alt="Genfity"
+              width={32}
+              height={32}
+              priority
+            />
             <span className="text-lg font-bold text-gray-900 dark:text-white">GENFITY</span>
           </Link>
         </div>

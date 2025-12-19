@@ -9,7 +9,7 @@
 'use client';
 
 import React from 'react';
-import { FaUser, FaPhone, FaUtensils, FaShoppingBag, FaClock, FaCheck } from 'react-icons/fa';
+import { FaUser, FaUtensils, FaShoppingBag, FaClock, FaCheck } from 'react-icons/fa';
 import { ORDER_STATUS_COLORS, PAYMENT_STATUS_COLORS } from '@/lib/constants/orderConstants';
 import { formatDistanceToNow } from 'date-fns';
 import type { OrderListItem, OrderWithDetails } from '@/lib/types/order';
@@ -36,21 +36,21 @@ export const OrderCard: React.FC<OrderCardProps> = ({
   currency = 'AUD',
 }) => {
   const statusConfig = ORDER_STATUS_COLORS[order.status as keyof typeof ORDER_STATUS_COLORS];
-  const paymentConfig = order.payment 
+  const paymentConfig = order.payment
     ? PAYMENT_STATUS_COLORS[order.payment.status as keyof typeof PAYMENT_STATUS_COLORS]
     : PAYMENT_STATUS_COLORS.PENDING;
-  
+
   // Check if order has orderItems (OrderWithDetails) or just _count (OrderListItem)
   const hasOrderItems = 'orderItems' in order && Array.isArray(order.orderItems);
-  const itemCount = hasOrderItems 
-    ? order.orderItems.length 
+  const itemCount = hasOrderItems
+    ? order.orderItems.length
     : ('_count' in order && (order as OrderListItem)._count?.orderItems) || 0;
 
   const formatCurrency = (amount: number | string) => {
     const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-    const locale = currency === 'AUD' ? 'en-AU' : 
-                   currency === 'USD' ? 'en-US' : 
-                   currency === 'IDR' ? 'id-ID' : 'en-AU';
+    const locale = currency === 'AUD' ? 'en-AU' :
+      currency === 'USD' ? 'en-US' :
+        currency === 'IDR' ? 'id-ID' : 'en-AU';
     return new Intl.NumberFormat(locale, {
       style: 'currency',
       currency: currency,
@@ -104,19 +104,13 @@ export const OrderCard: React.FC<OrderCardProps> = ({
 
       {/* Customer Info */}
       {order.customer && (
-        <div className="mb-3 space-y-1.5">
+        <div className="mb-3">
           <div className="flex items-center gap-2 text-sm">
             <FaUser className="h-3.5 w-3.5 text-gray-400" />
             <span className="text-gray-800 dark:text-white/90 font-medium truncate">
               {order.customer.name}
             </span>
           </div>
-          {order.customer.phone && (
-            <div className="flex items-center gap-2 text-sm">
-              <FaPhone className="h-3.5 w-3.5 text-gray-400" />
-              <span className="text-gray-600 dark:text-gray-400">{order.customer.phone}</span>
-            </div>
-          )}
         </div>
       )}
 
@@ -212,7 +206,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           </button>
         </div>
       )}
-      
+
       {/* View Details button for non-READY or when onStatusChange not provided */}
       {showQuickActions && onViewDetails && (order.status !== 'READY' || !onStatusChange) && (
         <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">

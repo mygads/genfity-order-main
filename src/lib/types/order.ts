@@ -95,6 +95,7 @@ export interface OrderFilters {
   since?: number;     // Timestamp for real-time polling
   page?: number;
   limit?: number;
+  includeItems?: boolean; // Include full orderItems for kitchen display
 }
 
 /**
@@ -323,6 +324,41 @@ export const ORDER_LIST_INCLUDE: Prisma.OrderInclude = {
   _count: {
     select: {
       orderItems: true,
+    },
+  },
+} as const;
+
+/**
+ * Include options for kitchen display (includes full orderItems for cooks)
+ */
+export const ORDER_KITCHEN_INCLUDE: Prisma.OrderInclude = {
+  payment: {
+    select: {
+      id: true,
+      status: true,
+      paymentMethod: true,
+      paidAt: true,
+    },
+  },
+  customer: {
+    select: {
+      id: true,
+      name: true,
+      phone: true,
+    },
+  },
+  orderItems: {
+    include: {
+      addons: {
+        include: {
+          addonItem: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      },
     },
   },
 } as const;

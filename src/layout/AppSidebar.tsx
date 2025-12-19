@@ -225,13 +225,13 @@ const AppSidebar: React.FC = () => {
   // Get menu groups based on user role
   const getMenuGroups = (): NavGroup[] => {
     if (!user) return [];
-    
+
     if (user.role === "SUPER_ADMIN") {
       return superAdminNavGroups;
     } else if (user.role === "MERCHANT_OWNER" || user.role === "MERCHANT_STAFF") {
       // If no merchant, return empty groups
       if (hasMerchant === false) return [];
-      
+
       // Filter groups and items based on user role
       return merchantNavGroups
         .map(group => ({
@@ -240,7 +240,7 @@ const AppSidebar: React.FC = () => {
         }))
         .filter(group => group.items.length > 0); // Remove empty groups
     }
-    
+
     return [];
   };
 
@@ -249,12 +249,12 @@ const AppSidebar: React.FC = () => {
   const isActive = useCallback((path: string) => {
     // Exact match first (most important)
     if (path === pathname) return true;
-    
+
     // Special handling for menu builder
     if (path === "/admin/dashboard/menu/builder/new") {
       return pathname.startsWith("/admin/dashboard/menu/builder");
     }
-    
+
     // For orders paths, handle nested routes properly
     if (path === "/admin/dashboard/orders") {
       // Only exact match for main orders page
@@ -266,18 +266,18 @@ const AppSidebar: React.FC = () => {
     if (path === "/admin/dashboard/orders/history") {
       return pathname.startsWith("/admin/dashboard/orders/history");
     }
-    
+
     // For menu path, only activate if exact match
     if (path === "/admin/dashboard/menu") {
       return pathname === "/admin/dashboard/menu" || pathname === "/admin/dashboard/menu/";
     }
-    
+
     // For other paths, check if current path starts with menu path
     // But exclude dashboard to prevent it from matching everything
     if (path !== "/admin/dashboard" && pathname.startsWith(path)) {
       return true;
     }
-    
+
     return false;
   }, [pathname]);
 
@@ -285,10 +285,9 @@ const AppSidebar: React.FC = () => {
     <aside
       data-sidebar
       className={`fixed mt-16 flex flex-col lg:mt-0 top-0 px-5 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-50 border-r border-gray-200 
-        ${
-          isExpanded || isMobileOpen
-            ? "w-[290px]"
-            : isHovered
+        ${isExpanded || isMobileOpen
+          ? "w-[290px]"
+          : isHovered
             ? "w-[290px]"
             : "w-[90px]"
         }
@@ -298,42 +297,55 @@ const AppSidebar: React.FC = () => {
       onMouseLeave={() => setIsHovered(false)}
     >
       <div
-        className={`py-8 flex  ${
-          !isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
-        }`}
+        className={`py-8 flex  ${!isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
+          }`}
       >
         <Link href="/admin/dashboard">
           {isExpanded || isHovered || isMobileOpen ? (
             <>
               <Image
                 className="dark:hidden"
-                src="/images/logo/logo.svg"
-                alt="Logo"
+                src="/images/logo/logo.png"
+                alt="Genfity"
                 width={150}
                 height={40}
+                priority
               />
               <Image
                 className="hidden dark:block"
-                src="/images/logo/logo-dark.svg"
-                alt="Logo"
+                src="/images/logo/logo-dark-mode.png"
+                alt="Genfity"
                 width={150}
                 height={40}
+                priority
               />
             </>
           ) : (
-            <Image
-              src="/images/logo/logo-icon.svg"
-              alt="Logo"
-              width={32}
-              height={32}
-            />
+            <>
+              <Image
+                className="dark:hidden"
+                src="/images/logo/icon.png"
+                alt="Genfity"
+                width={32}
+                height={32}
+                priority
+              />
+              <Image
+                className="hidden dark:block"
+                src="/images/logo/icon-dark-mode.png"
+                alt="Genfity"
+                width={32}
+                height={32}
+                priority
+              />
+            </>
           )}
         </Link>
       </div>
 
       {/* Merchant Banner - Only for MERCHANT_OWNER and MERCHANT_STAFF who have merchant */}
       {user && (user.role === "MERCHANT_OWNER" || user.role === "MERCHANT_STAFF") && hasMerchant && (
-        <MerchantBanner 
+        <MerchantBanner
           isExpanded={isExpanded || isHovered || isMobileOpen}
         />
       )}
@@ -361,11 +373,10 @@ const AppSidebar: React.FC = () => {
               navGroups.map((group, groupIndex) => (
                 <div key={groupIndex}>
                   <h2
-                    className={`mb-3 text-xs font-semibold uppercase flex leading-5 text-gray-500 dark:text-gray-400 ${
-                      !isExpanded && !isHovered
+                    className={`mb-3 text-xs font-semibold uppercase flex leading-5 text-gray-500 dark:text-gray-400 ${!isExpanded && !isHovered
                         ? "lg:justify-center"
                         : "justify-start"
-                    }`}
+                      }`}
                   >
                     {isExpanded || isHovered || isMobileOpen ? (
                       group.title
@@ -378,16 +389,15 @@ const AppSidebar: React.FC = () => {
                       <li key={nav.name}>
                         <Link
                           href={nav.path}
-                          className={`menu-item group ${
-                            isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
-                          }`}
+                          prefetch={true}
+                          className={`menu-item group ${isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
+                            }`}
                         >
                           <span
-                            className={`${
-                              isActive(nav.path)
+                            className={`${isActive(nav.path)
                                 ? "menu-item-icon-active"
                                 : "menu-item-icon-inactive"
-                            }`}
+                              }`}
                           >
                             {nav.icon}
                           </span>

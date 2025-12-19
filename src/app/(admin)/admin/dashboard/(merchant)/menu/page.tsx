@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
@@ -12,6 +12,8 @@ import { exportMenuItems } from "@/lib/utils/excelExport";
 import InlineEditField from "@/components/ui/InlineEditField";
 import ManageMenuAddonCategoriesModal from "@/components/menu/ManageMenuAddonCategoriesModal";
 import ManageMenuCategoriesModal from "@/components/menu/ManageMenuCategoriesModal";
+import { useSWRWithAuth, useSWRStatic } from "@/hooks/useSWRWithAuth";
+import { MenuPageSkeleton } from "@/components/common/SkeletonLoaders";
 
 interface MenuAddonCategory {
   addonCategoryId: string;
@@ -82,16 +84,28 @@ interface Merchant {
   currency: string;
 }
 
+// Response types for SWR
+interface MenuApiResponse {
+  success: boolean;
+  data: MenuItem[];
+}
+
+interface CategoriesApiResponse {
+  success: boolean;
+  data: Category[];
+}
+
+interface MerchantApiResponse {
+  success: boolean;
+  data: Merchant;
+}
+
 export default function MerchantMenuPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [filteredMenuItems, setFilteredMenuItems] = useState<MenuItem[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [merchant, setMerchant] = useState<Merchant | null>(null);
   const [selectedPromoMenu, setSelectedPromoMenu] = useState<MenuItem | null>(null);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [selectedMenuForAddons, setSelectedMenuForAddons] = useState<MenuItem | null>(null);
@@ -112,64 +126,149 @@ export default function MerchantMenuPage() {
   const [filterStock, setFilterStock] = useState<string[]>([]);
   const [filterPromo, setFilterPromo] = useState<string[]>([]);
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem("accessToken");
-      if (!token) {
-        router.push("/admin/login");
-        return;
-      }
+  // SWR hooks for data fetching with caching
+  const { 
+    data: menuResponse, 
+    error: menuError, 
+    isLoading: menuLoading,
+    mutate: mutateMenu 
+  } = useSWRWithAuth<MenuApiResponse>('/api/merchant/menu', {
+    refreshInterval: 30000, // Refresh every 30 seconds
+  });
 
-      const [menuResponse, categoriesResponse, merchantResponse] = await Promise.all([
-        fetch("/api/merchant/menu", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch("/api/merchant/categories", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch("/api/merchant/profile", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-      ]);
+  const { 
+    data: categoriesResponse, 
+    error: categoriesError,
+    isLoading: categoriesLoading 
+  } = useSWRStatic<CategoriesApiResponse>('/api/merchant/categories');
 
-      if (!menuResponse.ok || !categoriesResponse.ok) {
-        throw new Error("Failed to fetch data");
-      }
+  const { 
+    data: merchantResponse, 
+    error: merchantError,
+    isLoading: merchantLoading 
+  } = useSWRStatic<MerchantApiResponse>('/api/merchant/profile');
 
-      const menuData = await menuResponse.json();
-      const categoriesData = await categoriesResponse.json();
-      const merchantData = await merchantResponse.json();
-      console.log('Merchant data:', merchantData);
+  // Extract data from SWR responses
+  const menuItems = menuResponse?.success ? menuResponse.data : [];
+  const categories = categoriesResponse?.success ? categoriesResponse.data : [];
+  const merchant = merchantResponse?.success ? merchantResponse.data : null;
+  
+  // Combined loading state
+  const loading = menuLoading || categoriesLoading || merchantLoading;
 
-      // Handle response format: { success: true, data: [...] }
-      if (menuData.success && Array.isArray(menuData.data)) {
-        setMenuItems(menuData.data);
-      } else {
-        setMenuItems([]);
-      }
-      
-      if (categoriesData.success && Array.isArray(categoriesData.data)) {
-        setCategories(categoriesData.data);
-      } else {
-        setCategories([]);
-      }
+  // Function to refetch data (for backwards compatibility)
+  const fetchData = useCallback(async () => {
+    await mutateMenu();
+  }, [mutateMenu]);
 
-      if (merchantData.success && merchantData.data) {
-        setMerchant(merchantData.data);
-      }
-    } catch (err) {
-      console.error("Fetch menu data error:", err);
-      setError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Refs to track previous filter values for page reset
+  const prevFiltersRef = useRef({ searchQuery, filterCategory, filterStatus, filterStock, filterPromo });
 
+  // Filter and search logic - MUST be before any conditional returns
   useEffect(() => {
-    fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    let filtered = [...menuItems];
+
+    // Search filter
+    if (searchQuery) {
+      filtered = filtered.filter(item =>
+        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+    }
+
+    // Category filter
+    if (filterCategory !== "all") {
+      filtered = filtered.filter(item => {
+        if (item.categories && item.categories.length > 0) {
+          return item.categories.some(c => c.categoryId === filterCategory);
+        }
+        return item.categoryId === filterCategory;
+      });
+    }
+
+    // Status filter - don't filter by default, only when explicitly selected
+    if (filterStatus === "active") {
+      filtered = filtered.filter(item => item.isActive);
+    } else if (filterStatus === "inactive") {
+      filtered = filtered.filter(item => !item.isActive);
+    }
+    // if "all", don't filter - show everything
+
+    // Stock filters
+    if (filterStock.length > 0) {
+      filtered = filtered.filter(item => {
+        if (!item.trackStock) return filterStock.includes('no-track');
+        const stockQty = item.stockQty || 0;
+        if (filterStock.includes('in-stock') && stockQty > 0) return true;
+        if (filterStock.includes('low-stock') && stockQty > 0 && stockQty <= 10) return true;
+        if (filterStock.includes('out-of-stock') && stockQty === 0) return true;
+        return false;
+      });
+    }
+
+    // Promo filters
+    if (filterPromo.length > 0) {
+      filtered = filtered.filter(item => {
+        if (filterPromo.includes('promo') && item.isPromo) return true;
+        if (filterPromo.includes('no-promo') && !item.isPromo) return true;
+        return false;
+      });
+    }
+
+    setFilteredMenuItems(filtered);
+
+    // Only reset page when filters actually change, not when menuItems data updates
+    const prev = prevFiltersRef.current;
+    const filtersChanged = 
+      prev.searchQuery !== searchQuery ||
+      prev.filterCategory !== filterCategory ||
+      prev.filterStatus !== filterStatus ||
+      JSON.stringify(prev.filterStock) !== JSON.stringify(filterStock) ||
+      JSON.stringify(prev.filterPromo) !== JSON.stringify(filterPromo);
+
+    if (filtersChanged) {
+      setCurrentPage(1);
+      prevFiltersRef.current = { searchQuery, filterCategory, filterStatus, filterStock, filterPromo };
+    }
+  }, [menuItems, searchQuery, filterCategory, filterStatus, filterStock, filterPromo]);
+
+  // Pagination logic
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredMenuItems.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredMenuItems.length / itemsPerPage);
+
+  // Show skeleton loader during initial load
+  if (loading) {
+    return <MenuPageSkeleton />;
+  }
+
+  // Show error state if any fetch failed
+  if (menuError || categoriesError || merchantError) {
+    return (
+      <div className="flex min-h-[calc(100vh-200px)] items-center justify-center p-6">
+        <div className="w-full max-w-md rounded-2xl border-2 border-red-200 bg-white p-8 text-center shadow-sm dark:border-red-800 dark:bg-gray-900">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
+            <svg className="h-8 w-8 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h2 className="mb-2 text-xl font-bold text-gray-900 dark:text-white">
+            Error Loading Menu
+          </h2>
+          <p className="mb-6 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
+            {menuError?.message || categoriesError?.message || merchantError?.message || 'Failed to load data'}
+          </p>
+          <button
+            onClick={() => fetchData()}
+            className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Are you sure you want to delete "${name}"?`)) {
@@ -263,13 +362,19 @@ export default function MerchantMenuPage() {
       setSuccess(`Menu ${field} updated successfully`);
       setTimeout(() => setSuccess(null), 3000);
       
-      // Update local state immediately for better UX
-      setMenuItems(prev => prev.map(item => 
-        item.id === id ? { ...item, [field]: value } : item
-      ));
-      setFilteredMenuItems(prev => prev.map(item => 
-        item.id === id ? { ...item, [field]: value } : item
-      ));
+      // Use SWR optimistic update
+      await mutateMenu(
+        (current) => {
+          if (!current) return current;
+          return {
+            ...current,
+            data: current.data.map((item: MenuItem) =>
+              item.id === id ? { ...item, [field]: value } : item
+            ),
+          };
+        },
+        false // Don't revalidate immediately
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
       setTimeout(() => setError(null), 5000);
@@ -430,80 +535,7 @@ export default function MerchantMenuPage() {
     return category?.name || 'Uncategorized';
   };
 
-  // Filter and search logic
-  useEffect(() => {
-    let filtered = [...menuItems];
-
-    // Search filter
-    if (searchQuery) {
-      filtered = filtered.filter(item =>
-        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()))
-      );
-    }
-
-    // Category filter
-    if (filterCategory !== "all") {
-      filtered = filtered.filter(item => {
-        if (item.categories && item.categories.length > 0) {
-          return item.categories.some(c => c.categoryId === filterCategory);
-        }
-        return item.categoryId === filterCategory;
-      });
-    }
-
-    // Status filter - don't filter by default, only when explicitly selected
-    if (filterStatus === "active") {
-      filtered = filtered.filter(item => item.isActive);
-    } else if (filterStatus === "inactive") {
-      filtered = filtered.filter(item => !item.isActive);
-    }
-    // if "all", don't filter - show everything
-
-    // Stock filters
-    if (filterStock.length > 0) {
-      filtered = filtered.filter(item => {
-        if (!item.trackStock) return filterStock.includes('no-track');
-        const stockQty = item.stockQty || 0;
-        if (filterStock.includes('in-stock') && stockQty > 0) return true;
-        if (filterStock.includes('low-stock') && stockQty > 0 && stockQty <= 10) return true;
-        if (filterStock.includes('out-of-stock') && stockQty === 0) return true;
-        return false;
-      });
-    }
-
-    // Promo filters
-    if (filterPromo.length > 0) {
-      filtered = filtered.filter(item => {
-        if (filterPromo.includes('promo') && item.isPromo) return true;
-        if (filterPromo.includes('no-promo') && !item.isPromo) return true;
-        return false;
-      });
-    }
-
-    setFilteredMenuItems(filtered);
-    setCurrentPage(1); // Reset to first page when filters change
-  }, [menuItems, searchQuery, filterCategory, filterStatus, filterStock, filterPromo]);
-
-  // Pagination logic
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredMenuItems.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredMenuItems.length / itemsPerPage);
-
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
-
-  if (loading) {
-    return (
-      <div>
-        <PageBreadcrumb pageTitle="Menu" />
-        <div className="mt-6 py-10 text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-brand-500 border-r-transparent"></div>
-          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Loading menu...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div>
@@ -582,7 +614,7 @@ export default function MerchantMenuPage() {
               </button>
               <Link
                 href="/admin/dashboard/menu/create"
-                className="inline-flex h-11 items-center gap-2 rounded-lg bg-brand-500 px-6 text-sm font-medium text-white hover:bg-brand-600 focus:outline-none focus:ring-3 focus:ring-brand-500/20"
+                className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary-500 px-6 text-sm font-medium text-white hover:bg-primary-600 focus:outline-none focus:ring-3 focus:ring-primary-500/20"
               >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -600,7 +632,7 @@ export default function MerchantMenuPage() {
                 placeholder="Search menu items..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
               />
             </div>
             
@@ -609,7 +641,7 @@ export default function MerchantMenuPage() {
                 <select
                   value={filterCategory}
                   onChange={(e) => setFilterCategory(e.target.value)}
-                  className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
+                  className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
                 >
                   <option value="all">All Categories</option>
                   {categories.map((cat) => (
@@ -670,7 +702,7 @@ export default function MerchantMenuPage() {
                         type="checkbox"
                         checked={selectedItems.length === currentItems.length && currentItems.length > 0}
                         onChange={(e) => handleSelectAll(e.target.checked)}
-                        className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                        className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                       />
                     </th>
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Image</th>
@@ -690,7 +722,7 @@ export default function MerchantMenuPage() {
                           type="checkbox"
                           checked={selectedItems.includes(item.id)}
                           onChange={(e) => handleSelectItem(item.id, e.target.checked)}
-                          className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                          className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                         />
                       </td>
                       <td className="px-4 py-4">
@@ -927,7 +959,7 @@ export default function MerchantMenuPage() {
                         onClick={() => paginate(page)}
                         className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border text-sm font-medium ${
                           currentPage === page
-                            ? 'border-brand-500 bg-brand-500 text-white'
+                            ? 'border-primary-500 bg-primary-500 text-white'
                             : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
                         }`}
                       >
@@ -1030,7 +1062,7 @@ export default function MerchantMenuPage() {
                     id="isPromo"
                     name="isPromo"
                     defaultChecked={selectedPromoMenu.isPromo}
-                    className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+                    className="h-4 w-4 rounded border-gray-300 text-primary-500 focus:ring-primary-500"
                   />
                   <label htmlFor="isPromo" className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                     Enable Promo
@@ -1048,7 +1080,7 @@ export default function MerchantMenuPage() {
                     min="0"
                     defaultValue={selectedPromoMenu.promoPrice ? parseFloat(selectedPromoMenu.promoPrice.toString()) : ''}
                     placeholder="Enter promo price"
-                    className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
+                    className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
                   />
                 </div>
 
@@ -1061,7 +1093,7 @@ export default function MerchantMenuPage() {
                       type="date"
                       name="promoStartDate"
                       defaultValue={selectedPromoMenu.promoStartDate ? new Date(selectedPromoMenu.promoStartDate).toISOString().split('T')[0] : ''}
-                      className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
+                      className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
                     />
                   </div>
                   <div>
@@ -1072,7 +1104,7 @@ export default function MerchantMenuPage() {
                       type="date"
                       name="promoEndDate"
                       defaultValue={selectedPromoMenu.promoEndDate ? new Date(selectedPromoMenu.promoEndDate).toISOString().split('T')[0] : ''}
-                      className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
+                      className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
                     />
                   </div>
                 </div>
@@ -1181,3 +1213,4 @@ export default function MerchantMenuPage() {
     </div>
   );
 }
+

@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import { PeriodComparison, CustomerAnalytics, OperationalMetrics } from '@/components/reports';
 import { TopMenuItemsChart, HourlyDistributionChart } from '@/components/revenue';
+import { ReportsPageSkeleton } from '@/components/common/SkeletonLoaders';
 
 export default function ReportsPage() {
   const router = useRouter();
@@ -81,17 +82,7 @@ export default function ReportsPage() {
   };
 
   if (loading) {
-    return (
-      <div>
-        <PageBreadcrumb pageTitle="Reports & Analytics" />
-        <div className="flex items-center justify-center py-20">
-          <div className="flex items-center gap-3 text-gray-500">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand-500 border-t-transparent"></div>
-            Loading reports data...
-          </div>
-        </div>
-      </div>
-    );
+    return <ReportsPageSkeleton />;
   }
 
   return (

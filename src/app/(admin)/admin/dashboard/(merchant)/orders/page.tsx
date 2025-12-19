@@ -13,9 +13,9 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { 
-  FaSync, 
-  FaCheckSquare, 
+import {
+  FaSync,
+  FaCheckSquare,
   FaSquare,
   FaTimes,
   FaEye,
@@ -31,6 +31,7 @@ import { OrderKanbanListView } from '@/components/orders/OrderKanbanListView';
 import { OrderTabListView } from '@/components/orders/OrderTabListView';
 import { OrderDetailModal } from '@/components/orders/OrderDetailModal';
 import { OrderFiltersComponent, type OrderFilters } from '@/components/orders/OrderFilters';
+import { KitchenDisplaySkeleton } from '@/components/common/SkeletonLoaders';
 import type { OrderListItem } from '@/lib/types/order';
 import { OrderStatus } from '@prisma/client';
 
@@ -45,7 +46,7 @@ const DEFAULT_FILTERS: OrderFilters = {
 
 export default function MerchantOrdersPage() {
   const router = useRouter();
-  
+
   // State management
   const [viewMode, setViewMode] = useState<ViewMode>('kanban-card');
   const [selectedOrder, setSelectedOrder] = useState<OrderListItem | null>(null);
@@ -55,14 +56,14 @@ export default function MerchantOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [displayMode, setDisplayMode] = useState<'normal' | 'clean' | 'fullscreen'>('normal');
-  
+
   // Ref to trigger manual refresh from OrderKanbanBoard
   const kanbanRefreshRef = React.useRef<(() => void) | null>(null);
-  
+
   // Filters
   const [filters, setFilters] = useState<OrderFilters>(DEFAULT_FILTERS);
   const [showFilters, setShowFilters] = useState(false);
-  
+
   // Bulk operations
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
   const [bulkMode, setBulkMode] = useState(false);
@@ -245,20 +246,13 @@ export default function MerchantOrdersPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="flex items-center gap-3 text-gray-500 dark:text-gray-400">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary-500 border-t-transparent"></div>
-          <span className="text-sm font-medium">Loading orders...</span>
-        </div>
-      </div>
-    );
+    return <KitchenDisplaySkeleton />;
   }
 
   return (
-    <div className={`${displayMode !== 'normal' ? 'fixed inset-0 z-50 overflow-auto bg-white dark:bg-gray-950' : ''}`}>
-      {/* Header - Sticky when in clean/fullscreen mode */}
-      <div className={`${displayMode !== 'normal' ? 'sticky top-0 z-40 bg-white/95 backdrop-blur-sm dark:bg-gray-950/95 px-6 pt-6 pb-4 border-b border-gray-200 dark:border-gray-800 shadow-sm' : ''}`}>
+    <div className={`${displayMode !== 'normal' ? 'fixed inset-0 z-50 overflow-hidden bg-white dark:bg-gray-950 flex flex-col' : 'flex flex-col h-[calc(100vh-100px)]'}`}>
+      {/* Header - Always Sticky like Kitchen Display */}
+      <div className={`sticky top-0 z-40 bg-white/95 backdrop-blur-sm dark:bg-gray-950/95 border-b border-gray-200 dark:border-gray-800 ${displayMode !== 'normal' ? 'px-6 pt-6 pb-4' : 'pb-4 -mx-6 px-6 pt-0'}`}>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-800 dark:text-white/90">
@@ -268,148 +262,141 @@ export default function MerchantOrdersPage() {
               Manage and track orders in real-time with drag & drop
             </p>
           </div>
-        
+
           <div className="flex flex-wrap items-center gap-3">
             {/* View Mode Selector */}
             <div className="flex items-center gap-1 rounded-lg border border-gray-200 bg-white p-1 dark:border-gray-800 dark:bg-gray-900">
               <button
                 onClick={() => setViewMode('kanban-card')}
-                className={`flex h-8 items-center gap-2 rounded-md px-3 text-xs font-semibold transition-all ${
-                  viewMode === 'kanban-card'
+                className={`flex h-8 items-center gap-2 rounded-md px-3 text-xs font-semibold transition-all ${viewMode === 'kanban-card'
                   ? 'bg-primary-500 text-white shadow-sm'
                   : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
-              }`}
-              title="Kanban + Card View"
-            >
-              <FaTh className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Card</span>
-            </button>
+                  }`}
+                title="Kanban + Card View"
+              >
+                <FaTh className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Card</span>
+              </button>
+              <button
+                onClick={() => setViewMode('kanban-list')}
+                className={`flex h-8 items-center gap-2 rounded-md px-3 text-xs font-semibold transition-all ${viewMode === 'kanban-list'
+                  ? 'bg-primary-500 text-white shadow-sm'
+                  : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
+                  }`}
+                title="Kanban + List View"
+              >
+                <FaList className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">List</span>
+              </button>
+              <button
+                onClick={() => setViewMode('tab-list')}
+                className={`flex h-8 items-center gap-2 rounded-md px-3 text-xs font-semibold transition-all ${viewMode === 'tab-list'
+                  ? 'bg-primary-500 text-white shadow-sm'
+                  : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
+                  }`}
+                title="Tab + List View"
+              >
+                <FaTags className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Tabs</span>
+              </button>
+            </div>
+
+            {/* Filter Toggle */}
             <button
-              onClick={() => setViewMode('kanban-list')}
-              className={`flex h-8 items-center gap-2 rounded-md px-3 text-xs font-semibold transition-all ${
-                viewMode === 'kanban-list'
-                  ? 'bg-primary-500 text-white shadow-sm'
-                  : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
-              }`}
-              title="Kanban + List View"
+              onClick={() => setShowFilters(!showFilters)}
+              className={`flex h-10 items-center gap-2 rounded-lg border px-4 text-sm font-medium transition-colors ${showFilters
+                ? 'border-primary-200 bg-primary-50 text-primary-700 dark:border-primary-800 dark:bg-primary-900/20 dark:text-primary-400'
+                : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800'
+                }`}
             >
-              <FaList className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">List</span>
+              <FaFilter />
+              <span className="hidden sm:inline">Filters</span>
             </button>
+
+            {/* Bulk Mode Toggle */}
             <button
-              onClick={() => setViewMode('tab-list')}
-              className={`flex h-8 items-center gap-2 rounded-md px-3 text-xs font-semibold transition-all ${
-                viewMode === 'tab-list'
-                  ? 'bg-primary-500 text-white shadow-sm'
-                  : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
-              }`}
-              title="Tab + List View"
+              onClick={toggleBulkMode}
+              className={`flex h-10 items-center gap-2 rounded-lg border px-4 text-sm font-medium transition-colors ${bulkMode
+                ? 'border-primary-200 bg-primary-50 text-primary-700 dark:border-primary-800 dark:bg-primary-900/20 dark:text-primary-400'
+                : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800'
+                }`}
             >
-              <FaTags className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Tabs</span>
+              {bulkMode ? <FaCheckSquare /> : <FaSquare />}
+              <span className="hidden sm:inline">Bulk Select</span>
+            </button>
+
+            {/* Auto Refresh Toggle */}
+            <button
+              onClick={() => setAutoRefresh(!autoRefresh)}
+              className={`flex h-10 items-center gap-2 rounded-lg border px-4 text-sm font-medium transition-colors ${autoRefresh
+                ? 'border-primary-200 bg-primary-50 text-primary-700 dark:border-primary-800 dark:bg-primary-900/20 dark:text-primary-400'
+                : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800'
+                }`}
+            >
+              <FaSync className={autoRefresh ? 'animate-spin' : ''} />
+              <span className="hidden sm:inline">Auto Refresh</span>
+            </button>
+
+            {/* Manual Refresh */}
+            <button
+              onClick={handleManualRefresh}
+              className="flex h-10 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+            >
+              <FaSync />
+              <span className="hidden sm:inline">Refresh</span>
+            </button>
+
+            {/* Progressive Display Mode: Normal → Clean → Fullscreen */}
+            <button
+              onClick={async () => {
+                if (displayMode === 'normal') {
+                  // Go to clean mode
+                  setDisplayMode('clean');
+                } else if (displayMode === 'clean') {
+                  // Go to fullscreen mode
+                  try {
+                    await document.documentElement.requestFullscreen();
+                    setDisplayMode('fullscreen');
+                  } catch (err) {
+                    console.error('Error entering fullscreen:', err);
+                  }
+                } else {
+                  // Exit fullscreen, back to normal
+                  try {
+                    if (document.fullscreenElement) {
+                      await document.exitFullscreen();
+                    }
+                    setDisplayMode('normal');
+                  } catch (err) {
+                    console.error('Error exiting fullscreen:', err);
+                  }
+                }
+              }}
+              className={`flex h-10 items-center gap-2 rounded-lg border px-4 text-sm font-medium transition-colors ${displayMode !== 'normal'
+                ? 'border-primary-200 bg-primary-50 text-primary-700 dark:border-primary-800 dark:bg-primary-900/20 dark:text-primary-400'
+                : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800'
+                }`}
+              title={
+                displayMode === 'normal' ? 'Enter Clean Mode' :
+                  displayMode === 'clean' ? 'Enter Full Screen' :
+                    'Exit Full Screen'
+              }
+            >
+              {displayMode === 'normal' ? <FaEye /> :
+                displayMode === 'clean' ? <FaExpand /> :
+                  <FaCompress />}
+              <span className="hidden sm:inline">
+                {displayMode === 'normal' ? 'Clean Mode' :
+                  displayMode === 'clean' ? 'Full Screen' :
+                    'Exit'}
+              </span>
             </button>
           </div>
-
-          {/* Filter Toggle */}
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`flex h-10 items-center gap-2 rounded-lg border px-4 text-sm font-medium transition-colors ${
-              showFilters
-                ? 'border-primary-200 bg-primary-50 text-primary-700 dark:border-primary-800 dark:bg-primary-900/20 dark:text-primary-400'
-                : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800'
-            }`}
-          >
-            <FaFilter />
-            <span className="hidden sm:inline">Filters</span>
-          </button>
-
-          {/* Bulk Mode Toggle */}
-          <button
-            onClick={toggleBulkMode}
-            className={`flex h-10 items-center gap-2 rounded-lg border px-4 text-sm font-medium transition-colors ${
-              bulkMode
-                ? 'border-primary-200 bg-primary-50 text-primary-700 dark:border-primary-800 dark:bg-primary-900/20 dark:text-primary-400'
-                : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800'
-            }`}
-          >
-            {bulkMode ? <FaCheckSquare /> : <FaSquare />}
-            <span className="hidden sm:inline">Bulk Select</span>
-          </button>
-
-          {/* Auto Refresh Toggle */}
-          <button
-            onClick={() => setAutoRefresh(!autoRefresh)}
-            className={`flex h-10 items-center gap-2 rounded-lg border px-4 text-sm font-medium transition-colors ${
-              autoRefresh
-                ? 'border-primary-200 bg-primary-50 text-primary-700 dark:border-primary-800 dark:bg-primary-900/20 dark:text-primary-400'
-                : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800'
-            }`}
-          >
-            <FaSync className={autoRefresh ? 'animate-spin' : ''} />
-            <span className="hidden sm:inline">Auto Refresh</span>
-          </button>
-
-          {/* Manual Refresh */}
-          <button
-            onClick={handleManualRefresh}
-            className="flex h-10 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
-          >
-            <FaSync />
-            <span className="hidden sm:inline">Refresh</span>
-          </button>
-
-          {/* Progressive Display Mode: Normal → Clean → Fullscreen */}
-          <button
-            onClick={async () => {
-              if (displayMode === 'normal') {
-                // Go to clean mode
-                setDisplayMode('clean');
-              } else if (displayMode === 'clean') {
-                // Go to fullscreen mode
-                try {
-                  await document.documentElement.requestFullscreen();
-                  setDisplayMode('fullscreen');
-                } catch (err) {
-                  console.error('Error entering fullscreen:', err);
-                }
-              } else {
-                // Exit fullscreen, back to normal
-                try {
-                  if (document.fullscreenElement) {
-                    await document.exitFullscreen();
-                  }
-                  setDisplayMode('normal');
-                } catch (err) {
-                  console.error('Error exiting fullscreen:', err);
-                }
-              }
-            }}
-            className={`flex h-10 items-center gap-2 rounded-lg border px-4 text-sm font-medium transition-colors ${
-              displayMode !== 'normal'
-                ? 'border-primary-200 bg-primary-50 text-primary-700 dark:border-primary-800 dark:bg-primary-900/20 dark:text-primary-400'
-                : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800'
-            }`}
-            title={
-              displayMode === 'normal' ? 'Enter Clean Mode' :
-              displayMode === 'clean' ? 'Enter Full Screen' :
-              'Exit Full Screen'
-            }
-          >
-            {displayMode === 'normal' ? <FaEye /> :
-             displayMode === 'clean' ? <FaExpand /> :
-             <FaCompress />}
-            <span className="hidden sm:inline">
-              {displayMode === 'normal' ? 'Clean Mode' :
-               displayMode === 'clean' ? 'Full Screen' :
-               'Exit'}
-            </span>
-          </button>
-        </div>
         </div>
       </div>
 
-      {/* Content Area */}
-      <div className={`space-y-6 ${displayMode !== 'normal' ? 'px-6 pb-6' : ''}`}>
+      {/* Content Area - with spacing from header */}
+      <div className={`flex-1 overflow-y-auto space-y-6 ${displayMode !== 'normal' ? 'px-6 pb-6 pt-6' : 'pt-6'}`}>
         {/* Filters Section */}
         {showFilters && (
           <OrderFiltersComponent
@@ -459,81 +446,81 @@ export default function MerchantOrdersPage() {
                   Update Status
                 </button>
               </div>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Order Views - Conditional Rendering Based on View Mode */}
-      {merchantId && (
-        <>
-          {viewMode === 'kanban-card' && (
-            <OrderKanbanBoard
-              merchantId={merchantId}
-              autoRefresh={autoRefresh}
-              refreshInterval={1000}
-              enableDragDrop={!bulkMode}
-              onOrderClick={handleOrderClick}
-              filters={filters}
-              selectedOrders={selectedOrders}
-              bulkMode={bulkMode}
-              onToggleSelection={toggleOrderSelection}
-              onSelectAllInColumn={selectAllInColumn}
-              onDeselectAllInColumn={deselectAllInColumn}
-              currency={merchantCurrency}
-              onRefreshReady={(refreshFn) => {
-                kanbanRefreshRef.current = refreshFn;
-              }}
-            />
-          )}
+        {/* Order Views - Conditional Rendering Based on View Mode */}
+        {merchantId && (
+          <>
+            {viewMode === 'kanban-card' && (
+              <OrderKanbanBoard
+                merchantId={merchantId}
+                autoRefresh={autoRefresh}
+                refreshInterval={1000}
+                enableDragDrop={!bulkMode}
+                onOrderClick={handleOrderClick}
+                filters={filters}
+                selectedOrders={selectedOrders}
+                bulkMode={bulkMode}
+                onToggleSelection={toggleOrderSelection}
+                onSelectAllInColumn={selectAllInColumn}
+                onDeselectAllInColumn={deselectAllInColumn}
+                currency={merchantCurrency}
+                onRefreshReady={(refreshFn) => {
+                  kanbanRefreshRef.current = refreshFn;
+                }}
+              />
+            )}
 
-          {viewMode === 'kanban-list' && (
-            <OrderKanbanListView
-              merchantId={merchantId}
-              autoRefresh={autoRefresh}
-              refreshInterval={1000}
-              enableDragDrop={!bulkMode}
-              onOrderClick={handleOrderClick}
-              filters={filters}
-              selectedOrders={selectedOrders}
-              bulkMode={bulkMode}
-              onToggleSelection={toggleOrderSelection}
-              currency={merchantCurrency}
-              onRefreshReady={(refreshFn) => {
-                kanbanRefreshRef.current = refreshFn;
-              }}
-            />
-          )}
+            {viewMode === 'kanban-list' && (
+              <OrderKanbanListView
+                merchantId={merchantId}
+                autoRefresh={autoRefresh}
+                refreshInterval={1000}
+                enableDragDrop={!bulkMode}
+                onOrderClick={handleOrderClick}
+                filters={filters}
+                selectedOrders={selectedOrders}
+                bulkMode={bulkMode}
+                onToggleSelection={toggleOrderSelection}
+                currency={merchantCurrency}
+                onRefreshReady={(refreshFn) => {
+                  kanbanRefreshRef.current = refreshFn;
+                }}
+              />
+            )}
 
-          {viewMode === 'tab-list' && (
-            <OrderTabListView
-              merchantId={merchantId}
-              autoRefresh={autoRefresh}
-              refreshInterval={1000}
-              onOrderClick={handleOrderClick}
-              filters={filters}
-              selectedOrders={selectedOrders}
-              bulkMode={bulkMode}
-              onToggleSelection={toggleOrderSelection}
-              currency={merchantCurrency}
-              onRefreshReady={(refreshFn) => {
-                kanbanRefreshRef.current = refreshFn;
-              }}
-            />
-          )}
-        </>
-      )}
+            {viewMode === 'tab-list' && (
+              <OrderTabListView
+                merchantId={merchantId}
+                autoRefresh={autoRefresh}
+                refreshInterval={1000}
+                onOrderClick={handleOrderClick}
+                filters={filters}
+                selectedOrders={selectedOrders}
+                bulkMode={bulkMode}
+                onToggleSelection={toggleOrderSelection}
+                currency={merchantCurrency}
+                onRefreshReady={(refreshFn) => {
+                  kanbanRefreshRef.current = refreshFn;
+                }}
+              />
+            )}
+          </>
+        )}
 
-      {/* Order Detail Modal */}
-      {selectedOrder && (
-        <OrderDetailModal
-          orderId={String(selectedOrder.id)}
-          isOpen={isModalOpen}
-          onClose={handleCloseModal}
-          onUpdate={handleOrderUpdate}
-          initialOrder={selectedOrder as unknown as import('@/lib/types/order').OrderWithDetails}
-          currency={merchantCurrency}
-        />
-      )}
+        {/* Order Detail Modal */}
+        {selectedOrder && (
+          <OrderDetailModal
+            orderId={String(selectedOrder.id)}
+            isOpen={isModalOpen}
+            onClose={handleCloseModal}
+            onUpdate={handleOrderUpdate}
+            initialOrder={selectedOrder as unknown as import('@/lib/types/order').OrderWithDetails}
+            currency={merchantCurrency}
+          />
+        )}
       </div>
     </div>
   );

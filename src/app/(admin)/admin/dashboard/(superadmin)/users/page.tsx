@@ -6,7 +6,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Image from 'next/image';
 
@@ -15,6 +15,8 @@ import ToastContainer from '@/components/ui/ToastContainer';
 import { useToast } from '@/hooks/useToast';
 import { getAdminToken } from '@/lib/utils/adminAuth';
 import CreateUserModal from './CreateUserModal';
+import { useSWRWithAuth } from '@/hooks/useSWRWithAuth';
+import { UsersPageSkeleton } from '@/components/common/SkeletonLoaders';
 
 interface User {
   id: string;
@@ -29,13 +31,16 @@ interface User {
   createdAt: string;
 }
 
+interface UsersApiResponse {
+  success: boolean;
+  data: User[];
+}
+
 export default function UsersPage() {
   const { toasts, success: showSuccessToast, error: showErrorToast } = useToast();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('admin'); // Default: admin roles only
   const [statusFilter, setStatusFilter] = useState('');
@@ -44,39 +49,55 @@ export default function UsersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  /**
-   * Fetch all users from API
-   */
-  const fetchUsers = async () => {
-    setIsLoading(true);
-    try {
-      const token = getAdminToken();
-      const response = await fetch('/api/admin/users', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      
-      const data = await response.json();
+  // SWR hook for data fetching with caching
+  const { 
+    data: usersResponse, 
+    error: usersError, 
+    isLoading,
+    mutate: mutateUsers 
+  } = useSWRWithAuth<UsersApiResponse>('/api/admin/users', {
+    refreshInterval: 30000, // Refresh every 30 seconds
+  });
 
-      if (response.ok && data.success) {
-        setUsers(data.data);
-      } else {
-        showErrorToast('Gagal', data.message || 'Gagal memuat data users');
-      }
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      showErrorToast('Error', 'Terjadi kesalahan saat memuat data');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Extract users from SWR response
+  const users = usersResponse?.success ? usersResponse.data : [];
 
-  // Fetch users on mount
-  useEffect(() => {
-    fetchUsers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Function to refetch data (for backwards compatibility)
+  const fetchUsers = useCallback(async () => {
+    await mutateUsers();
+  }, [mutateUsers]);
+
+  // Show skeleton loader during initial load
+  if (isLoading) {
+    return <UsersPageSkeleton />;
+  }
+
+  // Show error state if fetch failed
+  if (usersError) {
+    return (
+      <div className="flex min-h-[calc(100vh-200px)] items-center justify-center p-6">
+        <div className="w-full max-w-md rounded-2xl border-2 border-red-200 bg-white p-8 text-center shadow-sm dark:border-red-800 dark:bg-gray-900">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
+            <svg className="h-8 w-8 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h2 className="mb-2 text-xl font-bold text-gray-900 dark:text-white">
+            Error Loading Users
+          </h2>
+          <p className="mb-6 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
+            {usersError?.message || 'Failed to load users'}
+          </p>
+          <button
+            onClick={() => fetchUsers()}
+            className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   /**
    * Handle successful user creation
@@ -174,9 +195,21 @@ export default function UsersPage() {
   const endIndex = startIndex + itemsPerPage;
   const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
 
+  // Refs to track previous filter values for page reset
+  const prevFiltersRef = useRef({ searchQuery, roleFilter, statusFilter });
+
   // Reset to page 1 when filters change
   useEffect(() => {
-    setCurrentPage(1);
+    const prev = prevFiltersRef.current;
+    const filtersChanged = 
+      prev.searchQuery !== searchQuery ||
+      prev.roleFilter !== roleFilter ||
+      prev.statusFilter !== statusFilter;
+
+    if (filtersChanged) {
+      setCurrentPage(1);
+      prevFiltersRef.current = { searchQuery, roleFilter, statusFilter };
+    }
   }, [searchQuery, roleFilter, statusFilter]);
 
   /**

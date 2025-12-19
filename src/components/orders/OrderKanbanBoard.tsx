@@ -2,12 +2,12 @@
  * OrderKanbanBoard Component
  * 
  * Main Kanban board with drag & drop functionality
- * Real-time order updates and auto-refresh
+ * Real-time order updates using SWR for caching & auto-refresh
  */
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -20,6 +20,7 @@ import {
   DragOverEvent,
 } from '@dnd-kit/core';
 import { FaBan } from 'react-icons/fa';
+import useSWR from 'swr';
 import { OrderColumn } from './OrderColumn';
 import { OrderCard } from './OrderCard';
 import type { OrderListItem } from '@/lib/types/order';
@@ -75,10 +76,7 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
   
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
-  const [orders, setOrders] = useState<OrderListItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [previousOrderCount, setPreviousOrderCount] = useState(0);
+  const previousOrderCountRef = useRef(0);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -88,59 +86,58 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
     })
   );
 
-  // Fetch orders
-  const fetchOrders = useCallback(async () => {
-    try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) {
-        setError('Authentication required');
-        return;
-      }
-
-      const response = await fetch('/api/merchant/orders/active', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch orders');
-      }
-
-      const data = await response.json();
-      if (data.success) {
-        const newOrders = data.data;
-        
-        // Detect new orders and play sound
-        if (previousOrderCount > 0 && newOrders.length > previousOrderCount) {
-          const newOrdersCount = newOrders.length - previousOrderCount;
-          console.log(`[OrderKanbanBoard] Detected ${newOrdersCount} new order(s)`);
-          playNotificationSound('newOrder');
-        }
-        
-        // Only update if data actually changed (prevent unnecessary re-renders)
-        setOrders(prevOrders => {
-          const hasChanged = JSON.stringify(prevOrders) !== JSON.stringify(newOrders);
-          return hasChanged ? newOrders : prevOrders;
-        });
-        
-        setPreviousOrderCount(newOrders.length);
-        setError(null);
-      } else {
-        throw new Error(data.error || 'Failed to fetch orders');
-      }
-    } catch (err) {
-      console.error('Error fetching orders:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch orders');
-    } finally {
-      setLoading(false);
+  // SWR fetcher with auth
+  const fetcher = async (url: string) => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      throw new Error('Authentication required');
     }
-  }, [previousOrderCount]);
 
-  // Initial fetch
-  useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
+    const res = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!res.ok) {
+      throw new Error('Failed to fetch orders');
+    }
+
+    return res.json();
+  };
+
+  // Use SWR for automatic caching, revalidation, and polling
+  const { data, error, isLoading, mutate } = useSWR(
+    '/api/merchant/orders/active',
+    fetcher,
+    {
+      refreshInterval: autoRefresh ? refreshInterval : 0,
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      dedupingInterval: 2000,
+      onSuccess: (data) => {
+        if (data.success) {
+          const newOrders = data.data;
+          // Detect new orders and play sound
+          if (previousOrderCountRef.current > 0 && newOrders.length > previousOrderCountRef.current) {
+            const newOrdersCount = newOrders.length - previousOrderCountRef.current;
+            console.log(`[OrderKanbanBoard] Detected ${newOrdersCount} new order(s)`);
+            playNotificationSound('newOrder');
+          }
+          previousOrderCountRef.current = newOrders.length;
+        }
+      },
+    }
+  );
+
+  // Extract orders from SWR data
+  const orders: OrderListItem[] = data?.success ? data.data : [];
+  const loading = isLoading;
+
+  // Fetch function for backwards compatibility
+  const fetchOrders = useCallback(async () => {
+    await mutate();
+  }, [mutate]);
 
   // Expose refresh function to parent
   useEffect(() => {
@@ -148,14 +145,6 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
       onRefreshReady(fetchOrders);
     }
   }, [onRefreshReady, fetchOrders]);
-
-  // Auto-refresh
-  useEffect(() => {
-    if (!autoRefresh) return;
-
-    const interval = setInterval(fetchOrders, refreshInterval);
-    return () => clearInterval(interval);
-  }, [autoRefresh, refreshInterval, fetchOrders]);
 
   // Apply filters
   const filteredOrders = orders.filter(order => {

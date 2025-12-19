@@ -138,7 +138,7 @@ export default function InlineEditField({
             placeholder={placeholder}
             rows={3}
             disabled={isSaving}
-            className={`w-full rounded-lg border border-brand-300 bg-white px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-50 dark:border-brand-600 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 ${editClassName}`}
+            className={`w-full rounded-lg border border-brand-300 bg-white px-3 py-2 text-left text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-50 dark:border-brand-600 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 ${editClassName}`}
           />
         ) : (
           <input
@@ -154,7 +154,7 @@ export default function InlineEditField({
             max={max}
             step={step}
             disabled={isSaving}
-            className={`w-full rounded-lg border border-brand-300 bg-white px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-50 dark:border-brand-600 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 ${editClassName}`}
+            className={`w-full rounded-lg border border-brand-300 bg-white px-3 py-2 text-left text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-50 dark:border-brand-600 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 ${editClassName}`}
           />
         )}
 

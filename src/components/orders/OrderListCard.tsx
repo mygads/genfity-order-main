@@ -3,8 +3,7 @@
  * 
  * Compact horizontal list view for orders
  * Used in Kanban+List and Tab+List modes
- * Professional UI with minimal height
- * Supports drag & drop and quick actions
+ * Professional UI - Responsive, no overflow
  */
 
 'use client';
@@ -42,21 +41,18 @@ export const OrderListCard: React.FC<OrderListCardProps> = ({
   className = '',
 }) => {
   const statusConfig = ORDER_STATUS_COLORS[order.status as keyof typeof ORDER_STATUS_COLORS];
-  const paymentConfig = order.payment 
+  const paymentConfig = order.payment
     ? PAYMENT_STATUS_COLORS[order.payment.status as keyof typeof PAYMENT_STATUS_COLORS]
     : PAYMENT_STATUS_COLORS.PENDING;
-  
+
   const itemCount = order._count?.orderItems || 0;
 
   const formatCurrency = (amount: number | string) => {
     const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-    const locale = currency === 'AUD' ? 'en-AU' : 
-                   currency === 'USD' ? 'en-US' : 
-                   currency === 'IDR' ? 'id-ID' : 'en-AU';
-    return new Intl.NumberFormat(locale, {
-      style: 'currency',
-      currency: currency,
-    }).format(numAmount);
+    if (currency === 'IDR') {
+      return `Rp ${numAmount.toLocaleString('id-ID')}`;
+    }
+    return `$${numAmount.toFixed(2)}`;
   };
 
   const timeAgo = formatDistanceToNow(new Date(order.placedAt), { addSuffix: true });
@@ -81,11 +77,11 @@ export const OrderListCard: React.FC<OrderListCardProps> = ({
       case 'PENDING':
         return { label: 'Accept', status: 'ACCEPTED' as OrderStatus, color: 'bg-blue-500 hover:bg-blue-600' };
       case 'ACCEPTED':
-        return { label: 'Start Cooking', status: 'IN_PROGRESS' as OrderStatus, color: 'bg-orange-500 hover:bg-orange-600' };
+        return { label: 'Start', status: 'IN_PROGRESS' as OrderStatus, color: 'bg-orange-500 hover:bg-orange-600' };
       case 'IN_PROGRESS':
-        return { label: 'Mark Ready', status: 'READY' as OrderStatus, color: 'bg-purple-500 hover:bg-purple-600' };
+        return { label: 'Ready', status: 'READY' as OrderStatus, color: 'bg-purple-500 hover:bg-purple-600' };
       case 'READY':
-        return { label: 'Complete', status: 'COMPLETED' as OrderStatus, color: 'bg-success-500 hover:bg-success-600' };
+        return { label: 'Done', status: 'COMPLETED' as OrderStatus, color: 'bg-success-500 hover:bg-success-600' };
       default:
         return null;
     }
@@ -97,118 +93,110 @@ export const OrderListCard: React.FC<OrderListCardProps> = ({
     <div
       onClick={onClick}
       className={`
-        flex items-center gap-4 px-4 py-3
         rounded-lg border border-gray-200 dark:border-gray-800 
-        bg-white dark:bg-white/3 
-        hover:shadow-md hover:border-brand-200 dark:hover:border-brand-800
-        transition-all duration-200
+        bg-white dark:bg-gray-900
+        hover:shadow-md hover:border-gray-300 dark:hover:border-gray-700
+        transition-all duration-200 overflow-hidden
         ${onClick ? 'cursor-pointer' : ''}
         ${draggable ? 'cursor-move touch-none' : ''}
-        ${isSelected ? 'ring-2 ring-brand-500 ring-offset-2 dark:ring-offset-gray-950' : ''}
+        ${isSelected ? 'ring-2 ring-brand-500 ring-offset-1 dark:ring-offset-gray-950' : ''}
         ${className}
       `}
     >
-      {/* Bulk Selection Checkbox */}
-      {bulkMode && (
-        <button
-          onClick={handleCheckboxClick}
-          className="shrink-0 text-gray-400 hover:text-brand-500 transition-colors"
-        >
-          {isSelected ? (
-            <FaCheckSquare className="h-5 w-5 text-brand-500" />
-          ) : (
-            <FaSquare className="h-5 w-5" />
+      {/* Compact Layout */}
+      <div className="p-3">
+        {/* Top Row: Order Number, Type, Customer */}
+        <div className="flex items-center gap-2 mb-2">
+          {/* Bulk Selection */}
+          {bulkMode && (
+            <button
+              onClick={handleCheckboxClick}
+              className="shrink-0 text-gray-400 hover:text-brand-500"
+            >
+              {isSelected ? (
+                <FaCheckSquare className="h-4 w-4 text-brand-500" />
+              ) : (
+                <FaSquare className="h-4 w-4" />
+              )}
+            </button>
           )}
-        </button>
-      )}
 
-      {/* Order Number & Time */}
-      <div className="flex flex-col min-w-[140px] shrink-0">
-        <h4 className="text-sm font-bold text-gray-800 dark:text-white/90">
-          #{order.orderNumber}
-        </h4>
-        <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-          <FaClock className="h-3 w-3" />
-          <span>{timeAgo}</span>
-        </div>
-      </div>
+          {/* Order Number with Status Color */}
+          <div className={`shrink-0 px-2 py-1 rounded text-xs font-bold ${statusConfig.bg} ${statusConfig.text}`}>
+            #{order.orderNumber}
+          </div>
 
-      {/* Order Type Icon */}
-      <div className="shrink-0">
-        {order.orderType === 'DINE_IN' ? (
-          <FaUtensils className="h-4 w-4 text-brand-500" title="Dine In" />
-        ) : (
-          <FaShoppingBag className="h-4 w-4 text-success-500" title="Takeaway" />
-        )}
-      </div>
-
-      {/* Customer Info */}
-      <div className="flex items-center gap-2 min-w-[180px] flex-1">
-        <FaUser className="h-3.5 w-3.5 text-gray-400 shrink-0" />
-        <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
-          {order.customer?.name || 'Guest'}
-        </span>
-      </div>
-
-      {/* Items Count */}
-      <div className="text-xs text-gray-500 dark:text-gray-400 min-w-20 text-center shrink-0">
-        {itemCount} item{itemCount !== 1 ? 's' : ''}
-      </div>
-
-      {/* Total Amount */}
-      <div className="text-sm font-bold text-gray-800 dark:text-white/90 min-w-[100px] text-right shrink-0">
-        {formatCurrency(Number(order.totalAmount))}
-      </div>
-
-      {/* Status Badge */}
-      <div className="shrink-0">
-        <span
-          className={`
-            inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap
-            ${statusConfig.bg} ${statusConfig.text}
-          `}
-        >
-          {statusConfig.label}
-        </span>
-      </div>
-
-      {/* Payment Status Badge */}
-      <div className="shrink-0">
-        <span
-          className={`
-            inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap
-            ${paymentConfig.bg} ${paymentConfig.text}
-          `}
-        >
-          {paymentConfig.label}
-        </span>
-      </div>
-
-      {/* Quick Action Button */}
-      {showQuickActions && nextAction && !bulkMode && (
-        <div className="shrink-0">
-          <button
-            onClick={(e) => handleStatusChange(e, nextAction.status)}
-            className={`
-              flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold text-white
-              transition-all duration-200 shadow-sm hover:shadow-md
-              ${nextAction.color}
-            `}
-          >
-            {order.status === 'READY' ? (
-              <>
-                <FaCheck className="h-3.5 w-3.5" />
-                <span>{nextAction.label}</span>
-              </>
+          {/* Order Type */}
+          <div className="shrink-0">
+            {order.orderType === 'DINE_IN' ? (
+              <div className="flex items-center gap-1 px-2 py-1 rounded bg-brand-50 dark:bg-brand-900/30">
+                <FaUtensils className="h-3 w-3 text-brand-600 dark:text-brand-400" />
+                {order.tableNumber && (
+                  <span className="text-xs font-semibold text-brand-700 dark:text-brand-300">T{order.tableNumber}</span>
+                )}
+              </div>
             ) : (
-              <>
-                <span>{nextAction.label}</span>
-                <FaArrowRight className="h-3.5 w-3.5" />
-              </>
+              <div className="flex items-center gap-1 px-2 py-1 rounded bg-success-50 dark:bg-success-900/30">
+                <FaShoppingBag className="h-3 w-3 text-success-600 dark:text-success-400" />
+              </div>
             )}
-          </button>
+          </div>
+
+          {/* Customer Name */}
+          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+            <FaUser className="h-3 w-3 text-gray-400 shrink-0" />
+            <span className="text-sm font-medium text-gray-800 dark:text-white truncate">
+              {order.customer?.name || 'Guest'}
+            </span>
+          </div>
         </div>
-      )}
+
+        {/* Bottom Row: Time, Items, Price, Payment, Action */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Time */}
+          <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+            <FaClock className="h-3 w-3" />
+            <span className="whitespace-nowrap">{timeAgo}</span>
+          </div>
+
+          {/* Items Count */}
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            • {itemCount} item{itemCount !== 1 ? 's' : ''}
+          </span>
+
+          {/* Flex spacer */}
+          <div className="flex-1" />
+
+          {/* Price */}
+          <span className="text-sm font-bold text-gray-800 dark:text-white shrink-0">
+            {formatCurrency(Number(order.totalAmount))}
+          </span>
+
+          {/* Payment Status */}
+          <span className={`shrink-0 px-2 py-0.5 rounded text-xs font-semibold ${paymentConfig.bg} ${paymentConfig.text}`}>
+            {paymentConfig.label}
+          </span>
+
+          {/* Quick Action Button */}
+          {showQuickActions && nextAction && !bulkMode && (
+            <button
+              onClick={(e) => handleStatusChange(e, nextAction.status)}
+              className={`
+                shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white
+                transition-all ${nextAction.color}
+              `}
+            >
+              {order.status === 'READY' ? (
+                <FaCheck className="h-3 w-3" />
+              ) : null}
+              <span>{nextAction.label}</span>
+              {order.status !== 'READY' && (
+                <FaArrowRight className="h-3 w-3" />
+              )}
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

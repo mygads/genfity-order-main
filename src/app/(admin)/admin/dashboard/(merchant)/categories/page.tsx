@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import Image from "next/image";
@@ -8,6 +8,8 @@ import CategoryDnDList from "@/components/ui/CategoryDnDList";
 import EmptyState from "@/components/ui/EmptyState";
 import { HelpTooltip } from "@/components/ui/Tooltip";
 import { exportCategories } from "@/lib/utils/excelExport";
+import { useSWRStatic } from "@/hooks/useSWRWithAuth";
+import { CategoriesPageSkeleton } from "@/components/common/SkeletonLoaders";
 
 interface Category {
   id: string;
@@ -37,14 +39,18 @@ interface CategoryFormData {
   sortOrder: number;
 }
 
+// Response type for SWR
+interface CategoriesApiResponse {
+  success: boolean;
+  data: Category[];
+}
+
 export default function MerchantCategoriesPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   
-  const [categories, setCategories] = useState<Category[]>([]);
   const [filteredCategories, setFilteredCategories] = useState<Category[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -73,44 +79,117 @@ export default function MerchantCategoriesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
-  const fetchCategories = async () => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem("accessToken");
-      if (!token) {
-        router.push("/admin/login");
-        return;
-      }
+  // SWR hook for data fetching with caching
+  const { 
+    data: categoriesResponse, 
+    error: categoriesError, 
+    isLoading,
+    mutate: mutateCategories 
+  } = useSWRStatic<CategoriesApiResponse>('/api/merchant/categories');
 
-      const response = await fetch("/api/merchant/categories", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+  // Extract data from SWR response
+  const categories = categoriesResponse?.success ? categoriesResponse.data : [];
+  const loading = isLoading;
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch categories");
-      }
+  // Function to refetch data (for backwards compatibility)
+  const fetchCategories = useCallback(async () => {
+    await mutateCategories();
+  }, [mutateCategories]);
 
-      const data = await response.json();
-      
-      // Handle response format: { success: true, data: [...] }
-      if (data.success && Array.isArray(data.data)) {
-        setCategories(data.data);
-      } else {
-        setCategories([]);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Refs to track previous filter values for page reset
+  const prevFiltersRef = useRef({ searchQuery, filterStatus, sortBy });
 
+  // Filter and search logic - MUST be before any conditional returns
   useEffect(() => {
-    fetchCategories();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    let filtered = [...categories];
+
+    // Search filter
+    if (searchQuery) {
+      filtered = filtered.filter(cat =>
+        cat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (cat.description && cat.description.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+    }
+
+    // Status filter
+    if (filterStatus !== "all") {
+      filtered = filtered.filter(cat =>
+        filterStatus === "active" ? cat.isActive : !cat.isActive
+      );
+    }
+
+    // Sorting
+    switch (sortBy) {
+      case "manual":
+        filtered.sort((a, b) => a.displayOrder - b.displayOrder);
+        break;
+      case "name-asc":
+        filtered.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case "name-desc":
+        filtered.sort((a, b) => b.name.localeCompare(a.name));
+        break;
+      case "menu-count":
+        filtered.sort((a, b) => (b._count?.menuItems || 0) - (a._count?.menuItems || 0));
+        break;
+      default:
+        break;
+    }
+
+    setFilteredCategories(filtered);
+
+    // Only reset page when filters actually change, not when categories data updates
+    const prev = prevFiltersRef.current;
+    const filtersChanged = 
+      prev.searchQuery !== searchQuery ||
+      prev.filterStatus !== filterStatus ||
+      prev.sortBy !== sortBy;
+
+    if (filtersChanged) {
+      setCurrentPage(1);
+      prevFiltersRef.current = { searchQuery, filterStatus, sortBy };
+    }
+  }, [categories, searchQuery, filterStatus, sortBy]);
+
+  // Pagination logic
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredCategories.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredCategories.length / itemsPerPage);
+
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
+
+  // Show skeleton loader during initial load
+  if (loading) {
+    return <CategoriesPageSkeleton />;
+  }
+
+  // Show error state if fetch failed
+  if (categoriesError) {
+    return (
+      <div className="flex min-h-[calc(100vh-200px)] items-center justify-center p-6">
+        <div className="w-full max-w-md rounded-2xl border-2 border-red-200 bg-white p-8 text-center shadow-sm dark:border-red-800 dark:bg-gray-900">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
+            <svg className="h-8 w-8 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h2 className="mb-2 text-xl font-bold text-gray-900 dark:text-white">
+            Error Loading Categories
+          </h2>
+          <p className="mb-6 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
+            {categoriesError?.message || 'Failed to load categories'}
+          </p>
+          <button
+            onClick={() => fetchCategories()}
+            className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
@@ -523,67 +602,6 @@ export default function MerchantCategoriesPage() {
     }
   };
 
-  // Filter and search logic
-  useEffect(() => {
-    let filtered = [...categories];
-
-    // Search filter
-    if (searchQuery) {
-      filtered = filtered.filter(cat =>
-        cat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (cat.description && cat.description.toLowerCase().includes(searchQuery.toLowerCase()))
-      );
-    }
-
-    // Status filter
-    if (filterStatus !== "all") {
-      filtered = filtered.filter(cat =>
-        filterStatus === "active" ? cat.isActive : !cat.isActive
-      );
-    }
-
-    // Sorting
-    switch (sortBy) {
-      case "manual":
-        filtered.sort((a, b) => a.displayOrder - b.displayOrder);
-        break;
-      case "name-asc":
-        filtered.sort((a, b) => a.name.localeCompare(b.name));
-        break;
-      case "name-desc":
-        filtered.sort((a, b) => b.name.localeCompare(a.name));
-        break;
-      case "menu-count":
-        filtered.sort((a, b) => (b._count?.menuItems || 0) - (a._count?.menuItems || 0));
-        break;
-      default:
-        break;
-    }
-
-    setFilteredCategories(filtered);
-    setCurrentPage(1); // Reset to first page when filters change
-  }, [categories, searchQuery, filterStatus, sortBy]);
-
-  // Pagination logic
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredCategories.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredCategories.length / itemsPerPage);
-
-  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
-
-  if (loading) {
-    return (
-      <div>
-        <PageBreadcrumb pageTitle="Categories\" />
-        <div className="mt-6 py-10 text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-brand-500 border-r-transparent"></div>
-          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Loading categories...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div>
       <PageBreadcrumb pageTitle="Categories\" />
@@ -629,7 +647,7 @@ export default function MerchantCategoriesPage() {
                   value={formData.name}
                   onChange={handleChange}
                   required
-                  className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                  className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
                 />
               </div>
 
@@ -642,7 +660,7 @@ export default function MerchantCategoriesPage() {
                   value={formData.description}
                   onChange={handleChange}
                   rows={3}
-                  className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                  className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
                 />
               </div>
 
@@ -658,7 +676,7 @@ export default function MerchantCategoriesPage() {
                   required
                   min="0"
                   placeholder="0"
-                  className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                  className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
                 />
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                   Lower numbers appear first in customer menu (0 = first)
@@ -676,7 +694,7 @@ export default function MerchantCategoriesPage() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="flex-1 h-11 rounded-lg bg-brand-500 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex-1 h-11 rounded-lg bg-primary-500 text-sm font-medium text-white hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {submitting ? "Saving..." : editingId ? "Update Category" : "Create Category"}
                 </button>
@@ -750,7 +768,7 @@ export default function MerchantCategoriesPage() {
               </button>
               <button
                 onClick={() => setShowForm(true)}
-                className="inline-flex h-11 items-center gap-2 rounded-lg bg-brand-500 px-6 text-sm font-medium text-white hover:bg-brand-600 focus:outline-none focus:ring-3 focus:ring-brand-500/20"
+                className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary-500 px-6 text-sm font-medium text-white hover:bg-primary-600 focus:outline-none focus:ring-3 focus:ring-primary-500/20"
               >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -768,7 +786,7 @@ export default function MerchantCategoriesPage() {
                 placeholder="Search categories..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
               />
             </div>
             <div className="flex items-center gap-2">
@@ -777,7 +795,7 @@ export default function MerchantCategoriesPage() {
                   type="checkbox"
                   checked={useDragDrop}
                   onChange={(e) => setUseDragDrop(e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                  className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                 />
                 Drag & Drop
               </label>
@@ -787,7 +805,7 @@ export default function MerchantCategoriesPage() {
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
+                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
               >
                 <option value="all">All Status</option>
                 <option value="active">Active</option>
@@ -799,7 +817,7 @@ export default function MerchantCategoriesPage() {
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
+                  className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
                 >
                   <option value="manual">Manual Order</option>
                   <option value="name-asc">Name (A-Z)</option>
@@ -877,7 +895,7 @@ export default function MerchantCategoriesPage() {
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => handleManageMenus(category)}
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-brand-200 bg-brand-50 text-brand-600 hover:bg-brand-100 dark:border-brand-900/50 dark:bg-brand-900/20 dark:text-brand-400 dark:hover:bg-brand-900/30"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-brand-200 bg-brand-50 text-primary-600 hover:bg-brand-100 dark:border-brand-900/50 dark:bg-brand-900/20 dark:text-brand-400 dark:hover:bg-brand-900/30"
                             title="Manage Menus"
                           >
                             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -931,7 +949,7 @@ export default function MerchantCategoriesPage() {
                         onClick={() => paginate(page)}
                         className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border text-sm font-medium ${
                           currentPage === page
-                            ? 'border-brand-500 bg-brand-500 text-white'
+                            ? 'border-primary-500 bg-primary-500 text-white'
                             : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
                         }`}
                       >
@@ -1021,7 +1039,7 @@ export default function MerchantCategoriesPage() {
                           </div>
                           <button
                             onClick={() => handleAddMenuToCategory(menu.id)}
-                            className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-brand-500 text-white hover:bg-brand-600"
+                            className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-primary-500 text-white hover:bg-primary-600"
                             title="Add to category"
                           >
                             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1105,7 +1123,7 @@ export default function MerchantCategoriesPage() {
               <div className="mt-6 flex justify-end">
                 <button
                   onClick={() => setSelectedCategory(null)}
-                  className="h-11 rounded-lg bg-brand-500 px-6 text-sm font-medium text-white hover:bg-brand-600"
+                  className="h-11 rounded-lg bg-primary-500 px-6 text-sm font-medium text-white hover:bg-primary-600"
                 >
                   Done
                 </button>

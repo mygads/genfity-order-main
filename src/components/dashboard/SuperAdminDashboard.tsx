@@ -264,7 +264,7 @@ export default function SuperAdminDashboard({
                 </div>
                 <div className="text-right">
                   <p className="font-medium text-gray-900 dark:text-white">
-                    {formatCurrency(order.totalAmount.toNumber())}
+                    {formatCurrency(typeof order.totalAmount === 'number' ? order.totalAmount : Number(order.totalAmount))}
                   </p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     {order.status}

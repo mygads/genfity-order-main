@@ -6,14 +6,20 @@ import AppSidebar from "@/layout/AppSidebar";
 import Backdrop from "@/layout/Backdrop";
 import SessionGuard from "@/components/auth/SessionGuard";
 import { useSessionSync } from "@/hooks/useSessionSync";
+import SWRProvider from "@/lib/providers/SWRProvider";
 import React from "react";
 
 /**
  * Admin Dashboard Layout
  * 
  * @description
- * Layout wrapper for all admin dashboard pages using template design system.
- * Includes responsive sidebar, header, and backdrop components.
+ * Layout wrapper for all admin dashboard pages with SWR provider
+ * 
+ * Features:
+ * - SWR for data caching and real-time updates
+ * - Responsive sidebar with expand/collapse
+ * - Auto session sync
+ * - Page transitions ready
  * 
  * @specification
  * - Uses AppSidebar from template with expand/collapse functionality
@@ -40,26 +46,28 @@ export default function AdminDashboardLayout({
     : "lg:ml-[90px]";
 
   return (
-    <div className="min-h-screen xl:flex">
-      {/* Session Guard - Auto logout on token expiry */}
-      <SessionGuard />
-      
-      {/* Sidebar and Backdrop */}
-      <AppSidebar />
-      <Backdrop />
-      
-      {/* Main Content Area */}
-      <div
-        className={`flex-1 transition-all duration-300 ease-in-out ${mainContentMargin}`}
-      >
-        {/* Header */}
-        <AppHeader />
+    <SWRProvider>
+      <div className="min-h-screen xl:flex">
+        {/* Session Guard - Auto logout on token expiry */}
+        <SessionGuard />
         
-        {/* Page Content */}
-        <div className="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6">
-          {children}
+        {/* Sidebar and Backdrop */}
+        <AppSidebar />
+        <Backdrop />
+        
+        {/* Main Content Area */}
+        <div
+          className={`flex-1 transition-all duration-300 ease-in-out ${mainContentMargin}`}
+        >
+          {/* Header */}
+          <AppHeader />
+          
+          {/* Page Content */}
+          <div className="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6">
+            {children}
+          </div>
         </div>
       </div>
-    </div>
+    </SWRProvider>
   );
 }

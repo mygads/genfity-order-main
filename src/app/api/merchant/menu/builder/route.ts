@@ -29,6 +29,11 @@ const menuBuilderSchema = z.object({
   stockQty: z.number().int().min(0).optional().nullable(),
   dailyStockTemplate: z.number().int().min(0).optional().nullable(),
   autoResetStock: z.boolean().optional().default(false),
+  // Menu attributes
+  isSpicy: z.boolean().optional().default(false),
+  isBestSeller: z.boolean().optional().default(false),
+  isSignature: z.boolean().optional().default(false),
+  isRecommended: z.boolean().optional().default(false),
   categoryIds: z.array(z.number().int().positive()).optional().default([]),
   addonCategoryIds: z.array(z.number().int().positive()).optional().default([]),
 });

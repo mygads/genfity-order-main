@@ -13,11 +13,11 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { FaSync, FaExpand, FaCompress, FaEye, FaClock, FaFire, FaPlay, FaCheck } from 'react-icons/fa';
+import { FaSync, FaExpand, FaCompress, FaEye, FaClock, FaFire, FaPlay, FaCheck, FaShoppingBag } from 'react-icons/fa';
 import { OrderDetailModal } from '@/components/orders/OrderDetailModal';
 import { OrderTimer } from '@/components/orders/OrderTimer';
+import { KitchenDisplaySkeleton } from '@/components/common/SkeletonLoaders';
 import type { OrderWithDetails } from '@/lib/types/order';
-import { ORDER_STATUS_COLORS } from '@/lib/constants/orderConstants';
 import { OrderStatus } from '@prisma/client';
 import { playNotificationSound } from '@/lib/utils/soundNotification';
 
@@ -25,18 +25,41 @@ const KITCHEN_STATUSES: OrderStatus[] = ['ACCEPTED', 'IN_PROGRESS'];
 
 export default function KitchenDisplayPage() {
   const router = useRouter();
-  
+
   const [orders, setOrders] = useState<OrderWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [displayMode, setDisplayMode] = useState<'normal' | 'clean' | 'fullscreen'>('normal');
-  const [previousOrderIds, setPreviousOrderIds] = useState<Set<string>>(new Set());
   const [merchantCurrency, setMerchantCurrency] = useState('AUD');
-  
+
+  // Use ref to track previous order IDs without triggering re-renders
+  const previousOrderIdsRef = React.useRef<Set<string>>(new Set());
+
   // Modal state
   const [selectedOrder, setSelectedOrder] = useState<OrderWithDetails | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Fetch merchant profile once on mount
+  useEffect(() => {
+    const fetchMerchant = async () => {
+      try {
+        const token = localStorage.getItem('accessToken');
+        if (!token) return;
+
+        const response = await fetch('/api/merchant/profile', {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        const data = await response.json();
+        if (data.success && data.data?.currency) {
+          setMerchantCurrency(data.data.currency);
+        }
+      } catch (err) {
+        console.error('Error fetching merchant:', err);
+      }
+    };
+    fetchMerchant();
+  }, []);
 
   // Fetch kitchen orders
   const fetchOrders = useCallback(async () => {
@@ -48,40 +71,30 @@ export default function KitchenDisplayPage() {
       }
 
       const statusFilter = KITCHEN_STATUSES.join(',');
-      const [ordersResponse, merchantResponse] = await Promise.all([
-        fetch(`/api/merchant/orders?status=${statusFilter}&limit=50`, {
-          headers: { 'Authorization': `Bearer ${token}` },
-        }),
-        fetch('/api/merchant/profile', {
-          headers: { 'Authorization': `Bearer ${token}` },
-        }),
-      ]);
+      const response = await fetch(`/api/merchant/orders?status=${statusFilter}&limit=50&includeItems=true`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
 
-      const ordersData = await ordersResponse.json();
-      const merchantData = await merchantResponse.json();
-
-      if (merchantData.success && merchantData.data?.currency) {
-        setMerchantCurrency(merchantData.data.currency);
-      }
+      const ordersData = await response.json();
 
       if (ordersData.success) {
         const allOrders = ordersData.data as OrderWithDetails[];
-        
+
         // Sort by placedAt (oldest first)
-        const sortedOrders = allOrders.sort((a, b) => 
+        const sortedOrders = allOrders.sort((a, b) =>
           new Date(a.placedAt).getTime() - new Date(b.placedAt).getTime()
         );
 
         // Detect new orders and play sound
         const currentOrderIds = new Set(sortedOrders.map((o) => String(o.id)));
-        const newOrders = sortedOrders.filter((o) => !previousOrderIds.has(String(o.id)));
-        
-        if (newOrders.length > 0 && previousOrderIds.size > 0) {
+        const newOrders = sortedOrders.filter((o) => !previousOrderIdsRef.current.has(String(o.id)));
+
+        if (newOrders.length > 0 && previousOrderIdsRef.current.size > 0) {
           playNotificationSound('newOrder');
         }
 
         setOrders(sortedOrders);
-        setPreviousOrderIds(currentOrderIds);
+        previousOrderIdsRef.current = currentOrderIds;
         setError(null);
       } else {
         throw new Error(ordersData.error || 'Failed to fetch kitchen orders');
@@ -92,12 +105,12 @@ export default function KitchenDisplayPage() {
     } finally {
       setLoading(false);
     }
-  }, [router, previousOrderIds]);
+  }, [router]);
 
   // Initial fetch
   useEffect(() => {
     fetchOrders();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Auto-refresh
@@ -211,67 +224,55 @@ export default function KitchenDisplayPage() {
   const inProgressOrders = orders.filter(o => o.status === 'IN_PROGRESS');
 
   if (loading && orders.length === 0) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="flex items-center gap-3 text-gray-500 dark:text-gray-400">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary-500 border-t-transparent"></div>
-          <span className="text-sm font-medium">Loading kitchen orders...</span>
-        </div>
-      </div>
-    );
+    return <KitchenDisplaySkeleton />;
   }
 
   return (
-    <div className={`${displayMode !== 'normal' ? 'fixed inset-0 z-50 overflow-auto bg-white dark:bg-gray-950' : ''}`}>
-      {/* Header - Always Sticky */}
-      <div className={`sticky top-0 z-40 bg-white/95 backdrop-blur-sm dark:bg-gray-950/95 border-b border-gray-200 dark:border-gray-800 ${displayMode !== 'normal' ? 'px-6 pt-6 pb-4' : 'pb-4 -mx-6 px-6 pt-0'}`}>
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800 dark:text-white/90">
-              Kitchen Display
+    <div className={`${displayMode !== 'normal' ? 'fixed inset-0 z-50 overflow-hidden bg-gray-50 dark:bg-gray-950 flex flex-col' : 'flex flex-col h-[calc(100vh-100px)]'}`}>
+      {/* Header - Clean Minimal Design */}
+      <div className={`sticky top-0 z-40 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 ${displayMode !== 'normal' ? 'px-6 py-4' : 'pb-4 -mx-6 px-6 pt-0'}`}>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+              Kitchen
             </h1>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Real-time order preparation view • Click cards for details
-            </p>
+
+            {/* Status Counts - Minimal */}
+            <div className="flex items-center gap-3 text-sm">
+              <span className="text-gray-500 dark:text-gray-400">
+                <span className="font-semibold text-gray-900 dark:text-white">{acceptedOrders.length}</span> pending
+              </span>
+              <span className="text-gray-300 dark:text-gray-600">•</span>
+              <span className="text-gray-500 dark:text-gray-400">
+                <span className="font-semibold text-gray-900 dark:text-white">{inProgressOrders.length}</span> cooking
+              </span>
+            </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Status Counts */}
-            <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 dark:border-gray-800 dark:bg-gray-900">
-              <FaClock className="h-4 w-4 text-warning-500" />
-              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                {acceptedOrders.length} Pending
-              </span>
-            </div>
-            <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 dark:border-gray-800 dark:bg-gray-900">
-              <FaFire className="h-4 w-4 text-blue-500" />
-              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                {inProgressOrders.length} Cooking
-              </span>
-            </div>
-
+          <div className="flex items-center gap-2">
             {/* Auto-refresh Toggle */}
             <button
               onClick={() => setAutoRefresh(!autoRefresh)}
-              className={`flex h-10 items-center gap-2 rounded-lg border px-4 text-sm font-medium transition-colors ${
-                autoRefresh
-                  ? 'border-primary-200 bg-primary-50 text-primary-700 dark:border-primary-800 dark:bg-primary-900/20 dark:text-primary-400'
-                  : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800'
-              }`}
+              className={`flex h-9 items-center gap-2 rounded-lg border px-3 text-sm font-medium transition-colors ${autoRefresh
+                ? 'border-gray-900 bg-gray-900 text-white dark:border-white dark:bg-white dark:text-gray-900'
+                : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                }`}
+              title={autoRefresh ? 'Auto-refresh on' : 'Auto-refresh off'}
             >
-              <FaSync className={autoRefresh ? 'animate-spin' : ''} />
+              <FaSync className={`h-3.5 w-3.5 ${autoRefresh ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">Auto</span>
             </button>
 
             {/* Manual Refresh */}
             <button
               onClick={fetchOrders}
-              className="flex h-10 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+              title="Refresh now"
             >
-              <FaSync />
+              <FaSync className="h-3.5 w-3.5" />
             </button>
 
-            {/* Progressive Display Mode */}
+            {/* Display Mode Toggle */}
             <button
               onClick={async () => {
                 if (displayMode === 'normal') {
@@ -294,101 +295,102 @@ export default function KitchenDisplayPage() {
                   }
                 }
               }}
-              className={`flex h-10 items-center gap-2 rounded-lg border px-4 text-sm font-medium transition-colors ${
-                displayMode !== 'normal'
-                  ? 'border-primary-200 bg-primary-50 text-primary-700 dark:border-primary-800 dark:bg-primary-900/20 dark:text-primary-400'
-                  : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800'
-              }`}
+              className={`flex h-9 w-9 items-center justify-center rounded-lg border transition-colors ${displayMode !== 'normal'
+                ? 'border-gray-900 bg-gray-900 text-white dark:border-white dark:bg-white dark:text-gray-900'
+                : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                }`}
               title={
-                displayMode === 'normal' ? 'Enter Clean Mode' :
-                displayMode === 'clean' ? 'Enter Full Screen' :
-                'Exit Full Screen'
+                displayMode === 'normal' ? 'Clean mode' :
+                  displayMode === 'clean' ? 'Fullscreen' :
+                    'Exit fullscreen'
               }
             >
-              {displayMode === 'normal' ? <FaEye /> :
-               displayMode === 'clean' ? <FaExpand /> :
-               <FaCompress />}
+              {displayMode === 'normal' ? <FaEye className="h-3.5 w-3.5" /> :
+                displayMode === 'clean' ? <FaExpand className="h-3.5 w-3.5" /> :
+                  <FaCompress className="h-3.5 w-3.5" />}
             </button>
           </div>
         </div>
       </div>
 
       {/* Content Area */}
-      <div className={`${displayMode !== 'normal' ? 'px-6 pb-6 pt-6' : 'pt-6'}`}>
+      <div className={`flex-1 overflow-hidden ${displayMode !== 'normal' ? 'px-6 py-6' : 'pt-6'}`}>
         {/* Error Message */}
         {error && (
-          <div className="mb-6 rounded-lg border border-error-200 bg-error-50 p-4 dark:border-error-800 dark:bg-error-900/20">
-            <p className="text-sm text-error-700 dark:text-error-400">{error}</p>
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
+            <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
           </div>
         )}
 
-        {/* Kitchen Grid - 2 columns Kanban style */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Accepted (Pending) Column */}
-          <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/3 min-h-[600px]">
-            <div className="mb-4 flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800">
-              <div className="flex items-center gap-2">
-                <h2 className="font-semibold text-sm text-warning-600 dark:text-warning-400">
-                  Pending
-                </h2>
+        {/* Kitchen Grid - 2 columns, full height */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
+          {/* Pending Column */}
+          <div className="rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 overflow-hidden flex flex-col">
+            <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 shrink-0">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FaClock className="h-4 w-4 text-amber-500" />
+                  <h2 className="font-semibold text-gray-900 dark:text-white">
+                    Pending
+                  </h2>
+                </div>
+                <span className="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full bg-amber-100 dark:bg-amber-900/30 text-xs font-semibold text-amber-700 dark:text-amber-300">
+                  {acceptedOrders.length}
+                </span>
               </div>
-              <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-warning-100 dark:bg-warning-900/30 px-2 text-xs font-semibold text-warning-700 dark:text-warning-300">
-                {acceptedOrders.length}
-              </span>
             </div>
-            <div className="space-y-3">
+            <div className="flex-1 p-4 space-y-4 overflow-y-auto">
               {acceptedOrders.map((order) => (
                 <KitchenCard
                   key={String(order.id)}
                   order={order}
                   onCardClick={handleCardClick}
                   onAction={(e) => handleMarkInProgress(String(order.id), e)}
-                  actionLabel="Start"
+                  actionLabel="Start Cooking"
                   actionIcon={<FaPlay className="h-3 w-3" />}
                   actionColor="primary"
                 />
               ))}
               {acceptedOrders.length === 0 && (
-                <div className="py-12 text-center">
-                  <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
-                    <FaClock className="h-6 w-6 text-warning-400" />
-                  </div>
-                  <p className="text-sm font-medium text-gray-400 dark:text-gray-500">No pending orders</p>
+                <div className="py-16 text-center">
+                  <FaClock className="mx-auto h-8 w-8 text-gray-300 dark:text-gray-600 mb-3" />
+                  <p className="text-sm text-gray-500 dark:text-gray-400">No pending orders</p>
                 </div>
               )}
             </div>
           </div>
 
-          {/* In Progress (Cooking) Column */}
-          <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/3 min-h-[600px]">
-            <div className="mb-4 flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800">
-              <div className="flex items-center gap-2">
-                <h2 className="font-semibold text-sm text-blue-600 dark:text-blue-400">
-                  Cooking
-                </h2>
+          {/* Cooking Column */}
+          <div className="rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 overflow-hidden flex flex-col">
+            <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 shrink-0">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FaFire className="h-4 w-4 text-orange-500" />
+                  <h2 className="font-semibold text-gray-900 dark:text-white">
+                    Cooking
+                  </h2>
+                </div>
+                <span className="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full bg-orange-100 dark:bg-orange-900/30 text-xs font-semibold text-orange-700 dark:text-orange-300">
+                  {inProgressOrders.length}
+                </span>
               </div>
-              <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30 px-2 text-xs font-semibold text-blue-700 dark:text-blue-300">
-                {inProgressOrders.length}
-              </span>
             </div>
-            <div className="space-y-3">
+            <div className="flex-1 p-4 space-y-4 overflow-y-auto">
               {inProgressOrders.map((order) => (
                 <KitchenCard
                   key={String(order.id)}
                   order={order}
                   onCardClick={handleCardClick}
                   onAction={(e) => handleMarkReady(String(order.id), e)}
-                  actionLabel="Ready"
+                  actionLabel="Mark Ready"
                   actionIcon={<FaCheck className="h-3 w-3" />}
                   actionColor="success"
                 />
               ))}
               {inProgressOrders.length === 0 && (
-                <div className="py-12 text-center">
-                  <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
-                    <FaFire className="h-6 w-6 text-blue-400" />
-                  </div>
-                  <p className="text-sm font-medium text-gray-400 dark:text-gray-500">No orders cooking</p>
+                <div className="py-16 text-center">
+                  <FaFire className="mx-auto h-8 w-8 text-gray-300 dark:text-gray-600 mb-3" />
+                  <p className="text-sm text-gray-500 dark:text-gray-400">No orders cooking</p>
                 </div>
               )}
             </div>
@@ -411,7 +413,12 @@ export default function KitchenDisplayPage() {
   );
 }
 
-// Compact Kitchen Card Component (inline)
+/**
+ * Kitchen Order Card - Full Details View
+ * 
+ * Shows complete order information inline so cooks can see everything
+ * without clicking. Clean, professional, minimal design.
+ */
 interface KitchenCardProps {
   order: OrderWithDetails;
   onCardClick: (order: OrderWithDetails) => void;
@@ -422,76 +429,127 @@ interface KitchenCardProps {
 }
 
 function KitchenCard({ order, onCardClick, onAction, actionLabel, actionIcon, actionColor }: KitchenCardProps) {
-  const statusConfig = ORDER_STATUS_COLORS[order.status as keyof typeof ORDER_STATUS_COLORS];
   const items = 'orderItems' in order ? order.orderItems : [];
+  const isUrgent = (() => {
+    const elapsed = Date.now() - new Date(order.placedAt).getTime();
+    return elapsed > 10 * 60 * 1000; // 10 minutes
+  })();
 
   return (
     <div
       onClick={() => onCardClick(order)}
-      className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/3 p-4 shadow-sm hover:shadow-md hover:border-gray-300 dark:hover:border-gray-700 transition-all duration-200 cursor-pointer"
+      className={`
+        rounded-lg border bg-white dark:bg-gray-900 
+        transition-all duration-200 cursor-pointer overflow-hidden
+        hover:shadow-md
+        ${isUrgent
+          ? 'border-amber-300 dark:border-amber-700'
+          : 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700'
+        }
+      `}
     >
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+      {/* Compact Header */}
+      <div className={`
+        px-4 py-3 border-b
+        ${isUrgent
+          ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
+          : 'bg-gray-50 dark:bg-gray-800/50 border-gray-100 dark:border-gray-800'
+        }
+      `}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-lg font-bold text-gray-900 dark:text-white">
               #{order.orderNumber}
-            </h3>
-            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${statusConfig.bg} ${statusConfig.text}`}>
-              {statusConfig.label}
             </span>
-          </div>
-          {order.tableNumber && (
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-              Table {order.tableNumber}
-            </p>
-          )}
-        </div>
-        <OrderTimer startTime={order.placedAt} className="text-xs px-2 py-1" />
-      </div>
-
-      {/* Items Preview */}
-      <div className="mb-3 space-y-1.5">
-        {items.slice(0, 3).map((item, idx) => (
-          <div key={idx} className="flex items-center justify-between text-sm">
-            <span className="text-gray-700 dark:text-gray-300 truncate">
-              {item.quantity}x {item.menuName}
-            </span>
-            {item.addons && item.addons.length > 0 && (
-              <span className="text-xs text-gray-400 dark:text-gray-500 ml-2">
-                +{item.addons.length} addon{item.addons.length > 1 ? 's' : ''}
+            {order.tableNumber && (
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+                Table {order.tableNumber}
+              </span>
+            )}
+            {order.orderType === 'TAKEAWAY' && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                <FaShoppingBag className="h-2.5 w-2.5" />
+                Takeaway
               </span>
             )}
           </div>
-        ))}
-        {items.length > 3 && (
-          <p className="text-xs text-gray-400 dark:text-gray-500">
-            +{items.length - 3} more item{items.length - 3 > 1 ? 's' : ''}
-          </p>
-        )}
+          <OrderTimer
+            startTime={order.placedAt}
+            className={`text-xs px-2 py-1 rounded font-medium ${isUrgent
+              ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
+              : ''
+              }`}
+          />
+        </div>
       </div>
 
-      {/* Notes */}
-      {order.notes && (
-        <div className="mb-3 p-2 bg-warning-50 dark:bg-warning-900/20 border border-warning-200 dark:border-warning-800 rounded-lg">
-          <p className="text-xs text-warning-700 dark:text-warning-300 line-clamp-2">
-            📝 {order.notes}
-          </p>
-        </div>
-      )}
+      {/* Order Items - Full Details */}
+      <div className="p-4">
+        <div className="space-y-3">
+          {items.map((item, idx) => (
+            <div key={idx} className="flex gap-3">
+              {/* Quantity Badge */}
+              <div className="shrink-0">
+                <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-brand-100 dark:bg-brand-900/30 text-sm font-bold text-brand-700 dark:text-brand-300">
+                  {item.quantity}
+                </span>
+              </div>
 
-      {/* Action Button */}
-      <button
-        onClick={onAction}
-        className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
-          actionColor === 'primary'
-            ? 'bg-primary-500 hover:bg-primary-600 text-white'
-            : 'bg-success-500 hover:bg-success-600 text-white'
-        }`}
-      >
-        {actionIcon}
-        {actionLabel}
-      </button>
+              {/* Item Details */}
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-gray-900 dark:text-white text-sm">
+                  {item.menuName}
+                </p>
+
+                {/* Addons - Show All */}
+                {item.addons && item.addons.length > 0 && (
+                  <div className="mt-1 space-y-0.5">
+                    {item.addons.map((addon, addonIdx) => (
+                      <p key={addonIdx} className="text-xs text-gray-500 dark:text-gray-400 pl-2 border-l-2 border-gray-200 dark:border-gray-700">
+                        {addon.addonName}
+                        {addon.quantity > 1 && ` ×${addon.quantity}`}
+                      </p>
+                    ))}
+                  </div>
+                )}
+
+                {/* Item Notes */}
+                {item.notes && (
+                  <div className="mt-1.5 px-2 py-1 bg-amber-50 dark:bg-amber-900/20 rounded text-xs text-amber-700 dark:text-amber-300 border-l-2 border-amber-400">
+                    {item.notes}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Order Notes - Prominent */}
+        {order.notes && (
+          <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Order Note</p>
+            <p className="text-sm text-gray-800 dark:text-gray-200">
+              {order.notes}
+            </p>
+          </div>
+        )}
+
+        {/* Action Button */}
+        <button
+          onClick={onAction}
+          className={`
+            mt-4 w-full flex items-center justify-center gap-2 py-2.5 rounded-lg 
+            text-sm font-semibold transition-colors
+            ${actionColor === 'primary'
+              ? 'bg-primary-500 hover:bg-primary-600 text-white'
+              : 'bg-success-500 hover:bg-success-600 text-white'
+            }
+          `}
+        >
+          {actionIcon}
+          {actionLabel}
+        </button>
+      </div>
     </div>
   );
 }

@@ -355,7 +355,7 @@ export default function MerchantOwnerDashboard({
                   </div>
                   <div className="text-right">
                     <p className="font-semibold text-gray-900 dark:text-white">
-                      {formatCurrency(order.totalAmount.toNumber())}
+                      {formatCurrency(typeof order.totalAmount === 'number' ? order.totalAmount : Number(order.totalAmount))}
                     </p>
                   </div>
                 </div>
@@ -461,7 +461,7 @@ export default function MerchantOwnerDashboard({
                     {item.name}
                   </p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {formatCurrency(item.price.toNumber())}
+                    {formatCurrency(typeof item.price === 'number' ? item.price : Number(item.price))}
                   </p>
                 </div>
                 <div className="text-right">

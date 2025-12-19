@@ -1,12 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import ViewAddonItemsModal from "@/components/addon-categories/ViewAddonItemsModal";
 import MenuRelationshipModal from "@/components/addon-categories/MenuRelationshipModal";
 import EmptyState from "@/components/ui/EmptyState";
 import { exportAddonCategories } from "@/lib/utils/excelExport";
+import { useSWRStatic } from "@/hooks/useSWRWithAuth";
+import { CategoriesPageSkeleton } from "@/components/common/SkeletonLoaders";
 
 interface AddonCategory {
   id: string;
@@ -29,22 +31,30 @@ interface AddonCategoryFormData {
   maxSelection: number | string;
 }
 
+// Response types for SWR
+interface AddonCategoriesApiResponse {
+  success: boolean;
+  data: AddonCategory[];
+}
+
+interface MerchantApiResponse {
+  success: boolean;
+  data: { currency: string };
+}
+
 export default function AddonCategoriesPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   
-  const [categories, setCategories] = useState<AddonCategory[]>([]);
   const [filteredCategories, setFilteredCategories] = useState<AddonCategory[]>([]);
   const [showForm, setShowForm] = useState(false);
-  const [merchant, setMerchant] = useState<{ currency: string }>({ currency: "AUD" });
   const [viewItemsModal, setViewItemsModal] = useState<{
     show: boolean;
     categoryId: string | null;
     categoryName: string;
-    items: any[];
+    items: unknown[];
   }>({ show: false, categoryId: null, categoryName: "", items: [] });
   
   const [viewRelationshipsModal, setViewRelationshipsModal] = useState<{
@@ -70,53 +80,106 @@ export default function AddonCategoriesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
-  const fetchCategories = async () => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem("accessToken");
-      if (!token) {
-        router.push("/admin/login");
-        return;
-      }
+  // SWR hooks for data fetching with caching
+  const { 
+    data: categoriesResponse, 
+    error: categoriesError, 
+    isLoading: categoriesLoading,
+    mutate: mutateCategories 
+  } = useSWRStatic<AddonCategoriesApiResponse>('/api/merchant/addon-categories');
 
-      const [categoriesResponse, merchantResponse] = await Promise.all([
-        fetch("/api/merchant/addon-categories", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch("/api/merchant/profile", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-      ]);
+  const { 
+    data: merchantResponse, 
+    isLoading: merchantLoading 
+  } = useSWRStatic<MerchantApiResponse>('/api/merchant/profile');
 
-      if (!categoriesResponse.ok) {
-        throw new Error("Failed to fetch addon categories");
-      }
+  // Extract data from SWR responses
+  const categories = categoriesResponse?.success ? categoriesResponse.data : [];
+  const merchant = merchantResponse?.success 
+    ? { currency: merchantResponse.data.currency || "AUD" }
+    : { currency: "AUD" };
+  const loading = categoriesLoading || merchantLoading;
 
-      const data = await categoriesResponse.json();
+  // Function to refetch data (for backwards compatibility)
+  const fetchCategories = useCallback(async () => {
+    await mutateCategories();
+  }, [mutateCategories]);
 
-      if (merchantResponse.ok) {
-        const merchantData = await merchantResponse.json();
-        if (merchantData.success && merchantData.data) {
-          setMerchant({ currency: merchantData.data.currency || "AUD" });
-        }
-      }
-      
-      if (data.success && Array.isArray(data.data)) {
-        setCategories(data.data);
-      } else {
-        setCategories([]);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Refs to track previous filter values for page reset
+  const prevFiltersRef = useRef({ searchQuery, filterStatus });
 
+  // Filter and search logic - MUST be before any conditional returns
   useEffect(() => {
-    fetchCategories();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    let filtered = [...categories];
+
+    // Search filter
+    if (searchQuery) {
+      filtered = filtered.filter(cat =>
+        cat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (cat.description && cat.description.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+    }
+
+    // Status filter
+    if (filterStatus === "active") {
+      filtered = filtered.filter(cat => cat.isActive);
+    } else if (filterStatus === "inactive") {
+      filtered = filtered.filter(cat => !cat.isActive);
+    }
+
+    setFilteredCategories(filtered);
+
+    // Only reset page when filters actually change, not when categories data updates
+    const prev = prevFiltersRef.current;
+    const filtersChanged = 
+      prev.searchQuery !== searchQuery ||
+      prev.filterStatus !== filterStatus;
+
+    if (filtersChanged) {
+      setCurrentPage(1);
+      prevFiltersRef.current = { searchQuery, filterStatus };
+    }
+  }, [categories, searchQuery, filterStatus]);
+
+  // Pagination logic
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredCategories.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredCategories.length / itemsPerPage);
+
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
+
+  // Show skeleton loader during initial load
+  if (loading) {
+    return <CategoriesPageSkeleton />;
+  }
+
+  // Show error state if fetch failed
+  if (categoriesError) {
+    return (
+      <div className="flex min-h-[calc(100vh-200px)] items-center justify-center p-6">
+        <div className="w-full max-w-md rounded-2xl border-2 border-red-200 bg-white p-8 text-center shadow-sm dark:border-red-800 dark:bg-gray-900">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
+            <svg className="h-8 w-8 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h2 className="mb-2 text-xl font-bold text-gray-900 dark:text-white">
+            Error Loading Addon Categories
+          </h2>
+          <p className="mb-6 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
+            {categoriesError?.message || 'Failed to load addon categories'}
+          </p>
+          <button
+            onClick={() => fetchCategories()}
+            className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
@@ -394,49 +457,6 @@ export default function AddonCategoriesPage() {
     setSuccess(null);
   };
 
-  // Filter and search logic
-  useEffect(() => {
-    let filtered = [...categories];
-
-    // Search filter
-    if (searchQuery) {
-      filtered = filtered.filter(cat =>
-        cat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (cat.description && cat.description.toLowerCase().includes(searchQuery.toLowerCase()))
-      );
-    }
-
-    // Status filter
-    if (filterStatus === "active") {
-      filtered = filtered.filter(cat => cat.isActive);
-    } else if (filterStatus === "inactive") {
-      filtered = filtered.filter(cat => !cat.isActive);
-    }
-
-    setFilteredCategories(filtered);
-    setCurrentPage(1);
-  }, [categories, searchQuery, filterStatus]);
-
-  // Pagination logic
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredCategories.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredCategories.length / itemsPerPage);
-
-  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
-
-  if (loading) {
-    return (
-      <div>
-        <PageBreadcrumb pageTitle="Addon Categories" />
-        <div className="mt-6 py-10 text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-brand-500 border-r-transparent"></div>
-          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Loading addon categories...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div>
       <PageBreadcrumb pageTitle="Addon Categories" />
@@ -483,7 +503,7 @@ export default function AddonCategoriesPage() {
                     onChange={handleChange}
                     required
                     placeholder="e.g., Size, Toppings, Extras"
-                    className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                    className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
                   />
                 </div>
 
@@ -497,7 +517,7 @@ export default function AddonCategoriesPage() {
                     onChange={handleChange}
                     rows={3}
                     placeholder="Describe this addon category"
-                    className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                    className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
                   />
                 </div>
 
@@ -514,7 +534,7 @@ export default function AddonCategoriesPage() {
                       required
                       min="0"
                       placeholder="0"
-                      className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                      className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
                     />
                     <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                       Minimum required selections
@@ -531,7 +551,7 @@ export default function AddonCategoriesPage() {
                       onChange={handleChange}
                       min="0"
                       placeholder="Unlimited"
-                      className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                      className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
                     />
                     <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                       Leave empty for unlimited
@@ -550,7 +570,7 @@ export default function AddonCategoriesPage() {
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="flex-1 h-11 rounded-lg bg-brand-500 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex-1 h-11 rounded-lg bg-primary-500 text-sm font-medium text-white hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {submitting ? "Saving..." : "Create Category"}
                   </button>
@@ -633,7 +653,7 @@ export default function AddonCategoriesPage() {
               </button>
               <button
                 onClick={() => setShowForm(true)}
-                className="inline-flex h-11 items-center gap-2 rounded-lg bg-brand-500 px-6 text-sm font-medium text-white hover:bg-brand-600 focus:outline-none focus:ring-3 focus:ring-brand-500/20"
+                className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary-500 px-6 text-sm font-medium text-white hover:bg-primary-600 focus:outline-none focus:ring-3 focus:ring-primary-500/20"
               >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -651,14 +671,14 @@ export default function AddonCategoriesPage() {
                 placeholder="Search addon categories..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
               />
             </div>
             <div>
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
+                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
               >
                 <option value="all">All Status</option>
                 <option value="active">Active</option>
@@ -687,7 +707,7 @@ export default function AddonCategoriesPage() {
                         type="checkbox"
                         checked={selectedCategories.length === currentItems.length && currentItems.length > 0}
                         onChange={(e) => handleSelectAllCategories(e.target.checked)}
-                        className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                        className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                       />
                     </th>
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Name</th>
@@ -707,7 +727,7 @@ export default function AddonCategoriesPage() {
                           type="checkbox"
                           checked={selectedCategories.includes(category.id)}
                           onChange={(e) => handleSelectCategory(category.id, e.target.checked)}
-                          className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                          className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                         />
                       </td>
                       <td className="px-4 py-4 text-sm font-medium text-gray-800 dark:text-white/90">{category.name}</td>
@@ -804,7 +824,7 @@ export default function AddonCategoriesPage() {
                         onClick={() => paginate(page)}
                         className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border text-sm font-medium ${
                           currentPage === page
-                            ? 'border-brand-500 bg-brand-500 text-white'
+                            ? 'border-primary-500 bg-primary-500 text-white'
                             : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
                         }`}
                       >

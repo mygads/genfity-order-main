@@ -27,6 +27,7 @@ import { OrderStatus, PaymentStatus, OrderType } from '@prisma/client';
  * - page?: number (default: 1)
  * - limit?: number (default: 20)
  * - since?: number (timestamp for real-time polling)
+ * - includeItems?: boolean (include full orderItems for kitchen display)
  */
 async function handleGet(req: NextRequest, context: AuthContext) {
   try {
@@ -57,6 +58,7 @@ async function handleGet(req: NextRequest, context: AuthContext) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
     const since = searchParams.get('since') ? parseInt(searchParams.get('since')!) : undefined;
+    const includeItems = searchParams.get('includeItems') === 'true';
 
     // Build filters
     const filters = {
@@ -67,6 +69,7 @@ async function handleGet(req: NextRequest, context: AuthContext) {
       page,
       limit,
       since,
+      includeItems,
     };
 
     // Fetch orders using OrderManagementService

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { useToast } from "@/hooks/useToast";
@@ -9,6 +9,8 @@ import ConfirmDialog from "@/components/modals/ConfirmDialog";
 import AddOwnerModal from "@/components/merchants/AddOwnerModal";
 import ViewUsersModal from "@/components/merchants/ViewUsersModal";
 import Image from "next/image";
+import { useSWRWithAuth } from "@/hooks/useSWRWithAuth";
+import { MerchantsPageSkeleton } from "@/components/common/SkeletonLoaders";
 
 interface Merchant {
   id: string;
@@ -48,13 +50,17 @@ interface Merchant {
   }>;
 }
 
+interface MerchantsApiResponse {
+  success: boolean;
+  data: {
+    merchants: Merchant[];
+  } | Merchant[];
+}
+
 export default function MerchantsPage() {
   const router = useRouter();
   const { toasts, success: showSuccess, error: showError } = useToast();
   
-  const [merchants, setMerchants] = useState<Merchant[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [activeOnly, setActiveOnly] = useState(false);
   
   // Delete confirmation state
@@ -84,59 +90,68 @@ export default function MerchantsPage() {
     merchantName: "",
   });
 
-  // Fetch merchants from API
-  const fetchMerchants = async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  // Build API URL based on filter
+  const apiUrl = activeOnly 
+    ? "/api/admin/merchants?activeOnly=true"
+    : "/api/admin/merchants";
 
-      const token = localStorage.getItem("accessToken");
-      if (!token) {
-        router.push("/admin/login");
-        return;
-      }
+  // SWR hook for data fetching with caching
+  const { 
+    data: merchantsResponse, 
+    error: merchantsError, 
+    isLoading,
+    mutate: mutateMerchants 
+  } = useSWRWithAuth<MerchantsApiResponse>(apiUrl, {
+    refreshInterval: 30000, // Refresh every 30 seconds
+  });
 
-      const url = activeOnly 
-        ? "/api/admin/merchants?activeOnly=true"
-        : "/api/admin/merchants";
+  // Extract merchants from SWR response
+  const merchants = (() => {
+    if (!merchantsResponse?.success) return [];
+    const data = merchantsResponse.data;
+    if (Array.isArray(data)) return data;
+    if (data && 'merchants' in data && Array.isArray(data.merchants)) return data.merchants;
+    return [];
+  })();
 
-      const response = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+  const loading = isLoading;
 
-      if (!response.ok) {
-        if (response.status === 401) {
-          router.push("/admin/login");
-          return;
-        }
-        throw new Error("Failed to fetch merchants");
-      }
+  // Function to refetch data (for backwards compatibility)
+  const fetchMerchants = useCallback(async () => {
+    await mutateMerchants();
+  }, [mutateMerchants]);
 
-      const data = await response.json();
-      
-      // Handle response format: { success: true, data: { merchants: [...] } }
-      if (data.success && data.data && Array.isArray(data.data.merchants)) {
-        setMerchants(data.data.merchants);
-      } else if (Array.isArray(data.data)) {
-        // Fallback if API returns data directly
-        setMerchants(data.data);
-      } else {
-        setMerchants([]);
-      }
-    } catch (err) {
-      console.error("Fetch merchants error:", err);
-      setError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Show skeleton loader during initial load
+  if (loading) {
+    return <MerchantsPageSkeleton />;
+  }
 
-  useEffect(() => {
-    fetchMerchants();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeOnly]);
+  // Show error state if fetch failed
+  if (merchantsError) {
+    return (
+      <div className="flex min-h-[calc(100vh-200px)] items-center justify-center p-6">
+        <div className="w-full max-w-md rounded-2xl border-2 border-red-200 bg-white p-8 text-center shadow-sm dark:border-red-800 dark:bg-gray-900">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
+            <svg className="h-8 w-8 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h2 className="mb-2 text-xl font-bold text-gray-900 dark:text-white">
+            Error Loading Merchants
+          </h2>
+          <p className="mb-6 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
+            {merchantsError?.message || 'Failed to load merchants'}
+          </p>
+          <button
+            onClick={() => fetchMerchants()}
+            className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   /**
    * Get store status based on isOpen field

@@ -1,284 +1,164 @@
-import type { Metadata } from "next";
-import { redirect } from 'next/navigation';
-import { requireAuth } from '@/lib/auth/serverAuth';
-import { PrismaClient } from '@prisma/client';
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import useSWR from 'swr';
 import SuperAdminDashboard from '@/components/dashboard/SuperAdminDashboard';
 import MerchantOwnerDashboard from '@/components/dashboard/MerchantOwnerDashboard';
 import MerchantStaffDashboard from '@/components/dashboard/MerchantStaffDashboard';
-
-const prisma = new PrismaClient();
-
-export const dynamic = 'force-dynamic';
-
-export const metadata: Metadata = {
-  title: "Dashboard | GENFITY",
-  description: "GENFITY admin dashboard for restaurant management",
-};
+import { DashboardSkeleton } from '@/components/common/SkeletonLoaders';
 
 /**
- * GENFITY Admin Dashboard Page
+ * GENFITY Admin Dashboard Page (CSR + SWR)
  * 
  * @description
- * Role-based personalized dashboard with real database data
+ * Client-side rendered dashboard with SWR for data caching and real-time updates
+ * Features:
+ * - Auto-refresh every 5 seconds for live order updates
+ * - Optimistic UI with SWR
+ * - Skeleton loaders for better UX
+ * - Hydration-safe rendering
+ * 
+ * Role-based dashboards:
  * - SUPER_ADMIN: Total merchants, users, orders, revenue
  * - MERCHANT_OWNER: Total menu items, staff, orders, revenue
  * - MERCHANT_STAFF: Today's orders, pending orders
  */
-export default async function AdminDashboardPage() {
-  const user = await requireAuth('/admin/dashboard');
+export default function AdminDashboardPage() {
+  const router = useRouter();
+  const [isMounted, setIsMounted] = useState(false);
+  const [hasToken, setHasToken] = useState(true); // Assume true to prevent flash
 
-  // Block CUSTOMER role
-  if (user.role === 'CUSTOMER') {
-    redirect('/admin/login?error=forbidden');
+  // Handle mount state to avoid hydration errors
+  useEffect(() => {
+    setIsMounted(true);
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      setHasToken(false);
+      router.push('/admin/login');
+    }
+  }, [router]);
+
+  // Use SWR for automatic caching, revalidation, and polling
+  const { data, error, isLoading } = useSWR(
+    isMounted && hasToken ? '/api/admin/dashboard' : null, // Only fetch when mounted and has token
+    {
+      refreshInterval: 5000, // Poll every 5 seconds for live updates
+      revalidateOnFocus: true, // Refetch when window regains focus
+    }
+  );
+
+  // Show skeleton during SSR and initial mount
+  if (!isMounted || isLoading) {
+    return <DashboardSkeleton />;
   }
 
-  // Render dashboard based on role
-  if (user.role === 'SUPER_ADMIN') {
-    // Get Super Admin stats
-    const [
-      totalMerchants,
-      activeMerchants,
-      totalUsers,
-      totalOrders,
-      recentMerchants,
-      recentOrders,
-    ] = await Promise.all([
-      prisma.merchant.count(),
-      prisma.merchant.count({ where: { isActive: true } }),
-      prisma.user.count({ where: { role: { not: 'CUSTOMER' } } }),
-      prisma.order.count(),
-      prisma.merchant.findMany({
-        take: 5,
-        orderBy: { createdAt: 'desc' },
-        select: {
-          id: true,
-          code: true,
-          name: true,
-          email: true,
-          city: true,
-          isActive: true,
-          createdAt: true,
-        },
-      }),
-      prisma.order.findMany({
-        take: 10,
-        orderBy: { createdAt: 'desc' },
-        include: {
-          merchant: { select: { name: true } },
-        },
-      }),
-    ]);
+  // Redirect happening
+  if (!hasToken) {
+    return <DashboardSkeleton />;
+  }
 
-    // Calculate revenue (total from all orders)
-    const revenue = await prisma.order.aggregate({
-      _sum: { totalAmount: true },
-    });
-
+  if (error) {
     return (
-      <SuperAdminDashboard
-        stats={{
-          totalMerchants,
-          activeMerchants,
-          totalUsers,
-          totalOrders,
-          totalRevenue: revenue._sum.totalAmount?.toNumber() || 0,
-        }}
-        recentMerchants={recentMerchants}
-        recentOrders={recentOrders}
-      />
+      <div className="flex min-h-[calc(100vh-200px)] items-center justify-center p-6">
+        <div className="w-full max-w-md rounded-2xl border-2 border-red-200 bg-white p-8 text-center shadow-sm dark:border-red-800 dark:bg-gray-900">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
+            <svg className="h-8 w-8 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h2 className="mb-2 text-xl font-bold text-gray-900 dark:text-white">
+            Error Loading Dashboard
+          </h2>
+          <p className="mb-6 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
+            {error?.message || 'Failed to load dashboard'}
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
     );
   }
 
-  if (user.role === 'MERCHANT_OWNER' || user.role === 'MERCHANT_STAFF') {
-    // Get merchant ID from merchant_users table
-    const merchantUser = await prisma.merchantUser.findFirst({
-      where: { userId: BigInt(user.id) },
-      include: { merchant: true },
-    });
+  if (!data?.success || !data?.data) {
+    return <DashboardSkeleton />;
+  }
 
-    // If no merchant connection, show message
-    if (!merchantUser) {
-      return (
-        <div className="flex min-h-[calc(100vh-200px)] items-center justify-center p-6">
-          <div className="w-full max-w-md rounded-2xl border-2 border-dashed border-gray-300 bg-white p-8 text-center shadow-sm dark:border-gray-700 dark:bg-gray-900">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
-              <svg className="h-8 w-8 text-gray-400 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+  const dashboardData = data.data;
+
+  // No merchant connection
+  if (dashboardData.noMerchant) {
+    return (
+      <div className="flex min-h-[calc(100vh-200px)] items-center justify-center p-6">
+        <div className="w-full max-w-md rounded-2xl border-2 border-dashed border-gray-300 bg-white p-8 text-center shadow-sm dark:border-gray-700 dark:bg-gray-900">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
+            <svg className="h-8 w-8 text-gray-400 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+          </div>
+          <h2 className="mb-2 text-xl font-bold text-gray-900 dark:text-white">
+            Not Connected to Any Merchant
+          </h2>
+          <p className="mb-6 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
+            You are currently not connected to any merchant. Please contact the merchant owner or super admin to get added to a merchant team.
+          </p>
+          <div className="rounded-lg bg-blue-50 p-4 dark:bg-blue-900/20">
+            <div className="flex items-start gap-3">
+              <svg className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-            </div>
-            <h2 className="mb-2 text-xl font-bold text-gray-900 dark:text-white">
-              Not Connected to Any Merchant
-            </h2>
-            <p className="mb-6 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
-              You are currently not connected to any merchant. Please contact the merchant owner or super admin to get added to a merchant team.
-            </p>
-            <div className="rounded-lg bg-blue-50 p-4 dark:bg-blue-900/20">
-              <div className="flex items-start gap-3">
-                <svg className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <div className="text-left">
-                  <p className="text-xs font-medium text-blue-800 dark:text-blue-300">
-                    Need Help?
-                  </p>
-                  <p className="mt-1 text-xs text-blue-700 dark:text-blue-400">
-                    Contact your administrator to request access to a merchant account.
-                  </p>
-                </div>
+              <div className="text-left">
+                <p className="text-xs font-medium text-blue-800 dark:text-blue-300">
+                  Need Help?
+                </p>
+                <p className="mt-1 text-xs text-blue-700 dark:text-blue-400">
+                  Contact your administrator to request access to a merchant account.
+                </p>
               </div>
             </div>
           </div>
         </div>
-      );
-    }
+      </div>
+    );
+  }
 
-    const merchantId = merchantUser.merchantId;
-
-    // Get Merchant stats
-    const [
-      totalMenuItems,
-      activeMenuItems,
-      totalCategories,
-      totalStaff,
-      totalOrders,
-      todayOrders,
-      pendingOrders,
-      recentOrders,
-      topSellingItems,
-      orderStatusBreakdown,
-      lowStockItems,
-    ] = await Promise.all([
-      prisma.menu.count({ where: { merchantId } }),
-      prisma.menu.count({ where: { merchantId, isActive: true } }),
-      prisma.menuCategory.count({ where: { merchantId } }),
-      prisma.merchantUser.count({ where: { merchantId } }),
-      prisma.order.count({ where: { merchantId } }),
-      prisma.order.count({
-        where: {
-          merchantId,
-          createdAt: {
-            gte: new Date(new Date().setHours(0, 0, 0, 0)),
-          },
-        },
-      }),
-      prisma.order.count({
-        where: { merchantId, status: 'PENDING' },
-      }),
-      prisma.order.findMany({
-        where: { merchantId },
-        take: 10,
-        orderBy: { createdAt: 'desc' },
-        include: {
-          orderItems: { include: { menu: true } },
-        },
-      }),
-      // Top Selling Items (last 30 days)
-      prisma.$queryRaw<Array<{
-        menu_id: bigint;
-        menu_name: string;
-        total_quantity: bigint;
-        total_revenue: number;
-      }>>`
-        SELECT 
-          oi.menu_id,
-          oi.menu_name,
-          SUM(oi.quantity)::BIGINT as total_quantity,
-          SUM(oi.subtotal)::FLOAT as total_revenue
-        FROM order_items oi
-        JOIN orders o ON oi.order_id = o.id
-        WHERE o.merchant_id = ${merchantId}
-          AND o.created_at >= NOW() - INTERVAL '30 days'
-          AND o.status != 'CANCELLED'
-        GROUP BY oi.menu_id, oi.menu_name
-        ORDER BY total_quantity DESC
-        LIMIT 5
-      `,
-      // Order Status Breakdown
-      prisma.order.groupBy({
-        by: ['status'],
-        where: { merchantId },
-        _count: { id: true },
-      }),
-      // Low Stock Items
-      prisma.menu.findMany({
-        where: {
-          merchantId,
-          trackStock: true,
-          isActive: true,
-          stockQty: { lte: 10 },
-        },
-        take: 5,
-        orderBy: { stockQty: 'asc' },
-        select: {
-          id: true,
-          name: true,
-          stockQty: true,
-          price: true,
-        },
-      }),
-    ]);
-
-    // Calculate revenue
-    const revenue = await prisma.order.aggregate({
-      where: { merchantId },
-      _sum: { totalAmount: true },
-    });
-
-    const todayRevenue = await prisma.order.aggregate({
-      where: {
-        merchantId,
-        createdAt: {
-          gte: new Date(new Date().setHours(0, 0, 0, 0)),
-        },
-      },
-      _sum: { totalAmount: true },
-    });
-
-    if (user.role === 'MERCHANT_OWNER') {
-      return (
-        <MerchantOwnerDashboard
-          merchant={merchantUser.merchant}
-          stats={{
-            totalMenuItems,
-            activeMenuItems,
-            totalCategories,
-            totalStaff,
-            totalOrders,
-            todayOrders,
-            pendingOrders,
-            totalRevenue: revenue._sum.totalAmount?.toNumber() || 0,
-            todayRevenue: todayRevenue._sum.totalAmount?.toNumber() || 0,
-          }}
-          recentOrders={recentOrders}
-          topSellingItems={topSellingItems.map(item => ({
-            menuId: item.menu_id,
-            menuName: item.menu_name,
-            totalQuantity: Number(item.total_quantity),
-            totalRevenue: item.total_revenue,
-          }))}
-          orderStatusBreakdown={orderStatusBreakdown.map(item => ({
-            status: item.status,
-            count: item._count.id,
-          }))}
-          lowStockItems={lowStockItems}
-        />
-      );
-    }
-
-    // MERCHANT_STAFF
+  // Render dashboard based on role
+  if (dashboardData.role === 'SUPER_ADMIN') {
     return (
-      <MerchantStaffDashboard
-        merchant={merchantUser.merchant}
-        stats={{
-          todayOrders,
-          pendingOrders,
-          totalOrders,
-          activeMenuItems,
-        }}
-        recentOrders={recentOrders}
+      <SuperAdminDashboard
+        stats={dashboardData.stats}
+        recentMerchants={dashboardData.recentMerchants}
+        recentOrders={dashboardData.recentOrders}
       />
     );
   }
 
-  redirect('/admin/login?error=forbidden');
+  if (dashboardData.role === 'MERCHANT_OWNER') {
+    return (
+      <MerchantOwnerDashboard
+        merchant={dashboardData.merchant}
+        stats={dashboardData.stats}
+        recentOrders={dashboardData.recentOrders}
+        topSellingItems={dashboardData.topSellingItems}
+        orderStatusBreakdown={dashboardData.orderStatusBreakdown}
+        lowStockItems={dashboardData.lowStockItems}
+      />
+    );
+  }
+
+  if (dashboardData.role === 'MERCHANT_STAFF') {
+    return (
+      <MerchantStaffDashboard
+        merchant={dashboardData.merchant}
+        stats={dashboardData.stats}
+        recentOrders={dashboardData.recentOrders}
+      />
+    );
+  }
+
+  return null;
 }
