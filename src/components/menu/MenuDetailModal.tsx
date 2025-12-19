@@ -7,16 +7,16 @@ import { formatCurrency } from '@/lib/utils/format';
 import Image from 'next/image';
 
 interface Addon {
-  id: number;
+  id: string; // ✅ String from API (BigInt serialized)
   name: string;
   price: number;
-  categoryId: number;
+  categoryId: string; // ✅ String from API
   isAvailable: boolean;
   inputType: 'SELECT' | 'QTY'; // SELECT = checkbox/radio, QTY = quantity input
 }
 
 interface AddonCategory {
-  id: number;
+  id: string; // ✅ String from API (BigInt serialized)
   name: string;
   type: 'required' | 'optional';
   minSelections: number;
@@ -25,7 +25,7 @@ interface AddonCategory {
 }
 
 interface MenuItem {
-  id: number;
+  id: string; // ✅ String from API (BigInt serialized)
   name: string;
   description: string;
   price: number;
@@ -81,15 +81,15 @@ export default function MenuDetailModal({
 
   const [quantity, setQuantity] = useState(editMode && existingCartItem ? existingCartItem.quantity : 1);
   const [notes, setNotes] = useState(editMode && existingCartItem ? existingCartItem.notes || '' : '');
-  const [selectedAddons, setSelectedAddons] = useState<Record<number, number>>({});
+  const [selectedAddons, setSelectedAddons] = useState<Record<string, number>>({});
   const [addonCategories, setAddonCategories] = useState<AddonCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
-  const [missingCategoryId, setMissingCategoryId] = useState<number | null>(null);
-  const addonCategoryRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  const [missingCategoryId, setMissingCategoryId] = useState<string | null>(null);
+  const addonCategoryRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const isAddingRef = useRef(false);
 
-  const scrollToAddonCategory = (categoryId: number) => {
+  const scrollToAddonCategory = (categoryId: string) => {
     const element = addonCategoryRefs.current[categoryId];
     if (!element) return;
 
@@ -127,11 +127,10 @@ export default function MenuDetailModal({
 
           // Pre-fill addons in edit mode
           if (editMode && existingCartItem && existingCartItem.addons) {
-            const addonQtyMap: Record<number, number> = {};
+            const addonQtyMap: Record<string, number> = {};
             existingCartItem.addons.forEach((addon: { id: string; name: string; price: number }) => {
-              const addonIdNum = parseInt(addon.id); // Convert string id to number
               // Aggregate quantities (duplicate entries represent quantity > 1)
-              addonQtyMap[addonIdNum] = (addonQtyMap[addonIdNum] || 0) + 1;
+              addonQtyMap[addon.id] = (addonQtyMap[addon.id] || 0) + 1;
             });
             console.log('🔄 [EDIT MODE] Pre-filled addons:', addonQtyMap);
             setSelectedAddons(addonQtyMap);
@@ -167,7 +166,7 @@ export default function MenuDetailModal({
   };
 
   // Handle addon quantity change with validation
-  const handleAddonQtyChange = (addonId: number, delta: number) => {
+  const handleAddonQtyChange = (addonId: string, delta: number) => {
     if (errorMessage) setErrorMessage('');
     if (missingCategoryId !== null) setMissingCategoryId(null);
 
@@ -211,7 +210,7 @@ export default function MenuDetailModal({
   };
 
   // Handle radio button selection (single choice - maxSelections = 1)
-  const handleRadioSelect = (categoryId: number, addonId: number) => {
+  const handleRadioSelect = (categoryId: string, addonId: string) => {
     if (errorMessage) setErrorMessage('');
     if (missingCategoryId !== null) setMissingCategoryId(null);
 
@@ -231,7 +230,7 @@ export default function MenuDetailModal({
   };
 
   // Handle checkbox toggle (multiple choice)
-  const handleCheckboxToggle = (categoryId: number, addonId: number) => {
+  const handleCheckboxToggle = (categoryId: string, addonId: string) => {
     if (errorMessage) setErrorMessage('');
     if (missingCategoryId !== null) setMissingCategoryId(null);
 
@@ -262,7 +261,7 @@ export default function MenuDetailModal({
   };
 
   // Validate required addons before adding to cart
-  const validateRequiredAddons = (): { valid: boolean; message?: string; missingCategoryId?: number } => {
+  const validateRequiredAddons = (): { valid: boolean; message?: string; missingCategoryId?: string } => {
     for (const category of addonCategories) {
       if (category.type === 'required') {
         // Count total selections in this category
@@ -304,7 +303,7 @@ export default function MenuDetailModal({
       if (validation.missingCategoryId) {
         setMissingCategoryId(validation.missingCategoryId);
         // Ensure scroll runs after state updates settle
-        setTimeout(() => scrollToAddonCategory(validation.missingCategoryId as number), 50);
+        setTimeout(() => scrollToAddonCategory(validation.missingCategoryId as string), 50);
       }
       return;
     }

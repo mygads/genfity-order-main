@@ -12,15 +12,17 @@ import PromoMenuSection from '@/components/customer/PromoMenuSection';
 import DetailedMenuSection from '@/components/customer/DetailedMenuSection';
 import FloatingCartButton from '@/components/cart/FloatingCartButton';
 import MenuDetailModal from '@/components/menu/MenuDetailModal';
+import MenuInCartModal from '@/components/menu/MenuInCartModal';
 import { Alert, EmptyState } from '@/components/ui';
 import { useCart } from '@/context/CartContext';
+import type { CartItem } from '@/context/CartContext';
 import OutletInfoModal from '@/components/customer/OutletInfoModal';
 import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';
 import { getTableNumber } from '@/lib/utils/localStorage';
 import TableNumberModal from '@/components/customer/TableNumberModal';
 
 interface MenuItem {
-  id: number;
+  id: string; // ✅ String from API (BigInt serialized)
   name: string;
   description: string;
   price: number; // ✅ From API: decimalToNumber(Decimal) → number with 2 decimal precision
@@ -107,6 +109,8 @@ export default function MenuBrowsePage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all'); // 'all' = show all sections
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMenu, setSelectedMenu] = useState<MenuItem | null>(null);
+  const [editingCartItem, setEditingCartItem] = useState<CartItem | null>(null);
+  const [cartOptionsMenu, setCartOptionsMenu] = useState<MenuItem | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showTableModal, setShowTableModal] = useState(false); // Table number modal state
   const [showOutletInfo, setShowOutletInfo] = useState(false); // Outlet info modal state
@@ -114,15 +118,58 @@ export default function MenuBrowsePage() {
   const [isCategoryTabsSticky, setIsCategoryTabsSticky] = useState(false); // Track if category tabs should be sticky
   const [showTableBadge, setShowTableBadge] = useState(false); // Track if table badge should be shown in header
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({}); // References to category sections
-  const { initializeCart, cart } = useCart();
+  const { initializeCart, cart, updateItem, removeItem } = useCart();
+
+  const getMenuCartItems = (menuId: string): CartItem[] => {
+    if (!cart) return [];
+    return cart.items.filter((item) => item.menuId === menuId);
+  };
+
+  const handleOpenMenu = (item: MenuItem) => {
+    const quantityInCart = getMenuQuantityInCart(item.id);
+    if (quantityInCart > 0) {
+      setCartOptionsMenu(item);
+      return;
+    }
+
+    setEditingCartItem(null);
+    setSelectedMenu(item);
+  };
+
+  const handleCloseMenuDetail = () => {
+    setSelectedMenu(null);
+    setEditingCartItem(null);
+  };
+
+  /**
+   * Handle increasing quantity for a menu from horizontal card
+   * Opens the cart options modal since there might be multiple configurations
+   */
+  const handleIncreaseQtyFromCard = (menuId: string) => {
+    const menuItem = allMenuItems.find(m => m.id === menuId);
+    if (menuItem) {
+      setCartOptionsMenu(menuItem);
+    }
+  };
+
+  /**
+   * Handle decreasing quantity for a menu from horizontal card
+   * Opens the cart options modal to choose which configuration to decrease
+   */
+  const handleDecreaseQtyFromCard = (menuId: string) => {
+    const menuItem = allMenuItems.find(m => m.id === menuId);
+    if (menuItem) {
+      setCartOptionsMenu(menuItem);
+    }
+  };
 
   /**
    * Get total quantity of a menu item in cart (including all variants with different addons)
    */
-  const getMenuQuantityInCart = (menuId: number): number => {
+  const getMenuQuantityInCart = (menuId: string): number => {
     if (!cart) return 0;
     return cart.items
-      .filter(item => parseInt(item.menuId) === menuId)
+      .filter(item => item.menuId === menuId)
       .reduce((sum, item) => sum + item.quantity, 0);
   };
 
@@ -448,7 +495,7 @@ export default function MenuBrowsePage() {
                       <PromoMenuSection
                         items={promoItems}
                         currency={merchantInfo?.currency || 'AUD'}
-                        onItemClick={(item) => setSelectedMenu(item as MenuItem)}
+                        onItemClick={(item) => handleOpenMenu(item as MenuItem)}
                         getItemQuantityInCart={getMenuQuantityInCart}
                       />
                     </div>
@@ -467,8 +514,10 @@ export default function MenuBrowsePage() {
                         title="New Menu"
                         items={newMenuItems}
                         currency={merchantInfo?.currency || 'AUD'}
-                        onItemClick={(item) => setSelectedMenu(item as MenuItem)}
+                        onItemClick={(item) => handleOpenMenu(item as MenuItem)}
                         getItemQuantityInCart={getMenuQuantityInCart}
+                        onIncreaseQty={handleIncreaseQtyFromCard}
+                        onDecreaseQty={handleDecreaseQtyFromCard}
                       />
                     </div>
                     {/* Divider */}
@@ -486,8 +535,10 @@ export default function MenuBrowsePage() {
                         title="Best Seller"
                         items={bestSellerItems}
                         currency={merchantInfo?.currency || 'AUD'}
-                        onItemClick={(item) => setSelectedMenu(item as MenuItem)}
+                        onItemClick={(item) => handleOpenMenu(item as MenuItem)}
                         getItemQuantityInCart={getMenuQuantityInCart}
+                        onIncreaseQty={handleIncreaseQtyFromCard}
+                        onDecreaseQty={handleDecreaseQtyFromCard}
                       />
                     </div>
                     {/* Divider */}
@@ -512,8 +563,10 @@ export default function MenuBrowsePage() {
                           title={category.name.toUpperCase()}
                           items={categoryItems}
                           currency={merchantInfo?.currency || 'AUD'}
-                          onAddItem={(item) => setSelectedMenu(item as MenuItem)}
+                          onAddItem={(item) => handleOpenMenu(item as MenuItem)}
                           getItemQuantityInCart={getMenuQuantityInCart}
+                          onIncreaseQty={handleIncreaseQtyFromCard}
+                          onDecreaseQty={handleDecreaseQtyFromCard}
                         />
                       </div>
                       {/* Divider between categories */}
@@ -537,8 +590,10 @@ export default function MenuBrowsePage() {
                     title={categories.find(c => c.id === selectedCategory)?.name.toUpperCase() || ''}
                     items={displayedItems}
                     currency={merchantInfo?.currency || 'AUD'}
-                    onAddItem={(item) => setSelectedMenu(item as MenuItem)}
+                    onAddItem={(item) => handleOpenMenu(item as MenuItem)}
                     getItemQuantityInCart={getMenuQuantityInCart}
+                    onIncreaseQty={handleIncreaseQtyFromCard}
+                    onDecreaseQty={handleDecreaseQtyFromCard}
                   />
                 </div>
               </>
@@ -571,7 +626,39 @@ export default function MenuBrowsePage() {
           merchantCode={merchantCode}
           mode={mode}
           currency={merchantInfo?.currency || 'AUD'}
-          onClose={() => setSelectedMenu(null)}
+          editMode={Boolean(editingCartItem)}
+          existingCartItem={editingCartItem}
+          onClose={handleCloseMenuDetail}
+        />
+      )}
+
+      {cartOptionsMenu && (
+        <MenuInCartModal
+          menuName={cartOptionsMenu.name}
+          currency={merchantInfo?.currency || 'AUD'}
+          items={getMenuCartItems(cartOptionsMenu.id)}
+          onClose={() => setCartOptionsMenu(null)}
+          onCreateAnother={() => {
+            setEditingCartItem(null);
+            setSelectedMenu(cartOptionsMenu);
+            setCartOptionsMenu(null);
+          }}
+          onEditItem={(item) => {
+            setEditingCartItem(item);
+            setSelectedMenu(cartOptionsMenu);
+            setCartOptionsMenu(null);
+          }}
+          onIncreaseQty={(item) => {
+            updateItem(item.cartItemId, { quantity: item.quantity + 1 });
+          }}
+          onDecreaseQty={(item) => {
+            const nextQty = item.quantity - 1;
+            if (nextQty <= 0) {
+              removeItem(item.cartItemId);
+              return;
+            }
+            updateItem(item.cartItemId, { quantity: nextQty });
+          }}
         />
       )}
 

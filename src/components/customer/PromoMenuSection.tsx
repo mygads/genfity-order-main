@@ -13,7 +13,7 @@
 import Image from 'next/image';
 
 interface PromoItem {
-    id: number;
+    id: string; // ✅ String from API (BigInt serialized)
     name: string;
     price: number;
     promoPrice?: number;
@@ -24,7 +24,7 @@ interface PromoMenuSectionProps {
     items: PromoItem[];
     currency?: string; // Merchant currency
     onItemClick?: (item: PromoItem) => void;
-    getItemQuantityInCart?: (menuId: number) => number; // Get quantity of item in cart
+    getItemQuantityInCart?: (menuId: string) => number; // Get quantity of item in cart
 }
 
 export default function PromoMenuSection({ items, currency = 'AUD', onItemClick, getItemQuantityInCart }: PromoMenuSectionProps) {

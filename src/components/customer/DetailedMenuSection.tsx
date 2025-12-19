@@ -13,7 +13,7 @@
 import Image from 'next/image';
 
 interface MenuItem {
-    id: number;
+    id: string; // ✅ String from API (BigInt serialized)
     name: string;
     description: string;
     price: number;
@@ -34,7 +34,9 @@ interface DetailedMenuSectionProps {
     items: MenuItem[];
     currency?: string; // Merchant currency
     onAddItem?: (item: MenuItem) => void;
-    getItemQuantityInCart?: (menuId: number) => number; // Get quantity of item in cart
+    getItemQuantityInCart?: (menuId: string) => number; // Get quantity of item in cart
+    onIncreaseQty?: (menuId: string) => void;
+    onDecreaseQty?: (menuId: string) => void;
 }
 
 export default function DetailedMenuSection({
@@ -43,6 +45,8 @@ export default function DetailedMenuSection({
     currency = 'AUD',
     onAddItem,
     getItemQuantityInCart,
+    onIncreaseQty,
+    onDecreaseQty,
 }: DetailedMenuSectionProps) {
     if (items.length === 0) return null;
 
@@ -62,6 +66,7 @@ export default function DetailedMenuSection({
             <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
                 {items.map((item, index) => {
                     const isAvailable = item.isActive && (!item.trackStock || (item.stockQty !== null && item.stockQty > 0));
+                    const isLowStock = item.trackStock && item.stockQty !== null && item.stockQty > 0 && item.stockQty < 10;
                     const hasAddons = item.addonCategories && item.addonCategories.length > 0;
                     const quantityInCart = getItemQuantityInCart ? getItemQuantityInCart(item.id) : 0;
                     const isInCart = quantityInCart > 0;
@@ -69,11 +74,14 @@ export default function DetailedMenuSection({
                     return (
                         <div
                             key={item.id}
-                            className={`flex gap-4 pb-4 ${index < items.length - 1 ? 'border-b border-gray-200 dark:border-gray-700 mb-4' : ''
+                            className={`flex gap-4 pb-4 ${isInCart ? 'border-l-4 border-l-orange-500 pl-3 -ml-4 bg-orange-50/50 dark:bg-orange-900/10 rounded-r-lg' : ''} ${index < items.length - 1 ? 'border-b border-gray-200 dark:border-gray-700 mb-4' : ''
                                 }`}
                         >
                             {/* Image */}
-                            <div className="relative w-20 h-20 shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
+                            <div 
+                                className="relative w-20 h-20 shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700 cursor-pointer"
+                                onClick={() => isAvailable && onAddItem?.(item)}
+                            >
                                 <Image
                                     src={item.imageUrl || '/images/default-menu.png'}
                                     alt={item.name}
@@ -81,16 +89,19 @@ export default function DetailedMenuSection({
                                     className="object-cover"
                                     sizes="80px"
                                 />
-                                {/* Quantity Badge - Show when item is in cart */}
-                                {isInCart && (
-                                    <div className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-lg border-2 border-white dark:border-gray-800">
-                                        {quantityInCart}
+                                {/* Low Stock Badge */}
+                                {isLowStock && !isInCart && (
+                                    <div className="absolute bottom-1 left-1 bg-orange-500 text-white px-1.5 py-0.5 rounded text-[10px] font-medium">
+                                        Stock &lt; 10
                                     </div>
                                 )}
                             </div>
 
                             {/* Content */}
-                            <div className="flex-1 flex flex-col justify-between min-w-0">
+                            <div 
+                                className="flex-1 flex flex-col justify-between min-w-0 cursor-pointer"
+                                onClick={() => isAvailable && onAddItem?.(item)}
+                            >
                                 <div className="flex-1">
                                     <h4 className="font-semibold text-gray-900 dark:text-white text-sm">
                                         {item.name}
@@ -127,16 +138,40 @@ export default function DetailedMenuSection({
                             <div className="shrink-0 flex items-center">
                                 {!isAvailable ? (
                                     <p className="text-red-500 text-sm font-medium">Sold out</p>
+                                ) : isInCart ? (
+                                    /* Quantity Controls */
+                                    <div className="flex items-center gap-1">
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onDecreaseQty?.(item.id);
+                                            }}
+                                            className="w-8 h-8 flex items-center justify-center text-orange-600 dark:text-orange-400 border border-orange-300 dark:border-orange-700 rounded-full hover:bg-orange-50 dark:hover:bg-orange-900/40 transition-colors"
+                                            aria-label="Decrease quantity"
+                                        >
+                                            −
+                                        </button>
+                                        <span className="w-8 text-center text-sm font-bold text-gray-900 dark:text-white">
+                                            {quantityInCart}
+                                        </span>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onIncreaseQty?.(item.id);
+                                            }}
+                                            className="w-8 h-8 flex items-center justify-center text-orange-600 dark:text-orange-400 border border-orange-300 dark:border-orange-700 rounded-full hover:bg-orange-50 dark:hover:bg-orange-900/40 transition-colors"
+                                            aria-label="Increase quantity"
+                                        >
+                                            +
+                                        </button>
+                                    </div>
                                 ) : (
                                     <button
                                         onClick={() => onAddItem?.(item)}
-                                        className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-all ${isInCart
-                                            ? 'border-2 border-orange-500 text-orange-500 dark:border-orange-400 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30'
-                                            : 'border border-orange-500 text-orange-500 dark:border-orange-400 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20'
-                                            }`}
-                                        title={isInCart ? 'Edit or add more' : 'Add to cart'}
+                                        className="px-4 py-1.5 text-sm font-medium rounded-lg transition-all border border-orange-500 text-orange-500 dark:border-orange-400 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                                        title="Add to cart"
                                     >
-                                        {isInCart ? 'Edit' : 'Add'}
+                                        Add
                                     </button>
                                 )}
                             </div>
