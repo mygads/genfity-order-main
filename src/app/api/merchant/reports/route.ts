@@ -378,6 +378,9 @@ async function handleGet(request: NextRequest, context: AuthContext) {
           current: { start: currentStart, end: currentEnd },
           previous: { start: previousStart, end: previousEnd },
         },
+        merchant: {
+          currency: merchantUser.merchant.currency || 'AUD',
+        },
         periodComparison,
         customerAnalytics,
         operationalMetrics,

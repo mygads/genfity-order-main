@@ -21,12 +21,21 @@ interface DailyRevenueTableProps {
  */
 export default function DailyRevenueTable({ 
   data, 
-  currency = "Rp" 
+  currency = "AUD" 
 }: DailyRevenueTableProps) {
   const formatCurrency = (amount: number) => {
-    return `${currency} ${amount.toLocaleString('id-ID', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
+    if (currency === "AUD") {
+      return new Intl.NumberFormat('en-AU', {
+        style: 'currency',
+        currency: 'AUD',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(amount);
+    }
+    // Fallback for other currencies
+    return `${currency} ${amount.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     })}`;
   };
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useEffect, useRef } from "react";
+import React, { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import Image from "next/image";
@@ -50,7 +50,7 @@ export default function MerchantCategoriesPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  
+
   const [filteredCategories, setFilteredCategories] = useState<Category[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -61,11 +61,11 @@ export default function MerchantCategoriesPage() {
   const [useDragDrop, setUseDragDrop] = useState<boolean>(false);
   const [hasUnsavedOrder, setHasUnsavedOrder] = useState<boolean>(false);
   const [pendingReorder, setPendingReorder] = useState<Category[] | null>(null);
-  
+
   // Bulk selection states
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
-  
+
   const [formData, setFormData] = useState<CategoryFormData>({
     name: "",
     description: "",
@@ -80,15 +80,18 @@ export default function MerchantCategoriesPage() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
   // SWR hook for data fetching with caching
-  const { 
-    data: categoriesResponse, 
-    error: categoriesError, 
+  const {
+    data: categoriesResponse,
+    error: categoriesError,
     isLoading,
-    mutate: mutateCategories 
+    mutate: mutateCategories
   } = useSWRStatic<CategoriesApiResponse>('/api/merchant/categories');
 
-  // Extract data from SWR response
-  const categories = categoriesResponse?.success ? categoriesResponse.data : [];
+  // Stabilize categories with useMemo to prevent infinite loop
+  const categories = useMemo(() => {
+    return categoriesResponse?.success ? categoriesResponse.data : [];
+  }, [categoriesResponse]);
+
   const loading = isLoading;
 
   // Function to refetch data (for backwards compatibility)
@@ -96,11 +99,23 @@ export default function MerchantCategoriesPage() {
     await mutateCategories();
   }, [mutateCategories]);
 
-  // Refs to track previous filter values for page reset
+  // Refs to track previous values for optimization
   const prevFiltersRef = useRef({ searchQuery, filterStatus, sortBy });
+  const prevCategoriesLengthRef = useRef(0);
 
-  // Filter and search logic - MUST be before any conditional returns
+  // Filter and search logic - stable with proper dependencies
   useEffect(() => {
+    // Skip if categories haven't changed and filters haven't changed
+    const filtersChanged =
+      prevFiltersRef.current.searchQuery !== searchQuery ||
+      prevFiltersRef.current.filterStatus !== filterStatus ||
+      prevFiltersRef.current.sortBy !== sortBy;
+
+    const categoriesChanged = prevCategoriesLengthRef.current !== categories.length;
+
+    // Update refs
+    prevCategoriesLengthRef.current = categories.length;
+
     let filtered = [...categories];
 
     // Search filter
@@ -139,12 +154,6 @@ export default function MerchantCategoriesPage() {
     setFilteredCategories(filtered);
 
     // Only reset page when filters actually change, not when categories data updates
-    const prev = prevFiltersRef.current;
-    const filtersChanged = 
-      prev.searchQuery !== searchQuery ||
-      prev.filterStatus !== filterStatus ||
-      prev.sortBy !== sortBy;
-
     if (filtersChanged) {
       setCurrentPage(1);
       prevFiltersRef.current = { searchQuery, filterStatus, sortBy };
@@ -193,7 +202,7 @@ export default function MerchantCategoriesPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
-    
+
     if (type === "number") {
       setFormData(prev => ({
         ...prev,
@@ -220,10 +229,10 @@ export default function MerchantCategoriesPage() {
         return;
       }
 
-      const url = editingId 
+      const url = editingId
         ? `/api/merchant/categories/${editingId}`
         : "/api/merchant/categories";
-      
+
       const method = editingId ? "PUT" : "POST";
 
       const response = await fetch(url, {
@@ -245,7 +254,7 @@ export default function MerchantCategoriesPage() {
       setShowForm(false);
       setEditingId(null);
       setFormData({ name: "", description: "", displayOrder: 1, sortOrder: 0 });
-      
+
       fetchCategories();
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
@@ -342,12 +351,12 @@ export default function MerchantCategoriesPage() {
     setPendingReorder(reorderedCategories);
     setHasUnsavedOrder(true);
     // Update display immediately for UX
-    setCategories(reorderedCategories);
+    setFilteredCategories(reorderedCategories);
   };
 
   const handleSaveOrder = async () => {
     if (!pendingReorder) return;
-    
+
     try {
       const token = localStorage.getItem("accessToken");
       if (!token) {
@@ -412,7 +421,7 @@ export default function MerchantCategoriesPage() {
 
   const handleBulkDeleteCategories = async () => {
     if (selectedCategories.length === 0) return;
-    
+
     try {
       const token = localStorage.getItem("accessToken");
       if (!token) {
@@ -485,7 +494,7 @@ export default function MerchantCategoriesPage() {
   const handleManageMenus = async (category: Category) => {
     setSelectedCategory(category);
     setError(null);
-    
+
     try {
       const token = localStorage.getItem("accessToken");
       if (!token) {
@@ -565,7 +574,7 @@ export default function MerchantCategoriesPage() {
 
     // Store removed menu for potential rollback
     const removedMenu = categoryMenus.find(m => m.id === menuId);
-    
+
     // Optimistic update - immediately update UI
     setCategoryMenus(prev => prev.filter(m => m.id !== menuId));
     setSuccess("Menu removed from category!");
@@ -633,73 +642,73 @@ export default function MerchantCategoriesPage() {
                   </svg>
                 </button>
               </div>
-              
+
               <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Category Name <span className="text-error-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                  className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                />
-              </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Category Name <span className="text-error-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    required
+                    className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                  />
+                </div>
 
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Description
-                </label>
-                <textarea
-                  name="description"
-                  value={formData.description}
-                  onChange={handleChange}
-                  rows={3}
-                  className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                />
-              </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Description
+                  </label>
+                  <textarea
+                    name="description"
+                    value={formData.description}
+                    onChange={handleChange}
+                    rows={3}
+                    className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                  />
+                </div>
 
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Display Order (Customer Page) <span className="text-error-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  name="sortOrder"
-                  value={formData.sortOrder}
-                  onChange={handleChange}
-                  required
-                  min="0"
-                  placeholder="0"
-                  className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                />
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Lower numbers appear first in customer menu (0 = first)
-                </p>
-              </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Display Order (Customer Page) <span className="text-error-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    name="sortOrder"
+                    value={formData.sortOrder}
+                    onChange={handleChange}
+                    required
+                    min="0"
+                    placeholder="0"
+                    className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                  />
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Lower numbers appear first in customer menu (0 = first)
+                  </p>
+                </div>
 
-              <div className="flex gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={handleCancel}
-                  className="flex-1 h-11 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="flex-1 h-11 rounded-lg bg-primary-500 text-sm font-medium text-white hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {submitting ? "Saving..." : editingId ? "Update Category" : "Create Category"}
-                </button>
-              </div>
-            </form>
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={handleCancel}
+                    className="flex-1 h-11 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="flex-1 h-11 rounded-lg bg-primary-500 text-sm font-medium text-white hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {submitting ? "Saving..." : editingId ? "Update Category" : "Create Category"}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
         )}
 
         <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
@@ -825,7 +834,7 @@ export default function MerchantCategoriesPage() {
               </div>
             )}
           </div>
-          
+
           {filteredCategories.length === 0 ? (
             <EmptyState
               type={categories.length === 0 ? "no-category" : "no-results"}
@@ -881,11 +890,10 @@ export default function MerchantCategoriesPage() {
                       <td className="px-4 py-4">
                         <button
                           onClick={() => handleToggleActive(category.id, category.isActive, category.name)}
-                          className={`inline-flex rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                            category.isActive 
-                              ? 'bg-success-100 text-success-700 hover:bg-success-200 dark:bg-success-900/20 dark:text-success-400 dark:hover:bg-success-900/30' 
-                              : 'bg-error-100 text-error-700 hover:bg-error-200 dark:bg-error-900/20 dark:text-error-400 dark:hover:bg-error-900/30'
-                          }`}>
+                          className={`inline-flex rounded-full px-3 py-1 text-xs font-medium transition-colors ${category.isActive
+                            ? 'bg-success-100 text-success-700 hover:bg-success-200 dark:bg-success-900/20 dark:text-success-400 dark:hover:bg-success-900/30'
+                            : 'bg-error-100 text-error-700 hover:bg-error-200 dark:bg-error-900/20 dark:text-error-400 dark:hover:bg-error-900/30'
+                            }`}>
                           {category.isActive ? '● Active' : '○ Inactive'}
                         </button>
                       </td>
@@ -945,11 +953,10 @@ export default function MerchantCategoriesPage() {
                       <button
                         key={page}
                         onClick={() => paginate(page)}
-                        className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border text-sm font-medium ${
-                          currentPage === page
-                            ? 'border-primary-500 bg-primary-500 text-white'
-                            : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
-                        }`}
+                        className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border text-sm font-medium ${currentPage === page
+                          ? 'border-primary-500 bg-primary-500 text-white'
+                          : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                          }`}
                       >
                         {page}
                       </button>
@@ -1023,11 +1030,10 @@ export default function MerchantCategoriesPage() {
                               <p className="text-sm font-medium text-gray-800 dark:text-white/90 truncate">
                                 {menu.name}
                               </p>
-                              <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                                menu.isActive
-                                  ? 'bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400'
-                                  : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-                              }`}>
+                              <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${menu.isActive
+                                ? 'bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400'
+                                : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                                }`}>
                                 {menu.isActive ? 'Active' : 'Inactive'}
                               </span>
                             </div>
@@ -1086,11 +1092,10 @@ export default function MerchantCategoriesPage() {
                             <p className="text-sm font-medium text-gray-800 dark:text-white/90 truncate">
                               {menu.name}
                             </p>
-                            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                              menu.isActive
-                                ? 'bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400'
-                                : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-                            }`}>
+                            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${menu.isActive
+                              ? 'bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400'
+                              : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                              }`}>
                               {menu.isActive ? 'Active' : 'Inactive'}
                             </span>
                           </div>
@@ -1149,9 +1154,9 @@ export default function MerchantCategoriesPage() {
                   </p>
                 </div>
               </div>
-              
+
               <p className="mb-6 text-sm text-gray-700 dark:text-gray-300">
-                Are you sure you want to delete {selectedCategories.length} category{selectedCategories.length > 1 ? 's' : ''}? 
+                Are you sure you want to delete {selectedCategories.length} category{selectedCategories.length > 1 ? 's' : ''}?
                 This will permanently remove {selectedCategories.length > 1 ? 'them' : 'it'} from your menu.
               </p>
 

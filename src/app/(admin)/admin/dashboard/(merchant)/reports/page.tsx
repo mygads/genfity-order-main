@@ -8,10 +8,10 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import { PeriodComparison, CustomerAnalytics, OperationalMetrics } from '@/components/reports';
 import { TopMenuItemsChart, HourlyDistributionChart } from '@/components/revenue';
 import { ReportsPageSkeleton } from '@/components/common/SkeletonLoaders';
+import { useMerchant } from '@/context/MerchantContext';
 
 export default function ReportsPage() {
   const router = useRouter();
@@ -86,10 +86,18 @@ export default function ReportsPage() {
   }
 
   return (
-    <div>
-      <PageBreadcrumb pageTitle="Reports & Analytics" />
+    <div className="space-y-6">
+      {/* Page Title */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+          Reports & Analytics
+        </h1>
+        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+          Comprehensive business intelligence and performance metrics
+        </p>
+      </div>
 
-      {/* Date Range & Export - Same as Revenue page */}
+      {/* Date Range & Export */}
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <select 
@@ -147,8 +155,7 @@ export default function ReportsPage() {
           <div className="mb-6">
             <PeriodComparison
               comparisonMode="custom"
-              metrics={data.periodComparison.metrics}
-            />
+              metrics={data.periodComparison.metrics}              currency={data.merchant?.currency || 'AUD'}            />
           </div>
 
           {/* Customer Analytics */}
@@ -171,6 +178,7 @@ export default function ReportsPage() {
                 totalQuantity: item.quantitySold,
                 totalRevenue: item.totalRevenue,
               }))}
+              currency={data.merchant?.currency || 'AUD'}
             />
 
             {/* Hourly Distribution */}

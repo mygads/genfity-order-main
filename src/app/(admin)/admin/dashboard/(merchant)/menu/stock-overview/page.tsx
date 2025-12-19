@@ -124,58 +124,82 @@ export default function StockOverviewPage() {
     }
   };
 
-  const handleUpdateStock = async (id: number | string, type: 'menu' | 'addon', newQty: number) => {
-    try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) return;
+  // Helper function to recalculate stats based on current stock items
+  const recalculateStats = (items: StockItem[]): StockStats => {
+    const menus = items.filter(item => item.type === 'menu').length;
+    const addons = items.filter(item => item.type === 'addon').length;
+    const healthy = items.filter(item => item.stockQty !== null && item.stockQty > 5).length;
+    const lowStock = items.filter(item => item.stockQty !== null && item.stockQty > 0 && item.stockQty <= 5).length;
+    const outOfStock = items.filter(item => item.stockQty === null || item.stockQty === 0).length;
+    const withTemplate = items.filter(item => item.dailyStockTemplate !== null).length;
 
-      const response = await fetch('/api/merchant/menu/stock/bulk-update', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          updates: [{ type, id: typeof id === 'string' ? parseInt(id) : id, stockQty: newQty }],
-        }),
-      });
-
-      if (!response.ok) throw new Error('Failed to update stock');
-
-      setStockItems((prev) =>
-        prev.map((item) =>
-          item.id === id && item.type === type ? { ...item, stockQty: newQty } : item
-        )
-      );
-      await fetchStockData();
-    } catch (error) {
-      console.error('Error updating stock:', error);
-      alert('Failed to update stock');
-    }
+    return {
+      total: items.length,
+      menus,
+      addons,
+      lowStock,
+      outOfStock,
+      healthy,
+      withTemplate,
+    };
   };
 
-  const handleResetToTemplate = async (id: number | string, type: 'menu' | 'addon') => {
-    try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) return;
+  // Optimistic update - UI changes instantly, server request in background
+  const handleUpdateStock = (id: number | string, type: 'menu' | 'addon', newQty: number) => {
+    // Update UI immediately
+    const updatedItems = stockItems.map((item) =>
+      item.id === id && item.type === type ? { ...item, stockQty: newQty } : item
+    );
+    setStockItems(updatedItems);
+    setStats(recalculateStats(updatedItems));
 
-      const response = await fetch('/api/merchant/menu/stock/bulk-update', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          updates: [{ type, id: typeof id === 'string' ? parseInt(id) : id, resetToTemplate: true }],
-        }),
-      });
+    // Send request in background (fire and forget with error handling)
+    const token = localStorage.getItem('accessToken');
+    if (!token) return;
 
-      if (!response.ok) throw new Error('Failed to reset stock');
-      await fetchStockData();
-    } catch (error) {
-      console.error('Error resetting stock:', error);
-      alert('Failed to reset stock');
-    }
+    fetch('/api/merchant/menu/stock/bulk-update', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        updates: [{ type, id: typeof id === 'string' ? parseInt(id) : id, stockQty: newQty }],
+      }),
+    }).catch((error) => {
+      console.error('Background stock update failed:', error);
+      // Optionally revert on failure - for now just log
+    });
+  };
+
+  // Optimistic reset to template
+  const handleResetToTemplate = (id: number | string, type: 'menu' | 'addon') => {
+    const item = stockItems.find(i => i.id === id && i.type === type);
+    if (!item || item.dailyStockTemplate === null) return;
+
+    // Update UI immediately with template value
+    const updatedItems = stockItems.map((i) =>
+      i.id === id && i.type === type ? { ...i, stockQty: i.dailyStockTemplate } : i
+    );
+    setStockItems(updatedItems);
+    setStats(recalculateStats(updatedItems));
+
+    // Send request in background
+    const token = localStorage.getItem('accessToken');
+    if (!token) return;
+
+    fetch('/api/merchant/menu/stock/bulk-update', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        updates: [{ type, id: typeof id === 'string' ? parseInt(id) : id, resetToTemplate: true }],
+      }),
+    }).catch((error) => {
+      console.error('Background reset failed:', error);
+    });
   };
 
   const handleSelectItem = (id: number | string, type: 'menu' | 'addon') => {
@@ -190,64 +214,76 @@ export default function StockOverviewPage() {
     }
   };
 
-  const handleResetSelected = async () => {
-    try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) return;
+  // Optimistic reset selected items
+  const handleResetSelected = () => {
+    // Update UI immediately
+    const updatedItems = stockItems.map((item) => {
+      const isSelected = selectedItems.some(s => s.id === item.id && s.type === item.type);
+      if (isSelected && item.dailyStockTemplate !== null) {
+        return { ...item, stockQty: item.dailyStockTemplate };
+      }
+      return item;
+    });
+    setStockItems(updatedItems);
+    setStats(recalculateStats(updatedItems));
+    setSelectedItems([]);
 
-      const updates = selectedItems.map((item) => ({
-        type: item.type,
-        id: typeof item.id === 'string' ? parseInt(item.id) : item.id,
-        resetToTemplate: true,
-      }));
+    // Send request in background
+    const token = localStorage.getItem('accessToken');
+    if (!token) return;
 
-      const response = await fetch('/api/merchant/menu/stock/bulk-update', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ updates }),
-      });
+    const updates = selectedItems.map((item) => ({
+      type: item.type,
+      id: typeof item.id === 'string' ? parseInt(item.id) : item.id,
+      resetToTemplate: true,
+    }));
 
-      if (!response.ok) throw new Error('Failed to reset stock');
-
-      setSelectedItems([]);
-      await fetchStockData();
-    } catch (error) {
-      console.error('Error resetting selected:', error);
-      alert('Failed to reset stock');
-    }
+    fetch('/api/merchant/menu/stock/bulk-update', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ updates }),
+    }).catch((error) => {
+      console.error('Background reset selected failed:', error);
+    });
   };
 
-  const handleUpdateAll = async (quantity: number) => {
-    try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) return;
+  // Optimistic update all selected items
+  const handleUpdateAll = (quantity: number) => {
+    // Update UI immediately
+    const updatedItems = stockItems.map((item) => {
+      const isSelected = selectedItems.some(s => s.id === item.id && s.type === item.type);
+      if (isSelected) {
+        return { ...item, stockQty: quantity };
+      }
+      return item;
+    });
+    setStockItems(updatedItems);
+    setStats(recalculateStats(updatedItems));
+    setSelectedItems([]);
 
-      const updates = selectedItems.map((item) => ({
-        type: item.type,
-        id: typeof item.id === 'string' ? parseInt(item.id) : item.id,
-        stockQty: quantity,
-      }));
+    // Send request in background
+    const token = localStorage.getItem('accessToken');
+    if (!token) return;
 
-      const response = await fetch('/api/merchant/menu/stock/bulk-update', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ updates }),
-      });
+    const updates = selectedItems.map((item) => ({
+      type: item.type,
+      id: typeof item.id === 'string' ? parseInt(item.id) : item.id,
+      stockQty: quantity,
+    }));
 
-      if (!response.ok) throw new Error('Failed to update stock');
-
-      setSelectedItems([]);
-      await fetchStockData();
-    } catch (error) {
-      console.error('Error updating all:', error);
-      alert('Failed to update stock');
-    }
+    fetch('/api/merchant/menu/stock/bulk-update', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ updates }),
+    }).catch((error) => {
+      console.error('Background update all failed:', error);
+    });
   };
 
   const handleExportCSV = () => {
@@ -276,38 +312,42 @@ export default function StockOverviewPage() {
     window.URL.revokeObjectURL(url);
   };
 
-  const handleBulkAddStock = async (amount: number) => {
+  // Optimistic bulk add stock
+  const handleBulkAddStock = (amount: number) => {
     if (!confirm(`Add ${amount} units to ALL items?`)) return;
 
-    try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) return;
+    // Update UI immediately
+    const updatedItems = stockItems.map((item) => ({
+      ...item,
+      stockQty: (item.stockQty ?? 0) + amount,
+    }));
+    setStockItems(updatedItems);
+    setStats(recalculateStats(updatedItems));
 
-      const updates = stockItems.map((item) => ({
-        id: typeof item.id === 'string' ? parseInt(item.id) : item.id,
-        type: item.type,
-        stockQty: (item.stockQty ?? 0) + amount,
-      }));
+    // Send request in background
+    const token = localStorage.getItem('accessToken');
+    if (!token) return;
 
-      const response = await fetch('/api/merchant/menu/stock/bulk-update', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ updates }),
-      });
+    const updates = stockItems.map((item) => ({
+      id: typeof item.id === 'string' ? parseInt(item.id) : item.id,
+      type: item.type,
+      stockQty: (item.stockQty ?? 0) + amount,
+    }));
 
-      if (!response.ok) throw new Error('Failed to add stock');
-      await fetchStockData();
-      alert(`Successfully added ${amount} units to all items`);
-    } catch (error) {
-      console.error('Error adding stock:', error);
-      alert('Failed to add stock');
-    }
+    fetch('/api/merchant/menu/stock/bulk-update', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ updates }),
+    }).catch((error) => {
+      console.error('Background bulk add failed:', error);
+    });
   };
 
-  const handleResetAllToTemplate = async () => {
+  // Optimistic reset all to template
+  const handleResetAllToTemplate = () => {
     const itemsWithTemplate = stockItems.filter(item => item.dailyStockTemplate !== null);
 
     if (itemsWithTemplate.length === 0) {
@@ -317,32 +357,36 @@ export default function StockOverviewPage() {
 
     if (!confirm(`Reset ${itemsWithTemplate.length} items to their template values?`)) return;
 
-    try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) return;
+    // Update UI immediately
+    const updatedItems = stockItems.map((item) => {
+      if (item.dailyStockTemplate !== null) {
+        return { ...item, stockQty: item.dailyStockTemplate };
+      }
+      return item;
+    });
+    setStockItems(updatedItems);
+    setStats(recalculateStats(updatedItems));
 
-      const updates = itemsWithTemplate.map((item) => ({
-        id: typeof item.id === 'string' ? parseInt(item.id) : item.id,
-        type: item.type,
-        resetToTemplate: true,
-      }));
+    // Send request in background
+    const token = localStorage.getItem('accessToken');
+    if (!token) return;
 
-      const response = await fetch('/api/merchant/menu/stock/bulk-update', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ updates }),
-      });
+    const updates = itemsWithTemplate.map((item) => ({
+      id: typeof item.id === 'string' ? parseInt(item.id) : item.id,
+      type: item.type,
+      resetToTemplate: true,
+    }));
 
-      if (!response.ok) throw new Error('Failed to reset stock');
-      await fetchStockData();
-      alert(`Successfully reset ${itemsWithTemplate.length} items to template values`);
-    } catch (error) {
-      console.error('Error resetting stock:', error);
-      alert('Failed to reset stock');
-    }
+    fetch('/api/merchant/menu/stock/bulk-update', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ updates }),
+    }).catch((error) => {
+      console.error('Background reset all failed:', error);
+    });
   };
 
   if (isLoading) {

@@ -528,3 +528,5 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     </div>
   );
 };
+
+export default OrderDetailModal;

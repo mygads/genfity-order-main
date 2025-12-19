@@ -180,8 +180,9 @@ async function handleGet(req: NextRequest, context: AuthContext) {
         dateRange: {
           startDate: startDate.toISOString(),
           endDate: endDate.toISOString(),
-        },
-        summary: {
+        },        merchant: {
+          currency: merchantUser.merchant.currency || 'AUD',
+        },        summary: {
           totalOrders: totalSummary._count.id,
           totalRevenue: Number(totalSummary._sum.subtotal) || 0,
           totalTax: Number(totalSummary._sum.taxAmount) || 0,

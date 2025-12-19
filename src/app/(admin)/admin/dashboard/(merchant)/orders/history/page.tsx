@@ -10,7 +10,6 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { FaChartLine, FaHistory, FaDownload, FaUtensils, FaShoppingBag } from 'react-icons/fa';
-import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import OrderStatsCards from '@/components/orders/OrderStatsCards';
 import OrderCharts from '@/components/orders/OrderCharts';
 import OrderHistoryTable from '@/components/orders/OrderHistoryTable';
@@ -228,7 +227,13 @@ export default function OrderHistoryPage() {
 
   return (
     <div>
-      <PageBreadcrumb pageTitle="Order Analytics & History" />
+      {/* Title Section */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Order Analytics & History</h1>
+        <p className="mt-2 text-gray-600 dark:text-gray-400">
+          Comprehensive analytics and historical data for all orders
+        </p>
+      </div>
 
       {/* Date Range & Export - Professional layout like reports page */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

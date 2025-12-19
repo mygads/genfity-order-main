@@ -10,23 +10,31 @@ interface ComparisonMetric {
 interface PeriodComparisonProps {
   comparisonMode: 'week' | 'month' | 'year' | 'custom';
   metrics: ComparisonMetric[];
+  currency?: string;
 }
 
-export default function PeriodComparison({ comparisonMode, metrics }: PeriodComparisonProps) {
+export default function PeriodComparison({ comparisonMode, metrics, currency = 'AUD' }: PeriodComparisonProps) {
   const formatValue = (value: number, format: 'currency' | 'number' | 'decimal') => {
     switch (format) {
       case 'currency':
-        return new Intl.NumberFormat('id-ID', {
-          style: 'currency',
-          currency: 'IDR',
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 0,
-        }).format(value);
+        if (currency === 'AUD') {
+          return new Intl.NumberFormat('en-AU', {
+            style: 'currency',
+            currency: 'AUD',
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          }).format(value);
+        }
+        // Fallback for other currencies
+        return `${currency} ${value.toLocaleString('en-US', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}`;
       case 'decimal':
         return value.toFixed(2);
       case 'number':
       default:
-        return value.toLocaleString('id-ID');
+        return value.toLocaleString('en-US');
     }
   };
 

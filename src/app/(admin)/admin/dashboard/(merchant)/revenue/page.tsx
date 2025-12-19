@@ -8,11 +8,15 @@ import DailyRevenueChart from "@/components/revenue/DailyRevenueChart";
 import DailyRevenueTable from "@/components/revenue/DailyRevenueTable";
 import OrderBreakdownCards from "@/components/revenue/OrderBreakdownCards";
 import { RevenuePageSkeleton } from "@/components/common/SkeletonLoaders";
+import { useMerchant } from "@/context/MerchantContext";
 
 interface RevenueAnalytics {
   dateRange: {
     startDate: string;
     endDate: string;
+  };
+  merchant: {
+    currency: string;
   };
   summary: {
     totalOrders: number;
@@ -56,6 +60,7 @@ interface RevenueAnalytics {
  */
 export default function MerchantRevenuePage() {
   const router = useRouter();
+  const { merchant } = useMerchant();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [analytics, setAnalytics] = useState<RevenueAnalytics | null>(null);
@@ -211,13 +216,19 @@ export default function MerchantRevenuePage() {
         <>
           {/* Summary Cards */}
           <div className="mb-6">
-            <RevenueSummaryCards summary={analytics.summary} />
+            <RevenueSummaryCards 
+              summary={analytics.summary} 
+              currency={analytics.merchant?.currency || 'AUD'}
+            />
           </div>
 
           {/* Charts Section */}
           <div className="mb-6">
             {/* Daily Revenue Chart */}
-            <DailyRevenueChart data={analytics.dailyRevenue} />
+            <DailyRevenueChart 
+              data={analytics.dailyRevenue} 
+              currency={analytics.merchant?.currency || 'AUD'} 
+            />
           </div>
 
           {/* Order Breakdowns */}
@@ -229,7 +240,10 @@ export default function MerchantRevenuePage() {
           </div>
 
           {/* Daily Revenue Table */}
-          <DailyRevenueTable data={analytics.dailyRevenue} />
+          <DailyRevenueTable 
+            data={analytics.dailyRevenue} 
+            currency={analytics.merchant?.currency || 'AUD'} 
+          />
         </>
       )}
 

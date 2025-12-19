@@ -15,8 +15,8 @@ import { PencilIcon, CloseIcon } from '@/icons';
 
 interface BulkStockActionsProps {
   selectedItems: Array<{ id: number | string; type: 'menu' | 'addon'; name: string }>;
-  onResetSelected: () => Promise<void>;
-  onUpdateAll: (quantity: number) => Promise<void>;
+  onResetSelected: () => void | Promise<void>;
+  onUpdateAll: (quantity: number) => void | Promise<void>;
   onClearSelection: () => void;
 }
 
@@ -29,47 +29,24 @@ export default function BulkStockActions({
   const [showResetModal, setShowResetModal] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [bulkUpdateQty, setBulkUpdateQty] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
 
-  const handleResetSelected = async () => {
-    setIsLoading(true);
-    try {
-      await onResetSelected();
-      setShowResetModal(false);
-      onClearSelection();
-    } catch (error) {
-      console.error('Error resetting stock:', error);
-    } finally {
-      setIsLoading(false);
-    }
+  const handleResetSelected = () => {
+    onResetSelected();
+    setShowResetModal(false);
+    onClearSelection();
   };
 
-  const handleUpdateAll = async () => {
+  const handleUpdateAll = () => {
     if (bulkUpdateQty < 0) return;
-    
-    setIsLoading(true);
-    try {
-      await onUpdateAll(bulkUpdateQty);
-      setShowUpdateModal(false);
-      onClearSelection();
-      setBulkUpdateQty(0);
-    } catch (error) {
-      console.error('Error updating stock:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    onUpdateAll(bulkUpdateQty);
+    setShowUpdateModal(false);
+    onClearSelection();
+    setBulkUpdateQty(0);
   };
 
-  const handleMarkAllOutOfStock = async () => {
-    setIsLoading(true);
-    try {
-      await onUpdateAll(0);
-      onClearSelection();
-    } catch (error) {
-      console.error('Error marking out of stock:', error);
-    } finally {
-      setIsLoading(false);
-    }
+  const handleMarkAllOutOfStock = () => {
+    onUpdateAll(0);
+    onClearSelection();
   };
 
   if (selectedItems.length === 0) {
@@ -118,7 +95,6 @@ export default function BulkStockActions({
               <button
                 onClick={handleMarkAllOutOfStock}
                 className="inline-flex h-10 items-center gap-2 rounded-lg border border-error-200 bg-error-50 px-4 text-sm font-medium text-error-700 transition-colors hover:bg-error-100 dark:border-error-800 dark:bg-error-900/20 dark:text-error-400 dark:hover:bg-error-900/30"
-                disabled={isLoading}
               >
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -137,7 +113,7 @@ export default function BulkStockActions({
               >
                 <CloseIcon className="h-4 w-4" />
                 Cancel
-                
+
               </button>
             </div>
           </div>
@@ -175,24 +151,15 @@ export default function BulkStockActions({
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setShowResetModal(false)}
-                className="inline-flex h-10 items-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:hover:bg-gray-800"
-                disabled={isLoading}
+                className="inline-flex h-10 items-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:hover:bg-gray-800"
               >
                 Cancel
               </button>
               <button
                 onClick={handleResetSelected}
-                className="inline-flex h-10 items-center rounded-lg bg-brand-500 px-4 text-sm font-medium text-white transition-colors hover:bg-brand-600 disabled:opacity-50"
-                disabled={isLoading}
+                className="inline-flex h-10 items-center rounded-lg bg-brand-500 px-4 text-sm font-medium text-white transition-colors hover:bg-brand-600"
               >
-                {isLoading ? (
-                  <>
-                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-                    Processing...
-                  </>
-                ) : (
-                  'Yes, Reset All'
-                )}
+                Yes, Reset All
               </button>
             </div>
           </div>
@@ -247,24 +214,16 @@ export default function BulkStockActions({
                   setShowUpdateModal(false);
                   setBulkUpdateQty(0);
                 }}
-                className="inline-flex h-10 items-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:hover:bg-gray-800"
-                disabled={isLoading}
+                className="inline-flex h-10 items-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:hover:bg-gray-800"
               >
                 Cancel
               </button>
               <button
                 onClick={handleUpdateAll}
                 className="inline-flex h-10 items-center rounded-lg bg-brand-500 px-4 text-sm font-medium text-white transition-colors hover:bg-brand-600 disabled:opacity-50"
-                disabled={isLoading || bulkUpdateQty < 0}
+                disabled={bulkUpdateQty < 0}
               >
-                {isLoading ? (
-                  <>
-                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-                    Processing...
-                  </>
-                ) : (
-                  'Update All'
-                )}
+                Update All
               </button>
             </div>
           </div>
