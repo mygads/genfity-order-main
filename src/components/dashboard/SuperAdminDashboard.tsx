@@ -48,15 +48,15 @@ export default function SuperAdminDashboard({
   recentOrders,
 }: SuperAdminDashboardProps) {
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
+    return new Intl.NumberFormat('en-AU', {
       style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
+      currency: 'AUD',
+      minimumFractionDigits: 2,
     }).format(amount);
   };
 
   const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('id-ID', {
+    return new Intl.DateTimeFormat('en-AU', {
       day: '2-digit',
       month: 'short',
       year: 'numeric',
@@ -228,11 +228,10 @@ export default function SuperAdminDashboard({
                   </p>
                 </div>
                 <span
-                  className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                    merchant.isActive
+                  className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${merchant.isActive
                       ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
                       : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400'
-                  }`}
+                    }`}
                 >
                   {merchant.isActive ? 'Active' : 'Inactive'}
                 </span>

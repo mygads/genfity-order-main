@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     // ========================================
     // VALIDATION (STEP_04 - Input Validation)
     // ========================================
-    
+
     // Validate merchantCode
     if (!body.merchantCode) {
       return NextResponse.json(
@@ -59,10 +59,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Get merchant by code
+    // Get merchant by code (cast as any to support new fee fields until prisma generate completes)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const merchant = await prisma.merchant.findUnique({
       where: { code: body.merchantCode },
-    });
+    }) as any;
 
     if (!merchant || !merchant.isActive) {
       return NextResponse.json(
@@ -118,7 +119,7 @@ export async function POST(req: NextRequest) {
     // ========================================
     // STEP 1: Auto-register customer if not exists
     // ========================================
-    
+
     let customer = await prisma.user.findFirst({
       where: {
         email: body.customerEmail.toLowerCase(),
@@ -128,7 +129,7 @@ export async function POST(req: NextRequest) {
 
     if (!customer) {
       console.log('👤 [ORDER] Registering new customer:', body.customerEmail);
-      
+
       // ✅ FIXED: No password for customers (email-based auth)
       customer = await prisma.user.create({
         data: {
@@ -141,7 +142,7 @@ export async function POST(req: NextRequest) {
           mustChangePassword: false,
         },
       });
-      
+
       console.log('✅ [ORDER] Customer registered:', customer.id.toString());
     } else {
       console.log('👤 [ORDER] Using existing customer:', customer.id.toString());
@@ -150,7 +151,7 @@ export async function POST(req: NextRequest) {
     // ========================================
     // STEP 2: Validate menu items & calculate prices
     // ========================================
-    
+
     let subtotal = 0;
     const orderItemsData: any[] = [];
 
@@ -188,10 +189,10 @@ export async function POST(req: NextRequest) {
       }
 
       // ✅ PROMO PRICE: Use promo price if available, otherwise use regular price
-      const effectivePrice = menu.isPromo && menu.promoPrice 
-        ? decimalToNumber(menu.promoPrice) 
+      const effectivePrice = menu.isPromo && menu.promoPrice
+        ? decimalToNumber(menu.promoPrice)
         : decimalToNumber(menu.price);
-      
+
       const menuPrice = effectivePrice; // Store the effective price to use
       let itemTotal = menuPrice * item.quantity;
 
@@ -242,24 +243,37 @@ export async function POST(req: NextRequest) {
     console.log(`💰 [ORDER CALC] Subtotal (items + addons): ${subtotal}`);
 
     // ========================================
-    // STEP 3: Calculate tax and total (NO SERVICE CHARGE)
+    // STEP 3: Calculate fees and total
     // ========================================
-    
-    const taxPercentage = merchant.enableTax && merchant.taxPercentage 
-      ? Number(merchant.taxPercentage) 
+
+    // Tax calculation
+    const taxPercentage = merchant.enableTax && merchant.taxPercentage
+      ? Number(merchant.taxPercentage)
       : 0;
-    
-    // ✅ Tax calculated on subtotal only
     const taxAmount = subtotal * (taxPercentage / 100);
     console.log(`💰 [ORDER CALC] Tax (${taxPercentage}% on ${subtotal}): ${taxAmount}`);
-    
-    const totalAmount = subtotal + taxAmount;
-    console.log(`💰 [ORDER CALC] Total: ${totalAmount}`);
+
+    // Service charge calculation
+    const serviceChargePercent = merchant.enableServiceCharge && merchant.serviceChargePercent
+      ? Number(merchant.serviceChargePercent)
+      : 0;
+    const serviceChargeAmount = subtotal * (serviceChargePercent / 100);
+    console.log(`💰 [ORDER CALC] Service Charge (${serviceChargePercent}% on ${subtotal}): ${serviceChargeAmount}`);
+
+    // Packaging fee (only for TAKEAWAY orders)
+    const packagingFeeAmount = (body.orderType === 'TAKEAWAY' && merchant.enablePackagingFee && merchant.packagingFeeAmount)
+      ? Number(merchant.packagingFeeAmount)
+      : 0;
+    console.log(`💰 [ORDER CALC] Packaging Fee: ${packagingFeeAmount} (orderType: ${body.orderType})`);
+
+    // Total calculation
+    const totalAmount = subtotal + taxAmount + serviceChargeAmount + packagingFeeAmount;
+    console.log(`💰 [ORDER CALC] Total: ${totalAmount} (subtotal: ${subtotal} + tax: ${taxAmount} + service: ${serviceChargeAmount} + packaging: ${packagingFeeAmount})`);
 
     // ========================================
     // STEP 4: Generate unique order number with retry logic
     // ========================================
-    
+
     /**
      * ✅ FIXED: Generate unique order number with timestamp to prevent duplicates
      * 
@@ -273,12 +287,12 @@ export async function POST(req: NextRequest) {
     const generateOrderNumber = async (merchantId: bigint): Promise<string> => {
       const today = new Date();
       const dateStr = today.toISOString().split('T')[0].replace(/-/g, '');
-      
+
       const todayStart = new Date(today);
       todayStart.setHours(0, 0, 0, 0);
       const todayEnd = new Date(today);
       todayEnd.setHours(23, 59, 59, 999);
-      
+
       const orderCount = await prisma.order.count({
         where: {
           merchantId: merchantId,
@@ -288,19 +302,19 @@ export async function POST(req: NextRequest) {
           },
         },
       });
-      
+
       const sequenceNumber = String(orderCount + 1).padStart(4, '0');
       const timestamp = Date.now().toString().slice(-6); // Last 6 digits of timestamp
       return `ORD-${dateStr}-${sequenceNumber}-${timestamp}`;
     };
-    
+
     const orderNumber = await generateOrderNumber(merchant.id);
     console.log(`📝 [ORDER] Generated order number: ${orderNumber}`);
 
     // ========================================
     // STEP 5: Create order with items and addons (using transaction)
     // ========================================
-    
+
     /**
      * ✅ CRITICAL FIX: Use transaction to create order, items, and addons separately
      * 
@@ -360,14 +374,16 @@ export async function POST(req: NextRequest) {
           status: 'PENDING',
           subtotal,
           taxAmount,
+          serviceChargeAmount,
+          packagingFeeAmount,
           totalAmount,
           notes: body.notes || null,
-        },
+        } as any, // Type assertion for new schema fields
       });
 
       // 2. Create OrderItems and track for addon creation
       const createdItems: any[] = [];
-      
+
       for (const itemData of orderItemsData) {
         const orderItem = await tx.orderItem.create({
           data: {
@@ -432,7 +448,7 @@ export async function POST(req: NextRequest) {
     // ========================================
     // STEP 6: Decrement stock (non-blocking)
     // ========================================
-    
+
     for (const item of body.items) {
       try {
         const menu = await prisma.menu.findUnique({
@@ -458,7 +474,7 @@ export async function POST(req: NextRequest) {
     // ========================================
     // STEP 7: Return serialized response
     // ========================================
-    
+
     return NextResponse.json({
       success: true,
       data: serializeBigInt(order),

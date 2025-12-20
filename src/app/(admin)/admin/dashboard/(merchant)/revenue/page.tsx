@@ -22,6 +22,8 @@ interface RevenueAnalytics {
     totalOrders: number;
     totalRevenue: number;
     totalTax: number;
+    totalServiceCharge: number;
+    totalPackagingFee: number;
     grandTotal: number;
     averageOrderValue: number;
   };
@@ -30,6 +32,8 @@ interface RevenueAnalytics {
     totalOrders: number;
     totalRevenue: number;
     totalTax: number;
+    totalServiceCharge: number;
+    totalPackagingFee: number;
     grandTotal: number;
   }>;
   orderStatusBreakdown: Array<{
@@ -64,7 +68,7 @@ export default function MerchantRevenuePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [analytics, setAnalytics] = useState<RevenueAnalytics | null>(null);
-  
+
   // Date range state
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [startDate, setStartDate] = useState(() => {
@@ -77,7 +81,7 @@ export default function MerchantRevenuePage() {
     try {
       setLoading(true);
       setError(null);
-      
+
       const token = localStorage.getItem("accessToken");
       if (!token) {
         router.push("/admin/login");
@@ -123,7 +127,7 @@ export default function MerchantRevenuePage() {
     const end = new Date();
     const start = new Date();
     start.setDate(start.getDate() - days);
-    
+
     setEndDate(end.toISOString().split('T')[0]);
     setStartDate(start.toISOString().split('T')[0]);
   };
@@ -132,12 +136,14 @@ export default function MerchantRevenuePage() {
     if (!analytics) return;
 
     const csvRows = [
-      ['Date', 'Orders', 'Revenue', 'Tax', 'Grand Total'],
+      ['Date', 'Orders', 'Revenue', 'Tax', 'Service Charge', 'Packaging Fee', 'Grand Total'],
       ...analytics.dailyRevenue.map(row => [
         row.date,
         row.totalOrders.toString(),
         row.totalRevenue.toString(),
         row.totalTax.toString(),
+        (row.totalServiceCharge || 0).toString(),
+        (row.totalPackagingFee || 0).toString(),
         row.grandTotal.toString(),
       ]),
     ];
@@ -163,7 +169,7 @@ export default function MerchantRevenuePage() {
       {/* Date Range & Export */}
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <select 
+          <select
             value={`${startDate}|${endDate}`}
             onChange={(e) => {
               const [start, end] = e.target.value.split('|');
@@ -216,8 +222,8 @@ export default function MerchantRevenuePage() {
         <>
           {/* Summary Cards */}
           <div className="mb-6">
-            <RevenueSummaryCards 
-              summary={analytics.summary} 
+            <RevenueSummaryCards
+              summary={analytics.summary}
               currency={analytics.merchant?.currency || 'AUD'}
             />
           </div>
@@ -225,9 +231,9 @@ export default function MerchantRevenuePage() {
           {/* Charts Section */}
           <div className="mb-6">
             {/* Daily Revenue Chart */}
-            <DailyRevenueChart 
-              data={analytics.dailyRevenue} 
-              currency={analytics.merchant?.currency || 'AUD'} 
+            <DailyRevenueChart
+              data={analytics.dailyRevenue}
+              currency={analytics.merchant?.currency || 'AUD'}
             />
           </div>
 
@@ -240,9 +246,9 @@ export default function MerchantRevenuePage() {
           </div>
 
           {/* Daily Revenue Table */}
-          <DailyRevenueTable 
-            data={analytics.dailyRevenue} 
-            currency={analytics.merchant?.currency || 'AUD'} 
+          <DailyRevenueTable
+            data={analytics.dailyRevenue}
+            currency={analytics.merchant?.currency || 'AUD'}
           />
         </>
       )}

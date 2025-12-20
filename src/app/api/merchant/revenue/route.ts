@@ -21,7 +21,7 @@ async function handleGet(req: NextRequest, context: AuthContext) {
       where: { userId: context.userId },
       include: { merchant: true },
     });
-    
+
     if (!merchantUser) {
       return NextResponse.json(
         {
@@ -41,9 +41,9 @@ async function handleGet(req: NextRequest, context: AuthContext) {
     // Default to last 30 days if not provided
     const endDate = endDateStr ? new Date(endDateStr) : new Date();
     endDate.setHours(23, 59, 59, 999);
-    
-    const startDate = startDateStr 
-      ? new Date(startDateStr) 
+
+    const startDate = startDateStr
+      ? new Date(startDateStr)
       : new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000);
     startDate.setHours(0, 0, 0, 0);
 
@@ -55,6 +55,8 @@ async function handleGet(req: NextRequest, context: AuthContext) {
       total_orders: bigint;
       total_revenue: number;
       total_tax: number;
+      total_service_charge: number;
+      total_packaging_fee: number;
       grand_total: number;
     }>>`
       SELECT 
@@ -62,6 +64,8 @@ async function handleGet(req: NextRequest, context: AuthContext) {
         COUNT(*)::bigint as total_orders,
         SUM(subtotal)::numeric as total_revenue,
         SUM(tax_amount)::numeric as total_tax,
+        SUM(COALESCE(service_charge_amount, 0))::numeric as total_service_charge,
+        SUM(COALESCE(packaging_fee_amount, 0))::numeric as total_packaging_fee,
         SUM(total_amount)::numeric as grand_total
       FROM orders
       WHERE merchant_id = ${merchantId}
@@ -72,28 +76,31 @@ async function handleGet(req: NextRequest, context: AuthContext) {
       ORDER BY date ASC
     `;
 
-    // 2. Total Summary
-    const totalSummary = await prisma.order.aggregate({
-      where: {
-        merchantId,
-        status: 'COMPLETED',
-        placedAt: {
-          gte: startDate,
-          lte: endDate,
-        },
-      },
-      _sum: {
-        subtotal: true,
-        taxAmount: true,
-        totalAmount: true,
-      },
-      _count: {
-        id: true,
-      },
-      _avg: {
-        totalAmount: true,
-      },
-    });
+    // 2. Total Summary (use raw SQL to include new fee fields)
+    const totalSummaryResult = await prisma.$queryRaw<Array<{
+      total_orders: bigint;
+      total_subtotal: number;
+      total_tax: number;
+      total_service_charge: number;
+      total_packaging_fee: number;
+      grand_total: number;
+      avg_order_value: number;
+    }>>`
+      SELECT
+        COUNT(*)::bigint as total_orders,
+        COALESCE(SUM(subtotal), 0)::numeric as total_subtotal,
+        COALESCE(SUM(tax_amount), 0)::numeric as total_tax,
+        COALESCE(SUM(service_charge_amount), 0)::numeric as total_service_charge,
+        COALESCE(SUM(packaging_fee_amount), 0)::numeric as total_packaging_fee,
+        COALESCE(SUM(total_amount), 0)::numeric as grand_total,
+        COALESCE(AVG(total_amount), 0)::numeric as avg_order_value
+      FROM orders
+      WHERE merchant_id = ${merchantId}
+        AND status = 'COMPLETED'
+        AND placed_at >= ${startDate}
+        AND placed_at <= ${endDate}
+    `;
+    const totalSummary = totalSummaryResult[0];
 
     // 3. Order Status Breakdown
     const orderStatusBreakdown = await prisma.order.groupBy({
@@ -180,20 +187,24 @@ async function handleGet(req: NextRequest, context: AuthContext) {
         dateRange: {
           startDate: startDate.toISOString(),
           endDate: endDate.toISOString(),
-        },        merchant: {
+        }, merchant: {
           currency: merchantUser.merchant.currency || 'AUD',
-        },        summary: {
-          totalOrders: totalSummary._count.id,
-          totalRevenue: Number(totalSummary._sum.subtotal) || 0,
-          totalTax: Number(totalSummary._sum.taxAmount) || 0,
-          grandTotal: Number(totalSummary._sum.totalAmount) || 0,
-          averageOrderValue: Number(totalSummary._avg.totalAmount) || 0,
+        }, summary: {
+          totalOrders: Number(totalSummary.total_orders),
+          totalRevenue: Number(totalSummary.total_subtotal) || 0,
+          totalTax: Number(totalSummary.total_tax) || 0,
+          totalServiceCharge: Number(totalSummary.total_service_charge) || 0,
+          totalPackagingFee: Number(totalSummary.total_packaging_fee) || 0,
+          grandTotal: Number(totalSummary.grand_total) || 0,
+          averageOrderValue: Number(totalSummary.avg_order_value) || 0,
         },
         dailyRevenue: dailyRevenue.map(row => ({
           date: row.date.toISOString().split('T')[0],
           totalOrders: Number(row.total_orders),
           totalRevenue: Number(row.total_revenue),
           totalTax: Number(row.total_tax),
+          totalServiceCharge: Number(row.total_service_charge),
+          totalPackagingFee: Number(row.total_packaging_fee),
           grandTotal: Number(row.grand_total),
         })),
         orderStatusBreakdown: orderStatusBreakdown.map(item => ({

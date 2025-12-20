@@ -27,6 +27,7 @@ import {
 } from 'react-icons/fa';
 import { ORDER_STATUS_COLORS, PAYMENT_STATUS_COLORS } from '@/lib/constants/orderConstants';
 import { getNextPossibleStatuses } from '@/lib/utils/orderStatusRules';
+import { useToast } from '@/context/ToastContext';
 import type { OrderWithDetails } from '@/lib/types/order';
 import { OrderStatus, PaymentMethod } from '@prisma/client';
 import { printReceipt, type ReceiptData } from '@/lib/utils/receiptPrinter';
@@ -54,6 +55,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [merchantCurrency, setMerchantCurrency] = useState<string>('AUD');
   const [showCustomerDetails, setShowCustomerDetails] = useState(false);
+  const { showSuccess, showError } = useToast();
 
   const fetchOrderDetails = useCallback(async () => {
     try {
@@ -133,9 +135,23 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
       if (data.success) {
         setOrder(data.data);
         onUpdate?.();
+        
+        // Show success toast
+        const statusLabels: Record<OrderStatus, string> = {
+          PENDING: 'Pending',
+          ACCEPTED: 'Accepted',
+          IN_PROGRESS: 'In Progress',
+          READY: 'Ready',
+          COMPLETED: 'Completed',
+          CANCELLED: 'Cancelled',
+        };
+        showSuccess(`Order status updated to ${statusLabels[newStatus]}`, 'Success');
+      } else {
+        showError(data.error || 'Failed to update order status', 'Update Failed');
       }
     } catch (error) {
       console.error('Error updating status:', error);
+      showError('Failed to update order status', 'Update Failed');
     } finally {
       setUpdating(false);
     }
@@ -179,13 +195,23 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
         await fetchOrderDetails();
         onUpdate?.();
         setShowPaymentModal(false);
+        
+        // Show success toast
+        const methodLabels: Record<PaymentMethod, string> = {
+          CASH_ON_COUNTER: 'Cash',
+          CARD_ON_COUNTER: 'Card',
+          ONLINE: 'Online',
+          BANK_TRANSFER: 'Bank Transfer',
+          E_WALLET: 'E-Wallet',
+        };
+        showSuccess(`Payment recorded successfully (${methodLabels[paymentMethod]})`, 'Payment Recorded');
       } else {
         console.error('[OrderDetailModal] Payment failed:', data.error);
-        alert(`Payment failed: ${data.error}`);
+        showError(data.error || 'Failed to record payment', 'Payment Failed');
       }
     } catch (error) {
       console.error('Error recording payment:', error);
-      alert('Error recording payment. Please try again.');
+      showError('Failed to record payment. Please try again.', 'Payment Failed');
     } finally {
       setUpdating(false);
     }
@@ -422,13 +448,56 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                 </div>
               )}
 
-              {/* Total */}
-              <div className="mb-4 rounded-lg border-2 border-primary-200 bg-primary-50 dark:border-primary-800 dark:bg-primary-900/20 px-4 py-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Total</span>
-                  <span className="text-xl font-bold text-primary-600 dark:text-primary-400">
-                    {formatCurrency(Number(order.totalAmount))}
-                  </span>
+              {/* Price Breakdown */}
+              <div className="mb-4 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div className="px-4 py-3 space-y-2">
+                  {/* Subtotal */}
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600 dark:text-gray-400">Subtotal</span>
+                    <span className="text-gray-900 dark:text-white font-medium">
+                      {formatCurrency(Number(order.subtotal))}
+                    </span>
+                  </div>
+
+                  {/* Tax */}
+                  {Number(order.taxAmount) > 0 && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600 dark:text-gray-400">Tax</span>
+                      <span className="text-gray-900 dark:text-white">
+                        {formatCurrency(Number(order.taxAmount))}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Service Charge - cast as any for new schema fields */}
+                  {Number((order as any).serviceChargeAmount) > 0 && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600 dark:text-gray-400">Service Charge</span>
+                      <span className="text-gray-900 dark:text-white">
+                        {formatCurrency(Number((order as any).serviceChargeAmount))}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Packaging Fee */}
+                  {Number((order as any).packagingFeeAmount) > 0 && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600 dark:text-gray-400">Packaging Fee</span>
+                      <span className="text-gray-900 dark:text-white">
+                        {formatCurrency(Number((order as any).packagingFeeAmount))}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Total */}
+                <div className="border-t-2 border-primary-200 dark:border-primary-800 bg-primary-50 dark:bg-primary-900/20 px-4 py-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Total</span>
+                    <span className="text-xl font-bold text-primary-600 dark:text-primary-400">
+                      {formatCurrency(Number(order.totalAmount))}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -483,10 +552,10 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                             onClick={() => handleStatusUpdate(status)}
                             disabled={updating}
                             className={`flex h-10 flex-1 items-center justify-center gap-2 rounded-lg text-sm font-medium disabled:opacity-50 ${isCancelled
-                                ? 'bg-error-500 text-white hover:bg-error-600'
-                                : isCompleted
-                                  ? 'bg-success-500 text-white hover:bg-success-600'
-                                  : 'bg-primary-500 text-white hover:bg-primary-600'
+                              ? 'bg-error-500 text-white hover:bg-error-600'
+                              : isCompleted
+                                ? 'bg-success-500 text-white hover:bg-success-600'
+                                : 'bg-primary-500 text-white hover:bg-primary-600'
                               }`}
                           >
                             {updating ? (
@@ -504,62 +573,64 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
             </div>
 
             {/* Payment Modal */}
-            {showPaymentModal && (
-              <div
-                className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 p-4"
-                onClick={() => setShowPaymentModal(false)}
-              >
+            {
+              showPaymentModal && (
                 <div
-                  className="w-full max-w-sm rounded-xl border border-gray-200 bg-white p-5 shadow-xl dark:border-gray-800 dark:bg-gray-900"
-                  onClick={(e) => e.stopPropagation()}
+                  className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 p-4"
+                  onClick={() => setShowPaymentModal(false)}
                 >
-                  <h3 className="mb-4 text-lg font-bold text-gray-900 dark:text-white">
-                    Record Payment
-                  </h3>
+                  <div
+                    className="w-full max-w-sm rounded-xl border border-gray-200 bg-white p-5 shadow-xl dark:border-gray-800 dark:bg-gray-900"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <h3 className="mb-4 text-lg font-bold text-gray-900 dark:text-white">
+                      Record Payment
+                    </h3>
 
-                  <div className="space-y-2">
-                    <button
-                      onClick={() => handleRecordPayment('CASH_ON_COUNTER', Number(order.totalAmount))}
-                      disabled={updating}
-                      className="flex h-14 w-full items-center justify-center gap-3 rounded-lg bg-success-500 px-4 text-white hover:bg-success-600 disabled:opacity-50"
-                    >
-                      <FaMoneyBillWave className="h-5 w-5" />
-                      <div className="text-left">
-                        <p className="text-sm font-bold">Cash Payment</p>
-                        <p className="text-xs opacity-90">{formatCurrency(Number(order.totalAmount))}</p>
-                      </div>
-                    </button>
+                    <div className="space-y-2">
+                      <button
+                        onClick={() => handleRecordPayment('CASH_ON_COUNTER', Number(order.totalAmount))}
+                        disabled={updating}
+                        className="flex h-14 w-full items-center justify-center gap-3 rounded-lg bg-success-500 px-4 text-white hover:bg-success-600 disabled:opacity-50"
+                      >
+                        <FaMoneyBillWave className="h-5 w-5" />
+                        <div className="text-left">
+                          <p className="text-sm font-bold">Cash Payment</p>
+                          <p className="text-xs opacity-90">{formatCurrency(Number(order.totalAmount))}</p>
+                        </div>
+                      </button>
 
-                    <button
-                      onClick={() => handleRecordPayment('CARD_ON_COUNTER', Number(order.totalAmount))}
-                      disabled={updating}
-                      className="flex h-14 w-full items-center justify-center gap-3 rounded-lg bg-primary-500 px-4 text-white hover:bg-primary-600 disabled:opacity-50"
-                    >
-                      <FaCreditCard className="h-5 w-5" />
-                      <div className="text-left">
-                        <p className="text-sm font-bold">Card Payment</p>
-                        <p className="text-xs opacity-90">{formatCurrency(Number(order.totalAmount))}</p>
-                      </div>
-                    </button>
+                      <button
+                        onClick={() => handleRecordPayment('CARD_ON_COUNTER', Number(order.totalAmount))}
+                        disabled={updating}
+                        className="flex h-14 w-full items-center justify-center gap-3 rounded-lg bg-primary-500 px-4 text-white hover:bg-primary-600 disabled:opacity-50"
+                      >
+                        <FaCreditCard className="h-5 w-5" />
+                        <div className="text-left">
+                          <p className="text-sm font-bold">Card Payment</p>
+                          <p className="text-xs opacity-90">{formatCurrency(Number(order.totalAmount))}</p>
+                        </div>
+                      </button>
 
-                    <button
-                      onClick={() => setShowPaymentModal(false)}
-                      className="h-10 w-full rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
-                    >
-                      Cancel
-                    </button>
+                      <button
+                        onClick={() => setShowPaymentModal(false)}
+                        className="h-10 w-full rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )
+            }
           </>
         ) : (
           <div className="flex items-center justify-center p-16">
             <p className="text-gray-500 dark:text-gray-400">Order not found</p>
           </div>
         )}
-      </div>
-    </div>
+      </div >
+    </div >
   );
 };
 

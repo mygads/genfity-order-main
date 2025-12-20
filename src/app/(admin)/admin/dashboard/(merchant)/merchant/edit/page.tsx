@@ -25,6 +25,13 @@ interface MerchantFormData {
   timezone: string;
   latitude?: number | null;
   longitude?: number | null;
+  // Fee settings
+  enableTax: boolean;
+  taxPercentage: number;
+  enableServiceCharge: boolean;
+  serviceChargePercent: number;
+  enablePackagingFee: boolean;
+  packagingFeeAmount: number;
 }
 
 interface OpeningHour {
@@ -48,7 +55,7 @@ export default function EditMerchantPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
-  
+
   const [formData, setFormData] = useState<MerchantFormData>({
     name: "",
     code: "",
@@ -62,6 +69,13 @@ export default function EditMerchantPage() {
     timezone: "Australia/Sydney",
     latitude: null,
     longitude: null,
+    // Fee settings
+    enableTax: false,
+    taxPercentage: 0,
+    enableServiceCharge: false,
+    serviceChargePercent: 0,
+    enablePackagingFee: false,
+    packagingFeeAmount: 0,
   });
 
   const [openingHours, setOpeningHours] = useState<OpeningHour[]>([
@@ -100,7 +114,7 @@ export default function EditMerchantPage() {
 
       const data = await response.json();
       const merchant = data.data?.merchant || data.data;
-      
+
       setFormData({
         name: merchant.name || "",
         code: merchant.code || "",
@@ -114,6 +128,13 @@ export default function EditMerchantPage() {
         timezone: merchant.timezone || "Australia/Sydney",
         latitude: merchant.latitude ? parseFloat(merchant.latitude) : null,
         longitude: merchant.longitude ? parseFloat(merchant.longitude) : null,
+        // Fee settings
+        enableTax: merchant.enableTax || false,
+        taxPercentage: merchant.taxPercentage ? parseFloat(merchant.taxPercentage) : 0,
+        enableServiceCharge: merchant.enableServiceCharge || false,
+        serviceChargePercent: merchant.serviceChargePercent ? parseFloat(merchant.serviceChargePercent) : 0,
+        enablePackagingFee: merchant.enablePackagingFee || false,
+        packagingFeeAmount: merchant.packagingFeeAmount ? parseFloat(merchant.packagingFeeAmount) : 0,
       });
 
       // Set opening hours if available
@@ -121,7 +142,7 @@ export default function EditMerchantPage() {
         const hoursMap = new Map(
           merchant.openingHours.map((h: OpeningHour) => [h.dayOfWeek, h])
         );
-        
+
         const initialHours = Array.from({ length: 7 }, (_, dayOfWeek) => {
           const existing = hoursMap.get(dayOfWeek) as OpeningHour | undefined;
           return existing ? {
@@ -136,7 +157,7 @@ export default function EditMerchantPage() {
             isClosed: false,
           };
         });
-        
+
         setOpeningHours(initialHours);
       }
     } catch (err) {
@@ -155,8 +176,8 @@ export default function EditMerchantPage() {
   };
 
   const handleOpeningHourChange = (dayOfWeek: number, field: keyof OpeningHour, value: string | boolean) => {
-    setOpeningHours(prev => prev.map(hour => 
-      hour.dayOfWeek === dayOfWeek 
+    setOpeningHours(prev => prev.map(hour =>
+      hour.dayOfWeek === dayOfWeek
         ? { ...hour, [field]: value }
         : hour
     ));
@@ -254,7 +275,7 @@ export default function EditMerchantPage() {
       }
 
       showSuccess("Success", "Merchant information updated successfully!");
-      
+
       setTimeout(() => {
         router.push("/admin/dashboard/merchant/view");
       }, 1000);
@@ -491,6 +512,123 @@ export default function EditMerchantPage() {
                   ))}
                 </select>
               </div>
+            </div>
+          </div>
+
+          {/* Fees & Charges */}
+          <div className="space-y-5 border-t border-gray-200 pt-6 dark:border-gray-800">
+            <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+              Fees & Charges
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Configure tax, service charge, and packaging fee for your orders.
+            </p>
+
+            {/* Tax Settings */}
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">Enable Tax</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Apply tax percentage to all orders</p>
+                </div>
+                <label className="relative inline-flex cursor-pointer items-center">
+                  <input
+                    type="checkbox"
+                    checked={formData.enableTax}
+                    onChange={(e) => setFormData(prev => ({ ...prev, enableTax: e.target.checked }))}
+                    className="peer sr-only"
+                  />
+                  <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
+                </label>
+              </div>
+              {formData.enableTax && (
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Tax Percentage (%)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={formData.taxPercentage}
+                    onChange={(e) => setFormData(prev => ({ ...prev, taxPercentage: parseFloat(e.target.value) || 0 }))}
+                    className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                    placeholder="e.g. 10"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Service Charge Settings */}
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">Enable Service Charge</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Apply service charge percentage to all orders</p>
+                </div>
+                <label className="relative inline-flex cursor-pointer items-center">
+                  <input
+                    type="checkbox"
+                    checked={formData.enableServiceCharge}
+                    onChange={(e) => setFormData(prev => ({ ...prev, enableServiceCharge: e.target.checked }))}
+                    className="peer sr-only"
+                  />
+                  <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
+                </label>
+              </div>
+              {formData.enableServiceCharge && (
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Service Charge Percentage (%)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={formData.serviceChargePercent}
+                    onChange={(e) => setFormData(prev => ({ ...prev, serviceChargePercent: parseFloat(e.target.value) || 0 }))}
+                    className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                    placeholder="e.g. 5"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Packaging Fee Settings */}
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">Enable Packaging Fee</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Apply fixed packaging fee for takeaway orders only</p>
+                </div>
+                <label className="relative inline-flex cursor-pointer items-center">
+                  <input
+                    type="checkbox"
+                    checked={formData.enablePackagingFee}
+                    onChange={(e) => setFormData(prev => ({ ...prev, enablePackagingFee: e.target.checked }))}
+                    className="peer sr-only"
+                  />
+                  <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
+                </label>
+              </div>
+              {formData.enablePackagingFee && (
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Packaging Fee Amount (A$)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.packagingFeeAmount}
+                    onChange={(e) => setFormData(prev => ({ ...prev, packagingFeeAmount: parseFloat(e.target.value) || 0 }))}
+                    className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                    placeholder="e.g. 2.00"
+                  />
+                </div>
+              )}
             </div>
           </div>
 

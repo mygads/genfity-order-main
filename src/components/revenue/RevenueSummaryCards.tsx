@@ -6,6 +6,8 @@ interface RevenueSummary {
   totalOrders: number;
   totalRevenue: number;
   totalTax: number;
+  totalServiceCharge?: number;
+  totalPackagingFee?: number;
   grandTotal: number;
   averageOrderValue: number;
 }
@@ -19,9 +21,9 @@ interface RevenueSummaryCardsProps {
  * Revenue Summary Cards Component - Clean Minimalist Design
  * Similar to Analytics page style
  */
-export default function RevenueSummaryCards({ 
-  summary, 
-  currency = "AUD" 
+export default function RevenueSummaryCards({
+  summary,
+  currency = "AUD"
 }: RevenueSummaryCardsProps) {
   const formatCurrency = (amount: number) => {
     if (currency === "AUD") {
@@ -48,20 +50,30 @@ export default function RevenueSummaryCards({
     {
       title: "Total Revenue",
       value: formatCurrency(summary.totalRevenue),
-      subtitle: "Before tax",
+      subtitle: "Before fees & tax",
     },
     {
       title: "Total Tax",
       value: formatCurrency(summary.totalTax),
       subtitle: "Tax collected",
     },
+    ...(summary.totalServiceCharge && summary.totalServiceCharge > 0 ? [{
+      title: "Service Charge",
+      value: formatCurrency(summary.totalServiceCharge),
+      subtitle: "Service fees",
+    }] : []),
+    ...(summary.totalPackagingFee && summary.totalPackagingFee > 0 ? [{
+      title: "Packaging Fee",
+      value: formatCurrency(summary.totalPackagingFee),
+      subtitle: "Takeaway packaging",
+    }] : []),
     {
       title: "Grand Total",
       value: formatCurrency(summary.grandTotal),
-      subtitle: "Revenue + Tax",
+      subtitle: "All income",
     },
     {
-      title: "Average Order Value",
+      title: "Avg Order Value",
       value: formatCurrency(summary.averageOrderValue),
       subtitle: "Per order",
     },

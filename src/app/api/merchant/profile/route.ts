@@ -23,7 +23,7 @@ async function handleGet(req: NextRequest, authContext: AuthContext) {
       where: { userId: authContext.userId },
       include: { merchant: true },
     });
-    
+
     if (!merchantUser) {
       return NextResponse.json(
         {
@@ -83,7 +83,7 @@ async function handlePut(req: NextRequest, authContext: AuthContext) {
       where: { userId: authContext.userId },
       include: { merchant: true },
     });
-    
+
     if (!merchantUser) {
       return NextResponse.json(
         {
@@ -107,8 +107,17 @@ async function handlePut(req: NextRequest, authContext: AuthContext) {
         address: body.address,
         phoneNumber: body.phoneNumber,
         email: body.email,
-        taxRate: body.taxRate,
+        // Tax settings
+        enableTax: body.enableTax,
+        taxRate: body.taxPercentage,
         taxIncluded: body.taxIncluded,
+        // Service charge settings
+        enableServiceCharge: body.enableServiceCharge,
+        serviceChargePercent: body.serviceChargePercent,
+        // Packaging fee settings
+        enablePackagingFee: body.enablePackagingFee,
+        packagingFeeAmount: body.packagingFeeAmount,
+        // Regional settings
         country: body.country,
         currency: body.currency,
         timezone: body.timezone,

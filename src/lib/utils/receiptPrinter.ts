@@ -168,13 +168,12 @@ export function generateReceiptHTML(data: ReceiptData): string {
       <span class="label">Order Type:</span>
       <span>${order.orderType}</span>
     </div>
-    ${
-      order.tableNumber
-        ? `<div class="row">
+    ${order.tableNumber
+      ? `<div class="row">
       <span class="label">Table:</span>
       <span>${order.tableNumber}</span>
     </div>`
-        : ''
+      : ''
     }
     <div class="row">
       <span class="label">Date:</span>
@@ -185,34 +184,32 @@ export function generateReceiptHTML(data: ReceiptData): string {
   <!-- Items -->
   <div class="section">
     <div class="items">
-      ${
-        order.orderItems
-          ?.map(
-            (item) => `
+      ${order.orderItems
+      ?.map(
+        (item) => `
         <div class="item">
           <div class="row">
             <span class="item-name">${item.quantity}x ${item.menuName}</span>
             <span>${formatCurrency(Number(item.subtotal), merchant.currency)}</span>
           </div>
-          ${
-            item.addons && item.addons.length > 0
-              ? item.addons
-                  .map(
-                    (addon) => `
+          ${item.addons && item.addons.length > 0
+            ? item.addons
+              .map(
+                (addon) => `
             <div class="item-addon">
               + ${addon.addonName} ${addon.quantity > 1 ? `(${addon.quantity}x)` : ''}
               ${formatCurrency(Number(addon.addonPrice) * addon.quantity, merchant.currency)}
             </div>
           `
-                  )
-                  .join('')
-              : ''
+              )
+              .join('')
+            : ''
           }
         </div>
       `
-          )
-          .join('') || ''
-      }
+      )
+      .join('') || ''
+    }
     </div>
   </div>
 
@@ -222,10 +219,18 @@ export function generateReceiptHTML(data: ReceiptData): string {
       <span>Subtotal:</span>
       <span>${formatCurrency(Number(order.subtotal), merchant.currency)}</span>
     </div>
-    <div class="row">
+    ${Number((order as any).taxAmount) > 0 ? `<div class="row">
       <span>Tax:</span>
-      <span>${formatCurrency(Number(order.taxAmount), merchant.currency)}</span>
-    </div>
+      <span>${formatCurrency(Number((order as any).taxAmount), merchant.currency)}</span>
+    </div>` : ''}
+    ${Number((order as any).serviceChargeAmount) > 0 ? `<div class="row">
+      <span>Service Charge:</span>
+      <span>${formatCurrency(Number((order as any).serviceChargeAmount), merchant.currency)}</span>
+    </div>` : ''}
+    ${Number((order as any).packagingFeeAmount) > 0 ? `<div class="row">
+      <span>Packaging Fee:</span>
+      <span>${formatCurrency(Number((order as any).packagingFeeAmount), merchant.currency)}</span>
+    </div>` : ''}
     <div class="row total">
       <span>TOTAL:</span>
       <span>${formatCurrency(Number(order.totalAmount), merchant.currency)}</span>
@@ -242,25 +247,23 @@ export function generateReceiptHTML(data: ReceiptData): string {
       <span class="label">Amount Paid:</span>
       <span>${formatCurrency(payment.amount, merchant.currency)}</span>
     </div>
-    ${
-      payment.amount > Number(order.totalAmount)
-        ? `<div class="row">
+    ${payment.amount > Number(order.totalAmount)
+      ? `<div class="row">
       <span class="label">Change:</span>
       <span>${formatCurrency(payment.amount - Number(order.totalAmount), merchant.currency)}</span>
     </div>`
-        : ''
+      : ''
     }
     <div class="row">
       <span class="label">Paid At:</span>
       <span>${formatDateTime(payment.paidAt)}</span>
     </div>
-    ${
-      payment.paidByName
-        ? `<div class="row">
+    ${payment.paidByName
+      ? `<div class="row">
       <span class="label">Served By:</span>
       <span>${payment.paidByName}</span>
     </div>`
-        : ''
+      : ''
     }
   </div>
 

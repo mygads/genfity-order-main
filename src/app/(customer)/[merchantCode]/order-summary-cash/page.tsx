@@ -31,6 +31,8 @@ interface OrderSummaryData {
   }>;
   subtotalAmount: number;
   taxAmount: number;
+  serviceChargeAmount: number;
+  packagingFeeAmount: number;
   totalAmount: number;
   createdAt: string;
 }
@@ -175,9 +177,11 @@ export default function OrderSummaryCashPage() {
           mode: data.data.orderType === 'DINE_IN' ? 'dinein' : 'takeaway',
           tableNumber: data.data.tableNumber,
           status: data.data.status,
-          orderItems: convertedOrderItems,            // ✅ Use converted items
+          orderItems: convertedOrderItems,
           subtotalAmount: convertDecimal(data.data.subtotal || data.data.subtotalAmount),
           taxAmount: convertDecimal(data.data.taxAmount),
+          serviceChargeAmount: convertDecimal(data.data.serviceChargeAmount),
+          packagingFeeAmount: convertDecimal(data.data.packagingFeeAmount),
           totalAmount: convertDecimal(data.data.totalAmount),
           createdAt: data.data.createdAt,
         };
@@ -424,12 +428,32 @@ export default function OrderSummaryCashPage() {
                   </span>
                 </div>
 
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Tax</span>
-                  <span className="text-gray-900 dark:text-white font-medium">
-                    {formatCurrency(order.taxAmount)}
-                  </span>
-                </div>
+                {order.taxAmount > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600 dark:text-gray-400">Tax</span>
+                    <span className="text-gray-900 dark:text-white font-medium">
+                      {formatCurrency(order.taxAmount)}
+                    </span>
+                  </div>
+                )}
+
+                {order.serviceChargeAmount > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600 dark:text-gray-400">Service Charge</span>
+                    <span className="text-gray-900 dark:text-white font-medium">
+                      {formatCurrency(order.serviceChargeAmount)}
+                    </span>
+                  </div>
+                )}
+
+                {order.packagingFeeAmount > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600 dark:text-gray-400">Packaging Fee</span>
+                    <span className="text-gray-900 dark:text-white font-medium">
+                      {formatCurrency(order.packagingFeeAmount)}
+                    </span>
+                  </div>
+                )}
 
                 <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
                   <div className="flex justify-between items-center">

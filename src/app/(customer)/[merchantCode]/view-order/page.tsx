@@ -52,7 +52,9 @@ export default function ViewOrderPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [showPaymentDetails, setShowPaymentDetails] = useState(false);
   const [generalNotes, setGeneralNotes] = useState('');
-  const [merchantTaxPercentage, setMerchantTaxPercentage] = useState(10);
+  const [merchantTaxPercentage, setMerchantTaxPercentage] = useState(0);
+  const [merchantServiceChargePercent, setMerchantServiceChargePercent] = useState(0);
+  const [merchantPackagingFee, setMerchantPackagingFee] = useState(0);
   const [merchantCurrency, setMerchantCurrency] = useState('AUD');
   const [selectedMenu, setSelectedMenu] = useState<MenuItem | null>(null);
   const [editingCartItem, setEditingCartItem] = useState<CartItem | null>(null);
@@ -73,10 +75,23 @@ export default function ViewOrderPage() {
         const data = await response.json();
 
         if (data.success) {
-          setMerchantTaxPercentage(Number(data.data.taxPercentage) || 10);
+          // Tax settings
+          if (data.data.enableTax) {
+            setMerchantTaxPercentage(Number(data.data.taxPercentage) || 0);
+          }
+          // Service charge settings
+          if (data.data.enableServiceCharge) {
+            setMerchantServiceChargePercent(Number(data.data.serviceChargePercent) || 0);
+          }
+          // Packaging fee (for takeaway)
+          if (data.data.enablePackagingFee && mode === 'takeaway') {
+            setMerchantPackagingFee(Number(data.data.packagingFeeAmount) || 0);
+          }
           setMerchantCurrency(data.data.currency || 'AUD');
           console.log('✅ [VIEW ORDER] Merchant settings:', {
             tax: data.data.taxPercentage,
+            serviceCharge: data.data.serviceChargePercent,
+            packagingFee: data.data.packagingFeeAmount,
             currency: data.data.currency
           });
         }
@@ -120,9 +135,12 @@ export default function ViewOrderPage() {
     }
   };
 
-  // ✅ UNIFIED: Calculate totals using utility
+  // ✅ UNIFIED: Calculate totals
   const subtotal = cart ? calculateCartSubtotal(cart.items) : 0;
-  const breakdown = calculatePriceBreakdown(subtotal, merchantTaxPercentage);
+  const taxAmount = subtotal * (merchantTaxPercentage / 100);
+  const serviceChargeAmount = subtotal * (merchantServiceChargePercent / 100);
+  const packagingFeeAmount = merchantPackagingFee; // Fixed amount
+  const total = subtotal + taxAmount + serviceChargeAmount + packagingFeeAmount;
 
   const handleProceedToPayment = () => {
     // Save general notes to cart context
@@ -362,43 +380,50 @@ export default function ViewOrderPage() {
               Payment Details
             </h2>
 
-            <div className="p-4 space-y-3">
-              {/* Collapsible Tax Details */}
-              <button
-                onClick={() => setShowPaymentDetails(!showPaymentDetails)}
-                className="w-full flex items-center justify-between text-sm hover:bg-gray-50 dark:hover:bg-gray-700 -mx-2 px-2 py-2 rounded transition-colors"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-700 dark:text-gray-300">Incl. tax</span>
-                  <svg
-                    className={`w-4 h-4 text-gray-500 transition-transform ${showPaymentDetails ? 'rotate-180' : ''}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-                <span className="font-medium text-gray-900 dark:text-white">
-                  {formatCurrency(Number(breakdown.tax), merchantCurrency)}
+            <div className="p-4 space-y-2">
+              {/* Subtotal */}
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600 dark:text-gray-400">Subtotal</span>
+                <span className="text-gray-900 dark:text-white font-medium">
+                  {formatCurrency(subtotal, merchantCurrency)}
                 </span>
-              </button>
+              </div>
 
-              {/* Expanded Details */}
-              {showPaymentDetails && (
-                <div className="pl-6 space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Tax ({merchantTaxPercentage}%)</span>
-                    <span className="text-gray-900 dark:text-white">{formatCurrency(Number(breakdown.tax), merchantCurrency)}</span>
-                  </div>
+              {/* Tax */}
+              {taxAmount > 0 && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600 dark:text-gray-400">Tax ({merchantTaxPercentage}%)</span>
+                  <span className="text-gray-900 dark:text-white">
+                    {formatCurrency(taxAmount, merchantCurrency)}
+                  </span>
+                </div>
+              )}
+
+              {/* Service Charge */}
+              {serviceChargeAmount > 0 && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600 dark:text-gray-400">Service Charge ({merchantServiceChargePercent}%)</span>
+                  <span className="text-gray-900 dark:text-white">
+                    {formatCurrency(serviceChargeAmount, merchantCurrency)}
+                  </span>
+                </div>
+              )}
+
+              {/* Packaging Fee */}
+              {packagingFeeAmount > 0 && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600 dark:text-gray-400">Packaging Fee</span>
+                  <span className="text-gray-900 dark:text-white">
+                    {formatCurrency(packagingFeeAmount, merchantCurrency)}
+                  </span>
                 </div>
               )}
 
               {/* Total */}
-              <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-700 mt-2">
                 <span className="text-lg font-bold text-gray-900 dark:text-white">Total</span>
                 <span className="text-xl font-bold text-orange-500">
-                  {formatCurrency(Number(breakdown.total), merchantCurrency)}
+                  {formatCurrency(total, merchantCurrency)}
                 </span>
               </div>
             </div>
@@ -412,7 +437,7 @@ export default function ViewOrderPage() {
           <div>
             <div className="text-sm text-gray-600 dark:text-gray-400">Total Payment</div>
             <div className="text-xl font-bold text-gray-900 dark:text-white">
-              {formatCurrency(Number(breakdown.total), merchantCurrency)}
+              {formatCurrency(total, merchantCurrency)}
             </div>
           </div>
           <button

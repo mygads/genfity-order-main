@@ -8,10 +8,11 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { FaUser, FaUtensils, FaShoppingBag, FaClock, FaCheck } from 'react-icons/fa';
 import { ORDER_STATUS_COLORS, PAYMENT_STATUS_COLORS } from '@/lib/constants/orderConstants';
 import { formatDistanceToNow } from 'date-fns';
+import { ConfirmationModal } from '@/components/common/ConfirmationModal';
 import type { OrderListItem, OrderWithDetails } from '@/lib/types/order';
 
 interface OrderCardProps {
@@ -35,6 +36,8 @@ export const OrderCard: React.FC<OrderCardProps> = ({
   className = '',
   currency = 'AUD',
 }) => {
+  const [showUnpaidConfirm, setShowUnpaidConfirm] = useState(false);
+
   const statusConfig = ORDER_STATUS_COLORS[order.status as keyof typeof ORDER_STATUS_COLORS];
   const paymentConfig = order.payment
     ? PAYMENT_STATUS_COLORS[order.payment.status as keyof typeof PAYMENT_STATUS_COLORS]
@@ -58,7 +61,14 @@ export const OrderCard: React.FC<OrderCardProps> = ({
 
   return (
     <div
-      onClick={onClick}
+      onClick={(e) => {
+        // Don't open detail modal if confirmation modal is open
+        if (showUnpaidConfirm) {
+          e.stopPropagation();
+          return;
+        }
+        onClick?.();
+      }}
       className={`
         rounded-xl border border-gray-200 dark:border-gray-800 
         bg-white dark:bg-white/3 
@@ -188,40 +198,90 @@ export const OrderCard: React.FC<OrderCardProps> = ({
         </span>
       </div>
 
-      {/* Quick Actions - Show Completed button for READY status */}
-      {showQuickActions && order.status === 'READY' && onStatusChange && (
+      {/* Quick Actions - Different buttons based on status */}
+      {showQuickActions && onStatusChange && (
         <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onStatusChange('COMPLETED');
-            }}
-            className="w-full h-9 px-4 rounded-lg bg-success-500 text-white font-semibold text-sm hover:bg-success-600 transition-colors duration-150 flex items-center justify-center gap-2"
-          >
-            <FaCheck className="h-3.5 w-3.5" />
-            Complete Order
-          </button>
-        </div>
-      )}
+          {/* PENDING: Accept Order button */}
+          {order.status === 'PENDING' && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onStatusChange('ACCEPTED');
+              }}
+              className="w-full h-9 px-4 rounded-lg bg-success-500 text-white font-semibold text-sm hover:bg-success-600 transition-colors duration-150 flex items-center justify-center gap-2"
+            >
+              <FaCheck className="h-3.5 w-3.5" />
+              Accept Order
+            </button>
+          )}
 
-      {/* View Details button for non-READY or when onStatusChange not provided */}
-      {showQuickActions && onViewDetails && (order.status !== 'READY' || !onStatusChange) && (
-        <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onViewDetails();
-            }}
-            className="w-full h-9 px-4 rounded-lg bg-primary-500 text-white font-semibold text-sm hover:bg-primary-600 transition-colors duration-150 flex items-center justify-center gap-2"
-          >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-            </svg>
-            View Details
-          </button>
+          {/* ACCEPTED: Mark In Progress button (with payment check) */}
+          {order.status === 'ACCEPTED' && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                // Check if order is unpaid
+                if (order.payment?.status !== 'PAID') {
+                  setShowUnpaidConfirm(true);
+                } else {
+                  onStatusChange('IN_PROGRESS');
+                }
+              }}
+              className="w-full h-9 px-4 rounded-lg bg-primary-500 text-white font-semibold text-sm hover:bg-primary-600 transition-colors duration-150 flex items-center justify-center gap-2"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Mark In Progress
+            </button>
+          )}
+
+          {/* IN_PROGRESS: Mark Ready button */}
+          {order.status === 'IN_PROGRESS' && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onStatusChange('READY');
+              }}
+              className="w-full h-9 px-4 rounded-lg bg-success-500 text-white font-semibold text-sm hover:bg-success-600 transition-colors duration-150 flex items-center justify-center gap-2"
+            >
+              <FaCheck className="h-3.5 w-3.5" />
+              Mark Ready
+            </button>
+          )}
+
+          {/* READY: Complete Order button */}
+          {order.status === 'READY' && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onStatusChange('COMPLETED');
+              }}
+              className="w-full h-9 px-4 rounded-lg bg-success-500 text-white font-semibold text-sm hover:bg-success-600 transition-colors duration-150 flex items-center justify-center gap-2"
+            >
+              <FaCheck className="h-3.5 w-3.5" />
+              Complete Order
+            </button>
+          )}
         </div>
       )}
+      
+      {/* Unpaid Order Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showUnpaidConfirm}
+        onClose={() => setShowUnpaidConfirm(false)}
+        onConfirm={() => {
+          if (onStatusChange) {
+            onStatusChange('IN_PROGRESS');
+          }
+        }}
+        title="Unpaid Order"
+        message="This order has not been paid yet. Do you want to continue marking it as In Progress?"
+        confirmText="Continue Anyway"
+        cancelText="Cancel"
+        variant="warning"
+      />
     </div>
   );
 };

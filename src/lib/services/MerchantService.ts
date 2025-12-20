@@ -26,21 +26,21 @@ export interface CreateMerchantInput {
   address?: string;
   phoneNumber?: string;
   email?: string;
-  
+
   // Store status
   isOpen?: boolean;
-  
+
   // Location settings
   country?: string;
   currency?: string;
   timezone?: string;
   latitude?: number | null;
   longitude?: number | null;
-  
+
   // Tax settings
   taxRate?: number;
   taxIncluded?: boolean;
-  
+
   // Owner info
   ownerName: string;
   ownerEmail: string;
@@ -57,8 +57,17 @@ export interface UpdateMerchantInput {
   address?: string;
   phoneNumber?: string;
   email?: string;
+  // Tax settings
+  enableTax?: boolean;
   taxRate?: number;
   taxIncluded?: boolean;
+  // Service charge settings
+  enableServiceCharge?: boolean;
+  serviceChargePercent?: number;
+  // Packaging fee settings
+  enablePackagingFee?: boolean;
+  packagingFeeAmount?: number;
+  // Other settings
   isActive?: boolean;
   isOpen?: boolean;
   country?: string;
@@ -237,10 +246,19 @@ class MerchantService {
     if (input.address !== undefined) updateData.address = input.address;
     if (input.phoneNumber !== undefined) updateData.phone = input.phoneNumber; // Map to phone
     if (input.email !== undefined) updateData.email = input.email;
+    // Tax settings
+    if (input.enableTax !== undefined) updateData.enableTax = input.enableTax;
     if (input.taxRate !== undefined) {
       updateData.enableTax = input.taxRate > 0;
       updateData.taxPercentage = input.taxRate;
     }
+    // Service charge settings
+    if (input.enableServiceCharge !== undefined) updateData.enableServiceCharge = input.enableServiceCharge;
+    if (input.serviceChargePercent !== undefined) updateData.serviceChargePercent = input.serviceChargePercent;
+    // Packaging fee settings
+    if (input.enablePackagingFee !== undefined) updateData.enablePackagingFee = input.enablePackagingFee;
+    if (input.packagingFeeAmount !== undefined) updateData.packagingFeeAmount = input.packagingFeeAmount;
+    // Other settings
     if (input.isActive !== undefined) updateData.isActive = input.isActive;
     if (input.isOpen !== undefined) updateData.isOpen = input.isOpen;
     if (input.country !== undefined) updateData.country = input.country;
@@ -458,7 +476,7 @@ class MerchantService {
       const existingOwner = merchant?.merchantUsers?.find(
         (mu: { role: string }) => mu.role === 'OWNER'
       );
-      
+
       if (existingOwner) {
         throw new ConflictError(
           '1 merchant hanya bisa memiliki 1 owner',
@@ -466,7 +484,7 @@ class MerchantService {
         );
       }
     }
-    
+
     await merchantRepository.addUser(merchantId, userId, role);
   }
 

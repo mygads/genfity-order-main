@@ -59,7 +59,9 @@ export default function PaymentPage() {
 
   // ✅ NEW: State untuk table number dan merchant data
   const [tableNumber, setTableNumber] = useState<string>('');
-  const [merchantTaxPercentage, setMerchantTaxPercentage] = useState(10);
+  const [merchantTaxPercentage, setMerchantTaxPercentage] = useState(0);
+  const [merchantServiceChargePercent, setMerchantServiceChargePercent] = useState(0);
+  const [merchantPackagingFee, setMerchantPackagingFee] = useState(0);
   const [merchantCurrency, setMerchantCurrency] = useState('AUD');
 
   const auth = getCustomerAuth();
@@ -101,8 +103,18 @@ export default function PaymentPage() {
         if (data.success) {
           // ✅ Set tax percentage
           if (data.data.enableTax) {
-            setMerchantTaxPercentage(Number(data.data.taxPercentage) || 10);
+            setMerchantTaxPercentage(Number(data.data.taxPercentage) || 0);
             console.log('✅ [PAYMENT] Merchant tax %:', data.data.taxPercentage);
+          }
+          // ✅ Set service charge
+          if (data.data.enableServiceCharge) {
+            setMerchantServiceChargePercent(Number(data.data.serviceChargePercent) || 0);
+            console.log('✅ [PAYMENT] Service charge %:', data.data.serviceChargePercent);
+          }
+          // ✅ Set packaging fee (for takeaway)
+          if (data.data.enablePackagingFee && mode === 'takeaway') {
+            setMerchantPackagingFee(Number(data.data.packagingFeeAmount) || 0);
+            console.log('✅ [PAYMENT] Packaging fee:', data.data.packagingFeeAmount);
           }
           // ✅ Set currency
           setMerchantCurrency(data.data.currency || 'AUD');
@@ -379,8 +391,12 @@ export default function PaymentPage() {
     }
   };
 
-  // ✅ FIXED: Calculate with merchant's tax percentage
-  const priceBreakdown = cart ? calculateCartSubtotal(cart.items, merchantTaxPercentage) : { subtotal: 0, serviceCharge: 0, tax: 0, total: 0 };
+  // ✅ FIXED: Calculate with all fees
+  const cartSubtotal = cart ? calculateCartSubtotal(cart.items) : 0;
+  const taxAmount = cartSubtotal * (merchantTaxPercentage / 100);
+  const serviceChargeAmount = cartSubtotal * (merchantServiceChargePercent / 100);
+  const packagingFeeAmount = merchantPackagingFee;
+  const totalPayment = cartSubtotal + taxAmount + serviceChargeAmount + packagingFeeAmount;
 
   // Loading state while cart initializes
   if (cart === null) {
@@ -413,7 +429,7 @@ export default function PaymentPage() {
 
       <main className="flex-1 overflow-y-auto px-4 py-4 pb-6">
 
-        
+
 
         {/* Error Message */}
         {error && (
@@ -606,39 +622,52 @@ export default function PaymentPage() {
             })}
           </div>
         </div>
-        
+
         {/* Total Summary Card */}
-        <div className="mb-4 p-4 bg-white dark:bg-gray-800 rounded-lg border border-[#E0E0E0] dark:border-gray-700">
+        <div className="mb-4 p-4 bg-white dark:bg-gray-800 rounded-lg border border-[#E0E0E0] dark:border-gray-700 space-y-2">
           {/* Subtotal */}
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between">
             <span className="text-sm text-[#666666] dark:text-gray-400">Subtotal ({cart?.items.length || 0} item{cart && cart.items.length !== 1 ? 's' : ''})</span>
             <span className="text-sm text-[#1A1A1A] dark:text-white font-medium">
-              {new Intl.NumberFormat('en-AU', {
-                style: 'currency',
-                currency: merchantCurrency,
-              }).format(Number(priceBreakdown.subtotal))}
+              {formatCurrency(cartSubtotal)}
             </span>
           </div>
 
           {/* Tax */}
-          <div className="flex items-center justify-between pb-3 mb-3 border-b border-[#E0E0E0] dark:border-gray-700">
-            <span className="text-sm text-[#666666] dark:text-gray-400">Tax ({merchantTaxPercentage}%)</span>
-            <span className="text-sm text-[#1A1A1A] dark:text-white font-medium">
-              {new Intl.NumberFormat('en-AU', {
-                style: 'currency',
-                currency: merchantCurrency,
-              }).format(Number(priceBreakdown.tax))}
-            </span>
-          </div>
+          {taxAmount > 0 && (
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-[#666666] dark:text-gray-400">Tax ({merchantTaxPercentage}%)</span>
+              <span className="text-sm text-[#1A1A1A] dark:text-white font-medium">
+                {formatCurrency(taxAmount)}
+              </span>
+            </div>
+          )}
+
+          {/* Service Charge */}
+          {serviceChargeAmount > 0 && (
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-[#666666] dark:text-gray-400">Service Charge ({merchantServiceChargePercent}%)</span>
+              <span className="text-sm text-[#1A1A1A] dark:text-white font-medium">
+                {formatCurrency(serviceChargeAmount)}
+              </span>
+            </div>
+          )}
+
+          {/* Packaging Fee */}
+          {packagingFeeAmount > 0 && (
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-[#666666] dark:text-gray-400">Packaging Fee</span>
+              <span className="text-sm text-[#1A1A1A] dark:text-white font-medium">
+                {formatCurrency(packagingFeeAmount)}
+              </span>
+            </div>
+          )}
 
           {/* Total */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between pt-3 border-t border-[#E0E0E0] dark:border-gray-700">
             <span className="text-base font-semibold text-[#1A1A1A] dark:text-white">Total Payment</span>
             <span className="text-xl font-bold text-[#FF6B35]">
-              {new Intl.NumberFormat('en-AU', {
-                style: 'currency',
-                currency: merchantCurrency,
-              }).format(Number(priceBreakdown.total))}
+              {formatCurrency(totalPayment)}
             </span>
           </div>
         </div>
@@ -659,13 +688,12 @@ export default function PaymentPage() {
         isOpen={showConfirmModal}
         onClose={() => setShowConfirmModal(false)}
         onConfirm={handleConfirmPayment}
-        totalAmount={Number(priceBreakdown.total)}
+        totalAmount={totalPayment}
         currency={merchantCurrency}
         breakdown={{
-          subtotal: Number(priceBreakdown.subtotal),
-          // Service charge is calculated on server at 5% of subtotal. Mirror that here for display.
-          serviceCharge: Number(priceBreakdown.subtotal) * 0.05,
-          tax: Number(priceBreakdown.tax),
+          subtotal: cartSubtotal,
+          serviceCharge: serviceChargeAmount,
+          tax: taxAmount,
         }}
       />
     </div>

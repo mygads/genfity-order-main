@@ -23,6 +23,7 @@ import { FaBan } from 'react-icons/fa';
 import useSWR from 'swr';
 import { OrderColumn } from './OrderColumn';
 import { OrderCard } from './OrderCard';
+import { ConfirmationModal } from '@/components/common/ConfirmationModal';
 import { useToast } from '@/context/ToastContext';
 import type { OrderListItem } from '@/lib/types/order';
 import { OrderStatus, OrderType, PaymentStatus } from '@prisma/client';
@@ -77,8 +78,10 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
   
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
+  const [showUnpaidConfirm, setShowUnpaidConfirm] = useState(false);
+  const [pendingStatusChange, setPendingStatusChange] = useState<{ orderId: string; newStatus: OrderStatus } | null>(null);
   const previousOrderCountRef = useRef(0);
-  const { showError } = useToast();
+  const { showError, showSuccess } = useToast();
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -246,6 +249,13 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
       return;
     }
 
+    // Check if dragging from ACCEPTED to IN_PROGRESS with unpaid order
+    if (order.status === 'ACCEPTED' && newStatus === 'IN_PROGRESS' && order.payment?.status !== 'PAID') {
+      setPendingStatusChange({ orderId, newStatus });
+      setShowUnpaidConfirm(true);
+      return;
+    }
+
     await updateOrderStatus(orderId, newStatus);
   };
 
@@ -256,11 +266,27 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
 
   // Common function to update order status
   const updateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
-    // Save current scroll positions for all scrollable containers
-    const scrollPositions = new Map<Element, number>();
-    const scrollableContainers = document.querySelectorAll('[data-droppable]');
-    scrollableContainers.forEach(container => {
-      scrollPositions.set(container, container.scrollTop);
+    // Save current scroll positions for all columns
+    const scrollPositions = new Map<Element, { scrollTop: number; scrollLeft: number }>();
+    
+    // Save scroll position of main container and all column containers
+    const mainContainer = document.querySelector('.grid.grid-cols-1.md\\:grid-cols-2.lg\\:grid-cols-4');
+    if (mainContainer && mainContainer.parentElement) {
+      scrollPositions.set(mainContainer.parentElement, {
+        scrollTop: mainContainer.parentElement.scrollTop,
+        scrollLeft: mainContainer.parentElement.scrollLeft,
+      });
+    }
+    
+    // Save scroll positions of all order list containers within columns
+    const columnContainers = document.querySelectorAll('.space-y-3');
+    columnContainers.forEach(container => {
+      if (container.parentElement) {
+        scrollPositions.set(container.parentElement, {
+          scrollTop: container.parentElement.scrollTop,
+          scrollLeft: container.parentElement.scrollLeft,
+        });
+      }
     });
 
     // Optimistic update using SWR mutate
@@ -304,23 +330,36 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
       // Refresh to get latest data from server
       await mutate();
 
+      // Show success toast with status label
+      const statusLabels: Record<OrderStatus, string> = {
+        PENDING: 'Pending',
+        ACCEPTED: 'Accepted',
+        IN_PROGRESS: 'In Progress',
+        READY: 'Ready',
+        COMPLETED: 'Completed',
+        CANCELLED: 'Cancelled',
+      };
+      showSuccess(`Order status updated to ${statusLabels[newStatus]}`, 'Success');
+
       // Restore scroll positions after DOM updates
-      requestAnimationFrame(() => {
-        scrollPositions.forEach((scrollTop, container) => {
-          container.scrollTop = scrollTop;
+      setTimeout(() => {
+        scrollPositions.forEach((position, container) => {
+          container.scrollTop = position.scrollTop;
+          container.scrollLeft = position.scrollLeft;
         });
-      });
+      }, 0);
     } catch (err) {
       console.error('Error updating order status:', err);
       // Revert optimistic update by refetching
       await mutate();
       
       // Restore scroll positions after revert
-      requestAnimationFrame(() => {
-        scrollPositions.forEach((scrollTop, container) => {
-          container.scrollTop = scrollTop;
+      setTimeout(() => {
+        scrollPositions.forEach((position, container) => {
+          container.scrollTop = position.scrollTop;
+          container.scrollLeft = position.scrollLeft;
         });
-      });
+      }, 0);
       
       showError(err instanceof Error ? err.message : 'Failed to update order', 'Update Failed');
     }
@@ -424,6 +463,26 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
           ) : null}
         </DragOverlay>
       </DndContext>
+
+      {/* Unpaid Order Confirmation Modal for Drag & Drop */}
+      <ConfirmationModal
+        isOpen={showUnpaidConfirm}
+        onClose={() => {
+          setShowUnpaidConfirm(false);
+          setPendingStatusChange(null);
+        }}
+        onConfirm={() => {
+          if (pendingStatusChange) {
+            updateOrderStatus(pendingStatusChange.orderId, pendingStatusChange.newStatus);
+            setPendingStatusChange(null);
+          }
+        }}
+        title="Unpaid Order"
+        message="This order has not been paid yet. Do you want to continue marking it as In Progress?"
+        confirmText="Continue Anyway"
+        cancelText="Cancel"
+        variant="warning"
+      />
     </div>
   );
 };

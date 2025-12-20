@@ -62,9 +62,17 @@ export async function GET(
       mapUrl: merchantData.mapUrl,
       description: merchantData.description,
       isActive: merchantData.isActive,
-      isOpen: merchantData.isOpen, // ✅ Added isOpen field
+      isOpen: merchantData.isOpen,
+      // Tax settings
       enableTax: merchantData.enableTax,
       taxPercentage: merchantData.taxPercentage,
+      // Service charge settings
+      enableServiceCharge: merchantData.enableServiceCharge,
+      serviceChargePercent: merchantData.serviceChargePercent,
+      // Packaging fee settings (for takeaway)
+      enablePackagingFee: merchantData.enablePackagingFee,
+      packagingFeeAmount: merchantData.packagingFeeAmount,
+      // Other settings
       currency: merchantData.currency,
       timezone: merchantData.timezone,
       latitude: merchantData.latitude,

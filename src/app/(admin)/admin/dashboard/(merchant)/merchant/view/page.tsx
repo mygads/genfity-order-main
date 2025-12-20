@@ -28,6 +28,13 @@ interface MerchantData {
   timezone: string;
   latitude: string | null;
   longitude: string | null;
+  // Tax & Fees
+  enableTax: boolean;
+  taxPercentage: number;
+  enableServiceCharge: boolean;
+  serviceChargePercent: number;
+  enablePackagingFee: boolean;
+  packagingFeeAmount: number;
   owners: Array<{
     id: string;
     name: string;
@@ -86,7 +93,7 @@ export default function ViewMerchantPage() {
       if (response.ok) {
         const data = await response.json();
         const merchantData = data.data?.merchant || data.data;
-        
+
         // Fetch users associated with this merchant
         const usersResponse = await fetch("/api/merchant/users", {
           headers: {
@@ -94,26 +101,26 @@ export default function ViewMerchantPage() {
           },
         });
 
-        let owners: Array<{id: string; name: string; email: string}> = [];
-        let staff: Array<{id: string; name: string; email: string}> = [];
+        let owners: Array<{ id: string; name: string; email: string }> = [];
+        let staff: Array<{ id: string; name: string; email: string }> = [];
 
         if (usersResponse.ok) {
           const usersData = await usersResponse.json();
           const users = usersData.data?.users || [];
-          
+
           interface UserItem {
             id: string;
             name: string;
             email: string;
             role: string;
           }
-          
+
           owners = users.filter((u: UserItem) => u.role === 'MERCHANT_OWNER').map((u: UserItem) => ({
             id: u.id,
             name: u.name,
             email: u.email,
           }));
-          
+
           staff = users.filter((u: UserItem) => u.role === 'MERCHANT_STAFF').map((u: UserItem) => ({
             id: u.id,
             name: u.name,
@@ -137,6 +144,13 @@ export default function ViewMerchantPage() {
           timezone: merchantData.timezone || "Australia/Sydney",
           latitude: merchantData.latitude || null,
           longitude: merchantData.longitude || null,
+          // Fee settings
+          enableTax: merchantData.enableTax || false,
+          taxPercentage: Number(merchantData.taxPercentage) || 0,
+          enableServiceCharge: merchantData.enableServiceCharge || false,
+          serviceChargePercent: Number(merchantData.serviceChargePercent) || 0,
+          enablePackagingFee: merchantData.enablePackagingFee || false,
+          packagingFeeAmount: Number(merchantData.packagingFeeAmount) || 0,
           openingHours: merchantData.openingHours || [],
           owners,
           staff,
@@ -151,7 +165,7 @@ export default function ViewMerchantPage() {
 
   const toggleStoreOpen = async () => {
     if (!merchant || !isMerchantOwner) return;
-    
+
     try {
       setIsTogglingOpen(true);
       const token = localStorage.getItem("accessToken");
@@ -171,7 +185,7 @@ export default function ViewMerchantPage() {
       if (response.ok) {
         // Refresh merchant details
         await fetchMerchantDetails();
-        
+
         // Notify other components (e.g., MerchantBanner) to refresh
         window.dispatchEvent(new Event('merchantStatusUpdated'));
       }
@@ -262,7 +276,7 @@ export default function ViewMerchantPage() {
                   Inactive
                 </span>
               )}
-              
+
               {merchant.isActive && (
                 merchant.isOpen ? (
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-success-100 px-3 py-1.5 text-xs font-medium text-success-700 dark:bg-success-900/20 dark:text-success-400">
@@ -299,15 +313,14 @@ export default function ViewMerchantPage() {
                   </svg>
                   Edit Merchant
                 </Link>
-                
+
                 <button
                   onClick={toggleStoreOpen}
                   disabled={isTogglingOpen || !merchant.isActive}
-                  className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-white transition-colors ${
-                    merchant.isOpen
-                      ? 'bg-orange-500 hover:bg-orange-600'
-                      : 'bg-green-500 hover:bg-green-600'
-                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-white transition-colors ${merchant.isOpen
+                    ? 'bg-orange-500 hover:bg-orange-600'
+                    : 'bg-green-500 hover:bg-green-600'
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                   {isTogglingOpen ? (
                     <>
@@ -333,7 +346,7 @@ export default function ViewMerchantPage() {
                     </>
                   )}
                 </button>
-                
+
                 {!merchant.isActive && (
                   <p className="text-xs text-gray-500 dark:text-gray-400">
                     Store must be active to open/close
@@ -341,7 +354,7 @@ export default function ViewMerchantPage() {
                 )}
               </>
             )}
-            
+
             <a
               href={getMerchantUrl()}
               target="_blank"
@@ -424,6 +437,84 @@ export default function ViewMerchantPage() {
           </div>
         </div>
 
+        {/* Fees & Charges */}
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/3">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Fees & Charges
+            </h2>
+            {isMerchantOwner && (
+              <Link
+                href="/admin/dashboard/merchant/edit"
+                className="text-sm font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
+              >
+                Edit Settings
+              </Link>
+            )}
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {/* Tax */}
+            <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Tax</p>
+                {merchant.enableTax ? (
+                  <span className="inline-flex items-center rounded-full bg-success-100 px-2 py-0.5 text-xs font-medium text-success-700 dark:bg-success-900/20 dark:text-success-400">
+                    Enabled
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+                    Disabled
+                  </span>
+                )}
+              </div>
+              <p className="text-xl font-bold text-gray-900 dark:text-white">
+                {merchant.enableTax ? `${merchant.taxPercentage}%` : '-'}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Applied to all orders</p>
+            </div>
+
+            {/* Service Charge */}
+            <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Service Charge</p>
+                {merchant.enableServiceCharge ? (
+                  <span className="inline-flex items-center rounded-full bg-success-100 px-2 py-0.5 text-xs font-medium text-success-700 dark:bg-success-900/20 dark:text-success-400">
+                    Enabled
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+                    Disabled
+                  </span>
+                )}
+              </div>
+              <p className="text-xl font-bold text-gray-900 dark:text-white">
+                {merchant.enableServiceCharge ? `${merchant.serviceChargePercent}%` : '-'}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Applied to all orders</p>
+            </div>
+
+            {/* Packaging Fee */}
+            <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Packaging Fee</p>
+                {merchant.enablePackagingFee ? (
+                  <span className="inline-flex items-center rounded-full bg-success-100 px-2 py-0.5 text-xs font-medium text-success-700 dark:bg-success-900/20 dark:text-success-400">
+                    Enabled
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+                    Disabled
+                  </span>
+                )}
+              </div>
+              <p className="text-xl font-bold text-gray-900 dark:text-white">
+                {merchant.enablePackagingFee ? `A$${merchant.packagingFeeAmount.toFixed(2)}` : '-'}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Takeaway orders only</p>
+            </div>
+          </div>
+        </div>
+
         {/* Map Location */}
         {merchant.latitude && merchant.longitude && (
           <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/3">
@@ -435,7 +526,7 @@ export default function ViewMerchantPage() {
                 <MapContent
                   latitude={parseFloat(merchant.latitude)}
                   longitude={parseFloat(merchant.longitude)}
-                  onLocationChange={() => {}} // Read-only
+                  onLocationChange={() => { }} // Read-only
                   height="300px"
                 />
               </div>
