@@ -338,37 +338,74 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
               {/* Order Items */}
               <div className="mb-4">
                 <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Items</p>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {order.orderItems && order.orderItems.length > 0 ? order.orderItems.map((item, idx) => (
                     <div key={idx} className="rounded-lg border border-gray-100 dark:border-gray-800 p-3">
-                      <div className="flex items-start justify-between">
-                        <div className="flex gap-3">
-                          <span className="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded bg-brand-100 dark:bg-brand-900/30 text-xs font-bold text-brand-700 dark:text-brand-300">
-                            {item.quantity}
-                          </span>
-                          <div>
-                            <p className="text-sm font-medium text-gray-900 dark:text-white">
-                              {item.menuName}
-                            </p>
-                            {item.addons && item.addons.length > 0 && (
-                              <div className="mt-1 space-y-0.5">
-                                {item.addons.map((addon, addonIdx) => (
-                                  <p key={addonIdx} className="text-xs text-gray-500 dark:text-gray-400">
-                                    + {addon.addonName} ({formatCurrency(Number(addon.addonPrice))})
-                                  </p>
-                                ))}
+                      <div className="flex gap-3">
+                        {/* Menu Image with Qty Badge */}
+                        <div className="relative flex-shrink-0">
+                          <div className="h-16 w-16 overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800">
+                            {item.menu?.imageUrl ? (
+                              <img
+                                src={item.menu.imageUrl}
+                                alt={item.menuName}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center">
+                                <svg className="h-8 w-8 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
                               </div>
                             )}
-                            {item.notes && (
-                              <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
-                                Note: {item.notes}
-                              </p>
-                            )}
                           </div>
+                          {/* Qty Badge */}
+                          <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-orange-500 text-xs font-bold text-white shadow-sm">
+                            {item.quantity}
+                          </span>
                         </div>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">
-                          {formatCurrency(Number(item.subtotal))}
-                        </p>
+
+                        {/* Item Details */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                                {item.menuName}
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                                {item.quantity}× {formatCurrency(Number(item.menuPrice))}
+                              </p>
+                            </div>
+                            <p className="text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap">
+                              {formatCurrency(Number(item.subtotal))}
+                            </p>
+                          </div>
+
+                          {/* Addons */}
+                          {item.addons && item.addons.length > 0 && (
+                            <div className="mt-2 space-y-1">
+                              {item.addons.map((addon, addonIdx) => (
+                                <div key={addonIdx} className="flex items-center justify-between text-xs">
+                                  <span className="text-gray-500 dark:text-gray-400">
+                                    + {addon.addonName}
+                                  </span>
+                                  <span className="text-gray-500 dark:text-gray-400">
+                                    {formatCurrency(Number(addon.addonPrice))}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Item Notes */}
+                          {item.notes && (
+                            <div className="mt-2 rounded bg-amber-50 dark:bg-amber-900/20 px-2 py-1">
+                              <p className="text-xs text-amber-700 dark:text-amber-400">
+                                📝 {item.notes}
+                              </p>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )) : (
@@ -445,13 +482,12 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                             key={status}
                             onClick={() => handleStatusUpdate(status)}
                             disabled={updating}
-                            className={`flex h-10 flex-1 items-center justify-center gap-2 rounded-lg text-sm font-medium disabled:opacity-50 ${
-                              isCancelled
+                            className={`flex h-10 flex-1 items-center justify-center gap-2 rounded-lg text-sm font-medium disabled:opacity-50 ${isCancelled
                                 ? 'bg-error-500 text-white hover:bg-error-600'
                                 : isCompleted
                                   ? 'bg-success-500 text-white hover:bg-success-600'
                                   : 'bg-primary-500 text-white hover:bg-primary-600'
-                            }`}
+                              }`}
                           >
                             {updating ? (
                               <FaSpinner className="h-4 w-4 animate-spin" />

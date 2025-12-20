@@ -148,20 +148,23 @@ async function handleGet(req: NextRequest, context: AuthContext) {
         prisma.$queryRaw<Array<{
           menu_id: bigint;
           menu_name: string;
+          menu_image_url: string | null;
           total_quantity: bigint;
           total_revenue: number;
         }>>`
           SELECT 
             oi.menu_id,
             oi.menu_name,
+            m.image_url as menu_image_url,
             SUM(oi.quantity)::BIGINT as total_quantity,
             SUM(oi.subtotal)::FLOAT as total_revenue
           FROM order_items oi
           JOIN orders o ON oi.order_id = o.id
+          LEFT JOIN menus m ON oi.menu_id = m.id
           WHERE o.merchant_id = ${merchantId}
             AND o.created_at >= NOW() - INTERVAL '30 days'
             AND o.status != 'CANCELLED'
-          GROUP BY oi.menu_id, oi.menu_name
+          GROUP BY oi.menu_id, oi.menu_name, m.image_url
           ORDER BY total_quantity DESC
           LIMIT 5
         `,
@@ -184,6 +187,7 @@ async function handleGet(req: NextRequest, context: AuthContext) {
             name: true,
             stockQty: true,
             price: true,
+            imageUrl: true,
           },
         }),
       ]);
@@ -224,6 +228,7 @@ async function handleGet(req: NextRequest, context: AuthContext) {
             topSellingItems: topSellingItems.map(item => ({
               menuId: item.menu_id.toString(),
               menuName: item.menu_name,
+              menuImageUrl: item.menu_image_url,
               totalQuantity: Number(item.total_quantity),
               totalRevenue: item.total_revenue,
             })),

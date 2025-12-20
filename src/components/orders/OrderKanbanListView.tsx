@@ -24,6 +24,7 @@ import { useDroppable } from '@dnd-kit/core';
 import { FaBan } from 'react-icons/fa';
 import { DraggableOrderTabListCard } from './DraggableOrderTabListCard';
 import { OrderTabListCard } from './OrderTabListCard';
+import { useToast } from '@/context/ToastContext';
 import type { OrderListItem } from '@/lib/types/order';
 import { OrderStatus, OrderType, PaymentStatus } from '@prisma/client';
 import { playNotificationSound } from '@/lib/utils/soundNotification';
@@ -74,9 +75,9 @@ export const OrderKanbanListView: React.FC<OrderKanbanListViewProps> = ({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [orders, setOrders] = useState<OrderListItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [previousOrderCount, setPreviousOrderCount] = useState(0);
   const previousDataRef = useRef<string>('');
+  const { showError } = useToast();
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -91,7 +92,7 @@ export const OrderKanbanListView: React.FC<OrderKanbanListViewProps> = ({
     try {
       const token = localStorage.getItem('accessToken');
       if (!token) {
-        setError('Authentication required');
+        showError('Authentication required', 'Auth Error');
         return;
       }
 
@@ -102,7 +103,7 @@ export const OrderKanbanListView: React.FC<OrderKanbanListViewProps> = ({
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch orders');
+        throw new Error('Failed to fetch orders from server');
       }
 
       const result = await response.json();
@@ -123,15 +124,15 @@ export const OrderKanbanListView: React.FC<OrderKanbanListViewProps> = ({
           setPreviousOrderCount(fetchedOrders.length);
         }
       } else {
-        setError(result.error || 'Failed to load orders');
+        showError(result.error || 'Failed to load orders', 'Connection Error');
       }
     } catch (err) {
       console.error('Error fetching orders:', err);
-      setError('Failed to load orders');
+      showError('Error getting data from server', 'Connection Error');
     } finally {
       setLoading(false);
     }
-  }, [previousOrderCount]);
+  }, [previousOrderCount, showError]);
 
   // Auto-refresh effect
   useEffect(() => {
@@ -237,21 +238,13 @@ export const OrderKanbanListView: React.FC<OrderKanbanListViewProps> = ({
     return filteredOrders;
   };
 
-  if (loading) {
+  if (loading && orders.length === 0) {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="flex items-center gap-3 text-gray-500 dark:text-gray-400">
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand-500 border-t-transparent"></div>
           <span className="text-sm font-medium">Loading orders...</span>
         </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="rounded-xl border border-red-200 bg-red-50 p-6 dark:border-red-800 dark:bg-red-900/20">
-        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
       </div>
     );
   }

@@ -7,6 +7,7 @@ import SuperAdminDashboard from '@/components/dashboard/SuperAdminDashboard';
 import MerchantOwnerDashboard from '@/components/dashboard/MerchantOwnerDashboard';
 import MerchantStaffDashboard from '@/components/dashboard/MerchantStaffDashboard';
 import { DashboardSkeleton } from '@/components/common/SkeletonLoaders';
+import { useToast } from '@/context/ToastContext';
 
 /**
  * GENFITY Admin Dashboard Page (CSR + SWR)
@@ -28,6 +29,7 @@ export default function AdminDashboardPage() {
   const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
   const [hasToken, setHasToken] = useState(true); // Assume true to prevent flash
+  const { showError } = useToast();
 
   // Handle mount state to avoid hydration errors
   useEffect(() => {
@@ -45,43 +47,27 @@ export default function AdminDashboardPage() {
     {
       refreshInterval: 5000, // Poll every 5 seconds for live updates
       revalidateOnFocus: true, // Refetch when window regains focus
+      shouldRetryOnError: true,
+      errorRetryCount: Infinity,
+      errorRetryInterval: 5000,
     }
   );
 
+  // Show error toast when fetch fails
+  useEffect(() => {
+    if (error && !isLoading && data) {
+      showError('Error getting dashboard data from server', 'Connection Error');
+    }
+  }, [error, isLoading, data, showError]);
+
   // Show skeleton during SSR and initial mount
-  if (!isMounted || isLoading) {
+  if (!isMounted || (isLoading && !data)) {
     return <DashboardSkeleton />;
   }
 
   // Redirect happening
   if (!hasToken) {
     return <DashboardSkeleton />;
-  }
-
-  if (error) {
-    return (
-      <div className="flex min-h-[calc(100vh-200px)] items-center justify-center p-6">
-        <div className="w-full max-w-md rounded-2xl border-2 border-red-200 bg-white p-8 text-center shadow-sm dark:border-red-800 dark:bg-gray-900">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
-            <svg className="h-8 w-8 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <h2 className="mb-2 text-xl font-bold text-gray-900 dark:text-white">
-            Error Loading Dashboard
-          </h2>
-          <p className="mb-6 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
-            {error?.message || 'Failed to load dashboard'}
-          </p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
   }
 
   if (!data?.success || !data?.data) {

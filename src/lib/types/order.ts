@@ -31,6 +31,11 @@ export type OrderWithCustomer = Order & {
  */
 export type OrderItemWithAddons = OrderItem & {
   addons: OrderItemAddon[];
+  menu?: {
+    id: bigint;
+    name: string;
+    imageUrl?: string | null;
+  } | null;
 };
 
 /**
@@ -222,7 +227,7 @@ export function buildOrderWhereInput(
 
   // Support single status or array of statuses (for kitchen display efficiency)
   if (filters.status) {
-    where.status = Array.isArray(filters.status) 
+    where.status = Array.isArray(filters.status)
       ? { in: filters.status }
       : filters.status;
   }

@@ -10,6 +10,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { OrderListCard } from './OrderListCard';
 import { OrderTabListSkeleton } from '@/components/common/SkeletonLoaders';
+import { useToast } from '@/context/ToastContext';
 import type { OrderListItem } from '@/lib/types/order';
 import { OrderStatus, OrderType, PaymentStatus } from '@prisma/client';
 import { playNotificationSound } from '@/lib/utils/soundNotification';
@@ -57,16 +58,16 @@ export const OrderTabListView: React.FC<OrderTabListViewProps> = ({
   const [activeTab, setActiveTab] = useState<OrderStatus>('PENDING');
   const [orders, setOrders] = useState<OrderListItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [previousOrderCount, setPreviousOrderCount] = useState(0);
   const previousDataRef = useRef<string>('');
+  const { showError } = useToast();
 
   // Fetch orders
   const fetchOrders = useCallback(async () => {
     try {
       const token = localStorage.getItem('accessToken');
       if (!token) {
-        setError('Authentication required');
+        showError('Authentication required', 'Auth Error');
         return;
       }
 
@@ -77,7 +78,7 @@ export const OrderTabListView: React.FC<OrderTabListViewProps> = ({
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch orders');
+        throw new Error('Failed to fetch orders from server');
       }
 
       const result = await response.json();
@@ -98,15 +99,15 @@ export const OrderTabListView: React.FC<OrderTabListViewProps> = ({
           setPreviousOrderCount(fetchedOrders.length);
         }
       } else {
-        setError(result.error || 'Failed to load orders');
+        showError(result.error || 'Failed to load orders', 'Connection Error');
       }
     } catch (err) {
       console.error('Error fetching orders:', err);
-      setError('Failed to load orders');
+      showError('Error getting data from server', 'Connection Error');
     } finally {
       setLoading(false);
     }
-  }, [previousOrderCount]);
+  }, [previousOrderCount, showError]);
 
   // Auto-refresh effect
   useEffect(() => {
@@ -172,23 +173,8 @@ export const OrderTabListView: React.FC<OrderTabListViewProps> = ({
     return orders.filter((order) => order.status === status).length;
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="flex items-center gap-3 text-gray-500 dark:text-gray-400">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand-500 border-t-transparent"></div>
-          <span className="text-sm font-medium">Loading orders...</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="rounded-xl border border-red-200 bg-red-50 p-6 dark:border-red-800 dark:bg-red-900/20">
-        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-      </div>
-    );
+  if (loading && orders.length === 0) {
+    return <OrderTabListSkeleton />;
   }
 
   const filteredOrders = getFilteredOrders();
@@ -196,7 +182,7 @@ export const OrderTabListView: React.FC<OrderTabListViewProps> = ({
   return (
     <div className="space-y-6">
       {/* Professional Tabs with Underline Indicator */}
-      <div className="bg-white border-b border-gray-200 dark:border-gray-800">
+      <div className="border-b border-gray-200 dark:border-gray-800">
         <div className="flex flex-wrap gap-1 -mb-px">
           {ACTIVE_STATUSES.map((status) => {
             const statusConfig = ORDER_STATUS_COLORS[status as keyof typeof ORDER_STATUS_COLORS];

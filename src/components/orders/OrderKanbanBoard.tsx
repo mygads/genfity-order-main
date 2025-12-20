@@ -23,6 +23,7 @@ import { FaBan } from 'react-icons/fa';
 import useSWR from 'swr';
 import { OrderColumn } from './OrderColumn';
 import { OrderCard } from './OrderCard';
+import { useToast } from '@/context/ToastContext';
 import type { OrderListItem } from '@/lib/types/order';
 import { OrderStatus, OrderType, PaymentStatus } from '@prisma/client';
 import { playNotificationSound } from '@/lib/utils/soundNotification';
@@ -77,6 +78,7 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const previousOrderCountRef = useRef(0);
+  const { showError } = useToast();
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -100,7 +102,7 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
     });
 
     if (!res.ok) {
-      throw new Error('Failed to fetch orders');
+      throw new Error('Failed to fetch orders from server');
     }
 
     return res.json();
@@ -115,6 +117,9 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
       dedupingInterval: 2000,
+      shouldRetryOnError: true,
+      errorRetryCount: Infinity,
+      errorRetryInterval: 5000,
       onSuccess: (data) => {
         if (data.success) {
           const newOrders = data.data;
@@ -132,7 +137,14 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
 
   // Extract orders from SWR data
   const orders: OrderListItem[] = data?.success ? data.data : [];
-  const loading = isLoading;
+  const loading = isLoading && !data; // Only show loading on initial load
+
+  // Show error toast when fetch fails
+  useEffect(() => {
+    if (error && !loading) {
+      showError('Error getting data from server', 'Connection Error');
+    }
+  }, [error, loading, showError]);
 
   // Fetch function for backwards compatibility
   const fetchOrders = useCallback(async () => {
@@ -281,7 +293,7 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
       console.error('Error updating order status:', err);
       // Revert optimistic update
       await fetchOrders();
-      setError(err instanceof Error ? err.message : 'Failed to update order');
+      showError(err instanceof Error ? err.message : 'Failed to update order', 'Update Failed');
     }
   };
 
@@ -299,22 +311,6 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
           <p className="text-gray-600 dark:text-gray-400">Loading orders...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <p className="text-red-600 dark:text-red-400 mb-4">{error}</p>
-          <button
-            onClick={fetchOrders}
-            className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600"
-          >
-            Retry
-          </button>
         </div>
       </div>
     );

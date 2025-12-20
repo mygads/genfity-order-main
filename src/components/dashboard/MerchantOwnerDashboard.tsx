@@ -60,6 +60,7 @@ interface MerchantOwnerDashboardProps {
   topSellingItems: Array<{
     menuId: bigint;
     menuName: string;
+    menuImageUrl?: string | null;
     totalQuantity: number;
     totalRevenue: number;
   }>;
@@ -72,6 +73,7 @@ interface MerchantOwnerDashboardProps {
     name: string;
     stockQty: number | null;
     price: any;
+    imageUrl?: string | null;
   }>;
 }
 
@@ -155,8 +157,8 @@ export default function MerchantOwnerDashboard({
                 </span>
                 {merchant.isOpen !== undefined && (
                   <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${merchant.isOpen
-                      ? 'bg-white/20 text-white'
-                      : 'bg-red-500/20 text-red-100'
+                    ? 'bg-white/20 text-white'
+                    : 'bg-red-500/20 text-red-100'
                     }`}>
                     <div className={`h-2 w-2 rounded-full ${merchant.isOpen ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}></div>
                     {merchant.isOpen ? 'Open' : 'Closed'}
@@ -315,7 +317,7 @@ export default function MerchantOwnerDashboard({
 
       {/* Recent Orders & Top Selling */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Recent Orders with Images */}
+        {/* Recent Orders - No Images */}
         <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -334,32 +336,7 @@ export default function MerchantOwnerDashboard({
                 key={order.id.toString()}
                 className="group rounded-xl border border-gray-100 p-4 transition-all hover:border-orange-200 hover:bg-orange-50/50 dark:border-gray-800 dark:hover:border-orange-800 dark:hover:bg-orange-900/10"
               >
-                <div className="flex items-center gap-4">
-                  {/* Menu Item Images Stack */}
-                  <div className="flex -space-x-2">
-                    {order.orderItems.slice(0, 3).map((item, idx) => (
-                      <div key={idx} className="relative h-10 w-10 overflow-hidden rounded-lg ring-2 ring-white dark:ring-gray-900">
-                        {item.menu?.imageUrl ? (
-                          <Image
-                            src={item.menu.imageUrl}
-                            alt={item.menu?.name || 'Menu item'}
-                            fill
-                            className="object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-orange-100 to-orange-200 text-xs font-medium text-orange-600 dark:from-orange-900/50 dark:to-orange-800/50 dark:text-orange-400">
-                            {(item.menu?.name || 'M').charAt(0)}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                    {order.orderItems.length > 3 && (
-                      <div className="relative flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 ring-2 ring-white text-xs font-medium text-gray-600 dark:bg-gray-800 dark:ring-gray-900 dark:text-gray-400">
-                        +{order.orderItems.length - 3}
-                      </div>
-                    )}
-                  </div>
-
+                <div className="flex items-center justify-between">
                   {/* Order Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
@@ -397,7 +374,7 @@ export default function MerchantOwnerDashboard({
           </div>
         </div>
 
-        {/* Top Selling Items */}
+        {/* Top Selling Items - With Images */}
         <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -409,26 +386,49 @@ export default function MerchantOwnerDashboard({
             {topSellingItems.map((item, index) => (
               <div
                 key={item.menuId.toString()}
-                className="flex items-center gap-4 rounded-xl border border-gray-100 p-4 transition-all hover:border-purple-200 hover:bg-purple-50/50 dark:border-gray-800 dark:hover:border-purple-800 dark:hover:bg-purple-900/10"
+                className="flex items-center gap-3 rounded-xl border border-gray-100 p-3 transition-all hover:border-purple-200 hover:bg-purple-50/50 dark:border-gray-800 dark:hover:border-purple-800 dark:hover:bg-purple-900/10"
               >
-                <div className={`flex h-10 w-10 items-center justify-center rounded-lg font-bold ${index === 0
-                    ? 'bg-gradient-to-br from-amber-400 to-yellow-500 text-white'
-                    : index === 1
-                      ? 'bg-gradient-to-br from-gray-300 to-gray-400 text-white'
-                      : index === 2
-                        ? 'bg-gradient-to-br from-orange-300 to-orange-400 text-white'
-                        : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                {/* Rank Badge */}
+                <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-sm font-bold ${index === 0
+                  ? 'bg-gradient-to-br from-amber-400 to-yellow-500 text-white'
+                  : index === 1
+                    ? 'bg-gradient-to-br from-gray-300 to-gray-400 text-white'
+                    : index === 2
+                      ? 'bg-gradient-to-br from-orange-300 to-orange-400 text-white'
+                      : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
                   }`}>
                   {index + 1}
                 </div>
-                <div className="flex-1">
-                  <p className="font-medium text-gray-900 dark:text-white">
+
+                {/* Menu Image */}
+                <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg">
+                  {item.menuImageUrl ? (
+                    <Image
+                      src={item.menuImageUrl}
+                      alt={item.menuName}
+                      fill
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-gray-100 dark:bg-gray-800">
+                      <svg className="h-6 w-6 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+
+                {/* Item Info */}
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-gray-900 dark:text-white truncate">
                     {item.menuName}
                   </p>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     {item.totalQuantity} sold
                   </p>
                 </div>
+
+                {/* Revenue */}
                 <div className="text-right">
                   <p className="font-semibold text-gray-900 dark:text-white">
                     {formatCurrency(item.totalRevenue)}
@@ -465,11 +465,11 @@ export default function MerchantOwnerDashboard({
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
                       <div className={`h-3 w-3 rounded-full ${item.status === 'COMPLETED' ? 'bg-emerald-500' :
-                          item.status === 'PENDING' ? 'bg-amber-500' :
-                            item.status === 'CANCELLED' ? 'bg-red-500' :
-                              item.status === 'IN_PROGRESS' ? 'bg-blue-500' :
-                                item.status === 'READY' ? 'bg-purple-500' :
-                                  'bg-gray-400'
+                        item.status === 'PENDING' ? 'bg-amber-500' :
+                          item.status === 'CANCELLED' ? 'bg-red-500' :
+                            item.status === 'IN_PROGRESS' ? 'bg-blue-500' :
+                              item.status === 'READY' ? 'bg-purple-500' :
+                                'bg-gray-400'
                         }`} />
                       <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                         {item.status.replace(/_/g, ' ')}
@@ -482,11 +482,11 @@ export default function MerchantOwnerDashboard({
                   <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
                     <div
                       className={`h-full rounded-full transition-all duration-500 ${item.status === 'COMPLETED' ? 'bg-emerald-500' :
-                          item.status === 'PENDING' ? 'bg-amber-500' :
-                            item.status === 'CANCELLED' ? 'bg-red-500' :
-                              item.status === 'IN_PROGRESS' ? 'bg-blue-500' :
-                                item.status === 'READY' ? 'bg-purple-500' :
-                                  'bg-gray-400'
+                        item.status === 'PENDING' ? 'bg-amber-500' :
+                          item.status === 'CANCELLED' ? 'bg-red-500' :
+                            item.status === 'IN_PROGRESS' ? 'bg-blue-500' :
+                              item.status === 'READY' ? 'bg-purple-500' :
+                                'bg-gray-400'
                         }`}
                       style={{ width: `${percentage}%` }}
                     />
@@ -518,13 +518,25 @@ export default function MerchantOwnerDashboard({
             {lowStockItems.map((item) => (
               <div
                 key={item.id.toString()}
-                className="flex items-center justify-between rounded-xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 p-4 dark:border-amber-800 dark:from-amber-900/20 dark:to-orange-900/20"
+                className="flex items-center justify-between rounded-xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 p-3 dark:border-amber-800 dark:from-amber-900/20 dark:to-orange-900/20"
               >
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/50">
-                    <svg className="h-5 w-5 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
+                  {/* Menu Image */}
+                  <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg">
+                    {item.imageUrl ? (
+                      <Image
+                        src={item.imageUrl}
+                        alt={item.name}
+                        fill
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-amber-100 dark:bg-amber-900/30">
+                        <svg className="h-6 w-6 text-amber-400 dark:text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                    )}
                   </div>
                   <div>
                     <p className="font-medium text-gray-900 dark:text-white">
@@ -540,7 +552,7 @@ export default function MerchantOwnerDashboard({
                     {item.stockQty || 0}
                   </p>
                   <p className="text-xs text-amber-500 dark:text-amber-500">
-                    left in stock
+                    left
                   </p>
                 </div>
               </div>

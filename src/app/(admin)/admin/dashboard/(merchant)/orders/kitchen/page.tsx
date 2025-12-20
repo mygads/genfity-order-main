@@ -17,6 +17,7 @@ import { FaSync, FaExpand, FaCompress, FaEye, FaClock, FaFire, FaPlay, FaCheck, 
 import { OrderDetailModal } from '@/components/orders/OrderDetailModal';
 import { OrderTimer } from '@/components/orders/OrderTimer';
 import { KitchenDisplaySkeleton } from '@/components/common/SkeletonLoaders';
+import { useToast } from '@/context/ToastContext';
 import type { OrderWithDetails } from '@/lib/types/order';
 import { OrderStatus } from '@prisma/client';
 import { playNotificationSound } from '@/lib/utils/soundNotification';
@@ -27,10 +28,10 @@ const KITCHEN_STATUSES: OrderStatus[] = ['ACCEPTED', 'IN_PROGRESS'];
 export default function KitchenDisplayPage() {
   const router = useRouter();
   const { merchant } = useMerchant();
+  const { showError } = useToast();
 
   const [orders, setOrders] = useState<OrderWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [displayMode, setDisplayMode] = useState<'normal' | 'clean' | 'fullscreen'>('normal');
   const merchantCurrency = merchant?.currency || 'AUD';
@@ -40,7 +41,7 @@ export default function KitchenDisplayPage() {
 
   // Modal state
   const [selectedOrder, setSelectedOrder] = useState<OrderWithDetails | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalOpen] = useState(false);
 
   // Fetch kitchen orders
   const fetchOrders = useCallback(async () => {
@@ -76,17 +77,16 @@ export default function KitchenDisplayPage() {
 
         setOrders(sortedOrders);
         previousOrderIdsRef.current = currentOrderIds;
-        setError(null);
       } else {
-        throw new Error(ordersData.error || 'Failed to fetch kitchen orders');
+        showError(ordersData.error || 'Failed to load orders', 'Connection Error');
       }
     } catch (err) {
       console.error('Error fetching kitchen orders:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch orders');
+      showError('Error getting data from server', 'Connection Error');
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, [router, showError]);
 
   // Initial fetch
   useEffect(() => {
