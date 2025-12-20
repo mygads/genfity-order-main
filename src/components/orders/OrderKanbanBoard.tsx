@@ -256,11 +256,25 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
 
   // Common function to update order status
   const updateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
-    // Optimistic update
-    setOrders(prevOrders =>
-      prevOrders.map(o =>
-        String(o.id) === orderId ? { ...o, status: newStatus } : o
-      )
+    // Save current scroll positions for all scrollable containers
+    const scrollPositions = new Map<Element, number>();
+    const scrollableContainers = document.querySelectorAll('[data-droppable]');
+    scrollableContainers.forEach(container => {
+      scrollPositions.set(container, container.scrollTop);
+    });
+
+    // Optimistic update using SWR mutate
+    const currentData = data;
+    
+    // Update local data optimistically
+    mutate(
+      {
+        ...currentData,
+        data: orders.map(o =>
+          String(o.id) === orderId ? { ...o, status: newStatus } : o
+        ),
+      },
+      false // Don't revalidate immediately
     );
 
     // Update on server
@@ -275,24 +289,39 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
         body: JSON.stringify({ status: newStatus }),
       });
 
-      const data = await response.json();
+      const responseData = await response.json();
       
-      if (!response.ok || !data.success) {
+      if (!response.ok || !responseData.success) {
         console.error('Order status update failed:', {
           status: response.status,
-          error: data.error,
+          error: responseData.error,
           orderId,
           newStatus,
         });
-        throw new Error(data.error || 'Failed to update order status');
+        throw new Error(responseData.error || 'Failed to update order status');
       }
 
-      // Refresh to get latest data
-      await fetchOrders();
+      // Refresh to get latest data from server
+      await mutate();
+
+      // Restore scroll positions after DOM updates
+      requestAnimationFrame(() => {
+        scrollPositions.forEach((scrollTop, container) => {
+          container.scrollTop = scrollTop;
+        });
+      });
     } catch (err) {
       console.error('Error updating order status:', err);
-      // Revert optimistic update
-      await fetchOrders();
+      // Revert optimistic update by refetching
+      await mutate();
+      
+      // Restore scroll positions after revert
+      requestAnimationFrame(() => {
+        scrollPositions.forEach((scrollTop, container) => {
+          container.scrollTop = scrollTop;
+        });
+      });
+      
       showError(err instanceof Error ? err.message : 'Failed to update order', 'Update Failed');
     }
   };

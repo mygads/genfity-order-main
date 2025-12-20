@@ -41,7 +41,7 @@ export default function KitchenDisplayPage() {
 
   // Modal state
   const [selectedOrder, setSelectedOrder] = useState<OrderWithDetails | null>(null);
-  const [isModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Fetch kitchen orders
   const fetchOrders = useCallback(async () => {
@@ -296,13 +296,6 @@ export default function KitchenDisplayPage() {
 
       {/* Content Area */}
       <div className={`flex-1 overflow-hidden ${displayMode !== 'normal' ? 'px-6 py-6' : 'pt-6'}`}>
-        {/* Error Message */}
-        {error && (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
-            <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
-          </div>
-        )}
-
         {/* Kitchen Grid - 2 columns, full height */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
           {/* Pending Column */}
