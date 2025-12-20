@@ -76,9 +76,9 @@ export const OrderCard: React.FC<OrderCardProps> = ({
             <h3 className="text-base font-bold text-gray-800 dark:text-white/90 truncate">
               #{order.orderNumber}
             </h3>
-            <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 mt-1">
-              <FaClock className="h-3 w-3" />
-              <span>{timeAgo}</span>
+            <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 mt-1 min-w-0">
+              <FaClock className="h-3 w-3 shrink-0" />
+              <span className="truncate max-w-[120px]" title={timeAgo}>{timeAgo}</span>
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">

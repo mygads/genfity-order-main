@@ -68,20 +68,19 @@ export default function MerchantStaffDashboard({
   recentOrders,
 }: MerchantStaffDashboardProps) {
   const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('id-ID', {
+    return new Intl.DateTimeFormat('en-AU', {
       day: '2-digit',
       month: 'short',
-      year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
     }).format(new Date(date));
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
+    return new Intl.NumberFormat('en-AU', {
       style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
+      currency: 'AUD',
+      minimumFractionDigits: 2,
     }).format(amount);
   };
 
@@ -260,18 +259,17 @@ export default function MerchantStaffDashboard({
                 <div className="flex-1">
                   <div className="flex items-center gap-3">
                     <p className="font-medium text-gray-900 dark:text-white">
-                      Order #{order.id.toString().slice(-6)}
+                      #{order.orderNumber}
                     </p>
                     <span
-                      className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        order.status === 'COMPLETED'
+                      className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${order.status === 'COMPLETED'
                           ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
                           : order.status === 'PENDING'
                             ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
                             : order.status === 'CANCELLED'
                               ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
                               : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
-                      }`}
+                        }`}
                     >
                       {order.status}
                     </span>

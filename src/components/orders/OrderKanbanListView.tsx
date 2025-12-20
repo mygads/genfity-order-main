@@ -22,8 +22,8 @@ import {
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useDroppable } from '@dnd-kit/core';
 import { FaBan } from 'react-icons/fa';
-import { DraggableOrderListCard } from './DraggableOrderListCard';
-import { OrderListCard } from './OrderListCard';
+import { DraggableOrderTabListCard } from './DraggableOrderTabListCard';
+import { OrderTabListCard } from './OrderTabListCard';
 import type { OrderListItem } from '@/lib/types/order';
 import { OrderStatus, OrderType, PaymentStatus } from '@prisma/client';
 import { playNotificationSound } from '@/lib/utils/soundNotification';
@@ -269,13 +269,13 @@ export const OrderKanbanListView: React.FC<OrderKanbanListViewProps> = ({
       <div
         ref={setNodeRef}
         className={`
-          flex flex-col gap-2 min-h-[400px] rounded-lg p-3
-          transition-all duration-200
+          flex flex-col gap-2 min-h-[400px] rounded-lg p-3 bg-white dark:bg-gray-900
+          transition-all duration-200 border
           ${isInvalid 
             ? 'border-2 border-dashed border-error-400 bg-error-50/50 dark:border-error-600 dark:bg-error-900/20' 
             : isOver 
               ? 'border-2 border-brand-400 bg-brand-50/70 dark:border-brand-600 dark:bg-brand-900/20' 
-              : 'border border-transparent'
+              : 'border-gray-200 dark:border-gray-800'
           }
         `}
       >
@@ -331,7 +331,7 @@ export const OrderKanbanListView: React.FC<OrderKanbanListViewProps> = ({
                     </div>
                   ) : (
                     statusOrders.map((order) => (
-                      <DraggableOrderListCard
+                      <DraggableOrderTabListCard
                         key={order.id}
                         order={order}
                         onOrderClick={onOrderClick || (() => {})}
@@ -354,10 +354,9 @@ export const OrderKanbanListView: React.FC<OrderKanbanListViewProps> = ({
       {/* Drag Overlay */}
       <DragOverlay>
         {activeOrder ? (
-          <OrderListCard
+          <OrderTabListCard
             order={activeOrder}
             currency={currency}
-            className="shadow-2xl rotate-3 scale-105"
           />
         ) : null}
       </DragOverlay>

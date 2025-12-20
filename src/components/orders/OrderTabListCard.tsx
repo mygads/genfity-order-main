@@ -1,9 +1,8 @@
 /**
- * OrderListCard Component
+ * OrderTabListCard Component
  * 
- * Compact horizontal list view for orders
- * Used in Kanban+List and Tab+List modes
- * Professional UI - Responsive, no overflow
+ * Vertical layout card specifically for Tab List view
+ * Order number, table, and customer stacked vertically
  */
 
 'use client';
@@ -15,7 +14,7 @@ import { formatDistanceToNow } from 'date-fns';
 import type { OrderListItem } from '@/lib/types/order';
 import { OrderStatus } from '@prisma/client';
 
-interface OrderListCardProps {
+interface OrderTabListCardProps {
   order: OrderListItem;
   onClick?: () => void;
   currency?: string;
@@ -24,11 +23,9 @@ interface OrderListCardProps {
   onToggleSelection?: (orderId: string) => void;
   onStatusChange?: (orderId: string, newStatus: OrderStatus) => void;
   showQuickActions?: boolean;
-  draggable?: boolean;
-  className?: string;
 }
 
-export const OrderListCard: React.FC<OrderListCardProps> = ({
+export const OrderTabListCard: React.FC<OrderTabListCardProps> = ({
   order,
   onClick,
   currency = 'AUD',
@@ -37,8 +34,6 @@ export const OrderListCard: React.FC<OrderListCardProps> = ({
   onToggleSelection,
   onStatusChange,
   showQuickActions = false,
-  draggable = false,
-  className = '',
 }) => {
   const statusConfig = ORDER_STATUS_COLORS[order.status as keyof typeof ORDER_STATUS_COLORS];
   const paymentConfig = order.payment
@@ -98,15 +93,12 @@ export const OrderListCard: React.FC<OrderListCardProps> = ({
         hover:shadow-md hover:border-gray-300 dark:hover:border-gray-700
         transition-all duration-200 overflow-hidden
         ${onClick ? 'cursor-pointer' : ''}
-        ${draggable ? 'cursor-move touch-none' : ''}
         ${isSelected ? 'ring-2 ring-brand-500 ring-offset-1 dark:ring-offset-gray-950' : ''}
-        ${className}
       `}
     >
-      {/* Compact Layout */}
       <div className="p-3">
-        {/* Top Row: Order Number, Type, Customer */}
-        <div className="flex items-center gap-2 mb-2">
+        {/* Top Section: Vertical Stack */}
+        <div className="flex items-start gap-2 mb-3">
           {/* Bulk Selection */}
           {bulkMode && (
             <button
@@ -121,33 +113,35 @@ export const OrderListCard: React.FC<OrderListCardProps> = ({
             </button>
           )}
 
-          {/* Order Number with Status Color */}
-          <div className={`shrink-0 px-2 py-1 rounded text-xs font-bold ${statusConfig.bg} ${statusConfig.text}`}>
-            #{order.orderNumber}
-          </div>
+          {/* Vertical Stack: Order Number, Table, Customer */}
+          <div className="flex-1 min-w-0 space-y-2">
+            {/* Order Number with Status */}
+            <div className="flex items-center gap-2">
+              <div className={`px-2 py-1 rounded text-xs font-bold whitespace-nowrap ${statusConfig.bg} ${statusConfig.text}`}>
+                #{order.orderNumber}
+              </div>
+            </div>
 
-          {/* Order Type */}
-          <div className="shrink-0">
-            {order.orderType === 'DINE_IN' ? (
-              <div className="flex items-center gap-1 px-2 py-1 rounded bg-brand-50 dark:bg-brand-900/30">
-                <FaUtensils className="h-3 w-3 text-brand-600 dark:text-brand-400" />
-                {order.tableNumber && (
-                  <span className="text-xs font-semibold text-brand-700 dark:text-brand-300">T{order.tableNumber}</span>
-                )}
+            {/* Table Number or Takeaway */}
+            {order.orderType === 'DINE_IN' && order.tableNumber ? (
+              <div className="flex items-center gap-1.5">
+                <FaUtensils className="h-3.5 w-3.5 text-brand-600 dark:text-brand-400" />
+                <span className="text-sm font-semibold text-brand-700 dark:text-brand-300">Table {order.tableNumber}</span>
               </div>
             ) : (
-              <div className="flex items-center gap-1 px-2 py-1 rounded bg-success-50 dark:bg-success-900/30">
-                <FaShoppingBag className="h-3 w-3 text-success-600 dark:text-success-400" />
+              <div className="flex items-center gap-1.5">
+                <FaShoppingBag className="h-3.5 w-3.5 text-success-600 dark:text-success-400" />
+                <span className="text-sm font-semibold text-success-700 dark:text-success-300">Takeaway</span>
               </div>
             )}
-          </div>
 
-          {/* Customer Name */}
-          <div className="flex items-center gap-1.5 min-w-0 flex-1">
-            <FaUser className="h-3 w-3 text-gray-400 shrink-0" />
-            <span className="text-sm font-medium text-gray-800 dark:text-white truncate">
-              {order.customer?.name || 'Guest'}
-            </span>
+            {/* Customer Name */}
+            <div className="flex items-center gap-1.5">
+              <FaUser className="h-3.5 w-3.5 text-gray-400" />
+              <span className="text-sm font-medium text-gray-800 dark:text-white truncate">
+                {order.customer?.name || 'Guest'}
+              </span>
+            </div>
           </div>
         </div>
 

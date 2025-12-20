@@ -734,20 +734,16 @@ export function OrderTabListSkeleton() {
         </div>
       </div>
 
-      {/* List Content with White Background */}
-      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
+      {/* List Content with Container */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 p-4">
         <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-3">
               {/* Top Row */}
-              <div className="flex items-start gap-2 mb-2">
-                {/* Order Number & Table */}
-                <div className="shrink-0 flex flex-col gap-1">
-                  <Skeleton width="w-24" height="h-6" className="rounded" />
-                  <Skeleton width="w-20" height="h-6" className="rounded" />
-                </div>
-                {/* Customer */}
-                <div className="flex-1 mt-1">
+              <div className="flex items-center gap-2 mb-2">
+                <Skeleton width="w-20" height="h-6" className="rounded" />
+                <Skeleton width="w-20" height="h-6" className="rounded" />
+                <div className="flex-1">
                   <Skeleton width="w-32" height="h-4" />
                 </div>
               </div>
