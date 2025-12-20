@@ -8,6 +8,7 @@ import AddonItemsTable from "@/components/addon-items/AddonItemsTable";
 import AddonItemsFilters from "@/components/addon-items/AddonItemsFilters";
 import { AddonItemsPageSkeleton } from "@/components/common/SkeletonLoaders";
 import { useMerchant } from "@/context/MerchantContext";
+import { useToast } from "@/context/ToastContext";
 
 interface AddonCategory {
   id: string;
@@ -52,18 +53,17 @@ interface Merchant {
 export default function AddonItemsPage() {
   const router = useRouter();
   const { merchant: merchantData } = useMerchant();
+  const { showSuccess, showError } = useToast();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  
+
   const [items, setItems] = useState<AddonItem[]>([]);
   const [filteredItems, setFilteredItems] = useState<AddonItem[]>([]);
   const [categories, setCategories] = useState<AddonCategory[]>([]);
   const merchant = { currency: merchantData?.currency || "AUD" };
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  
+
   const [formData, setFormData] = useState<AddonItemFormData>({
     addonCategoryId: "",
     name: "",
@@ -75,6 +75,8 @@ export default function AddonItemsPage() {
     dailyStockTemplate: "",
     autoResetStock: false,
   });
+
+  const [originalFormData, setOriginalFormData] = useState<AddonItemFormData | null>(null);
 
   // Pagination & Filter states
   const [currentPage, setCurrentPage] = useState(1);
@@ -121,7 +123,7 @@ export default function AddonItemsPage() {
         setCategories([]);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      showError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setLoading(false);
     }
@@ -134,7 +136,7 @@ export default function AddonItemsPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
-    
+
     if (type === "checkbox") {
       const checked = (e.target as HTMLInputElement).checked;
       setFormData(prev => ({
@@ -154,8 +156,6 @@ export default function AddonItemsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    setError(null);
-    setSuccess(null);
 
     try {
       const token = localStorage.getItem("accessToken");
@@ -164,10 +164,10 @@ export default function AddonItemsPage() {
         return;
       }
 
-      const url = editingId 
+      const url = editingId
         ? `/api/merchant/addon-items/${editingId}`
         : "/api/merchant/addon-items";
-      
+
       const method = editingId ? "PUT" : "POST";
 
       const payload = {
@@ -197,29 +197,27 @@ export default function AddonItemsPage() {
         throw new Error(data.message || `Failed to ${editingId ? 'update' : 'create'} addon item`);
       }
 
-      setSuccess(`Addon item ${editingId ? 'updated' : 'created'} successfully!`);
-      setTimeout(() => setSuccess(null), 3000);
+      showSuccess(`Addon item ${editingId ? 'updated' : 'created'} successfully!`);
       setShowForm(false);
       setEditingId(null);
       resetForm();
-      
+
       fetchData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-      setTimeout(() => setError(null), 5000);
+      showError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setSubmitting(false);
     }
   };
 
   const resetForm = () => {
-    setFormData({ 
-      addonCategoryId: "", 
-      name: "", 
-      description: "", 
-      price: "0", 
+    setFormData({
+      addonCategoryId: "",
+      name: "",
+      description: "",
+      price: "0",
       inputType: "SELECT",
-      trackStock: false, 
+      trackStock: false,
       stockQty: "",
       dailyStockTemplate: "",
       autoResetStock: false,
@@ -227,8 +225,7 @@ export default function AddonItemsPage() {
   };
 
   const handleEdit = (item: AddonItem) => {
-    setEditingId(item.id);
-    setFormData({
+    const editFormData = {
       addonCategoryId: item.addonCategoryId,
       name: item.name,
       description: item.description || "",
@@ -238,10 +235,11 @@ export default function AddonItemsPage() {
       stockQty: item.stockQty !== null ? item.stockQty.toString() : "",
       dailyStockTemplate: item.dailyStockTemplate !== null ? item.dailyStockTemplate.toString() : "",
       autoResetStock: item.autoResetStock,
-    });
+    };
+    setEditingId(item.id);
+    setFormData(editFormData);
+    setOriginalFormData(editFormData);
     setShowForm(true);
-    setError(null);
-    setSuccess(null);
   };
 
   const handleToggleActive = async (id: string, currentStatus: boolean) => {
@@ -264,12 +262,10 @@ export default function AddonItemsPage() {
         throw new Error(data.message || "Failed to toggle status");
       }
 
-      setSuccess(`Addon item ${!currentStatus ? 'activated' : 'deactivated'} successfully!`);
-      setTimeout(() => setSuccess(null), 3000);
+      showSuccess(`Addon item ${!currentStatus ? 'activated' : 'deactivated'} successfully!`);
       fetchData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-      setTimeout(() => setError(null), 5000);
+      showError(err instanceof Error ? err.message : "An error occurred");
     }
   };
 
@@ -297,12 +293,10 @@ export default function AddonItemsPage() {
         throw new Error(data.message || "Failed to delete addon item");
       }
 
-      setSuccess("Addon item deleted successfully!");
-      setTimeout(() => setSuccess(null), 3000);
+      showSuccess("Addon item deleted successfully!");
       fetchData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-      setTimeout(() => setError(null), 5000);
+      showError(err instanceof Error ? err.message : "An error occurred");
     }
   };
 
@@ -310,8 +304,6 @@ export default function AddonItemsPage() {
     setShowForm(false);
     setEditingId(null);
     resetForm();
-    setError(null);
-    setSuccess(null);
   };
 
   // Refs to track previous filter values for page reset
@@ -350,7 +342,7 @@ export default function AddonItemsPage() {
 
     // Only reset page when filters actually change, not when items data updates
     const prev = prevFiltersRef.current;
-    const filtersChanged = 
+    const filtersChanged =
       prev.searchQuery !== searchQuery ||
       prev.filterCategory !== filterCategory ||
       prev.filterStatus !== filterStatus ||
@@ -377,30 +369,6 @@ export default function AddonItemsPage() {
   return (
     <div>
       <div className="space-y-6">
-        {error && (
-          <div className="rounded-lg bg-error-50 p-4 dark:bg-error-900/20">
-            <p className="text-sm text-error-600 dark:text-error-400">{error}</p>
-          </div>
-        )}
-
-        {success && (
-          <div className="rounded-lg bg-success-50 p-4 dark:bg-success-900/20">
-            <p className="text-sm text-success-600 dark:text-success-400">{success}</p>
-          </div>
-        )}
-
-        {/* Form Modal Component */}
-        <AddonItemFormModal
-          show={showForm}
-          editingId={editingId}
-          formData={formData}
-          categories={categories}
-          submitting={submitting}
-          onSubmit={handleSubmit}
-          onChange={handleChange}
-          onCancel={handleCancel}
-        />
-
         <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6">
           <div className="mb-5 flex items-center justify-between">
             <div>
@@ -432,7 +400,7 @@ export default function AddonItemsPage() {
             onInputTypeChange={setFilterInputType}
             onStatusChange={setFilterStatus}
           />
-          
+
           {filteredItems.length === 0 ? (
             <div className="py-10 text-center">
               <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -482,11 +450,10 @@ export default function AddonItemsPage() {
                       <button
                         key={page}
                         onClick={() => paginate(page)}
-                        className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border text-sm font-medium ${
-                          currentPage === page
-                            ? 'border-primary-500 bg-primary-500 text-white'
-                            : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
-                        }`}
+                        className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border text-sm font-medium ${currentPage === page
+                          ? 'border-primary-500 bg-primary-500 text-white'
+                          : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                          }`}
                       >
                         {page}
                       </button>
@@ -507,6 +474,34 @@ export default function AddonItemsPage() {
           )}
         </div>
       </div>
+
+      {/* Form Modal Component - placed outside main content for proper overlay coverage */}
+      <AddonItemFormModal
+        show={showForm}
+        editingId={editingId}
+        formData={formData}
+        originalFormData={originalFormData}
+        categories={categories}
+        submitting={submitting}
+        onSubmit={handleSubmit}
+        onChange={handleChange}
+        onCancel={() => {
+          setShowForm(false);
+          setEditingId(null);
+          setOriginalFormData(null);
+          setFormData({
+            addonCategoryId: "",
+            name: "",
+            description: "",
+            price: "0",
+            inputType: "SELECT",
+            trackStock: false,
+            stockQty: "",
+            dailyStockTemplate: "",
+            autoResetStock: false,
+          });
+        }}
+      />
     </div>
   );
 }

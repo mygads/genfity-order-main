@@ -131,12 +131,8 @@ export const OrderStatsCards: React.FC<OrderStatsCardsProps> = ({
 }) => {
   // Format currency
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-AU', {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
+    if (amount === 0) return 'Free';
+    return `A$${amount.toFixed(0)}`;
   };
 
   // Format number

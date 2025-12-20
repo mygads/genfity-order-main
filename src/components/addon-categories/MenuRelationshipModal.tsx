@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/context/ToastContext";
 
 interface MenuRelationship {
   id: string;
@@ -26,10 +27,10 @@ export default function MenuRelationshipModal({
   onClose,
 }: MenuRelationshipModalProps) {
   const router = useRouter();
+  const { showError } = useToast();
   const [loading, setLoading] = useState(true);
   const [menus, setMenus] = useState<MenuRelationship[]>([]);
   const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (show && categoryId) {
@@ -41,8 +42,7 @@ export default function MenuRelationshipModal({
   const fetchMenuRelationships = async () => {
     try {
       setLoading(true);
-      setError(null);
-      
+
       const token = localStorage.getItem("accessToken");
       if (!token) {
         router.push("/admin/login");
@@ -61,7 +61,7 @@ export default function MenuRelationshipModal({
       }
 
       const data = await response.json();
-      
+
       if (data.success && Array.isArray(data.data)) {
         setMenus(data.data);
         // Auto-expand all menus by default
@@ -70,7 +70,7 @@ export default function MenuRelationshipModal({
         setMenus([]);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      showError(err instanceof Error ? err.message : "An error occurred");
       setMenus([]);
     } finally {
       setLoading(false);
@@ -135,10 +135,6 @@ export default function MenuRelationshipModal({
               <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">
                 Loading menu relationships...
               </p>
-            </div>
-          ) : error ? (
-            <div className="rounded-lg bg-error-50 p-4 dark:bg-error-900/20">
-              <p className="text-sm text-error-600 dark:text-error-400">{error}</p>
             </div>
           ) : menus.length === 0 ? (
             <div className="py-12 text-center">
@@ -343,7 +339,7 @@ export default function MenuRelationshipModal({
           </div>
           <button
             onClick={onClose}
-            className="inline-flex h-11 items-center gap-2 rounded-lg bg-gray-900 px-6 text-sm font-medium text-white hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100"
+            className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary-500 px-6 text-sm font-medium text-white shadow-lg shadow-primary-500/25 transition-all hover:bg-primary-600 hover:shadow-primary-500/30 focus:outline-none focus:ring-4 focus:ring-primary-500/20"
           >
             Close
           </button>

@@ -542,13 +542,12 @@ export default function MerchantMenuPage() {
 
   const formatPrice = (price: string | number, currency?: string): string => {
     const numPrice = typeof price === 'string' ? parseFloat(price) : price;
-    if (isNaN(numPrice)) return `${currency || 'AUD'} 0`;
+    if (isNaN(numPrice) || numPrice === 0) return 'Free';
 
     const curr = currency || merchant?.currency || 'AUD';
-    const symbol = curr === 'IDR' ? 'Rp' : curr === 'AUD' ? 'A$' : curr;
     const locale = curr === 'IDR' ? 'id-ID' : 'en-AU';
 
-    return `${symbol} ${numPrice.toLocaleString(locale, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+    return `A$${numPrice.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   const getCategoryNames = (item: MenuItem): string => {
@@ -905,7 +904,7 @@ export default function MerchantMenuPage() {
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Name</th>
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Category</th>
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Attributes</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Price (A$)</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Price</th>
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Stock</th>
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Status</th>
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Actions</th>
@@ -1042,12 +1041,13 @@ export default function MerchantMenuPage() {
                             </>
                           ) : (
                             <div className="flex items-center gap-1">
-                              <InlineEditField
-                                value={String(item.price)}
-                                type="number"
-                                onSave={(newValue) => handleInlineUpdate(item.id, 'price', newValue)}
-                                className="text-sm font-semibold text-gray-800 dark:text-white/90"
-                              />
+                              <span className={`text-sm font-semibold ${
+                                formatPrice(item.price) === 'Free' 
+                                  ? 'text-success-600 dark:text-success-400' 
+                                  : 'text-gray-800 dark:text-white/90'
+                              }`}>
+                                {formatPrice(item.price)}
+                              </span>
                             </div>
                           )}
                         </div>

@@ -106,10 +106,11 @@ export const OrderHistoryTable: React.FC<OrderHistoryTableProps> = ({
 
   // Format currency
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-AU', {
-      style: 'currency',
-      currency: currency,
-    }).format(amount);
+    if (amount === 0) return 'Free';
+    return `A$${amount.toLocaleString('en-AU', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
   };
 
   // Filter and sort orders
@@ -362,7 +363,9 @@ export const OrderHistoryTable: React.FC<OrderHistoryTableProps> = ({
                       )}
                     </td>
                     <td className="px-4 py-3 text-sm font-medium text-right text-gray-800 dark:text-white/90">
-                      {formatCurrency(Number(order.totalAmount))}
+                      <span className={formatCurrency(Number(order.totalAmount)) === 'Free' ? 'text-success-600 dark:text-success-400' : ''}>
+                        {formatCurrency(Number(order.totalAmount))}
+                      </span>
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
                       {new Date(order.placedAt).toLocaleDateString('en-AU', {

@@ -215,13 +215,11 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
 
   const formatCurrency = (amount: number | string) => {
     const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-    const locale = merchantCurrency === 'AUD' ? 'en-AU' :
-      merchantCurrency === 'USD' ? 'en-US' :
-        merchantCurrency === 'IDR' ? 'id-ID' : 'en-AU';
-    return new Intl.NumberFormat(locale, {
-      style: 'currency',
-      currency: merchantCurrency,
-    }).format(numAmount);
+    if (numAmount === 0) return 'Free';
+    return `A$${numAmount.toLocaleString('en-AU', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
   };
 
   const formatDateTime = (date: Date | string) => {

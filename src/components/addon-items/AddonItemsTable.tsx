@@ -45,8 +45,8 @@ export default function AddonItemsTable({
 }: AddonItemsTableProps) {
   const formatPrice = (price: string | number): string => {
     const numPrice = typeof price === 'string' ? parseFloat(price) : price;
-    if (isNaN(numPrice)) return `${currency} 0`;
-    return `${currency} ${numPrice.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    if (isNaN(numPrice) || numPrice === 0) return 'Free';
+    return `A$${numPrice.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   const getCategoryName = (item: AddonItem): string => {
@@ -111,7 +111,11 @@ export default function AddonItemsTable({
                 </span>
               </td>
               <td className="px-4 py-4">
-                <span className="text-sm font-semibold text-gray-800 dark:text-white/90">
+                <span className={`text-sm font-semibold ${
+                  formatPrice(item.price) === 'Free' 
+                    ? 'text-success-600 dark:text-success-400' 
+                    : 'text-gray-800 dark:text-white/90'
+                }`}>
                   {formatPrice(item.price)}
                 </span>
               </td>

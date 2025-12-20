@@ -489,36 +489,96 @@ export function AddonItemsPageSkeleton() {
  */
 export function CategoriesPageSkeleton() {
   return (
-    <div className="space-y-6 p-6">
-      {/* Header with Actions */}
-      <div className="flex items-center justify-between">
-        <div className="space-y-2">
-          <Skeleton width="w-32" height="h-8" />
-          <Skeleton width="w-56" height="h-4" />
+    <div className="space-y-6">
+      {/* Main Content Card */}
+      <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
+        {/* Header with Actions */}
+        <div className="mb-5 flex items-center justify-between">
+          <Skeleton width="w-32" height="h-6" />
+          <div className="flex items-center gap-3">
+            <Skeleton width="w-24" height="h-11" className="rounded-lg" />
+            <Skeleton width="w-36" height="h-11" className="rounded-lg" />
+          </div>
         </div>
-        <Skeleton width="w-40" height="h-10" className="rounded-lg" />
-      </div>
 
-      {/* Search */}
-      <Skeleton width="w-72" height="h-10" className="rounded-lg" />
+        {/* Search and Filters */}
+        <div className="mb-5 grid grid-cols-1 gap-4 md:grid-cols-3">
+          <Skeleton width="w-full" height="h-11" className="rounded-lg" />
+          <div className="flex items-center gap-2">
+            <Skeleton width="w-4" height="h-4" className="rounded" />
+            <Skeleton width="w-24" height="h-4" />
+            <Skeleton width="w-4" height="h-4" className="rounded-full" />
+          </div>
+          <Skeleton width="w-full" height="h-11" className="rounded-lg" />
+        </div>
 
-      {/* Categories Grid */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {Array.from({ length: 9 }).map((_, i) => (
-          <div key={i} className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-            <div className="flex items-center gap-4">
-              <Skeleton width="w-12" height="h-12" className="rounded-lg shrink-0" />
-              <div className="flex-1 space-y-2">
-                <Skeleton width="w-28" height="h-5" />
-                <Skeleton width="w-20" height="h-4" />
-              </div>
-              <div className="flex gap-1">
-                <Skeleton width="w-8" height="h-8" className="rounded-lg" />
-                <Skeleton width="w-8" height="h-8" className="rounded-lg" />
-              </div>
+        {/* Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full table-auto">
+            <thead>
+              <tr className="bg-gray-50 text-left dark:bg-gray-900/50">
+                <th className="px-4 py-3">
+                  <Skeleton width="w-12" height="h-3" />
+                </th>
+                <th className="px-4 py-3">
+                  <Skeleton width="w-20" height="h-3" />
+                </th>
+                <th className="px-4 py-3">
+                  <Skeleton width="w-24" height="h-3" />
+                </th>
+                <th className="px-4 py-3">
+                  <Skeleton width="w-16" height="h-3" />
+                </th>
+                <th className="px-4 py-3">
+                  <Skeleton width="w-16" height="h-3" />
+                </th>
+                <th className="px-4 py-3">
+                  <Skeleton width="w-16" height="h-3" />
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-900/30">
+                  <td className="px-4 py-4">
+                    <Skeleton width="w-32" height="h-4" />
+                  </td>
+                  <td className="px-4 py-4">
+                    <Skeleton width="w-40" height="h-4" />
+                  </td>
+                  <td className="px-4 py-4">
+                    <Skeleton width="w-16" height="h-4" />
+                  </td>
+                  <td className="px-4 py-4">
+                    <Skeleton width="w-20" height="h-6" className="rounded-full" />
+                  </td>
+                  <td className="px-4 py-4">
+                    <Skeleton width="w-20" height="h-6" className="rounded-full" />
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className="flex items-center gap-2">
+                      <Skeleton width="w-9" height="h-9" className="rounded-lg" />
+                      <Skeleton width="w-9" height="h-9" className="rounded-lg" />
+                      <Skeleton width="w-9" height="h-9" className="rounded-lg" />
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* Pagination */}
+          <div className="mt-5 flex items-center justify-between border-t border-gray-200 pt-5 dark:border-gray-800">
+            <Skeleton width="w-48" height="h-4" />
+            <div className="flex gap-2">
+              <Skeleton width="w-9" height="h-9" className="rounded-lg" />
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} width="w-9" height="h-9" className="rounded-lg" />
+              ))}
+              <Skeleton width="w-9" height="h-9" className="rounded-lg" />
             </div>
           </div>
-        ))}
+        </div>
       </div>
     </div>
   );
@@ -655,6 +715,60 @@ export function KitchenDisplaySkeleton() {
 }
 
 /**
+ * Order Tab List View Skeleton
+ * Skeleton for tab-based list view with improved layout
+ */
+export function OrderTabListSkeleton() {
+  return (
+    <div className="space-y-6">
+      {/* Tabs */}
+      <div className="border-b border-gray-200 dark:border-gray-800">
+        <div className="flex flex-wrap gap-1 -mb-px">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-2 px-5 py-3.5">
+              <Skeleton width="w-2" height="h-2" className="rounded-full" />
+              <Skeleton width="w-16" height="h-4" />
+              <Skeleton width="w-6" height="h-6" className="rounded-full" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* List Content with White Background */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
+        <div className="space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-3">
+              {/* Top Row */}
+              <div className="flex items-start gap-2 mb-2">
+                {/* Order Number & Table */}
+                <div className="shrink-0 flex flex-col gap-1">
+                  <Skeleton width="w-24" height="h-6" className="rounded" />
+                  <Skeleton width="w-20" height="h-6" className="rounded" />
+                </div>
+                {/* Customer */}
+                <div className="flex-1 mt-1">
+                  <Skeleton width="w-32" height="h-4" />
+                </div>
+              </div>
+              {/* Bottom Row */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <Skeleton width="w-20" height="h-3" />
+                <Skeleton width="w-16" height="h-3" />
+                <div className="flex-1" />
+                <Skeleton width="w-16" height="h-4" />
+                <Skeleton width="w-16" height="h-5" className="rounded" />
+                <Skeleton width="w-20" height="h-7" className="rounded-lg" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
  * Reports Page Skeleton
  */
 export function ReportsPageSkeleton() {
@@ -701,6 +815,318 @@ export function ReportsPageSkeleton() {
               </div>
             ))}
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Menu Builder Page Skeleton
+ */
+export function MenuBuilderSkeleton() {
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="mb-6">
+        <Skeleton width="w-48" height="h-8" className="mb-2" />
+        <Skeleton width="w-96" height="h-4" />
+      </div>
+
+      {/* Main Card */}
+      <div className="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-950">
+        {/* Step Progress Indicator */}
+        <div className="border-b border-gray-200 bg-gray-50/50 px-6 py-4 dark:border-gray-800 dark:bg-gray-900/50">
+          <div className="flex items-center justify-between">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="flex flex-1 items-center">
+                <div className="group flex flex-col items-center gap-2">
+                  {/* Step Circle */}
+                  <Skeleton width="w-10" height="h-10" className="rounded-full" />
+
+                  {/* Step Label */}
+                  <div className="flex items-center gap-1.5">
+                    <Skeleton width="w-4" height="h-4" />
+                    <Skeleton width="w-16" height="h-3" />
+                  </div>
+                </div>
+
+                {/* Connector Line */}
+                {index < 3 && (
+                  <div className="mx-2 h-1 flex-1">
+                    <Skeleton width="w-full" height="h-1" className="rounded-full" />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Form Content */}
+        <div className="p-6 lg:p-8">
+          <div className="space-y-6">
+            {/* Section Header */}
+            <div className="mb-6">
+              <Skeleton width="w-40" height="h-6" className="mb-2" />
+              <Skeleton width="w-80" height="h-4" />
+            </div>
+
+            {/* Main Content Grid */}
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+              {/* Left Column - Form Fields */}
+              <div className="space-y-5 lg:col-span-2">
+                {/* Name Input */}
+                <div>
+                  <Skeleton width="w-24" height="h-4" className="mb-2" />
+                  <Skeleton width="w-full" height="h-12" className="rounded-xl" />
+                </div>
+
+                {/* Description */}
+                <div>
+                  <Skeleton width="w-28" height="h-4" className="mb-2" />
+                  <Skeleton width="w-full" height="h-24" className="rounded-xl" />
+                </div>
+
+                {/* Price */}
+                <div>
+                  <Skeleton width="w-16" height="h-4" className="mb-2" />
+                  <Skeleton width="w-full" height="h-12" className="rounded-xl" />
+                </div>
+              </div>
+
+              {/* Right Column - Image Upload */}
+              <div className="lg:col-span-1">
+                <Skeleton width="w-28" height="h-4" className="mb-2" />
+                <Skeleton
+                  width="w-full"
+                  height="h-64"
+                  className="rounded-2xl"
+                />
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="border-t border-gray-100 dark:border-gray-800" />
+
+            {/* Additional Settings Grid */}
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              {/* Promo Section */}
+              <div className="rounded-2xl border-2 border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900/50">
+                <div className="mb-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Skeleton
+                      width="w-10"
+                      height="h-10"
+                      className="rounded-xl"
+                    />
+                    <div>
+                      <Skeleton width="w-32" height="h-4" className="mb-1" />
+                      <Skeleton width="w-40" height="h-3" />
+                    </div>
+                  </div>
+                  <Skeleton width="w-11" height="h-6" className="rounded-full" />
+                </div>
+              </div>
+
+              {/* Stock Section */}
+              <div className="rounded-2xl border-2 border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900/50">
+                <div className="mb-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Skeleton
+                      width="w-10"
+                      height="h-10"
+                      className="rounded-xl"
+                    />
+                    <div>
+                      <Skeleton width="w-32" height="h-4" className="mb-1" />
+                      <Skeleton width="w-40" height="h-3" />
+                    </div>
+                  </div>
+                  <Skeleton width="w-11" height="h-6" className="rounded-full" />
+                </div>
+              </div>
+            </div>
+
+            {/* Menu Attributes */}
+            <div className="rounded-2xl border-2 border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900/50">
+              <div className="mb-4">
+                <Skeleton width="w-32" height="h-5" className="mb-1" />
+                <Skeleton width="w-64" height="h-3" />
+              </div>
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <Skeleton width="w-4" height="h-4" className="rounded" />
+                    <Skeleton width="w-20" height="h-4" />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Status Toggle */}
+            <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
+              <div className="flex items-center gap-3">
+                <Skeleton width="w-10" height="h-10" className="rounded-xl" />
+                <div>
+                  <Skeleton width="w-24" height="h-4" className="mb-1" />
+                  <Skeleton width="w-48" height="h-3" />
+                </div>
+              </div>
+              <Skeleton width="w-11" height="h-6" className="rounded-full" />
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="mt-8 flex items-center justify-between border-t border-gray-200 pt-6 dark:border-gray-800">
+            <Skeleton width="w-24" height="h-11" className="rounded-lg" />
+            <div className="flex gap-3">
+              <Skeleton width="w-32" height="h-11" className="rounded-lg" />
+              <Skeleton width="w-40" height="h-11" className="rounded-lg" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Edit Addon Category Page Skeleton
+ */
+export function EditAddonCategorySkeleton() {
+  return (
+    <div className="space-y-6">
+      {/* Category Info Form Card */}
+      <div className="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-950">
+        {/* Header */}
+        <div className="border-b border-gray-200 bg-gray-50/50 px-6 py-5 dark:border-gray-800 dark:bg-gray-900/50">
+          <div className="flex items-center gap-4">
+            <Skeleton width="w-12" height="h-12" className="rounded-xl" />
+            <div>
+              <Skeleton width="w-40" height="h-6" className="mb-2" />
+              <Skeleton width="w-64" height="h-4" />
+            </div>
+          </div>
+        </div>
+
+        {/* Form Content */}
+        <div className="p-6 lg:p-8">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            {/* Name Field */}
+            <div>
+              <Skeleton width="w-20" height="h-4" className="mb-2" />
+              <Skeleton width="w-full" height="h-12" className="rounded-xl" />
+            </div>
+
+            {/* Description Field */}
+            <div>
+              <Skeleton width="w-24" height="h-4" className="mb-2" />
+              <Skeleton width="w-full" height="h-12" className="rounded-xl" />
+            </div>
+
+            {/* Min Selection Field */}
+            <div>
+              <Skeleton width="w-28" height="h-4" className="mb-2" />
+              <Skeleton width="w-full" height="h-12" className="rounded-xl" />
+            </div>
+
+            {/* Max Selection Field */}
+            <div>
+              <Skeleton width="w-28" height="h-4" className="mb-2" />
+              <Skeleton width="w-full" height="h-12" className="rounded-xl" />
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="mt-8 flex items-center justify-between border-t border-gray-200 pt-6 dark:border-gray-800">
+            <Skeleton width="w-24" height="h-11" className="rounded-xl" />
+            <Skeleton width="w-40" height="h-11" className="rounded-xl" />
+          </div>
+        </div>
+      </div>
+
+      {/* Addon Items Management Card */}
+      <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6">
+        {/* Header */}
+        <div className="mb-5 flex items-center justify-between">
+          <div>
+            <Skeleton width="w-32" height="h-6" className="mb-2" />
+            <Skeleton width="w-24" height="h-4" />
+          </div>
+          <Skeleton width="w-32" height="h-11" className="rounded-lg" />
+        </div>
+
+        {/* Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full table-auto">
+            <thead>
+              <tr className="bg-gray-50 text-left dark:bg-gray-900/50">
+                <th className="px-4 py-3">
+                  <Skeleton width="w-16" height="h-3" />
+                </th>
+                <th className="px-4 py-3">
+                  <Skeleton width="w-12" height="h-3" />
+                </th>
+                <th className="px-4 py-3">
+                  <Skeleton width="w-12" height="h-3" />
+                </th>
+                <th className="px-4 py-3">
+                  <Skeleton width="w-12" height="h-3" />
+                </th>
+                <th className="px-4 py-3">
+                  <Skeleton width="w-16" height="h-3" />
+                </th>
+                <th className="px-4 py-3">
+                  <Skeleton width="w-16" height="h-3" />
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-900/30">
+                  <td className="px-4 py-4">
+                    <div className="flex items-center gap-3">
+                      <Skeleton width="w-4" height="h-4" />
+                      <div className="flex-1">
+                        <Skeleton width="w-32" height="h-4" className="mb-1" />
+                        <Skeleton width="w-48" height="h-3" />
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-4">
+                    <Skeleton
+                      width="w-24"
+                      height="h-6"
+                      className="rounded-full"
+                    />
+                  </td>
+                  <td className="px-4 py-4">
+                    <Skeleton width="w-20" height="h-4" />
+                  </td>
+                  <td className="px-4 py-4">
+                    <Skeleton
+                      width="w-16"
+                      height="h-6"
+                      className="rounded-full"
+                    />
+                  </td>
+                  <td className="px-4 py-4">
+                    <Skeleton
+                      width="w-20"
+                      height="h-6"
+                      className="rounded-full"
+                    />
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className="flex items-center gap-2">
+                      <Skeleton width="w-9" height="h-9" className="rounded-lg" />
+                      <Skeleton width="w-9" height="h-9" className="rounded-lg" />
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

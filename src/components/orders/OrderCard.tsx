@@ -48,13 +48,10 @@ export const OrderCard: React.FC<OrderCardProps> = ({
 
   const formatCurrency = (amount: number | string) => {
     const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-    const locale = currency === 'AUD' ? 'en-AU' :
-      currency === 'USD' ? 'en-US' :
-        currency === 'IDR' ? 'id-ID' : 'en-AU';
-    return new Intl.NumberFormat(locale, {
-      style: 'currency',
-      currency: currency,
-    }).format(numAmount);
+    if (numAmount === 0) {
+      return 'Free';
+    }
+    return `A$${numAmount.toFixed(2)}`;
   };
 
   const timeAgo = formatDistanceToNow(new Date(order.placedAt), { addSuffix: true });

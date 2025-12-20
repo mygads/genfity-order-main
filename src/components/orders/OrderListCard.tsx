@@ -49,10 +49,10 @@ export const OrderListCard: React.FC<OrderListCardProps> = ({
 
   const formatCurrency = (amount: number | string) => {
     const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-    if (currency === 'IDR') {
-      return `Rp ${numAmount.toLocaleString('id-ID')}`;
+    if (numAmount === 0) {
+      return 'Free';
     }
-    return `$${numAmount.toFixed(2)}`;
+    return `A$${numAmount.toFixed(2)}`;
   };
 
   const timeAgo = formatDistanceToNow(new Date(order.placedAt), { addSuffix: true });
@@ -106,12 +106,12 @@ export const OrderListCard: React.FC<OrderListCardProps> = ({
       {/* Compact Layout */}
       <div className="p-3">
         {/* Top Row: Order Number, Type, Customer */}
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex items-start gap-2 mb-2">
           {/* Bulk Selection */}
           {bulkMode && (
             <button
               onClick={handleCheckboxClick}
-              className="shrink-0 text-gray-400 hover:text-brand-500"
+              className="shrink-0 text-gray-400 hover:text-brand-500 mt-0.5"
             >
               {isSelected ? (
                 <FaCheckSquare className="h-4 w-4 text-brand-500" />
@@ -121,29 +121,32 @@ export const OrderListCard: React.FC<OrderListCardProps> = ({
             </button>
           )}
 
-          {/* Order Number with Status Color */}
-          <div className={`shrink-0 px-2 py-1 rounded text-xs font-bold ${statusConfig.bg} ${statusConfig.text}`}>
-            #{order.orderNumber}
-          </div>
-
-          {/* Order Type */}
-          <div className="shrink-0">
-            {order.orderType === 'DINE_IN' ? (
+          {/* Left Section: Order Number & Table */}
+          <div className="shrink-0 flex flex-col gap-1">
+            {/* Order Number with Status Color */}
+            <div className={`px-2 py-1 rounded text-xs font-bold ${statusConfig.bg} ${statusConfig.text}`}>
+              #{order.orderNumber}
+            </div>
+            
+            {/* Table Number (for DINE_IN) - Below Order Number */}
+            {order.orderType === 'DINE_IN' && order.tableNumber && (
               <div className="flex items-center gap-1 px-2 py-1 rounded bg-brand-50 dark:bg-brand-900/30">
                 <FaUtensils className="h-3 w-3 text-brand-600 dark:text-brand-400" />
-                {order.tableNumber && (
-                  <span className="text-xs font-semibold text-brand-700 dark:text-brand-300">T{order.tableNumber}</span>
-                )}
+                <span className="text-xs font-semibold text-brand-700 dark:text-brand-300">Table {order.tableNumber}</span>
               </div>
-            ) : (
+            )}
+            
+            {/* Takeaway Icon (for TAKEAWAY) */}
+            {order.orderType === 'TAKEAWAY' && (
               <div className="flex items-center gap-1 px-2 py-1 rounded bg-success-50 dark:bg-success-900/30">
                 <FaShoppingBag className="h-3 w-3 text-success-600 dark:text-success-400" />
+                <span className="text-xs font-semibold text-success-700 dark:text-success-300">Takeaway</span>
               </div>
             )}
           </div>
 
           {/* Customer Name */}
-          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 min-w-0 flex-1 mt-1">
             <FaUser className="h-3 w-3 text-gray-400 shrink-0" />
             <span className="text-sm font-medium text-gray-800 dark:text-white truncate">
               {order.customer?.name || 'Guest'}

@@ -9,6 +9,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { OrderListCard } from './OrderListCard';
+import { OrderTabListSkeleton } from '@/components/common/SkeletonLoaders';
 import type { OrderListItem } from '@/lib/types/order';
 import { OrderStatus, OrderType, PaymentStatus } from '@prisma/client';
 import { playNotificationSound } from '@/lib/utils/soundNotification';
@@ -248,10 +249,10 @@ export const OrderTabListView: React.FC<OrderTabListViewProps> = ({
       </div>
 
       {/* List Content with Container */}
-      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 p-4">
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
         <div className="space-y-3">
           {filteredOrders.length === 0 ? (
-            <div className="rounded-xl bg-white dark:bg-gray-900 border border-dashed border-gray-300 dark:border-gray-700 px-6 py-16 text-center">
+            <div className="rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-dashed border-gray-300 dark:border-gray-700 px-6 py-16 text-center">
               <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
                 <svg className="h-7 w-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />

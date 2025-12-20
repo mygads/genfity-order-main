@@ -1,5 +1,5 @@
 "use client";
-import React, { useCallback } from "react";
+import React, { useCallback, useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -16,8 +16,7 @@ import {
   BoxIconLine,
   FolderIcon,
 } from "../icons/index";
-import { FaHistory, FaUtensils } from "react-icons/fa";
-import SidebarWidget from "./SidebarWidget";
+import { FaHistory, FaUtensils, FaChevronDown } from "react-icons/fa";
 import MerchantBanner from "../components/merchants/MerchantBanner";
 
 type NavItem = {
@@ -198,6 +197,7 @@ const AppSidebar: React.FC = () => {
   const pathname = usePathname();
   const { user } = useAuth();
   const [hasMerchant, setHasMerchant] = React.useState<boolean | null>(null);
+  const [showScrollIndicator, setShowScrollIndicator] = useState(false);
 
   // Check if merchant owner/staff has merchant association
   React.useEffect(() => {
@@ -221,6 +221,32 @@ const AppSidebar: React.FC = () => {
       setHasMerchant(true); // Super admin always has access
     }
   }, [user]);
+
+  // Scroll detection for indicator
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollContainer = document.querySelector('[data-sidebar-scroll]');
+      if (scrollContainer) {
+        const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+        const hasMoreContent = scrollTop + clientHeight < scrollHeight - 10; // 10px threshold
+        setShowScrollIndicator(hasMoreContent);
+      }
+    };
+
+    const scrollContainer = document.querySelector('[data-sidebar-scroll]');
+    if (scrollContainer) {
+      scrollContainer.addEventListener('scroll', handleScroll);
+      // Initial check
+      handleScroll();
+      // Check again after content loads
+      const timer = setTimeout(handleScroll, 500);
+      
+      return () => {
+        scrollContainer.removeEventListener('scroll', handleScroll);
+        clearTimeout(timer);
+      };
+    }
+  }, [user, hasMerchant]);
 
   // Get menu groups based on user role
   const getMenuGroups = (): NavGroup[] => {
@@ -350,7 +376,7 @@ const AppSidebar: React.FC = () => {
         />
       )}
 
-      <div className="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
+      <div className="mb-12 flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar" data-sidebar-scroll>
         <nav className="mb-6">
           <div className="flex flex-col gap-6">
             {/* No merchant message for merchant owner/staff */}
@@ -417,6 +443,24 @@ const AppSidebar: React.FC = () => {
       </div>
       
       {/* Dashboard Version - Fixed at bottom */}
+      {/* Scroll Indicator */}
+      {showScrollIndicator && (
+        <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 z-10">
+          <div className="flex items-center justify-center w-6 h-6 bg-gray-100 dark:bg-gray-800 rounded-full shadow-sm border border-gray-200 dark:border-gray-700 animate-bounce">
+            <FaChevronDown className="w-3 h-3 text-gray-500 dark:text-gray-400" />
+          </div>
+        </div>
+      )}
+
+      {/* Scroll Indicator */}
+      {showScrollIndicator && (
+        <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 z-10">
+          <div className="flex items-center justify-center w-6 h-6 bg-white dark:bg-gray-800 rounded-full shadow-md border border-gray-200 dark:border-gray-700 animate-bounce">
+            <FaChevronDown className="w-3 h-3 text-gray-500 dark:text-gray-400" />
+          </div>
+        </div>
+      )}
+
       <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
         <div className={`flex items-center justify-center ${!(isExpanded || isHovered || isMobileOpen) ? 'lg:flex-col lg:gap-1' : ''}`}>
           {isExpanded || isHovered || isMobileOpen ? (

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useEffect, useRef } from "react";
+import React, { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import ViewAddonItemsModal from "@/components/addon-categories/ViewAddonItemsModal";
@@ -92,8 +92,11 @@ export default function AddonCategoriesPage() {
   // Use MerchantContext instead of fetching
   const { merchant: merchantData, isLoading: merchantLoading } = useMerchant();
 
-  // Extract data from SWR responses
-  const categories = categoriesResponse?.success ? categoriesResponse.data : [];
+  // Extract data from SWR responses with useMemo to prevent infinite loops
+  const categories = useMemo(() => {
+    return categoriesResponse?.success ? categoriesResponse.data : [];
+  }, [categoriesResponse]);
+  
   const merchant = merchantData 
     ? { currency: merchantData.currency || "AUD" }
     : { currency: "AUD" };
@@ -253,6 +256,15 @@ export default function AddonCategoriesPage() {
   };
 
   const handleViewItems = async (category: AddonCategory) => {
+    // Open modal immediately with empty items (will show skeleton)
+    setViewItemsModal({
+      show: true,
+      categoryId: category.id,
+      categoryName: category.name,
+      items: [], // Empty initially, will load
+    });
+
+    // Fetch items in background
     try {
       const token = localStorage.getItem("accessToken");
       if (!token) return;
@@ -263,6 +275,7 @@ export default function AddonCategoriesPage() {
 
       if (response.ok) {
         const data = await response.json();
+        // Update modal with fetched items
         setViewItemsModal({
           show: true,
           categoryId: category.id,
@@ -272,6 +285,7 @@ export default function AddonCategoriesPage() {
       }
     } catch (err) {
       console.error('Failed to fetch items:', err);
+      showError('Failed to load items');
     }
   };
 

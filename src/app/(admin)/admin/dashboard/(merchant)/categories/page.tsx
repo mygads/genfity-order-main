@@ -61,6 +61,7 @@ export default function MerchantCategoriesPage() {
   const [useDragDrop, setUseDragDrop] = useState<boolean>(false);
   const [hasUnsavedOrder, setHasUnsavedOrder] = useState<boolean>(false);
   const [pendingReorder, setPendingReorder] = useState<Category[] | null>(null);
+  const [loadingMenus, setLoadingMenus] = useState<boolean>(false);
 
   // Bulk selection states
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -494,6 +495,9 @@ export default function MerchantCategoriesPage() {
   const handleManageMenus = async (category: Category) => {
     setSelectedCategory(category);
     setError(null);
+    setLoadingMenus(true);
+    setAvailableMenus([]);
+    setCategoryMenus([]);
 
     try {
       const token = localStorage.getItem("accessToken");
@@ -523,6 +527,8 @@ export default function MerchantCategoriesPage() {
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load menus");
+    } finally {
+      setLoadingMenus(false);
     }
   };
 
@@ -999,63 +1005,79 @@ export default function MerchantCategoriesPage() {
                 {/* Available Menus */}
                 <div>
                   <h4 className="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                    Available Menus ({availableMenus.filter(m => !categoryMenus.find(cm => cm.id === m.id)).length})
+                    Available Menus {!loadingMenus && `(${availableMenus.filter(m => !categoryMenus.find(cm => cm.id === m.id)).length})`}
                   </h4>
                   <div className="space-y-2 max-h-96 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-3">
-                    {availableMenus
-                      .filter(menu => !categoryMenus.find(cm => cm.id === menu.id))
-                      .map((menu) => (
-                        <div
-                          key={menu.id}
-                          className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800"
-                        >
-                          {menu.imageUrl ? (
-                            <Image
-                              src={menu.imageUrl}
-                              alt={menu.name}
-                              width={48}
-                              height={48}
-                              className="rounded-lg object-cover"
-                              unoptimized
-                            />
-                          ) : (
-                            <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700">
-                              <svg className="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                              </svg>
-                            </div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="text-sm font-medium text-gray-800 dark:text-white/90 truncate">
-                                {menu.name}
-                              </p>
-                              <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${menu.isActive
-                                ? 'bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400'
-                                : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-                                }`}>
-                                {menu.isActive ? 'Active' : 'Inactive'}
-                              </span>
-                            </div>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                              {formatPrice(menu.price)}
-                            </p>
+                    {loadingMenus ? (
+                      // Skeleton Rows
+                      Array.from({ length: 3 }).map((_, idx) => (
+                        <div key={idx} className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800 animate-pulse">
+                          <div className="h-12 w-12 flex-shrink-0 rounded-lg bg-gray-200 dark:bg-gray-700" />
+                          <div className="flex-1 min-w-0 space-y-2">
+                            <div className="h-4 w-3/4 rounded bg-gray-200 dark:bg-gray-700" />
+                            <div className="h-3 w-1/4 rounded bg-gray-200 dark:bg-gray-700" />
                           </div>
-                          <button
-                            onClick={() => handleAddMenuToCategory(menu.id)}
-                            className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-primary-500 text-white hover:bg-primary-600"
-                            title="Add to category"
-                          >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                            </svg>
-                          </button>
+                          <div className="h-8 w-8 rounded-lg bg-gray-200 dark:bg-gray-700" />
                         </div>
-                      ))}
-                    {availableMenus.filter(m => !categoryMenus.find(cm => cm.id === m.id)).length === 0 && (
-                      <p className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
-                        All menus are already in this category
-                      </p>
+                      ))
+                    ) : (
+                      <>
+                        {availableMenus
+                          .filter(menu => !categoryMenus.find(cm => cm.id === menu.id))
+                          .map((menu) => (
+                            <div
+                              key={menu.id}
+                              className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800"
+                            >
+                              {menu.imageUrl ? (
+                                <Image
+                                  src={menu.imageUrl}
+                                  alt={menu.name}
+                                  width={48}
+                                  height={48}
+                                  className="rounded-lg object-cover"
+                                  unoptimized
+                                />
+                              ) : (
+                                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700">
+                                  <svg className="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                  </svg>
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <p className="text-sm font-medium text-gray-800 dark:text-white/90 truncate">
+                                    {menu.name}
+                                  </p>
+                                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${menu.isActive
+                                    ? 'bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400'
+                                    : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                                    }`}>
+                                    {menu.isActive ? 'Active' : 'Inactive'}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  {formatPrice(menu.price)}
+                                </p>
+                              </div>
+                              <button
+                                onClick={() => handleAddMenuToCategory(menu.id)}
+                                className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-primary-500 text-white hover:bg-primary-600"
+                                title="Add to category"
+                              >
+                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                </svg>
+                              </button>
+                            </div>
+                          ))}
+                        {availableMenus.filter(m => !categoryMenus.find(cm => cm.id === m.id)).length === 0 && (
+                          <p className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                            All menus are already in this category
+                          </p>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -1063,61 +1085,77 @@ export default function MerchantCategoriesPage() {
                 {/* Category Menus */}
                 <div>
                   <h4 className="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                    Menus in Category ({categoryMenus.length})
+                    Menus in Category {!loadingMenus && `(${categoryMenus.length})`}
                   </h4>
                   <div className="space-y-2 max-h-96 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-3">
-                    {categoryMenus.map((menu) => (
-                      <div
-                        key={menu.id}
-                        className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800"
-                      >
-                        {menu.imageUrl ? (
-                          <Image
-                            src={menu.imageUrl}
-                            alt={menu.name}
-                            width={48}
-                            height={48}
-                            className="rounded-lg object-cover"
-                            unoptimized
-                          />
-                        ) : (
-                          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700">
-                            <svg className="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
+                    {loadingMenus ? (
+                      // Skeleton Rows
+                      Array.from({ length: 3 }).map((_, idx) => (
+                        <div key={idx} className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800 animate-pulse">
+                          <div className="h-12 w-12 flex-shrink-0 rounded-lg bg-gray-200 dark:bg-gray-700" />
+                          <div className="flex-1 min-w-0 space-y-2">
+                            <div className="h-4 w-3/4 rounded bg-gray-200 dark:bg-gray-700" />
+                            <div className="h-3 w-1/4 rounded bg-gray-200 dark:bg-gray-700" />
                           </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium text-gray-800 dark:text-white/90 truncate">
-                              {menu.name}
-                            </p>
-                            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${menu.isActive
-                              ? 'bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400'
-                              : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-                              }`}>
-                              {menu.isActive ? 'Active' : 'Inactive'}
-                            </span>
-                          </div>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
-                            {formatPrice(menu.price)}
-                          </p>
+                          <div className="h-8 w-8 rounded-lg bg-gray-200 dark:bg-gray-700" />
                         </div>
-                        <button
-                          onClick={() => handleRemoveMenuFromCategory(menu.id)}
-                          className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-error-50 text-error-600 hover:bg-error-100 dark:bg-error-900/20 dark:text-error-400 dark:hover:bg-error-900/30"
-                          title="Remove from category"
-                        >
-                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </div>
-                    ))}
-                    {categoryMenus.length === 0 && (
-                      <p className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
-                        No menus in this category yet
-                      </p>
+                      ))
+                    ) : (
+                      <>
+                        {categoryMenus.map((menu) => (
+                          <div
+                            key={menu.id}
+                            className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800"
+                          >
+                            {menu.imageUrl ? (
+                              <Image
+                                src={menu.imageUrl}
+                                alt={menu.name}
+                                width={48}
+                                height={48}
+                                className="rounded-lg object-cover"
+                                unoptimized
+                              />
+                            ) : (
+                              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700">
+                                <svg className="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-medium text-gray-800 dark:text-white/90 truncate">
+                                  {menu.name}
+                                </p>
+                                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${menu.isActive
+                                  ? 'bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400'
+                                  : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                                  }`}>
+                                  {menu.isActive ? 'Active' : 'Inactive'}
+                                </span>
+                              </div>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                                {formatPrice(menu.price)}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => handleRemoveMenuFromCategory(menu.id)}
+                              className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-error-50 text-error-600 hover:bg-error-100 dark:bg-error-900/20 dark:text-error-400 dark:hover:bg-error-900/30"
+                              title="Remove from category"
+                            >
+                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                        ))}
+                        {categoryMenus.length === 0 && (
+                          <p className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                            No menus in this category yet
+                          </p>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -1184,6 +1222,6 @@ export default function MerchantCategoriesPage() {
 
 function formatPrice(price: number | string): string {
   const numPrice = typeof price === 'string' ? parseFloat(price) : price;
-  if (isNaN(numPrice)) return 'AUD 0';
-  return `AUD ${numPrice.toLocaleString('en-AU', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+  if (isNaN(numPrice)) return 'A$ 0';
+  return `A$ ${numPrice.toLocaleString('en-AU', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useToast } from "@/context/ToastContext";
 
 interface AddonItem {
   id: string;
@@ -34,6 +35,7 @@ export default function ViewAddonItemsModal({
   onClose,
   onRefresh,
 }: ViewAddonItemsModalProps) {
+  const { showSuccess, showError } = useToast();
   const [sortedItems, setSortedItems] = useState<AddonItem[]>([]);
   const [draggedItem, setDraggedItem] = useState<AddonItem | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
@@ -44,19 +46,17 @@ export default function ViewAddonItemsModal({
     currentStock: number;
     newStock: string;
   }>({ show: false, itemId: null, itemName: "", currentStock: 0, newStock: "" });
-  const [success, setSuccess] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  
+
   // Inline edit state
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editData, setEditData] = useState<{ name: string; price: string }>({ name: "", price: "" });
-  
+
   // Add items state
   const [showAddItemsModal, setShowAddItemsModal] = useState(false);
   const [availableItems, setAvailableItems] = useState<AddonItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loadingItems, setLoadingItems] = useState(false);
-  
+
   // Delete confirmation
   const [deleteConfirm, setDeleteConfirm] = useState<{
     show: boolean;
@@ -82,11 +82,11 @@ export default function ViewAddonItemsModal({
 
   const formatPrice = (price: string | number): string => {
     const numPrice = typeof price === 'string' ? parseFloat(price) : price;
-    if (isNaN(numPrice)) return `${currency} 0`;
-    return `${currency} ${numPrice.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    if (isNaN(numPrice) || numPrice === 0) return 'Free';
+    return `A$${numPrice.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
-  // Drag and drop handlers
+  // Drag and drop handlers with optimistic update
   const handleDragStart = (e: React.DragEvent, item: AddonItem) => {
     setDraggedItem(item);
     e.dataTransfer.effectAllowed = "move";
@@ -111,7 +111,7 @@ export default function ViewAddonItemsModal({
     const dragIndex = sortedItems.findIndex(item => item.id === draggedItem.id);
     if (dragIndex === dropIndex) return;
 
-    // Reorder items
+    // Optimistic update - reorder items immediately
     const newItems = [...sortedItems];
     const [removed] = newItems.splice(dragIndex, 1);
     newItems.splice(dropIndex, 0, removed);
@@ -122,9 +122,11 @@ export default function ViewAddonItemsModal({
       displayOrder: index,
     }));
 
+    // Update UI immediately
     setSortedItems(updatedItems);
-    
-    // Update in database
+    setDraggedItem(null);
+
+    // Update in database in background
     try {
       const token = localStorage.getItem("accessToken");
       if (!token) return;
@@ -147,19 +149,15 @@ export default function ViewAddonItemsModal({
       );
 
       if (response.ok) {
-        setSuccess("Items reordered successfully!");
-        setTimeout(() => setSuccess(null), 2000);
-        onRefresh();
+        showSuccess("Items reordered successfully!");
       } else {
         throw new Error("Failed to reorder items");
       }
     } catch {
-      setError("Failed to save order");
-      setTimeout(() => setError(null), 5000);
+      showError("Failed to save order");
+      // Revert on error
       onRefresh();
     }
-
-    setDraggedItem(null);
   };
 
   const handleDragEnd = () => {
@@ -167,8 +165,13 @@ export default function ViewAddonItemsModal({
     setDragOverIndex(null);
   };
 
-  // Action handlers
+  // Action handlers with optimistic updates
   const handleToggleActive = async (id: string) => {
+    // Optimistic update - toggle status immediately
+    setSortedItems(prev => prev.map(item => 
+      item.id === id ? { ...item, isActive: !item.isActive } : item
+    ));
+
     try {
       const token = localStorage.getItem("accessToken");
       if (!token) return;
@@ -179,13 +182,14 @@ export default function ViewAddonItemsModal({
       });
 
       if (response.ok) {
-        setSuccess("Item status updated!");
-        setTimeout(() => setSuccess(null), 2000);
-        onRefresh();
+        showSuccess("Item status updated!");
+      } else {
+        throw new Error("Failed to update status");
       }
     } catch {
-      setError("Failed to update status");
-      setTimeout(() => setError(null), 3000);
+      showError("Failed to update status");
+      // Revert on error
+      onRefresh();
     }
   };
 
@@ -208,14 +212,12 @@ export default function ViewAddonItemsModal({
       });
 
       if (response.ok) {
-        setSuccess("Stock updated!");
-        setTimeout(() => setSuccess(null), 2000);
+        showSuccess("Stock updated!");
         setStockModal({ show: false, itemId: null, itemName: "", currentStock: 0, newStock: "" });
         onRefresh();
       }
     } catch {
-      setError("Failed to update stock");
-      setTimeout(() => setError(null), 5000);
+      showError("Failed to update stock");
     }
   };
 
@@ -236,18 +238,20 @@ export default function ViewAddonItemsModal({
       });
 
       if (response.ok) {
-        setSuccess("Set to out of stock!");
-        setTimeout(() => setSuccess(null), 2000);
+        showSuccess("Set to out of stock!");
         onRefresh();
       }
     } catch {
-      setError("Failed to update stock");
-      setTimeout(() => setError(null), 5000);
+      showError("Failed to update stock");
     }
   };
 
-  // Delete addon item from category
+  // Delete addon item from category with optimistic update
   const handleDeleteItem = async (itemId: string) => {
+    // Optimistic update - remove item immediately
+    setSortedItems(prev => prev.filter(item => item.id !== itemId));
+    setDeleteConfirm({ show: false, itemId: null, itemName: "" });
+
     try {
       const token = localStorage.getItem("accessToken");
       if (!token) return;
@@ -258,16 +262,14 @@ export default function ViewAddonItemsModal({
       });
 
       if (response.ok) {
-        setSuccess("Item deleted successfully!");
-        setTimeout(() => setSuccess(null), 2000);
-        setDeleteConfirm({ show: false, itemId: null, itemName: "" });
-        onRefresh();
+        showSuccess("Item deleted successfully!");
       } else {
         throw new Error("Failed to delete item");
       }
     } catch {
-      setError("Failed to delete item");
-      setTimeout(() => setError(null), 5000);
+      showError("Failed to delete item");
+      // Revert on error
+      onRefresh();
     }
   };
 
@@ -286,6 +288,16 @@ export default function ViewAddonItemsModal({
   };
 
   const handleSaveEdit = async (itemId: string) => {
+    // Optimistic update - update item immediately
+    setSortedItems(prev => prev.map(item => 
+      item.id === itemId 
+        ? { ...item, name: editData.name, price: parseFloat(editData.price) || 0 }
+        : item
+    ));
+    setEditingItemId(null);
+    const oldEditData = { ...editData };
+    setEditData({ name: "", price: "" });
+
     try {
       const token = localStorage.getItem("accessToken");
       if (!token) return;
@@ -297,23 +309,20 @@ export default function ViewAddonItemsModal({
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          name: editData.name,
-          price: parseFloat(editData.price),
+          name: oldEditData.name,
+          price: parseFloat(oldEditData.price),
         }),
       });
 
       if (response.ok) {
-        setSuccess("Item updated successfully!");
-        setTimeout(() => setSuccess(null), 2000);
-        setEditingItemId(null);
-        setEditData({ name: "", price: "" });
-        onRefresh();
+        showSuccess("Item updated successfully!");
       } else {
         throw new Error("Failed to update item");
       }
     } catch {
-      setError("Failed to update item");
-      setTimeout(() => setError(null), 5000);
+      showError("Failed to update item");
+      // Revert on error
+      onRefresh();
     }
   };
 
@@ -335,8 +344,7 @@ export default function ViewAddonItemsModal({
         }
       }
     } catch {
-      setError("Failed to load items");
-      setTimeout(() => setError(null), 3000);
+      showError("Failed to load items");
     } finally {
       setLoadingItems(false);
     }
@@ -390,14 +398,12 @@ export default function ViewAddonItemsModal({
         }
       }
 
-      setSuccess(shouldDuplicate ? "Item duplicated and added!" : "Item added successfully!");
-      setTimeout(() => setSuccess(null), 2000);
+      showSuccess(shouldDuplicate ? "Item duplicated and added!" : "Item added successfully!");
       setShowAddItemsModal(false);
       setSearchQuery("");
       onRefresh();
     } catch {
-      setError("Failed to add item");
-      setTimeout(() => setError(null), 5000);
+      showError("Failed to add item");
     }
   };
 
@@ -419,7 +425,7 @@ export default function ViewAddonItemsModal({
                 setShowAddItemsModal(true);
                 fetchAvailableItems();
               }}
-              className="inline-flex h-11 items-center gap-2 rounded-lg bg-brand-500 px-4 text-sm font-medium text-white hover:bg-brand-600"
+              className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary-500 px-5 text-sm font-medium text-white shadow-lg shadow-primary-500/25 transition-all hover:bg-primary-600 hover:shadow-primary-500/30 focus:outline-none focus:ring-4 focus:ring-primary-500/20"
             >
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -436,24 +442,60 @@ export default function ViewAddonItemsModal({
             </button>
           </div>
         </div>
-        
-        {(success || error) && (
-          <div className="px-6 pt-4">
-            {success && (
-              <div className="rounded-lg bg-success-50 p-3 dark:bg-success-900/20">
-                <p className="text-sm text-success-600 dark:text-success-400">{success}</p>
-              </div>
-            )}
-            {error && (
-              <div className="rounded-lg bg-error-50 p-3 dark:bg-error-900/20">
-                <p className="text-sm text-error-600 dark:text-error-400">{error}</p>
-              </div>
-            )}
-          </div>
-        )}
-        
+
+
+
         <div className="flex-1 overflow-y-auto p-6">
-          {sortedItems.length === 0 ? (
+          {sortedItems.length === 0 && items.length === 0 ? (
+            // Show skeleton loading when items are being fetched
+            <div className="overflow-x-auto">
+              <table className="w-full table-auto">
+                <thead>
+                  <tr className="bg-gray-50 text-left dark:bg-gray-900/50">
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Name</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Type</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Price</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Stock</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Status</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <tr key={i} className="animate-pulse">
+                      <td className="px-4 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="h-4 w-4 rounded bg-gray-200 dark:bg-gray-700"></div>
+                          <div className="flex-1 space-y-2">
+                            <div className="h-4 w-32 rounded bg-gray-200 dark:bg-gray-700"></div>
+                            <div className="h-3 w-48 rounded bg-gray-200 dark:bg-gray-700"></div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="h-6 w-24 rounded-full bg-gray-200 dark:bg-gray-700"></div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="h-4 w-20 rounded bg-gray-200 dark:bg-gray-700"></div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="h-6 w-16 rounded-full bg-gray-200 dark:bg-gray-700"></div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="h-6 w-20 rounded-full bg-gray-200 dark:bg-gray-700"></div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="flex items-center gap-2">
+                          <div className="h-9 w-9 rounded-lg bg-gray-200 dark:bg-gray-700"></div>
+                          <div className="h-9 w-9 rounded-lg bg-gray-200 dark:bg-gray-700"></div>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : sortedItems.length === 0 ? (
             <div className="py-10 text-center">
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 No addon items in this category
@@ -474,7 +516,7 @@ export default function ViewAddonItemsModal({
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                   {sortedItems.map((item, index) => (
-                    <tr 
+                    <tr
                       key={item.id}
                       draggable
                       onDragStart={(e) => handleDragStart(e, item)}
@@ -482,11 +524,9 @@ export default function ViewAddonItemsModal({
                       onDragLeave={handleDragLeave}
                       onDrop={(e) => handleDrop(e, index)}
                       onDragEnd={handleDragEnd}
-                      className={`cursor-move transition-colors ${
-                        draggedItem?.id === item.id ? 'opacity-50' : ''
-                      } ${
-                        dragOverIndex === index ? 'bg-brand-50 dark:bg-brand-900/20 border-t-2 border-brand-500' : 'hover:bg-gray-50 dark:hover:bg-gray-900/30'
-                      }`}
+                      className={`cursor-move transition-colors ${draggedItem?.id === item.id ? 'opacity-50' : ''
+                        } ${dragOverIndex === index ? 'bg-brand-50 dark:bg-brand-900/20 border-t-2 border-brand-500' : 'hover:bg-gray-50 dark:hover:bg-gray-900/30'
+                        }`}
                     >
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-3">
@@ -514,11 +554,10 @@ export default function ViewAddonItemsModal({
                         </div>
                       </td>
                       <td className="px-4 py-4">
-                        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
-                          item.inputType === "SELECT"
-                            ? "bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400"
-                            : "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-400"
-                        }`}>
+                        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${item.inputType === "SELECT"
+                          ? "bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400"
+                          : "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-400"
+                          }`}>
                           {item.inputType === "SELECT" ? "Single Select" : "Quantity Input"}
                         </span>
                       </td>
@@ -533,7 +572,11 @@ export default function ViewAddonItemsModal({
                             className="w-24 rounded border border-brand-300 bg-white px-2 py-1 text-sm font-semibold text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-brand-700 dark:bg-gray-800 dark:text-white/90"
                           />
                         ) : (
-                          <span className="text-sm font-semibold text-gray-800 dark:text-white/90">
+                          <span className={`text-sm font-semibold ${
+                            formatPrice(item.price) === 'Free' 
+                              ? 'text-success-600 dark:text-success-400' 
+                              : 'text-gray-800 dark:text-white/90'
+                          }`}>
                             {formatPrice(item.price)}
                           </span>
                         )}
@@ -541,13 +584,12 @@ export default function ViewAddonItemsModal({
                       <td className="px-4 py-4">
                         {item.trackStock ? (
                           <div className="flex items-center gap-2">
-                            <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                              (item.stockQty || 0) > 10
-                                ? 'bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400'
-                                : (item.stockQty || 0) > 0
+                            <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${(item.stockQty || 0) > 10
+                              ? 'bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400'
+                              : (item.stockQty || 0) > 0
                                 ? 'bg-warning-100 text-warning-700 dark:bg-warning-900/20 dark:text-warning-400'
                                 : 'bg-error-100 text-error-700 dark:bg-error-900/20 dark:text-error-400'
-                            }`}>
+                              }`}>
                               {item.stockQty || 0} pcs
                             </span>
                             <button
@@ -575,11 +617,10 @@ export default function ViewAddonItemsModal({
                       <td className="px-4 py-4">
                         <button
                           onClick={() => handleToggleActive(item.id)}
-                          className={`inline-flex cursor-pointer rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                            item.isActive 
-                              ? 'bg-success-100 text-success-700 hover:bg-success-200 dark:bg-success-900/20 dark:text-success-400 dark:hover:bg-success-900/30' 
-                              : 'bg-error-100 text-error-700 hover:bg-error-200 dark:bg-error-900/20 dark:text-error-400 dark:hover:bg-error-900/30'
-                          }`}
+                          className={`inline-flex cursor-pointer rounded-full px-3 py-1 text-xs font-medium transition-colors ${item.isActive
+                            ? 'bg-success-100 text-success-700 hover:bg-success-200 dark:bg-success-900/20 dark:text-success-400 dark:hover:bg-success-900/30'
+                            : 'bg-error-100 text-error-700 hover:bg-error-200 dark:bg-error-900/20 dark:text-error-400 dark:hover:bg-error-900/30'
+                            }`}
                         >
                           {item.isActive ? '● Active' : '○ Inactive'}
                         </button>
@@ -653,7 +694,7 @@ export default function ViewAddonItemsModal({
         <div className="border-t border-gray-200 p-6 dark:border-gray-800">
           <button
             onClick={onClose}
-            className="h-11 w-full rounded-lg bg-brand-500 text-sm font-medium text-white hover:bg-brand-600"
+            className="h-11 w-full rounded-xl bg-primary-500 text-sm font-medium text-white shadow-lg shadow-primary-500/25 transition-all hover:bg-primary-600 hover:shadow-primary-500/30 focus:outline-none focus:ring-4 focus:ring-primary-500/20"
           >
             Close
           </button>
@@ -670,7 +711,7 @@ export default function ViewAddonItemsModal({
             <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
               Current stock: {stockModal.currentStock} pcs
             </p>
-            
+
             <div className="mt-4">
               <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                 New Stock Quantity
@@ -721,9 +762,9 @@ export default function ViewAddonItemsModal({
                 </p>
               </div>
             </div>
-            
+
             <p className="mb-6 text-sm text-gray-700 dark:text-gray-300">
-              Are you sure you want to delete <strong>&quot;{deleteConfirm.itemName}&quot;</strong>? 
+              Are you sure you want to delete <strong>&quot;{deleteConfirm.itemName}&quot;</strong>?
               This will permanently remove it from the system.
             </p>
 
@@ -790,14 +831,14 @@ export default function ViewAddonItemsModal({
               ) : (
                 <div className="space-y-2">
                   {availableItems
-                    .filter(item => 
+                    .filter(item =>
                       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                       (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()))
                     )
                     .map((item) => {
                       const isInCurrentCategory = items.some(i => i.id === item.id);
                       const isInOtherCategory = item.addonCategoryId && item.addonCategoryId !== categoryId;
-                      
+
                       return (
                         <div
                           key={item.id}
@@ -853,7 +894,7 @@ export default function ViewAddonItemsModal({
                             ) : (
                               <button
                                 onClick={() => handleAddItem(item, false)}
-                                className="inline-flex h-10 items-center gap-2 rounded-lg border border-brand-200 bg-brand-50 px-4 text-sm font-medium text-brand-700 hover:bg-brand-100 dark:border-brand-900/50 dark:bg-brand-900/20 dark:text-brand-400"
+                                className="inline-flex h-10 items-center gap-2 rounded-xl border border-primary-200 bg-primary-50 px-4 text-sm font-medium text-primary-700 shadow-sm transition-all hover:bg-primary-100 hover:shadow-md dark:border-primary-900/50 dark:bg-primary-900/20 dark:text-primary-400"
                               >
                                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -865,16 +906,16 @@ export default function ViewAddonItemsModal({
                         </div>
                       );
                     })}
-                  {availableItems.filter(item => 
+                  {availableItems.filter(item =>
                     item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                     (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()))
                   ).length === 0 && (
-                    <div className="py-10 text-center">
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {searchQuery ? 'No items found matching your search' : 'No items available'}
-                      </p>
-                    </div>
-                  )}
+                      <div className="py-10 text-center">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {searchQuery ? 'No items found matching your search' : 'No items available'}
+                        </p>
+                      </div>
+                    )}
                 </div>
               )}
             </div>
@@ -885,7 +926,7 @@ export default function ViewAddonItemsModal({
                   setShowAddItemsModal(false);
                   setSearchQuery("");
                 }}
-                className="h-11 w-full rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                className="h-11 w-full rounded-xl bg-primary-500 text-sm font-medium text-white shadow-lg shadow-primary-500/25 transition-all hover:bg-primary-600 hover:shadow-primary-500/30 focus:outline-none focus:ring-4 focus:ring-primary-500/20"
               >
                 Close
               </button>
