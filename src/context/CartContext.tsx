@@ -302,9 +302,63 @@ export function CartProvider({ children }: CartProviderProps) {
     setCart((prev) => {
       if (!prev) return prev;
 
-      const updatedItems = prev.items.map((item) =>
-        item.cartItemId === cartItemId ? { ...item, ...updates } : item
+      // Find the item being updated
+      const itemIndex = prev.items.findIndex((item) => item.cartItemId === cartItemId);
+      if (itemIndex === -1) return prev;
+
+      // Apply updates to create the updated item
+      const currentItem = prev.items[itemIndex];
+      const updatedItem: CartItem = { ...currentItem, ...updates };
+
+      // Sanitize prices
+      if (typeof updatedItem.price === 'string') {
+        updatedItem.price = parseFloat(updatedItem.price);
+      }
+      if (updatedItem.addons) {
+        updatedItem.addons = updatedItem.addons.map((addon) => ({
+          ...addon,
+          price: typeof addon.price === 'string' ? parseFloat(addon.price) : addon.price,
+        }));
+      }
+
+      // Check if another item in the cart has the same menuId and addons (excluding the current item)
+      const duplicateIndex = prev.items.findIndex(
+        (cartItem, idx) =>
+          idx !== itemIndex &&
+          cartItem.menuId === updatedItem.menuId &&
+          JSON.stringify(cartItem.addons) === JSON.stringify(updatedItem.addons)
       );
+
+      let updatedItems: CartItem[];
+
+      if (duplicateIndex >= 0) {
+        // ✅ Merge: add quantity to existing item and remove the edited item
+        console.log("🔄 [UPDATE ITEM] Found duplicate, merging items:", {
+          existingQty: prev.items[duplicateIndex].quantity,
+          addingQty: updatedItem.quantity,
+          newQty: prev.items[duplicateIndex].quantity + updatedItem.quantity,
+        });
+
+        updatedItems = prev.items.map((item, idx) => {
+          if (idx === duplicateIndex) {
+            // Merge: combine quantities, keep notes if both have them
+            const mergedNotes = [prev.items[duplicateIndex].notes, updatedItem.notes]
+              .filter(Boolean)
+              .join('; ');
+            return {
+              ...item,
+              quantity: item.quantity + updatedItem.quantity,
+              notes: mergedNotes || undefined,
+            };
+          }
+          return item;
+        }).filter((_, idx) => idx !== itemIndex); // Remove the edited item since it's merged
+      } else {
+        // No duplicate, just update the item normally
+        updatedItems = prev.items.map((item) =>
+          item.cartItemId === cartItemId ? updatedItem : item
+        );
+      }
 
       const updatedCart = { ...prev, items: updatedItems };
       saveCart(updatedCart);
