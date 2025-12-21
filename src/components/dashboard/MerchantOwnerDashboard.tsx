@@ -95,11 +95,10 @@ export default function MerchantOwnerDashboard({
   lowStockItems,
 }: MerchantOwnerDashboardProps) {
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-AU', {
-      style: 'currency',
-      currency: 'AUD',
+    return `A$${amount.toLocaleString('en-AU', {
       minimumFractionDigits: 2,
-    }).format(amount);
+      maximumFractionDigits: 2,
+    })}`;
   };
 
   const formatDate = (date: Date) => {
