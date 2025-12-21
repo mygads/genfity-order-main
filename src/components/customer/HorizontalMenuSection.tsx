@@ -1,11 +1,9 @@
 /**
- * Horizontal Menu Section Component
+ * Horizontal Menu Section Component - Burjo ESB Style
  * 
  * @description
- * Horizontal scrolling menu section with "View All" button
- * Shows menu items in a grid/carousel layout
- * 
- * @specification copilot-instructions.md - Component Reusability
+ * Horizontal scrolling menu section with grid cards
+ * Matches Burjo ESB design specifications exactly
  */
 
 'use client';
@@ -13,7 +11,7 @@
 import Image from 'next/image';
 
 interface MenuItem {
-    id: string; // ✅ String from API (BigInt serialized)
+    id: string;
     name: string;
     description?: string;
     price: number;
@@ -32,12 +30,13 @@ interface MenuItem {
 interface HorizontalMenuSectionProps {
     title: string;
     items: MenuItem[];
-    currency?: string; // Merchant currency (e.g., "AUD", "IDR", "USD")
+    currency?: string;
     onViewAll?: () => void;
     onItemClick?: (item: MenuItem) => void;
-    getItemQuantityInCart?: (menuId: string) => number; // Get quantity of item in cart
+    getItemQuantityInCart?: (menuId: string) => number;
     onIncreaseQty?: (menuId: string) => void;
     onDecreaseQty?: (menuId: string) => void;
+    isPromoSection?: boolean; // Flag to show promo badge
 }
 
 export default function HorizontalMenuSection({
@@ -49,8 +48,8 @@ export default function HorizontalMenuSection({
     getItemQuantityInCart,
     onIncreaseQty,
     onDecreaseQty,
+    isPromoSection = false,
 }: HorizontalMenuSectionProps) {
-    // Format currency based on merchant settings
     const formatPrice = (amount: number): string => {
         return new Intl.NumberFormat('en-US', {
             style: 'currency',
@@ -61,16 +60,25 @@ export default function HorizontalMenuSection({
     };
 
     return (
-        <div className="space-y-4">
-            {/* Header */}
+        <div className="space-y-3">
+            {/* Section Header - Burjo Style: 16px, 700 weight, Inter, dark gray */}
             <div className="flex items-center justify-between px-4">
-                <h2 className="text-lg font-bold uppercase tracking-wide text-gray-900 dark:text-white">
+                <h2
+                    className="uppercase"
+                    style={{
+                        fontFamily: 'Inter, sans-serif',
+                        fontSize: '16px',
+                        fontWeight: 700,
+                        color: 'rgb(33, 37, 41)',
+                        letterSpacing: '0.025em',
+                    }}
+                >
                     {title}
                 </h2>
                 {onViewAll && (
                     <button
                         onClick={onViewAll}
-                        className="flex items-center gap-1 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-orange-500 dark:hover:text-orange-400 transition-colors"
+                        className="flex items-center gap-1 text-sm font-medium text-gray-600 hover:text-orange-500 transition-colors"
                     >
                         View All
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
@@ -80,188 +88,187 @@ export default function HorizontalMenuSection({
                 )}
             </div>
 
-            {/* Menu Items Horizontal Scroll */}
+            {/* Horizontal Scroll Container */}
             <div className="px-4 overflow-x-auto scrollbar-hide">
-                <div className="flex gap-3 pb-2">
+                <div className="flex pb-2" style={{ gap: '10px' }}>
                     {items.map((item) => {
                         const isAvailable = item.isActive && (!item.trackStock || (item.stockQty !== null && item.stockQty > 0));
-                        const isLowStock = item.trackStock && item.stockQty !== null && item.stockQty > 0 && item.stockQty < 10;
                         const quantityInCart = getItemQuantityInCart ? getItemQuantityInCart(item.id) : 0;
                         const isInCart = quantityInCart > 0;
 
                         return (
                             <div
                                 key={item.id}
-                                className={`shrink-0 w-40 bg-white dark:bg-gray-800 rounded-lg transition-all overflow-hidden ${isInCart
-                                    ? 'border-l-4 border-l-orange-500'
-                                    : ''
-                                    } ${isAvailable ? '' : 'opacity-60'
-                                    }`}
+                                className={`shrink-0 bg-white px-4 pt-4 pb-3 ${isAvailable ? '' : 'opacity-60'}`}
                                 style={{
-                                    boxShadow: isInCart
-                                        ? '0 8px 16px -4px rgba(0, 0, 0, 0.1), 0 4px 8px -2px rgba(0, 0, 0, 0.06)'
-                                        : '0 4px 12px -2px rgba(0, 0, 0, 0.08), 0 2px 6px -1px rgba(0, 0, 0, 0.04)',
-                                    border: isInCart ? undefined : '0.5px solid rgb(229 231 235 / 1)',
+                                    width: '210px',
+                                    borderRadius: '10px',
+                                    boxShadow: '0 3px 10px rgba(0, 0, 0, 0.08)',
+                                    // paddingTop: '16px',
+                                    // paddingLeft: '16px',
+                                    // paddingRight: '16px',
+                                    // paddingBottom: '12px',
+                                    borderBottom: isInCart ? '3px solid rgb(240, 90, 40)' : 'none',
                                 }}
                             >
-                                {/* Clickable Image Area */}
+                                {/* Image Container - 178px square */}
                                 <div
                                     onClick={() => isAvailable && onItemClick?.(item)}
-                                    className={`p-3 pb-0 ${isAvailable ? 'cursor-pointer' : 'cursor-not-allowed'}`}
-                                    role="button"
-                                    tabIndex={isAvailable ? 0 : -1}
+                                    className={isAvailable ? 'cursor-pointer' : 'cursor-not-allowed'}
+                                    style={{
+                                        position: 'relative',
+                                        width: '178px',
+                                        height: '178px',
+                                        borderRadius: '10px',
+                                        overflow: 'hidden',
+                                        backgroundColor: '#f3f4f6',
+                                    }}
                                 >
-                                    {/* Image */}
-                                    <div className="relative w-full aspect-square bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden">
-                                        <Image
-                                            src={item.imageUrl || '/images/default-menu.png'}
-                                            alt={item.name}
-                                            fill
-                                            className="object-cover"
-                                            sizes="160px"
-                                        />
-
-                                        {/* Low Stock Badge - Bottom left */}
-                                        {isLowStock && !isInCart && (
-                                            <div className="absolute bottom-2 left-2 bg-orange-500 text-white px-2 py-1 rounded text-xs font-medium">
-                                                Stock &lt; 10
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Content */}
-                                    <div className="flex flex-col gap-1 mt-2">
-                                        <h3 className="font-semibold text-sm line-clamp-2 text-gray-900 dark:text-white">
-                                            {item.name}
-                                        </h3>
-
-                                        {/* Menu Badges */}
-                                        {(item.isSpicy || item.isBestSeller || item.isSignature || item.isRecommended) && (
-                                            <div className="flex flex-wrap gap-1">
-                                                {item.isSpicy && (
-                                                    <div 
-                                                        className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-orange-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
-                                                        title="Spicy"
-                                                    >
-                                                        <Image
-                                                            src="/images/menu-badges/spicy.png"
-                                                            alt="Spicy"
-                                                            fill
-                                                            className="object-cover transition-opacity duration-300 group-hover:opacity-80"
-                                                        />
-                                                    </div>
-                                                )}
-                                                {item.isBestSeller && (
-                                                    <div 
-                                                        className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-amber-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
-                                                        title="Best Seller"
-                                                    >
-                                                        <Image
-                                                            src="/images/menu-badges/best-seller.png"
-                                                            alt="Best Seller"
-                                                            fill
-                                                            className="object-cover transition-opacity duration-300 group-hover:opacity-80"
-                                                        />
-                                                    </div>
-                                                )}
-                                                {item.isSignature && (
-                                                    <div 
-                                                        className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-purple-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
-                                                        title="Signature"
-                                                    >
-                                                        <Image
-                                                            src="/images/menu-badges/signature.png"
-                                                            alt="Signature"
-                                                            fill
-                                                            className="object-cover transition-opacity duration-300 group-hover:opacity-80"
-                                                        />
-                                                    </div>
-                                                )}
-                                                {item.isRecommended && (
-                                                    <div 
-                                                        className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-green-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
-                                                        title="Recommended"
-                                                    >
-                                                        <Image
-                                                            src="/images/menu-badges/recommended.png"
-                                                            alt="Recommended"
-                                                            fill
-                                                            className="object-cover transition-opacity duration-300 group-hover:opacity-80"
-                                                        />
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-
-                                        {/* Price or Status */}
-                                        <div>
-                                            {!isAvailable ? (
-                                                <p className="text-red-500 font-medium text-sm">Sold out</p>
-                                            ) : item.isPromo && item.promoPrice ? (
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-base font-bold text-gray-900 dark:text-white">
-                                                        {formatPrice(item.promoPrice)}
-                                                    </span>
-                                                    <span className="text-xs text-gray-400 line-through">
-                                                        {formatPrice(item.price)}
-                                                    </span>
-                                                </div>
-                                            ) : (
-                                                <p className="text-gray-900 dark:text-white font-semibold">
-                                                    {formatPrice(item.price)}
-                                                </p>
-                                            )}
+                                    <Image
+                                        src={item.imageUrl || '/images/default-menu.png'}
+                                        alt={item.name}
+                                        fill
+                                        className="object-cover"
+                                        sizes="178px"
+                                    />
+                                    
+                                    {/* Promo Badge - only show if isPromoSection */}
+                                    {isPromoSection && (
+                                        <div
+                                            className="absolute top-2 left-2"
+                                            style={{
+                                                backgroundColor: '#ef4444',
+                                                color: 'white',
+                                                padding: '4px 8px',
+                                                borderRadius: '20px',
+                                                fontSize: '10px',
+                                                fontWeight: 700,
+                                                textTransform: 'uppercase',
+                                            }}
+                                        >
+                                            Promo
                                         </div>
-                                    </div>
+                                    )}
                                 </div>
 
-                                {/* Bottom Action Area */}
-                                <div className="px-3 pb-3 pt-2">
-                                    {!isAvailable ? (
-                                        <div className="h-9" />
-                                    ) : isInCart ? (
-                                        <div className="flex items-center justify-between bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    onDecreaseQty?.(item.id);
-                                                }}
-                                                className="w-9 h-9 flex items-center justify-center text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/40 rounded-l-lg transition-colors"
-                                                aria-label="Decrease quantity"
-                                            >
-                                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                                                    <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
-                                                    <path d="M5 8h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                                                </svg>
-                                            </button>
-                                            <span className="text-sm font-bold text-gray-900 dark:text-white min-w-6 text-center">
-                                                {quantityInCart}
-                                            </span>
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    onIncreaseQty?.(item.id);
-                                                }}
-                                                className="w-9 h-9 flex items-center justify-center text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/40 rounded-r-lg transition-colors"
-                                                aria-label="Increase quantity"
-                                            >
-                                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                                                    <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
-                                                    <path d="M8 5v6M5 8h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                                                </svg>
-                                            </button>
+                                {/* Content Area */}
+                                <div style={{ marginTop: '10px' }}>
+                                    {/* Product Name - 14px, 600 weight, max 2 lines */}
+                                    <h3
+                                        className="line-clamp-2"
+                                        style={{
+                                            fontFamily: 'Inter, sans-serif',
+                                            fontSize: '15px',
+                                            fontWeight: 700,
+                                            color: 'rgb(0, 0, 0)',
+                                            lineHeight: '1.3',
+                                            minHeight: '36px', // Fixed height for 2 lines
+                                        }}
+                                    >
+                                        {item.name}
+                                    </h3>
+
+                                    {/* Badges - 24px circular */}
+                                    {(item.isSpicy || item.isBestSeller || item.isSignature || item.isRecommended) && (
+                                        <div className="flex flex-wrap" style={{ gap: '4px', marginTop: '8px', marginBottom: '4px' }}>
+                                            {item.isBestSeller && (
+                                                <div style={{ width: '24px', height: '24px', position: 'relative', borderRadius: '50%', overflow: 'hidden' }}>
+                                                    <Image src="/images/menu-badges/best-seller.png" alt="Best Seller" fill className="object-cover" />
+                                                </div>
+                                            )}
+                                            {item.isSignature && (
+                                                <div style={{ width: '24px', height: '24px', position: 'relative', borderRadius: '50%', overflow: 'hidden' }}>
+                                                    <Image src="/images/menu-badges/signature.png" alt="Signature" fill className="object-cover" />
+                                                </div>
+                                            )}
+                                            {item.isSpicy && (
+                                                <div style={{ width: '24px', height: '24px', position: 'relative', borderRadius: '50%', overflow: 'hidden' }}>
+                                                    <Image src="/images/menu-badges/spicy.png" alt="Spicy" fill className="object-cover" />
+                                                </div>
+                                            )}
+                                            {item.isRecommended && (
+                                                <div style={{ width: '24px', height: '24px', position: 'relative', borderRadius: '50%', overflow: 'hidden' }}>
+                                                    <Image src="/images/menu-badges/recommended.png" alt="Recommended" fill className="object-cover" />
+                                                </div>
+                                            )}
                                         </div>
-                                    ) : (
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                onItemClick?.(item);
-                                            }}
-                                            className="w-full h-9 border border-orange-500 text-orange-500 dark:border-orange-400 dark:text-orange-400 rounded-lg text-sm font-semibold hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
-                                        >
-                                            Add
-                                        </button>
                                     )}
+
+                                    {/* Price - 14px, 600 weight */}
+                                    <div style={{ marginTop: '8px' }}>
+                                        {!isAvailable ? (
+                                            <p style={{ color: '#ef4444', fontSize: '15px', fontWeight: 700 }}>Sold out</p>
+                                        ) : item.isPromo && item.promoPrice ? (
+                                            <div className="flex items-center gap-2">
+                                                <span style={{ fontSize: '14px', fontWeight: 600, color: 'rgb(0, 0, 0)' }}>
+                                                    {formatPrice(item.promoPrice)}
+                                                </span>
+                                                <span style={{ fontSize: '12px', color: '#9ca3af', textDecoration: 'line-through' }}>
+                                                    {formatPrice(item.price)}
+                                                </span>
+                                            </div>
+                                        ) : (
+                                            <p style={{ fontSize: '14px', fontWeight: 600, color: 'rgb(0, 0, 0)' }}>
+                                                {formatPrice(item.price)}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {/* Add Button - 28px height, 8px radius, orange border */}
+                                    <div style={{ marginTop: '6px' }}>
+                                        {isAvailable && (
+                                            isInCart ? (
+                                                <div
+                                                    className="flex items-center justify-between"
+                                                    style={{
+                                                        height: '28px',
+                                                        border: '0.66px solid rgb(240, 90, 40)',
+                                                        borderRadius: '8px',
+                                                        overflow: 'hidden',
+                                                    }}
+                                                >
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); onDecreaseQty?.(item.id); }}
+                                                        className="flex items-center justify-center hover:bg-orange-50 transition-colors"
+                                                        style={{ width: '36px', height: '100%', color: 'rgb(240, 90, 40)' }}
+                                                    >
+                                                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                                                            <path d="M3 7h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                                                        </svg>
+                                                    </button>
+                                                    <span style={{ fontSize: '12px', fontWeight: 600, color: 'rgb(0, 0, 0)' }}>
+                                                        {quantityInCart}
+                                                    </span>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); onIncreaseQty?.(item.id); }}
+                                                        className="flex items-center justify-center hover:bg-orange-50 transition-colors"
+                                                        style={{ width: '36px', height: '100%', color: 'rgb(240, 90, 40)' }}
+                                                    >
+                                                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                                                            <path d="M7 3v8M3 7h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); onItemClick?.(item); }}
+                                                    className="w-full flex items-center justify-center hover:bg-orange-50 transition-colors"
+                                                    style={{
+                                                        height: '28px',
+                                                        border: '0.66px solid rgb(240, 90, 40)',
+                                                        borderRadius: '8px',
+                                                        backgroundColor: 'transparent',
+                                                        color: 'rgb(240, 90, 40)',
+                                                        fontSize: '12px',
+                                                        fontWeight: 600,
+                                                        fontFamily: 'Inter, sans-serif',
+                                                    }}
+                                                >
+                                                    Add
+                                                </button>
+                                            )
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         );

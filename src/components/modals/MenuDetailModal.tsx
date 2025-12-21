@@ -1,27 +1,25 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import type { MenuItem, CartAddon } from '@/lib/types/customer';
 
 /**
- * Menu Detail Modal Component
+ * Menu Detail Modal Component - Burjo ESB Style
  * 
- * Based on FRONTEND_SPECIFICATION.md:
- * - Bottom sheet: slide from bottom 0.3s, max-height 85vh
- * - Image banner: 200px height, gradient overlay
- * - Menu name: 20px/700 #1A1A1A
- * - Description: 14px/400 #666, line-height 1.5
- * - Base price: 16px/700 #FF6B35
- * - Add-ons section: checkbox list, 14px, +Rp{price}
- * - Notes: textarea 48px min-height, 200 char max
- * - Quantity: plus/minus buttons 40x40px, number display 16px/700
- * - Total: 20px/700 #1A1A1A, Rp{total}
- * - Add to cart: 48px #FF6B35, full width
+ * Full-screen modal matching Burjo ESB exactly:
+ * - Full viewport coverage
+ * - Image with rounded TOP corners
+ * - Close button top-right
+ * - Add-on sections with orange required labels
+ * - Sticky footer with gray bg, quantity selector, and orange Add button
+ * - Currency formatted as A$
  */
 interface MenuDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   menu: MenuItem | null;
+  currency?: string;
   onAddToCart: (menuId: bigint, quantity: number, notes: string, addons: CartAddon[]) => void;
 }
 
@@ -29,11 +27,25 @@ export default function MenuDetailModal({
   isOpen,
   onClose,
   menu,
+  currency = 'AUD',
   onAddToCart,
 }: MenuDetailModalProps) {
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState('');
   const [selectedAddons, setSelectedAddons] = useState<Set<bigint>>(new Set());
+
+  // Format currency - A$ for AUD
+  const formatPrice = (amount: number): string => {
+    if (currency === 'AUD' || currency === 'A$') {
+      return `A$${amount.toFixed(2)}`;
+    }
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
 
   // Reset state when modal opens/closes
   useEffect(() => {
@@ -41,7 +53,13 @@ export default function MenuDetailModal({
       setQuantity(1);
       setNotes('');
       setSelectedAddons(new Set());
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
     }
+    return () => {
+      document.body.style.overflow = '';
+    };
   }, [isOpen]);
 
   if (!isOpen || !menu) return null;
@@ -69,8 +87,7 @@ export default function MenuDetailModal({
 
   const calculateTotal = (): number => {
     let total = menu.price * quantity;
-    
-    // Add addons price
+
     if (menu.addonCategories && menu.addonCategories.length > 0) {
       let addonsPrice = 0;
       menu.addonCategories.forEach((category) => {
@@ -82,21 +99,20 @@ export default function MenuDetailModal({
       });
       total += addonsPrice * quantity;
     }
-    
+
     return total;
   };
 
   const handleSubmit = () => {
     if (!menu.isAvailable) return;
 
-    // Build addons array
     const cartAddons: CartAddon[] = [];
     if (menu.addonCategories && menu.addonCategories.length > 0) {
       menu.addonCategories.forEach((category) => {
         category.items.forEach((item) => {
           if (selectedAddons.has(item.id)) {
             cartAddons.push({
-              id: BigInt(0), // Will be set by localStorage utility
+              id: BigInt(0),
               addonItemId: item.id,
               name: item.name,
               price: item.price,
@@ -116,196 +132,469 @@ export default function MenuDetailModal({
 
   return (
     <>
-      {/* Overlay */}
+      {/* Full Screen Modal - Burjo ESB Style */}
       <div
-        className="fixed inset-0 bg-black bg-opacity-40 z-[250] transition-opacity duration-300"
-        onClick={onClose}
-      />
-
-      {/* Bottom Sheet */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl z-[250] max-h-[85vh] overflow-y-auto animate-slide-up">
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/90 shadow-md flex items-center justify-center text-[#666666] hover:bg-gray-100 transition-colors z-10"
-          aria-label="Close"
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          width: '100vw',
+          height: '100vh',
+          backgroundColor: '#ffffff',
+          zIndex: 400,
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        {/* Scrollable Content Area */}
+        <div
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            paddingBottom: '80px', // Space for footer
+          }}
         >
-          ✕
-        </button>
+          {/* Image Section - Rounded TOP corners only */}
+          <div
+            style={{
+              position: 'relative',
+              width: '100%',
+              height: '220px',
+              backgroundColor: '#f3f4f6',
+            }}
+          >
+            {menu.imageUrl ? (
+              <Image
+                src={menu.imageUrl}
+                alt={menu.name}
+                fill
+                className="object-cover"
+                sizes="100vw"
+                style={{ borderRadius: '0 0 16px 16px' }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'linear-gradient(135deg, #F05A28 0%, #ff8c42 100%)',
+                  borderRadius: '0 0 16px 16px',
+                }}
+              >
+                <span style={{ fontSize: '80px' }}>🍜</span>
+              </div>
+            )}
 
-        {/* Drag Handle */}
-        <div className="flex justify-center pt-3 pb-2">
-          <div className="w-12 h-1 bg-[#E0E0E0] rounded-full" />
-        </div>
+            {/* Close Button - Top Right */}
+            <button
+              onClick={onClose}
+              style={{
+                position: 'absolute',
+                top: '16px',
+                right: '16px',
+                width: '40px',
+                height: '40px',
+                borderRadius: '50%',
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                border: 'none',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                zIndex: 10,
+              }}
+              aria-label="Close"
+            >
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M15 5L5 15M5 5L15 15" stroke="#333" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            </button>
 
-        {/* Image Banner - 200px */}
-        <div className="relative w-full h-[200px] bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black bg-opacity-20" />
-          <span className="text-7xl z-10">🍜</span>
-          
-          {/* Unavailable Badge */}
-          {!menu.isAvailable && (
-            <div className="absolute top-4 left-4 px-3 py-1.5 bg-red-500 text-white text-sm font-semibold rounded-full">
-              Tidak Tersedia
-            </div>
-          )}
-        </div>
+            {/* Expand Button - Below Close */}
+            <button
+              style={{
+                position: 'absolute',
+                top: '64px',
+                right: '16px',
+                width: '40px',
+                height: '40px',
+                borderRadius: '50%',
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                border: 'none',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                zIndex: 10,
+              }}
+              aria-label="Expand"
+            >
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M4 8L10 14L16 8" stroke="#333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
 
-        {/* Content */}
-        <div className="px-4 pb-6">
-          {/* Menu Name - 20px/700 */}
-          <h2 className="text-xl font-bold text-[#1A1A1A] mt-4 mb-2">
-            {menu.name}
-          </h2>
-
-          {/* Description - 14px/400 */}
-          {menu.description && (
-            <p className="text-sm text-[#666666] leading-relaxed mb-3">
-              {menu.description}
-            </p>
-          )}
-
-          {/* Base Price - 16px/700 */}
-          <div className="mb-6">
-            <span className="text-base font-bold text-[#FF6B35]">
-              Rp{menu.price.toLocaleString('id-ID')}
-            </span>
+            {/* Unavailable Badge */}
+            {!menu.isAvailable && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '16px',
+                  left: '16px',
+                  padding: '8px 16px',
+                  borderRadius: '20px',
+                  backgroundColor: '#ef4444',
+                  color: 'white',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                }}
+              >
+                Tidak Tersedia
+              </div>
+            )}
           </div>
 
-          {/* Add-ons Section */}
-          {hasAddons && (
-            <div className="mb-6">
-              <h3 className="text-base font-semibold text-[#1A1A1A] mb-3">
-                Tambahan (Opsional)
-              </h3>
-              <div className="space-y-4">
+          {/* Content Area */}
+          <div style={{ padding: '16px' }}>
+            {/* Menu Name - 18px/700 */}
+            <h2
+              style={{
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '18px',
+                fontWeight: 700,
+                color: '#000',
+                marginBottom: '8px',
+                lineHeight: '1.4',
+              }}
+            >
+              {menu.name}
+            </h2>
+
+            {/* Price - 16px/600 */}
+            <div style={{ marginBottom: '12px' }}>
+              <span
+                style={{
+                  fontFamily: 'Inter, sans-serif',
+                  fontSize: '16px',
+                  fontWeight: 600,
+                  color: '#000',
+                }}
+              >
+                {formatPrice(menu.price)}
+              </span>
+            </div>
+
+            {/* Description - 14px/400 */}
+            {menu.description && (
+              <p
+                style={{
+                  fontFamily: 'Inter, sans-serif',
+                  fontSize: '14px',
+                  fontWeight: 400,
+                  color: '#666',
+                  lineHeight: '1.5',
+                  marginBottom: '16px',
+                }}
+              >
+                {menu.description}
+              </p>
+            )}
+
+            {/* Divider */}
+            <div style={{ height: '8px', backgroundColor: '#f5f5f5', margin: '0 -16px', marginBottom: '16px' }} />
+
+            {/* Add-ons Section */}
+            {hasAddons && (
+              <div>
                 {menu.addonCategories!.map((category) => (
-                  <div key={category.id.toString()}>
-                    {/* Category Name */}
-                    <h4 className="text-sm font-medium text-[#666666] mb-2">
-                      {category.name}
-                      {category.maxSelection > 0 && (
-                        <span className="ml-2 text-xs text-[#999999]">
-                          (Maks. {category.maxSelection})
+                  <div key={category.id.toString()} style={{ marginBottom: '20px' }}>
+                    {/* Category Header */}
+                    <div style={{ marginBottom: '12px' }}>
+                      <h3
+                        style={{
+                          fontFamily: 'Inter, sans-serif',
+                          fontSize: '16px',
+                          fontWeight: 700,
+                          color: '#000',
+                          marginBottom: '4px',
+                        }}
+                      >
+                        {category.name}
+                      </h3>
+                      {/* Required Label - Orange */}
+                      {category.minSelection > 0 && (
+                        <span
+                          style={{
+                            fontFamily: 'Inter, sans-serif',
+                            fontSize: '12px',
+                            fontWeight: 500,
+                            color: '#F05A28',
+                          }}
+                        >
+                          Must be selected
                         </span>
                       )}
-                    </h4>
-                    
-                    {/* Addon Items */}
-                    <div className="space-y-2">
-                      {category.items.map((item) => (
-                        <label
-                          key={item.id.toString()}
-                          className="flex items-center justify-between p-3 border border-[#E0E0E0] rounded-lg cursor-pointer hover:border-[#FF6B35] transition-colors"
+                      {category.maxSelection > 0 && category.minSelection === 0 && (
+                        <span
+                          style={{
+                            fontFamily: 'Inter, sans-serif',
+                            fontSize: '12px',
+                            fontWeight: 400,
+                            color: '#999',
+                          }}
                         >
-                          <div className="flex items-center gap-3 flex-1">
+                          Max. {category.maxSelection}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Addon Items */}
+                    <div>
+                      {category.items.map((item, index) => {
+                        const isUnavailable = !item.isAvailable || (item.trackStock && item.stockQty !== undefined && item.stockQty <= 0);
+
+                        return (
+                          <div
+                            key={item.id.toString()}
+                            onClick={() => !isUnavailable && handleToggleAddon(item.id)}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              padding: '14px 0',
+                              borderBottom: index < category.items.length - 1 ? '1px solid #f0f0f0' : 'none',
+                              cursor: isUnavailable ? 'not-allowed' : 'pointer',
+                              opacity: isUnavailable ? 0.5 : 1,
+                            }}
+                          >
+                            <div style={{ flex: 1 }}>
+                              <span
+                                style={{
+                                  fontFamily: 'Inter, sans-serif',
+                                  fontSize: '14px',
+                                  fontWeight: 400,
+                                  color: '#000',
+                                  textDecoration: isUnavailable ? 'line-through' : 'none',
+                                }}
+                              >
+                                {item.name}
+                              </span>
+                              {item.price > 0 && (
+                                <span
+                                  style={{
+                                    fontFamily: 'Inter, sans-serif',
+                                    fontSize: '14px',
+                                    fontWeight: 400,
+                                    color: '#666',
+                                    marginLeft: '8px',
+                                  }}
+                                >
+                                  (+{formatPrice(item.price)})
+                                </span>
+                              )}
+                              {isUnavailable && (
+                                <span
+                                  style={{
+                                    fontFamily: 'Inter, sans-serif',
+                                    fontSize: '12px',
+                                    color: '#ef4444',
+                                    marginLeft: '8px',
+                                  }}
+                                >
+                                  Sold out
+                                </span>
+                              )}
+                            </div>
                             {/* Checkbox */}
-                            <input
-                              type="checkbox"
-                              checked={selectedAddons.has(item.id)}
-                              onChange={() => handleToggleAddon(item.id)}
-                              disabled={!item.isAvailable}
-                              className="w-5 h-5 text-[#FF6B35] border-[#E0E0E0] rounded focus:ring-[#FF6B35] focus:ring-offset-0 disabled:opacity-30"
-                            />
-                            {/* Item Name - 14px/400 */}
-                            <span className={`text-sm ${!item.isAvailable ? 'text-[#999999] line-through' : 'text-[#1A1A1A]'}`}>
-                              {item.name}
-                            </span>
+                            <div
+                              style={{
+                                width: '24px',
+                                height: '24px',
+                                borderRadius: '4px',
+                                border: selectedAddons.has(item.id) ? '2px solid #F05A28' : '2px solid #ddd',
+                                backgroundColor: selectedAddons.has(item.id) ? '#F05A28' : 'transparent',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'all 0.15s',
+                                flexShrink: 0,
+                              }}
+                            >
+                              {selectedAddons.has(item.id) && (
+                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                                  <path d="M11.5 4L5.5 10L2.5 7" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                              )}
+                            </div>
                           </div>
-                          {/* Item Price - 14px/600 */}
-                          <span className="text-sm font-semibold text-[#FF6B35]">
-                            +Rp{item.price.toLocaleString('id-ID')}
-                          </span>
-                        </label>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Notes Section */}
-          <div className="mb-6">
-            <label className="block text-base font-semibold text-[#1A1A1A] mb-2">
-              Catatan (Opsional)
-            </label>
-            <textarea
-              value={notes}
-              onChange={handleNotesChange}
-              placeholder="Contoh: Tidak pakai cabe, kuah banyak..."
-              className="w-full min-h-[48px] px-4 py-3 border border-[#E0E0E0] rounded-lg text-sm text-[#1A1A1A] placeholder-[#999999] focus:outline-none focus:ring-2 focus:ring-[#FF6B35] resize-none"
-              rows={3}
-            />
-            <div className="text-xs text-[#999999] text-right mt-1">
-              {notes.length}/200 karakter
+            {/* Notes Section */}
+            <div style={{ marginTop: '8px' }}>
+              {/* Divider before notes */}
+              <div style={{ height: '8px', backgroundColor: '#f5f5f5', margin: '0 -16px', marginBottom: '16px' }} />
+
+              <label
+                style={{
+                  display: 'block',
+                  fontFamily: 'Inter, sans-serif',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  color: '#000',
+                  marginBottom: '8px',
+                }}
+              >
+                Notes (Optional)
+              </label>
+              <textarea
+                value={notes}
+                onChange={handleNotesChange}
+                placeholder="E.g., No chili, extra sauce..."
+                style={{
+                  width: '100%',
+                  minHeight: '80px',
+                  padding: '12px',
+                  border: '1px solid #ddd',
+                  borderRadius: '8px',
+                  fontFamily: 'Inter, sans-serif',
+                  fontSize: '14px',
+                  color: '#000',
+                  resize: 'none',
+                  outline: 'none',
+                }}
+              />
+              <div
+                style={{
+                  fontFamily: 'Inter, sans-serif',
+                  fontSize: '12px',
+                  color: '#999',
+                  textAlign: 'right',
+                  marginTop: '4px',
+                }}
+              >
+                {notes.length}/200
+              </div>
             </div>
           </div>
+        </div>
 
-          {/* Quantity Controls */}
-          <div className="mb-6">
-            <label className="block text-base font-semibold text-[#1A1A1A] mb-3">
-              Jumlah
-            </label>
-            <div className="flex items-center gap-4">
-              {/* Minus Button - 40x40px */}
+        {/* Sticky Footer - Burjo Style */}
+        <div
+          style={{
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            backgroundColor: '#F5F5F5',
+            padding: '12px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderTop: '1px solid #e0e0e0',
+            zIndex: 410,
+          }}
+        >
+          {/* Left: Total Order + Quantity Selector */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span
+              style={{
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '14px',
+                fontWeight: 500,
+                color: '#666',
+              }}
+            >
+              Total Order
+            </span>
+            {/* Quantity Selector */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <button
                 onClick={() => handleQuantityChange(-1)}
                 disabled={quantity <= 1}
-                className="w-10 h-10 rounded-full border-2 border-[#E0E0E0] flex items-center justify-center text-xl text-[#1A1A1A] hover:border-[#FF6B35] hover:text-[#FF6B35] disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-90"
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  border: quantity <= 1 ? '2px solid #ddd' : '2px solid #F05A28',
+                  backgroundColor: 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: quantity <= 1 ? 'not-allowed' : 'pointer',
+                }}
               >
-                −
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M4 8H12" stroke={quantity <= 1 ? '#ddd' : '#F05A28'} strokeWidth="2" strokeLinecap="round" />
+                </svg>
               </button>
-
-              {/* Quantity Display - 16px/700 */}
-              <span className="text-base font-bold text-[#1A1A1A] w-12 text-center">
+              <span
+                style={{
+                  fontFamily: 'Inter, sans-serif',
+                  fontSize: '16px',
+                  fontWeight: 700,
+                  color: '#000',
+                  minWidth: '24px',
+                  textAlign: 'center',
+                }}
+              >
                 {quantity}
               </span>
-
-              {/* Plus Button - 40x40px */}
               <button
                 onClick={() => handleQuantityChange(1)}
                 disabled={quantity >= 99}
-                className="w-10 h-10 rounded-full border-2 border-[#FF6B35] bg-[#FF6B35] flex items-center justify-center text-xl text-white hover:bg-[#E55A2B] hover:border-[#E55A2B] disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-90"
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  border: '2px solid #F05A28',
+                  backgroundColor: '#F05A28',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: quantity >= 99 ? 'not-allowed' : 'pointer',
+                }}
               >
-                +
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M8 4V12M4 8H12" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                </svg>
               </button>
             </div>
           </div>
 
-          {/* Total Price - 20px/700 */}
-          <div className="flex items-center justify-between p-4 bg-[#F9F9F9] rounded-lg mb-4">
-            <span className="text-base font-semibold text-[#666666]">Total Harga</span>
-            <span className="text-xl font-bold text-[#1A1A1A]">
-              Rp{total.toLocaleString('id-ID')}
-            </span>
-          </div>
-
-          {/* Add to Cart Button - 48px */}
+          {/* Right: Add Orders Button */}
           <button
             onClick={handleSubmit}
             disabled={!menu.isAvailable}
-            className="w-full h-12 bg-[#FF6B35] text-white text-base font-semibold rounded-lg hover:bg-[#E55A2B] disabled:bg-[#E0E0E0] disabled:text-[#999999] disabled:cursor-not-allowed transition-all active:scale-[0.98]"
+            style={{
+              backgroundColor: menu.isAvailable ? '#F05A28' : '#E0E0E0',
+              color: menu.isAvailable ? 'white' : '#999',
+              fontFamily: 'Inter, sans-serif',
+              fontSize: '16px',
+              fontWeight: 700,
+              padding: '12px 20px',
+              borderRadius: '8px',
+              border: 'none',
+              cursor: menu.isAvailable ? 'pointer' : 'not-allowed',
+              minWidth: '130px',
+            }}
           >
-            {menu.isAvailable ? 'Tambahkan ke Keranjang' : 'Menu Tidak Tersedia'}
+            Add {formatPrice(total)}
           </button>
         </div>
       </div>
-
-      {/* Animation CSS */}
-      <style jsx>{`
-        @keyframes slide-up {
-          from {
-            transform: translateY(100%);
-          }
-          to {
-            transform: translateY(0);
-          }
-        }
-        .animate-slide-up {
-          animation: slide-up 0.3s ease-out;
-        }
-      `}</style>
     </>
   );
 }

@@ -8,7 +8,6 @@ import RestaurantBanner from '@/components/customer/RestaurantBanner';
 import RestaurantInfoCard from '@/components/customer/RestaurantInfoCard';
 import TableNumberCard from '@/components/customer/TableNumberCard';
 import HorizontalMenuSection from '@/components/customer/HorizontalMenuSection';
-import PromoMenuSection from '@/components/customer/PromoMenuSection';
 import DetailedMenuSection from '@/components/customer/DetailedMenuSection';
 import FloatingCartButton from '@/components/cart/FloatingCartButton';
 import MenuDetailModal from '@/components/menu/MenuDetailModal';
@@ -374,13 +373,11 @@ export default function MenuBrowsePage() {
   // Get promo items
   const promoItems = allMenuItems.filter(item => item.isPromo && item.promoPrice);
 
-  // Get "New Menu" items (first 6 items)
-  const newMenuItems = allMenuItems.slice(0, 6);
+  // Get "Best Seller" items (items with isBestSeller = true)
+  const bestSellerItems = allMenuItems.filter(item => item.isBestSeller);
 
-  // Get "Best Seller" items (items with high stock or featured)
-  const bestSellerItems = allMenuItems.filter(item =>
-    item.trackStock && item.stockQty && item.stockQty > 50
-  ).slice(0, 6);
+  // Get "Recommendation" items (items with isRecommended = true)
+  const recommendationItems = allMenuItems.filter(item => item.isRecommended);
 
   // ========================================
   // RENDER - NEW LAYOUT
@@ -514,32 +511,15 @@ export default function MenuBrowsePage() {
                 {promoItems.length > 0 && (
                   <>
                     <div className="mt-4">
-                      <PromoMenuSection
-                        items={promoItems}
-                        currency={merchantInfo?.currency || 'AUD'}
-                        onItemClick={(item) => handleOpenMenu(item as MenuItem)}
-                        getItemQuantityInCart={getMenuQuantityInCart}
-                      />
-                    </div>
-                    {/* Divider */}
-                    <div className="px-4 mt-6">
-                      <hr className="border-gray-200 dark:border-gray-700" />
-                    </div>
-                  </>
-                )}
-
-                {/* New Menu Section */}
-                {newMenuItems.length > 0 && (
-                  <>
-                    <div className="mt-4">
                       <HorizontalMenuSection
-                        title="New Menu"
-                        items={newMenuItems}
+                        title="Promo"
+                        items={promoItems}
                         currency={merchantInfo?.currency || 'AUD'}
                         onItemClick={(item) => handleOpenMenu(item as MenuItem)}
                         getItemQuantityInCart={getMenuQuantityInCart}
                         onIncreaseQty={handleIncreaseQtyFromCard}
                         onDecreaseQty={handleDecreaseQtyFromCard}
+                        isPromoSection={true}
                       />
                     </div>
                     {/* Divider */}
@@ -556,6 +536,27 @@ export default function MenuBrowsePage() {
                       <HorizontalMenuSection
                         title="Best Seller"
                         items={bestSellerItems}
+                        currency={merchantInfo?.currency || 'AUD'}
+                        onItemClick={(item) => handleOpenMenu(item as MenuItem)}
+                        getItemQuantityInCart={getMenuQuantityInCart}
+                        onIncreaseQty={handleIncreaseQtyFromCard}
+                        onDecreaseQty={handleDecreaseQtyFromCard}
+                      />
+                    </div>
+                    {/* Divider */}
+                    <div className="px-4 mt-6">
+                      <hr className="border-gray-200 dark:border-gray-700" />
+                    </div>
+                  </>
+                )}
+
+                {/* Recommendation Section */}
+                {recommendationItems.length > 0 && (
+                  <>
+                    <div className="mt-4">
+                      <HorizontalMenuSection
+                        title="Recommendation"
+                        items={recommendationItems}
                         currency={merchantInfo?.currency || 'AUD'}
                         onItemClick={(item) => handleOpenMenu(item as MenuItem)}
                         getItemQuantityInCart={getMenuQuantityInCart}

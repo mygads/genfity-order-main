@@ -86,6 +86,7 @@ export default function MenuDetailModal({
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
   const [missingCategoryId, setMissingCategoryId] = useState<string | null>(null);
+  const [isImageZoomed, setIsImageZoomed] = useState(false);
   const addonCategoryRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const isAddingRef = useRef(false);
 
@@ -218,13 +219,21 @@ export default function MenuDetailModal({
     if (!category) return;
 
     setSelectedAddons(prev => {
+      // Check if this addon is already selected
+      const isCurrentlySelected = prev[addonId] === 1;
+      
       // Remove all selections from this category first
       const newState = { ...prev };
       category.addons.forEach(a => {
         delete newState[a.id];
       });
-      // Then add the selected one
-      newState[addonId] = 1;
+      
+      // If it was not selected before, add it (toggle behavior)
+      // If it was selected, leave it unselected (allows deselection)
+      if (!isCurrentlySelected) {
+        newState[addonId] = 1;
+      }
+      
       return newState;
     });
   };
@@ -239,7 +248,7 @@ export default function MenuDetailModal({
 
     setSelectedAddons(prev => {
       const currentQty = prev[addonId] || 0;
-      
+
       if (currentQty > 0) {
         // Uncheck - remove this addon
         const { [addonId]: _, ...rest } = prev;
@@ -299,10 +308,10 @@ export default function MenuDetailModal({
     // Validate required addons
     const validation = validateRequiredAddons();
     if (!validation.valid) {
-      setErrorMessage(validation.message || 'Please complete required selections');
+      // Don't show error modal, just scroll to missing category
       if (validation.missingCategoryId) {
         setMissingCategoryId(validation.missingCategoryId);
-        // Ensure scroll runs after state updates settle
+        // Scroll to the incomplete category
         setTimeout(() => scrollToAddonCategory(validation.missingCategoryId as string), 50);
       }
       return;
@@ -345,7 +354,9 @@ export default function MenuDetailModal({
           selectedAddons,
         });
         return;
-      } console.log(`✅ [MODAL] Adding addon: ${addon.name} x${qty} (+${formatCurrency(addon.price * qty, currency)})`, {
+      }
+      
+      console.log(`✅ [MODAL] Adding addon: ${addon.name} x${qty} (+${formatCurrency(addon.price * qty, currency)})`, {
         addonId: addon.id,
         name: addon.name,
         price: addon.price,
@@ -408,24 +419,21 @@ export default function MenuDetailModal({
   const isAvailable = menu.isActive && (!menu.trackStock || (menu.stockQty !== null && menu.stockQty > 0));
 
   return (
-    <div className="fixed inset-0 z-300 flex items-end justify-center">
-      {/* Overlay */}
-      <div
-        className="absolute inset-0 bg-black/40"
-        onClick={onClose}
-      />
+    <div className="fixed inset-0 z-300 flex justify-center">
+      {/* Overlay background */}
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
 
-      {/* Modal Container - Mobile First max-w-[420px] */}
-      <div className="relative w-full max-w-[420px] bg-white dark:bg-gray-800 rounded-t-2xl shadow-2xl animate-slide-up flex flex-col max-h-[90vh]">
-        {/* Drag Handle */}
-        <div className="flex justify-center pt-3 pb-2">
-          <div className="w-12 h-1 bg-gray-300 dark:bg-gray-600 rounded-full" />
-        </div>
+      {/* Modal Container - Constrained to 500px like layout */}
+      <div className="relative w-full max-w-[500px] h-full bg-white dark:bg-gray-800 flex flex-col overflow-hidden">
+        {/* Full Screen Modal within 500px container - Burjo ESB Style */}
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto scrollbar-hide">
+        <div className="flex-1 overflow-y-auto scrollbar-hide pb-32">
           {/* Image Banner with Buttons */}
-          <div className="relative w-full h-[200px] bg-gray-200 dark:bg-gray-700">
+          <div 
+            className="relative w-full h-[250px] bg-gray-200 dark:bg-gray-700 cursor-pointer"
+            onClick={() => setIsImageZoomed(true)}
+          >
             <Image
               src={menu.imageUrl || '/images/default-menu.png'}
               alt={menu.name}
@@ -434,10 +442,24 @@ export default function MenuDetailModal({
               sizes="420px"
             />
 
-            {/* Close Button */}
+            {/* Gradient Overlay - Top 1/5 of image */}
+            <div 
+              className="absolute top-0 left-0 right-0 pointer-events-none"
+              style={{
+                height: '50px',
+                background: 'linear-gradient(to bottom, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0) 100%)',
+                zIndex: 1
+              }}
+            />
+
+            {/* Fixed Close Button - stays on top when scrolling */}
             <button
-              onClick={onClose}
-              className="absolute top-3 right-3 w-10 h-10 bg-white/90 dark:bg-gray-800/90 rounded-full flex items-center justify-center shadow-md hover:bg-white dark:hover:bg-gray-800 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                onClose();
+              }}
+              className="fixed top-3 right-3 w-8 h-8 bg-white/90 dark:bg-gray-800/90 rounded-full flex items-center justify-center shadow-md hover:bg-white dark:hover:bg-gray-800 transition-colors z-320"
+              style={{ right: 'calc(50% - 250px + 12px)' }}
               aria-label="Close"
             >
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -445,9 +467,14 @@ export default function MenuDetailModal({
               </svg>
             </button>
 
-            {/* Expand Button (optional) */}
+            {/* Expand Button */}
             <button
-              className="absolute top-3 left-3 w-10 h-10 bg-white/90 dark:bg-gray-800/90 rounded-full flex items-center justify-center shadow-md hover:bg-white dark:hover:bg-gray-800 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsImageZoomed(true);
+              }}
+              className="absolute top-3 left-3 w-8 h-8 bg-white/90 dark:bg-gray-800/90 rounded-full flex items-center justify-center shadow-md hover:bg-white dark:hover:bg-gray-800 transition-colors"
+              style={{ zIndex: 2 }}
               aria-label="Expand image"
             >
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -463,22 +490,22 @@ export default function MenuDetailModal({
             )}
           </div>
 
-          {/* Menu Info Section */}
-          <section className="px-4 py-3">
+          {/* Menu Info Section - Overlaps image with rounded top */}
+          <section className="px-4 py-3 bg-white dark:bg-gray-800 rounded-t-2xl relative -mt-4 z-10">
             {/* Menu Icons (e.g., Recommended badge) */}
             <div className="flex gap-2 mb-2">
               {/* Placeholder for menu icons/badges */}
             </div>
 
             {/* Menu Name */}
-            <h1 className="text-lg font-bold text-gray-900 dark:text-white mb-1">
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
               {menu.name}
             </h1>
 
             {/* Price Display - Show promo price with strikethrough if available */}
             {menu.isPromo && menu.promoPrice ? (
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-lg font-bold text-gray-900 dark:text-white">
+                <span className="text-lg font-semibold text-gray-900 dark:text-white">
                   {formatCurrency(menu.promoPrice, currency)}
                 </span>
                 <span className="text-sm text-gray-400 line-through">
@@ -486,21 +513,21 @@ export default function MenuDetailModal({
                 </span>
               </div>
             ) : (
-              <div className="text-base font-bold text-gray-900 dark:text-white mb-2">
+              <div className="text-base font-semibold text-gray-900 dark:text-white mb-2">
                 {formatCurrency(menu.price, currency)}
               </div>
             )}
 
             {/* Description */}
             {menu.description && (
-              <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed m-0">
+              <p className="text-[13px] text-gray-500 dark:text-gray-400 leading-relaxed">
                 {menu.description}
               </p>
             )}
           </section>
 
           {/* Thin Divider */}
-          <hr className="border-t-4 border-gray-200 dark:border-gray-700" style={{ margin: 0 }} />
+          <hr className="border-t-2 border-gray-200 dark:border-gray-700" style={{ margin: 0 }} />
 
           {/* Add-ons Section */}
           {isLoading ? (
@@ -508,7 +535,7 @@ export default function MenuDetailModal({
               <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
             </div>
           ) : addonCategories.length > 0 ? (
-            <section>
+            <section className="addon-categories">
               {addonCategories.map((category, index) => {
                 // Calculate total selections in this category
                 const totalSelected = category.addons.reduce((sum, addon) => {
@@ -529,20 +556,30 @@ export default function MenuDetailModal({
                       style={{ position: 'relative' }}
                     >
                       {/* Category Header */}
-                      <div className="w-full mb-2">
-                        <h2 className="text-base font-bold text-gray-900 dark:text-white m-0">
-                          {category.name}
-                        </h2>
-                        {category.type === 'required' ? (
-                          <p className={`mt-1 text-xs font-medium ${isIncomplete ? 'text-orange-600 dark:text-orange-400' : 'text-orange-600/90 dark:text-orange-400/90'}`}>
-                            Required
-                            {category.maxSelections > 0 ? ` • max ${category.maxSelections}` : ''}
-                          </p>
-                        ) : (
-                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                            Optional
-                            {category.maxSelections > 0 ? ` • max ${category.maxSelections}` : ''}
-                          </p>
+                      <div className="w-full mb-2 flex items-start justify-between">
+                        <div className="flex-1">
+                          <h2 className="text-base font-bold text-gray-900 dark:text-white m-0">
+                            {category.name}
+                          </h2>
+                          {category.type === 'required' ? (
+                            <p className={`text-xs font-medium ${isIncomplete ? 'text-orange-600 dark:text-orange-400' : 'text-gray-900 dark:text-gray-400'}`}>
+                              Required
+                              {category.maxSelections > 0 ? ` • max ${category.maxSelections}` : ''}
+                            </p>
+                          ) : (
+                            <p className="text-xs text-gray-900 dark:text-gray-400">
+                              Optional
+                              {category.maxSelections > 0 ? ` • max ${category.maxSelections}` : ''}
+                            </p>
+                          )}
+                        </div>
+                        {/* Checkmark icon when required category is complete */}
+                        {category.type === 'required' && !isIncomplete && (
+                          <div className="flex items-center justify-center w-5 h-5 rounded-full bg-green-600 shrink-0 ml-2">
+                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                              <path d="M3 7l3 3 5-6" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </div>
                         )}
                       </div>
 
@@ -563,21 +600,21 @@ export default function MenuDetailModal({
                           // 3. Quantity: inputType === 'QTY' (can select multiple of same item)
                           const isSingleChoice = category.maxSelections === 1;
                           const isQuantityType = addon.inputType === 'QTY';
-                          
+
                           // Disable checkbox if max reached and not already selected
-                          const isMaxReached = category.maxSelections > 0 && 
+                          const isMaxReached = category.maxSelections > 0 &&
                             totalInCategory >= category.maxSelections && !isSelected;
 
                           return (
-                            <div key={addon.id} className="flex items-center justify-between py-2.5 px-4">
+                            <div key={addon.id} className="flex items-center justify-between py-2">
                               {/* Left side: Name + Price */}
-                              <div className="flex-1 min-w-0">
-                                <span className={`text-sm ${!addon.isAvailable ? 'text-gray-400 dark:text-gray-500 line-through' : 'text-gray-900 dark:text-white'}`}>
+                              <div className="flex">
+                                <span className={`text-sm ${!addon.isAvailable ? 'text-gray-400 dark:text-gray-500 line-through' : 'text-gray-800 dark:text-white'}`}>
                                   {addon.name}
                                 </span>
                                 {addon.price > 0 && (
-                                  <span className={`text-sm font-semibold ml-1 ${!addon.isAvailable ? 'text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-white'}`}>
-                                    (+{formatCurrency(addon.price, currency)})
+                                  <span className={`text-sm font-bold ml-1 ${!addon.isAvailable ? 'text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-white'}`}>
+                                    (+ {formatCurrency(addon.price, currency)})
                                   </span>
                                 )}
                               </div>
@@ -593,11 +630,10 @@ export default function MenuDetailModal({
                                 <button
                                   type="button"
                                   onClick={() => handleRadioSelect(category.id, addon.id)}
-                                  className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-all shrink-0 ${
-                                    isSelected
-                                      ? 'border-orange-500 bg-orange-500'
-                                      : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
-                                  }`}
+                                  className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all shrink-0 ${isSelected
+                                    ? 'border-orange-500 bg-orange-500'
+                                    : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
+                                    }`}
                                   aria-label={`Select ${addon.name}`}
                                 >
                                   {isSelected ? (
@@ -613,7 +649,7 @@ export default function MenuDetailModal({
                                     type="button"
                                     onClick={() => handleAddonQtyChange(addon.id, -1)}
                                     disabled={addonQty === 0}
-                                    className="w-7 h-7 rounded-full border border-gray-300 dark:border-gray-600 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                                    className="w-6 h-6 rounded-full border border-gray-300 dark:border-gray-600 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                                     aria-label="Decrease quantity"
                                   >
                                     <svg className="w-4 h-4 text-gray-500 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
@@ -641,13 +677,12 @@ export default function MenuDetailModal({
                                   type="button"
                                   onClick={() => handleCheckboxToggle(category.id, addon.id)}
                                   disabled={isMaxReached}
-                                      className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-all shrink-0 ${
-                                    isSelected 
-                                      ? 'border-orange-500 bg-orange-500' 
-                                      : isMaxReached
-                                        ? 'border-gray-200 dark:border-gray-700 opacity-50 cursor-not-allowed'
-                                            : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
-                                  }`}
+                                  className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all shrink-0 ${isSelected
+                                    ? 'border-orange-500 bg-orange-500'
+                                    : isMaxReached
+                                      ? 'border-gray-200 dark:border-gray-700 opacity-50 cursor-not-allowed'
+                                      : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
+                                    }`}
                                   aria-label={`${isSelected ? 'Deselect' : 'Select'} ${addon.name}`}
                                 >
                                   {isSelected && (
@@ -672,7 +707,7 @@ export default function MenuDetailModal({
               })}
 
               {/* Thick Divider after all addons */}
-              <hr className="border-t-4 border-gray-200 dark:border-gray-700" style={{ margin: 0 }} />
+              <hr className="border-t-2 border-gray-200 dark:border-gray-700" style={{ margin: 0 }} />
             </section>
           ) : null}
 
@@ -682,27 +717,27 @@ export default function MenuDetailModal({
               <h2 className="text-base font-bold text-gray-900 dark:text-white m-0">
                 Notes
               </h2>
-              <span className="text-xs text-gray-500 dark:text-gray-400">Optional</span>
+              <span className="text-sm text-gray-900 dark:text-gray-400">Optional</span>
             </div>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value.slice(0, 100))}
-              placeholder="Example: Make my dish delicious!"
+              placeholder="Example: Dont add onions!"
               maxLength={100}
               rows={4}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500 dark:focus:ring-orange-400 resize-none"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500 dark:focus:ring-orange-400 resize-none"
             />
           </div>
 
           {/* Spacer for fixed footer */}
-          <div className="h-24" />
+          <div className="h-14" />
         </div>
 
-        {/* Fixed Bottom Bar */}
-        <div className="sticky bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg">
+        {/* Fixed Bottom Bar - Burjo ESB Style */}
+        <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[500px] bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 rounded-t-2xl z-310" style={{ boxShadow: '0 -4px 6px -1px rgba(0, 0, 0, 0.1), 0 -2px 4px -1px rgba(0, 0, 0, 0.06)' }}>
           {/* Total Order Row */}
-          <div className="flex items-center justify-between px-4 py-3">
-            <div className="text-sm font-medium text-gray-900 dark:text-gray-300">
+          <div className="flex items-center justify-between px-4 py-4">
+            <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Total Order
             </div>
 
@@ -711,10 +746,10 @@ export default function MenuDetailModal({
               <button
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
                 disabled={quantity === 1}
-                className="w-7 h-7 rounded-md border border-gray-300 dark:border-gray-600 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-gray-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                className="w-6 h-6 rounded-full border border-black dark:border-gray-600 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-gray-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                 aria-label="Decrease order quantity"
               >
-                <svg className="w-4 h-4 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+                <svg className="w-4 h-4 text-black dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
                 </svg>
               </button>
@@ -725,10 +760,10 @@ export default function MenuDetailModal({
 
               <button
                 onClick={() => setQuantity(quantity + 1)}
-                className="w-7 h-7 rounded-md border border-gray-300 dark:border-gray-600 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-gray-400 transition-all"
+                className="w-6 h-6 rounded-full border border-black dark:border-gray-600 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-gray-400 transition-all"
                 aria-label="Increase order quantity"
               >
-                <svg className="w-4 h-4 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+                <svg className="w-4 h-4 text-black dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                 </svg>
               </button>
@@ -740,47 +775,20 @@ export default function MenuDetailModal({
             <button
               onClick={handleAddToCart}
               disabled={!isAvailable}
-              className="w-full h-11 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-lg disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:text-gray-500 dark:disabled:text-gray-400 disabled:cursor-not-allowed transition-all active:scale-[0.98] flex items-center justify-between px-5"
+              className="w-full h-11 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-lg disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:text-gray-500 dark:disabled:text-gray-400 disabled:cursor-not-allowed transition-all active:scale-[0.98] flex items-center justify-center px-5"
             >
-              <span className="text-sm">{editMode ? 'Update Order' : 'Add Orders'}</span>
-              <span className="flex items-center gap-2 text-sm">
-                <span>-</span>
+              <span className="text-md">{editMode ? 'Update Order ' : 'Add Orders '}</span>
+              
+              <span className="flex items-center gap-2 text-md gap-2 mx-2">-</span>
+              <span className="flex items-center gap-2 text-md gap-2">
                 <strong>{formatCurrency(calculateTotal(), currency)}</strong>
               </span>
             </button>
           </div>
         </div>
-      </div>
 
-      {/* Error Modal */}
-      {errorMessage && (
-        <>
-          <div
-            className="fixed inset-0 bg-black/50 z-400"
-            onClick={() => setErrorMessage('')}
-          />
-          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-32px)] max-w-[320px] bg-white dark:bg-gray-800 rounded-xl z-400 p-6 shadow-2xl">
-            <div className="text-center mb-6">
-              <div className="text-4xl mb-3">⚠️</div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
-                Required Selection
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {errorMessage}
-              </p>
-            </div>
-            <button
-              onClick={() => setErrorMessage('')}
-              className="w-full h-11 bg-orange-500 text-white font-semibold rounded-lg hover:bg-orange-600 transition-colors"
-            >
-              OK
-            </button>
-          </div>
-        </>
-      )}
-
-      {/* Animation CSS */}
-      <style jsx>{`
+        {/* Animation CSS */}
+        <style jsx>{`
         @keyframes slide-up {
           from {
             transform: translateY(100%);
@@ -800,6 +808,45 @@ export default function MenuDetailModal({
           display: none;  /* Chrome, Safari, Opera */
         }
       `}</style>
+      </div>
+
+      {/* Image Zoom Modal */}
+      {isImageZoomed && (
+        <div className="fixed inset-0 z-400 flex items-center justify-center bg-black">
+          {/* Zoomed Image Container - Max 500px */}
+          <div className="relative w-full max-w-[500px] h-auto">
+            {/* Gradient Overlay - Top 1/5 of image */}
+            <div 
+              className="absolute top-0 left-0 right-0 z-405 pointer-events-none"
+              style={{
+                height: '20%',
+                background: 'linear-gradient(to bottom, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0) 100%)'
+              }}
+            />
+
+            {/* Close Button for Zoom - positioned relative to container */}
+            <button
+              onClick={() => setIsImageZoomed(false)}
+              className="absolute top-4 right-4 w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors z-410"
+              aria-label="Close zoom"
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                <path d="M18 6L6 18M6 6L18 18" strokeLinecap="round" />
+              </svg>
+            </button>
+
+            {/* Zoomed Image */}
+            <Image
+              src={menu.imageUrl || '/images/default-menu.png'}
+              alt={menu.name}
+              width={500}
+              height={500}
+              className="w-full h-auto object-contain"
+              priority
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

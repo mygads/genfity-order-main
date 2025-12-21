@@ -1,11 +1,13 @@
 /**
- * Detailed Menu Section Component
+ * Detailed Menu Section Component - Burjo ESB Style
  * 
- * @description
- * List-style menu section for category-based menu items
- * with description and "Add" button
- * 
- * @specification copilot-instructions.md - Component Reusability
+ * Layout:
+ * - Image: Fixed 70x70px, top-left
+ * - Title: Top right of image
+ * - Description: Below title, with ellipsis
+ * - Badges: Below description
+ * - Price + Add Button: Bottom row (price left, button right)
+ * - Sold out: Replaces Add button, red text
  */
 
 'use client';
@@ -13,7 +15,7 @@
 import Image from 'next/image';
 
 interface MenuItem {
-    id: string; // ✅ String from API (BigInt serialized)
+    id: string;
     name: string;
     description: string;
     price: number;
@@ -36,9 +38,9 @@ interface MenuItem {
 interface DetailedMenuSectionProps {
     title: string;
     items: MenuItem[];
-    currency?: string; // Merchant currency
+    currency?: string;
     onAddItem?: (item: MenuItem) => void;
-    getItemQuantityInCart?: (menuId: string) => number; // Get quantity of item in cart
+    getItemQuantityInCart?: (menuId: string) => number;
     onIncreaseQty?: (menuId: string) => void;
     onDecreaseQty?: (menuId: string) => void;
 }
@@ -54,182 +56,274 @@ export default function DetailedMenuSection({
 }: DetailedMenuSectionProps) {
     if (items.length === 0) return null;
 
-    // Format currency based on merchant settings
     const formatPrice = (amount: number): string => {
-        return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: currency,
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-        }).format(amount);
+        if (currency === 'IDR') {
+            return `Rp${new Intl.NumberFormat('id-ID').format(amount)}`;
+        }
+        const symbol = currency === 'AUD' ? 'A$' : currency === 'USD' ? '$' : currency;
+        return `${symbol}${amount.toFixed(2)}`;
     };
 
     return (
-        <section className="px-4">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">{title}</h2>
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+        <section style={{ position: 'relative' }}>
+            {/* Section Header */}
+            <h2
+                style={{
+                    fontFamily: 'Inter, sans-serif',
+                    fontSize: '16px',
+                    fontWeight: 700,
+                    color: 'rgb(33, 37, 41)',
+                    padding: '0 16px',
+                    marginBottom: '8px',
+                }}
+            >
+                {title}
+            </h2>
+
+            {/* Menu Items */}
+            <div style={{ padding: '0 16px' }}>
                 {items.map((item, index) => {
                     const isAvailable = item.isActive && (!item.trackStock || (item.stockQty !== null && item.stockQty > 0));
-                    const isLowStock = item.trackStock && item.stockQty !== null && item.stockQty > 0 && item.stockQty < 10;
-                    const hasAddons = item.addonCategories && item.addonCategories.length > 0;
                     const quantityInCart = getItemQuantityInCart ? getItemQuantityInCart(item.id) : 0;
                     const isInCart = quantityInCart > 0;
 
                     return (
                         <div
                             key={item.id}
-                            className={`flex gap-4 pb-4 ${isInCart ? 'border-l-4 border-l-orange-500 pl-3 -ml-4' : ''} ${index < items.length - 1 ? 'border-b border-gray-200 dark:border-gray-700 mb-4' : ''
-                                }`}
+                            style={{
+                                position: 'relative',
+                                display: 'flex',
+                                gap: '12px',
+                                paddingTop: '16px',
+                                paddingBottom: '16px',
+                                borderBottom: index < items.length - 1 ? '2px solid #e4e2e2ff' : 'none',
+                            }}
                         >
-                            {/* Image */}
-                            <div 
-                                className="relative w-20 h-20 shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700 cursor-pointer"
+                            {/* Border Left for item in cart */}
+                            {isInCart && (
+                                <div
+                                    style={{
+                                        position: 'absolute',
+                                        left: '-16px',
+                                        top: '10px',
+                                        bottom: '10px',
+                                        width: '4px',
+                                        backgroundColor: '#F05A28',
+                                        borderRadius: '0 2px 2px 0',
+                                    }}
+                                />
+                            )}
+
+                            {/* Image - Fixed 70x70px */}
+                            <div
                                 onClick={() => isAvailable && onAddItem?.(item)}
+                                style={{
+                                    position: 'relative',
+                                    width: '70px',
+                                    height: '70px',
+                                    flexShrink: 0,
+                                    borderRadius: '8px',
+                                    overflow: 'hidden',
+                                    backgroundColor: '#f3f4f6',
+                                    cursor: isAvailable ? 'pointer' : 'default',
+                                    filter: isAvailable ? 'none' : 'grayscale(100%)',
+                                    opacity: isAvailable ? 1 : 0.6,
+                                }}
                             >
                                 <Image
                                     src={item.imageUrl || '/images/default-menu.png'}
                                     alt={item.name}
                                     fill
                                     className="object-cover"
-                                    sizes="80px"
+                                    sizes="70px"
                                 />
-                                {/* Low Stock Badge */}
-                                {isLowStock && !isInCart && (
-                                    <div className="absolute bottom-1 left-1 bg-orange-500 text-white px-1.5 py-0.5 rounded text-[10px] font-medium">
-                                        Stock &lt; 10
-                                    </div>
-                                )}
                             </div>
 
                             {/* Content */}
-                            <div 
-                                className="flex-1 flex flex-col justify-between min-w-0 cursor-pointer"
-                                onClick={() => isAvailable && onAddItem?.(item)}
-                            >
-                                <div className="flex-1">
-                                    <h4 className="font-semibold text-gray-900 dark:text-white text-sm">
-                                        {item.name}
-                                    </h4>
-                                    {item.description && (
-                                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
-                                            {item.description}
-                                        </p>
-                                    )}
-                                    {/* Menu Badges */}
-                                    {(item.isSpicy || item.isBestSeller || item.isSignature || item.isRecommended) && (
-                                        <div className="flex flex-wrap gap-1 mt-1">
-                                            {item.isSpicy && (
-                                                <div 
-                                                    className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-orange-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
-                                                    title="Spicy"
-                                                >
-                                                    <Image
-                                                        src="/images/menu-badges/spicy.png"
-                                                        alt="Spicy"
-                                                        fill
-                                                        className="object-cover transition-opacity duration-300 group-hover:opacity-80"
-                                                    />
-                                                </div>
-                                            )}
-                                            {item.isBestSeller && (
-                                                <div 
-                                                    className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-amber-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
-                                                    title="Best Seller"
-                                                >
-                                                    <Image
-                                                        src="/images/menu-badges/best-seller.png"
-                                                        alt="Best Seller"
-                                                        fill
-                                                        className="object-cover transition-opacity duration-300 group-hover:opacity-80"
-                                                    />
-                                                </div>
-                                            )}
-                                            {item.isSignature && (
-                                                <div 
-                                                    className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-purple-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
-                                                    title="Signature"
-                                                >
-                                                    <Image
-                                                        src="/images/menu-badges/signature.png"
-                                                        alt="Signature"
-                                                        fill
-                                                        className="object-cover transition-opacity duration-300 group-hover:opacity-80"
-                                                    />
-                                                </div>
-                                            )}
-                                            {item.isRecommended && (
-                                                <div 
-                                                    className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-green-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
-                                                    title="Recommended"
-                                                >
-                                                    <Image
-                                                        src="/images/menu-badges/recommended.png"
-                                                        alt="Recommended"
-                                                        fill
-                                                        className="object-cover transition-opacity duration-300 group-hover:opacity-80"
-                                                    />
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                                {/* Price Display - Check for Promo */}
-                                {item.isPromo && item.promoPrice ? (
-                                    <div className="flex items-center gap-2 mt-2">
-                                        <span className="text-sm font-bold text-gray-900 dark:text-white">
-                                            {formatPrice(item.promoPrice)}
-                                        </span>
-                                        <span className="text-xs text-gray-400 line-through">
-                                            {formatPrice(item.price)}
-                                        </span>
-                                    </div>
-                                ) : (
-                                    <p className="text-sm font-medium text-gray-900 dark:text-white mt-2">
-                                        {formatPrice(item.price)}
+                            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+                                {/* Title */}
+                                <h4
+                                    onClick={() => isAvailable && onAddItem?.(item)}
+                                    className="line-clamp-2"
+                                    style={{
+                                        fontFamily: 'Inter, sans-serif',
+                                        fontSize: '15px',
+                                        fontWeight: 700,
+                                        color: isAvailable ? '#000000' : '#9CA3AF',
+                                        lineHeight: '1.4',
+                                        margin: 0,
+                                        cursor: isAvailable ? 'pointer' : 'default',
+                                    }}
+                                >
+                                    {item.name}
+                                </h4>
+
+                                {/* Description */}
+                                {item.description && (
+                                    <p
+                                        onClick={() => isAvailable && onAddItem?.(item)}
+                                        className="line-clamp-2"
+                                        style={{
+                                            fontFamily: 'Inter, sans-serif',
+                                            fontSize: '12px',
+                                            fontWeight: 400,
+                                            color: isAvailable ? '#222222ff' : '#9CA3AF',
+                                            lineHeight: '1.5',
+                                            margin: '4px 0 0 0',
+                                            cursor: isAvailable ? 'pointer' : 'default',
+                                        }}
+                                    >
+                                        {item.description}
                                     </p>
                                 )}
-                            </div>
 
-                            {/* Action */}
-                            <div className="shrink-0 flex items-center">
-                                {!isAvailable ? (
-                                    <p className="text-red-500 text-sm font-medium">Sold out</p>
-                                ) : isInCart ? (
-                                    /* Quantity Controls */
-                                    <div className="flex items-center gap-1">
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                onDecreaseQty?.(item.id);
-                                            }}
-                                            className="w-5 h-5 flex items-center justify-center text-black border border-black dark:border-orange-700 rounded-full hover:bg-gray-200 dark:hover:bg-orange-900/40 transition-colors"
-                                            aria-label="Decrease quantity"
-                                        >
-                                            -
-                                        </button>
-                                        <span className="w-5 h-5 text-center text-sm font-bold text-gray-900 dark:text-white">
-                                            {quantityInCart}
-                                        </span>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                onIncreaseQty?.(item.id);
-                                            }}
-                                            className="w-5 h-5 flex items-center justify-center text-black border border-black dark:border-orange-700 rounded-full hover:bg-gray-200 dark:hover:bg-orange-900/40 transition-colors"
-                                            aria-label="Increase quantity"
-                                        >
-                                            +
-                                        </button>
+                                {/* Badges */}
+                                {(item.isSpicy || item.isBestSeller || item.isSignature || item.isRecommended) && (
+                                    <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+                                        {item.isBestSeller && (
+                                            <div style={{ width: '28px', height: '28px', position: 'relative', overflow: 'hidden' }}>
+                                                <Image src="/images/menu-badges/best-seller.png" alt="Best Seller" fill className="object-contain" />
+                                            </div>
+                                        )}
+                                        {item.isSignature && (
+                                            <div style={{ width: '28px', height: '28px', position: 'relative', overflow: 'hidden' }}>
+                                                <Image src="/images/menu-badges/signature.png" alt="Signature" fill className="object-contain" />
+                                            </div>
+                                        )}
+                                        {item.isSpicy && (
+                                            <div style={{ width: '28px', height: '28px', position: 'relative', overflow: 'hidden' }}>
+                                                <Image src="/images/menu-badges/spicy.png" alt="Spicy" fill className="object-contain" />
+                                            </div>
+                                        )}
+                                        {item.isRecommended && (
+                                            <div style={{ width: '28px', height: '28px', position: 'relative', overflow: 'hidden' }}>
+                                                <Image src="/images/menu-badges/recommended.png" alt="Recommended" fill className="object-contain" />
+                                            </div>
+                                        )}
                                     </div>
-                                ) : (
-                                    <button
-                                        onClick={() => onAddItem?.(item)}
-                                        className="px-4 py-0.5 text-sm font-medium rounded-md transition-all border border-orange-500 text-orange-500 dark:border-orange-400 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20"
-                                        title="Add to cart"
-                                    >
-                                        Add
-                                    </button>
                                 )}
+
+                                {/* Bottom Row: Price + Button */}
+                                <div 
+                                    style={{ 
+                                        display: 'flex', 
+                                        justifyContent: 'space-between', 
+                                        alignItems: 'center',
+                                        marginTop: 'auto',
+                                        paddingTop: '8px',
+                                    }}
+                                >
+                                    {/* Price */}
+                                    <div onClick={() => isAvailable && onAddItem?.(item)} style={{ cursor: isAvailable ? 'pointer' : 'default' }}>
+                                        {item.isPromo && item.promoPrice ? (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <span style={{ fontSize: '14px', fontWeight: 700, color: isAvailable ? '#000000' : '#9CA3AF' }}>
+                                                    {formatPrice(item.promoPrice)}
+                                                </span>
+                                                <span style={{ fontSize: '12px', color: '#9CA3AF', textDecoration: 'line-through' }}>
+                                                    {formatPrice(item.price)}
+                                                </span>
+                                            </div>
+                                        ) : (
+                                            <span style={{ fontSize: '14px', fontWeight: 700, color: isAvailable ? '#000000' : '#9CA3AF' }}>
+                                                {formatPrice(item.price)}
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    {/* Button Area - Add / Quantity / Sold out */}
+                                    <div style={{ flexShrink: 0 }}>
+                                        {!isAvailable ? (
+                                            /* Sold out text */
+                                            <span
+                                                style={{
+                                                    fontSize: '14px',
+                                                    fontWeight: 600,
+                                                    color: '#EF4444',
+                                                    fontFamily: 'Inter, sans-serif',
+                                                }}
+                                            >
+                                                Sold out
+                                            </span>
+                                        ) : isInCart ? (
+                                            /* Quantity Controls */
+                                            <div
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    height: '32px',
+                                                    border: '1px solid #F05A28',
+                                                    borderRadius: '8px',
+                                                }}
+                                            >
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); onDecreaseQty?.(item.id); }}
+                                                    style={{
+                                                        width: '32px',
+                                                        height: '100%',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        backgroundColor: 'transparent',
+                                                        border: 'none',
+                                                        color: '#F05A28',
+                                                        cursor: 'pointer',
+                                                        fontSize: '16px',
+                                                    }}
+                                                >
+                                                    −
+                                                </button>
+                                                <span
+                                                    style={{
+                                                        fontSize: '14px',
+                                                        fontWeight: 600,
+                                                        color: '#000000',
+                                                        minWidth: '20px',
+                                                        textAlign: 'center',
+                                                    }}
+                                                >
+                                                    {quantityInCart}
+                                                </span>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); onIncreaseQty?.(item.id); }}
+                                                    style={{
+                                                        width: '32px',
+                                                        height: '100%',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        backgroundColor: 'transparent',
+                                                        border: 'none',
+                                                        color: '#F05A28',
+                                                        cursor: 'pointer',
+                                                        fontSize: '16px',
+                                                    }}
+                                                >
+                                                    +
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            /* Add Button */
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); onAddItem?.(item); }}
+                                                style={{
+                                                    height: '32px',
+                                                    padding: '0 20px',
+                                                    border: '1px solid #F05A28',
+                                                    borderRadius: '8px',
+                                                    backgroundColor: 'transparent',
+                                                    color: '#F05A28',
+                                                    fontSize: '14px',
+                                                    fontWeight: 600,
+                                                    fontFamily: 'Inter, sans-serif',
+                                                    cursor: 'pointer',
+                                                }}
+                                            >
+                                                Add
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     );

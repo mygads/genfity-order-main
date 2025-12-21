@@ -15,17 +15,21 @@
  * @example formatCurrency(10, 'AUD') => "$10.00"
  */
 export function formatCurrency(amount: number, currency: string = 'IDR'): string {
+  // Special handling for AUD to show A$ prefix
+  if (currency === 'AUD') {
+    return `A$${amount.toFixed(2)}`;
+  }
+
   // Map currency to appropriate locale
   const localeMap: Record<string, string> = {
     'IDR': 'id-ID',
-    'AUD': 'en-AU',
     'USD': 'en-US',
     'SGD': 'en-SG',
     'MYR': 'ms-MY',
   };
-  
+
   const locale = localeMap[currency] || 'en-US';
-  
+
   return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency: currency,
@@ -55,7 +59,7 @@ export function formatCurrencyValue(amount: number): string {
  */
 export function formatDate(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date;
-  
+
   return new Intl.DateTimeFormat('id-ID', {
     day: 'numeric',
     month: 'short',
@@ -69,7 +73,7 @@ export function formatDate(date: Date | string): string {
  */
 export function formatDateLong(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date;
-  
+
   return new Intl.DateTimeFormat('id-ID', {
     day: 'numeric',
     month: 'long',
@@ -83,7 +87,7 @@ export function formatDateLong(date: Date | string): string {
  */
 export function formatTime(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date;
-  
+
   return new Intl.DateTimeFormat('id-ID', {
     hour: '2-digit',
     minute: '2-digit',
@@ -115,7 +119,7 @@ export function getRelativeTime(date: Date | string): string {
   if (diffMin < 60) return `${diffMin} menit yang lalu`;
   if (diffHour < 24) return `${diffHour} jam yang lalu`;
   if (diffDay < 7) return `${diffDay} hari yang lalu`;
-  
+
   return formatDate(d);
 }
 
@@ -130,17 +134,17 @@ export function getRelativeTime(date: Date | string): string {
 export function formatPhoneNumber(phone: string): string {
   // Remove all non-numeric characters
   const cleaned = phone.replace(/\D/g, '');
-  
+
   // Format: 0896-6817-6764
   if (cleaned.length === 12) {
     return `${cleaned.slice(0, 4)}-${cleaned.slice(4, 8)}-${cleaned.slice(8)}`;
   }
-  
+
   // Format: 0812-3456-7890 (11 digits)
   if (cleaned.length === 11) {
     return `${cleaned.slice(0, 4)}-${cleaned.slice(4, 8)}-${cleaned.slice(8)}`;
   }
-  
+
   // Return as-is if doesn't match expected format
   return phone;
 }
@@ -166,11 +170,11 @@ export function generateOrderNumber(merchantCode: string): string {
   // Generate random 8-character alphanumeric string (uppercase)
   const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let unique = '';
-  
+
   for (let i = 0; i < 8; i++) {
     unique += characters.charAt(Math.floor(Math.random() * characters.length));
   }
-  
+
   return `${merchantCode}${unique}`;
 }
 

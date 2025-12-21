@@ -242,83 +242,151 @@ export function OrdersPageSkeleton() {
 }
 
 /**
- * Customer Order Page Skeleton (Mobile-optimized)
- * Shows skeleton for the menu content area (info card, categories, menu items)
+ * Customer Order Page Skeleton - Burjo ESB Style
+ * Shows skeleton for the menu content area matching Burjo ESB design
  */
 export function CustomerOrderSkeleton() {
   return (
-    <>
-      {/* Divider */}
-      <div className="px-4 mt-4">
-        <Skeleton width="w-full" height="h-px" />
-      </div>
-
+    <div style={{ backgroundColor: '#F5F5F5' }}>
       {/* Restaurant Info Card Skeleton */}
-      <div className="px-4 mt-4">
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 p-4 space-y-2">
+      <div style={{ padding: '0 16px', marginTop: '-24px', position: 'relative', zIndex: 10 }}>
+        <div 
+          style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: '8px',
+            padding: '16px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          }}
+        >
           <Skeleton width="w-3/4" height="h-5" />
-          <div className="flex items-center gap-2">
-            <Skeleton width="w-16" height="h-4" />
-            <Skeleton width="w-24" height="h-4" />
+          <div className="flex items-center gap-2 mt-2">
+            <Skeleton width="w-32" height="h-4" />
           </div>
         </div>
       </div>
 
-      {/* Divider */}
-      <div className="px-4 mt-4">
-        <Skeleton width="w-full" height="h-px" />
-      </div>
+      {/* Spacer */}
+      <div style={{ height: '12px' }} />
 
       {/* Category Tabs Skeleton */}
-      <div className="flex gap-2 px-4 mt-4 overflow-x-auto pb-2">
-        <Skeleton width="w-16" height="h-9" className="rounded-full shrink-0" />
-        {Array.from({ length: 5 }).map((_, i) => (
-          <Skeleton key={i} width="w-20" height="h-9" className="rounded-full shrink-0" />
-        ))}
-      </div>
-
-      {/* Horizontal Menu Section Skeleton (New Menu) */}
-      <div className="mt-4">
-        <div className="px-4 mb-3">
-          <Skeleton width="w-24" height="h-5" />
-        </div>
-        <div className="flex gap-3 px-4 overflow-x-auto pb-2">
+      <div 
+        style={{
+          height: '48px',
+          borderBottom: '1px solid #E6E6E6',
+          backgroundColor: '#FFFFFF',
+        }}
+      >
+        <div className="flex gap-0 px-4 h-full items-center overflow-hidden">
+          <Skeleton width="w-20" height="h-6" className="shrink-0 mr-4" />
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="shrink-0 w-32 space-y-2">
-              <Skeleton width="w-32" height="h-24" className="rounded-xl" />
-              <Skeleton width="w-24" height="h-4" />
-              <Skeleton width="w-16" height="h-4" />
-            </div>
+            <Skeleton key={i} width="w-24" height="h-6" className="shrink-0 mr-4" />
           ))}
         </div>
       </div>
 
-      {/* Divider */}
-      <div className="px-4 mt-6">
-        <Skeleton width="w-full" height="h-px" />
+      {/* Horizontal Menu Section Skeleton - Hidden overflow */}
+      <div style={{ marginTop: '16px', overflow: 'hidden' }}>
+        <div style={{ padding: '0 16px', marginBottom: '12px' }}>
+          <Skeleton width="w-32" height="h-5" />
+        </div>
+        <div style={{ padding: '0 16px', overflow: 'hidden' }}>
+          <div className="flex gap-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div 
+                key={i} 
+                style={{
+                  width: '140px',
+                  flexShrink: 0,
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: '8px',
+                  padding: '8px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                }}
+              >
+                <Skeleton width="w-full" height="h-32" className="rounded-lg" />
+                <div className="mt-2 space-y-2">
+                  <Skeleton width="w-full" height="h-4" />
+                  <Skeleton width="w-20" height="h-4" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Detailed Menu Section Skeleton */}
-      <div className="mt-4 px-4">
-        <Skeleton width="w-28" height="h-5" className="mb-4" />
-        <div className="space-y-3">
+      <div style={{ marginTop: '16px', padding: '0 16px' }}>
+        <Skeleton width="w-28" height="h-5" className="mb-3" />
+        <div 
+          style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: '8px',
+            overflow: 'hidden',
+          }}
+        >
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="flex gap-3 rounded-xl border border-gray-200 dark:border-gray-800 p-3">
+            <div 
+              key={i} 
+              style={{
+                display: 'flex',
+                gap: '12px',
+                padding: '12px',
+                borderBottom: i < 3 ? '1px solid #E6E6E6' : 'none',
+              }}
+            >
               <Skeleton width="w-20" height="h-20" className="rounded-lg shrink-0" />
               <div className="flex-1 space-y-2">
                 <Skeleton width="w-3/4" height="h-4" />
                 <Skeleton width="w-full" height="h-3" />
                 <Skeleton width="w-1/2" height="h-3" />
                 <div className="flex items-center justify-between pt-1">
-                  <Skeleton width="w-16" height="h-5" />
-                  <Skeleton width="w-8" height="h-8" className="rounded-full" />
+                  <Skeleton width="w-16" height="h-4" />
+                  <Skeleton width="w-16" height="h-8" className="rounded-lg" />
                 </div>
               </div>
             </div>
           ))}
         </div>
       </div>
-    </>
+
+      {/* Another Section */}
+      <div style={{ marginTop: '16px', padding: '0 16px' }}>
+        <Skeleton width="w-28" height="h-5" className="mb-3" />
+        <div 
+          style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: '8px',
+            overflow: 'hidden',
+          }}
+        >
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div 
+              key={i} 
+              style={{
+                display: 'flex',
+                gap: '12px',
+                padding: '12px',
+                borderBottom: i < 2 ? '1px solid #E6E6E6' : 'none',
+              }}
+            >
+              <Skeleton width="w-20" height="h-20" className="rounded-lg shrink-0" />
+              <div className="flex-1 space-y-2">
+                <Skeleton width="w-3/4" height="h-4" />
+                <Skeleton width="w-full" height="h-3" />
+                <Skeleton width="w-1/2" height="h-3" />
+                <div className="flex items-center justify-between pt-1">
+                  <Skeleton width="w-16" height="h-4" />
+                  <Skeleton width="w-16" height="h-8" className="rounded-lg" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Padding bottom for floating cart */}
+      <div style={{ height: '100px' }} />
+    </div>
   );
 }
 
