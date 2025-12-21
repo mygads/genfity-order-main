@@ -17,6 +17,7 @@ interface MerchantData {
   name: string;
   code: string;
   logoUrl: string | null;
+  bannerUrl: string | null;
   isActive: boolean;
   isOpen: boolean;
   address: string;
@@ -133,6 +134,7 @@ export default function ViewMerchantPage() {
           name: merchantData.name,
           code: merchantData.code,
           logoUrl: merchantData.logoUrl,
+          bannerUrl: merchantData.bannerUrl,
           isActive: merchantData.isActive,
           isOpen: merchantData.isOpen ?? true,
           address: merchantData.address,
@@ -232,6 +234,18 @@ export default function ViewMerchantPage() {
 
       {/* Header - Centered Layout */}
       <div className="mb-6 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-white/3">
+        {/* Banner Image */}
+        {merchant.bannerUrl && (
+          <div className="relative h-40 w-full overflow-hidden">
+            <Image
+              src={merchant.bannerUrl}
+              alt={`${merchant.name} banner`}
+              fill
+              className="object-cover"
+            />
+          </div>
+        )}
+
         <div className="px-6 py-8">
           {/* Logo & Basic Info - Centered */}
           <div className="flex flex-col items-center text-center">

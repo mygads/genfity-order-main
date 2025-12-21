@@ -19,7 +19,7 @@ interface MerchantData {
   address?: string;
   phone?: string;
   logoUrl?: string | null;
-  coverImageUrl?: string;
+  bannerUrl?: string | null;
   openingHours: {
     id: bigint;
     dayOfWeek: number;
@@ -122,7 +122,7 @@ export default function MerchantModePage({ params }: MerchantPageProps) {
 
   if (error || !merchant) {
     return (
-      <div className="flex flex-col min-h-screen max-w-[420px] mx-auto bg-white dark:bg-gray-900 items-center justify-center px-6">
+      <div className="flex-1 flex flex-col items-center justify-center px-6">
         <div className="text-center max-w-sm">
           <span className="text-6xl">😕</span>
           <h1 className="mt-4 text-xl font-bold text-gray-900 dark:text-white">
@@ -143,7 +143,7 @@ export default function MerchantModePage({ params }: MerchantPageProps) {
   }
 
   return (
-    <div className="flex flex-col min-h-screen max-w-[420px] mx-auto bg-white dark:bg-gray-900">
+    <>
 
       {/* BANNER 1 - WITH HEADER (Transparent & Overlay) */}
       <div className="relative w-full h-32 mb-4">
@@ -151,7 +151,7 @@ export default function MerchantModePage({ params }: MerchantPageProps) {
         <div className="relative w-full h-full">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={merchant.coverImageUrl || '/images/no-outlet.png'}
+            src={merchant.bannerUrl || '/images/no-outlet.png'}
             alt={merchant.name}
             className="w-full h-full object-cover"
             onError={(e) => {
@@ -322,7 +322,7 @@ export default function MerchantModePage({ params }: MerchantPageProps) {
           openingHours: merchant.openingHours,
         }}
       />
-    </div>
+    </>
   );
 }
 

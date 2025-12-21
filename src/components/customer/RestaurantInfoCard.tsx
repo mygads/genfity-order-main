@@ -1,11 +1,16 @@
 /**
- * Restaurant Info Card Component
+ * Restaurant Info Card Component - Burjo ESB Style
  * 
  * @description
  * Display merchant information with opening hours
- * Clickable card that can show more details
+ * Matches Burjo ESB reference:
+ * - Border: 0.66px solid #E6E6E6
+ * - Border Radius: 16px
+ * - Shadow: 0 2px 8px rgba(0,0,0,0.08)
+ * - Store name: 16px, weight 700, #212529
+ * - Business hours: 14px, #666
  * 
- * @specification copilot-instructions.md - Component Reusability
+ * @specification Burjo ESB Reference
  */
 
 'use client';
@@ -43,7 +48,7 @@ export default function RestaurantInfoCard({ name, openingHours, onClick }: Rest
     }
 
     const { openTime, closeTime } = todayHours;
-    
+
     // Format time for display
     const formatTime = (time: string): string => {
       const [hours, minutes] = time.split(':');
@@ -59,16 +64,43 @@ export default function RestaurantInfoCard({ name, openingHours, onClick }: Rest
   return (
     <div
       onClick={onClick}
-      className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 flex items-center justify-between cursor-pointer hover:border-gray-300 dark:hover:border-gray-600 transition-colors"
+      className="flex items-center justify-between cursor-pointer transition-all duration-200 hover:shadow-md"
+      style={{
+        backgroundColor: '#ffffff',
+        border: '0.66px solid #E6E6E6',
+        borderRadius: '16px',
+        padding: '16px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+        fontFamily: 'Inter, sans-serif',
+      }}
       role="button"
       tabIndex={0}
       aria-label={`${name} information`}
     >
       <div>
-        <h2 className="font-bold text-gray-900 dark:text-white">{name}</h2>
-        <p className="text-sm text-gray-500 dark:text-gray-400">{getMerchantStatus()}</p>
+        <h2
+          className="font-bold"
+          style={{
+            fontSize: '16px',
+            fontWeight: 700,
+            color: '#212529',
+            fontFamily: 'Inter, sans-serif',
+          }}
+        >
+          {name}
+        </h2>
+        <p
+          style={{
+            fontSize: '14px',
+            color: '#666666',
+            fontFamily: 'Inter, sans-serif',
+          }}
+        >
+          {getMerchantStatus()}
+        </p>
       </div>
-      <ChevronRight className="text-gray-400 dark:text-gray-500 flex-shrink-0" width="20" height="20" />
+      <ChevronRight style={{ color: '#999999', flexShrink: 0 }} width="20" height="20" />
     </div>
   );
 }
+

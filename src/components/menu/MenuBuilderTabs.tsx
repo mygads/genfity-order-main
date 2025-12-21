@@ -195,9 +195,9 @@ export default function MenuBuilderTabs({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    if (!validTypes.includes(file.type)) {
-      alert('Invalid file type. Only JPEG, PNG, and WebP are allowed.');
+    // Validate file type - accept all image formats
+    if (!file.type.startsWith('image/')) {
+      alert('Invalid file type. Please upload an image file.');
       return;
     }
 
@@ -493,7 +493,7 @@ export default function MenuBuilderTabs({
                     <label className="flex aspect-square cursor-pointer flex-col items-center justify-center p-6">
                       <input
                         type="file"
-                        accept="image/jpeg,image/jpg,image/png,image/webp"
+                        accept="image/*"
                         onChange={handleImageUpload}
                         disabled={uploadingImage}
                         className="sr-only"
@@ -527,7 +527,7 @@ export default function MenuBuilderTabs({
                             Click to upload image
                           </p>
                           <p className="text-xs text-gray-500 dark:text-gray-400">
-                            JPG, PNG, WebP up to 5MB
+                            All image formats supported. Max 5MB
                           </p>
                         </>
                       )}

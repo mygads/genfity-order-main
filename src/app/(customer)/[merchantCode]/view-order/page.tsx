@@ -184,7 +184,7 @@ export default function ViewOrderPage() {
   }
 
   return (
-    <div className="max-w-[420px] mx-auto bg-white dark:bg-gray-900 min-h-svh flex flex-col">
+    <>
       {/* Header */}
       <div className="sticky top-0 z-50 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between px-4 h-14">
@@ -502,6 +502,6 @@ export default function ViewOrderPage() {
           </div>
         </>
       )}
-    </div>
+    </>
   );
 }

@@ -1,28 +1,41 @@
 /**
- * Restaurant Banner Component
+ * Restaurant Banner Component - Burjo ESB Style
  * 
  * @description
  * Banner image for merchant with fallback to no-outlet.png
- * Simple and clean design without zoom controls
+ * Matches Burjo ESB reference:
+ * - Height: 214px
+ * - Border radius: 8px bottom corners
+ * - Object-fit: cover
  * 
- * @specification copilot-instructions.md - Component Reusability
+ * @specification Burjo ESB Reference
  */
 
 'use client';
 
 interface RestaurantBannerProps {
   imageUrl?: string | null;
+  bannerUrl?: string | null;
   merchantName: string;
 }
 
-export default function RestaurantBanner({ imageUrl, merchantName }: RestaurantBannerProps) {
+export default function RestaurantBanner({ imageUrl, bannerUrl, merchantName }: RestaurantBannerProps) {
+  // Use bannerUrl if available, otherwise fall back to imageUrl (logo)
+  const displayImage = bannerUrl || imageUrl || '/images/no-outlet.png';
+
   return (
-    <div className="relative w-full h-48 bg-gray-100 dark:bg-gray-800 overflow-hidden">
+    <div
+      className="relative w-full bg-gray-100 dark:bg-gray-800 overflow-hidden"
+      style={{
+        height: '214px',
+        borderRadius: '0 0 8px 8px', // Bottom corners only
+      }}
+    >
       {/* Banner Image */}
       <div className="relative w-full h-full">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={imageUrl || '/images/no-outlet.png'}
+          src={displayImage}
           alt={merchantName}
           className="w-full h-full object-cover"
           onError={(e) => {
@@ -34,3 +47,4 @@ export default function RestaurantBanner({ imageUrl, merchantName }: RestaurantB
     </div>
   );
 }
+

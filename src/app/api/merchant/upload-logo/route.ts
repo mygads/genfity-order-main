@@ -49,9 +49,8 @@ async function handlePost(req: NextRequest, authContext: AuthContext) {
       );
     }
 
-    // Validate file type
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    if (!validTypes.includes(file.type)) {
+    // Validate file type - accept all image formats
+    if (!file.type.startsWith('image/')) {
       return NextResponse.json(
         {
           success: false,

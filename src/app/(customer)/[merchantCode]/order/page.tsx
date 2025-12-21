@@ -78,6 +78,7 @@ interface MerchantInfo {
   postalCode: string;
   country: string;
   logoUrl: string | null;
+  bannerUrl: string | null;
   description: string;
   isActive: boolean;
   currency: string;
@@ -110,7 +111,8 @@ export default function MenuBrowsePage() {
   const [allMenuItems, setAllMenuItems] = useState<MenuItem[]>([]); // Store all items
   const [merchantInfo, setMerchantInfo] = useState<MerchantInfo | null>(null);
   const [tableNumber, setTableNumber] = useState<string | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string>('all'); // 'all' = show all sections
+  const [selectedCategory, setSelectedCategory] = useState<string>('all'); // 'all' = show all sections (for filtering)
+  const [activeScrollTab, setActiveScrollTab] = useState<string>('all'); // Active tab based on scroll position (for highlight only)
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMenu, setSelectedMenu] = useState<MenuItem | null>(null);
   const [editingCartItem, setEditingCartItem] = useState<CartItem | null>(null);
@@ -298,6 +300,11 @@ export default function MenuBrowsePage() {
     };
 
     const handleScroll = () => {
+      // Header height is 55px + optional 40px table bar
+      const stickyHeaderHeight = mode === 'dinein' && tableNumber ? 95 : 55;
+      // Category tabs are 48px when sticky
+      const totalStickyHeight = stickyHeaderHeight + 48;
+
       // Check if 75% of banner has been scrolled past (for header)
       const bannerElement = document.querySelector('[data-banner]');
       if (bannerElement) {
@@ -314,27 +321,36 @@ export default function MenuBrowsePage() {
       if (categoryTabsElement) {
         const rect = categoryTabsElement.getBoundingClientRect();
         // CategoryTabs become sticky when top of trigger reaches header bottom
-        const headerHeight = 56; // Height of header
-        setIsCategoryTabsSticky(rect.top <= headerHeight);
+        setIsCategoryTabsSticky(rect.top <= stickyHeaderHeight);
       }
 
       // Check if TableNumberCard has been scrolled past (for showing table badge in header)
       const tableNumberElement = document.querySelector('[data-table-number-card]');
       if (tableNumberElement) {
         const rect = tableNumberElement.getBoundingClientRect();
-        const headerHeight = 56; // Height of header
         // Show table badge when TableNumberCard starts being covered by header OR has scrolled past
-        setShowTableBadge(rect.top <= headerHeight);
+        setShowTableBadge(rect.top <= 55);
       }
 
-      // Update active tab based on scroll position
-      for (const [categoryId, element] of Object.entries(sectionRefs.current)) {
-        if (element) {
-          const rect = element.getBoundingClientRect();
-          if (rect.top <= 100 && rect.bottom > 100) {
-            setSelectedCategory(categoryId);
-            break;
+      // Update active tab based on scroll position (scroll spy)
+      // This only affects tab highlight, not menu filtering
+      // Only runs when selectedCategory is 'all' (showing all sections)
+      if (selectedCategory === 'all') {
+        let currentCategory = 'all';
+        for (const [categoryId, element] of Object.entries(sectionRefs.current)) {
+          if (element) {
+            const rect = element.getBoundingClientRect();
+            // Section is active when its top is at or above the sticky area 
+            // and its bottom is still visible
+            if (rect.top <= totalStickyHeight + 50 && rect.bottom > totalStickyHeight) {
+              currentCategory = categoryId;
+            }
           }
+        }
+
+        // Only update if different to avoid unnecessary re-renders
+        if (activeScrollTab !== currentCategory) {
+          setActiveScrollTab(currentCategory);
         }
       }
     };    // Update header height on mount and window resize
@@ -346,7 +362,7 @@ export default function MenuBrowsePage() {
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('resize', updateHeaderHeight);
     };
-  }, []);
+  }, [mode, tableNumber, selectedCategory, activeScrollTab]);
 
   // Filter items by selected category
   const displayedItems = selectedCategory === 'all'
@@ -370,7 +386,7 @@ export default function MenuBrowsePage() {
   // RENDER - NEW LAYOUT
   // ========================================
   return (
-    <div className="flex flex-col min-h-screen max-w-[420px] mx-auto bg-white dark:bg-gray-900">
+    <>
       {/* ======================================== 
           ORDER PAGE HEADER (New Component - Matches Reference)
           Positioned absolutely above banner when not sticky
@@ -396,6 +412,7 @@ export default function MenuBrowsePage() {
         ) : (
           <RestaurantBanner
             imageUrl={merchantInfo?.logoUrl}
+            bannerUrl={merchantInfo?.bannerUrl}
             merchantName={merchantInfo?.name || merchantCode}
           />
         )}
@@ -420,13 +437,8 @@ export default function MenuBrowsePage() {
           <CustomerOrderSkeleton />
         ) : (
           <>
-            {/* Divider */}
-            <div className="px-4 mt-4">
-              <hr className="border-gray-200 dark:border-gray-700" />
-            </div>
-
-            {/* Restaurant Info Card */}
-            <div className="px-4 mt-4">
+            {/* Restaurant Info Card - No divider above, floating style like Burjo */}
+            <div className="px-4 -mt-6 relative z-10">
               {merchantInfo && (
                 <RestaurantInfoCard
                   name={merchantInfo.name}
@@ -442,22 +454,11 @@ export default function MenuBrowsePage() {
               )}
             </div>
 
-            {/* Divider */}
-            <div className="px-4 mt-4">
-              <hr className="border-gray-200 dark:border-gray-700" />
-            </div>
-
-            {/* Table Number (Dinein Only) */}
+            {/* Table Number (Dinein Only) - No divider between components like Burjo */}
             {mode === 'dinein' && tableNumber && (
-              <>
-                <div className="px-4 mt-4" data-table-number-card>
-                  <TableNumberCard tableNumber={tableNumber} />
-                </div>
-                {/* Divider */}
-                <div className="px-4 mt-4">
-                  <hr className="border-gray-200 dark:border-gray-700" />
-                </div>
-              </>
+              <div className="px-4 my-2" data-table-number-card>
+                <TableNumberCard tableNumber={tableNumber} />
+              </div>
             )}
 
             {/* ========================================
@@ -468,23 +469,40 @@ export default function MenuBrowsePage() {
 
             {/* Placeholder spacer - shown when CategoryTabs is fixed to prevent content jump */}
             {isCategoryTabsSticky && (
-              <div className="h-[57px]" aria-hidden="true" />
+              <div className="h-[48px]" aria-hidden="true" />
             )}
 
             {/* CategoryTabs - Always rendered, positioned based on its own sticky state */}
             <div
               data-category-tabs
               className={`transition-all duration-300 ${isCategoryTabsSticky
-                ? 'fixed top-14 left-0 right-0 z-40'
+                ? 'fixed left-0 right-0 z-40'
                 : 'relative'
-                } max-w-[420px] mx-auto bg-white dark:bg-gray-900`}
+                } max-w-[500px] mx-auto bg-white`}
+              style={{
+                top: isCategoryTabsSticky
+                  ? (mode === 'dinein' && tableNumber ? '95px' : '55px') // 55px header + optional 40px table bar
+                  : 'auto',
+              }}
             >
               <CategoryTabs
                 categories={categories}
-                activeTab={selectedCategory}
-                onTabClick={(categoryId) => {
-                  setSelectedCategory(categoryId);
-                  sectionRefs.current[categoryId]?.scrollIntoView({ behavior: 'smooth' });
+                activeTab={selectedCategory === 'all' ? activeScrollTab : selectedCategory}
+                onTabClick={(categoryId: string) => {
+                  if (categoryId === 'all') {
+                    // Reset to all mode - show all sections
+                    setSelectedCategory('all');
+                    setActiveScrollTab('all');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  } else if (selectedCategory === 'all') {
+                    // User clicked a category while viewing all - just scroll to it
+                    setActiveScrollTab(categoryId);
+                    sectionRefs.current[categoryId]?.scrollIntoView({ behavior: 'smooth' });
+                  } else {
+                    // User is in single category mode - switch to that category
+                    setSelectedCategory(categoryId);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }
                 }}
               />
             </div>
@@ -561,7 +579,13 @@ export default function MenuBrowsePage() {
                   if (categoryItems.length === 0) return null;
 
                   return (
-                    <div key={category.id}>
+                    <div
+                      key={category.id}
+                      ref={(el) => {
+                        sectionRefs.current[category.id] = el;
+                      }}
+                      data-category-section={category.id}
+                    >
                       <div className="mt-4">
                         <DetailedMenuSection
                           title={category.name.toUpperCase()}
@@ -705,6 +729,6 @@ export default function MenuBrowsePage() {
           }}
         />
       )}
-    </div>
+    </>
   );
 }

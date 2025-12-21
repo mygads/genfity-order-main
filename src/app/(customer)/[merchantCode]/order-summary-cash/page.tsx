@@ -252,7 +252,7 @@ export default function OrderSummaryCashPage() {
   // ========================================
   if (error || !order) {
     return (
-      <div className="flex min-h-screen max-w-[420px] mx-auto items-center justify-center bg-white dark:bg-gray-900 px-4">
+      <div className="flex-1 flex items-center justify-center px-4">
         <div className="text-center max-w-sm">
           <div className="text-6xl mb-4">❌</div>
           <p className="text-base text-gray-900 dark:text-white font-semibold mb-2">
@@ -274,7 +274,7 @@ export default function OrderSummaryCashPage() {
   // SUCCESS STATE - MINIMALIST DESIGN
   // ========================================
   return (
-    <div className="flex flex-col min-h-screen max-w-[420px] mx-auto bg-white dark:bg-gray-900">
+    <>
       {/* ========================================
           SUCCESS HEADER - Clean & Minimal
       ======================================== */}
@@ -487,6 +487,6 @@ export default function OrderSummaryCashPage() {
           View History
         </button>
       </div>
-    </div>
+    </>
   );
 }

@@ -94,6 +94,26 @@ export class BlobService {
   }
 
   /**
+   * Upload merchant banner
+   * @param merchantId Merchant ID
+   * @param file Image file
+   * @returns Upload result
+   */
+  static async uploadMerchantBanner(
+    merchantId: string | number,
+    file: File | Buffer
+  ): Promise<UploadResult> {
+    const pathname = `merchants/banners/merchant-${merchantId}.jpg`;
+    
+    return this.uploadFile(file, pathname, {
+      access: 'public',
+      addRandomSuffix: true,
+      cacheControlMaxAge: 86400, // 24 hours
+      contentType: 'image/jpeg',
+    });
+  }
+
+  /**
    * Upload menu item image
    * @param merchantId Merchant ID
    * @param menuId Menu ID
@@ -186,6 +206,22 @@ export class BlobService {
   }
 
   /**
+   * Delete old merchant banner before uploading new one
+   * @param merchantId Merchant ID
+   */
+  static async deleteOldMerchantBanner(merchantId: string | number): Promise<void> {
+    try {
+      const blobs = await this.listFiles(`merchants/banners/merchant-${merchantId}`);
+      
+      for (const blob of blobs) {
+        await this.deleteFile(blob.url);
+      }
+    } catch (error) {
+      console.warn('Failed to delete old merchant banner:', error);
+    }
+  }
+
+  /**
    * Delete old menu image before uploading new one
    * @param merchantId Merchant ID
    * @param menuId Menu ID
@@ -217,12 +253,23 @@ export class BlobService {
     file: File,
     maxSizeMB: number = 5
   ): { valid: boolean; error?: string } {
-    // Check file type
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    // Check file type - accept all common image formats
+    const validTypes = [
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/webp',
+      'image/gif',
+      'image/bmp',
+      'image/svg+xml',
+      'image/tiff',
+      'image/heic',
+      'image/heif',
+    ];
     if (!validTypes.includes(file.type)) {
       return {
         valid: false,
-        error: 'Invalid file type. Only JPEG, PNG, and WebP are allowed.',
+        error: 'Invalid file type. Please upload an image file.',
       };
     }
 

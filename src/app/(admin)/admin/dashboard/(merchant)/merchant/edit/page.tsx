@@ -20,6 +20,7 @@ interface MerchantFormData {
   email: string;
   phoneNumber: string;
   logoUrl?: string;
+  bannerUrl?: string;
   country: string;
   currency: string;
   timezone: string;
@@ -51,10 +52,12 @@ export default function EditMerchantPage() {
   const router = useRouter();
   const { toasts, success: showSuccess, error: showError } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
 
   const [formData, setFormData] = useState<MerchantFormData>({
     name: "",
@@ -64,6 +67,7 @@ export default function EditMerchantPage() {
     email: "",
     phoneNumber: "",
     logoUrl: "",
+    bannerUrl: "",
     country: "Australia",
     currency: "AUD",
     timezone: "Australia/Sydney",
@@ -123,6 +127,7 @@ export default function EditMerchantPage() {
         email: merchant.email || "",
         phoneNumber: merchant.phone || "",
         logoUrl: merchant.logoUrl || "",
+        bannerUrl: merchant.bannerUrl || "",
         country: merchant.country || "Australia",
         currency: merchant.currency || "AUD",
         timezone: merchant.timezone || "Australia/Sydney",
@@ -187,9 +192,9 @@ export default function EditMerchantPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
-    if (!['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(file.type)) {
-      showError('Invalid File', 'Only JPEG, PNG, and WebP images are allowed');
+    // Validate file type - accept all image formats
+    if (!file.type.startsWith('image/')) {
+      showError('Invalid File', 'Please upload an image file');
       return;
     }
 
@@ -203,9 +208,10 @@ export default function EditMerchantPage() {
     try {
       const formDataUpload = new FormData();
       formDataUpload.append('file', file);
+      formDataUpload.append('type', 'logo');
 
       const token = localStorage.getItem("accessToken");
-      const response = await fetch("/api/merchant/upload-logo", {
+      const response = await fetch("/api/merchant/upload/merchant-image", {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -227,6 +233,55 @@ export default function EditMerchantPage() {
       setUploading(false);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type - accept all image formats
+    if (!file.type.startsWith('image/')) {
+      showError('Invalid File', 'Please upload an image file');
+      return;
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      showError('File Too Large', 'File size must be less than 5MB');
+      return;
+    }
+
+    setUploadingBanner(true);
+    try {
+      const formDataUpload = new FormData();
+      formDataUpload.append('file', file);
+      formDataUpload.append('type', 'banner');
+
+      const token = localStorage.getItem("accessToken");
+      const response = await fetch("/api/merchant/upload/merchant-image", {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formDataUpload,
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setFormData(prev => ({ ...prev, bannerUrl: data.data.url }));
+        showSuccess('Success', 'Banner uploaded successfully');
+      } else {
+        showError('Error', data.message || 'Failed to upload banner');
+      }
+    } catch {
+      showError('Error', 'Failed to upload banner');
+    } finally {
+      setUploadingBanner(false);
+      if (bannerInputRef.current) {
+        bannerInputRef.current.value = '';
       }
     }
   };
@@ -321,6 +376,9 @@ export default function EditMerchantPage() {
               <label className="mb-3 block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Store Logo
               </label>
+              <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
+                Square image (1:1 ratio). Displayed on mode selection page and header.
+              </p>
               <div className="flex items-center gap-5">
                 <div className="relative h-20 w-20 overflow-hidden rounded-lg border-2 border-gray-200 dark:border-gray-700">
                   {formData.logoUrl ? (
@@ -340,7 +398,7 @@ export default function EditMerchantPage() {
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept="image/jpeg,image/jpg,image/png,image/webp"
+                    accept="image/*"
                     onChange={handleLogoUpload}
                     className="hidden"
                   />
@@ -353,7 +411,58 @@ export default function EditMerchantPage() {
                     {uploading ? 'Uploading...' : 'Change Logo'}
                   </button>
                   <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                    JPG, PNG or WebP. Max 5MB
+                    All image formats supported. Max 5MB
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Banner Upload */}
+            <div>
+              <label className="mb-3 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Store Banner
+              </label>
+              <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
+                Wide image (2:1 ratio recommended). Displayed at the top of order page.
+              </p>
+              <div className="flex flex-col gap-3">
+                <div className="relative h-32 w-full overflow-hidden rounded-lg border-2 border-gray-200 dark:border-gray-700">
+                  {formData.bannerUrl ? (
+                    <Image
+                      src={formData.bannerUrl}
+                      alt={`${formData.name} banner`}
+                      fill
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-gray-100 dark:bg-gray-800">
+                      <div className="text-center">
+                        <svg className="mx-auto h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">No banner uploaded</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <input
+                    ref={bannerInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleBannerUpload}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => bannerInputRef.current?.click()}
+                    disabled={uploadingBanner}
+                    className="inline-flex h-9 items-center rounded-lg bg-gray-100 px-4 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                  >
+                    {uploadingBanner ? 'Uploading...' : 'Change Banner'}
+                  </button>
+                  <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    All image formats supported. Max 5MB. Recommended: 800x400px (2:1)
                   </p>
                 </div>
               </div>

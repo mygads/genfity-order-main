@@ -169,9 +169,9 @@ export default function EditMerchantPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
-    if (!['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(file.type)) {
-      showError('Invalid File', 'Only JPEG, PNG, and WebP images are allowed');
+    // Validate file type - accept all image formats
+    if (!file.type.startsWith('image/')) {
+      showError('Invalid File', 'Please upload an image file');
       return;
     }
 
@@ -320,7 +320,7 @@ export default function EditMerchantPage() {
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept="image/jpeg,image/jpg,image/png,image/webp"
+                    accept="image/*"
                     onChange={handleLogoUpload}
                     className="hidden"
                   />

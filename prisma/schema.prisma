@@ -112,6 +112,7 @@ model Merchant {
   postalCode             String?               @map("postal_code")
   country                String                @default("Australia")
   logoUrl                String?               @map("logo_url")
+  bannerUrl              String?               @map("banner_url")
   mapUrl                 String?               @map("map_url")
   description            String?
   isActive               Boolean               @default(true) @map("is_active")

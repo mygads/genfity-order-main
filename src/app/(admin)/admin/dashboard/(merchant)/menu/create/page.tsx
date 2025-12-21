@@ -121,10 +121,9 @@ export default function CreateMenuPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    if (!validTypes.includes(file.type)) {
-      setError('Invalid file type. Only JPEG, PNG, and WebP are allowed.');
+    // Validate file - accept all image formats
+    if (!file.type.startsWith('image/')) {
+      setError('Invalid file type. Please upload an image file.');
       return;
     }
 
@@ -425,7 +424,7 @@ export default function CreateMenuPage() {
                   <label className="flex aspect-square cursor-pointer flex-col items-center justify-center p-6">
                     <input
                       type="file"
-                      accept="image/jpeg,image/jpg,image/png,image/webp"
+                      accept="image/*"
                       onChange={handleImageUpload}
                       disabled={uploadingImage}
                       className="sr-only"
@@ -459,7 +458,7 @@ export default function CreateMenuPage() {
                           Click to upload
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          JPG, PNG, WebP up to 5MB
+                          All image formats supported. Max 5MB
                         </p>
                       </>
                     )}

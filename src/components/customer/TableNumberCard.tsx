@@ -1,10 +1,15 @@
 /**
- * Table Number Card Component
+ * Table Number Card Component - Burjo ESB Style
  * 
  * @description
  * Display table number for dine-in orders
+ * Matches Burjo ESB reference:
+ * - Background: #fff7ed (light beige)
+ * - Padding: 12px 16px
+ * - Border Radius: 16px 16px 0 0 (top corners)
+ * - Font: 14px, weight 500, Inter
  * 
- * @specification copilot-instructions.md - Component Reusability
+ * @specification Burjo ESB Reference
  */
 
 'use client';
@@ -15,10 +20,25 @@ interface TableNumberCardProps {
 
 export default function TableNumberCard({ tableNumber }: TableNumberCardProps) {
   return (
-    <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4 text-center border border-orange-200 dark:border-orange-800">
-      <p className="text-sm font-semibold text-gray-900 dark:text-white">
-        Table Number: <span className="font-bold text-gray-900 dark:text-white">{tableNumber}</span>
+    <div
+      className="text-center"
+      style={{
+        backgroundColor: '#fff7ed',
+        padding: '12px 16px',
+        borderRadius: '16px 16px 0 0',
+        fontFamily: 'Inter, sans-serif',
+      }}
+    >
+      <p
+        style={{
+          fontSize: '14px',
+          fontWeight: 500,
+          color: '#212529',
+        }}
+      >
+        Table Number: <span style={{ fontWeight: 700 }}>{tableNumber}</span>
       </p>
     </div>
   );
 }
+

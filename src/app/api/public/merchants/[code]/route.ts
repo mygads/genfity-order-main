@@ -59,6 +59,7 @@ export async function GET(
       postalCode: merchantData.postalCode,
       country: merchantData.country,
       logoUrl: merchantData.logoUrl,
+      bannerUrl: merchantData.bannerUrl,
       mapUrl: merchantData.mapUrl,
       description: merchantData.description,
       isActive: merchantData.isActive,

@@ -12,10 +12,16 @@ interface CategoryTabsProps {
 }
 
 /**
- * ✅ Category Tabs Component
- * Matches reference category-tabs.tsx pattern with sticky behavior
+ * ✅ Category Tabs Component - Burjo ESB Style
  * 
- * @specification copilot-instructions.md - UI/UX Standards
+ * Matches Burjo ESB reference:
+ * - Container height: 48px
+ * - Background: #ffffff
+ * - Text: 14px, weight 600
+ * - Active tab: 2.67px solid #f05a28 bottom border at very bottom
+ * - Inactive tab: transparent border
+ * 
+ * @specification Burjo ESB Reference
  */
 export default function CategoryTabs({
     categories,
@@ -23,19 +29,39 @@ export default function CategoryTabs({
     onTabClick,
 }: CategoryTabsProps) {
     return (
-        <div className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-            <div className="max-w-[420px] mx-auto">
-                <div className="overflow-x-auto scrollbar-hide">
-                    <div className="flex gap-0 min-w-max px-4">
+        <div
+            className="bg-white relative"
+            style={{
+                height: '48px',
+                borderBottom: '1px solid #E6E6E6',
+            }}
+        >
+            <div className="max-w-[500px] mx-auto h-full">
+                <div className="overflow-x-auto scrollbar-hide h-full">
+                    <div className="flex gap-0 min-w-max px-4 h-full">
                         {/* All Categories Tab */}
                         <button
                             onClick={() => onTabClick('all')}
-                            className={`shrink-0 px-4 py-4 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap ${activeTab === 'all'
-                                    ? 'border-orange-500 text-orange-500'
-                                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                                }`}
+                            className="shrink-0 relative h-full flex items-center"
+                            style={{
+                                fontSize: '14px',
+                                fontWeight: 600,
+                                fontFamily: 'Inter, sans-serif',
+                                padding: '0 16px',
+                                color: '#000000',
+                            }}
                         >
                             ALL MENU
+                            {/* Active indicator - positioned at very bottom */}
+                            {activeTab === 'all' && (
+                                <span
+                                    className="absolute bottom-0 left-4 right-4"
+                                    style={{
+                                        height: '2.67px',
+                                        backgroundColor: '#f05a28',
+                                    }}
+                                />
+                            )}
                         </button>
 
                         {/* Category Tabs */}
@@ -43,12 +69,26 @@ export default function CategoryTabs({
                             <button
                                 key={category.id}
                                 onClick={() => onTabClick(category.id)}
-                                className={`shrink-0 px-4 py-4 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap ${activeTab === category.id
-                                        ? 'border-orange-500 text-orange-500'
-                                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                                    }`}
+                                className="shrink-0 relative h-full flex items-center"
+                                style={{
+                                    fontSize: '14px',
+                                    fontWeight: 600,
+                                    fontFamily: 'Inter, sans-serif',
+                                    padding: '0 16px',
+                                    color: '#000000',
+                                }}
                             >
                                 {category.name.toUpperCase()}
+                                {/* Active indicator - positioned at very bottom */}
+                                {activeTab === category.id && (
+                                    <span
+                                        className="absolute bottom-0 left-4 right-4"
+                                        style={{
+                                            height: '2.67px',
+                                            backgroundColor: '#f05a28',
+                                        }}
+                                    />
+                                )}
                             </button>
                         ))}
                     </div>

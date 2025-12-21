@@ -202,9 +202,9 @@ export default function EditMenuPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    if (!validTypes.includes(file.type)) {
-      setError('Invalid file type. Only JPEG, PNG, and WebP are allowed.');
+    // Validate file type - accept all image formats
+    if (!file.type.startsWith('image/')) {
+      setError('Invalid file type. Please upload an image file.');
       setTimeout(() => setError(null), 3000);
       return;
     }
@@ -515,7 +515,7 @@ export default function EditMenuPage() {
                   <label className="flex aspect-square cursor-pointer flex-col items-center justify-center p-6">
                     <input
                       type="file"
-                      accept="image/jpeg,image/jpg,image/png,image/webp"
+                      accept="image/*"
                       onChange={handleImageUpload}
                       disabled={uploadingImage}
                       className="sr-only"
@@ -546,7 +546,7 @@ export default function EditMenuPage() {
                           </svg>
                         </div>
                         <p className="mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Click to upload</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">JPG, PNG, WebP up to 5MB</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">All image formats supported. Max 5MB</p>
                       </>
                     )}
                   </label>
