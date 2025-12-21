@@ -97,7 +97,7 @@ export default function TableNumberModal({
 
       {/* Modal - Bottom Sheet */}
       <div className="fixed inset-x-0 bottom-0 z-50 flex justify-center animate-slideUp">
-        <div className="w-full max-w-[420px] bg-white dark:bg-gray-900 rounded-t-2xl shadow-2xl">
+        <div className="w-full max-w-[500px] bg-white dark:bg-gray-900 rounded-t-2xl shadow-2xl">
 
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
@@ -114,7 +114,7 @@ export default function TableNumberModal({
               </svg>
             </button>
           </div>
-
+          
           {/* Content */}
           <div className="px-4 py-4">
             {/* Input Field */}

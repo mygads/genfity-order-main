@@ -103,12 +103,8 @@ export default function HorizontalMenuSection({
                                 style={{
                                     width: '210px',
                                     borderRadius: '10px',
-                                    boxShadow: '0 3px 10px rgba(0, 0, 0, 0.08)',
-                                    // paddingTop: '16px',
-                                    // paddingLeft: '16px',
-                                    // paddingRight: '16px',
-                                    // paddingBottom: '12px',
-                                    borderBottom: isInCart ? '3px solid rgb(240, 90, 40)' : 'none',
+                                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)',
+                                    borderBottom: isInCart ? '4px solid rgb(240, 90, 40)' : 'none',
                                 }}
                             >
                                 {/* Image Container - 178px square */}
@@ -131,7 +127,7 @@ export default function HorizontalMenuSection({
                                         className="object-cover"
                                         sizes="178px"
                                     />
-                                    
+
                                     {/* Promo Badge - only show if isPromoSection */}
                                     {isPromoSection && (
                                         <div

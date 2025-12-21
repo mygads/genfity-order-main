@@ -108,6 +108,7 @@ export default function MenuBrowsePage() {
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [allMenuItems, setAllMenuItems] = useState<MenuItem[]>([]); // Store all items
+  const [menuAddonsCache, setMenuAddonsCache] = useState<Record<string, any>>({}); // Cache for menu addons
   const [merchantInfo, setMerchantInfo] = useState<MerchantInfo | null>(null);
   const [tableNumber, setTableNumber] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all'); // 'all' = show all sections (for filtering)
@@ -281,6 +282,49 @@ export default function MenuBrowsePage() {
 
     fetchData();
   }, [merchantCode]); // Only run once on mount
+
+  // ========================================
+  // Prefetch Addon Data in Background
+  // ========================================
+  useEffect(() => {
+    if (allMenuItems.length === 0) return;
+
+    const prefetchAddons = async () => {
+      console.log('🔄 [PREFETCH] Starting addon prefetch for', allMenuItems.length, 'menus');
+      
+      // Prefetch addons for all menu items in background
+      const promises = allMenuItems.map(async (menu) => {
+        try {
+          const response = await fetch(`/api/public/merchants/${merchantCode}/menus/${menu.id}/addons`);
+          const data = await response.json();
+          
+          if (data.success) {
+            return { menuId: menu.id, addons: data.data };
+          }
+          return null;
+        } catch (err) {
+          console.error(`Failed to prefetch addons for menu ${menu.id}:`, err);
+          return null;
+        }
+      });
+
+      const results = await Promise.all(promises);
+      
+      // Build cache object
+      const cache: Record<string, any> = {};
+      results.forEach((result) => {
+        if (result) {
+          cache[result.menuId] = result.addons;
+        }
+      });
+
+      setMenuAddonsCache(cache);
+      console.log('✅ [PREFETCH] Addon prefetch complete. Cached', Object.keys(cache).length, 'menus');
+    };
+
+    // Run prefetch in background (non-blocking)
+    prefetchAddons();
+  }, [allMenuItems, merchantCode]);
 
   useEffect(() => {
     initializeCart(merchantCode, mode as 'dinein' | 'takeaway');
@@ -658,6 +702,7 @@ export default function MenuBrowsePage() {
           editMode={Boolean(editingCartItem)}
           existingCartItem={editingCartItem}
           onClose={handleCloseMenuDetail}
+          prefetchedAddons={menuAddonsCache[selectedMenu.id]}
         />
       )}
 

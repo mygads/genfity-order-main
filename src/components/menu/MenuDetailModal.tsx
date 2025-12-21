@@ -46,6 +46,7 @@ interface MenuDetailModalProps {
   editMode?: boolean;
   existingCartItem?: CartItem | null;
   onClose: () => void;
+  prefetchedAddons?: AddonCategory[]; // Prefetched addon data from parent
 }
 
 /**
@@ -68,7 +69,8 @@ export default function MenuDetailModal({
   currency = 'AUD',
   editMode = false,
   existingCartItem = null,
-  onClose
+  onClose,
+  prefetchedAddons
 }: MenuDetailModalProps) {
   const { addItem, updateItem, initializeCart, cart } = useCart();
 
@@ -100,6 +102,35 @@ export default function MenuDetailModal({
   // Fetch addon categories
   useEffect(() => {
     const fetchAddons = async () => {
+      // Use prefetched data if available
+      if (prefetchedAddons) {
+        console.log('✅ [PREFETCH] Using prefetched addon data for menu:', menu.id);
+        const sanitized = (prefetchedAddons || []).map((category: AddonCategory) => ({
+          ...category,
+          addons: category.addons.map((addon: Addon) => ({
+            ...addon,
+            price: typeof addon.price === 'string' ? parseFloat(addon.price) : addon.price,
+          })),
+        }));
+
+        setAddonCategories(sanitized);
+
+        // Pre-fill addons in edit mode
+        if (editMode && existingCartItem && existingCartItem.addons) {
+          const addonQtyMap: Record<string, number> = {};
+          existingCartItem.addons.forEach((addon: { id: string; name: string; price: number }) => {
+            addonQtyMap[addon.id] = (addonQtyMap[addon.id] || 0) + 1;
+          });
+          console.log('🔄 [EDIT MODE] Pre-filled addons:', addonQtyMap);
+          setSelectedAddons(addonQtyMap);
+        }
+
+        setIsLoading(false);
+        return;
+      }
+
+      // Fallback: Fetch from API if not prefetched
+      console.log('🔄 [FETCH] Fetching addon data from API for menu:', menu.id);
       setIsLoading(true);
       try {
         const response = await fetch(`/api/public/merchants/${merchantCode}/menus/${menu.id}/addons`);
@@ -145,7 +176,7 @@ export default function MenuDetailModal({
     };
 
     fetchAddons();
-  }, [merchantCode, menu.id, editMode, existingCartItem]);
+  }, [merchantCode, menu.id, editMode, existingCartItem, prefetchedAddons]);
 
   // Calculate total price - Use promoPrice if available
   const calculateTotal = () => {
@@ -593,11 +624,6 @@ export default function MenuDetailModal({
                           const totalInCategory = category.addons.reduce((sum, a) => {
                             return sum + (selectedAddons[a.id] || 0);
                           }, 0);
-
-                          // Determine input type to render:
-                          // 1. Radio: maxSelections === 1 (single choice)
-                          // 2. Checkbox: inputType === 'SELECT' and maxSelections > 1 (multiple choice)
-                          // 3. Quantity: inputType === 'QTY' (can select multiple of same item)
                           const isSingleChoice = category.maxSelections === 1;
                           const isQuantityType = addon.inputType === 'QTY';
 
