@@ -17,7 +17,7 @@ import { Alert, EmptyState } from '@/components/ui';
 import { useCart } from '@/context/CartContext';
 import type { CartItem } from '@/context/CartContext';
 import OutletInfoModal from '@/components/customer/OutletInfoModal';
-import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';
+import { CustomerOrderSkeleton } from '@/components/common/SkeletonLoaders';
 import { getTableNumber } from '@/lib/utils/localStorage';
 import TableNumberModal from '@/components/customer/TableNumberModal';
 
@@ -417,7 +417,7 @@ export default function MenuBrowsePage() {
         )}
 
         {isLoading ? (
-          <LoadingState type="inline" message={LOADING_MESSAGES.MENU} />
+          <CustomerOrderSkeleton />
         ) : (
           <>
             {/* Divider */}
@@ -475,8 +475,8 @@ export default function MenuBrowsePage() {
             <div
               data-category-tabs
               className={`transition-all duration-300 ${isCategoryTabsSticky
-                  ? 'fixed top-14 left-0 right-0 z-40'
-                  : 'relative'
+                ? 'fixed top-14 left-0 right-0 z-40'
+                : 'relative'
                 } max-w-[420px] mx-auto bg-white dark:bg-gray-900`}
             >
               <CategoryTabs

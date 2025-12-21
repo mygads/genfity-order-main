@@ -243,33 +243,82 @@ export function OrdersPageSkeleton() {
 
 /**
  * Customer Order Page Skeleton (Mobile-optimized)
+ * Shows skeleton for the menu content area (info card, categories, menu items)
  */
 export function CustomerOrderSkeleton() {
   return (
-    <div className="space-y-4">
-      {/* Banner Skeleton */}
-      <Skeleton width="w-full" height="h-48" className="rounded-none" />
-
-      {/* Restaurant Info */}
-      <div className="px-4 space-y-3">
-        <Skeleton width="w-3/4" height="h-6" />
-        <Skeleton width="w-full" height="h-4" />
+    <>
+      {/* Divider */}
+      <div className="px-4 mt-4">
+        <Skeleton width="w-full" height="h-px" />
       </div>
 
-      {/* Category Tabs */}
-      <div className="flex gap-2 px-4 overflow-x-auto">
+      {/* Restaurant Info Card Skeleton */}
+      <div className="px-4 mt-4">
+        <div className="rounded-xl border border-gray-200 dark:border-gray-800 p-4 space-y-2">
+          <Skeleton width="w-3/4" height="h-5" />
+          <div className="flex items-center gap-2">
+            <Skeleton width="w-16" height="h-4" />
+            <Skeleton width="w-24" height="h-4" />
+          </div>
+        </div>
+      </div>
+
+      {/* Divider */}
+      <div className="px-4 mt-4">
+        <Skeleton width="w-full" height="h-px" />
+      </div>
+
+      {/* Category Tabs Skeleton */}
+      <div className="flex gap-2 px-4 mt-4 overflow-x-auto pb-2">
+        <Skeleton width="w-16" height="h-9" className="rounded-full shrink-0" />
         {Array.from({ length: 5 }).map((_, i) => (
-          <Skeleton key={i} width="w-24" height="h-9" className="rounded-full shrink-0" />
+          <Skeleton key={i} width="w-20" height="h-9" className="rounded-full shrink-0" />
         ))}
       </div>
 
-      {/* Menu Items */}
-      <div className="px-4 space-y-4">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <ListItemSkeleton key={i} />
-        ))}
+      {/* Horizontal Menu Section Skeleton (New Menu) */}
+      <div className="mt-4">
+        <div className="px-4 mb-3">
+          <Skeleton width="w-24" height="h-5" />
+        </div>
+        <div className="flex gap-3 px-4 overflow-x-auto pb-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="shrink-0 w-32 space-y-2">
+              <Skeleton width="w-32" height="h-24" className="rounded-xl" />
+              <Skeleton width="w-24" height="h-4" />
+              <Skeleton width="w-16" height="h-4" />
+            </div>
+          ))}
+        </div>
       </div>
-    </div>
+
+      {/* Divider */}
+      <div className="px-4 mt-6">
+        <Skeleton width="w-full" height="h-px" />
+      </div>
+
+      {/* Detailed Menu Section Skeleton */}
+      <div className="mt-4 px-4">
+        <Skeleton width="w-28" height="h-5" className="mb-4" />
+        <div className="space-y-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex gap-3 rounded-xl border border-gray-200 dark:border-gray-800 p-3">
+              <Skeleton width="w-20" height="h-20" className="rounded-lg shrink-0" />
+              <div className="flex-1 space-y-2">
+                <Skeleton width="w-3/4" height="h-4" />
+                <Skeleton width="w-full" height="h-3" />
+                <Skeleton width="w-1/2" height="h-3" />
+                <div className="flex items-center justify-between pt-1">
+                  <Skeleton width="w-16" height="h-5" />
+                  <Skeleton width="w-8" height="h-8" className="rounded-full" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
   );
 }
 
