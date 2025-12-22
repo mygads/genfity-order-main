@@ -291,13 +291,13 @@ export default function MenuBrowsePage() {
 
     const prefetchAddons = async () => {
       console.log('🔄 [PREFETCH] Starting addon prefetch for', allMenuItems.length, 'menus');
-      
+
       // Prefetch addons for all menu items in background
       const promises = allMenuItems.map(async (menu) => {
         try {
           const response = await fetch(`/api/public/merchants/${merchantCode}/menus/${menu.id}/addons`);
           const data = await response.json();
-          
+
           if (data.success) {
             return { menuId: menu.id, addons: data.data };
           }
@@ -309,7 +309,7 @@ export default function MenuBrowsePage() {
       });
 
       const results = await Promise.all(promises);
-      
+
       // Build cache object
       const cache: Record<string, any> = {};
       results.forEach((result) => {
@@ -767,10 +767,12 @@ export default function MenuBrowsePage() {
             window.history.pushState({}, '', newUrl);
             setShowOutletInfo(false);
           }}
+          merchantCode={merchantCode}
           merchant={{
             name: merchantInfo.name,
             address: merchantInfo.address,
             phone: merchantInfo.phone,
+            logoUrl: merchantInfo.logoUrl || undefined,
             openingHours: merchantInfo.openingHours.map(h => ({ ...h, is24Hours: (h as { is24Hours?: boolean }).is24Hours ?? false })),
           }}
         />
