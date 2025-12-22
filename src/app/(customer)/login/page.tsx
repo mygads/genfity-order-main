@@ -243,33 +243,32 @@ function LoginForm() {
             <div className="flex items-center gap-2">
               <Image
                 className="dark:hidden"
-                src="/images/logo/icon.png"
+                src="/images/logo/logo.png"
                 alt="Genfity"
-                width={40}
-                height={40}
+                width={200}
+                height={100}
                 priority
               />
               <Image
                 className="hidden dark:block"
-                src="/images/logo/icon-dark-mode.png"
+                src="/images/logo/logo-dark.png"
                 alt="Genfity"
-                width={40}
-                height={40}
+                width={200}
+                height={100}
                 priority
               />
-              <span className="text-xl font-bold text-gray-900 dark:text-white">GENFITY</span>
             </div>
           </div>
 
           {/* Title */}
-          <div className="text-center mb-8">
+          {/* <div className="text-center mb-8">
             <p className="text-sm text-gray-600 dark:text-gray-400">
               {showAuthChoice
                 ? 'Choose how to continue'
                 : 'Access your order history and checkout faster'
               }
             </p>
-          </div>
+          </div> */}
 
           {/* Conditional Rendering: Auth Choice or Login Form */}
           {showAuthChoice ? (
@@ -351,7 +350,7 @@ function LoginForm() {
 
                 {/* Email or Phone Input */}
                 <div>
-                  <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">
+                  <label className="block text-sm text-gray-900 dark:text-gray-400 mb-2">
                     Email or Phone Number
                   </label>
                   <input
@@ -368,7 +367,7 @@ function LoginForm() {
                 {/* Phone Input - Only show in save-account mode */}
                 {isSaveAccountMode && (
                   <div>
-                    <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">
+                    <label className="block text-sm text-gray-900 dark:text-gray-400 mb-2">
                       Phone Number (optional)
                     </label>
                     <input

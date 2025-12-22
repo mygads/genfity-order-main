@@ -95,21 +95,20 @@ function ForgotPasswordForm() {
                         <div className="flex items-center gap-2">
                             <Image
                                 className="dark:hidden"
-                                src="/images/logo/icon.png"
+                                src="/images/logo/logo.png"
                                 alt="Genfity"
-                                width={40}
-                                height={40}
+                                width={200}
+                                height={100}
                                 priority
                             />
                             <Image
                                 className="hidden dark:block"
-                                src="/images/logo/icon-dark-mode.png"
+                                src="/images/logo/logo-dark-mode.png"
                                 alt="Genfity"
-                                width={40}
-                                height={40}
+                                width={200}
+                                height={100}
                                 priority
                             />
-                            <span className="text-xl font-bold text-gray-900 dark:text-white">GENFITY</span>
                         </div>
                     </div>
 
@@ -133,7 +132,7 @@ function ForgotPasswordForm() {
                     <form onSubmit={handleSubmit} className="space-y-4">
                         {/* Email Input */}
                         <div>
-                            <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">
+                            <label className="block text-sm text-gray-900 dark:text-gray-400 mb-2">
                                 Email Address
                             </label>
                             <input
