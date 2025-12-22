@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Search, X } from 'lucide-react';
+import { ArrowLeft, Search, X, SlidersHorizontal, ChevronDown } from 'lucide-react';
 import Image from 'next/image';
 import FloatingCartButton from '@/components/cart/FloatingCartButton';
 import MenuDetailModal from '@/components/menu/MenuDetailModal';
@@ -38,6 +38,26 @@ interface MerchantInfo {
   currency: string;
 }
 
+// Sort options
+type SortOption = 'name-asc' | 'name-desc' | 'price-asc' | 'price-desc' | 'popular';
+
+const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: 'name-asc', label: 'Name (A-Z)' },
+  { value: 'name-desc', label: 'Name (Z-A)' },
+  { value: 'price-asc', label: 'Price: Low to High' },
+  { value: 'price-desc', label: 'Price: High to Low' },
+  { value: 'popular', label: 'Most Popular' },
+];
+
+// Dietary/Tag filters
+const DIETARY_FILTERS = [
+  { key: 'isSpicy', label: '🌶️ Spicy', color: 'bg-red-100 text-red-700 border-red-300' },
+  { key: 'isBestSeller', label: '⭐ Best Seller', color: 'bg-yellow-100 text-yellow-700 border-yellow-300' },
+  { key: 'isSignature', label: '👨‍🍳 Signature', color: 'bg-purple-100 text-purple-700 border-purple-300' },
+  { key: 'isRecommended', label: '👍 Recommended', color: 'bg-green-100 text-green-700 border-green-300' },
+  { key: 'isPromo', label: '🏷️ Promo', color: 'bg-orange-100 text-orange-700 border-orange-300' },
+];
+
 export default function SearchPage() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -57,6 +77,14 @@ export default function SearchPage() {
   const [editingCartItem, setEditingCartItem] = useState<CartItem | null>(null);
   const [cartOptionsMenu, setCartOptionsMenu] = useState<MenuItem | null>(null);
 
+  // ✅ NEW: Filter state
+  const [showFilters, setShowFilters] = useState(false);
+  const [sortBy, setSortBy] = useState<SortOption>('name-asc');
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedDietaryFilters, setSelectedDietaryFilters] = useState<string[]>([]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
+  const [maxPrice, setMaxPrice] = useState(1000);
+
   const { initializeCart, cart, updateItem, removeItem } = useCart();
 
   useEffect(() => {
@@ -69,19 +97,15 @@ export default function SearchPage() {
 
   useEffect(() => {
     const fetchMerchantInfo = async () => {
-      // Check cache first
       const cacheKey = `merchant_info_${merchantCode}`;
       const cached = sessionStorage.getItem(cacheKey);
 
       if (cached) {
         try {
           const cachedData = JSON.parse(cached);
-          console.log('✅ [SEARCH] Using cached merchant info');
           setMerchantInfo(cachedData);
           return;
-        } catch (err) {
-          console.warn('⚠️ Failed to parse cached merchant info, fetching fresh');
-        }
+        } catch (err) { }
       }
 
       try {
@@ -89,7 +113,6 @@ export default function SearchPage() {
         const data = await response.json();
         if (data.success) {
           setMerchantInfo(data.data);
-          // Cache the data
           sessionStorage.setItem(cacheKey, JSON.stringify(data.data));
         }
       } catch (err) {
@@ -101,7 +124,6 @@ export default function SearchPage() {
 
   useEffect(() => {
     const fetchMenus = async () => {
-      // Check cache first
       const menusCacheKey = `menus_${merchantCode}`;
       const addonsCacheKey = `addons_cache_${merchantCode}`;
       const cachedMenus = sessionStorage.getItem(menusCacheKey);
@@ -111,20 +133,21 @@ export default function SearchPage() {
         try {
           const menus = JSON.parse(cachedMenus);
           const addons = JSON.parse(cachedAddons);
-          console.log('✅ [SEARCH] Using cached menu and addon data');
-          const activeItems = menus
-            .filter((item: MenuItem) => item.isActive)
-            .sort((a: MenuItem, b: MenuItem) => a.name.localeCompare(b.name));
+          const activeItems = menus.filter((item: MenuItem) => item.isActive);
           setAllMenuItems(activeItems);
           setMenuAddonsCache(addons);
+
+          // Set max price from menu items
+          const prices = activeItems.map((m: MenuItem) => m.isPromo && m.promoPrice ? m.promoPrice : m.price);
+          const calculatedMax = Math.ceil(Math.max(...prices, 100));
+          setMaxPrice(calculatedMax);
+          setPriceRange([0, calculatedMax]);
+
           setIsLoading(false);
           return;
-        } catch (err) {
-          console.warn('⚠️ Failed to parse cached data, fetching fresh');
-        }
+        } catch (err) { }
       }
 
-      // Fetch fresh if no cache
       setIsLoading(true);
       try {
         const response = await fetch(`/api/public/merchants/${merchantCode}/menus`);
@@ -135,16 +158,19 @@ export default function SearchPage() {
             .map((item: MenuItem) => ({
               ...item,
               price: typeof item.price === 'string' ? parseFloat(item.price) : item.price,
-            }))
-            .sort((a: MenuItem, b: MenuItem) => a.name.localeCompare(b.name));
+            }));
           setAllMenuItems(activeItems);
           sessionStorage.setItem(menusCacheKey, JSON.stringify(activeItems));
 
-          // ✅ Extract addon data using utility function
           const newAddonCache = extractAddonDataFromMenus(data.data);
           setMenuAddonsCache(newAddonCache);
           sessionStorage.setItem(addonsCacheKey, JSON.stringify(newAddonCache));
-          console.log('✅ [SEARCH] Extracted addon data from initial fetch');
+
+          // Set max price
+          const prices = activeItems.map((m: MenuItem) => m.isPromo && m.promoPrice ? m.promoPrice : m.price);
+          const calculatedMax = Math.ceil(Math.max(...prices, 100));
+          setMaxPrice(calculatedMax);
+          setPriceRange([0, calculatedMax]);
         }
       } catch (err) {
         console.error('Error fetching menus:', err);
@@ -155,12 +181,95 @@ export default function SearchPage() {
     fetchMenus();
   }, [merchantCode]);
 
-  const filteredItems = searchQuery.trim()
-    ? allMenuItems.filter((item) => {
+  // ✅ Get unique categories from menu items
+  const availableCategories = useMemo(() => {
+    const categoryMap = new Map<string, string>();
+    allMenuItems.forEach(item => {
+      item.categories?.forEach(cat => {
+        categoryMap.set(cat.id, cat.name);
+      });
+    });
+    return Array.from(categoryMap.entries()).map(([id, name]) => ({ id, name }));
+  }, [allMenuItems]);
+
+  // ✅ Enhanced filtering with all filters
+  const filteredItems = useMemo(() => {
+    let items = [...allMenuItems];
+
+    // Text search
+    if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      return item.name.toLowerCase().includes(query) || (item.description && item.description.toLowerCase().includes(query));
-    })
-    : allMenuItems;
+      items = items.filter(item =>
+        item.name.toLowerCase().includes(query) ||
+        (item.description && item.description.toLowerCase().includes(query))
+      );
+    }
+
+    // Category filter
+    if (selectedCategories.length > 0) {
+      items = items.filter(item =>
+        item.categories?.some(cat => selectedCategories.includes(cat.id))
+      );
+    }
+
+    // Dietary/Tag filters
+    if (selectedDietaryFilters.length > 0) {
+      items = items.filter(item =>
+        selectedDietaryFilters.every(filter => item[filter as keyof MenuItem])
+      );
+    }
+
+    // Price range filter
+    items = items.filter(item => {
+      const effectivePrice = item.isPromo && item.promoPrice ? item.promoPrice : item.price;
+      return effectivePrice >= priceRange[0] && effectivePrice <= priceRange[1];
+    });
+
+    // Sorting
+    switch (sortBy) {
+      case 'name-asc':
+        items.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case 'name-desc':
+        items.sort((a, b) => b.name.localeCompare(a.name));
+        break;
+      case 'price-asc':
+        items.sort((a, b) => {
+          const priceA = a.isPromo && a.promoPrice ? a.promoPrice : a.price;
+          const priceB = b.isPromo && b.promoPrice ? b.promoPrice : b.price;
+          return priceA - priceB;
+        });
+        break;
+      case 'price-desc':
+        items.sort((a, b) => {
+          const priceA = a.isPromo && a.promoPrice ? a.promoPrice : a.price;
+          const priceB = b.isPromo && b.promoPrice ? b.promoPrice : b.price;
+          return priceB - priceA;
+        });
+        break;
+      case 'popular':
+        // Sort by best seller, then signature, then recommended
+        items.sort((a, b) => {
+          const scoreA = (a.isBestSeller ? 4 : 0) + (a.isSignature ? 2 : 0) + (a.isRecommended ? 1 : 0);
+          const scoreB = (b.isBestSeller ? 4 : 0) + (b.isSignature ? 2 : 0) + (b.isRecommended ? 1 : 0);
+          return scoreB - scoreA;
+        });
+        break;
+    }
+
+    return items;
+  }, [allMenuItems, searchQuery, selectedCategories, selectedDietaryFilters, priceRange, sortBy]);
+
+  // Check if any filters are active
+  const hasActiveFilters = selectedCategories.length > 0 || selectedDietaryFilters.length > 0 || priceRange[0] > 0 || priceRange[1] < maxPrice;
+
+  // Clear all filters
+  const clearAllFilters = () => {
+    setSelectedCategories([]);
+    setSelectedDietaryFilters([]);
+    setPriceRange([0, maxPrice]);
+    setSortBy('name-asc');
+  };
 
   const getMenuCartItems = (menuId: string): CartItem[] => {
     if (!cart) return [];
@@ -193,11 +302,131 @@ export default function SearchPage() {
           </button>
           <div className="flex-1 relative">
             <div className="absolute left-3 top-1/2 -translate-y-1/2"><Search className="w-5 h-5 text-gray-400" /></div>
-            <input ref={inputRef} type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="What are you craving today?" className="w-full h-8 pl-10 pr-10 bg-white border rounded-lg text-sm text-gray-900 border-gray-400 placeholder-gray-400 focus:outline-none focus:ring-1 border-gray focus:ring-orange-500" />
+            <input ref={inputRef} type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="What are you craving today?" className="w-full h-9 pl-10 pr-10 bg-white border rounded-lg text-sm text-gray-900 border-gray-300 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500" />
             {searchQuery && (<button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2" aria-label="Clear search"><X className="w-5 h-5 text-gray-400 hover:text-gray-600" /></button>)}
           </div>
+          {/* Filter Toggle Button */}
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`relative w-9 h-9 flex items-center justify-center rounded-full transition-colors ${showFilters ? 'bg-orange-100 text-orange-600' : 'hover:bg-gray-100 text-gray-700'}`}
+            aria-label="Toggle filters"
+          >
+            <SlidersHorizontal className="w-5 h-5" />
+            {hasActiveFilters && (
+              <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-orange-500 rounded-full" />
+            )}
+          </button>
         </div>
       </header>
+
+      {/* Filter Panel */}
+      {showFilters && (
+        <div className="border-b-2 border-gray-300 px-4 py-4 space-y-4">
+          {/* Sort Dropdown */}
+          <div>
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">Sort By</label>
+            <div className="relative">
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as SortOption)}
+                className="w-full h-10 pl-3 pr-10 bg-white border border-gray-300 rounded-lg text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-orange-500"
+              >
+                {SORT_OPTIONS.map(option => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            </div>
+          </div>
+
+          {/* Price Range */}
+          <div>
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
+              Price Range: {formatCurrency(priceRange[0], merchantInfo?.currency || 'AUD')} - {formatCurrency(priceRange[1], merchantInfo?.currency || 'AUD')}
+            </label>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min={0}
+                max={maxPrice}
+                value={priceRange[0]}
+                onChange={(e) => setPriceRange([Math.min(Number(e.target.value), priceRange[1] - 1), priceRange[1]])}
+                className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-orange-500"
+              />
+              <input
+                type="range"
+                min={0}
+                max={maxPrice}
+                value={priceRange[1]}
+                onChange={(e) => setPriceRange([priceRange[0], Math.max(Number(e.target.value), priceRange[0] + 1)])}
+                className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-orange-500"
+              />
+            </div>
+          </div>
+
+          {/* Category Filters */}
+          {availableCategories.length > 0 && (
+            <div>
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">Categories</label>
+              <div className="flex flex-wrap gap-2">
+                {availableCategories.map(cat => (
+                  <button
+                    key={cat.id}
+                    onClick={() => {
+                      setSelectedCategories(prev =>
+                        prev.includes(cat.id)
+                          ? prev.filter(id => id !== cat.id)
+                          : [...prev, cat.id]
+                      );
+                    }}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-all ${selectedCategories.includes(cat.id)
+                        ? 'bg-orange-500 text-white border-orange-500'
+                        : 'bg-white text-gray-700 border-gray-300 hover:border-orange-400'
+                      }`}
+                  >
+                    {cat.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Dietary / Tag Filters */}
+          <div>
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">Tags</label>
+            <div className="flex flex-wrap gap-2">
+              {DIETARY_FILTERS.map(filter => (
+                <button
+                  key={filter.key}
+                  onClick={() => {
+                    setSelectedDietaryFilters(prev =>
+                      prev.includes(filter.key)
+                        ? prev.filter(k => k !== filter.key)
+                        : [...prev, filter.key]
+                    );
+                  }}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-all ${selectedDietaryFilters.includes(filter.key)
+                      ? filter.color + ' border-current'
+                      : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'
+                    }`}
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Clear Filters Button */}
+          {hasActiveFilters && (
+            <button
+              onClick={clearAllFilters}
+              className="w-full h-10 text-sm font-medium text-orange-600 hover:text-orange-700 transition-colors"
+            >
+              Clear All Filters
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Content */}
       <div className="pb-24">

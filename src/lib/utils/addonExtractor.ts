@@ -35,11 +35,15 @@ interface MenuWithAddons {
  * Extract addon data from menu items and transform to cache format
  * @param menus - Array of menu items from API
  * @returns Record of menuId -> transformed addon categories
+ * 
+ * ✅ IMPORTANT: Always sets an entry for every menu (even empty array)
+ * so that MenuDetailModal knows not to fetch from API
  */
-export function extractAddonDataFromMenus(menus: MenuWithAddons[]): Record<string, any> {
-  const addonCache: Record<string, any> = {};
+export function extractAddonDataFromMenus(menus: MenuWithAddons[]): Record<string, any[]> {
+  const addonCache: Record<string, any[]> = {};
 
   menus.forEach((menu) => {
+    // ✅ Always set cache entry - empty array if no addons
     if (menu.addonCategories && menu.addonCategories.length > 0) {
       addonCache[menu.id] = menu.addonCategories.map((cat) => ({
         id: cat.id,
@@ -62,6 +66,10 @@ export function extractAddonDataFromMenus(menus: MenuWithAddons[]): Record<strin
           displayOrder: item.displayOrder,
         })),
       }));
+    } else {
+      // ✅ Set empty array for menus without addons
+      // This tells MenuDetailModal that we already checked - no need to fetch
+      addonCache[menu.id] = [];
     }
   });
 

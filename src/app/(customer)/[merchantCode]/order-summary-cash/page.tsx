@@ -473,18 +473,29 @@ export default function OrderSummaryCashPage() {
           FIXED BOTTOM ACTIONS
       ======================================== */}
       <div className="sticky bottom-0 px-6 py-4 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 space-y-3">
+        {/* Track Order Button - Primary Action */}
+        <button
+          onClick={() => router.push(`/${merchantCode}/track/${order.orderNumber}`)}
+          className="w-full h-12 bg-orange-500 text-white text-base font-semibold rounded-lg hover:bg-orange-600 transition-all active:scale-[0.98] shadow-sm flex items-center justify-center gap-2"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+          </svg>
+          Track Order Status
+        </button>
+
         <button
           onClick={handleNewOrder}
-          className="w-full h-12 bg-orange-500 text-white text-base font-semibold rounded-lg hover:bg-orange-600 transition-all active:scale-[0.98] shadow-sm"
+          className="w-full h-12 border-2 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white text-base font-semibold rounded-lg hover:border-orange-500 hover:text-orange-500 dark:hover:border-orange-500 dark:hover:text-orange-500 transition-all active:scale-[0.98]"
         >
           New Order
         </button>
 
         <button
           onClick={handleViewHistory}
-          className="w-full h-12 border-2 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white text-base font-semibold rounded-lg hover:border-orange-500 hover:text-orange-500 dark:hover:border-orange-500 dark:hover:text-orange-500 transition-all active:scale-[0.98]"
+          className="w-full h-10 text-gray-600 dark:text-gray-400 text-sm font-medium hover:text-orange-500 dark:hover:text-orange-500 transition-all"
         >
-          View History
+          View Order History
         </button>
       </div>
     </>

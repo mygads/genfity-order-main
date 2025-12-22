@@ -102,10 +102,11 @@ export default function MenuDetailModal({
   // Fetch addon categories
   useEffect(() => {
     const fetchAddons = async () => {
-      // Use prefetched data if available
-      if (prefetchedAddons) {
-        console.log('✅ [PREFETCH] Using prefetched addon data for menu:', menu.id);
-        const sanitized = (prefetchedAddons || []).map((category: AddonCategory) => ({
+      // ✅ Use prefetched data if available (including empty arrays)
+      // Array.isArray handles both populated arrays AND empty arrays
+      if (Array.isArray(prefetchedAddons)) {
+        console.log('✅ [PREFETCH] Using prefetched addon data for menu:', menu.id, 'count:', prefetchedAddons.length);
+        const sanitized = prefetchedAddons.map((category: AddonCategory) => ({
           ...category,
           addons: category.addons.map((addon: Addon) => ({
             ...addon,
@@ -252,19 +253,19 @@ export default function MenuDetailModal({
     setSelectedAddons(prev => {
       // Check if this addon is already selected
       const isCurrentlySelected = prev[addonId] === 1;
-      
+
       // Remove all selections from this category first
       const newState = { ...prev };
       category.addons.forEach(a => {
         delete newState[a.id];
       });
-      
+
       // If it was not selected before, add it (toggle behavior)
       // If it was selected, leave it unselected (allows deselection)
       if (!isCurrentlySelected) {
         newState[addonId] = 1;
       }
-      
+
       return newState;
     });
   };
@@ -386,7 +387,7 @@ export default function MenuDetailModal({
         });
         return;
       }
-      
+
       console.log(`✅ [MODAL] Adding addon: ${addon.name} x${qty} (+${formatCurrency(addon.price * qty, currency)})`, {
         addonId: addon.id,
         name: addon.name,
@@ -461,7 +462,7 @@ export default function MenuDetailModal({
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto scrollbar-hide pb-32">
           {/* Image Banner with Buttons */}
-          <div 
+          <div
             className="relative w-full h-[250px] bg-gray-200 dark:bg-gray-700 cursor-pointer"
             onClick={() => setIsImageZoomed(true)}
           >
@@ -474,7 +475,7 @@ export default function MenuDetailModal({
             />
 
             {/* Gradient Overlay - Top 1/5 of image */}
-            <div 
+            <div
               className="absolute top-0 left-0 right-0 pointer-events-none"
               style={{
                 height: '50px',
@@ -804,7 +805,7 @@ export default function MenuDetailModal({
               className="w-full h-11 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-lg disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:text-gray-500 dark:disabled:text-gray-400 disabled:cursor-not-allowed transition-all active:scale-[0.98] flex items-center justify-center px-5"
             >
               <span className="text-md">{editMode ? 'Update Order ' : 'Add Orders '}</span>
-              
+
               <span className="flex items-center gap-2 text-md gap-2 mx-2">-</span>
               <span className="flex items-center gap-2 text-md gap-2">
                 <strong>{formatCurrency(calculateTotal(), currency)}</strong>
@@ -842,7 +843,7 @@ export default function MenuDetailModal({
           {/* Zoomed Image Container - Max 500px */}
           <div className="relative w-full max-w-[500px] h-auto">
             {/* Gradient Overlay - Top 1/5 of image */}
-            <div 
+            <div
               className="absolute top-0 left-0 right-0 z-405 pointer-events-none"
               style={{
                 height: '20%',
