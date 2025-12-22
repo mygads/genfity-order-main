@@ -79,6 +79,7 @@ export default function OrderSummaryCashPage() {
   const [merchantInfo, setMerchantInfo] = useState<MerchantInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showFeeDetails, setShowFeeDetails] = useState(false);
 
   /**
    * ✅ Fetch merchant info and order details
@@ -209,12 +210,18 @@ export default function OrderSummaryCashPage() {
 
   /**
    * ✅ Format currency using merchant's currency
+   * Uses A$ prefix for Australian Dollar
    * 
    * @param amount - Number amount to format
    * @returns Formatted string (e.g., "A$45.00")
    */
   const formatCurrency = (amount: number) => {
     if (!merchantInfo) return amount.toFixed(2);
+
+    // Special handling for AUD to show A$ prefix
+    if (merchantInfo.currency === 'AUD') {
+      return `A$${amount.toFixed(2)}`;
+    }
 
     return new Intl.NumberFormat('en-AU', {
       style: 'currency',
@@ -271,233 +278,441 @@ export default function OrderSummaryCashPage() {
   }
 
   // ========================================
-  // SUCCESS STATE - MINIMALIST DESIGN
+  // SUCCESS STATE - ESB DESIGN
   // ========================================
   return (
     <>
       {/* ========================================
-          SUCCESS HEADER - Clean & Minimal
+          HEADER - ESB Style
       ======================================== */}
-      <div className="px-6 py-8 text-center border-b border-gray-200 dark:border-gray-800">
-        {/* Success Icon - Custom CheckCircle */}
-        <div className="flex items-center justify-center w-16 h-16 mx-auto rounded-full bg-green-500 mb-4">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            className="w-10 h-10 text-white"
-          >
-            <path
+      <header className="sticky top-0 z-50 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-center px-4 h-14">
+          <h1 className="text-base font-bold text-gray-900 dark:text-white">Order Summary</h1>
+        </div>
+      </header>
+
+      {/* ========================================
+          ORDER TYPE CARD - ESB Style
+      ======================================== */}
+      <section className="px-4 pt-4">
+        <div
+          className="flex items-center justify-between relative"
+          style={{
+            height: '36px',
+            fontSize: '0.8rem',
+            padding: '8px 16px',
+            border: '1px solid #f05a28',
+            borderRadius: '8px',
+            backgroundColor: 'rgba(240, 90, 40, 0.1)'
+          }}
+        >
+          <span className="text-gray-700">Order Type</span>
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-gray-900">
+              {mode === 'dinein' ? 'Dine In' : 'Takeaway'}
+            </span>
+            <svg
+              style={{ width: '18px', height: '18px', color: '#1ca406' }}
+              viewBox="0 0 24 24"
               fill="currentColor"
-              fillRule="evenodd"
-              d="M3.55 12a8.448 8.448 0 1 1 16.897 0 8.448 8.448 0 0 1-16.896 0M12 2.052c-5.494 0-9.948 4.454-9.948 9.948s4.454 9.948 9.948 9.948 9.948-4.454 9.948-9.948S17.493 2.052 12 2.052m3.514 8.581a.75.75 0 1 0-1.061-1.06l-3.264 3.263-1.642-1.642a.75.75 0 0 0-1.06 1.06l2.172 2.173a.75.75 0 0 0 1.06 0z"
-              clipRule="evenodd"
-            />
-          </svg>
+            >
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+            </svg>
+          </div>
+        </div>
+      </section>
+
+      {/* ========================================
+          QR CODE BOX - ESB Style
+      ======================================== */}
+      <div
+        className="flex flex-col flex-grow items-center mt-6 mb-3"
+        style={{ margin: '24px 16px 12px', borderRadius: '10px' }}
+      >
+        {/* Order Number Title */}
+        <div className="order-container text-center mb-4">
+          <span
+            className="text-sm "
+            style={{ color: '#212529' }}
+          >
+            Order Number
+          </span>
+
+          {/* Order Number Box - ESB Style */}
+          <div
+            className="flex mt-2 justify-center"
+            style={{
+              border: '1px solid #E6E6E6',
+              borderRadius: '8px',
+              height: '42px',
+              textAlign: 'center',
+              fontFamily: 'Inter, sans-serif',
+              fontSize: '14px',
+              letterSpacing: '0.25px',
+              lineHeight: '20px'
+            }}
+          >
+            {/* Merchant Code (Left - Gray) */}
+            <div
+              style={{
+                padding: '10px',
+                backgroundColor: '#ECECEC',
+                minWidth: '125px',
+                borderRadius: '7px 0 0 7px',
+                color: '#a6a6a6',
+                fontWeight: 500,
+                fontSize: '18px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              {merchantCode.toUpperCase()}
+            </div>
+            {/* Order Code (Right - White) */}
+            <div
+              style={{
+                padding: '10px',
+                backgroundColor: 'white',
+                minWidth: '125px',
+                borderRadius: '0 7px 7px 0',
+                color: '#212529',
+                fontWeight: 700,
+                fontSize: '18px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              {order.orderNumber.split('-').pop()?.toUpperCase() || order.orderNumber}
+            </div>
+          </div>
         </div>
 
-        <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-3">
-          Order Successful!
-        </h1>
 
-        {/* Order Number - Monospace Badge */}
-        <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg mb-2">
-          <span className="text-sm font-mono text-gray-900 dark:text-white font-semibold">
-            {order.orderNumber}
+
+        {/* QR Placeholder - ESB Style */}
+        <div className="flex justify-center mb-4">
+          <div
+            className="flex items-center justify-center rounded-xl"
+            style={{
+              width: '240px',
+              height: '240px',
+              backgroundColor: '#f3f4f6',
+              border: '1px solid #e5e7eb'
+            }}
+          >
+            {/* Mobile Icon Placeholder */}
+            <div className="text-center">
+              <div
+                className="w-16 h-20 mx-auto rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: '#374151' }}
+              >
+                <div
+                  className="w-10 h-10 rounded"
+                  style={{ backgroundColor: '#60a5fa' }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Notification Message - ESB Style with 2-line layout */}
+        <div
+          className="flex justify-center items-center mb-3 mt-2"
+          style={{
+            padding: '12px 16px',
+            width: '64%',
+            minWidth: '343px',
+            margin: '0 auto 12px auto',
+            backgroundColor: '#fef0c7',
+            borderRadius: '8px',
+            fontSize: '14px',
+            letterSpacing: '0'
+          }}
+        >
+          <svg
+            className="flex-shrink-0"
+            style={{
+              width: '20px',
+              height: '20px',
+              marginRight: '8px',
+              color: '#dc6803'
+            }}
+            viewBox="0 0 24 24"
+            fill="currentColor"
+          >
+            <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
+          </svg>
+          <span
+            style={{
+              color: '#1d2939',
+              fontFamily: 'Inter, sans-serif',
+              fontSize: '14px',
+              fontWeight: 400,
+              lineHeight: '20px',
+              textAlign: 'start'
+            }}
+          >
+            <strong>Show the QR code</strong> or <strong>8-digit order number</strong> to our cashier.
           </span>
         </div>
-
-        {/* Order Type Info */}
-        <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-          {order.mode === 'dinein'
-            ? `Table #${order.tableNumber}`
-            : 'Takeaway Order'
-          }
-        </p>
       </div>
 
       {/* ========================================
-          SCROLLABLE CONTENT
+          ORDERED ITEMS SECTION - ESB Style
       ======================================== */}
-      <div className="flex-1 overflow-y-auto">
-        <main className="px-6 py-6">
-          {/* QR Code Section - Minimal Design */}
-          <div className="mb-8 text-center">
-            <div className="inline-block p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl">
-              <div className="w-[200px] h-[200px] bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 rounded-lg flex items-center justify-center text-6xl">
-                📱
-              </div>
-            </div>
-            <p className="mt-4 text-sm font-semibold text-gray-900 dark:text-white">
-              Show QR code or order number to cashier
-            </p>
-            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-              to complete payment
-            </p>
-          </div>
+      <main
+        className="pb-4"
+        style={{
+          fontFamily: 'Inter, sans-serif',
+          fontSize: '14px',
+          letterSpacing: '0.25px',
+          lineHeight: '20px',
+          color: '#212529'
+        }}
+      >
+        {/* Divider */}
+        <div style={{ height: '4px', backgroundColor: '#f3f4f6' }} />
 
-          {/* Order Items Section */}
-          <div className="mb-6">
-            <h2 className="text-base font-semibold text-gray-900 dark:text-white mb-4">
-              Order Details
-            </h2>
+        {/* Ordered Items Header */}
+        <div
+          className="flex justify-between items-center"
+          style={{ paddingTop: '16px', paddingLeft: '12px', paddingRight: '12px', height: '35px' }}
+        >
+          <h1 className="mb-0" style={{ fontSize: '16px', fontWeight: 600, color: '#212529' }}>
+            Ordered Items
+          </h1>
+        </div>
 
-            {!order.orderItems || order.orderItems.length === 0 ? (
-              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg text-center">
-                <p className="text-sm text-gray-500 dark:text-gray-400">No items in order</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {order.orderItems.map((item, index) => {
-                  // Calculate addon total for this item
-                  const addonTotal = (item.addons || []).reduce((sum, addon) => {
-                    const addonPrice = typeof addon.price === 'number' ? addon.price : 0;
-                    const addonQty = addon.quantity || 1;
-                    return sum + (addonPrice * addonQty);
-                  }, 0);
+        {/* Order Items List */}
+        {order.orderItems && order.orderItems.length > 0 && (
+          <div style={{ borderBottom: '1px solid #e5e7eb' }}>
+            {order.orderItems.map((item, index) => {
+              const addonTotal = (item.addons || []).reduce((sum, addon) => {
+                const addonPrice = typeof addon.price === 'number' ? addon.price : 0;
+                const addonQty = addon.quantity || 1;
+                return sum + (addonPrice * addonQty);
+              }, 0);
+              const itemTotalWithAddons = (item.quantity * item.price) + addonTotal;
 
-                  // Item base price (menu price * quantity)
-                  const itemBasePrice = item.quantity * item.price;
-                  const itemTotalWithAddons = itemBasePrice + addonTotal;
+              return (
+                <div
+                  key={index}
+                  className="flex flex-col"
+                  style={{ padding: '16px' }}
+                >
+                  <div className="flex flex-row">
+                    {/* Quantity - ESB: dark color, bold */}
+                    <div
+                      className="flex items-start justify-center"
+                      style={{
+                        marginRight: '0.5rem',
+                        fontSize: '1em',
+                        fontWeight: 700,
+                        lineHeight: '17px',
+                        color: '#212529'
+                      }}
+                    >
+                      {item.quantity}x
+                    </div>
 
-                  return (
-                    <div key={index} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800">
-                      {/* Item Header */}
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="flex-1">
-                          <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                            {item.quantity}x {item.menuName}
-                          </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            {formatCurrency(item.price)} each
-                          </p>
-                        </div>
-                        <p className="text-sm font-bold text-orange-500">
-                          {formatCurrency(itemTotalWithAddons)}
-                        </p>
+                    {/* Menu Name & Addons */}
+                    <div className="flex-grow flex flex-col">
+                      <div style={{ maxWidth: '245px', fontWeight: 500, color: '#212529' }}>
+                        {item.menuName}
                       </div>
 
-                      {/* Display Addons */}
-                      {item.addons && item.addons.length > 0 && (
-                        <div className="ml-4 space-y-1 mb-2">
-                          {item.addons.map((addon, ai) => {
-                            const addonPrice = typeof addon.price === 'number' ? addon.price : 0;
-                            const addonQty = addon.quantity || 1;
-                            const addonSubtotal = addonPrice * addonQty;
+                      {/* Addons as package text */}
+                      {item.addons && item.addons.length > 0 && item.addons.map((addon, ai) => (
+                        <div
+                          key={ai}
+                          style={{
+                            fontSize: '12px',
+                            color: '#808080',
+                            marginTop: '0px',
+                            lineHeight: '15px',
+                            letterSpacing: '0.25px',
+                            fontWeight: 400
+                          }}
+                        >
+                          {addon.quantity || 1} x {addon.addonItemName}
+                        </div>
+                      ))}
 
-                            return (
-                              <div key={ai} className="flex justify-between items-center text-xs text-gray-600 dark:text-gray-400">
-                                <span>
-                                  + {addon.addonItemName}
-                                  {addonQty > 1 && ` x${addonQty}`}
-                                  {addonPrice > 0 && ` (+${formatCurrency(addonPrice)})`}
-                                </span>
-                                {addonSubtotal > 0 && (
-                                  <span className="text-gray-500 dark:text-gray-400">
-                                    {formatCurrency(addonSubtotal)}
-                                  </span>
-                                )}
-                              </div>
-                            );
-                          })}
+                      {/* Notes */}
+                      {item.notes && (
+                        <div style={{ fontSize: '12px', color: '#6b7280', fontStyle: 'italic', marginTop: '4px' }}>
+                          📝 {item.notes}
                         </div>
                       )}
-
-                      {/* Item Notes */}
-                      {item.notes && (
-                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-2 flex items-start gap-1">
-                          <span>📝</span>
-                          <span>{item.notes}</span>
-                        </p>
-                      )}
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
 
-          {/* Price Summary - Minimal Card */}
-          <div className="mb-6">
-            <div className="p-5 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-              <div className="space-y-3">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Subtotal</span>
-                  <span className="text-gray-900 dark:text-white font-medium">
-                    {formatCurrency(order.subtotalAmount)}
-                  </span>
-                </div>
-
-                {order.taxAmount > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">Tax</span>
-                    <span className="text-gray-900 dark:text-white font-medium">
-                      {formatCurrency(order.taxAmount)}
-                    </span>
-                  </div>
-                )}
-
-                {order.serviceChargeAmount > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">Service Charge</span>
-                    <span className="text-gray-900 dark:text-white font-medium">
-                      {formatCurrency(order.serviceChargeAmount)}
-                    </span>
-                  </div>
-                )}
-
-                {order.packagingFeeAmount > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">Packaging Fee</span>
-                    <span className="text-gray-900 dark:text-white font-medium">
-                      {formatCurrency(order.packagingFeeAmount)}
-                    </span>
-                  </div>
-                )}
-
-                <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
-                  <div className="flex justify-between items-center">
-                    <span className="text-base font-semibold text-gray-900 dark:text-white">Total</span>
-                    <span className="text-lg font-bold text-orange-500">
-                      {formatCurrency(order.totalAmount)}
-                    </span>
+                    {/* Price */}
+                    <div
+                      className="flex flex-col items-end"
+                      style={{ fontSize: '14px', whiteSpace: 'nowrap', color: '#212529' }}
+                    >
+                      {formatCurrency(itemTotalWithAddons)}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
+              );
+            })}
           </div>
-        </main>
-      </div>
+        )}
 
-      {/* ========================================
-          FIXED BOTTOM ACTIONS
-      ======================================== */}
-      <div className="sticky bottom-0 px-6 py-4 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 space-y-3">
-        {/* Track Order Button - Primary Action */}
-        <button
-          onClick={() => router.push(`/${merchantCode}/track/${order.orderNumber}`)}
-          className="w-full h-12 bg-orange-500 text-white text-base font-semibold rounded-lg hover:bg-orange-600 transition-all active:scale-[0.98] shadow-sm flex items-center justify-center gap-2"
+        {/* ========================================
+            PAYMENT DETAILS SECTION - ESB Style
+        ======================================== */}
+        <div
+          className="flex flex-col"
+          style={{
+            padding: '16px',
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '14px',
+            letterSpacing: '0.25px',
+            lineHeight: '20px'
+          }}
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-          </svg>
-          Track Order Status
-        </button>
+          {/* Inclusive Fees - Expandable */}
+          {(order.taxAmount > 0 || order.serviceChargeAmount > 0 || order.packagingFeeAmount > 0) && (
+            <>
+              {/* Header Row - Clickable */}
+              <div
+                className="flex justify-between items-center cursor-pointer"
+                style={{
+                  paddingTop: '8px',
+                  paddingBottom: '8px',
+                  borderBottom: '1px dashed #e4e7ec',
+                  color: '#aeb3be',
+                  fontSize: '14px',
+                  fontWeight: 400
+                }}
+                onClick={() => setShowFeeDetails(!showFeeDetails)}
+              >
+                <div className="flex items-center">
+                  Incl. other fees
+                  <svg
+                    style={{
+                      width: '24px',
+                      height: '24px',
+                      marginLeft: '2px',
+                      transform: showFeeDetails ? 'rotate(180deg)' : 'rotate(0deg)',
+                      transition: 'transform 0.2s ease'
+                    }}
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path d="M7 10l5 5 5-5z" />
+                  </svg>
+                </div>
+                <div style={{ fontWeight: 400 }}>
+                  {formatCurrency(order.taxAmount + order.serviceChargeAmount + order.packagingFeeAmount)}
+                </div>
+              </div>
 
+              {/* Fee Details - Shown when expanded */}
+              {showFeeDetails && (
+                <div
+                  style={{
+                    color: '#aeb3be',
+                    fontSize: '14px',
+                    borderBottom: '1px dashed #e4e7ec',
+                    fontWeight: 400
+                  }}
+                >
+                  {order.taxAmount > 0 && (
+                    <div
+                      className="flex justify-between"
+                      style={{
+                        paddingTop: '8px',
+                        paddingBottom: '8px',
+                        paddingLeft: '8px'
+                      }}
+                    >
+                      <div>Incl. PB1</div>
+                      <div>{formatCurrency(order.taxAmount)}</div>
+                    </div>
+                  )}
+                  {order.serviceChargeAmount > 0 && (
+                    <div
+                      className="flex justify-between"
+                      style={{
+                        paddingTop: '8px',
+                        paddingBottom: '8px',
+                        paddingLeft: '24px'
+                      }}
+                    >
+                      <div>Service Charge</div>
+                      <div>{formatCurrency(order.serviceChargeAmount)}</div>
+                    </div>
+                  )}
+                  {order.packagingFeeAmount > 0 && (
+                    <div
+                      className="flex justify-between"
+                      style={{
+                        paddingTop: '8px',
+                        paddingBottom: '8px',
+                        paddingLeft: '24px'
+                      }}
+                    >
+                      <div>Packaging Fee</div>
+                      <div>{formatCurrency(order.packagingFeeAmount)}</div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Total Section - ESB Style */}
+          <section
+            className="flex"
+            style={{
+              paddingTop: '12px',
+              fontWeight: 700,
+              fontSize: '1em',
+              lineHeight: '17px'
+            }}
+          >
+            <div
+              className="flex-grow"
+              style={{ color: '#212529' }}
+            >
+              Total
+            </div>
+            <div style={{ color: '#f05a28', fontWeight: 700 }}>
+              {formatCurrency(order.totalAmount)}
+            </div>
+          </section>
+        </div>
+        {/* New Order Button - ESB Style */}
         <button
           onClick={handleNewOrder}
-          className="w-full h-12 border-2 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white text-base font-semibold rounded-lg hover:border-orange-500 hover:text-orange-500 dark:hover:border-orange-500 dark:hover:text-orange-500 transition-all active:scale-[0.98]"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 'calc(100% - 32px)',
+            margin: '16px',
+            height: '48px',
+            backgroundColor: '#F05A28',
+            color: 'white',
+            fontSize: '14px',
+            fontWeight: 600,
+            fontFamily: 'Roboto, sans-serif',
+            borderRadius: '8px',
+            border: 'none',
+            cursor: 'pointer',
+            boxShadow: 'rgba(0, 0, 0, 0.2) 0px 3px 1px -2px, rgba(0, 0, 0, 0.14) 0px 2px 2px 0px, rgba(0, 0, 0, 0.12) 0px 1px 5px 0px',
+            lineHeight: '20px',
+            padding: '4.8px 16px'
+          }}
         >
           New Order
         </button>
-
-        <button
-          onClick={handleViewHistory}
-          className="w-full h-10 text-gray-600 dark:text-gray-400 text-sm font-medium hover:text-orange-500 dark:hover:text-orange-500 transition-all"
-        >
-          View Order History
-        </button>
-      </div>
+      </main>
     </>
   );
 }
