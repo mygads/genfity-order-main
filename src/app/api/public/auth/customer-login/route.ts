@@ -1,86 +1,104 @@
 import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
-import prisma from '@/lib/db/client'; // ✅ Use Prisma client
+import bcrypt from 'bcryptjs';
+import prisma from '@/lib/db/client';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const JWT_EXPIRES_IN = '30d'; // 30 days for customers
 
 interface LoginRequestBody {
-  email: string;
-  name?: string;
+  email?: string;
   phone?: string;
+  password?: string;
+  name?: string;
 }
 
 /**
  * Customer Login/Register Endpoint
  * POST /api/public/auth/customer-login
  * 
- * ✅ FIXED: Create UserSession record for JWT token tracking
- * 
- * @specification STEP_02_AUTHENTICATION_JWT.txt - Customer Auth Flow
- * 
  * @description
  * Seamless authentication for customers:
- * - If email exists → login (update name/phone if provided)
- * - If email doesn't exist → auto-register as CUSTOMER
- * - Create UserSession record for token tracking
+ * - Login with email OR phone number + password
+ * - If user has password → require password verification
+ * - If user has no password → passwordless login (legacy)
+ * - Auto-register new users
+ * - Session duration: 30 days
+ * 
+ * @session
+ * - JWT token expires in 30 days
+ * - UserSession record created in database for tracking
+ * - Session can be revoked by updating status to 'REVOKED'
+ * - Token stored in localStorage on client side
  * 
  * @security
- * - Email validation (RFC 5322 format)
- * - Prisma parameterized queries (SQL injection safe)
+ * - Email/Phone validation
+ * - Password hashing with bcrypt (10 rounds)
  * - JWT token with 30-day expiry
  * - UserSession tracking with device info
- * - No password required for customers
- * 
- * @returns {Object} Standard response format
- * @returns {boolean} success - Operation status
- * @returns {Object} data - User data + JWT token
- * @returns {string} data.accessToken - JWT token for authentication
- * @returns {number} data.expiresAt - Token expiry timestamp (milliseconds)
- * @returns {Object} data.user - User profile data
- * @returns {string} message - Success/error message
- * @returns {number} statusCode - HTTP status code
  */
 export async function POST(request: NextRequest) {
   try {
     const body: LoginRequestBody = await request.json();
-    const { email, name, phone } = body;
+    const { email, phone, password, name } = body;
 
     // ========================================
-    // VALIDATION (STEP_02 Section 3.1)
+    // VALIDATION - Accept email OR phone
     // ========================================
-    if (!email || typeof email !== 'string') {
+    const emailTrimmed = email?.trim().toLowerCase();
+    const phoneTrimmed = phone?.trim();
+
+    if (!emailTrimmed && !phoneTrimmed) {
       return NextResponse.json(
         {
           success: false,
           error: 'VALIDATION_ERROR',
-          message: 'Email tidak valid',
+          message: 'Email or phone number is required',
           statusCode: 400,
         },
         { status: 400 }
       );
     }
 
-    const emailTrimmed = email.trim().toLowerCase();
-    if (!emailTrimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrimmed)) {
+    // Validate email format if provided
+    if (emailTrimmed && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrimmed)) {
       return NextResponse.json(
         {
           success: false,
           error: 'VALIDATION_ERROR',
-          message: 'Format email tidak valid',
+          message: 'Invalid email format',
           statusCode: 400,
         },
         { status: 400 }
       );
     }
 
+    // Validate phone format if provided (starts with + or 0, 8-15 digits)
+    if (phoneTrimmed) {
+      const cleanedPhone = phoneTrimmed.replace(/[\s-]/g, '');
+      if (!/^(\+|0)\d{8,15}$/.test(cleanedPhone)) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'VALIDATION_ERROR',
+            message: 'Invalid phone number format',
+            statusCode: 400,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     // ========================================
-    // DATABASE QUERY (STEP_01 users table)
+    // DATABASE QUERY - Find by email or phone
     // ========================================
-    
+
     const existingUser = await prisma.user.findFirst({
       where: {
-        email: emailTrimmed,
+        OR: [
+          ...(emailTrimmed ? [{ email: emailTrimmed }] : []),
+          ...(phoneTrimmed ? [{ phone: phoneTrimmed }] : []),
+        ],
         role: 'CUSTOMER',
       },
       select: {
@@ -88,6 +106,7 @@ export async function POST(request: NextRequest) {
         email: true,
         name: true,
         phone: true,
+        passwordHash: true,
         role: true,
         isActive: true,
       },
@@ -95,75 +114,117 @@ export async function POST(request: NextRequest) {
 
     let userId: bigint;
     let userName: string;
+    let userEmail: string;
     let userPhone: string | null;
 
     if (existingUser) {
       // ========================================
       // EXISTING USER - LOGIN FLOW
       // ========================================
-      
+
       // Check if account is active
       if (!existingUser.isActive) {
         return NextResponse.json(
           {
             success: false,
             error: 'ACCOUNT_DISABLED',
-            message: 'Akun Anda tidak aktif',
+            message: 'Your account is disabled',
             statusCode: 403,
           },
           { status: 403 }
         );
       }
 
+      // Check if user has a password set
+      if (existingUser.passwordHash && existingUser.passwordHash.length > 0) {
+        // Password required for this user
+        if (!password) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'PASSWORD_REQUIRED',
+              message: 'Password is required',
+              statusCode: 400,
+            },
+            { status: 400 }
+          );
+        }
+
+        // Verify password
+        const passwordValid = await bcrypt.compare(password, existingUser.passwordHash);
+        if (!passwordValid) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'INVALID_CREDENTIALS',
+              message: 'Invalid email/phone or password',
+              statusCode: 401,
+            },
+            { status: 401 }
+          );
+        }
+      }
+
       userId = existingUser.id;
       userName = name?.trim() || existingUser.name;
-      userPhone = phone?.trim() || existingUser.phone;
+      userEmail = existingUser.email;
+      userPhone = phoneTrimmed || existingUser.phone;
 
-      // ✅ Update name/phone if provided and different
-      if ((name && name.trim() !== existingUser.name) || (phone && phone.trim() !== existingUser.phone)) {
-        await prisma.user.update({
-          where: { id: userId },
-          data: {
-            name: userName,
-            phone: userPhone,
-            lastLoginAt: new Date(), // ✅ Update last login timestamp
-          },
-        });
-      } else {
-        // ✅ Just update last login
-        await prisma.user.update({
-          where: { id: userId },
-          data: { lastLoginAt: new Date() },
-        });
-      }
+      // Update user info
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          ...(name && name.trim() !== existingUser.name ? { name: name.trim() } : {}),
+          lastLoginAt: new Date(),
+        },
+      });
 
     } else {
       // ========================================
       // NEW USER - REGISTER FLOW
       // ========================================
-      
+
       // Name required for new registration
       if (!name || typeof name !== 'string' || !name.trim()) {
         return NextResponse.json(
           {
             success: false,
             error: 'VALIDATION_ERROR',
-            message: 'Nama harus diisi untuk pendaftaran',
+            message: 'Name is required for registration',
             statusCode: 400,
           },
           { status: 400 }
         );
       }
 
+      // Email required for new registration
+      if (!emailTrimmed) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'VALIDATION_ERROR',
+            message: 'Email is required for registration',
+            statusCode: 400,
+          },
+          { status: 400 }
+        );
+      }
+
+      // Hash password if provided
+      let passwordHash = '';
+      if (password && password.length >= 6) {
+        passwordHash = await bcrypt.hash(password, 10);
+      }
+
       const newUser = await prisma.user.create({
         data: {
           email: emailTrimmed,
           name: name.trim(),
-          phone: phone?.trim() || null,
-          passwordHash: '', // No password for customers (email-based auth)
+          phone: phoneTrimmed || null,
+          passwordHash,
           role: 'CUSTOMER',
           isActive: true,
-          lastLoginAt: new Date(), // ✅ Set initial login timestamp
+          lastLoginAt: new Date(),
         },
         select: {
           id: true,
@@ -172,16 +233,17 @@ export async function POST(request: NextRequest) {
 
       userId = newUser.id;
       userName = name.trim();
-      userPhone = phone?.trim() || null;
+      userEmail = emailTrimmed;
+      userPhone = phoneTrimmed || null;
     }
 
     // ========================================
-    // JWT GENERATION (STEP_02 Section 4.2)
+    // JWT GENERATION - 30 days expiry
     // ========================================
-    
+
     const payload = {
       customerId: userId.toString(),
-      email: emailTrimmed,
+      email: userEmail,
       name: userName,
       role: 'CUSTOMER',
     };
@@ -190,24 +252,13 @@ export async function POST(request: NextRequest) {
     const expiresAt = Date.now() + 30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
 
     // ========================================
-    // ✅ NEW: CREATE USER SESSION RECORD
+    // CREATE USER SESSION RECORD
     // ========================================
-    
-    /**
-     * Create UserSession record for token tracking
-     * 
-     * @specification STEP_02_AUTHENTICATION_JWT.txt - Session Management
-     * 
-     * @benefits
-     * - Track active sessions per user
-     * - Enable session revocation
-     * - Monitor login activity
-     * - Device/IP tracking for security
-     */
+
     const userAgent = request.headers.get('user-agent') || 'Unknown';
-    const ipAddress = request.headers.get('x-forwarded-for') || 
-                      request.headers.get('x-real-ip') || 
-                      'Unknown';
+    const ipAddress = request.headers.get('x-forwarded-for') ||
+      request.headers.get('x-real-ip') ||
+      'Unknown';
 
     await prisma.userSession.create({
       data: {
@@ -217,11 +268,11 @@ export async function POST(request: NextRequest) {
         ipAddress,
         status: 'ACTIVE',
         expiresAt: new Date(expiresAt),
-        refreshExpiresAt: null, // No refresh token for customers
+        refreshExpiresAt: null,
       },
     });
 
-    console.log('✅ [AUTH] Session created for customer:', userId.toString());
+    console.log('✅ [AUTH] Session created for customer:', userId.toString(), '- expires:', new Date(expiresAt).toISOString());
 
     return NextResponse.json(
       {
@@ -231,13 +282,13 @@ export async function POST(request: NextRequest) {
           expiresAt,
           user: {
             id: userId.toString(),
-            email: emailTrimmed,
+            email: userEmail,
             name: userName,
             phone: userPhone,
             role: 'CUSTOMER',
           },
         },
-        message: existingUser ? 'Login berhasil' : 'Akun berhasil dibuat',
+        message: existingUser ? 'Login successful' : 'Account created successfully',
         statusCode: 200,
       },
       { status: 200 }
@@ -248,7 +299,7 @@ export async function POST(request: NextRequest) {
       {
         success: false,
         error: 'INTERNAL_ERROR',
-        message: 'Terjadi kesalahan pada server',
+        message: 'An error occurred. Please try again.',
         statusCode: 500,
       },
       { status: 500 }

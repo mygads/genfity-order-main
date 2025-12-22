@@ -12,7 +12,7 @@
  */
 
 import prisma from '@/lib/db/client';
-import { OrderStatus, PaymentMethod, PaymentStatus, Prisma } from '@prisma/client';
+import { Order, OrderStatus, PaymentMethod, PaymentStatus, Prisma } from '@prisma/client';
 import {
   OrderFilters,
   OrderWithDetails,
@@ -25,9 +25,19 @@ import {
   ORDER_DETAIL_INCLUDE,
   ORDER_LIST_INCLUDE,
   PaymentVerificationResult,
+  CreateOrderInput,
+  RevenueReportItem,
 } from '@/lib/types/order';
 import { canTransitionStatus, validateStatusTransition } from '@/lib/utils/orderStatusRules';
-import { serializeBigInt } from '@/lib/utils/serializer';
+import { serializeBigInt, serializeData } from '@/lib/utils/serializer';
+import { ValidationError, NotFoundError, ERROR_CODES } from '@/lib/constants/errors';
+import { validateRequired, validateEmail } from '@/lib/utils/validators';
+import { hashPassword, generateTempPassword } from '@/lib/utils/passwordHasher';
+import userRepository from '@/lib/repositories/UserRepository';
+import orderRepository from '@/lib/repositories/OrderRepository';
+import merchantService from '@/lib/services/MerchantService';
+import menuService from '@/lib/services/MenuService';
+import emailService from '@/lib/services/EmailService';
 
 export class OrderService {
   /**
@@ -59,27 +69,32 @@ export class OrderService {
     });
 
     // ========================================
-    // ✅ NEW STEP 2: Register or Fetch Customer
+    // ✅ STEP 2: Register or Fetch Customer (Phone-based)
     // ========================================
-    
+
     /**
      * Auto-register customer if not exists
      * 
-     * @specification STEP_06_BUSINESS_FLOWS.txt - Customer Registration
+     * @specification Phone-based customer identification
      * 
      * @flow
-     * 1. Check if customer exists by email
-     * 2. If exists → use existing customer
-     * 3. If not exists → create new customer with temp password
+     * 1. Check if customer exists by PHONE NUMBER (primary identifier)
+     * 2. If exists → use existing customer (update name/email if different)
+     * 3. If not exists → create new customer with temp password & send email
      * 4. Return customer object for order creation
      */
-    let customer = await userRepository.findByEmail(input.customerEmail);
+    let customer = input.customerPhone
+      ? await userRepository.findByPhone(input.customerPhone)
+      : null;
+
+    let isNewCustomer = false;
 
     if (!customer) {
-      console.log('👤 [ORDER SERVICE] Registering new customer:', input.customerEmail);
+      isNewCustomer = true;
+      console.log('👤 [ORDER SERVICE] Registering new customer with phone:', input.customerPhone);
 
-      // Generate temporary password (user can reset later)
-      const tempPassword = Math.random().toString(36).slice(-8);
+      // Generate proper temporary password
+      const tempPassword = generateTempPassword(12);
       const hashedPassword = await hashPassword(tempPassword);
 
       // Create customer account
@@ -90,18 +105,53 @@ export class OrderService {
         passwordHash: hashedPassword,
         role: 'CUSTOMER',
         isActive: true,
-        mustChangePassword: false, // ✅ Guest checkout doesn't require password change
+        mustChangePassword: false, // Guest checkout doesn't require password change
       });
 
       console.log('✅ [ORDER SERVICE] Customer registered:', {
         customerId: customer.id,
+        phone: customer.phone,
         email: customer.email,
       });
+
+      // Send welcome email with temp password
+      try {
+        await emailService.sendCustomerWelcome({
+          to: input.customerEmail,
+          name: input.customerName,
+          email: input.customerEmail,
+          phone: input.customerPhone || '',
+          tempPassword,
+        });
+        console.log('📧 [ORDER SERVICE] Welcome email sent to:', input.customerEmail);
+      } catch (emailError) {
+        console.error('⚠️ [ORDER SERVICE] Failed to send welcome email:', emailError);
+        // Non-blocking: Continue even if email fails
+      }
     } else {
       console.log('👤 [ORDER SERVICE] Using existing customer:', {
         customerId: customer.id,
-        email: customer.email,
+        phone: customer.phone,
       });
+
+      // Update name & email if different (phone stays the same as primary identifier)
+      const needsUpdate = customer.name !== input.customerName || customer.email !== input.customerEmail;
+      if (needsUpdate) {
+        await userRepository.update(customer.id, {
+          name: input.customerName,
+          email: input.customerEmail,
+        });
+        console.log('📝 [ORDER SERVICE] Customer info updated:', {
+          customerId: customer.id,
+          oldName: customer.name,
+          newName: input.customerName,
+          oldEmail: customer.email,
+          newEmail: input.customerEmail,
+        });
+        // Update local reference
+        customer.name = input.customerName;
+        customer.email = input.customerEmail;
+      }
     }
 
     // ========================================
@@ -234,17 +284,17 @@ export class OrderService {
     // ========================================
     // STEP 6: Calculate service charge, tax, and total
     // ========================================
-    
+
     // 1. Service Charge (5%)
     const serviceCharge = subtotal * 0.05;
 
     // 2. Tax (merchant-specific percentage on subtotal + service charge)
     const taxableAmount = subtotal + serviceCharge;
-    
-    const taxPercentage = merchantData.enableTax && merchantData.taxPercentage 
-      ? Number(merchantData.taxPercentage) 
+
+    const taxPercentage = merchantData.enableTax && merchantData.taxPercentage
+      ? Number(merchantData.taxPercentage)
       : 10;
-    
+
     const taxAmount = taxableAmount * (taxPercentage / 100);
 
     // 3. Total Amount
@@ -345,18 +395,18 @@ export class OrderService {
       // Generate order number
       const today = new Date();
       const dateStr = today.toISOString().split('T')[0].replace(/-/g, ''); // YYYYMMDD
-      
+
       // Get count of orders today for this merchant
       const todayStart = new Date(today.setHours(0, 0, 0, 0));
       const todayEnd = new Date(today.setHours(23, 59, 59, 999));
-      
+
       // ✅ FIXED: Use repository method instead of direct Prisma access
       const orderCount = await orderRepository.countOrdersByMerchantAndDate(
         merchantId,
         todayStart,
         todayEnd
       );
-      
+
       const sequenceNumber = String(orderCount + 1 + attempt).padStart(4, '0');
       const orderNumber = `ORD-${dateStr}-${sequenceNumber}`;
 

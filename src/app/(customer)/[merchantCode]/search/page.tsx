@@ -10,6 +10,7 @@ import MenuInCartModal from '@/components/menu/MenuInCartModal';
 import { useCart } from '@/context/CartContext';
 import type { CartItem } from '@/context/CartContext';
 import { formatCurrency } from '@/lib/utils/format';
+import { extractAddonDataFromMenus } from '@/lib/utils/addonExtractor';
 
 interface MenuItem {
   id: string;
@@ -68,11 +69,28 @@ export default function SearchPage() {
 
   useEffect(() => {
     const fetchMerchantInfo = async () => {
+      // Check cache first
+      const cacheKey = `merchant_info_${merchantCode}`;
+      const cached = sessionStorage.getItem(cacheKey);
+
+      if (cached) {
+        try {
+          const cachedData = JSON.parse(cached);
+          console.log('✅ [SEARCH] Using cached merchant info');
+          setMerchantInfo(cachedData);
+          return;
+        } catch (err) {
+          console.warn('⚠️ Failed to parse cached merchant info, fetching fresh');
+        }
+      }
+
       try {
         const response = await fetch(`/api/public/merchants/${merchantCode}`);
         const data = await response.json();
         if (data.success) {
           setMerchantInfo(data.data);
+          // Cache the data
+          sessionStorage.setItem(cacheKey, JSON.stringify(data.data));
         }
       } catch (err) {
         console.error('Error fetching merchant info:', err);
@@ -83,6 +101,30 @@ export default function SearchPage() {
 
   useEffect(() => {
     const fetchMenus = async () => {
+      // Check cache first
+      const menusCacheKey = `menus_${merchantCode}`;
+      const addonsCacheKey = `addons_cache_${merchantCode}`;
+      const cachedMenus = sessionStorage.getItem(menusCacheKey);
+      const cachedAddons = sessionStorage.getItem(addonsCacheKey);
+
+      if (cachedMenus && cachedAddons) {
+        try {
+          const menus = JSON.parse(cachedMenus);
+          const addons = JSON.parse(cachedAddons);
+          console.log('✅ [SEARCH] Using cached menu and addon data');
+          const activeItems = menus
+            .filter((item: MenuItem) => item.isActive)
+            .sort((a: MenuItem, b: MenuItem) => a.name.localeCompare(b.name));
+          setAllMenuItems(activeItems);
+          setMenuAddonsCache(addons);
+          setIsLoading(false);
+          return;
+        } catch (err) {
+          console.warn('⚠️ Failed to parse cached data, fetching fresh');
+        }
+      }
+
+      // Fetch fresh if no cache
       setIsLoading(true);
       try {
         const response = await fetch(`/api/public/merchants/${merchantCode}/menus`);
@@ -96,6 +138,13 @@ export default function SearchPage() {
             }))
             .sort((a: MenuItem, b: MenuItem) => a.name.localeCompare(b.name));
           setAllMenuItems(activeItems);
+          sessionStorage.setItem(menusCacheKey, JSON.stringify(activeItems));
+
+          // ✅ Extract addon data using utility function
+          const newAddonCache = extractAddonDataFromMenus(data.data);
+          setMenuAddonsCache(newAddonCache);
+          sessionStorage.setItem(addonsCacheKey, JSON.stringify(newAddonCache));
+          console.log('✅ [SEARCH] Extracted addon data from initial fetch');
         }
       } catch (err) {
         console.error('Error fetching menus:', err);
@@ -106,30 +155,11 @@ export default function SearchPage() {
     fetchMenus();
   }, [merchantCode]);
 
-  useEffect(() => {
-    if (allMenuItems.length === 0) return;
-    const prefetchAddons = async () => {
-      const promises = allMenuItems.map(async (menu) => {
-        try {
-          const response = await fetch(`/api/public/merchants/${merchantCode}/menus/${menu.id}/addons`);
-          const data = await response.json();
-          if (data.success) return { menuId: menu.id, addons: data.data };
-          return null;
-        } catch { return null; }
-      });
-      const results = await Promise.all(promises);
-      const cache: Record<string, any> = {};
-      results.forEach((result) => { if (result) cache[result.menuId] = result.addons; });
-      setMenuAddonsCache(cache);
-    };
-    prefetchAddons();
-  }, [allMenuItems, merchantCode]);
-
   const filteredItems = searchQuery.trim()
     ? allMenuItems.filter((item) => {
-        const query = searchQuery.toLowerCase();
-        return item.name.toLowerCase().includes(query) || (item.description && item.description.toLowerCase().includes(query));
-      })
+      const query = searchQuery.toLowerCase();
+      return item.name.toLowerCase().includes(query) || (item.description && item.description.toLowerCase().includes(query));
+    })
     : allMenuItems;
 
   const getMenuCartItems = (menuId: string): CartItem[] => {
@@ -172,7 +202,28 @@ export default function SearchPage() {
       {/* Content */}
       <div className="pb-24">
         {isLoading ? (
-          <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" /></div>
+          /* Search Page Skeleton */
+          <div className="px-4 py-3">
+            <div className="mb-4">
+              <div className="h-4 w-32 bg-gray-200 rounded animate-pulse" />
+            </div>
+            <div className="space-y-4">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} style={{ display: 'flex', gap: '12px', paddingTop: '16px', paddingBottom: '16px', borderBottom: i < 7 ? '2px solid #e4e2e2ff' : 'none' }}>
+                  <div style={{ width: '70px', height: '70px', flexShrink: 0, borderRadius: '8px', backgroundColor: '#e5e7eb' }} className="animate-pulse" />
+                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div className="h-4 w-3/4 bg-gray-200 rounded animate-pulse" />
+                    <div className="h-3 w-full bg-gray-200 rounded animate-pulse" />
+                    <div className="h-3 w-1/2 bg-gray-200 rounded animate-pulse" />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
+                      <div className="h-4 w-16 bg-gray-200 rounded animate-pulse" />
+                      <div className="h-8 w-16 bg-gray-200 rounded-lg animate-pulse" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         ) : (
           <>
             <div className="px-4 py-3">

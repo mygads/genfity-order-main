@@ -81,6 +81,33 @@ export class UserRepository {
   }
 
   /**
+   * Find user by phone number
+   * @param phone - Phone number to search
+   */
+  async findByPhone(phone: string) {
+    return prisma.user.findFirst({
+      where: { phone },
+      include: {
+        merchantUsers: {
+          include: {
+            merchant: true,
+          },
+        },
+      },
+    });
+  }
+
+  /**
+   * Check if phone number exists
+   */
+  async phoneExists(phone: string): Promise<boolean> {
+    const count = await prisma.user.count({
+      where: { phone },
+    });
+    return count > 0;
+  }
+
+  /**
    * Get user with merchant relationship
    */
   async findUserWithMerchant(userId: bigint, merchantId: bigint) {

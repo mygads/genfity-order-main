@@ -8,13 +8,14 @@ import { saveCustomerAuth } from '@/lib/utils/localStorage';
 import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';
 
 /**
- * Customer Login Form Component
- * Mobile-first redesign with consistent layout:
- * - Max width 420px (same as order page)
- * - English language
- * - Minimal and readable design
- * - Two paths: Login (email/password) or Guest checkout
- * - Ref parameter for navigation
+ * Customer Login Page - Burjo ESB Style
+ * 
+ * Features:
+ * - Auth choice: Sign In or Guest
+ * - Guest returns to previous page (ref)
+ * - Sign In with email/phone + password
+ * - Forgot password link
+ * - Consistent header styling
  */
 function LoginForm() {
   const router = useRouter();
@@ -22,9 +23,10 @@ function LoginForm() {
 
   const [showAuthChoice, setShowAuthChoice] = useState(true);
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [emailOrPhone, setEmailOrPhone] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [isSaveAccountMode, setIsSaveAccountMode] = useState(false);
@@ -44,7 +46,7 @@ function LoginForm() {
       const nameParam = searchParams.get('name');
       const phoneParam = searchParams.get('phone');
 
-      if (emailParam) setEmail(decodeURIComponent(emailParam));
+      if (emailParam) setEmailOrPhone(decodeURIComponent(emailParam));
       if (nameParam) setName(decodeURIComponent(nameParam));
       if (phoneParam) setPhone(decodeURIComponent(phoneParam));
     }
@@ -58,10 +60,9 @@ function LoginForm() {
   };
 
   /**
-   * Handle "Continue as Guest" - skip login
+   * Handle "Continue as Guest" - go back to previous page
    */
   const handleGuestCheckout = () => {
-    // Skip to cart/menu as guest
     if (ref) {
       router.push(decodeURIComponent(ref));
     } else if (merchant && mode) {
@@ -69,8 +70,34 @@ function LoginForm() {
     } else if (merchant) {
       router.push(`/${merchant}`);
     } else {
-      router.push('/');
+      // Check if we have browser history to go back
+      if (typeof window !== 'undefined' && window.history.length > 1) {
+        router.back();
+      } else {
+        router.push('/');
+      }
     }
+  };
+
+  /**
+   * Handle forgot password navigation
+   */
+  const handleForgotPassword = () => {
+    const currentRef = ref || (merchant ? `/${merchant}/order?mode=${mode || 'dinein'}` : '/');
+    router.push(`/forgot-password?ref=${encodeURIComponent(currentRef)}`);
+  };
+
+  /**
+   * Check if input is email or phone
+   */
+  const isEmail = (value: string): boolean => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  };
+
+  const isPhoneNumber = (value: string): boolean => {
+    // Check for phone number patterns: starts with + or 0, contains only digits
+    const cleaned = value.replace(/[\s-]/g, '');
+    return /^(\+|0)\d{8,15}$/.test(cleaned);
   };
 
   /**
@@ -89,7 +116,25 @@ function LoginForm() {
         return;
       }
 
-      // Call customer login API (or save-account API)
+      const inputValue = emailOrPhone.trim();
+
+      // Validate email or phone
+      if (!inputValue) {
+        setError('Email or phone number is required');
+        setIsLoading(false);
+        return;
+      }
+
+      const isEmailInput = isEmail(inputValue);
+      const isPhoneInput = isPhoneNumber(inputValue);
+
+      if (!isEmailInput && !isPhoneInput) {
+        setError('Please enter a valid email or phone number');
+        setIsLoading(false);
+        return;
+      }
+
+      // Call customer login API
       const apiEndpoint = isSaveAccountMode
         ? '/api/customer/save-account'
         : '/api/public/auth/customer-login';
@@ -98,7 +143,8 @@ function LoginForm() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: email.trim(),
+          // Send as email or phone based on input type
+          ...(isEmailInput ? { email: inputValue } : { phone: inputValue }),
           password: password.trim(),
           ...(isSaveAccountMode && {
             name: name.trim(),
@@ -137,41 +183,68 @@ function LoginForm() {
     }
   };
 
+  /**
+   * Handle back navigation
+   */
+  const handleBack = () => {
+    if (showAuthChoice) {
+      // If on auth choice, go back to previous page
+      handleGuestCheckout();
+    } else {
+      // If on login form, go back to auth choice
+      setShowAuthChoice(true);
+      setError('');
+    }
+  };
+
   return (
-    <>
+    <div className="min-h-screen bg-white dark:bg-gray-900 flex flex-col">
       {/* Header */}
-      <div className="sticky top-0 z-50 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between px-4 h-14">
-          <Link href="/" className="flex items-center gap-2">
-            <Image
-              className="dark:hidden"
-              src="/images/logo/icon.png"
-              alt="Genfity"
-              width={32}
-              height={32}
-              priority
-            />
-            <Image
-              className="hidden dark:block"
-              src="/images/logo/icon-dark-mode.png"
-              alt="Genfity"
-              width={32}
-              height={32}
-              priority
-            />
-            <span className="text-lg font-bold text-gray-900 dark:text-white">GENFITY</span>
-          </Link>
+      <header className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700 shadow-md">
+        <div className="flex items-center px-4 py-3">
+          <button
+            onClick={handleBack}
+            className="w-10 h-10 flex items-center justify-center -ml-2"
+            aria-label="Back"
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 12H5M12 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <h1 className="flex-1 text-center font-semibold text-gray-900 dark:text-white text-base pr-10">
+            {showAuthChoice ? 'Welcome' : 'Sign In'}
+          </h1>
         </div>
-      </div>
+      </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex items-center justify-center px-4 py-8">
+      <main className="flex-1 flex flex-col items-center justify-center px-4 py-8">
         <div className="w-full max-w-sm">
+          {/* Logo */}
+          <div className="flex justify-center mb-6">
+            <div className="flex items-center gap-2">
+              <Image
+                className="dark:hidden"
+                src="/images/logo/icon.png"
+                alt="Genfity"
+                width={40}
+                height={40}
+                priority
+              />
+              <Image
+                className="hidden dark:block"
+                src="/images/logo/icon-dark-mode.png"
+                alt="Genfity"
+                width={40}
+                height={40}
+                priority
+              />
+              <span className="text-xl font-bold text-gray-900 dark:text-white">GENFITY</span>
+            </div>
+          </div>
+
           {/* Title */}
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-              {showAuthChoice ? 'Welcome' : 'Sign In'}
-            </h1>
             <p className="text-sm text-gray-600 dark:text-gray-400">
               {showAuthChoice
                 ? 'Choose how to continue'
@@ -234,93 +307,108 @@ function LoginForm() {
 
               {/* Error Message */}
               {error && (
-                <div className="p-3 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 rounded text-sm text-red-600 dark:text-red-400">
+                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-600 dark:text-red-400">
                   {error}
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-3">
-                {/* Name Input with Icon - Only show in save-account mode */}
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Name Input - Only show in save-account mode */}
                 {isSaveAccountMode && (
-                  <div className="relative">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
-                    </div>
+                  <div>
+                    <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">
+                      Full Name
+                    </label>
                     <input
                       id="name"
                       type="text"
                       required
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="w-full h-12 pl-11 pr-4 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                      placeholder="Full Name"
+                      className="w-full h-12 px-4 border-b border-gray-300 dark:border-gray-600 text-base text-gray-900 dark:text-white placeholder-gray-400 bg-white dark:bg-gray-900 focus:outline-none focus:border-orange-500 transition-all"
+                      placeholder="Your full name"
                     />
                   </div>
                 )}
 
-                {/* Email Input with Icon */}
-                <div className="relative">
-                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                  </div>
+                {/* Email or Phone Input */}
+                <div>
+                  <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">
+                    Email or Phone Number
+                  </label>
                   <input
-                    id="email"
-                    type="email"
+                    id="emailOrPhone"
+                    type="text"
                     required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full h-12 pl-11 pr-4 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                    placeholder="Email"
+                    value={emailOrPhone}
+                    onChange={(e) => setEmailOrPhone(e.target.value)}
+                    className="w-full h-12 px-4 border-b border-gray-300 dark:border-gray-600 text-base text-gray-900 dark:text-white placeholder-gray-400 bg-white dark:bg-gray-900 focus:outline-none focus:border-orange-500 transition-all"
+                    placeholder="your@email.com or +628xxx"
                   />
                 </div>
 
-                {/* Phone Input with Icon - Only show in save-account mode */}
+                {/* Phone Input - Only show in save-account mode */}
                 {isSaveAccountMode && (
-                  <div className="relative">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                      </svg>
-                    </div>
+                  <div>
+                    <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">
+                      Phone Number (optional)
+                    </label>
                     <input
                       id="phone"
                       type="tel"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      className="w-full h-12 pl-11 pr-4 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                      placeholder="Phone Number (optional)"
+                      className="w-full h-12 px-4 border-b border-gray-300 dark:border-gray-600 text-base text-gray-900 dark:text-white placeholder-gray-400 bg-white dark:bg-gray-900 focus:outline-none focus:border-orange-500 transition-all"
+                      placeholder="+62xxx or +61xxx"
                     />
                   </div>
                 )}
 
-                {/* Password Input with Icon */}
-                <div className="relative">
-                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                    </svg>
+                {/* Password Input */}
+                <div>
+                  <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">
+                    Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full h-12 px-4 pr-12 border-b border-gray-300 dark:border-gray-600 text-base text-gray-900 dark:text-white placeholder-gray-400 bg-white dark:bg-gray-900 focus:outline-none focus:border-orange-500 transition-all"
+                      placeholder={isSaveAccountMode ? 'Create password (min. 6 chars)' : 'Your password'}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-gray-600"
+                    >
+                      {showPassword ? (
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                          <line x1="1" y1="1" x2="23" y2="23" />
+                        </svg>
+                      ) : (
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
+                      )}
+                    </button>
                   </div>
-                  <input
-                    id="password"
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full h-12 pl-11 pr-4 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                    placeholder={isSaveAccountMode ? "Create Password (min. 6 characters)" : "Password"}
-                  />
                 </div>
 
                 {/* Forgot Password Link - Only show in login mode */}
                 {!isSaveAccountMode && (
                   <div className="text-right">
-                    <a href="#" className="text-xs text-orange-500 hover:underline">
+                    <button
+                      type="button"
+                      onClick={handleForgotPassword}
+                      className="text-sm text-orange-500 hover:underline"
+                    >
                       Forgot password?
-                    </a>
+                    </button>
                   </div>
                 )}
 
@@ -328,22 +416,18 @@ function LoginForm() {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full h-12 bg-orange-500 text-white text-base font-semibold rounded-lg hover:bg-orange-600 transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+                  className="w-full h-12 bg-orange-500 text-white text-base font-semibold rounded-lg hover:bg-orange-600 transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed mt-4"
                 >
-                  {isLoading ? (isSaveAccountMode ? 'Saving...' : 'Signing in...') : (isSaveAccountMode ? 'Save Account' : 'Continue')}
+                  {isLoading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      {isSaveAccountMode ? 'Saving...' : 'Signing in...'}
+                    </span>
+                  ) : (
+                    isSaveAccountMode ? 'Save Account' : 'Sign In'
+                  )}
                 </button>
               </form>
-
-              {/* Back Button */}
-              <button
-                onClick={() => {
-                  setShowAuthChoice(true);
-                  setError('');
-                }}
-                className="w-full text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-              >
-                ← Back
-              </button>
 
               {/* Sign Up Info */}
               <p className="text-xs text-center text-gray-500 dark:text-gray-400 pt-4">
@@ -355,7 +439,7 @@ function LoginForm() {
       </main>
 
       {/* Footer */}
-      <footer className="px-4 py-6 border-t border-gray-200 dark:border-gray-700">
+      <footer className="px-4 py-4 border-t border-gray-200 dark:border-gray-700">
         <p className="text-xs text-center text-gray-500 dark:text-gray-400">
           By continuing, you agree to our{' '}
           <Link href="#" className="text-orange-500 hover:underline">
@@ -367,16 +451,17 @@ function LoginForm() {
           </Link>
         </p>
       </footer>
-    </>
+
+      {/* Powered By Footer */}
+      <div className="py-3 text-center text-xs text-gray-400">
+        Powered By <span className="font-semibold">GENFITY</span>
+      </div>
+    </div>
   );
 }
 
 /**
- * Customer Login Page
- * - Conditional rendering: Auth choice dialog first
- * - Two paths: Login or Guest checkout
- * - Passwordless auto-register on new email
- * - Ref parameter for navigation
+ * Customer Login Page with Suspense wrapper
  */
 export default function CustomerLoginPage() {
   return (

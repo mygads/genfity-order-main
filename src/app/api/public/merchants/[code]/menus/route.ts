@@ -132,6 +132,7 @@ export async function GET(
           displayOrder: item.displayOrder,
           trackStock: item.trackStock,
           stockQty: item.stockQty,
+          isActive: item.isActive, // ✅ Added for availability check
         })),
       })),
     }));

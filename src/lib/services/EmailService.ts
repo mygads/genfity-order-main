@@ -9,6 +9,7 @@ import {
   getPasswordNotificationTemplate,
   getOrderConfirmationTemplate,
   getOrderCompletedTemplate,
+  getCustomerWelcomeTemplate,
 } from '@/lib/utils/emailTemplates';
 
 // Track initialization to prevent duplicate logs
@@ -205,6 +206,35 @@ class EmailService {
     return this.sendEmail({
       to: params.to,
       subject: `Order Completed - ${params.orderNumber} | Thank you!`,
+      html,
+    });
+  }
+
+  /**
+   * Send welcome email to new customer (registered via checkout)
+   */
+  async sendCustomerWelcome(params: {
+    to: string;
+    name: string;
+    email: string;
+    phone: string;
+    tempPassword: string;
+  }): Promise<boolean> {
+    const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL}/login`;
+    const supportEmail = process.env.EMAIL_FROM || 'support@genfity.com';
+
+    const html = getCustomerWelcomeTemplate({
+      name: params.name,
+      email: params.email,
+      phone: params.phone,
+      tempPassword: params.tempPassword,
+      loginUrl,
+      supportEmail,
+    });
+
+    return this.sendEmail({
+      to: params.to,
+      subject: 'Welcome to GENFITY - Your Account Credentials',
       html,
     });
   }

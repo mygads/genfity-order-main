@@ -6,11 +6,11 @@ import MenuDetailModal from '@/components/menu/MenuDetailModal';
 import { useCart } from '@/context/CartContext'; // ✅ ADD THIS
 import type { CartItem } from '@/context/CartContext';
 import { formatCurrency } from '@/lib/utils/format';
-import { calculateCartSubtotal, calculatePriceBreakdown } from '@/lib/utils/priceCalculator';
+import { calculateCartSubtotal } from '@/lib/utils/priceCalculator';
 import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';
 
 interface MenuItem {
-  id: number;
+  id: string; // ✅ Fixed: String from API (BigInt serialized)
   name: string;
   description: string;
   price: number;
@@ -50,7 +50,6 @@ export default function ViewOrderPage() {
   const { cart, updateItem, removeItem, initializeCart } = useCart();
 
   const [isLoading, setIsLoading] = useState(true);
-  const [showPaymentDetails, setShowPaymentDetails] = useState(false);
   const [generalNotes, setGeneralNotes] = useState('');
   const [merchantTaxPercentage, setMerchantTaxPercentage] = useState(0);
   const [merchantServiceChargePercent, setMerchantServiceChargePercent] = useState(0);
@@ -157,9 +156,26 @@ export default function ViewOrderPage() {
   };
 
   // Handle Edit Item - Open modal with menu detail
+  // ✅ OPTIMIZED: Use cache first before fetching
   const handleEditItem = async (item: CartItem) => {
     try {
-      // Fetch menu detail with addons
+      // Check cache first
+      const menusCacheKey = `menus_${merchantCode}`;
+      const cachedMenus = sessionStorage.getItem(menusCacheKey);
+
+      if (cachedMenus) {
+        const menus = JSON.parse(cachedMenus);
+        const cachedMenu = menus.find((m: any) => m.id === item.menuId);
+        if (cachedMenu) {
+          console.log('✅ [VIEW ORDER] Using cached menu for edit');
+          setSelectedMenu(cachedMenu);
+          setEditingCartItem(item);
+          return;
+        }
+      }
+
+      // Fallback: Fetch menu detail with addons
+      console.log('🔄 [VIEW ORDER] Fetching menu from API');
       const response = await fetch(`/api/public/merchants/${merchantCode}/menus/${item.menuId}`);
       const data = await response.json();
 

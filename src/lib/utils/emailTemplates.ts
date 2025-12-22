@@ -8,13 +8,13 @@
  * Sent when new merchant/staff account is created
  */
 export function getPasswordNotificationTemplate(params: {
-  name: string;
-  email: string;
-  tempPassword: string;
-  dashboardUrl: string;
-  supportEmail: string;
+    name: string;
+    email: string;
+    tempPassword: string;
+    dashboardUrl: string;
+    supportEmail: string;
 }): string {
-  return `
+    return `
 <!DOCTYPE html>
 <html>
 <head>
@@ -187,30 +187,30 @@ export function getPasswordNotificationTemplate(params: {
  * Sent to customer after order is placed
  */
 export function getOrderConfirmationTemplate(params: {
-  customerName: string;
-  orderNumber: string;
-  merchantName: string;
-  orderType: string;
-  tableNumber?: string;
-  items: Array<{ name: string; quantity: number; price: number }>;
-  subtotal: number;
-  tax: number;
-  total: number;
-  trackingUrl: string;
+    customerName: string;
+    orderNumber: string;
+    merchantName: string;
+    orderType: string;
+    tableNumber?: string;
+    items: Array<{ name: string; quantity: number; price: number }>;
+    subtotal: number;
+    tax: number;
+    total: number;
+    trackingUrl: string;
 }): string {
-  const itemsHtml = params.items
-    .map(
-      (item) => `
+    const itemsHtml = params.items
+        .map(
+            (item) => `
     <tr>
         <td style="padding: 8px; border-bottom: 1px solid #eee;">${item.name}</td>
         <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">x${item.quantity}</td>
         <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">$${item.price.toFixed(2)}</td>
     </tr>
   `
-    )
-    .join('');
+        )
+        .join('');
 
-  return `
+    return `
 <!DOCTYPE html>
 <html>
 <head>
@@ -268,27 +268,27 @@ export function getOrderConfirmationTemplate(params: {
  * Sent to customer when order status changes to COMPLETED
  */
 export function getOrderCompletedTemplate(params: {
-  customerName: string;
-  orderNumber: string;
-  merchantName: string;
-  orderType: string;
-  items: Array<{ name: string; quantity: number; price: number }>;
-  total: number;
-  completedAt: string;
+    customerName: string;
+    orderNumber: string;
+    merchantName: string;
+    orderType: string;
+    items: Array<{ name: string; quantity: number; price: number }>;
+    total: number;
+    completedAt: string;
 }): string {
-  const itemsHtml = params.items
-    .map(
-      (item) => `
+    const itemsHtml = params.items
+        .map(
+            (item) => `
     <tr>
         <td style="padding: 8px; border-bottom: 1px solid #eee;">${item.name}</td>
         <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">x${item.quantity}</td>
         <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">$${item.price.toFixed(2)}</td>
     </tr>
   `
-    )
-    .join('');
+        )
+        .join('');
 
-  return `
+    return `
 <!DOCTYPE html>
 <html>
 <head>
@@ -353,6 +353,74 @@ export function getOrderCompletedTemplate(params: {
                 Powered by <strong style="color: #ff9800;">GENFITY</strong><br>
                 &copy; 2025 GENFITY. All rights reserved.
             </p>
+        </div>
+    </div>
+</body>
+</html>
+  `.trim();
+}
+
+/**
+ * Customer welcome email template
+ * Sent when new customer registers via checkout
+ */
+export function getCustomerWelcomeTemplate(params: {
+    name: string;
+    email: string;
+    phone: string;
+    tempPassword: string;
+    loginUrl: string;
+    supportEmail: string;
+}): string {
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; background-color: #f5f5f5;">
+    <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <div style="background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); padding: 30px; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">🍽️ Welcome to GENFITY!</h1>
+            <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">Your account has been created</p>
+        </div>
+        <div style="padding: 30px;">
+            <h2 style="color: #333; margin-top: 0;">Hi ${params.name}! 👋</h2>
+            <p style="color: #666; line-height: 1.6;">Thank you for your order! Your account has been created successfully. You can use the credentials below to login and track your orders.</p>
+            
+            <div style="background: #f9f9f9; padding: 20px; border-left: 4px solid #ff9800; margin: 25px 0; border-radius: 0 8px 8px 0;">
+                <p style="margin: 0 0 10px 0; color: #333;"><strong>📧 Email:</strong> <span style="color: #666;">${params.email}</span></p>
+                <p style="margin: 0 0 10px 0; color: #333;"><strong>📱 Phone:</strong> <span style="color: #666;">${params.phone}</span></p>
+                <p style="margin: 0; color: #333;"><strong>🔑 Temporary Password:</strong> 
+                    <code style="background: #fff3e0; padding: 4px 10px; border-radius: 4px; font-weight: bold; color: #e65100; font-family: 'Courier New', monospace;">${params.tempPassword}</code>
+                </p>
+            </div>
+            
+            <div style="background: #fff3cd; padding: 15px 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #ffc107;">
+                <strong style="color: #856404;">⚠️ Important:</strong><br>
+                <span style="color: #856404;">Please change your password after first login for security.</span>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="${params.loginUrl}" style="display: inline-block; background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); color: white; padding: 15px 35px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">
+                    Login to Your Account →
+                </a>
+            </div>
+            
+            <p style="color: #666; font-size: 14px; line-height: 1.6;">
+                With your account, you can:
+            </p>
+            <ul style="color: #666; font-size: 14px; line-height: 1.8;">
+                <li>Track your current orders in real-time</li>
+                <li>View your order history</li>
+                <li>Reorder your favorite items quickly</li>
+                <li>Save your delivery preferences</li>
+            </ul>
+        </div>
+        <div style="background: #f5f5f5; padding: 20px; text-align: center; font-size: 12px; color: #666;">
+            <p style="margin: 0 0 10px 0;">Questions? Contact us at <a href="mailto:${params.supportEmail}" style="color: #ff9800; text-decoration: none;">${params.supportEmail}</a></p>
+            <p style="margin: 0;">© ${new Date().getFullYear()} GENFITY. All rights reserved.</p>
         </div>
     </div>
 </body>

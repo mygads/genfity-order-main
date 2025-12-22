@@ -62,7 +62,7 @@ export default function FloatingCartButton({ merchantCode, mode }: FloatingCartB
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 max-w-[420px] mx-auto px-4 pb-5">
+    <div className="fixed bottom-0 left-0 right-0 z-50 max-w-[450px] mx-auto px-4 pb-5 ">
       <button
         onClick={handleClick}
         className={`
@@ -72,7 +72,7 @@ export default function FloatingCartButton({ merchantCode, mode }: FloatingCartB
           rounded-xl
           shadow-lg hover:shadow-xl
           transition-all duration-200
-          overflow-hidden
+          overflow-hidden shadow-xl
           ${pulse ? 'animate-pulse' : ''}
         `}
         aria-label={`Checkout: ${totalItems} items, total ${formatPrice(totalPrice)}`}

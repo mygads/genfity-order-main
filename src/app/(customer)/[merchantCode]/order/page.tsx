@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import OrderPageHeader from '@/components/customer/OrderPageHeader';
 import CategoryTabs from '@/components/customer/CategoryTabs';
@@ -19,6 +19,8 @@ import OutletInfoModal from '@/components/customer/OutletInfoModal';
 import { CustomerOrderSkeleton } from '@/components/common/SkeletonLoaders';
 import { getTableNumber } from '@/lib/utils/localStorage';
 import TableNumberModal from '@/components/customer/TableNumberModal';
+import { extractAddonDataFromMenus } from '@/lib/utils/addonExtractor';
+import { throttle } from '@/lib/utils/throttle';
 
 interface MenuItem {
   id: string; // ✅ String from API (BigInt serialized)
@@ -125,6 +127,7 @@ export default function MenuBrowsePage() {
   const [showTableBadge, setShowTableBadge] = useState(false); // Track if table badge should be shown in header
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({}); // References to category sections
   const { initializeCart, cart, updateItem, removeItem } = useCart();
+  const autoRefreshIntervalRef = useRef<NodeJS.Timeout | null>(null); // Auto-refresh interval
 
   const getMenuCartItems = (menuId: string): CartItem[] => {
     if (!cart) return [];
@@ -183,27 +186,15 @@ export default function MenuBrowsePage() {
   // Load Table Number & Always Show Modal for Dinein
   // ========================================
   useEffect(() => {
-    console.log('🔍 Loading table number...');
-    console.log('Mode:', mode);
-    console.log('Merchant Code:', merchantCode);
-
     if (mode === 'dinein') {
       const tableData = getTableNumber(merchantCode);
 
-      console.log('📋 Table Data:', tableData);
-
-      // Always show modal for dinein mode (even if table number exists)
-      // This allows users to check/change their table number
+      // Always show modal for dinein mode
       setShowTableModal(true);
 
       if (tableData?.tableNumber) {
         setTableNumber(tableData.tableNumber);
-        console.log('✅ Table number set:', tableData.tableNumber);
-      } else {
-        console.warn('⚠️ No table number found in localStorage');
       }
-    } else {
-      console.log('⚠️ Not dinein mode, skipping table number');
     }
   }, [merchantCode, mode]);
 
@@ -217,22 +208,39 @@ export default function MenuBrowsePage() {
   }, [searchParams]);
 
   // ========================================
-  // Fetch Merchant Info
+  // Fetch Merchant Info with Cache
   // ========================================
   useEffect(() => {
     const fetchMerchantInfo = async () => {
+      // Check cache first
+      const cacheKey = `merchant_info_${merchantCode}`;
+      const cached = sessionStorage.getItem(cacheKey);
+
+      if (cached) {
+        try {
+          const cachedData = JSON.parse(cached);
+          console.log('✅ [MERCHANT] Using cached merchant info');
+          setMerchantInfo(cachedData);
+          return;
+        } catch (err) {
+          console.warn('⚠️ [MERCHANT] Failed to parse cached merchant info, fetching fresh');
+        }
+      }
+
+      console.log('🔄 [MERCHANT] Fetching fresh merchant info');
       try {
         const response = await fetch(`/api/public/merchants/${merchantCode}`);
         const data = await response.json();
 
         if (data.success) {
-          console.log('✅ Merchant info loaded:', data.data);
           setMerchantInfo(data.data);
+          // Cache the data
+          sessionStorage.setItem(cacheKey, JSON.stringify(data.data));
         } else {
-          console.error('❌ Failed to fetch merchant info:', data.message);
+          console.error('❌ [MERCHANT] Failed to fetch merchant info:', data.message);
         }
       } catch (err) {
-        console.error('❌ Error fetching merchant info:', err);
+        console.error('❌ [MERCHANT] Error fetching merchant info:', err);
       }
     };
 
@@ -240,17 +248,43 @@ export default function MenuBrowsePage() {
   }, [merchantCode]);
 
   // ========================================
-  // Fetch Menu Data (Once, all items)
+  // Fetch Menu Data with Cache
   // ========================================
   useEffect(() => {
     const fetchData = async () => {
+      // Check cache first
+      const categoriesCacheKey = `categories_${merchantCode}`;
+      const menusCacheKey = `menus_${merchantCode}`;
+      const addonsCacheKey = `addons_cache_${merchantCode}`;
+      const cachedCategories = sessionStorage.getItem(categoriesCacheKey);
+      const cachedMenus = sessionStorage.getItem(menusCacheKey);
+      const cachedAddons = sessionStorage.getItem(addonsCacheKey);
+
+      if (cachedCategories && cachedMenus && cachedAddons) {
+        try {
+          const categories = JSON.parse(cachedCategories);
+          const menus = JSON.parse(cachedMenus);
+          const addons = JSON.parse(cachedAddons);
+          console.log('✅ [MENU] Using cached menu and addon data');
+          setCategories(categories);
+          setAllMenuItems(menus);
+          setMenuAddonsCache(addons);
+          setIsLoading(false);
+          return;
+        } catch (err) {
+          console.warn('⚠️ [MENU] Failed to parse cached data, fetching fresh');
+        }
+      }
+
+      // Fetch from API
+      console.log('🔄 [MENU] Fetching fresh menu data');
       setIsLoading(true);
       setError(null);
 
       try {
         const [categoriesRes, menusRes] = await Promise.all([
           fetch(`/api/public/merchants/${merchantCode}/categories`),
-          fetch(`/api/public/merchants/${merchantCode}/menus`), // Fetch all menus once
+          fetch(`/api/public/merchants/${merchantCode}/menus`),
         ]);
 
         const categoriesData = await categoriesRes.json();
@@ -259,6 +293,7 @@ export default function MenuBrowsePage() {
         if (categoriesData.success) {
           const sorted = categoriesData.data.sort((a: Category, b: Category) => a.sortOrder - b.sortOrder);
           setCategories(sorted);
+          sessionStorage.setItem(categoriesCacheKey, JSON.stringify(sorted));
         }
 
         if (menusData.success) {
@@ -269,6 +304,13 @@ export default function MenuBrowsePage() {
               price: typeof item.price === 'string' ? parseFloat(item.price) : item.price,
             }));
           setAllMenuItems(activeItems);
+          sessionStorage.setItem(menusCacheKey, JSON.stringify(activeItems));
+
+          // ✅ Extract addon data using utility function
+          const newAddonCache = extractAddonDataFromMenus(menusData.data);
+          setMenuAddonsCache(newAddonCache);
+          sessionStorage.setItem(addonsCacheKey, JSON.stringify(newAddonCache));
+          console.log('✅ [ADDONS] Extracted addon data from initial fetch. Cached', Object.keys(newAddonCache).length, 'menus');
         } else {
           setError(menusData.message || 'Failed to load menu');
         }
@@ -281,50 +323,57 @@ export default function MenuBrowsePage() {
     };
 
     fetchData();
-  }, [merchantCode]); // Only run once on mount
+  }, [merchantCode]);
 
   // ========================================
-  // Prefetch Addon Data in Background
+  // Auto-refresh menu data AND addon data every 10 seconds in background
   // ========================================
   useEffect(() => {
     if (allMenuItems.length === 0) return;
 
-    const prefetchAddons = async () => {
-      console.log('🔄 [PREFETCH] Starting addon prefetch for', allMenuItems.length, 'menus');
+    const autoRefreshData = async () => {
+      try {
+        console.log('🔄 [AUTO-REFRESH] Fetching latest menu and addon data...');
 
-      // Prefetch addons for all menu items in background
-      const promises = allMenuItems.map(async (menu) => {
-        try {
-          const response = await fetch(`/api/public/merchants/${merchantCode}/menus/${menu.id}/addons`);
-          const data = await response.json();
+        // Fetch menus (includes addon categories and items with stock info)
+        const menusResponse = await fetch(`/api/public/merchants/${merchantCode}/menus`);
+        const menusData = await menusResponse.json();
 
-          if (data.success) {
-            return { menuId: menu.id, addons: data.data };
-          }
-          return null;
-        } catch (err) {
-          console.error(`Failed to prefetch addons for menu ${menu.id}:`, err);
-          return null;
+        if (menusData.success) {
+          const activeItems = menusData.data
+            .filter((item: MenuItem) => item.isActive)
+            .map((item: MenuItem) => ({
+              ...item,
+              price: typeof item.price === 'string' ? parseFloat(item.price) : item.price,
+            }));
+
+          // Update menus state and cache
+          setAllMenuItems(activeItems);
+          sessionStorage.setItem(`menus_${merchantCode}`, JSON.stringify(activeItems));
+
+          // ✅ Extract addon data using utility function
+          const newAddonCache = extractAddonDataFromMenus(menusData.data);
+          setMenuAddonsCache(newAddonCache);
+          sessionStorage.setItem(`addons_cache_${merchantCode}`, JSON.stringify(newAddonCache));
+
+          console.log('✅ [AUTO-REFRESH] Menu and addon data updated');
         }
-      });
-
-      const results = await Promise.all(promises);
-
-      // Build cache object
-      const cache: Record<string, any> = {};
-      results.forEach((result) => {
-        if (result) {
-          cache[result.menuId] = result.addons;
-        }
-      });
-
-      setMenuAddonsCache(cache);
-      console.log('✅ [PREFETCH] Addon prefetch complete. Cached', Object.keys(cache).length, 'menus');
+      } catch (err) {
+        console.error('❌ [AUTO-REFRESH] Failed to refresh data:', err);
+      }
     };
 
-    // Run prefetch in background (non-blocking)
-    prefetchAddons();
-  }, [allMenuItems, merchantCode]);
+    // Set up interval for auto-refresh every 10 seconds
+    autoRefreshIntervalRef.current = setInterval(autoRefreshData, 10000);
+
+    // Cleanup interval on unmount
+    return () => {
+      if (autoRefreshIntervalRef.current) {
+        clearInterval(autoRefreshIntervalRef.current);
+        console.log('🛑 [AUTO-REFRESH] Stopped auto-refresh');
+      }
+    };
+  }, [allMenuItems.length, merchantCode]);
 
   useEffect(() => {
     initializeCart(merchantCode, mode as 'dinein' | 'takeaway');
@@ -342,7 +391,8 @@ export default function MenuBrowsePage() {
       }
     };
 
-    const handleScroll = () => {
+    // ✅ THROTTLED: Scroll handler with 100ms throttle for better performance
+    const handleScroll = throttle(() => {
       // Header height is 55px + optional 40px table bar
       const stickyHeaderHeight = mode === 'dinein' && tableNumber ? 95 : 55;
       // Category tabs are 48px when sticky
@@ -396,7 +446,9 @@ export default function MenuBrowsePage() {
           setActiveScrollTab(currentCategory);
         }
       }
-    };    // Update header height on mount and window resize
+    }, 100); // 100ms throttle
+
+    // Update header height on mount and window resize
     updateHeaderHeight();
     window.addEventListener('scroll', handleScroll);
     window.addEventListener('resize', updateHeaderHeight);
@@ -407,21 +459,33 @@ export default function MenuBrowsePage() {
     };
   }, [mode, tableNumber, selectedCategory, activeScrollTab]);
 
-  // Filter items by selected category
-  const displayedItems = selectedCategory === 'all'
-    ? allMenuItems
-    : allMenuItems.filter(item =>
-      item.categories?.some(cat => cat.id === selectedCategory)
-    );
+  // ✅ MEMOIZED: Filter items by selected category
+  const displayedItems = useMemo(() =>
+    selectedCategory === 'all'
+      ? allMenuItems
+      : allMenuItems.filter(item =>
+        item.categories?.some(cat => cat.id === selectedCategory)
+      ),
+    [allMenuItems, selectedCategory]
+  );
 
-  // Get promo items
-  const promoItems = allMenuItems.filter(item => item.isPromo && item.promoPrice);
+  // ✅ MEMOIZED: Get promo items
+  const promoItems = useMemo(() =>
+    allMenuItems.filter(item => item.isPromo && item.promoPrice),
+    [allMenuItems]
+  );
 
-  // Get "Best Seller" items (items with isBestSeller = true)
-  const bestSellerItems = allMenuItems.filter(item => item.isBestSeller);
+  // ✅ MEMOIZED: Get "Best Seller" items
+  const bestSellerItems = useMemo(() =>
+    allMenuItems.filter(item => item.isBestSeller),
+    [allMenuItems]
+  );
 
-  // Get "Recommendation" items (items with isRecommended = true)
-  const recommendationItems = allMenuItems.filter(item => item.isRecommended);
+  // ✅ MEMOIZED: Get "Recommendation" items
+  const recommendationItems = useMemo(() =>
+    allMenuItems.filter(item => item.isRecommended),
+    [allMenuItems]
+  );
 
   // ========================================
   // RENDER - NEW LAYOUT
