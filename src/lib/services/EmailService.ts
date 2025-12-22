@@ -77,7 +77,7 @@ class EmailService {
 
     try {
       const info = await this.transporter.sendMail({
-        from: options.from || process.env.EMAIL_FROM || 'noreply@genfity.com',
+        from: options.from || process.env.SMTP_FROM_EMAIL || 'noreply@genfity.com',
         to: options.to,
         subject: options.subject,
         html: options.html,
@@ -235,6 +235,32 @@ class EmailService {
     return this.sendEmail({
       to: params.to,
       subject: 'Welcome to GENFITY - Your Account Credentials',
+      html,
+    });
+  }
+
+  /**
+   * Send password reset OTP email
+   */
+  async sendPasswordResetOTP(params: {
+    to: string;
+    name: string;
+    code: string;
+    expiresInMinutes: number;
+  }): Promise<boolean> {
+    const { getPasswordResetOTPTemplate } = await import('@/lib/utils/emailTemplates');
+    const supportEmail = process.env.EMAIL_FROM || process.env.SMTP_FROM_EMAIL || 'support@genfity.com';
+
+    const html = getPasswordResetOTPTemplate({
+      name: params.name,
+      code: params.code,
+      expiresInMinutes: params.expiresInMinutes,
+      supportEmail,
+    });
+
+    return this.sendEmail({
+      to: params.to,
+      subject: `${params.code} - Your Password Reset Code`,
       html,
     });
   }

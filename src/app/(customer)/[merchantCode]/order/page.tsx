@@ -363,8 +363,8 @@ export default function MenuBrowsePage() {
       }
     };
 
-    // Set up interval for auto-refresh every 10 seconds
-    autoRefreshIntervalRef.current = setInterval(autoRefreshData, 10000);
+    // Set up interval for auto-refresh every 15 seconds
+    autoRefreshIntervalRef.current = setInterval(autoRefreshData, 15000);
 
     // Cleanup interval on unmount
     return () => {

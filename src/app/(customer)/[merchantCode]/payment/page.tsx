@@ -385,9 +385,14 @@ export default function PaymentPage() {
 
     } catch (err) {
       console.error('❌ Payment error:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred';
+      setError(errorMessage);
       setIsLoading(false);
       setIsProcessingOrder(false);
+      setShowConfirmModal(false);
+
+      // ✅ Scroll to top to show error message
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 

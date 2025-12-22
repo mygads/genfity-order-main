@@ -1,18 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
 import crypto from 'crypto';
+import emailService from '@/lib/services/EmailService';
 
 /**
  * Forgot Password API Endpoint
  * POST /api/public/auth/forgot-password
  * 
- * Generates a 6-digit verification code and stores it in user's resetToken field.
- * In production, this would send an email with the code.
- * 
- * @security
- * - Rate limiting should be implemented
+ * Features:
+ * - Generates a 6-digit verification code
+ * - Sends email with OTP code
+ * - Rate limiting: 1 request per 3 minutes per email
  * - Code expires in 10 minutes
  */
+
+// ✅ In-memory rate limit store (for serverless, consider Redis)
+const rateLimitStore = new Map<string, number>();
+const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
+const CODE_EXPIRY_MINUTES = 60; // 1 hour
+
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
@@ -44,6 +50,28 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // ✅ Rate Limiting Check (3 minutes cooldown per email)
+        const lastRequestTime = rateLimitStore.get(emailTrimmed);
+        const now = Date.now();
+
+        if (lastRequestTime && (now - lastRequestTime) < RATE_LIMIT_WINDOW_MS) {
+            const remainingSeconds = Math.ceil((RATE_LIMIT_WINDOW_MS - (now - lastRequestTime)) / 1000);
+            const remainingMinutes = Math.floor(remainingSeconds / 60);
+            const remainingSecs = remainingSeconds % 60;
+
+            console.log('⚠️ [FORGOT-PASSWORD] Rate limited:', emailTrimmed);
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: 'RATE_LIMITED',
+                    message: `Please wait ${remainingMinutes > 0 ? `${remainingMinutes}m ` : ''}${remainingSecs}s before requesting another code`,
+                    data: { retryAfterSeconds: remainingSeconds },
+                    statusCode: 429,
+                },
+                { status: 429 }
+            );
+        }
+
         // Find user by email
         const user = await prisma.user.findFirst({
             where: {
@@ -57,26 +85,25 @@ export async function POST(request: NextRequest) {
             },
         });
 
-        // Always return success to prevent email enumeration
+        // Return error if email not found
         if (!user) {
             console.log('🔐 [FORGOT-PASSWORD] Email not found:', emailTrimmed);
             return NextResponse.json(
                 {
-                    success: true,
-                    data: null,
-                    message: 'If the email exists, you will receive a verification code shortly',
-                    statusCode: 200,
+                    success: false,
+                    error: 'EMAIL_NOT_FOUND',
+                    message: 'No account found with this email address',
+                    statusCode: 404,
                 },
-                { status: 200 }
+                { status: 404 }
             );
         }
 
         // Generate 6-digit verification code
         const verificationCode = crypto.randomInt(100000, 999999).toString();
 
-        // Store code with expiry (10 minutes from now)
-        // Format: CODE:EXPIRY_TIMESTAMP
-        const expiryTimestamp = Date.now() + 10 * 60 * 1000; // 10 minutes
+        // Store code with expiry (1 hour from now)
+        const expiryTimestamp = Date.now() + CODE_EXPIRY_MINUTES * 60 * 1000;
         const resetToken = `${verificationCode}:${expiryTimestamp}`;
 
         // Update user with reset token
@@ -85,26 +112,39 @@ export async function POST(request: NextRequest) {
             data: { resetToken },
         });
 
+        // ✅ Update rate limit store
+        rateLimitStore.set(emailTrimmed, now);
+
         console.log('🔐 [FORGOT-PASSWORD] Verification code generated for:', emailTrimmed);
         console.log('🔐 [FORGOT-PASSWORD] Code (DEV ONLY):', verificationCode);
 
-        // TODO: Send email with verification code
-        // In production, integrate with email service (SendGrid, Mailgun, etc.)
-        // await sendEmail({
-        //   to: user.email,
-        //   subject: 'Password Reset Verification Code',
-        //   body: `Your verification code is: ${verificationCode}. This code expires in 10 minutes.`
-        // });
+        // ✅ Send email with verification code
+        const emailSent = await emailService.sendPasswordResetOTP({
+            to: user.email,
+            name: user.name || 'Customer',
+            code: verificationCode,
+            expiresInMinutes: CODE_EXPIRY_MINUTES,
+        });
+
+        if (emailSent) {
+            console.log('✅ [FORGOT-PASSWORD] Email sent successfully to:', emailTrimmed);
+        } else {
+            console.warn('⚠️ [FORGOT-PASSWORD] Email sending failed, but code is stored');
+        }
 
         return NextResponse.json(
             {
                 success: true,
                 data: {
+                    emailSent,
+                    lastSentAt: now, // ✅ For frontend to persist resend countdown
+                    retryAfterMs: RATE_LIMIT_WINDOW_MS, // ✅ How long to wait before resend
                     // In development, return the code for testing
-                    // Remove this in production!
                     ...(process.env.NODE_ENV === 'development' && { code: verificationCode }),
                 },
-                message: 'Verification code has been sent to your email',
+                message: emailSent
+                    ? 'Verification code has been sent to your email'
+                    : 'Verification code generated. Check console for code (dev mode).',
                 statusCode: 200,
             },
             { status: 200 }

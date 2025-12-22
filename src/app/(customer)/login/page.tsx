@@ -61,10 +61,28 @@ function LoginForm() {
 
   /**
    * Handle "Continue as Guest" - go back to previous page
+   * ✅ Smart redirect: if ref is a protected page, go to order instead
    */
   const handleGuestCheckout = () => {
+    // Protected page patterns that require authentication
+    const protectedPatterns = ['/history', '/profile', '/view-order', '/order-summary'];
+
     if (ref) {
-      router.push(decodeURIComponent(ref));
+      const decodedRef = decodeURIComponent(ref);
+
+      // Check if ref points to a protected page
+      const isProtectedPage = protectedPatterns.some(pattern =>
+        decodedRef.includes(pattern)
+      );
+
+      if (isProtectedPage && merchant) {
+        // Redirect to order page instead of protected page
+        router.push(`/${merchant}/order?mode=${mode || 'dinein'}`);
+        return;
+      }
+
+      // Safe to redirect to ref
+      router.push(decodedRef);
     } else if (merchant && mode) {
       router.push(`/${merchant}/order?mode=${mode}`);
     } else if (merchant) {
@@ -439,7 +457,7 @@ function LoginForm() {
       </main>
 
       {/* Footer */}
-      <footer className="px-4 py-4 border-t border-gray-200 dark:border-gray-700">
+      {/* <footer className="px-4 py-4 border-t border-gray-200 dark:border-gray-700">
         <p className="text-xs text-center text-gray-500 dark:text-gray-400">
           By continuing, you agree to our{' '}
           <Link href="#" className="text-orange-500 hover:underline">
@@ -450,11 +468,19 @@ function LoginForm() {
             Privacy Policy
           </Link>
         </p>
-      </footer>
+      </footer> */}
 
       {/* Powered By Footer */}
-      <div className="py-3 text-center text-xs text-gray-400">
-        Powered By <span className="font-semibold">GENFITY</span>
+      <div className="py-6 text-center text-xs text-gray-500 dark:text-gray-400">
+        Powered By{' '}
+        <a
+          href="https://genfity.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-semibold hover:text-orange-500 transition-colors"
+        >
+          Genfity Digital Solution
+        </a>
       </div>
     </div>
   );

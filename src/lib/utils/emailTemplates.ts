@@ -1,11 +1,189 @@
 /**
- * Email Templates
- * HTML templates for email notifications (STEP_03)
+ * Email Templates - Professional Clean Design
+ * Inspired by shadcn/ui - minimal, clean, modern
  */
 
+// Base URL for logo (set in env or fallback)
+const getLogoUrl = () => process.env.NEXT_PUBLIC_APP_URL
+    ? `${process.env.NEXT_PUBLIC_APP_URL}/images/logo/logo.png`
+    : 'https://genfity.com/images/logo/logo.png';
+
 /**
- * Password notification email template
- * Sent when new merchant/staff account is created
+ * Shared email base template - Clean shadcn-inspired design
+ */
+function getBaseTemplate(content: string, footerEmail: string): string {
+    return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Genfity</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #fafafa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #fafafa; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 480px; background-color: #ffffff; border-radius: 12px; border: 1px solid #e5e5e5; overflow: hidden;">
+          <!-- Header with Logo -->
+          <tr>
+            <td style="padding: 32px 32px 24px 32px; border-bottom: 1px solid #f0f0f0;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center">
+                    <!-- SVG Text Logo (works in all email clients) -->
+                    <div style="font-size: 28px; font-weight: 700; color: #171717; letter-spacing: -0.5px;">
+                      <span style="color: #f97316;">●</span> Genfity
+                    </div>
+                    <p style="margin: 4px 0 0 0; font-size: 12px; color: #a3a3a3; letter-spacing: 0.5px;">
+                      DIGITAL ORDERING SOLUTION
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Content -->
+          <tr>
+            <td style="padding: 32px;">
+              ${content}
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 24px 32px; background-color: #fafafa; border-top: 1px solid #f0f0f0;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center">
+                    <p style="margin: 0 0 8px 0; font-size: 13px; color: #737373;">
+                      Need assistance? <a href="mailto:sales@genfity.com" style="color: #171717; text-decoration: underline;">sales@genfity.com</a>
+                    </p>
+                    <p style="margin: 0; font-size: 12px; color: #a3a3a3;">
+                      © ${new Date().getFullYear()} Genfity Digital Solution. All rights reserved.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`.trim();
+}
+
+/**
+ * Password Reset OTP Email Template
+ */
+export function getPasswordResetOTPTemplate(params: {
+    name: string;
+    code: string;
+    expiresInMinutes: number;
+    supportEmail: string;
+}): string {
+    const content = `
+    <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #171717; text-align: center;">
+      Reset Your Password
+    </h1>
+    <p style="margin: 0 0 24px 0; font-size: 14px; color: #737373; text-align: center;">
+      Hi ${params.name}, use the code below to reset your password.
+    </p>
+    
+    <!-- OTP Code -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
+      <tr>
+        <td align="center">
+          <div style="background-color: #f5f5f5; border: 1px solid #e5e5e5; border-radius: 8px; padding: 20px 32px; display: inline-block;">
+            <span style="font-family: 'SF Mono', 'Roboto Mono', monospace; font-size: 32px; font-weight: 700; letter-spacing: 6px; color: #171717;">
+              ${params.code}
+            </span>
+          </div>
+        </td>
+      </tr>
+    </table>
+    
+    <p style="margin: 24px 0 0 0; font-size: 13px; color: #a3a3a3; text-align: center;">
+      This code expires in <strong style="color: #737373;">${params.expiresInMinutes} minutes</strong>
+    </p>
+    
+    <hr style="border: none; border-top: 1px solid #f0f0f0; margin: 24px 0;" />
+    
+    <p style="margin: 0; font-size: 12px; color: #a3a3a3; text-align: center;">
+      If you didn't request this, you can safely ignore this email.
+    </p>
+  `;
+
+    return getBaseTemplate(content, params.supportEmail);
+}
+
+/**
+ * Customer Welcome Email Template
+ * Sent to new customers after their first order
+ */
+export function getCustomerWelcomeTemplate(params: {
+    name: string;
+    email: string;
+    phone: string;
+    tempPassword: string;
+    loginUrl: string;
+    supportEmail: string;
+}): string {
+    const content = `
+    <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #171717; text-align: center;">
+      Welcome to Genfity
+    </h1>
+    <p style="margin: 0 0 24px 0; font-size: 14px; color: #737373; text-align: center;">
+      Your account has been created successfully.
+    </p>
+    
+    <!-- Credentials Box -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; border: 1px solid #e5e5e5; border-radius: 8px; margin: 24px 0;">
+      <tr>
+        <td style="padding: 20px;">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="padding: 8px 0;">
+                <span style="font-size: 12px; color: #737373; text-transform: uppercase; letter-spacing: 0.5px;">Email</span>
+                <p style="margin: 4px 0 0 0; font-size: 14px; font-weight: 500; color: #171717;">${params.email}</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; border-top: 1px solid #e5e5e5;">
+                <span style="font-size: 12px; color: #737373; text-transform: uppercase; letter-spacing: 0.5px;">Temporary Password</span>
+                <p style="margin: 4px 0 0 0; font-family: 'SF Mono', 'Roboto Mono', monospace; font-size: 16px; font-weight: 600; color: #171717; letter-spacing: 1px;">${params.tempPassword}</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+    
+    <!-- CTA Button -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
+      <tr>
+        <td align="center">
+          <a href="${params.loginUrl}" style="display: inline-block; background-color: #171717; color: #ffffff; font-size: 14px; font-weight: 500; padding: 12px 32px; border-radius: 6px; text-decoration: none;">
+            Sign In to Your Account
+          </a>
+        </td>
+      </tr>
+    </table>
+    
+    <p style="margin: 0; font-size: 12px; color: #a3a3a3; text-align: center;">
+      Please change your password after signing in.
+    </p>
+  `;
+
+    return getBaseTemplate(content, params.supportEmail);
+}
+
+/**
+ * Password Notification Template (for merchants/staff)
  */
 export function getPasswordNotificationTemplate(params: {
     name: string;
@@ -14,177 +192,57 @@ export function getPasswordNotificationTemplate(params: {
     dashboardUrl: string;
     supportEmail: string;
 }): string {
-    return `
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f5f5f5;
-            margin: 0;
-            padding: 0;
-        }
-        .container {
-            max-width: 600px;
-            margin: 20px auto;
-            background-color: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .header {
-            text-align: center;
-            border-bottom: 2px solid #ff9800;
-            padding-bottom: 15px;
-            margin-bottom: 20px;
-        }
-        .header h1 {
-            color: #ff9800;
-            margin: 0;
-            font-size: 32px;
-        }
-        .header p {
-            color: #666;
-            margin: 5px 0 0 0;
-        }
-        .content {
-            padding: 20px 0;
-            color: #333;
-            line-height: 1.6;
-        }
-        .credentials {
-            background-color: #f9f9f9;
-            padding: 20px;
-            border-left: 4px solid #ff9800;
-            margin: 20px 0;
-            border-radius: 4px;
-        }
-        .credentials .label {
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 5px;
-        }
-        .credentials .value {
-            font-family: 'Courier New', monospace;
-            color: #ff9800;
-            font-weight: bold;
-            font-size: 16px;
-            background-color: white;
-            padding: 8px 12px;
-            border-radius: 4px;
-            margin-top: 5px;
-            display: inline-block;
-        }
-        .warning {
-            background-color: #fff3cd;
-            padding: 15px;
-            border-radius: 4px;
-            margin: 20px 0;
-            border-left: 4px solid #ffc107;
-        }
-        .warning strong {
-            color: #856404;
-        }
-        .button {
-            display: inline-block;
-            background-color: #ff9800;
-            color: white !important;
-            padding: 14px 28px;
-            border-radius: 4px;
-            text-decoration: none;
-            font-weight: bold;
-            margin: 20px 0;
-        }
-        .button:hover {
-            background-color: #e68900;
-        }
-        .steps {
-            background-color: #f0f0f0;
-            padding: 15px 20px;
-            border-radius: 4px;
-            margin: 20px 0;
-        }
-        .steps ol {
-            margin: 10px 0;
-            padding-left: 20px;
-        }
-        .steps li {
-            margin: 8px 0;
-        }
-        .footer {
-            text-align: center;
-            font-size: 12px;
-            color: #999;
-            border-top: 1px solid #eee;
-            padding-top: 20px;
-            margin-top: 30px;
-        }
-        .footer a {
-            color: #ff9800;
-            text-decoration: none;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>🍽️ GENFITY</h1>
-            <p>Online Ordering Platform for Restaurants</p>
-        </div>
+    const content = `
+    <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #171717; text-align: center;">
+      Your Account is Ready
+    </h1>
+    <p style="margin: 0 0 24px 0; font-size: 14px; color: #737373; text-align: center;">
+      Hi ${params.name}, your merchant account has been created.
+    </p>
+    
+    <!-- Credentials Box -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; border: 1px solid #e5e5e5; border-radius: 8px; margin: 24px 0;">
+      <tr>
+        <td style="padding: 20px;">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="padding: 8px 0;">
+                <span style="font-size: 12px; color: #737373; text-transform: uppercase; letter-spacing: 0.5px;">Email</span>
+                <p style="margin: 4px 0 0 0; font-size: 14px; font-weight: 500; color: #171717;">${params.email}</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; border-top: 1px solid #e5e5e5;">
+                <span style="font-size: 12px; color: #737373; text-transform: uppercase; letter-spacing: 0.5px;">Temporary Password</span>
+                <p style="margin: 4px 0 0 0; font-family: 'SF Mono', 'Roboto Mono', monospace; font-size: 16px; font-weight: 600; color: #171717; letter-spacing: 1px;">${params.tempPassword}</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+    
+    <!-- CTA Button -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
+      <tr>
+        <td align="center">
+          <a href="${params.dashboardUrl}" style="display: inline-block; background-color: #171717; color: #ffffff; font-size: 14px; font-weight: 500; padding: 12px 32px; border-radius: 6px; text-decoration: none;">
+            Open Dashboard
+          </a>
+        </td>
+      </tr>
+    </table>
+    
+    <p style="margin: 0; font-size: 12px; color: #a3a3a3; text-align: center;">
+      For security, please change your password after your first login.
+    </p>
+  `;
 
-        <div class="content">
-            <h2 style="color: #333;">Welcome! Your Account Has Been Created</h2>
-            <p>Hello <strong>${params.name}</strong>,</p>
-            <p>We're pleased to inform you that your account on the GENFITY platform has been activated.</p>
-
-            <div class="credentials">
-                <div class="label">📧 Email:</div>
-                <div class="value">${params.email}</div>
-                <br><br>
-                <div class="label">🔑 Temporary Password:</div>
-                <div class="value">${params.tempPassword}</div>
-            </div>
-
-            <div style="text-align: center;">
-                <a href="${params.dashboardUrl}" class="button">Login to Dashboard</a>
-            </div>
-
-            <div class="warning">
-                <strong>⚠️ IMPORTANT:</strong><br>
-                ✓ Change your password when you login for the first time!<br>
-                ✓ Do not share this password with anyone.<br>
-                ✓ Keep this email in a safe place.
-            </div>
-
-            <div class="steps">
-                <h3 style="margin-top: 0; color: #333;">Next Steps:</h3>
-                <ol>
-                    <li>Open the <a href="${params.dashboardUrl}" style="color: #ff9800;">Merchant Dashboard</a></li>
-                    <li>Login with the email and temporary password above</li>
-                    <li>Change your password to a stronger one</li>
-                    <li>Start setting up your menu & merchant configuration</li>
-                </ol>
-            </div>
-
-            <p>If you have any questions, please contact us at <strong>${params.supportEmail}</strong>.</p>
-        </div>
-
-        <div class="footer">
-            &copy; 2025 GENFITY. All rights reserved.<br>
-            Powered by GENFITY | <a href="#">Privacy Policy</a>
-        </div>
-    </div>
-</body>
-</html>
-  `.trim();
+    return getBaseTemplate(content, params.supportEmail);
 }
 
 /**
- * Order confirmation email template
- * Sent to customer after order is placed
+ * Order Confirmation Template
  */
 export function getOrderConfirmationTemplate(params: {
     customerName: string;
@@ -198,74 +256,89 @@ export function getOrderConfirmationTemplate(params: {
     total: number;
     trackingUrl: string;
 }): string {
-    const itemsHtml = params.items
-        .map(
-            (item) => `
+    const itemsHtml = params.items.map(item => `
     <tr>
-        <td style="padding: 8px; border-bottom: 1px solid #eee;">${item.name}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">x${item.quantity}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">$${item.price.toFixed(2)}</td>
+      <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0;">
+        <span style="font-size: 14px; color: #171717;">${item.name}</span>
+        <span style="font-size: 13px; color: #737373;"> × ${item.quantity}</span>
+      </td>
+      <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; text-align: right;">
+        <span style="font-size: 14px; color: #171717;">$${item.price.toFixed(2)}</span>
+      </td>
     </tr>
-  `
-        )
-        .join('');
+  `).join('');
 
-    return `
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <style>
-        body { font-family: Arial, sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
-        .container { max-width: 600px; margin: 20px auto; background-color: white; padding: 20px; }
-        .header { text-align: center; border-bottom: 2px solid #ff9800; padding-bottom: 15px; }
-        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1 style="color: #ff9800;">Order Confirmed!</h1>
-        </div>
-        <h2>Hello ${params.customerName},</h2>
-        <p>Your order at <strong>${params.merchantName}</strong> has been received.</p>
-        <p><strong>Order Number:</strong> ${params.orderNumber}</p>
-        <p><strong>Order Type:</strong> ${params.orderType}</p>
-        ${params.tableNumber ? `<p><strong>Table Number:</strong> ${params.tableNumber}</p>` : ''}
-        
-        <h3>Order Details:</h3>
-        <table>
-            ${itemsHtml}
-            <tr>
-                <td colspan="2" style="padding: 8px; text-align: right;"><strong>Subtotal:</strong></td>
-                <td style="padding: 8px; text-align: right;">$${params.subtotal.toFixed(2)}</td>
-            </tr>
-            <tr>
-                <td colspan="2" style="padding: 8px; text-align: right;"><strong>Tax:</strong></td>
-                <td style="padding: 8px; text-align: right;">$${params.tax.toFixed(2)}</td>
-            </tr>
-            <tr style="background-color: #f9f9f9;">
-                <td colspan="2" style="padding: 12px; text-align: right;"><strong>Total:</strong></td>
-                <td style="padding: 12px; text-align: right; font-size: 18px; color: #ff9800;"><strong>$${params.total.toFixed(2)}</strong></td>
-            </tr>
-        </table>
-        
-        <p style="text-align: center;">
-            <a href="${params.trackingUrl}" style="display: inline-block; background-color: #ff9800; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px;">Track Your Order</a>
-        </p>
-        
-        <p style="text-align: center; color: #666; font-size: 12px;">
-            &copy; 2025 GENFITY. All rights reserved.
-        </p>
+    const content = `
+    <div style="text-align: center; margin-bottom: 24px;">
+      <div style="display: inline-block; background-color: #f0fdf4; border-radius: 50%; padding: 16px; margin-bottom: 16px;">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2">
+          <polyline points="20,6 9,17 4,12"></polyline>
+        </svg>
+      </div>
+      <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #171717;">
+        Order Confirmed
+      </h1>
+      <p style="margin: 0; font-size: 14px; color: #737373;">
+        Thank you, ${params.customerName}!
+      </p>
     </div>
-</body>
-</html>
-  `.trim();
+    
+    <!-- Order Info -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; border-radius: 8px; margin: 24px 0;">
+      <tr>
+        <td style="padding: 16px;">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="font-size: 12px; color: #737373;">Order Number</td>
+              <td style="font-size: 14px; font-weight: 600; color: #171717; text-align: right;">${params.orderNumber}</td>
+            </tr>
+            <tr>
+              <td style="font-size: 12px; color: #737373; padding-top: 8px;">Restaurant</td>
+              <td style="font-size: 14px; color: #171717; text-align: right; padding-top: 8px;">${params.merchantName}</td>
+            </tr>
+            <tr>
+              <td style="font-size: 12px; color: #737373; padding-top: 8px;">Order Type</td>
+              <td style="font-size: 14px; color: #171717; text-align: right; padding-top: 8px;">${params.orderType}${params.tableNumber ? ` - Table ${params.tableNumber}` : ''}</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+    
+    <!-- Items -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
+      ${itemsHtml}
+      <tr>
+        <td style="padding: 8px 0; font-size: 13px; color: #737373;">Subtotal</td>
+        <td style="padding: 8px 0; font-size: 13px; color: #737373; text-align: right;">$${params.subtotal.toFixed(2)}</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px 0; font-size: 13px; color: #737373;">Tax</td>
+        <td style="padding: 8px 0; font-size: 13px; color: #737373; text-align: right;">$${params.tax.toFixed(2)}</td>
+      </tr>
+      <tr>
+        <td style="padding: 12px 0; font-size: 16px; font-weight: 600; color: #171717; border-top: 1px solid #e5e5e5;">Total</td>
+        <td style="padding: 12px 0; font-size: 16px; font-weight: 600; color: #171717; text-align: right; border-top: 1px solid #e5e5e5;">$${params.total.toFixed(2)}</td>
+      </tr>
+    </table>
+    
+    <!-- Track Button -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
+      <tr>
+        <td align="center">
+          <a href="${params.trackingUrl}" style="display: inline-block; background-color: #171717; color: #ffffff; font-size: 14px; font-weight: 500; padding: 12px 32px; border-radius: 6px; text-decoration: none;">
+            Track Your Order
+          </a>
+        </td>
+      </tr>
+    </table>
+  `;
+
+    return getBaseTemplate(content, 'support@genfity.com');
 }
 
 /**
- * Order completed email template
- * Sent to customer when order status changes to COMPLETED
+ * Order Completed Template
  */
 export function getOrderCompletedTemplate(params: {
     customerName: string;
@@ -276,154 +349,48 @@ export function getOrderCompletedTemplate(params: {
     total: number;
     completedAt: string;
 }): string {
-    const itemsHtml = params.items
-        .map(
-            (item) => `
-    <tr>
-        <td style="padding: 8px; border-bottom: 1px solid #eee;">${item.name}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">x${item.quantity}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">$${item.price.toFixed(2)}</td>
-    </tr>
-  `
-        )
-        .join('');
+    const itemsList = params.items.map(item =>
+        `<li style="margin: 4px 0; font-size: 14px; color: #525252;">${item.name} × ${item.quantity}</li>`
+    ).join('');
 
-    return `
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <style>
-        body { font-family: Arial, sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
-        .container { max-width: 600px; margin: 20px auto; background-color: white; padding: 20px; border-radius: 8px; }
-        .header { text-align: center; border-bottom: 2px solid #22c55e; padding-bottom: 15px; }
-        .success-icon { font-size: 48px; margin-bottom: 10px; }
-        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <div class="success-icon">✅</div>
-            <h1 style="color: #22c55e; margin: 0;">Order Completed!</h1>
-        </div>
-        
-        <div style="padding: 20px 0;">
-            <h2 style="color: #333;">Thank you, ${params.customerName}!</h2>
-            <p style="color: #666;">Your order at <strong>${params.merchantName}</strong> has been completed successfully.</p>
-            
-            <div style="background-color: #f0fdf4; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #22c55e;">
-                <p style="margin: 0; color: #166534;">
-                    <strong>Order Number:</strong> ${params.orderNumber}<br>
-                    <strong>Order Type:</strong> ${params.orderType}<br>
-                    <strong>Completed At:</strong> ${params.completedAt}
-                </p>
-            </div>
-            
-            <h3 style="color: #333;">Order Summary:</h3>
-            <table>
-                <thead>
-                    <tr style="background-color: #f9f9f9;">
-                        <th style="padding: 10px; text-align: left;">Item</th>
-                        <th style="padding: 10px; text-align: center;">Qty</th>
-                        <th style="padding: 10px; text-align: right;">Price</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${itemsHtml}
-                </tbody>
-                <tfoot>
-                    <tr style="background-color: #f0fdf4;">
-                        <td colspan="2" style="padding: 12px; text-align: right;"><strong>Total Paid:</strong></td>
-                        <td style="padding: 12px; text-align: right; font-size: 18px; color: #22c55e;"><strong>$${params.total.toFixed(2)}</strong></td>
-                    </tr>
-                </tfoot>
-            </table>
-            
-            <div style="background-color: #fef9c3; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                <p style="margin: 0; color: #854d0e;">
-                    <strong>💬 We'd love your feedback!</strong><br>
-                    Thank you for ordering with us. We hope you enjoyed your meal!
-                </p>
-            </div>
-        </div>
-        
-        <div style="text-align: center; border-top: 1px solid #eee; padding-top: 20px; color: #666; font-size: 12px;">
-            <p style="margin: 0;">
-                Powered by <strong style="color: #ff9800;">GENFITY</strong><br>
-                &copy; 2025 GENFITY. All rights reserved.
-            </p>
-        </div>
+    const content = `
+    <div style="text-align: center; margin-bottom: 24px;">
+      <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #171717;">
+        Order Complete! 🎉
+      </h1>
+      <p style="margin: 0; font-size: 14px; color: #737373;">
+        Thanks for dining with ${params.merchantName}
+      </p>
     </div>
-</body>
-</html>
-  `.trim();
-}
+    
+    <!-- Order Summary -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; border-radius: 8px; margin: 24px 0;">
+      <tr>
+        <td style="padding: 20px;">
+          <p style="margin: 0 0 4px 0; font-size: 12px; color: #737373; text-transform: uppercase; letter-spacing: 0.5px;">Order #${params.orderNumber}</p>
+          <p style="margin: 0 0 16px 0; font-size: 12px; color: #a3a3a3;">${params.completedAt}</p>
+          
+          <ul style="margin: 0; padding: 0 0 0 16px; list-style-type: disc;">
+            ${itemsList}
+          </ul>
+          
+          <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 16px 0;" />
+          
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="font-size: 14px; font-weight: 600; color: #171717;">Total Paid</td>
+              <td style="font-size: 16px; font-weight: 600; color: #171717; text-align: right;">$${params.total.toFixed(2)}</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+    
+    <p style="margin: 0; font-size: 13px; color: #737373; text-align: center;">
+      We hope you enjoyed your meal!<br/>
+      See you again soon.
+    </p>
+  `;
 
-/**
- * Customer welcome email template
- * Sent when new customer registers via checkout
- */
-export function getCustomerWelcomeTemplate(params: {
-    name: string;
-    email: string;
-    phone: string;
-    tempPassword: string;
-    loginUrl: string;
-    supportEmail: string;
-}): string {
-    return `
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; background-color: #f5f5f5;">
-    <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-        <div style="background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); padding: 30px; text-align: center;">
-            <h1 style="color: white; margin: 0; font-size: 28px;">🍽️ Welcome to GENFITY!</h1>
-            <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">Your account has been created</p>
-        </div>
-        <div style="padding: 30px;">
-            <h2 style="color: #333; margin-top: 0;">Hi ${params.name}! 👋</h2>
-            <p style="color: #666; line-height: 1.6;">Thank you for your order! Your account has been created successfully. You can use the credentials below to login and track your orders.</p>
-            
-            <div style="background: #f9f9f9; padding: 20px; border-left: 4px solid #ff9800; margin: 25px 0; border-radius: 0 8px 8px 0;">
-                <p style="margin: 0 0 10px 0; color: #333;"><strong>📧 Email:</strong> <span style="color: #666;">${params.email}</span></p>
-                <p style="margin: 0 0 10px 0; color: #333;"><strong>📱 Phone:</strong> <span style="color: #666;">${params.phone}</span></p>
-                <p style="margin: 0; color: #333;"><strong>🔑 Temporary Password:</strong> 
-                    <code style="background: #fff3e0; padding: 4px 10px; border-radius: 4px; font-weight: bold; color: #e65100; font-family: 'Courier New', monospace;">${params.tempPassword}</code>
-                </p>
-            </div>
-            
-            <div style="background: #fff3cd; padding: 15px 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #ffc107;">
-                <strong style="color: #856404;">⚠️ Important:</strong><br>
-                <span style="color: #856404;">Please change your password after first login for security.</span>
-            </div>
-            
-            <div style="text-align: center; margin: 30px 0;">
-                <a href="${params.loginUrl}" style="display: inline-block; background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); color: white; padding: 15px 35px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">
-                    Login to Your Account →
-                </a>
-            </div>
-            
-            <p style="color: #666; font-size: 14px; line-height: 1.6;">
-                With your account, you can:
-            </p>
-            <ul style="color: #666; font-size: 14px; line-height: 1.8;">
-                <li>Track your current orders in real-time</li>
-                <li>View your order history</li>
-                <li>Reorder your favorite items quickly</li>
-                <li>Save your delivery preferences</li>
-            </ul>
-        </div>
-        <div style="background: #f5f5f5; padding: 20px; text-align: center; font-size: 12px; color: #666;">
-            <p style="margin: 0 0 10px 0;">Questions? Contact us at <a href="mailto:${params.supportEmail}" style="color: #ff9800; text-decoration: none;">${params.supportEmail}</a></p>
-            <p style="margin: 0;">© ${new Date().getFullYear()} GENFITY. All rights reserved.</p>
-        </div>
-    </div>
-</body>
-</html>
-  `.trim();
+    return getBaseTemplate(content, 'support@genfity.com');
 }

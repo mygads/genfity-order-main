@@ -115,7 +115,7 @@ function EditProfileContent() {
     return (
         <div className="min-h-screen bg-white dark:bg-gray-900 flex flex-col">
             {/* Header */}
-            <header className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+            <header className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700 shadow-md">
                 <div className="flex items-center px-4 py-3">
                     <button
                         onClick={handleBack}

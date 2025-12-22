@@ -50,6 +50,14 @@ function ForgotPasswordForm() {
                 throw new Error(data.message || 'Failed to send verification code');
             }
 
+            // ✅ Save timestamp for countdown persistence
+            const storageKey = `resend_cooldown_${email.trim().toLowerCase()}`;
+            if (data.data?.lastSentAt) {
+                localStorage.setItem(storageKey, data.data.lastSentAt.toString());
+            } else {
+                localStorage.setItem(storageKey, Date.now().toString());
+            }
+
             // Navigate to verification page
             router.push(`/verify-code?email=${encodeURIComponent(email.trim())}&ref=${encodeURIComponent(ref)}`);
         } catch (err) {

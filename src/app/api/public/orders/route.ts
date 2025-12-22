@@ -31,6 +31,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ValidationError } from '@/lib/constants/errors';
 import prisma from '@/lib/db/client';
 import { serializeBigInt, decimalToNumber } from '@/lib/utils/serializer';
+import emailService from '@/lib/services/EmailService';
+import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 
 /**
  * POST /api/public/orders
@@ -117,9 +120,10 @@ export async function POST(req: NextRequest) {
     }
 
     // ========================================
-    // STEP 1: Auto-register customer if not exists
+    // STEP 1: Find or create customer
     // ========================================
 
+    // First check if email exists as CUSTOMER
     let customer = await prisma.user.findFirst({
       where: {
         email: body.customerEmail.toLowerCase(),
@@ -128,55 +132,156 @@ export async function POST(req: NextRequest) {
     });
 
     if (!customer) {
-      console.log('👤 [ORDER] Registering new customer:', body.customerEmail);
-
-      // ✅ FIXED: No password for customers (email-based auth)
-      customer = await prisma.user.create({
-        data: {
-          name: body.customerName,
+      // Check if email exists with a different role (admin, owner, staff, etc.)
+      const existingUser = await prisma.user.findFirst({
+        where: {
           email: body.customerEmail.toLowerCase(),
-          phone: body.customerPhone || null,
-          passwordHash: '', // ✅ Empty password - customers don't need passwords
-          role: 'CUSTOMER',
-          isActive: true,
-          mustChangePassword: false,
         },
+        select: { role: true },
       });
 
-      console.log('✅ [ORDER] Customer registered:', customer.id.toString());
+      if (existingUser) {
+        // Email belongs to non-customer account - reject
+        console.log('⚠️ [ORDER] Email belongs to non-customer account:', existingUser.role);
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'EMAIL_RESERVED',
+            message: 'This email is associated with a merchant account. Please use a different email.',
+            statusCode: 400,
+          },
+          { status: 400 }
+        );
+      }
+
+      // Email doesn't exist - create new customer with temp password
+      console.log('👤 [ORDER] Registering new customer:', body.customerEmail);
+
+      // ✅ Generate temporary password for new customer
+      const tempPassword = crypto.randomBytes(4).toString('hex'); // 8-char random password
+      const hashedPassword = await bcrypt.hash(tempPassword, 10);
+
+      try {
+        customer = await prisma.user.create({
+          data: {
+            name: body.customerName,
+            email: body.customerEmail.toLowerCase(),
+            phone: body.customerPhone || null,
+            passwordHash: hashedPassword,
+            role: 'CUSTOMER',
+            isActive: true,
+            mustChangePassword: true, // ✅ Force password change on first login
+          },
+        });
+        console.log('✅ [ORDER] Customer registered:', customer.id.toString());
+
+        // ✅ Send welcome email with temp password (async, don't wait)
+        emailService.sendCustomerWelcome({
+          to: body.customerEmail.toLowerCase(),
+          name: body.customerName || 'Customer',
+          email: body.customerEmail.toLowerCase(),
+          phone: body.customerPhone || '',
+          tempPassword: tempPassword,
+        }).then(sent => {
+          if (sent) {
+            console.log('✅ [ORDER] Welcome email sent to:', body.customerEmail);
+          } else {
+            console.warn('⚠️ [ORDER] Welcome email failed for:', body.customerEmail);
+          }
+        }).catch(err => {
+          console.error('❌ [ORDER] Welcome email error:', err);
+        });
+      } catch (createError: any) {
+        // Handle race condition - email was created between check and create
+        if (createError.code === 'P2002') {
+          console.log('⚠️ [ORDER] Race condition - fetching existing customer');
+          customer = await prisma.user.findFirst({
+            where: {
+              email: body.customerEmail.toLowerCase(),
+              role: 'CUSTOMER',
+            },
+          });
+        } else {
+          throw createError;
+        }
+      }
     } else {
       console.log('👤 [ORDER] Using existing customer:', customer.id.toString());
+
+      // Update name/phone if different (optional - keep customer data fresh)
+      if (customer.name !== body.customerName || customer.phone !== (body.customerPhone || null)) {
+        await prisma.user.update({
+          where: { id: customer.id },
+          data: {
+            name: body.customerName,
+            phone: body.customerPhone || null,
+          },
+        });
+        console.log('✅ [ORDER] Updated customer info');
+      }
+    }
+
+    if (!customer) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'CUSTOMER_ERROR',
+          message: 'Failed to create or find customer',
+          statusCode: 500,
+        },
+        { status: 500 }
+      );
     }
 
     // ========================================
     // STEP 2: Validate menu items & calculate prices
     // ========================================
 
-    let subtotal = 0;
-    const orderItemsData: any[] = [];
+    // ✅ PERFORMANCE: Helper function for 2 decimal precision
+    const round2 = (num: number): number => Math.round(num * 100) / 100;
 
-    for (const item of body.items) {
-      const menu = await prisma.menu.findUnique({
-        where: { id: BigInt(item.menuId) },
-        include: {
-          addonCategories: {
-            include: {
-              addonCategory: {
-                include: {
-                  addonItems: true,
-                },
+    // ✅ PERFORMANCE: Batch fetch all menus in ONE query
+    const menuIds = body.items.map((item: any) => BigInt(item.menuId));
+    const menus = await prisma.menu.findMany({
+      where: {
+        id: { in: menuIds },
+        merchantId: merchant.id,
+      },
+      include: {
+        addonCategories: {
+          include: {
+            addonCategory: {
+              include: {
+                addonItems: true,
               },
             },
           },
         },
-      });
+      },
+    });
+
+    // Create lookup map for O(1) access
+    const menuMap = new Map(menus.map(m => [m.id.toString(), m]));
+
+    // ✅ PERFORMANCE: Batch fetch all addon items in ONE query
+    const allAddonIds = body.items.flatMap((item: any) =>
+      (item.addons || []).map((a: any) => BigInt(a.addonItemId))
+    );
+    const addons = allAddonIds.length > 0
+      ? await prisma.addonItem.findMany({
+        where: { id: { in: allAddonIds } },
+      })
+      : [];
+    const addonMap = new Map(addons.map(a => [a.id.toString(), a]));
+
+    let subtotal = 0;
+    const orderItemsData: any[] = [];
+
+    for (const item of body.items) {
+      const menu = menuMap.get(item.menuId.toString());
 
       if (!menu) {
         throw new ValidationError('Menu item not found');
-      }
-
-      if (menu.merchantId !== merchant.id) {
-        throw new ValidationError('Menu item does not belong to this merchant');
       }
 
       if (!menu.isActive || menu.deletedAt) {
@@ -188,29 +293,27 @@ export async function POST(req: NextRequest) {
         throw new ValidationError(`Insufficient stock for "${menu.name}"`);
       }
 
-      // ✅ PROMO PRICE: Use promo price if available, otherwise use regular price
+      // ✅ PROMO PRICE: Use promo price if available
       const effectivePrice = menu.isPromo && menu.promoPrice
         ? decimalToNumber(menu.promoPrice)
         : decimalToNumber(menu.price);
 
-      const menuPrice = effectivePrice; // Store the effective price to use
-      let itemTotal = menuPrice * item.quantity;
+      const menuPrice = round2(effectivePrice);
+      let itemTotal = round2(menuPrice * item.quantity);
 
-      console.log(`💰 [MENU PRICE] ${menu.name}: ${menu.isPromo && menu.promoPrice ? `PROMO ${effectivePrice} (was ${decimalToNumber(menu.price)})` : effectivePrice}`);
+      console.log(`💰 [MENU PRICE] ${menu.name}: ${menu.isPromo && menu.promoPrice ? `PROMO ${menuPrice} (was ${decimalToNumber(menu.price)})` : menuPrice}`);
 
-      // ✅ FIX: Process addons with individual quantities
+      // ✅ Process addons using pre-fetched map
       const addonData: any[] = [];
       if (item.addons && item.addons.length > 0) {
         for (const addonItem of item.addons) {
-          const addon = await prisma.addonItem.findUnique({
-            where: { id: BigInt(addonItem.addonItemId) },
-          });
+          const addon = addonMap.get(addonItem.addonItemId.toString());
 
           if (addon && addon.isActive && !addon.deletedAt) {
-            const addonPrice = decimalToNumber(addon.price);
-            const addonQty = addonItem.quantity || 1; // ✅ Use addon-specific quantity
-            const addonSubtotal = addonPrice * addonQty;
-            itemTotal += addonSubtotal;
+            const addonPrice = round2(decimalToNumber(addon.price));
+            const addonQty = addonItem.quantity || 1;
+            const addonSubtotal = round2(addonPrice * addonQty);
+            itemTotal = round2(itemTotal + addonSubtotal);
 
             console.log(`💰 [ADDON] ${addon.name}: ${addonPrice} x ${addonQty} = ${addonSubtotal}`);
 
@@ -218,21 +321,21 @@ export async function POST(req: NextRequest) {
               addonItemId: addon.id,
               addonName: addon.name,
               addonPrice: addon.price,
-              quantity: addonQty, // ✅ Use addon quantity, not item quantity
+              quantity: addonQty,
               subtotal: addonSubtotal,
             });
           }
         }
       }
 
-      subtotal += itemTotal;
+      subtotal = round2(subtotal + itemTotal);
 
-      console.log(`📊 [ITEM] ${menu.name} x${item.quantity}: base=${menuPrice * item.quantity}, addons=${itemTotal - (menuPrice * item.quantity)}, total=${itemTotal}`);
+      console.log(`📊 [ITEM] ${menu.name} x${item.quantity}: base=${round2(menuPrice * item.quantity)}, addons=${round2(itemTotal - (menuPrice * item.quantity))}, total=${itemTotal}`);
 
       orderItemsData.push({
         menuId: menu.id,
         menuName: menu.name,
-        menuPrice: menuPrice, // ✅ Store effective price (promo if available)
+        menuPrice: menuPrice,
         quantity: item.quantity,
         subtotal: itemTotal,
         notes: item.notes || null,
@@ -250,39 +353,35 @@ export async function POST(req: NextRequest) {
     const taxPercentage = merchant.enableTax && merchant.taxPercentage
       ? Number(merchant.taxPercentage)
       : 0;
-    const taxAmount = subtotal * (taxPercentage / 100);
+    const taxAmount = round2(subtotal * (taxPercentage / 100));
     console.log(`💰 [ORDER CALC] Tax (${taxPercentage}% on ${subtotal}): ${taxAmount}`);
 
     // Service charge calculation
     const serviceChargePercent = merchant.enableServiceCharge && merchant.serviceChargePercent
       ? Number(merchant.serviceChargePercent)
       : 0;
-    const serviceChargeAmount = subtotal * (serviceChargePercent / 100);
+    const serviceChargeAmount = round2(subtotal * (serviceChargePercent / 100));
     console.log(`💰 [ORDER CALC] Service Charge (${serviceChargePercent}% on ${subtotal}): ${serviceChargeAmount}`);
 
     // Packaging fee (only for TAKEAWAY orders)
     const packagingFeeAmount = (body.orderType === 'TAKEAWAY' && merchant.enablePackagingFee && merchant.packagingFeeAmount)
-      ? Number(merchant.packagingFeeAmount)
+      ? round2(Number(merchant.packagingFeeAmount))
       : 0;
     console.log(`💰 [ORDER CALC] Packaging Fee: ${packagingFeeAmount} (orderType: ${body.orderType})`);
 
     // Total calculation
-    const totalAmount = subtotal + taxAmount + serviceChargeAmount + packagingFeeAmount;
+    const totalAmount = round2(subtotal + taxAmount + serviceChargeAmount + packagingFeeAmount);
     console.log(`💰 [ORDER CALC] Total: ${totalAmount} (subtotal: ${subtotal} + tax: ${taxAmount} + service: ${serviceChargeAmount} + packaging: ${packagingFeeAmount})`);
 
     // ========================================
-    // STEP 4: Generate unique order number with retry logic
+    // STEP 4: Generate unique order number
     // ========================================
 
     /**
-     * ✅ FIXED: Generate unique order number with timestamp to prevent duplicates
-     * 
-     * Format: ORD-YYYYMMDD-XXXX-TIMESTAMP
+     * ✅ SIMPLIFIED: Shorter order number format
+     * Format: ORD-YYYYMMDD-XXXX
      * - YYYYMMDD: Date
-     * - XXXX: Sequence number (4 digits)
-     * - TIMESTAMP: Milliseconds for uniqueness
-     * 
-     * This prevents race conditions when multiple orders are created simultaneously
+     * - XXXX: Sequence + random suffix for uniqueness
      */
     const generateOrderNumber = async (merchantId: bigint): Promise<string> => {
       const today = new Date();
@@ -304,8 +403,8 @@ export async function POST(req: NextRequest) {
       });
 
       const sequenceNumber = String(orderCount + 1).padStart(4, '0');
-      const timestamp = Date.now().toString().slice(-6); // Last 6 digits of timestamp
-      return `ORD-${dateStr}-${sequenceNumber}-${timestamp}`;
+      const randomSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+      return `ORD-${dateStr}-${sequenceNumber}${randomSuffix}`;
     };
 
     const orderNumber = await generateOrderNumber(merchant.id);

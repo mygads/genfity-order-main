@@ -181,10 +181,24 @@ export async function POST(request: NextRequest) {
 
     } else {
       // ========================================
-      // NEW USER - REGISTER FLOW
+      // NEW USER - REGISTER FLOW (only if no password provided)
       // ========================================
 
-      // Name required for new registration
+      // ✅ FIX: If user provided password but account doesn't exist → invalid credentials
+      // This prevents confusing "name required" error when trying to login
+      if (password && password.length > 0) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'INVALID_CREDENTIALS',
+            message: 'Invalid email/phone or password',
+            statusCode: 401,
+          },
+          { status: 401 }
+        );
+      }
+
+      // Name required for new registration (only when NOT providing password)
       if (!name || typeof name !== 'string' || !name.trim()) {
         return NextResponse.json(
           {

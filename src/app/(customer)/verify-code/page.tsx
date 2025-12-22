@@ -17,7 +17,7 @@ function VerifyCodeForm() {
     const [code, setCode] = useState(['', '', '', '', '', '']);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
-    const [resendTimer, setResendTimer] = useState(60);
+    const [resendTimer, setResendTimer] = useState(0);
     const [canResend, setCanResend] = useState(false);
 
     const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -25,12 +25,36 @@ function VerifyCodeForm() {
     const email = searchParams.get('email') || '';
     const ref = searchParams.get('ref') || '/login';
 
+    const RESEND_COOLDOWN_MS = 60 * 1000; // 1 minute
+
+    // ✅ Check localStorage for last sent timestamp on mount
+    useEffect(() => {
+        const storageKey = `resend_cooldown_${email}`;
+        const lastSentAt = localStorage.getItem(storageKey);
+
+        if (lastSentAt) {
+            const elapsed = Date.now() - parseInt(lastSentAt, 10);
+            const remaining = Math.max(0, RESEND_COOLDOWN_MS - elapsed);
+
+            if (remaining > 0) {
+                setResendTimer(Math.ceil(remaining / 1000));
+                setCanResend(false);
+            } else {
+                setCanResend(true);
+                localStorage.removeItem(storageKey);
+            }
+        } else {
+            // First time visiting - start with cooldown active
+            setResendTimer(60);
+        }
+    }, [email]);
+
     // Countdown timer for resend
     useEffect(() => {
         if (resendTimer > 0) {
             const timer = setTimeout(() => setResendTimer(resendTimer - 1), 1000);
             return () => clearTimeout(timer);
-        } else {
+        } else if (resendTimer === 0) {
             setCanResend(true);
         }
     }, [resendTimer]);
@@ -78,6 +102,8 @@ function VerifyCodeForm() {
         setResendTimer(60);
         setError('');
 
+        const storageKey = `resend_cooldown_${email}`;
+
         try {
             const response = await fetch('/api/public/auth/forgot-password', {
                 method: 'POST',
@@ -85,9 +111,23 @@ function VerifyCodeForm() {
                 body: JSON.stringify({ email }),
             });
 
+            const data = await response.json();
+
             if (!response.ok) {
-                const data = await response.json();
+                // Handle rate limit - use remaining time from API
+                if (response.status === 429 && data.data?.retryAfterSeconds) {
+                    setResendTimer(data.data.retryAfterSeconds);
+                    setCanResend(false);
+                    return;
+                }
                 throw new Error(data.message || 'Failed to resend code');
+            }
+
+            // ✅ Save timestamp on successful resend
+            if (data.data?.lastSentAt) {
+                localStorage.setItem(storageKey, data.data.lastSentAt.toString());
+            } else {
+                localStorage.setItem(storageKey, Date.now().toString());
             }
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to resend code');
