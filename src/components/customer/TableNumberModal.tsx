@@ -40,6 +40,16 @@ export default function TableNumberModal({
 }: TableNumberModalProps) {
   const [tableNumber, setTableNumber] = useState('');
   const [error, setError] = useState('');
+  const [isClosing, setIsClosing] = useState(false);
+
+  // ✅ Handle smooth close
+  const handleClose = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      setIsClosing(false);
+      onClose();
+    }, 250);
+  };
 
   /**
    * Load saved table number on mount
@@ -91,12 +101,12 @@ export default function TableNumberModal({
     <>
       {/* Overlay */}
       <div
-        className="fixed inset-0 bg-black/50 z-50 animate-fadeIn"
-        onClick={onClose}
+        className={`fixed inset-0 bg-black/50 z-50 transition-opacity duration-250 ${isClosing ? 'animate-fadeOut' : 'animate-fadeIn'}`}
+        onClick={handleClose}
       />
 
       {/* Modal - Bottom Sheet */}
-      <div className="fixed inset-x-0 bottom-0 z-50 flex justify-center animate-slideUp">
+      <div className={`fixed inset-x-0 bottom-0 z-50 flex justify-center ${isClosing ? 'animate-slideDown' : 'animate-slideUp'}`}>
         <div className="w-full max-w-[500px] bg-white dark:bg-gray-900 rounded-t-2xl shadow-2xl">
 
           {/* Header */}
@@ -105,7 +115,7 @@ export default function TableNumberModal({
               Dine In
             </h2>
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               aria-label="Close"
             >
@@ -114,7 +124,7 @@ export default function TableNumberModal({
               </svg>
             </button>
           </div>
-          
+
           {/* Content */}
           <div className="px-4 py-4">
             {/* Input Field */}
@@ -160,29 +170,32 @@ export default function TableNumberModal({
       {/* Animations */}
       <style jsx>{`
         @keyframes fadeIn {
-          from {
-            opacity: 0;
-          }
-          to {
-            opacity: 1;
-          }
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
-
+        @keyframes fadeOut {
+          from { opacity: 1; }
+          to { opacity: 0; }
+        }
         @keyframes slideUp {
-          from {
-            transform: translateY(100%);
-          }
-          to {
-            transform: translateY(0);
-          }
+          from { transform: translateY(100%); }
+          to { transform: translateY(0); }
         }
-
+        @keyframes slideDown {
+          from { transform: translateY(0); }
+          to { transform: translateY(100%); }
+        }
         .animate-fadeIn {
           animation: fadeIn 0.2s ease-out;
         }
-
+        .animate-fadeOut {
+          animation: fadeOut 0.25s ease-in forwards;
+        }
         .animate-slideUp {
           animation: slideUp 0.3s ease-out;
+        }
+        .animate-slideDown {
+          animation: slideDown 0.25s ease-in forwards;
         }
       `}</style>
     </>

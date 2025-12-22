@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+
 interface PaymentConfirmationModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -32,6 +34,17 @@ export default function PaymentConfirmationModal({
   currency = 'AUD', // ✅ Default to AUD
   breakdown,
 }: PaymentConfirmationModalProps) {
+  const [isClosing, setIsClosing] = useState(false);
+
+  // ✅ Handle smooth close
+  const handleClose = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      setIsClosing(false);
+      onClose();
+    }, 200);
+  };
+
   if (!isOpen) return null;
 
   // ✅ Format currency dynamically
@@ -44,14 +57,37 @@ export default function PaymentConfirmationModal({
 
   return (
     <>
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes fadeOut {
+          from { opacity: 1; }
+          to { opacity: 0; }
+        }
+        @keyframes scaleIn {
+          from { opacity: 0; transform: scale(0.95); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes scaleOut {
+          from { opacity: 1; transform: scale(1); }
+          to { opacity: 0; transform: scale(0.95); }
+        }
+        .animate-fade-in { animation: fadeIn 0.2s ease-out; }
+        .animate-fade-out { animation: fadeOut 0.2s ease-in forwards; }
+        .animate-scale-in { animation: scaleIn 0.2s ease-out; }
+        .animate-scale-out { animation: scaleOut 0.2s ease-in forwards; }
+      `}</style>
+
       {/* Overlay - rgba(0,0,0,0.5), z-index 300 */}
       <div
-        className="fixed inset-0 bg-black/50 z-[300] flex items-center justify-center p-4"
-        onClick={onClose}
+        className={`fixed inset-0 bg-black/50 z-[300] flex items-center justify-center p-4 ${isClosing ? 'animate-fade-out' : 'animate-fade-in'}`}
+        onClick={handleClose}
       >
         {/* Center Modal - Max-width 320px */}
         <div
-          className="bg-white dark:bg-gray-800 rounded-xl max-w-[320px] w-full p-6 shadow-2xl"
+          className={`bg-white dark:bg-gray-800 rounded-xl max-w-[320px] w-full p-6 shadow-2xl ${isClosing ? 'animate-scale-out' : 'animate-scale-in'}`}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Question Icon - 48x48px */}
@@ -112,7 +148,7 @@ export default function PaymentConfirmationModal({
           <div className="flex gap-3">
             {/* Check Again Button - 44px, outline */}
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="flex-1 h-11 bg-white dark:bg-gray-800 border-2 border-[#FF6A35] text-[#FF6A35] text-sm font-semibold rounded-lg hover:bg-[#FFF5F0] dark:hover:bg-orange-900/20 transition-all duration-200 active:scale-[0.98]"
             >
               Check Again

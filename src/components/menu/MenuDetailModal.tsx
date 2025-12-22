@@ -89,8 +89,18 @@ export default function MenuDetailModal({
   const [errorMessage, setErrorMessage] = useState('');
   const [missingCategoryId, setMissingCategoryId] = useState<string | null>(null);
   const [isImageZoomed, setIsImageZoomed] = useState(false);
+  const [isClosing, setIsClosing] = useState(false); // ✅ Smooth close animation
   const addonCategoryRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const isAddingRef = useRef(false);
+
+  // ✅ Handle smooth close
+  const handleClose = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      setIsClosing(false);
+      onClose();
+    }, 250);
+  };
 
   const scrollToAddonCategory = (categoryId: string) => {
     const element = addonCategoryRefs.current[categoryId];
@@ -486,10 +496,16 @@ export default function MenuDetailModal({
   return (
     <div className="fixed inset-0 z-300 flex justify-center">
       {/* Overlay background */}
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div
+        className={`absolute inset-0 bg-black/40 transition-opacity duration-250 ${isClosing ? 'opacity-0' : 'opacity-100'}`}
+        onClick={handleClose}
+      />
 
       {/* Modal Container - Constrained to 500px like layout */}
-      <div className="relative w-full max-w-[500px] h-full bg-white dark:bg-gray-800 flex flex-col overflow-hidden">
+      <div
+        className={`relative w-full max-w-[500px] h-full bg-white dark:bg-gray-800 flex flex-col overflow-hidden transition-transform duration-250 ${isClosing ? 'translate-y-full' : 'translate-y-0'}`}
+        style={{ animation: isClosing ? 'none' : 'slideUp 0.3s ease-out' }}
+      >
         {/* Full Screen Modal within 500px container - Burjo ESB Style */}
 
         {/* Scrollable Content */}
@@ -521,7 +537,7 @@ export default function MenuDetailModal({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                onClose();
+                handleClose();
               }}
               className="fixed top-3 right-3 w-8 h-8 bg-white/90 dark:bg-gray-800/90 rounded-full flex items-center justify-center shadow-md hover:bg-white dark:hover:bg-gray-800 transition-colors z-320"
               style={{ right: 'calc(50% - 250px + 12px)' }}

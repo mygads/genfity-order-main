@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import type { CartItem } from '@/context/CartContext';
 import { formatCurrency } from '@/lib/utils/format';
 
@@ -45,6 +46,17 @@ export default function MenuInCartModal({
   onIncreaseQty,
   onDecreaseQty,
 }: MenuInCartModalProps) {
+  const [isClosing, setIsClosing] = useState(false);
+
+  // ✅ Handle smooth close
+  const handleClose = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      setIsClosing(false);
+      onClose();
+    }, 250);
+  };
+
   return (
     <>
       <style>{`
@@ -58,15 +70,45 @@ export default function MenuInCartModal({
             opacity: 1;
           }
         }
+        @keyframes menuInCartSlideDown {
+          from {
+            transform: translateY(0);
+            opacity: 1;
+          }
+          to {
+            transform: translateY(100%);
+            opacity: 0;
+          }
+        }
+        @keyframes menuInCartFadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes menuInCartFadeOut {
+          from { opacity: 1; }
+          to { opacity: 0; }
+        }
         .menu-in-cart-slide-up {
           animation: menuInCartSlideUp 0.3s ease-out forwards;
+        }
+        .menu-in-cart-slide-down {
+          animation: menuInCartSlideDown 0.25s ease-in forwards;
+        }
+        .menu-in-cart-fade-in {
+          animation: menuInCartFadeIn 0.2s ease-out;
+        }
+        .menu-in-cart-fade-out {
+          animation: menuInCartFadeOut 0.25s ease-in forwards;
         }
       `}</style>
       <div className="fixed inset-0 flex items-end justify-center" style={{ zIndex: 300 }}>
         {/* Overlay */}
-        <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+        <div
+          className={`absolute inset-0 bg-black/40 ${isClosing ? 'menu-in-cart-fade-out' : 'menu-in-cart-fade-in'}`}
+          onClick={handleClose}
+        />
 
-        <div className="relative w-full max-w-[500px] bg-white dark:bg-gray-800 rounded-t-2xl shadow-2xl menu-in-cart-slide-up flex flex-col max-h-[80vh]">
+        <div className={`relative w-full max-w-[500px] bg-white dark:bg-gray-800 rounded-t-2xl shadow-2xl ${isClosing ? 'menu-in-cart-slide-down' : 'menu-in-cart-slide-up'} flex flex-col max-h-[80vh]`}>
           {/* Drag Handle */}
           <div className="flex justify-center pt-3 pb-2">
             <div className="w-12 h-1 bg-gray-300 dark:bg-gray-600 rounded-full" />
@@ -76,7 +118,7 @@ export default function MenuInCartModal({
           <div className="px-4 pb-3 flex items-start justify-between gap-3">
             <h3 className="text-lg font-bold text-gray-900 dark:text-white">{menuName}</h3>
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="shrink-0 w-9 h-9 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
               aria-label="Close"
             >

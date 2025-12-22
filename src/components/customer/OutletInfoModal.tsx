@@ -32,11 +32,21 @@ const dayNames = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDA
 export default function OutletInfoModal({ isOpen, onClose, merchant, merchantCode }: OutletInfoModalProps) {
     const [showShareModal, setShowShareModal] = useState(false);
     const [copySuccess, setCopySuccess] = useState(false);
+    const [isClosing, setIsClosing] = useState(false);
 
     // Generate share URL
     const shareUrl = typeof window !== 'undefined'
         ? `${window.location.origin}/${merchantCode || ''}/order?mode=dinein`
         : '';
+
+    // Handle smooth close
+    const handleClose = () => {
+        setIsClosing(true);
+        setTimeout(() => {
+            setIsClosing(false);
+            onClose();
+        }, 250); // Match animation duration
+    };
 
     // Prevent body scroll when modal is open
     useEffect(() => {
@@ -95,13 +105,13 @@ export default function OutletInfoModal({ isOpen, onClose, merchant, merchantCod
         <>
             {/* Backdrop */}
             <div
-                className="fixed inset-0 bg-black/50 z-50 transition-opacity"
-                onClick={onClose}
+                className={`fixed inset-0 bg-black/50 z-50 transition-opacity duration-250 ${isClosing ? 'opacity-0' : 'opacity-100'}`}
+                onClick={handleClose}
             />
 
             {/* Modal */}
             <div className="fixed inset-0 z-50 flex items-end justify-center pointer-events-none">
-                <div className="w-full max-w-[500px] bg-white dark:bg-gray-900 rounded-t-2xl shadow-2xl pointer-events-auto animate-slide-up">
+                <div className={`w-full max-w-[500px] bg-white dark:bg-gray-900 rounded-t-2xl shadow-2xl pointer-events-auto ${isClosing ? 'animate-slide-down' : 'animate-slide-up'}`}>
 
                     {/* Header */}
                     <header className="relative shadow-[0_4px_12px_rgba(0,0,0,0.08)]">
@@ -392,6 +402,17 @@ export default function OutletInfoModal({ isOpen, onClose, merchant, merchantCod
                 }
                 .animate-slide-up {
                     animation: slide-up 0.3s ease-out;
+                }
+                @keyframes slide-down {
+                    from {
+                        transform: translateY(0);
+                    }
+                    to {
+                        transform: translateY(100%);
+                    }
+                }
+                .animate-slide-down {
+                    animation: slide-down 0.25s ease-in forwards;
                 }
                 @keyframes scale-in {
                     from {

@@ -303,7 +303,7 @@ export default function MerchantModePage({ params }: MerchantPageProps) {
             <button
               id="mode-dinein"
               onClick={() => handleModeSelect('dinein')}
-              className="w-full h-12 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white text-base font-medium shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-200"
+              className="w-full h-12 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white text-base font-medium shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-200 shadow-lg"
             >
               Dine In
             </button>
@@ -312,7 +312,7 @@ export default function MerchantModePage({ params }: MerchantPageProps) {
             <button
               id="mode-takeaway"
               onClick={() => handleModeSelect('takeaway')}
-              className="w-full h-12 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white text-base font-medium shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-200"
+              className="w-full h-12 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white text-base font-medium shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-200 shadow-lg"
             >
               Pick Up
             </button>
