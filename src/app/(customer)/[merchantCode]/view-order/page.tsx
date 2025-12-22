@@ -210,8 +210,8 @@ export default function ViewOrderPage() {
       {/* Content */}
       <div className="flex-1 overflow-y-auto pb-32">
         {/* Order Type Section */}
-        <section className="px-4 pt-4 pb-3">
-          <div className="flex items-center justify-between px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800">
+        <section className="px-4 py-4">
+          <div className="flex items-center justify-between bg-yellow-600 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800">
             <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Order Type</span>
             <div className="flex items-center gap-2">
               <span className="text-base font-semibold text-gray-900 dark:text-white">
@@ -432,7 +432,7 @@ export default function ViewOrderPage() {
       </div>
 
       {/* Fixed Bottom Bar */}
-      <div className="fixed bottom-0 left-0 right-0 max-w-[420px] mx-auto bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg">
+      <div className="fixed bottom-0 left-0 right-0 max-w-[500px] mx-auto bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg">
         <div className="flex items-center justify-between p-4">
           <div>
             <div className="text-sm text-gray-600 dark:text-gray-400">Total Payment</div>
