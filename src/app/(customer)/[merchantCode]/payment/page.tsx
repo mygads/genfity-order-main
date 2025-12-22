@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { getCustomerAuth, getTableNumber, saveCustomerAuth } from '@/lib/utils/localStorage';
+import { getCustomerAuth, getTableNumber } from '@/lib/utils/localStorage';
 import type { OrderMode } from '@/lib/types/customer';
 import PaymentConfirmationModal from '@/components/modals/PaymentConfirmationModal';
 import { useCart } from '@/context/CartContext';
@@ -336,58 +336,9 @@ export default function PaymentPage() {
 
       console.log('✅ Order created:', orderData.data.orderNumber);
 
-      // ========================================
-      // STEP 4: Auto-login guest customer (if not logged in)
-      // ========================================
-
-      /**
-       * ✅ GUEST AUTO-LOGIN AFTER ORDER
-       * 
-       * @description
-       * If user is not logged in (guest), auto-login them after successful order
-       * so they can view order history and track their order.
-       * 
-       * @flow
-       * 1. Check if user is NOT logged in (no accessToken)
-       * 2. Call customer-login API with email, name, phone
-       * 3. Save auth data to localStorage
-       * 4. User can now access order history
-       */
-      if (!accessToken) {
-        console.log('🔐 Auto-login guest customer after order...');
-
-        try {
-          const loginResponse = await fetch('/api/public/auth/customer-login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              email: email.trim(),
-              name: name.trim(),
-              phone: phone.trim() || undefined,
-            }),
-          });
-
-          if (loginResponse.ok) {
-            const loginData = await loginResponse.json();
-
-            if (loginData.success) {
-              // ✅ Save auth data to localStorage
-              saveCustomerAuth({
-                accessToken: loginData.data.accessToken,
-                user: loginData.data.user,
-                expiresAt: loginData.data.expiresAt,
-              });
-
-              console.log('✅ Guest customer logged in:', loginData.data.user.email);
-            }
-          } else {
-            console.warn('⚠️ Guest auto-login failed (non-critical)');
-          }
-        } catch (loginError) {
-          // Non-critical error - order is already created
-          console.warn('⚠️ Guest auto-login error (non-critical):', loginError);
-        }
-      }
+      // ✅ REMOVED: Auto-login is no longer needed
+      // Orders can be tracked publicly via orderNumber
+      console.log('📝 Order created - public tracking via orderNumber:', orderData.data.orderNumber);
 
       // ========================================
       // STEP 5: Clear localStorage ONLY (not cart context yet)
@@ -664,8 +615,8 @@ export default function PaymentPage() {
                 }}
                 disabled={!!(auth && auth.user.phone)}
                 className={`w-full h-12 pl-11 pr-4 border-2 rounded-xl text-sm focus:outline-none transition-colors ${fieldErrors.phone
-                    ? 'border-red-500 ring-1 ring-red-500 focus:border-red-500 focus:ring-red-500'
-                    : 'border-gray-300 focus:ring-1 focus:ring-[#f05a28] focus:border-[#f05a28]'
+                  ? 'border-red-500 ring-1 ring-red-500 focus:border-red-500 focus:ring-red-500'
+                  : 'border-gray-300 focus:ring-1 focus:ring-[#f05a28] focus:border-[#f05a28]'
                   } ${(auth && auth.user.phone) ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}`}
                 placeholder="Phone Number"
               />

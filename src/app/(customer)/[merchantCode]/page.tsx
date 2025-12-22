@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import OutletInfoModal from '@/components/customer/OutletInfoModal';
-import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';
+import RestaurantBanner from '@/components/customer/RestaurantBanner';
+import RestaurantInfoCard from '@/components/customer/RestaurantInfoCard';
 
 interface MerchantPageProps {
   params: Promise<{
@@ -63,12 +64,9 @@ export default function MerchantModePage({ params }: MerchantPageProps) {
     params.then(({ merchantCode: code }) => {
       setMerchantCode(code);
 
-      // Check localStorage for cached mode
-      const cachedMode = localStorage.getItem(`mode_${code}`);
-      if (cachedMode === 'dinein' || cachedMode === 'takeaway') {
-        router.replace(`/${code}/order?mode=${cachedMode}`);
-        return;
-      }
+      // ✅ REMOVED: No more auto-redirect from cached mode
+      // User should always see mode selection when visiting merchant page directly
+      // Cached mode is only used as a convenience, not for auto-redirect
 
       // Fetch merchant data
       fetchMerchant(code);
@@ -117,7 +115,78 @@ export default function MerchantModePage({ params }: MerchantPageProps) {
   };
 
   if (isLoading) {
-    return <LoadingState type="page" message={LOADING_MESSAGES.MERCHANT} />;
+    return (
+      <>
+        {/* Banner Skeleton - Match RestaurantBanner (214px) */}
+        <div
+          className="relative w-full bg-gray-200 dark:bg-gray-700 animate-pulse"
+          style={{ height: '214px', borderRadius: '0 0 8px 8px' }}
+        />
+
+        {/* Merchant Info Card Skeleton */}
+        <div className="px-3 -mt-6 relative z-10">
+          <div
+            className="p-4 bg-white dark:bg-gray-800 rounded-2xl animate-pulse"
+            style={{
+              border: '0.66px solid #E6E6E6',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className="w-32 h-5 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
+                <div className="w-48 h-4 bg-gray-200 dark:bg-gray-700 rounded" />
+              </div>
+              <div className="w-5 h-5 bg-gray-200 dark:bg-gray-700 rounded" />
+            </div>
+          </div>
+        </div>
+
+        {/* How to use Section Skeleton */}
+        <div className="px-3 my-4 mt-12">
+          <div className="text-center">
+            <div className="w-48 h-5 mx-auto bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-4" />
+
+            {/* Steps Skeleton */}
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <div className="flex flex-col items-center">
+                <div className="w-14 h-14 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse mb-1" />
+                <div className="w-10 h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              </div>
+              <div className="w-5 h-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              <div className="flex flex-col items-center">
+                <div className="w-14 h-14 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse mb-1" />
+                <div className="w-10 h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              </div>
+              <div className="w-5 h-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              <div className="flex flex-col items-center">
+                <div className="w-14 h-14 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse mb-1" />
+                <div className="w-10 h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Mode Selection Skeleton */}
+        <div className="px-3 mb-6">
+          <div className="text-center">
+            <div className="w-56 h-5 mx-auto bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-4" />
+
+            <div className="space-y-3">
+              <div className="w-full h-12 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
+              <div className="w-full h-12 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
+            </div>
+          </div>
+        </div>
+
+        {/* Footer Skeleton */}
+        <div className="mt-auto px-4 py-4 text-center">
+          <div className="flex items-center justify-center gap-2">
+            <div className="w-24 h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+          </div>
+        </div>
+      </>
+    );
   }
 
   if (error || !merchant) {
@@ -145,74 +214,25 @@ export default function MerchantModePage({ params }: MerchantPageProps) {
   return (
     <>
 
-      {/* BANNER 1 - WITH HEADER (Transparent & Overlay) */}
-      <div className="relative w-full h-32 mb-4">
-        {/* Banner Image */}
-        <div className="relative w-full h-full">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={merchant.bannerUrl || '/images/no-outlet.png'}
-            alt={merchant.name}
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              target.src = '/images/no-outlet.png';
-            }}
-          />
-        </div>
+      {/* BANNER - Matching Order Page Style */}
+      <RestaurantBanner
+        bannerUrl={merchant.bannerUrl}
+        imageUrl={merchant.logoUrl}
+        merchantName={merchant.name}
+      />
 
-        {/* Header Overlay - Transparent & Absolute */}
-        <header className="absolute top-0 left-0 right-0 z-50 bg-transparent">
-          <div className="flex items-center justify-between px-4 py-2">
-            {/* Back Button */}
-            <button
-              onClick={() => router.push('/')}
-              className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-              aria-label="Go back"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 12H5M12 19l-7-7 7-7" />
-              </svg>
-            </button>
-
-            {/* Title (Empty in original design) */}
-            <div className="grow text-center font-semibold text-gray-900 dark:text-white" style={{ fontSize: '1.2rem' }}>
-            </div>
-          </div>
-        </header>
-
-        {/* Merchant Info Section - Floating Card */}
-        <div className="absolute left-4 right-4 -bottom-8">
-          <div
-            className="flex items-center px-4 py-3 cursor-pointer bg-white dark:bg-gray-800 rounded-lg shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1)]"
-            onClick={() => setShowOutletInfo(!showOutletInfo)}
-          >
-            {/* Merchant Logo */}
-            <div className="w-12 h-12 rounded overflow-hidden shrink-0 mr-3 bg-gray-100 dark:bg-gray-700">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={merchant.logoUrl || '/images/no-outlet.png'}
-                alt={merchant.name}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.src = '/images/no-outlet.png';
-                }}
-              />
-            </div>
-
-            {/* Merchant Name */}
-            <div className="grow font-medium text-gray-900 dark:text-white">
-              {merchant.name}
-            </div>
-
-            {/* Chevron Right Icon */}
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="text-gray-400">
-              <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
-            </svg>
-          </div>
-        </div>
-
+      {/* Merchant Info Card - Matching Order Page Style */}
+      <div className="px-3 -mt-6 relative z-10">
+        <RestaurantInfoCard
+          name={merchant.name}
+          openingHours={(merchant.openingHours || []).map(h => ({
+            dayOfWeek: h.dayOfWeek,
+            openTime: h.openTime || '',
+            closeTime: h.closeTime || '',
+            isClosed: h.isClosed,
+          }))}
+          onClick={() => setShowOutletInfo(true)}
+        />
       </div>
 
       {/* How to use Genfity Order Section */}

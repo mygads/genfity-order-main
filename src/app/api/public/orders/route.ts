@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ========================================
-    // STEP 1: Find or create customer
+    // STEP 1: Find or create customer (Email-Primary)
     // ========================================
 
     // First check if email exists as CUSTOMER
@@ -152,6 +152,31 @@ export async function POST(req: NextRequest) {
           },
           { status: 400 }
         );
+      }
+
+      // ✅ NEW: Check if phone is already used by another customer with different email
+      if (body.customerPhone) {
+        const phoneOwner = await prisma.user.findFirst({
+          where: {
+            phone: body.customerPhone,
+            role: 'CUSTOMER',
+            email: { not: body.customerEmail.toLowerCase() },
+          },
+          select: { email: true },
+        });
+
+        if (phoneOwner) {
+          console.log('⚠️ [ORDER] Phone already used by another email:', phoneOwner.email);
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'PHONE_CONFLICT',
+              message: 'This phone number is already registered with a different email address.',
+              statusCode: 400,
+            },
+            { status: 400 }
+          );
+        }
       }
 
       // Email doesn't exist - create new customer with temp password
@@ -208,7 +233,8 @@ export async function POST(req: NextRequest) {
     } else {
       console.log('👤 [ORDER] Using existing customer:', customer.id.toString());
 
-      // Update name/phone if different (optional - keep customer data fresh)
+      // ✅ Update name/phone if different (keep customer data fresh)
+      // Phone can be changed because email is the primary identifier
       if (customer.name !== body.customerName || customer.phone !== (body.customerPhone || null)) {
         await prisma.user.update({
           where: { id: customer.id },
@@ -217,7 +243,7 @@ export async function POST(req: NextRequest) {
             phone: body.customerPhone || null,
           },
         });
-        console.log('✅ [ORDER] Updated customer info');
+        console.log('✅ [ORDER] Updated customer info (name/phone)');
       }
     }
 
