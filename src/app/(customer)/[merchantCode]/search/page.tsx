@@ -1,0 +1,253 @@
+'use client';
+
+import { useEffect, useState, useRef } from 'react';
+import { useParams, useSearchParams, useRouter } from 'next/navigation';
+import { ArrowLeft, Search, X } from 'lucide-react';
+import Image from 'next/image';
+import FloatingCartButton from '@/components/cart/FloatingCartButton';
+import MenuDetailModal from '@/components/menu/MenuDetailModal';
+import MenuInCartModal from '@/components/menu/MenuInCartModal';
+import { useCart } from '@/context/CartContext';
+import type { CartItem } from '@/context/CartContext';
+import { formatCurrency } from '@/lib/utils/format';
+
+interface MenuItem {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  imageUrl: string | null;
+  stockQty: number | null;
+  categoryId: string | null;
+  categories: Array<{ id: string; name: string }>;
+  isActive: boolean;
+  trackStock: boolean;
+  isPromo?: boolean;
+  isSpicy?: boolean;
+  isBestSeller?: boolean;
+  isSignature?: boolean;
+  isRecommended?: boolean;
+  promoPrice?: number;
+}
+
+interface MerchantInfo {
+  id: string;
+  code: string;
+  name: string;
+  currency: string;
+}
+
+export default function SearchPage() {
+  const params = useParams();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const merchantCode = params.merchantCode as string;
+  const mode = searchParams.get('mode') || 'takeaway';
+  const refUrl = searchParams.get('ref') || `/${merchantCode}/order?mode=${mode}`;
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [allMenuItems, setAllMenuItems] = useState<MenuItem[]>([]);
+  const [menuAddonsCache, setMenuAddonsCache] = useState<Record<string, any>>({});
+  const [merchantInfo, setMerchantInfo] = useState<MerchantInfo | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedMenu, setSelectedMenu] = useState<MenuItem | null>(null);
+  const [editingCartItem, setEditingCartItem] = useState<CartItem | null>(null);
+  const [cartOptionsMenu, setCartOptionsMenu] = useState<MenuItem | null>(null);
+
+  const { initializeCart, cart, updateItem, removeItem } = useCart();
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    initializeCart(merchantCode, mode as 'dinein' | 'takeaway');
+  }, [merchantCode, mode, initializeCart]);
+
+  useEffect(() => {
+    const fetchMerchantInfo = async () => {
+      try {
+        const response = await fetch(`/api/public/merchants/${merchantCode}`);
+        const data = await response.json();
+        if (data.success) {
+          setMerchantInfo(data.data);
+        }
+      } catch (err) {
+        console.error('Error fetching merchant info:', err);
+      }
+    };
+    fetchMerchantInfo();
+  }, [merchantCode]);
+
+  useEffect(() => {
+    const fetchMenus = async () => {
+      setIsLoading(true);
+      try {
+        const response = await fetch(`/api/public/merchants/${merchantCode}/menus`);
+        const data = await response.json();
+        if (data.success) {
+          const activeItems = data.data
+            .filter((item: MenuItem) => item.isActive)
+            .map((item: MenuItem) => ({
+              ...item,
+              price: typeof item.price === 'string' ? parseFloat(item.price) : item.price,
+            }))
+            .sort((a: MenuItem, b: MenuItem) => a.name.localeCompare(b.name));
+          setAllMenuItems(activeItems);
+        }
+      } catch (err) {
+        console.error('Error fetching menus:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchMenus();
+  }, [merchantCode]);
+
+  useEffect(() => {
+    if (allMenuItems.length === 0) return;
+    const prefetchAddons = async () => {
+      const promises = allMenuItems.map(async (menu) => {
+        try {
+          const response = await fetch(`/api/public/merchants/${merchantCode}/menus/${menu.id}/addons`);
+          const data = await response.json();
+          if (data.success) return { menuId: menu.id, addons: data.data };
+          return null;
+        } catch { return null; }
+      });
+      const results = await Promise.all(promises);
+      const cache: Record<string, any> = {};
+      results.forEach((result) => { if (result) cache[result.menuId] = result.addons; });
+      setMenuAddonsCache(cache);
+    };
+    prefetchAddons();
+  }, [allMenuItems, merchantCode]);
+
+  const filteredItems = searchQuery.trim()
+    ? allMenuItems.filter((item) => {
+        const query = searchQuery.toLowerCase();
+        return item.name.toLowerCase().includes(query) || (item.description && item.description.toLowerCase().includes(query));
+      })
+    : allMenuItems;
+
+  const getMenuCartItems = (menuId: string): CartItem[] => {
+    if (!cart) return [];
+    return cart.items.filter((item) => item.menuId === menuId);
+  };
+
+  const getMenuQuantityInCart = (menuId: string): number => {
+    if (!cart) return 0;
+    return cart.items.filter((item) => item.menuId === menuId).reduce((sum, item) => sum + item.quantity, 0);
+  };
+
+  const handleOpenMenu = (item: MenuItem) => {
+    const quantityInCart = getMenuQuantityInCart(item.id);
+    if (quantityInCart > 0) { setCartOptionsMenu(item); return; }
+    setEditingCartItem(null);
+    setSelectedMenu(item);
+  };
+
+  const handleCloseMenuDetail = () => { setSelectedMenu(null); setEditingCartItem(null); };
+  const handleBack = () => { router.push(decodeURIComponent(refUrl)); };
+  const isAvailable = (item: MenuItem) => item.isActive && (!item.trackStock || (item.stockQty !== null && item.stockQty > 0));
+
+  return (
+    <div className="min-h-screen bg-white">
+      {/* Search Header */}
+      <header className="sticky top-0 z-50 bg-white shadow-sm">
+        <div className="flex items-center gap-3 px-4 py-3">
+          <button onClick={handleBack} className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors" aria-label="Go back">
+            <ArrowLeft className="w-5 h-5 text-gray-700" />
+          </button>
+          <div className="flex-1 relative">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2"><Search className="w-5 h-5 text-gray-400" /></div>
+            <input ref={inputRef} type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="What are you craving today?" className="w-full h-8 pl-10 pr-10 bg-white border rounded-lg text-sm text-gray-900 border-gray-400 placeholder-gray-400 focus:outline-none focus:ring-1 border-gray focus:ring-orange-500" />
+            {searchQuery && (<button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2" aria-label="Clear search"><X className="w-5 h-5 text-gray-400 hover:text-gray-600" /></button>)}
+          </div>
+        </div>
+      </header>
+
+      {/* Content */}
+      <div className="pb-24">
+        {isLoading ? (
+          <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" /></div>
+        ) : (
+          <>
+            <div className="px-4 py-3">
+              <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+                {searchQuery ? `Search Results (${filteredItems.length})` : 'Must Try This Week'}
+              </h2>
+            </div>
+            {filteredItems.length === 0 ? (
+              <div className="text-center py-12"><p className="text-gray-500">No menu items found</p></div>
+            ) : (
+              <div className="bg-white px-4">
+                {filteredItems.map((item, index) => {
+                  const available = isAvailable(item);
+                  const quantityInCart = getMenuQuantityInCart(item.id);
+                  const isInCart = quantityInCart > 0;
+                  return (
+                    <div key={item.id} style={{ position: 'relative', display: 'flex', gap: '12px', paddingTop: '16px', paddingBottom: '16px', borderBottom: index < filteredItems.length - 1 ? '2px solid #e4e2e2ff' : 'none' }}>
+                      {isInCart && (<div style={{ position: 'absolute', left: '-16px', top: '10px', bottom: '10px', width: '4px', backgroundColor: '#F05A28', borderRadius: '0 2px 2px 0' }} />)}
+                      <div onClick={() => available && handleOpenMenu(item)} style={{ position: 'relative', width: '70px', height: '70px', flexShrink: 0, borderRadius: '8px', overflow: 'hidden', backgroundColor: '#f3f4f6', cursor: available ? 'pointer' : 'default', filter: available ? 'none' : 'grayscale(100%)', opacity: available ? 1 : 0.6 }}>
+                        <Image src={item.imageUrl || '/images/default-menu.png'} alt={item.name} fill className="object-cover" sizes="70px" />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+                        <h4 onClick={() => available && handleOpenMenu(item)} className="line-clamp-2" style={{ fontFamily: 'Inter, sans-serif', fontSize: '15px', fontWeight: 700, color: available ? '#000000' : '#9CA3AF', lineHeight: '1.4', margin: 0, cursor: available ? 'pointer' : 'default' }}>{item.name}</h4>
+                        {item.description && (<p onClick={() => available && handleOpenMenu(item)} className="line-clamp-2" style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', fontWeight: 400, color: available ? '#222222ff' : '#9CA3AF', lineHeight: '1.5', margin: '4px 0 0 0', cursor: available ? 'pointer' : 'default' }}>{item.description}</p>)}
+                        {(item.isSpicy || item.isBestSeller || item.isSignature || item.isRecommended) && (
+                          <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+                            {item.isBestSeller && (<div style={{ width: '28px', height: '28px', position: 'relative', overflow: 'hidden' }}><Image src="/images/menu-badges/best-seller.png" alt="Best Seller" fill className="object-contain" /></div>)}
+                            {item.isSignature && (<div style={{ width: '28px', height: '28px', position: 'relative', overflow: 'hidden' }}><Image src="/images/menu-badges/signature.png" alt="Signature" fill className="object-contain" /></div>)}
+                            {item.isSpicy && (<div style={{ width: '28px', height: '28px', position: 'relative', overflow: 'hidden' }}><Image src="/images/menu-badges/spicy.png" alt="Spicy" fill className="object-contain" /></div>)}
+                            {item.isRecommended && (<div style={{ width: '28px', height: '28px', position: 'relative', overflow: 'hidden' }}><Image src="/images/menu-badges/recommended.png" alt="Recommended" fill className="object-contain" /></div>)}
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '8px' }}>
+                          <div onClick={() => available && handleOpenMenu(item)} style={{ cursor: available ? 'pointer' : 'default' }}>
+                            {item.isPromo && item.promoPrice ? (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ fontSize: '14px', fontWeight: 700, color: available ? '#000000' : '#9CA3AF' }}>{formatCurrency(item.promoPrice, merchantInfo?.currency || 'AUD')}</span>
+                                <span style={{ fontSize: '12px', color: '#9CA3AF', textDecoration: 'line-through' }}>{formatCurrency(item.price, merchantInfo?.currency || 'AUD')}</span>
+                              </div>
+                            ) : (<span style={{ fontSize: '14px', fontWeight: 700, color: available ? '#000000' : '#9CA3AF' }}>{formatCurrency(item.price, merchantInfo?.currency || 'AUD')}</span>)}
+                          </div>
+                          <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                            {/* Low Stock Indicator */}
+                            {available && item.trackStock && item.stockQty !== null && item.stockQty <= 10 && (
+                              <span style={{ fontSize: '12px', fontWeight: 500, color: '#f97316' }}>Only {item.stockQty} left</span>
+                            )}
+                            {!available ? (<span style={{ fontSize: '14px', fontWeight: 600, color: '#EF4444', fontFamily: 'Inter, sans-serif' }}>Sold out</span>
+                            ) : isInCart ? (
+                              <div style={{ display: 'flex', alignItems: 'center', height: '32px', border: '1px solid #F05A28', borderRadius: '8px' }}>
+                                <button onClick={(e) => { e.stopPropagation(); handleOpenMenu(item); }} style={{ width: '32px', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', border: 'none', color: '#F05A28', cursor: 'pointer', fontSize: '16px' }}>−</button>
+                                <span style={{ fontSize: '14px', fontWeight: 600, color: '#000000', minWidth: '20px', textAlign: 'center' }}>{quantityInCart}</span>
+                                <button onClick={(e) => { e.stopPropagation(); handleOpenMenu(item); }} style={{ width: '32px', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', border: 'none', color: '#F05A28', cursor: 'pointer', fontSize: '16px' }}>+</button>
+                              </div>
+                            ) : (<button onClick={(e) => { e.stopPropagation(); handleOpenMenu(item); }} style={{ height: '32px', padding: '0 20px', border: '1px solid #F05A28', borderRadius: '8px', backgroundColor: 'transparent', color: '#F05A28', fontSize: '14px', fontWeight: 600, fontFamily: 'Inter, sans-serif', cursor: 'pointer' }}>Add</button>)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      <FloatingCartButton merchantCode={merchantCode} mode={mode as 'dinein' | 'takeaway'} />
+
+      {selectedMenu && (
+        <MenuDetailModal menu={selectedMenu} merchantCode={merchantCode} mode={mode} currency={merchantInfo?.currency || 'AUD'} editMode={Boolean(editingCartItem)} existingCartItem={editingCartItem} onClose={handleCloseMenuDetail} prefetchedAddons={menuAddonsCache[selectedMenu.id]} />
+      )}
+
+      {cartOptionsMenu && (
+        <MenuInCartModal menuName={cartOptionsMenu.name} currency={merchantInfo?.currency || 'AUD'} items={getMenuCartItems(cartOptionsMenu.id)} onClose={() => setCartOptionsMenu(null)} onCreateAnother={() => { setEditingCartItem(null); setSelectedMenu(cartOptionsMenu); setCartOptionsMenu(null); }} onEditItem={(item) => { setEditingCartItem(item); setSelectedMenu(cartOptionsMenu); setCartOptionsMenu(null); }} onIncreaseQty={(item) => { updateItem(item.cartItemId, { quantity: item.quantity + 1 }); }} onDecreaseQty={(item) => { const nextQty = item.quantity - 1; if (nextQty <= 0) { removeItem(item.cartItemId); return; } updateItem(item.cartItemId, { quantity: nextQty }); }} />
+      )}
+    </div>
+  );
+}

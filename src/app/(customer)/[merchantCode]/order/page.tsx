@@ -443,6 +443,9 @@ export default function MenuBrowsePage() {
           localStorage.removeItem(`mode_${merchantCode}`);
           router.push(`/${merchantCode}`);
         }}
+        onSearchClick={() => {
+          router.push(`/${merchantCode}/search?mode=${mode}&ref=${encodeURIComponent(`/${merchantCode}/order?mode=${mode}`)}`);
+        }}
       />
 
       {/* Hero Section (Restaurant Banner) - Header overlays on top */}
