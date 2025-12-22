@@ -1,4 +1,4 @@
-import { Outfit, Inter } from 'next/font/google';
+import { Outfit } from 'next/font/google';
 import './globals.css';
 
 import { SidebarProvider } from '@/context/SidebarContext';
@@ -8,11 +8,6 @@ import { Metadata } from 'next';
 
 const outfit = Outfit({
   subsets: ["latin"],
-});
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: '--font-inter',
 });
 
 export const metadata: Metadata = {
@@ -31,7 +26,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${outfit.className} ${inter.variable} dark:bg-gray-900`}>
+      <body className={`${outfit.className} dark:bg-gray-900`}>
         <ThemeProvider>
           <SidebarProvider>
             <CartProvider>
