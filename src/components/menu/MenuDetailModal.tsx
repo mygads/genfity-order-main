@@ -106,13 +106,39 @@ export default function MenuDetailModal({
       // Array.isArray handles both populated arrays AND empty arrays
       if (Array.isArray(prefetchedAddons)) {
         console.log('✅ [PREFETCH] Using prefetched addon data for menu:', menu.id, 'count:', prefetchedAddons.length);
-        const sanitized = prefetchedAddons.map((category: AddonCategory) => ({
-          ...category,
-          addons: category.addons.map((addon: Addon) => ({
-            ...addon,
-            price: typeof addon.price === 'string' ? parseFloat(addon.price) : addon.price,
-          })),
-        }));
+
+        // ✅ FIX: Transform API field names to component expected field names
+        // API uses: minSelection, maxSelection, isRequired, addonItems, isActive
+        // Component expects: minSelections, maxSelections, type, addons, isAvailable
+        const sanitized = prefetchedAddons.map((category: any) => {
+          // Get addons from either 'addons' or 'addonItems' field
+          const rawAddons = category.addons || category.addonItems || [];
+
+          return {
+            id: category.id?.toString() || category.id,
+            name: category.name,
+            // Transform isRequired (boolean) to type ('required' | 'optional')
+            type: category.type || (category.isRequired ? 'required' : 'optional'),
+            // Handle both minSelection and minSelections
+            minSelections: category.minSelections ?? category.minSelection ?? 0,
+            // Handle both maxSelection and maxSelections  
+            maxSelections: category.maxSelections ?? category.maxSelection ?? 0,
+            // Transform addons with proper field mapping
+            addons: rawAddons.map((addon: any) => ({
+              id: addon.id?.toString() || addon.id,
+              name: addon.name,
+              price: typeof addon.price === 'string' ? parseFloat(addon.price) : (addon.price || 0),
+              categoryId: addon.categoryId?.toString() || category.id?.toString() || '',
+              // Transform isActive (from API) to isAvailable (component expects)
+              isAvailable: addon.isAvailable !== undefined ? addon.isAvailable : (addon.isActive !== false),
+              inputType: addon.inputType || 'SELECT',
+            })),
+          };
+        });
+
+        console.log('📋 [PREFETCH] Sanitized categories:', sanitized.map((c: any) => ({
+          name: c.name, type: c.type, min: c.minSelections, max: c.maxSelections, addonsCount: c.addons.length
+        })));
 
         setAddonCategories(sanitized);
 
@@ -448,7 +474,14 @@ export default function MenuDetailModal({
     }, 100);
   };
 
-  const isAvailable = menu.isActive && (!menu.trackStock || (menu.stockQty !== null && menu.stockQty > 0));
+  // ✅ FIX: Handle undefined fields from cached data with safe defaults
+  // isActive defaults to true (assume available unless explicitly set to false)
+  // trackStock defaults to false (don't track stock unless explicitly enabled)
+  const menuIsActive = menu.isActive !== false; // true unless explicitly false
+  const menuTrackStock = menu.trackStock === true; // false unless explicitly true
+  const menuStockQty = menu.stockQty ?? null;
+
+  const isAvailable = menuIsActive && (!menuTrackStock || (menuStockQty !== null && menuStockQty > 0));
 
   return (
     <div className="fixed inset-0 z-300 flex justify-center">

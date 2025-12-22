@@ -181,6 +181,24 @@ export default function ViewOrderPage() {
 
   const handleEditItem = async (item: CartItem) => {
     try {
+      // ✅ OPTIMIZATION: Check sessionStorage cache first
+      const menusCacheKey = `menus_${merchantCode}`;
+      const cachedMenus = sessionStorage.getItem(menusCacheKey);
+
+      if (cachedMenus) {
+        const menus = JSON.parse(cachedMenus);
+        const cachedMenu = menus.find((m: any) => m.id.toString() === item.menuId.toString());
+
+        if (cachedMenu) {
+          console.log('✅ [VIEW ORDER] Using cached menu + addons for edit:', item.menuId);
+          setSelectedMenu(cachedMenu);
+          setEditingCartItem(item);
+          return; // No API call needed!
+        }
+      }
+
+      // Fallback: Fetch from API if not in cache
+      console.log('🔄 [VIEW ORDER] Cache miss, fetching from API:', item.menuId);
       const response = await fetch(`/api/public/merchants/${merchantCode}/menus/${item.menuId}`);
       const data = await response.json();
       if (data.success) {
@@ -727,6 +745,7 @@ export default function ViewOrderPage() {
             editMode={true}
             existingCartItem={editingCartItem}
             onClose={handleCloseModal}
+            prefetchedAddons={selectedMenu.addonCategories || []}
           />
         )
       }

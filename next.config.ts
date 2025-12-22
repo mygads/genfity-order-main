@@ -17,7 +17,16 @@ const nextConfig: NextConfig = {
         hostname: '**.public.blob.vercel-storage.com',
         pathname: '/**',
       },
+      // {
+      //   protocol: 'https',
+      //   hostname: 't03h0x5v48mc1tqh.public.blob.vercel-storage.com',
+      //   pathname: '/**',
+      // },
     ],
+    // Increase timeout for slow connections
+    minimumCacheTTL: 60,
+    // Disable image optimization in development if having issues
+    unoptimized: process.env.NODE_ENV === 'development',
   },
   webpack(config) {
     config.module.rules.push({
