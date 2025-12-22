@@ -834,12 +834,10 @@ export default function MenuBrowsePage() {
             window.history.pushState({}, '', newUrl);
             setShowOutletInfo(false);
           }}
-          merchantCode={merchantCode}
           merchant={{
             name: merchantInfo.name,
             address: merchantInfo.address,
             phone: merchantInfo.phone,
-            logoUrl: merchantInfo.logoUrl || undefined,
             openingHours: merchantInfo.openingHours.map(h => ({ ...h, is24Hours: (h as { is24Hours?: boolean }).is24Hours ?? false })),
           }}
         />

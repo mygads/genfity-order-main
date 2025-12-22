@@ -56,6 +56,7 @@ export default function PaymentPage() {
   const [error, setError] = useState('');
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [isProcessingOrder, setIsProcessingOrder] = useState(false);
+  const [showPaymentDetails, setShowPaymentDetails] = useState(false);
 
   // ✅ NEW: State untuk table number dan merchant data
   const [tableNumber, setTableNumber] = useState<string>('');
@@ -68,8 +69,14 @@ export default function PaymentPage() {
 
   /**
    * ✅ Format currency using merchant's currency
+   * Uses A$ prefix for Australian Dollar
    */
   const formatCurrency = (amount: number): string => {
+    // Special handling for AUD to show A$ prefix
+    if (merchantCurrency === 'AUD') {
+      return `A$${amount.toFixed(2)}`;
+    }
+
     return new Intl.NumberFormat('en-AU', {
       style: 'currency',
       currency: merchantCurrency,
@@ -432,261 +439,306 @@ export default function PaymentPage() {
         </div>
       </div>
 
-      <main className="flex-1 overflow-y-auto px-4 py-4 pb-6">
-
-
+      <main className="flex-1 overflow-y-auto  py-4 pb-6">
 
         {/* Error Message */}
         {error && (
-          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+          <div className="m-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
             <p className="text-sm text-red-600 dark:text-red-400">⚠️ {error}</p>
           </div>
         )}
 
-        {/* Customer Info Form */}
-        <div className="mb-4">
-          <h2 className="text-base font-semibold text-[#1A1A1A] dark:text-white mb-3">
-            Customer Information
-          </h2>
+        <section className="pb-3">
+          <div
+            className="flex items-center justify-between mt-4 mx-4 relative"
+            style={{
+              height: '36px',
+              fontSize: '0.8rem',
+              padding: '8px 16px',
+              border: '1px solid #f05a28',
+              borderRadius: '8px',
+              backgroundColor: 'rgba(240, 90, 40, 0.1)'
+            }}
+          >
+            <span className="text-gray-700">Order Type</span>
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-gray-900">
+                {mode === 'dinein' ? 'Dine In' : 'Takeaway'}
+              </span>
+              <svg
+                style={{ width: '18px', height: '18px', color: '#212529' }}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+              >
+                {/* Hollow Circle */}
+                <circle cx="12" cy="12" r="10" strokeWidth="2" fill="none" />
+                {/* Solid Checkmark */}
+                <path
+                  d="M8 12l3 3 5-6"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  fill="none"
+                />
+              </svg>
+            </div>
+          </div>
+        </section>
 
-          <form onSubmit={handleFormSubmit} className="space-y-3">
-            {/* Name Input with Icon */}
-            <div className="relative">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#999999] dark:text-gray-500">
+        {/* Customer Info Form (ESB Exact Match) */}
+        <div className="p-4 pb-0">
+          <div className="flex items-center mb-2">
+            <span
+              className="font-semibold"
+              style={{ fontSize: '16px', color: '#101828' }}
+            >
+              Customer Information
+            </span>
+          </div>
+
+          <form onSubmit={handleFormSubmit} className="flex flex-col">
+            {/* Full Name */}
+            <label
+              htmlFor="name"
+              className="mb-1"
+              style={{ fontSize: '14px', color: '#212529' }}
+            >
+              Full Name<span className="text-red-500">*</span>
+            </label>
+            <div className="relative mb-3">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#9CA3AF' }}>
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
               </div>
               <input
                 id="name"
                 type="text"
                 required
+                maxLength={100}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 disabled={!!(auth && auth.user.name)}
-                className={`w-full h-12 pl-11 pr-4 border border-[#E0E0E0] dark:border-gray-700 rounded-lg text-sm text-[#1A1A1A] dark:text-white placeholder-[#999999] dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35] ${(auth && auth.user.name) ? 'bg-gray-100 dark:bg-gray-700 cursor-not-allowed' : 'dark:bg-gray-800'}`}
-                placeholder="Full Name *"
+                className={`w-full h-12 pl-11 pr-4 border rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-[#f05a28] focus:border-[#f05a28] ${(auth && auth.user.name) ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}`}
+                style={{ borderColor: '#d0d5dd', color: '#101828' }}
+                placeholder="Full Name"
               />
             </div>
 
-            {/* Phone Input with Icon */}
-            <div className="relative">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#999999] dark:text-gray-500">
+            {/* Phone Number */}
+            <label
+              htmlFor="phone"
+              className="mb-1"
+              style={{ fontSize: '14px', color: '#212529' }}
+            >
+              Phone Number (for upcoming promos)
+            </label>
+            <div className="relative mb-3">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#9CA3AF' }}>
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                 </svg>
               </div>
               <input
                 id="phone"
                 type="tel"
+                inputMode="numeric"
+                minLength={9}
+                maxLength={18}
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 disabled={!!(auth && auth.user.phone)}
-                className={`w-full h-12 pl-11 pr-4 border border-[#E0E0E0] dark:border-gray-700 rounded-lg text-sm text-[#1A1A1A] dark:text-white placeholder-[#999999] dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35] ${(auth && auth.user.phone) ? 'bg-gray-100 dark:bg-gray-700 cursor-not-allowed' : 'dark:bg-gray-800'}`}
-                placeholder="Phone Number (optional)"
+                className={`w-full h-12 pl-11 pr-4 border rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-[#f05a28] focus:border-[#f05a28] ${(auth && auth.user.phone) ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}`}
+                style={{ borderColor: '#d0d5dd', color: '#101828' }}
+                placeholder="Phone Number"
               />
             </div>
 
-            {/* Email Input with Icon */}
-            <div className="relative">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#999999] dark:text-gray-500">
+            {/* Email */}
+            <label
+              htmlFor="email"
+              className="mb-1"
+              style={{ fontSize: '14px', color: '#212529' }}
+            >
+              Send Receipt to Email<span className="text-red-500">*</span>
+            </label>
+            <div className="relative mb-3">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#9CA3AF' }}>
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
               </div>
               <input
                 id="email"
                 type="email"
                 required
+                maxLength={50}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={!!(auth && auth.user.email)}
-                className={`w-full h-12 pl-11 pr-4 border border-[#E0E0E0] dark:border-gray-700 rounded-lg text-sm text-[#1A1A1A] dark:text-white placeholder-[#999999] dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35] ${(auth && auth.user.email) ? 'bg-gray-100 dark:bg-gray-700 cursor-not-allowed' : 'dark:bg-gray-800'}`}
-                placeholder="Email *"
+                className={`w-full h-12 pl-11 pr-4 border rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-[#f05a28] focus:border-[#f05a28] ${(auth && auth.user.email) ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}`}
+                style={{ borderColor: '#d0d5dd', color: '#101828' }}
+                placeholder="Email"
               />
             </div>
 
-            {/* ✅ EDITABLE Table Number Input with Icon */}
+            {/* Table Number (Dine-in only) */}
             {mode === 'dinein' && (
-              <div className="relative">
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#999999] dark:text-gray-500">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                  </svg>
+              <>
+                <label
+                  htmlFor="tableNumber"
+                  className="mb-1"
+                  style={{ fontSize: '14px', color: '#212529' }}
+                >
+                  Table Number<span className="text-red-500">*</span>
+                </label>
+                <div className="relative mb-3">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#9CA3AF' }}>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                  </div>
+                  <input
+                    id="tableNumber"
+                    type="text"
+                    required
+                    maxLength={50}
+                    value={tableNumber}
+                    onChange={(e) => setTableNumber(e.target.value)}
+                    className="w-full h-12 pl-11 pr-4 border rounded-xl text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#f05a28] focus:border-[#f05a28]"
+                    style={{ borderColor: '#d0d5dd', color: '#101828' }}
+                    placeholder="Table Number"
+                  />
                 </div>
-                <input
-                  id="tableNumber"
-                  type="text"
-                  required
-                  value={tableNumber}
-                  onChange={(e) => setTableNumber(e.target.value)}
-                  className="w-full h-12 pl-11 pr-4 border border-[#E0E0E0] dark:border-gray-700 rounded-lg text-sm text-[#1A1A1A] dark:text-white dark:bg-gray-800 placeholder-[#999999] dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#FF6B35] focus:border-[#FF6B35]"
-                  placeholder="Table Number *"
-                />
-              </div>
+              </>
             )}
           </form>
         </div>
 
-        {/* Payment Instructions Card */}
-        <div className="mb-4 p-4 bg-[#FFF5F0] dark:bg-orange-900/20 rounded-lg border border-[#FF6B35]">
-          <div className="flex items-start gap-3">
-            <div className="shrink-0 w-10 h-10 bg-[#FF6B35] rounded-full flex items-center justify-center">
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+        {/* Pay at Cashier (ESB Exact Match) */}
+        <div
+          className="flex flex-col items-center text-center"
+          style={{
+            padding: '32px',
+            gap: '12px',
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '14px',
+            letterSpacing: '0.25px',
+            lineHeight: '20px',
+            color: '#212529'
+          }}
+        >
+          <div>
+            <img
+              src="/images/cashier.png"
+              alt="Pay at Cashier"
+              style={{ maxWidth: '300px', height: 'auto' }}
+            />
+          </div>
+          <div>
+            <span>Click <b>&apos;Pay at Cashier&apos;</b> and show QR code to the cashier.</span>
+          </div>
+        </div>
+      </main>
+
+      {/* ===== FIXED BOTTOM PAYMENT BAR (ESB Exact Match) ===== */}
+      <div
+        className="fixed bottom-0 left-0 right-0 bg-white z-10"
+        style={{
+          boxShadow: '0 -4px 12px rgba(0,0,0,0.15)',
+          borderRadius: '16px 16px 0 0',
+          maxWidth: '500px',
+          margin: '0 auto',
+          fontFamily: 'Inter, sans-serif',
+          fontSize: '14px',
+          letterSpacing: '0.25px',
+          lineHeight: '20px'
+        }}
+      >
+        {/* Detail Payment Section (shown when expanded) */}
+        {showPaymentDetails && (
+          <div className="flex flex-col px-4 pt-4 mt-2 mx-2">
+            {/* Tax Row */}
+            {taxAmount > 0 && (
+              <div
+                className="flex mb-1"
+                style={{ fontSize: '0.9rem', color: '#AEB3BE' }}
+              >
+                <div className="flex-grow">Incl. Tax</div>
+                <div>{formatCurrency(taxAmount)}</div>
+              </div>
+            )}
+            {/* Service Charge Row */}
+            {serviceChargeAmount > 0 && (
+              <div
+                className="flex mb-1"
+                style={{ fontSize: '0.9rem', color: '#AEB3BE' }}
+              >
+                <div className="flex-grow">Service Charge</div>
+                <div>{formatCurrency(serviceChargeAmount)}</div>
+              </div>
+            )}
+            {/* Packaging Fee Row */}
+            {packagingFeeAmount > 0 && (
+              <div
+                className="flex mb-1"
+                style={{ fontSize: '0.9rem', color: '#AEB3BE' }}
+              >
+                <div className="flex-grow">Packaging Fee</div>
+                <div>{formatCurrency(packagingFeeAmount)}</div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Payment Total + Button */}
+        <div className="flex pt-3 px-4 pb-2 m-4 items-center">
+          {/* Left: Payment Total */}
+          <div className="flex flex-col w-1/2">
+            <div
+              className="flex items-center cursor-pointer"
+              style={{ lineHeight: 1, color: '#212529' }}
+              onClick={() => setShowPaymentDetails(!showPaymentDetails)}
+            >
+              Payment Total
+              <svg
+                style={{
+                  width: '20px',
+                  height: '20px',
+                  marginLeft: '4px',
+                  transform: showPaymentDetails ? 'rotate(180deg)' : 'rotate(0deg)',
+                  transition: 'transform 0.2s ease'
+                }}
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z" />
               </svg>
             </div>
-            <div className="flex-1">
-              <h3 className="text-sm font-semibold text-[#1A1A1A] dark:text-white mb-1">
-                Pay at Cashier
-              </h3>
-              <p className="text-xs text-[#666666] dark:text-gray-400 leading-relaxed">
-                Click &quot;Process Order&quot; then show the QR code to the cashier for payment.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* ✅ NEW: Order Items Summary */}
-        <div className="mb-4">
-          <h2 className="text-base font-semibold text-gray-900 dark:text-white mb-3">
-            Order Items
-          </h2>
-          <div className="space-y-3">
-            {cart?.items.map((item, index) => {
-              // Build aggregated addon list — cart stores addons as duplicated entries
-              const addonAggregatedMap = (item.addons || []).reduce((acc: Record<string, any>, addon) => {
-                const key = addon.id.toString();
-                if (!acc[key]) acc[key] = { ...addon, quantity: 0 };
-                acc[key].quantity += 1;
-                return acc;
-              }, {} as Record<string, any>);
-
-              const addonAggregated = Object.values(addonAggregatedMap);
-
-              // Calculate addon total using aggregated quantities
-              const addonTotal = addonAggregated.reduce((sum, addon) => {
-                const addonPrice = typeof addon.price === 'number' ? addon.price : 0;
-                const addonQty = addon.quantity || 1;
-                return sum + addonPrice * addonQty;
-              }, 0);
-
-              const itemSubtotal = (item.quantity * item.price) + addonTotal;
-
-              return (
-                <div key={index} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                        {item.quantity}x {item.menuName}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        {formatCurrency(item.price)} each
-                      </p>
-                    </div>
-                    <p className="text-sm font-semibold text-orange-500">
-                      {formatCurrency(itemSubtotal)}
-                    </p>
-                  </div>
-
-                  {/* Display Addons */}
-                  {item.addons && item.addons.length > 0 && (
-                    <div className="ml-4 space-y-1 mb-2">
-                      {addonAggregated.map((addon, addonIndex) => {
-                        const addonPrice = typeof addon.price === 'number' ? addon.price : 0;
-                        const addonQty = addon.quantity || 1;
-                        const addonSubtotal = addonPrice * addonQty;
-
-                        return (
-                          <div key={addonIndex} className="flex justify-between items-center text-xs text-gray-600 dark:text-gray-400">
-                            <span>
-                              + {addon.name}
-                              {addonQty > 1 && ` x${addonQty}`}
-                              {addonPrice > 0 && ` (+${formatCurrency(addonPrice)})`}
-                            </span>
-                            {addonSubtotal > 0 && (
-                              <span className="text-gray-500 dark:text-gray-400">
-                                {formatCurrency(addonSubtotal)}
-                              </span>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {/* Item Notes */}
-                  {item.notes && (
-                    <div className="ml-4 text-xs text-gray-500 dark:text-gray-400 flex items-start gap-1">
-                      <span>📝</span>
-                      <span>{item.notes}</span>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Total Summary Card */}
-        <div className="mb-4 p-4 bg-white dark:bg-gray-800 rounded-lg border border-[#E0E0E0] dark:border-gray-700 space-y-2">
-          {/* Subtotal */}
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-[#666666] dark:text-gray-400">Subtotal ({cart?.items.length || 0} item{cart && cart.items.length !== 1 ? 's' : ''})</span>
-            <span className="text-sm text-[#1A1A1A] dark:text-white font-medium">
-              {formatCurrency(cartSubtotal)}
-            </span>
-          </div>
-
-          {/* Tax */}
-          {taxAmount > 0 && (
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-[#666666] dark:text-gray-400">Tax ({merchantTaxPercentage}%)</span>
-              <span className="text-sm text-[#1A1A1A] dark:text-white font-medium">
-                {formatCurrency(taxAmount)}
-              </span>
-            </div>
-          )}
-
-          {/* Service Charge */}
-          {serviceChargeAmount > 0 && (
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-[#666666] dark:text-gray-400">Service Charge ({merchantServiceChargePercent}%)</span>
-              <span className="text-sm text-[#1A1A1A] dark:text-white font-medium">
-                {formatCurrency(serviceChargeAmount)}
-              </span>
-            </div>
-          )}
-
-          {/* Packaging Fee */}
-          {packagingFeeAmount > 0 && (
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-[#666666] dark:text-gray-400">Packaging Fee</span>
-              <span className="text-sm text-[#1A1A1A] dark:text-white font-medium">
-                {formatCurrency(packagingFeeAmount)}
-              </span>
-            </div>
-          )}
-
-          {/* Total */}
-          <div className="flex items-center justify-between pt-3 border-t border-[#E0E0E0] dark:border-gray-700">
-            <span className="text-base font-semibold text-[#1A1A1A] dark:text-white">Total Payment</span>
-            <span className="text-xl font-bold text-[#FF6B35]">
+            <div
+              className="flex items-center"
+              style={{ fontWeight: 'bold', fontSize: '20px', lineHeight: 1.5, color: '#101828' }}
+            >
               {formatCurrency(totalPayment)}
-            </span>
+            </div>
           </div>
-        </div>
 
-        {/* Submit Button */}
-        <button
-          type="button"
-          onClick={handleFormSubmit}
-          disabled={isLoading}
-          className="w-full h-12 bg-[#FF6B35] text-white text-base font-semibold rounded-lg hover:bg-[#E55A2B] disabled:bg-[#E0E0E0] dark:disabled:bg-gray-700 disabled:text-[#999999] dark:disabled:text-gray-500 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
-        >
-          {isLoading ? 'Processing...' : 'Process Order'}
-        </button>
-      </main>
+          {/* Right: Pay at Cashier Button */}
+          <button
+            type="button"
+            onClick={handleFormSubmit}
+            disabled={isLoading}
+            className="w-1/2 py-3 text-white font-medium rounded-lg transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              backgroundColor: '#f05a28',
+              fontSize: '14px'
+            }}
+          >
+            {isLoading ? 'Processing...' : 'Pay at Cashier'}
+          </button>
+        </div>
+      </div>
 
       {/* Payment Confirmation Modal */}
       <PaymentConfirmationModal

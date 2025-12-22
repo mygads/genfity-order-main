@@ -210,13 +210,6 @@ export default function HorizontalMenuSection({
                                         )}
                                     </div>
 
-                                    {/* Low Stock Indicator - Show when stock <= 10 */}
-                                    {isAvailable && item.trackStock && item.stockQty !== null && item.stockQty <= 10 && (
-                                        <p style={{ fontSize: '12px', fontWeight: 500, color: '#f97316', marginTop: '4px' }}>
-                                            Only {item.stockQty} left
-                                        </p>
-                                    )}
-
                                     {/* Add Button - 28px height, 8px radius, orange border */}
                                     <div style={{ marginTop: '6px' }}>
                                         {isAvailable && (
