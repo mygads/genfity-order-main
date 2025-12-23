@@ -35,6 +35,10 @@ interface MenuItem {
   trackStock: boolean;
   isPromo?: boolean;
   promoPrice?: number;
+  isSpicy?: boolean;
+  isBestSeller?: boolean;
+  isSignature?: boolean;
+  isRecommended?: boolean;
   addonCategories?: AddonCategory[];
 }
 
@@ -512,8 +516,8 @@ export default function MenuDetailModal({
         <div className="flex-1 overflow-y-auto scrollbar-hide pb-32">
           {/* Image Banner with Buttons */}
           <div
-            className="relative w-full h-[250px] bg-gray-200 dark:bg-gray-700 cursor-pointer"
-            onClick={() => setIsImageZoomed(true)}
+            className={`relative w-full h-[250px] bg-gray-200 dark:bg-gray-700 ${menu.imageUrl ? 'cursor-pointer' : 'cursor-default'}`}
+            onClick={() => menu.imageUrl && setIsImageZoomed(true)}
           >
             <Image
               src={menu.imageUrl || '/images/default-menu.png'}
@@ -548,20 +552,22 @@ export default function MenuDetailModal({
               </svg>
             </button>
 
-            {/* Expand Button */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsImageZoomed(true);
-              }}
-              className="absolute top-3 left-3 w-8 h-8 bg-white/90 dark:bg-gray-800/90 rounded-full flex items-center justify-center shadow-md hover:bg-white dark:hover:bg-gray-800 transition-colors"
-              style={{ zIndex: 2 }}
-              aria-label="Expand image"
-            >
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <path d="M3 3L8 3M3 3L3 8M3 3L8 8M17 17L12 17M17 17L17 12M17 17L12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
+            {/* Expand Button - Only show if has image */}
+            {menu.imageUrl && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsImageZoomed(true);
+                }}
+                className="absolute top-3 left-3 w-8 h-8 bg-white/90 dark:bg-gray-800/90 rounded-full flex items-center justify-center shadow-md hover:bg-white dark:hover:bg-gray-800 transition-colors"
+                style={{ zIndex: 2 }}
+                aria-label="Expand image"
+              >
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <path d="M3 3L8 3M3 3L3 8M3 3L8 8M17 17L12 17M17 17L17 12M17 17L12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+            )}
 
             {/* Unavailable Badge */}
             {!isAvailable && (
@@ -573,10 +579,51 @@ export default function MenuDetailModal({
 
           {/* Menu Info Section - Overlaps image with rounded top */}
           <section className="px-4 py-3 bg-white dark:bg-gray-800 rounded-t-2xl relative -mt-4 z-10">
-            {/* Menu Icons (e.g., Recommended badge) */}
-            <div className="flex gap-2 mb-2">
-              {/* Placeholder for menu icons/badges */}
-            </div>
+            {/* Menu Badges (Recommended, Best Seller, Spicy, Signature) */}
+            {(menu.isRecommended || menu.isBestSeller || menu.isSpicy || menu.isSignature || menu.isPromo) && (
+              <div className="flex flex-wrap gap-2 mb-2">
+                {menu.isPromo && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-500 text-white text-xs font-semibold rounded-full">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z" />
+                    </svg>
+                    Promo
+                  </span>
+                )}
+                {menu.isRecommended && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-500 text-white text-xs font-semibold rounded-full">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                    </svg>
+                    Recommended
+                  </span>
+                )}
+                {menu.isBestSeller && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-500 text-white text-xs font-semibold rounded-full">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                    </svg>
+                    Best Seller
+                  </span>
+                )}
+                {menu.isSignature && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-500 text-white text-xs font-semibold rounded-full">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M9 11.75c-.69 0-1.25.56-1.25 1.25s.56 1.25 1.25 1.25 1.25-.56 1.25-1.25-.56-1.25-1.25-1.25zm6 0c-.69 0-1.25.56-1.25 1.25s.56 1.25 1.25 1.25 1.25-.56 1.25-1.25-.56-1.25-1.25-1.25zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8 0-.29.02-.58.05-.86 2.36-1.05 4.23-2.98 5.21-5.37C11.07 8.33 14.05 10 17.42 10c.78 0 1.53-.09 2.25-.26.21.71.33 1.47.33 2.26 0 4.41-3.59 8-8 8z" />
+                    </svg>
+                    Signature
+                  </span>
+                )}
+                {menu.isSpicy && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-500 text-white text-xs font-semibold rounded-full">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M17.66 11.2C17.43 10.9 17.15 10.64 16.89 10.38C16.22 9.78 15.46 9.35 14.82 8.72C13.33 7.26 13 4.85 13.95 3C13.95 3 12.17 4.59 11.5 6.31C11.08 7.29 11.03 8.2 11.11 9.19C11.12 9.48 11.13 9.78 11.05 10.06C10.89 10.65 10.45 11.14 9.94 11.45C9.74 11.57 9.54 11.67 9.33 11.68C9.04 11.69 8.76 11.54 8.55 11.34C8.24 11.05 8.06 10.65 7.96 10.25C7.87 9.93 7.84 9.59 7.78 9.27C7.29 9.72 6.86 10.25 6.53 10.83C5.73 12.18 5.5 13.82 5.89 15.34C6.49 17.69 8.74 19.54 11.06 19.93C13.54 20.35 16.24 19.59 17.85 17.58C19.65 15.28 19.84 12.27 17.66 11.2" />
+                    </svg>
+                    Spicy
+                  </span>
+                )}
+              </div>
+            )}
 
             {/* Menu Name */}
             <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
