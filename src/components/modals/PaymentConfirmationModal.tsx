@@ -1,13 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 
 interface PaymentConfirmationModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
   totalAmount: number;
-  currency?: string; // ✅ NEW: Dynamic currency (AUD, IDR, USD, etc.)
+  currency?: string;
   breakdown?: {
     subtotal: number;
     serviceCharge?: number;
@@ -16,44 +17,28 @@ interface PaymentConfirmationModalProps {
 }
 
 /**
- * Payment Confirmation Modal - Center Overlay
+ * Payment Confirmation Modal - ESB Bottom Sheet Style
  * 
- * @specification FRONTEND_SPECIFICATION.md - Payment Confirmation
- * 
- * @description
- * Shows order total with breakdown before payment:
- * - Subtotal (base price)
- * - Tax (merchant-specific %)
- * - Total amount
+ * Modal slides up from bottom with rounded top corners
+ * matching ESB design exactly
  */
 export default function PaymentConfirmationModal({
   isOpen,
   onClose,
   onConfirm,
-  totalAmount,
-  currency = 'AUD', // ✅ Default to AUD
-  breakdown,
 }: PaymentConfirmationModalProps) {
   const [isClosing, setIsClosing] = useState(false);
 
-  // ✅ Handle smooth close
+  // Handle smooth close
   const handleClose = () => {
     setIsClosing(true);
     setTimeout(() => {
       setIsClosing(false);
       onClose();
-    }, 200);
+    }, 300);
   };
 
   if (!isOpen) return null;
-
-  // ✅ Format currency dynamically
-  const formatPrice = (amount: number) => {
-    return new Intl.NumberFormat('en-AU', {
-      style: 'currency',
-      currency: currency,
-    }).format(amount);
-  };
 
   return (
     <>
@@ -66,100 +51,111 @@ export default function PaymentConfirmationModal({
           from { opacity: 1; }
           to { opacity: 0; }
         }
-        @keyframes scaleIn {
-          from { opacity: 0; transform: scale(0.95); }
-          to { opacity: 1; transform: scale(1); }
+        @keyframes slideUp {
+          from { transform: translateY(100%); }
+          to { transform: translateY(0); }
         }
-        @keyframes scaleOut {
-          from { opacity: 1; transform: scale(1); }
-          to { opacity: 0; transform: scale(0.95); }
+        @keyframes slideDown {
+          from { transform: translateY(0); }
+          to { transform: translateY(100%); }
         }
-        .animate-fade-in { animation: fadeIn 0.2s ease-out; }
-        .animate-fade-out { animation: fadeOut 0.2s ease-in forwards; }
-        .animate-scale-in { animation: scaleIn 0.2s ease-out; }
-        .animate-scale-out { animation: scaleOut 0.2s ease-in forwards; }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out; }
+        .animate-fade-out { animation: fadeOut 0.3s ease-in forwards; }
+        .animate-slide-up { animation: slideUp 0.3s ease-out; }
+        .animate-slide-down { animation: slideDown 0.3s ease-in forwards; }
       `}</style>
 
-      {/* Overlay - rgba(0,0,0,0.5), z-index 300 */}
+      {/* Overlay */}
       <div
-        className={`fixed inset-0 bg-black/50 z-[300] flex items-center justify-center p-4 ${isClosing ? 'animate-fade-out' : 'animate-fade-in'}`}
+        className={`fixed inset-0 bg-black/50 z-[300] ${isClosing ? 'animate-fade-out' : 'animate-fade-in'}`}
         onClick={handleClose}
+      />
+
+      {/* Bottom Sheet Modal - ESB Style */}
+      <div
+        className={`fixed bottom-0 left-0 right-0 z-[301] ${isClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
+        style={{
+          maxWidth: '500px',
+          margin: '0 auto',
+          fontFamily: 'Inter, sans-serif'
+        }}
       >
-        {/* Center Modal - Max-width 320px */}
         <div
-          className={`bg-white dark:bg-gray-800 rounded-xl max-w-[320px] w-full p-6 shadow-2xl ${isClosing ? 'animate-scale-out' : 'animate-scale-in'}`}
+          style={{
+            backgroundColor: 'white',
+            borderTopLeftRadius: '24px',
+            borderTopRightRadius: '24px',
+            padding: '24px 16px',
+            boxShadow: '0 -4px 20px rgba(0,0,0,0.15)'
+          }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Question Icon - 48x48px */}
-          <div className="flex justify-center mb-4">
-            <div className="w-12 h-12 rounded-full bg-[#FFF5F0] dark:bg-orange-900/20 flex items-center justify-center text-3xl">
-              ❓
-            </div>
+
+          {/* Cashier Illustration - ESB Style */}
+          <div className="flex justify-center mt-2 mb-4">
+            <Image
+              src="/images/ic-pay-now.svg"
+              alt="Payment confirmation"
+              width={200}
+              height={160}
+              priority
+            />
           </div>
 
-          {/* Title - 20px/700 */}
-          <h2 className="text-[20px] font-bold text-[#1A1A1A] dark:text-white mb-2 text-center">
+          {/* Title - ESB Style */}
+          <h3
+            className="text-center mb-6"
+            style={{
+              fontSize: '18px',
+              fontWeight: 600,
+              color: '#1A1A1A',
+              lineHeight: '24px'
+            }}
+          >
             Process payment now?
-          </h2>
+          </h3>
 
-          {/* Message - 14px/400 */}
-          <p className="text-sm text-[#666666] dark:text-gray-400 mb-4 text-center">
-            Make sure your order is correct
-          </p>
-
-          {/* ✅ FIXED: Total Recap with Breakdown */}
-          <div className="bg-[#F9F9F9] dark:bg-gray-700 rounded-lg p-3 mb-6">
-            {breakdown ? (
-              <div className="space-y-2">
-                <div className="flex justify-between text-xs">
-                  <span className="text-[#666666] dark:text-gray-400">Subtotal</span>
-                  <span className="text-[#1A1A1A] dark:text-white">{formatPrice(breakdown.subtotal)}</span>
-                </div>
-                {typeof breakdown.serviceCharge === 'number' && (
-                  <div className="flex justify-between text-xs">
-                    <span className="text-[#666666] dark:text-gray-400">Service charge</span>
-                    <span className="text-[#1A1A1A] dark:text-white">{formatPrice(breakdown.serviceCharge)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-xs">
-                  <span className="text-[#666666] dark:text-gray-400">Tax</span>
-                  <span className="text-[#1A1A1A] dark:text-white">{formatPrice(breakdown.tax)}</span>
-                </div>
-                <div className="pt-2 border-t border-[#E0E0E0] dark:border-gray-600">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-semibold text-[#666666] dark:text-gray-400">Total:</span>
-                    <span className="text-base font-bold text-[#FF6A35]">
-                      {formatPrice(totalAmount)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-semibold text-[#666666] dark:text-gray-400">Total:</span>
-                <span className="text-base font-bold text-[#FF6A35]">
-                  {formatPrice(totalAmount)}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Buttons */}
-          <div className="flex gap-3">
-            {/* Check Again Button - 44px, outline */}
+          {/* Buttons Row - ESB Style */}
+          <div
+            className="flex justify-between gap-3"
+            style={{ padding: '0 8px' }}
+          >
+            {/* Check Again Button - Outline Style */}
             <button
               onClick={handleClose}
-              className="flex-1 h-11 bg-white dark:bg-gray-800 border-2 border-[#FF6A35] text-[#FF6A35] text-sm font-semibold rounded-lg hover:bg-[#FFF5F0] dark:hover:bg-orange-900/20 transition-all duration-200 active:scale-[0.98]"
+              style={{
+                flex: 1,
+                height: '48px',
+                backgroundColor: 'white',
+                border: '1px solid #F05A28',
+                borderRadius: '8px',
+                color: '#F05A28',
+                fontSize: '14px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
             >
               Check Again
             </button>
 
-            {/* Pay Now Button - 44px, primary */}
+            {/* Payment Now Button - Primary Style */}
             <button
               onClick={onConfirm}
-              className="flex-1 h-11 bg-[#FF6A35] text-white text-sm font-semibold rounded-lg hover:bg-[#F1592A] transition-all duration-200 active:scale-[0.98]"
+              style={{
+                flex: 1,
+                height: '48px',
+                backgroundColor: '#F05A28',
+                border: 'none',
+                borderRadius: '8px',
+                color: 'white',
+                fontSize: '14px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
             >
-              Pay Now
+              Payment Now
             </button>
           </div>
         </div>

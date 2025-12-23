@@ -463,27 +463,23 @@ export default function PaymentPage() {
 
   return (
     <>
-      {/* Header */}
-      <div className="sticky top-0 z-50 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between px-4 h-14">
-          {/* Back Button */}
+      {/* Header - Profile Style */}
+      <header className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700 shadow-md">
+        <div className="flex items-center px-4 py-3">
           <button
             onClick={() => router.push(`/${merchantCode}/view-order?mode=${mode}`)}
-            className="p-2 -ml-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
-            aria-label="Go back"
+            className="w-10 h-10 flex items-center justify-center -ml-2"
+            aria-label="Back"
           >
-            <svg className="w-6 h-6 text-gray-900 dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 12H5M12 19l-7-7 7-7" />
             </svg>
           </button>
-
-          {/* Title */}
-          <h1 className="text-base font-bold text-gray-900 dark:text-white">Payment</h1>
-
-          {/* Placeholder for symmetry */}
-          <div className="w-10" />
+          <h1 className="flex-1 text-center font-semibold text-gray-900 dark:text-white text-base pr-10">
+            Payment
+          </h1>
         </div>
-      </div>
+      </header>
 
       <main className="flex-1 overflow-y-auto  py-4 pb-6">
 
@@ -509,7 +505,7 @@ export default function PaymentPage() {
             <span className="text-gray-700">Order Type</span>
             <div className="flex items-center gap-2">
               <span className="font-medium text-gray-900">
-                {mode === 'dinein' ? 'Dine In' : 'Takeaway'}
+                {mode === 'dinein' ? 'Dine In' : 'Pick Up'}
               </span>
               <svg
                 style={{ width: '18px', height: '18px', color: '#212529' }}

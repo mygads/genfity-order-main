@@ -7,6 +7,8 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { clearCart } from '@/lib/utils/localStorage';
 import type { OrderMode } from '@/lib/types/customer';
 import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';
+import NewOrderConfirmationModal from '@/components/modals/NewOrderConfirmationModal';
+import { QRCodeSVG } from 'qrcode.react';
 
 // ✅ Order Summary Data Interface
 interface OrderSummaryData {
@@ -80,6 +82,7 @@ export default function OrderSummaryCashPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [showFeeDetails, setShowFeeDetails] = useState(false);
+  const [showNewOrderModal, setShowNewOrderModal] = useState(false);
 
   /**
    * ✅ Fetch merchant info and order details
@@ -230,12 +233,20 @@ export default function OrderSummaryCashPage() {
   };
 
   /**
-   * ✅ Handle "New Order" button click
+   * ✅ Handle "New Order" button click - Show confirmation modal
    */
   const handleNewOrder = () => {
+    setShowNewOrderModal(true);
+  };
+
+  /**
+   * ✅ Handle confirm new order from modal
+   */
+  const handleConfirmNewOrder = () => {
     console.log('🔄 Starting new order');
     clearCart(merchantCode, mode);
     localStorage.removeItem(`mode_${merchantCode}`);
+    setShowNewOrderModal(false);
     router.push(`/${merchantCode}`);
   };
 
@@ -283,11 +294,20 @@ export default function OrderSummaryCashPage() {
   return (
     <>
       {/* ========================================
-          HEADER - ESB Style
+          HEADER - ESB Style (Centered with Shadow)
       ======================================== */}
-      <header className="sticky top-0 z-50 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-center px-4 h-14">
-          <h1 className="text-base font-bold text-gray-900 dark:text-white">Order Summary</h1>
+      <header className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700 shadow-md">
+        <div className="flex items-center justify-center px-5 py-4">
+          <h1
+            className="text-gray-900 dark:text-white"
+            style={{
+              fontSize: '16px',
+              fontWeight: 500,
+              lineHeight: '24px'
+            }}
+          >
+            Order Summary
+          </h1>
         </div>
       </header>
 
@@ -309,7 +329,7 @@ export default function OrderSummaryCashPage() {
           <span className="text-gray-700">Order Type</span>
           <div className="flex items-center gap-2">
             <span className="font-medium text-gray-900">
-              {mode === 'dinein' ? 'Dine In' : 'Takeaway'}
+              {mode === 'dinein' ? 'Dine In' : 'Pick Up'}
             </span>
             <svg
               style={{ width: '18px', height: '18px', color: '#1ca406' }}
@@ -391,29 +411,22 @@ export default function OrderSummaryCashPage() {
 
 
 
-        {/* QR Placeholder - ESB Style */}
+        {/* QR Code - Real QR with Order Number */}
         <div className="flex justify-center mb-4">
           <div
-            className="flex items-center justify-center rounded-xl"
+            className="flex items-center justify-center rounded-xl "
             style={{
               width: '240px',
               height: '240px',
-              backgroundColor: '#f3f4f6',
-              border: '1px solid #e5e7eb'
+              backgroundColor: 'white',
             }}
           >
-            {/* Mobile Icon Placeholder */}
-            <div className="text-center">
-              <div
-                className="w-16 h-20 mx-auto rounded-lg flex items-center justify-center"
-                style={{ backgroundColor: '#374151' }}
-              >
-                <div
-                  className="w-10 h-10 rounded"
-                  style={{ backgroundColor: '#60a5fa' }}
-                />
-              </div>
-            </div>
+            <QRCodeSVG
+              value={order.orderNumber}
+              size={350}
+              level="H"
+              includeMargin={false}
+            />
           </div>
         </div>
 
@@ -454,7 +467,7 @@ export default function OrderSummaryCashPage() {
               textAlign: 'start'
             }}
           >
-            <strong>Show the QR code</strong> or <strong>8-digit order number</strong> to our cashier.
+            <strong>Show the QR code</strong> or <strong>7-digit order number</strong> to our cashier.
           </span>
         </div>
       </div>
@@ -713,6 +726,13 @@ export default function OrderSummaryCashPage() {
           New Order
         </button>
       </main>
+
+      {/* New Order Confirmation Modal */}
+      <NewOrderConfirmationModal
+        isOpen={showNewOrderModal}
+        onClose={() => setShowNewOrderModal(false)}
+        onConfirm={handleConfirmNewOrder}
+      />
     </>
   );
 }

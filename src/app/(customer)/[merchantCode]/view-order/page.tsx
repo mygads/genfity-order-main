@@ -9,6 +9,7 @@ import type { CartItem } from '@/context/CartContext';
 import { formatCurrency } from '@/lib/utils/format';
 import { calculateCartSubtotal } from '@/lib/utils/priceCalculator';
 import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';
+import OtherNotesModal from '@/components/modals/OtherNotesModal';
 
 interface MenuItem {
   id: string;
@@ -61,6 +62,7 @@ export default function ViewOrderPage() {
   const [removeItemId, setRemoveItemId] = useState<string | null>(null);
   const [removeItemName, setRemoveItemName] = useState<string>('');
   const [relatedMenus, setRelatedMenus] = useState<RelatedMenuItem[]>([]);
+  const [showNotesModal, setShowNotesModal] = useState(false);
 
   // Initialize cart on mount
   useEffect(() => {
@@ -221,20 +223,21 @@ export default function ViewOrderPage() {
 
   return (
     <div className="min-h-screen bg-white-50 dark:bg-gray-900">
-      {/* ===== HEADER (ESB Style) ===== */}
-      <header className="sticky top-0 z-50 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between px-4 h-14">
+      {/* ===== HEADER (Profile Style) ===== */}
+      <header className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700 shadow-md">
+        <div className="flex items-center px-4 py-3">
           <button
             onClick={() => router.push(`/${merchantCode}/order?mode=${mode}`)}
-            className="w-10 h-10 -ml-2 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
-            aria-label="Go back"
+            className="w-10 h-10 flex items-center justify-center -ml-2"
+            aria-label="Back"
           >
-            <svg className="w-6 h-6 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 12H5M12 19l-7-7 7-7" />
             </svg>
           </button>
-          <h1 className="text-base font-bold text-gray-900 dark:text-white">Order</h1>
-          <div className="w-10" />
+          <h1 className="flex-1 text-center font-semibold text-gray-900 dark:text-white text-base pr-10">
+            Order
+          </h1>
         </div>
       </header>
 
@@ -256,7 +259,7 @@ export default function ViewOrderPage() {
             <span className="text-gray-700">Order Type</span>
             <div className="flex items-center gap-2">
               <span className="font-medium text-gray-900">
-                {mode === 'dinein' ? 'Dine In' : 'Takeaway'}
+                {mode === 'dinein' ? 'Dine In' : 'Pick Up'}
               </span>
               <svg
                 style={{ width: '18px', height: '18px', color: '#212529' }}
@@ -279,6 +282,44 @@ export default function ViewOrderPage() {
           </div>
         </section>
 
+        {/* ===== PICK UP NOW CARD (ESB Style - Only for Takeaway) ===== */}
+        {mode === 'takeaway' && (
+          <section className="mx-3 my-2">
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'flex-start',
+                height: '60px',
+                minHeight: '60px',
+                padding: '8px 16px',
+                backgroundColor: '#ffffff',
+                borderTop: '1px solid #e6e6e6',
+                borderRadius: '0 0 16px 16px',
+                boxShadow: '0px 3px 10px 0px rgba(0, 0, 0, 0.08)',
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '14px',
+                cursor: 'default'
+              }}
+            >
+              {/* Serving/Pickup Icon (dark using CSS mask) */}
+              <div
+                style={{
+                  width: '24px',
+                  height: '24px',
+                  backgroundColor: '#212529',
+                  WebkitMask: 'url(/images/icons/ic-serving-menu.svg) center/contain no-repeat',
+                  mask: 'url(/images/icons/ic-serving-menu.svg) center/contain no-repeat'
+                }}
+              />
+              {/* Pick Up Now Text */}
+              <div className="ml-3 flex flex-col">
+                <span style={{ fontWeight: 700, color: '#212529' }}>Pick Up Now</span>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* ===== ORDERED ITEMS SECTION (ESB Exact CSS Match) ===== */}
         <section className="order-menu-section" style={{ fontFamily: 'var(--font-inter), Inter, sans-serif' }}>
@@ -493,10 +534,10 @@ export default function ViewOrderPage() {
             }}
           />
 
-          {/* Add Another Notes (ESB Style) */}
+          {/* Add Another Notes (ESB Style) - Shows notes when entered */}
           <div
             className="flex items-center cursor-pointer"
-            onClick={() => document.getElementById('general-notes')?.focus()}
+            onClick={() => setShowNotesModal(true)}
             style={{
               marginTop: '1.5rem',
               marginBottom: '1.5rem',
@@ -511,27 +552,17 @@ export default function ViewOrderPage() {
             }}
           >
             <svg
-              className="mr-2"
+              className="mr-2 flex-shrink-0"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
-              style={{ minWidth: '24px', minHeight: '24px', width: '24px', color: '#808080' }}
+              style={{ minWidth: '24px', minHeight: '24px', width: '24px', color: generalNotes ? '#1A1A1A' : '#808080' }}
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
             </svg>
-            <span style={{ color: '#808080' }}>Add another notes</span>
-          </div>
-
-          {/* Notes Textarea (hidden initially, show when focused) */}
-          <div className="px-3 pb-3">
-            <textarea
-              id="general-notes"
-              value={generalNotes}
-              onChange={(e) => setGeneralNotes(e.target.value)}
-              placeholder="Add notes for your entire order..."
-              rows={2}
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg text-gray-900 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all resize-none"
-            />
+            <span style={{ color: generalNotes ? '#1A1A1A' : '#808080' }}>
+              {generalNotes || 'Add another notes'}
+            </span>
           </div>
         </section>
 
@@ -796,6 +827,14 @@ export default function ViewOrderPage() {
           </>
         )
       }
+
+      {/* Other Notes Modal */}
+      <OtherNotesModal
+        isOpen={showNotesModal}
+        onClose={() => setShowNotesModal(false)}
+        onAdd={(notes) => setGeneralNotes(notes)}
+        initialNotes={generalNotes}
+      />
     </div >
   );
 }
