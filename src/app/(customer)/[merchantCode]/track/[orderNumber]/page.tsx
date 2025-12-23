@@ -39,11 +39,11 @@ interface StatusStep {
 }
 
 const STATUS_STEPS: StatusStep[] = [
-    { status: 'PENDING', label: 'Pending', icon: '🕐', description: 'Waiting for acceptance' },
-    { status: 'ACCEPTED', label: 'Accepted', icon: '✓', description: 'Order confirmed' },
-    { status: 'IN_PROGRESS', label: 'Preparing', icon: '👨‍🍳', description: 'Being prepared' },
-    { status: 'READY', label: 'Ready', icon: '🔔', description: 'Ready for pickup!' },
-    { status: 'COMPLETED', label: 'Completed', icon: '✅', description: 'Order completed' },
+    { status: 'PENDING', label: 'Pending', icon: '1', description: 'Waiting for acceptance' },
+    { status: 'ACCEPTED', label: 'Accepted', icon: '2', description: 'Order confirmed' },
+    { status: 'IN_PROGRESS', label: 'Preparing', icon: '3', description: 'Being prepared' },
+    { status: 'READY', label: 'Ready', icon: '4', description: 'Ready for pickup!' },
+    { status: 'COMPLETED', label: 'Completed', icon: '✓', description: 'Order completed' },
 ];
 
 /**
@@ -179,7 +179,7 @@ export default function OrderTrackPage() {
 
     // Handle back navigation
     const handleBack = () => {
-        router.push(`/${merchantCode}/order-summary-cash?orderNumber=${orderNumber}`);
+        router.back();
     };
 
     // Handle new order
@@ -197,16 +197,18 @@ export default function OrderTrackPage() {
         return (
             <div className="flex-1 flex items-center justify-center px-4">
                 <div className="text-center max-w-sm">
-                    <div className="text-6xl mb-4">❌</div>
+                    <svg className="w-16 h-16 mx-auto mb-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
                     <p className="text-base text-gray-900 dark:text-white font-semibold mb-2">
                         Order Not Found
                     </p>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">{error}</p>
                     <button
-                        onClick={() => router.push(`/${merchantCode}`)}
+                        onClick={() => router.back()}
                         className="px-6 py-3 bg-orange-500 text-white text-sm font-semibold rounded-lg hover:bg-orange-600 transition-all active:scale-[0.98]"
                     >
-                        Back to Menu
+                        Go Back
                     </button>
                 </div>
             </div>
@@ -220,25 +222,25 @@ export default function OrderTrackPage() {
 
     return (
         <>
-            {/* Header */}
-            <header className="sticky top-0 z-50 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
-                <div className="flex items-center justify-between px-4 h-14">
+            {/* Header - Profile Style */}
+            <header className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700 shadow-md">
+                <div className="flex items-center px-4 py-3">
                     <button
                         onClick={handleBack}
-                        className="p-2 -ml-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+                        className="w-10 h-10 flex items-center justify-center -ml-2"
                         aria-label="Go back"
                     >
                         <ArrowLeft className="w-5 h-5 text-gray-700 dark:text-white" />
                     </button>
 
-                    <h1 className="text-base font-bold text-gray-900 dark:text-white">
+                    <h1 className="flex-1 text-center font-semibold text-gray-900 dark:text-white text-base">
                         Track Order
                     </h1>
 
                     <button
                         onClick={() => fetchOrder(true)}
                         disabled={isRefreshing}
-                        className="p-2 -mr-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+                        className="w-10 h-10 flex items-center justify-center -mr-2"
                         aria-label="Refresh"
                     >
                         <RefreshCw className={`w-5 h-5 text-gray-700 dark:text-white ${isRefreshing ? 'animate-spin' : ''}`} />
@@ -268,7 +270,9 @@ export default function OrderTrackPage() {
                     {isCancelled ? (
                         /* Cancelled State */
                         <div className="text-center py-8">
-                            <div className="text-6xl mb-4">❌</div>
+                            <svg className="w-16 h-16 mx-auto mb-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
                             <h2 className="text-xl font-bold text-red-600 mb-2">Order Cancelled</h2>
                             <p className="text-sm text-gray-600 dark:text-gray-400">
                                 This order has been cancelled.
@@ -305,7 +309,32 @@ export default function OrderTrackPage() {
                                                                 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}
                           `}
                                                 >
-                                                    {step.icon}
+                                                    {/* SVG Icons for each step */}
+                                                    {step.status === 'PENDING' && (
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                        </svg>
+                                                    )}
+                                                    {step.status === 'ACCEPTED' && (
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                        </svg>
+                                                    )}
+                                                    {step.status === 'IN_PROGRESS' && (
+                                                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                                                        </svg>
+                                                    )}
+                                                    {step.status === 'READY' && (
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                                        </svg>
+                                                    )}
+                                                    {step.status === 'COMPLETED' && (
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                        </svg>
+                                                    )}
                                                 </div>
 
                                                 {/* Label */}
@@ -325,22 +354,48 @@ export default function OrderTrackPage() {
 
                             {/* Current Status Card */}
                             <div className={`
-                p-6 rounded-xl text-center mb-6
-                ${isReady ? 'bg-green-50 dark:bg-green-900/20 border-2 border-green-500' :
-                                    'bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800'}
+                p-6 rounded-xl text-center mb-6 bg-white dark:bg-gray-800
+                ${isReady ? 'border-2 border-green-500' : 'border border-gray-200 dark:border-gray-700'}
               `}>
-                                <div className="text-4xl mb-3">
-                                    {isReady ? '🔔' : STATUS_STEPS[currentStepIndex]?.icon || '⏳'}
+                                {/* Status Icon - SVG */}
+                                <div className={`w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center ${isReady ? 'bg-green-100 dark:bg-green-900/30 text-green-600' : 'bg-orange-100 dark:bg-orange-900/30 text-orange-600'}`}>
+                                    {currentStepIndex === 0 && (
+                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    )}
+                                    {currentStepIndex === 1 && (
+                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    )}
+                                    {currentStepIndex === 2 && (
+                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                        </svg>
+                                    )}
+                                    {currentStepIndex === 3 && (
+                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                        </svg>
+                                    )}
+                                    {currentStepIndex === 4 && (
+                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    )}
                                 </div>
-                                <h2 className={`text-xl font-bold mb-2 ${isReady ? 'text-green-700 dark:text-green-400' : 'text-orange-700 dark:text-orange-400'}`}>
-                                    {isCompleted ? '✅ Order Completed!' :
-                                        isReady ? '🎉 Your Order is Ready!' :
+                                <h2 className={`text-xl font-bold mb-2 ${isReady ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-white'}`}>
+                                    {isCompleted ? 'Order Completed!' :
+                                        isReady ? 'Your Order is Ready!' :
                                             STATUS_STEPS[currentStepIndex]?.description || 'Processing...'}
                                 </h2>
 
                                 {!isCompleted && (
                                     <div className="flex items-center justify-center gap-2 text-gray-600 dark:text-gray-400">
-                                        <span className="text-lg">⏱️</span>
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
                                         <span className="text-sm font-medium">
                                             Estimated: {getEstimatedWaitTime(order.status)}
                                         </span>
@@ -397,14 +452,6 @@ export default function OrderTrackPage() {
 
             {/* Fixed Bottom Actions */}
             <div className="fixed bottom-0 left-0 right-0 max-w-[500px] mx-auto px-6 py-4 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 space-y-3">
-                {order.orderType === 'DINE_IN' && !isCompleted && !isCancelled && (
-                    <button
-                        className="w-full h-12 flex items-center justify-center gap-2 border-2 border-orange-500 text-orange-500 text-base font-semibold rounded-lg hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-all active:scale-[0.98]"
-                    >
-                        <Bell className="w-5 h-5" />
-                        Call Waiter
-                    </button>
-                )}
 
                 <button
                     onClick={handleNewOrder}
