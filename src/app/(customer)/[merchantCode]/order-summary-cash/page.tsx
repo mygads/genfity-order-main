@@ -329,7 +329,7 @@ export default function OrderSummaryCashPage() {
           <span className="text-gray-700">Order Type</span>
           <div className="flex items-center gap-2">
             <span className="font-medium text-gray-900">
-              {mode === 'dinein' ? 'Dine In' : 'Takeaway'}
+              {mode === 'dinein' ? 'Dine In' : 'Pick Up'}
             </span>
             <svg
               style={{ width: '18px', height: '18px', color: '#1ca406' }}

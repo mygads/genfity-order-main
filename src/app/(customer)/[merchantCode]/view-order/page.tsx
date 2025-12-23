@@ -259,7 +259,7 @@ export default function ViewOrderPage() {
             <span className="text-gray-700">Order Type</span>
             <div className="flex items-center gap-2">
               <span className="font-medium text-gray-900">
-                {mode === 'dinein' ? 'Dine In' : 'Takeaway'}
+                {mode === 'dinein' ? 'Dine In' : 'Pick Up'}
               </span>
               <svg
                 style={{ width: '18px', height: '18px', color: '#212529' }}
@@ -282,6 +282,44 @@ export default function ViewOrderPage() {
           </div>
         </section>
 
+        {/* ===== PICK UP NOW CARD (ESB Style - Only for Takeaway) ===== */}
+        {mode === 'takeaway' && (
+          <section className="mx-3 my-2">
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'flex-start',
+                height: '60px',
+                minHeight: '60px',
+                padding: '8px 16px',
+                backgroundColor: '#ffffff',
+                borderTop: '1px solid #e6e6e6',
+                borderRadius: '0 0 16px 16px',
+                boxShadow: '0px 3px 10px 0px rgba(0, 0, 0, 0.08)',
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '14px',
+                cursor: 'default'
+              }}
+            >
+              {/* Serving/Pickup Icon (dark using CSS mask) */}
+              <div
+                style={{
+                  width: '24px',
+                  height: '24px',
+                  backgroundColor: '#212529',
+                  WebkitMask: 'url(/images/icons/ic-serving-menu.svg) center/contain no-repeat',
+                  mask: 'url(/images/icons/ic-serving-menu.svg) center/contain no-repeat'
+                }}
+              />
+              {/* Pick Up Now Text */}
+              <div className="ml-3 flex flex-col">
+                <span style={{ fontWeight: 700, color: '#212529' }}>Pick Up Now</span>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* ===== ORDERED ITEMS SECTION (ESB Exact CSS Match) ===== */}
         <section className="order-menu-section" style={{ fontFamily: 'var(--font-inter), Inter, sans-serif' }}>
