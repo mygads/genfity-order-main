@@ -49,6 +49,9 @@ export default function UsersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  // Refs to track previous filter values for page reset (MUST be before early returns)
+  const prevFiltersRef = useRef({ searchQuery, roleFilter, statusFilter });
+
   // SWR hook for data fetching with caching
   const { 
     data: usersResponse, 
@@ -66,6 +69,20 @@ export default function UsersPage() {
   const fetchUsers = useCallback(async () => {
     await mutateUsers();
   }, [mutateUsers]);
+
+  // Reset to page 1 when filters change (MUST be before early returns)
+  useEffect(() => {
+    const prev = prevFiltersRef.current;
+    const filtersChanged = 
+      prev.searchQuery !== searchQuery ||
+      prev.roleFilter !== roleFilter ||
+      prev.statusFilter !== statusFilter;
+
+    if (filtersChanged) {
+      setCurrentPage(1);
+      prevFiltersRef.current = { searchQuery, roleFilter, statusFilter };
+    }
+  }, [searchQuery, roleFilter, statusFilter]);
 
   // Show skeleton loader during initial load
   if (isLoading) {
@@ -194,23 +211,6 @@ export default function UsersPage() {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
-
-  // Refs to track previous filter values for page reset
-  const prevFiltersRef = useRef({ searchQuery, roleFilter, statusFilter });
-
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    const prev = prevFiltersRef.current;
-    const filtersChanged = 
-      prev.searchQuery !== searchQuery ||
-      prev.roleFilter !== roleFilter ||
-      prev.statusFilter !== statusFilter;
-
-    if (filtersChanged) {
-      setCurrentPage(1);
-      prevFiltersRef.current = { searchQuery, roleFilter, statusFilter };
-    }
-  }, [searchQuery, roleFilter, statusFilter]);
 
   /**
    * Format role for display

@@ -59,11 +59,12 @@ async function getMerchantsHandler(request: NextRequest) {
 
   // Get all merchants with owner info
   const merchantsData = await merchantService.getAllMerchants(activeOnly);
-  
+
   // Transform to include owner information
-  const merchants = merchantsData.map((merchant: any) => {
-    const owner = merchant.merchantUsers?.find((mu: any) => mu.role === 'OWNER')?.user;
-    
+  const merchants = merchantsData.map((merchant: Record<string, unknown>) => {
+    const merchantUsers = merchant.merchantUsers as Array<{ role: string; user: Record<string, unknown> }> | undefined;
+    const owner = merchantUsers?.find((mu) => mu.role === 'OWNER')?.user;
+
     return {
       id: merchant.id,
       code: merchant.code,

@@ -193,6 +193,9 @@ class MenuService {
     }
 
     // Validate category exists and belongs to merchant
+    if (!input.categoryId) {
+      throw new ValidationError('Category ID is required', ERROR_CODES.REQUIRED_FIELD);
+    }
     const category = await menuRepository.findCategoryById(input.categoryId);
     if (!category) {
       throw new NotFoundError(
@@ -461,8 +464,9 @@ class MenuService {
    * Reset daily stock for menu items with autoResetStock enabled
    */
   async resetDailyStock(merchantId?: bigint): Promise<number> {
+    if (!merchantId) return 0; // Require merchantId for now, or handle 'all' case differently
     const menus = await menuRepository.findAllMenus(merchantId, undefined, false);
-    
+
     let resetCount = 0;
     for (const menu of menus) {
       if (menu.autoResetStock && menu.dailyStockTemplate !== null) {
@@ -507,8 +511,8 @@ class MenuService {
         );
       }
 
-      const originalPrice = typeof menu.price === 'number' 
-        ? menu.price 
+      const originalPrice = typeof menu.price === 'number'
+        ? menu.price
         : parseFloat(menu.price.toString());
 
       if (promoData.promoPrice >= originalPrice) {

@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import Image from "next/image";
 // Removed QuickFilterPills - replaced with dropdown selects for minimalist design
 import EmptyState from "@/components/ui/EmptyState";
@@ -83,11 +82,7 @@ interface Category {
   name: string;
 }
 
-interface Merchant {
-  id: string;
-  name: string;
-  currency: string;
-}
+
 
 // Response types for SWR
 interface MenuApiResponse {
@@ -98,11 +93,6 @@ interface MenuApiResponse {
 interface CategoriesApiResponse {
   success: boolean;
   data: Category[];
-}
-
-interface MerchantApiResponse {
-  success: boolean;
-  data: Merchant;
 }
 
 export default function MerchantMenuPage() {
@@ -130,7 +120,7 @@ export default function MerchantMenuPage() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterStock, setFilterStock] = useState<string[]>([]);
   const [filterPromo, setFilterPromo] = useState<string[]>([]);
-  
+
   // Dropdown open states for multi-select filters
   const [isStockDropdownOpen, setIsStockDropdownOpen] = useState(false);
   const [isPromoDropdownOpen, setIsPromoDropdownOpen] = useState(false);
@@ -155,7 +145,8 @@ export default function MerchantMenuPage() {
   const { merchant: merchantData, isLoading: merchantLoading } = useMerchant();
 
   // Extract data from SWR responses
-  const menuItems = menuResponse?.success ? menuResponse.data : [];
+  // Extract data from SWR responses
+  const menuItems = useMemo(() => menuResponse?.success ? menuResponse.data : [], [menuResponse]);
   const categories = categoriesResponse?.success ? categoriesResponse.data : [];
   const merchant = merchantData;
 
@@ -711,15 +702,15 @@ export default function MerchantMenuPage() {
                   className="flex h-10 min-w-[140px] items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 hover:bg-gray-50 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
                 >
                   <span>
-                    {filterStock.length === 0 
-                      ? 'Stock Status' 
+                    {filterStock.length === 0
+                      ? 'Stock Status'
                       : filterStock.length === 1
-                      ? filterStock[0] === 'in-stock' 
-                        ? 'In Stock'
-                        : filterStock[0] === 'low-stock'
-                        ? 'Low Stock'
-                        : 'Out of Stock'
-                      : `${filterStock.length} selected`
+                        ? filterStock[0] === 'in-stock'
+                          ? 'In Stock'
+                          : filterStock[0] === 'low-stock'
+                            ? 'Low Stock'
+                            : 'Out of Stock'
+                        : `${filterStock.length} selected`
                     }
                   </span>
                   <svg className={`h-4 w-4 transition-transform ${isStockDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -796,13 +787,13 @@ export default function MerchantMenuPage() {
                   className="flex h-10 min-w-[140px] items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 hover:bg-gray-50 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
                 >
                   <span>
-                    {filterPromo.length === 0 
-                      ? 'Promo Status' 
+                    {filterPromo.length === 0
+                      ? 'Promo Status'
                       : filterPromo.length === 1
-                      ? filterPromo[0] === 'on-promo' 
-                        ? 'On Promo'
-                        : 'Regular Price'
-                      : `${filterPromo.length} selected`
+                        ? filterPromo[0] === 'on-promo'
+                          ? 'On Promo'
+                          : 'Regular Price'
+                        : `${filterPromo.length} selected`
                     }
                   </span>
                   <svg className={`h-4 w-4 transition-transform ${isPromoDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -969,7 +960,7 @@ export default function MerchantMenuPage() {
                       <td className="px-4 py-4">
                         <div className="flex flex-wrap gap-1.5">
                           {item.isSpicy && (
-                            <div 
+                            <div
                               className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-orange-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
                               title="Spicy"
                             >
@@ -982,7 +973,7 @@ export default function MerchantMenuPage() {
                             </div>
                           )}
                           {item.isBestSeller && (
-                            <div 
+                            <div
                               className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-amber-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
                               title="Best Seller"
                             >
@@ -995,7 +986,7 @@ export default function MerchantMenuPage() {
                             </div>
                           )}
                           {item.isSignature && (
-                            <div 
+                            <div
                               className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-purple-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
                               title="Signature"
                             >
@@ -1008,7 +999,7 @@ export default function MerchantMenuPage() {
                             </div>
                           )}
                           {item.isRecommended && (
-                            <div 
+                            <div
                               className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-green-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
                               title="Recommended"
                             >
@@ -1041,11 +1032,10 @@ export default function MerchantMenuPage() {
                             </>
                           ) : (
                             <div className="flex items-center gap-1">
-                              <span className={`text-sm font-semibold ${
-                                formatPrice(item.price) === 'Free' 
-                                  ? 'text-success-600 dark:text-success-400' 
-                                  : 'text-gray-800 dark:text-white/90'
-                              }`}>
+                              <span className={`text-sm font-semibold ${formatPrice(item.price) === 'Free'
+                                ? 'text-success-600 dark:text-success-400'
+                                : 'text-gray-800 dark:text-white/90'
+                                }`}>
                                 {formatPrice(item.price)}
                               </span>
                             </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
+import React, { createContext, useContext, useState, useCallback } from "react";
 
 /**
  * GENFITY - Cart Context & Provider
@@ -118,9 +118,36 @@ export function CartProvider({ children }: CartProviderProps) {
   /**
    * Get localStorage key for current cart
    */
-  const getStorageKey = useCallback((merchantCode: string, mode: "dinein" | "takeaway") => {
-    return `cart_${merchantCode}_${mode}`;
-  }, []);
+
+
+  // Save cart to localStorage
+  const saveCart = (updatedCart: Cart) => {
+    const key = `cart_${updatedCart.merchantCode}_${updatedCart.mode}`;
+    localStorage.setItem(key, JSON.stringify(updatedCart));
+    console.log("💾 Cart saved to localStorage:", updatedCart);
+  };
+
+  // Initialize empty cart
+  const initializeEmptyCart = useCallback((merchantCode: string, mode: "dinein" | "takeaway") => {
+    const newCart: Cart = {
+      merchantCode,
+      mode,
+      items: [],
+    };
+
+    // Load table number if dine-in
+    if (mode === "dinein") {
+      const tableKey = `table_${merchantCode}`;
+      const tableData = localStorage.getItem(tableKey);
+      if (tableData) {
+        const { tableNumber } = JSON.parse(tableData);
+        newCart.tableNumber = tableNumber;
+      }
+    }
+
+    setCart(newCart);
+    saveCart(newCart);
+  }, []); // Added useCallback for stability
 
   /**
    * Load cart from localStorage
@@ -136,10 +163,10 @@ export function CartProvider({ children }: CartProviderProps) {
         // ✅ Sanitize prices first
         const sanitizedCart: Cart = {
           ...parsed,
-          items: parsed.items.map((item: any) => ({
+          items: parsed.items.map((item: { id: string; name: string; price: string | number; addons?: Array<{ id: string; name: string; price: string | number }> }) => ({
             ...item,
             price: typeof item.price === "string" ? parseFloat(item.price) : item.price,
-            addons: item.addons?.map((addon: any) => ({
+            addons: item.addons?.map((addon: { id: string; name: string; price: string | number }) => ({
               ...addon,
               price: typeof addon.price === "string" ? parseFloat(addon.price) : addon.price,
             })) || [],
@@ -167,36 +194,9 @@ export function CartProvider({ children }: CartProviderProps) {
     } else {
       initializeEmptyCart(merchantCode, mode);
     }
-  }, []);
+  }, [initializeEmptyCart]);
 
-  // Initialize empty cart
-  const initializeEmptyCart = (merchantCode: string, mode: "dinein" | "takeaway") => {
-    const newCart: Cart = {
-      merchantCode,
-      mode,
-      items: [],
-    };
 
-    // Load table number if dine-in
-    if (mode === "dinein") {
-      const tableKey = `table_${merchantCode}`;
-      const tableData = localStorage.getItem(tableKey);
-      if (tableData) {
-        const { tableNumber } = JSON.parse(tableData);
-        newCart.tableNumber = tableNumber;
-      }
-    }
-
-    setCart(newCart);
-    saveCart(newCart);
-  };
-
-  // Save cart to localStorage
-  const saveCart = (updatedCart: Cart) => {
-    const key = `cart_${updatedCart.merchantCode}_${updatedCart.mode}`;
-    localStorage.setItem(key, JSON.stringify(updatedCart));
-    console.log("💾 Cart saved to localStorage:", updatedCart);
-  };
 
   /**
    * ✅ FIXED: Add comprehensive logging for debugging

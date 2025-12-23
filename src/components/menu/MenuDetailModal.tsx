@@ -124,33 +124,33 @@ export default function MenuDetailModal({
         // ✅ FIX: Transform API field names to component expected field names
         // API uses: minSelection, maxSelection, isRequired, addonItems, isActive
         // Component expects: minSelections, maxSelections, type, addons, isAvailable
-        const sanitized = prefetchedAddons.map((category: any) => {
+        const sanitized = prefetchedAddons.map((category: { id?: string | number; name: string; type?: string; isRequired?: boolean; minSelection?: number; maxSelection?: number; minSelections?: number; maxSelections?: number; addons?: unknown[]; addonItems?: unknown[] }) => {
           // Get addons from either 'addons' or 'addonItems' field
-          const rawAddons = category.addons || category.addonItems || [];
+          const rawAddons = (category.addons || category.addonItems || []) as Array<{ id?: string | number; name: string; price?: string | number; categoryId?: string | number; isAvailable?: boolean; isActive?: boolean; inputType?: string }>;
 
           return {
-            id: category.id?.toString() || category.id,
+            id: String(category.id || ''),
             name: category.name,
             // Transform isRequired (boolean) to type ('required' | 'optional')
-            type: category.type || (category.isRequired ? 'required' : 'optional'),
+            type: (category.type || (category.isRequired ? 'required' : 'optional')) as 'required' | 'optional',
             // Handle both minSelection and minSelections
             minSelections: category.minSelections ?? category.minSelection ?? 0,
             // Handle both maxSelection and maxSelections  
             maxSelections: category.maxSelections ?? category.maxSelection ?? 0,
             // Transform addons with proper field mapping
-            addons: rawAddons.map((addon: any) => ({
-              id: addon.id?.toString() || addon.id,
+            addons: rawAddons.map((addon) => ({
+              id: String(addon.id || ''),
               name: addon.name,
               price: typeof addon.price === 'string' ? parseFloat(addon.price) : (addon.price || 0),
               categoryId: addon.categoryId?.toString() || category.id?.toString() || '',
               // Transform isActive (from API) to isAvailable (component expects)
               isAvailable: addon.isAvailable !== undefined ? addon.isAvailable : (addon.isActive !== false),
-              inputType: addon.inputType || 'SELECT',
+              inputType: (addon.inputType || 'SELECT') as 'SELECT' | 'QTY',
             })),
           };
         });
 
-        console.log('📋 [PREFETCH] Sanitized categories:', sanitized.map((c: any) => ({
+        console.log('📋 [PREFETCH] Sanitized categories:', sanitized.map((c: { name: string; type: string; minSelections: number; maxSelections: number; addons: unknown[] }) => ({
           name: c.name, type: c.type, min: c.minSelections, max: c.maxSelections, addonsCount: c.addons.length
         })));
 

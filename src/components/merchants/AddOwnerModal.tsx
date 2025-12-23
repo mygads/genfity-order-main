@@ -43,7 +43,7 @@ export default function AddOwnerModal({
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
   const [error, setError] = useState('');
-  const [showOwnerWarning, setShowOwnerWarning] = useState(false);
+  const [_showOwnerWarning, _setShowOwnerWarning] = useState(false);
 
   /**
    * Fetch available users based on active tab
@@ -65,16 +65,16 @@ export default function AddOwnerModal({
 
       if (response.ok && data.success) {
         // Filter based on active tab
-        const available = Array.isArray(data.data) 
+        const available = Array.isArray(data.data)
           ? data.data.filter((user: AvailableUser) => {
-              if (activeTab === 'owner') {
-                // Owner: Only MERCHANT_OWNER, not bound to any merchant
-                return user.role === 'MERCHANT_OWNER' && !user.merchantName;
-              } else {
-                // Staff: Only MERCHANT_STAFF, not bound to any merchant
-                return user.role === 'MERCHANT_STAFF' && !user.merchantName;
-              }
-            })
+            if (activeTab === 'owner') {
+              // Owner: Only MERCHANT_OWNER, not bound to any merchant
+              return user.role === 'MERCHANT_OWNER' && !user.merchantName;
+            } else {
+              // Staff: Only MERCHANT_STAFF, not bound to any merchant
+              return user.role === 'MERCHANT_STAFF' && !user.merchantName;
+            }
+          })
           : [];
         setAvailableUsers(available);
       } else {
@@ -101,9 +101,9 @@ export default function AddOwnerModal({
   // Show owner warning when selecting owner and there's a current owner
   useEffect(() => {
     if (activeTab === 'owner' && currentOwner && selectedUserId) {
-      setShowOwnerWarning(true);
+      _setShowOwnerWarning(true);
     } else {
-      setShowOwnerWarning(false);
+      _setShowOwnerWarning(false);
     }
   }, [activeTab, currentOwner, selectedUserId]);
 
@@ -114,7 +114,7 @@ export default function AddOwnerModal({
    */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!selectedUserId) {
       setError('Please select a user');
       return;
@@ -125,7 +125,7 @@ export default function AddOwnerModal({
 
     try {
       const token = getAdminToken();
-      const endpoint = activeTab === 'owner' 
+      const endpoint = activeTab === 'owner'
         ? `/api/admin/merchants/${merchantId}/assign-owner`
         : `/api/admin/merchants/${merchantId}/assign-staff`;
 
@@ -147,7 +147,7 @@ export default function AddOwnerModal({
         onClose();
         // Reset state
         setSelectedUserId('');
-        setShowOwnerWarning(false);
+        _setShowOwnerWarning(false);
       } else {
         setError(data.message || `Failed to assign ${activeTab}`);
       }
@@ -164,7 +164,7 @@ export default function AddOwnerModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
-      <div 
+      <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={onClose}
       />
@@ -190,11 +190,10 @@ export default function AddOwnerModal({
               setSelectedUserId('');
               setError('');
             }}
-            className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-              activeTab === 'owner'
+            className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'owner'
                 ? 'bg-white text-brand-600 shadow-sm dark:bg-gray-800 dark:text-brand-400'
                 : 'text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200'
-            }`}
+              }`}
           >
             Owner
           </button>
@@ -205,11 +204,10 @@ export default function AddOwnerModal({
               setSelectedUserId('');
               setError('');
             }}
-            className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-              activeTab === 'staff'
+            className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'staff'
                 ? 'bg-white text-brand-600 shadow-sm dark:bg-gray-800 dark:text-brand-400'
                 : 'text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200'
-            }`}
+              }`}
           >
             Staff
           </button>
@@ -266,7 +264,7 @@ export default function AddOwnerModal({
                 </select>
               )}
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                {activeTab === 'owner' 
+                {activeTab === 'owner'
                   ? 'Only MERCHANT_OWNER users not bound to any merchant are shown'
                   : 'Only MERCHANT_STAFF users not bound to any merchant are shown'
                 }

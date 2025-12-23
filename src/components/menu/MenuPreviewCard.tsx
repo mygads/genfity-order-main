@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 
 /**
  * Menu Preview Card Component
@@ -59,18 +60,26 @@ export default function MenuPreviewCard({
   const isOutOfStock = trackStock && (stockQty === null || stockQty === undefined || stockQty <= 0);
   const isLowStock = trackStock && stockQty !== null && stockQty !== undefined && stockQty > 0 && stockQty <= 5;
 
+  const [imgSrc, setImgSrc] = React.useState(imageUrl || '/images/placeholder-food.png');
+
+  React.useEffect(() => {
+    setImgSrc(imageUrl || '/images/placeholder-food.png');
+  }, [imageUrl]);
+
   return (
     <div className="bg-white dark:bg-gray-dark rounded-lg shadow-md overflow-hidden border border-stroke dark:border-stroke-dark transition-transform hover:scale-[1.02]">
       {/* Image */}
       <div className="relative h-48 bg-gray-100 dark:bg-gray-700">
-        {imageUrl ? (
-          <img
-            src={imageUrl}
+        {imgSrc ? (
+          <Image
+            src={imgSrc}
             alt={name}
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              e.currentTarget.src = '/images/placeholder-food.png';
+            fill
+            className="object-cover"
+            onError={() => {
+              setImgSrc('/images/placeholder-food.png');
             }}
+            unoptimized={imgSrc.startsWith('blob:')}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-gray-400">
@@ -112,7 +121,7 @@ export default function MenuPreviewCard({
         {(isSpicy || isBestSeller || isSignature || isRecommended) && (
           <div className="mb-2 flex flex-wrap gap-1.5">
             {isSpicy && (
-              <div 
+              <div
                 className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-orange-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
                 title="Spicy"
               >
@@ -125,7 +134,7 @@ export default function MenuPreviewCard({
               </div>
             )}
             {isBestSeller && (
-              <div 
+              <div
                 className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-amber-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
                 title="Best Seller"
               >
@@ -138,7 +147,7 @@ export default function MenuPreviewCard({
               </div>
             )}
             {isSignature && (
-              <div 
+              <div
                 className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-purple-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
                 title="Signature"
               >
@@ -151,7 +160,7 @@ export default function MenuPreviewCard({
               </div>
             )}
             {isRecommended && (
-              <div 
+              <div
                 className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-green-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
                 title="Recommended"
               >
@@ -221,11 +230,10 @@ export default function MenuPreviewCard({
 
         {/* Add to Cart Button */}
         <button
-          className={`w-full mt-4 py-2 rounded font-medium transition-colors ${
-            isOutOfStock || !isActive
+          className={`w-full mt-4 py-2 rounded font-medium transition-colors ${isOutOfStock || !isActive
               ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
               : 'bg-primary text-white hover:bg-primary-dark'
-          }`}
+            }`}
           disabled={isOutOfStock || !isActive}
         >
           {isOutOfStock ? 'Stok Habis' : !isActive ? 'Tidak Tersedia' : 'Tambah ke Keranjang'}

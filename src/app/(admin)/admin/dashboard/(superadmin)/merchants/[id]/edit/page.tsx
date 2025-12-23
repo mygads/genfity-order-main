@@ -47,7 +47,7 @@ export default function EditMerchantPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
-  
+
   const [formData, setFormData] = useState<MerchantFormData>({
     name: "",
     code: "",
@@ -97,7 +97,7 @@ export default function EditMerchantPage() {
         const data = await response.json();
         // API returns { success: true, data: { merchant: {...} } }
         const merchant = data.data?.merchant || data.data;
-        
+
         setFormData({
           name: merchant.name || "",
           code: merchant.code || "",
@@ -119,7 +119,7 @@ export default function EditMerchantPage() {
           const hoursMap = new Map(
             merchant.openingHours.map((h: OpeningHour) => [h.dayOfWeek, h])
           );
-          
+
           const initialHours = Array.from({ length: 7 }, (_, dayOfWeek) => {
             const existing = hoursMap.get(dayOfWeek) as OpeningHour | undefined;
             return existing ? {
@@ -134,7 +134,7 @@ export default function EditMerchantPage() {
               isClosed: false,
             };
           });
-          
+
           setOpeningHours(initialHours);
         }
       } catch (err) {
@@ -158,8 +158,8 @@ export default function EditMerchantPage() {
   };
 
   const handleOpeningHourChange = (dayOfWeek: number, field: keyof OpeningHour, value: string | boolean) => {
-    setOpeningHours(prev => prev.map(hour => 
-      hour.dayOfWeek === dayOfWeek 
+    setOpeningHours(prev => prev.map(hour =>
+      hour.dayOfWeek === dayOfWeek
         ? { ...hour, [field]: value }
         : hour
     ));
@@ -203,7 +203,7 @@ export default function EditMerchantPage() {
       } else {
         showError('Error', data.message || 'Failed to upload logo');
       }
-    } catch (err) {
+    } catch {
       showError('Error', 'Failed to upload logo');
     } finally {
       setUploading(false);
@@ -257,7 +257,7 @@ export default function EditMerchantPage() {
       }
 
       showSuccess("Success", "Merchant updated successfully!");
-      
+
       setTimeout(() => {
         router.push(`/admin/dashboard/merchants/${merchantId}`);
       }, 1000);
@@ -296,332 +296,330 @@ export default function EditMerchantPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Logo Upload Section */}
-            <div className="border-b border-gray-200 pb-6 dark:border-gray-800">
-              <label className="mb-3 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Merchant Logo
-              </label>
-              <div className="flex items-center gap-6">
-                <div className="relative h-24 w-24 overflow-hidden rounded-xl border-4 border-gray-200 dark:border-gray-700">
-                  {formData.logoUrl ? (
-                    <Image
-                      src={formData.logoUrl}
-                      alt={formData.name}
-                      fill
-                      className="object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-brand-100 text-2xl font-bold text-brand-600 dark:bg-brand-900/20 dark:text-brand-400">
-                      {formData.name.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleLogoUpload}
-                    className="hidden"
+          {/* Logo Upload Section */}
+          <div className="border-b border-gray-200 pb-6 dark:border-gray-800">
+            <label className="mb-3 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Merchant Logo
+            </label>
+            <div className="flex items-center gap-6">
+              <div className="relative h-24 w-24 overflow-hidden rounded-xl border-4 border-gray-200 dark:border-gray-700">
+                {formData.logoUrl ? (
+                  <Image
+                    src={formData.logoUrl}
+                    alt={formData.name}
+                    fill
+                    className="object-cover"
                   />
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploading}
-                    className="h-10 rounded-lg bg-gray-100 px-4 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                  >
-                    {uploading ? 'Uploading...' : 'Change Logo'}
-                  </button>
-                  <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                    Recommended: Square image, JPEG/PNG/WebP, max 5MB
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Merchant Code <span className="text-error-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="code"
-                value={formData.code}
-                onChange={handleChange}
-                required
-                disabled
-                className="h-11 w-full rounded-lg border border-gray-200 bg-gray-50 px-4 text-sm text-gray-500 cursor-not-allowed dark:border-gray-800 dark:bg-gray-800 dark:text-gray-400"
-              />
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Merchant code cannot be changed</p>
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Merchant Name <span className="text-error-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                required
-                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Email <span className="text-error-500">*</span>
-              </label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                required
-                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Phone Number <span className="text-error-500">*</span>
-              </label>
-              <input
-                type="tel"
-                name="phoneNumber"
-                value={formData.phoneNumber}
-                onChange={handleChange}
-                required
-                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Address <span className="text-error-500">*</span>
-              </label>
-              <textarea
-                name="address"
-                value={formData.address}
-                onChange={handleChange}
-                required
-                rows={3}
-                className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Description
-              </label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                rows={3}
-                className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-              />
-            </div>
-
-            {/* Store Open/Close Toggle */}
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
-              <div className="flex items-center justify-between">
-                <div>
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Store Open Status
-                  </label>
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    Toggle whether the store is currently accepting orders
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, isOpen: !prev.isOpen }))}
-                  className={`relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 ${
-                    formData.isOpen ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
-                  }`}
-                >
-                  <span
-                    className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                      formData.isOpen ? 'translate-x-5' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
-              </div>
-              <div className="mt-3">
-                {formData.isOpen ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700 dark:bg-green-900/20 dark:text-green-400">
-                    <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
-                    Store is Open - Accepting Orders
-                  </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-700 dark:bg-red-900/20 dark:text-red-400">
-                    <div className="h-2 w-2 rounded-full bg-red-500"></div>
-                    Store is Closed - Not Accepting Orders
-                  </span>
+                  <div className="flex h-full w-full items-center justify-center bg-brand-100 text-2xl font-bold text-brand-600 dark:bg-brand-900/20 dark:text-brand-400">
+                    {formData.name.charAt(0).toUpperCase()}
+                  </div>
                 )}
               </div>
-            </div>
-
-            {/* Location & Settings Section */}
-            <div className="border-t border-gray-200 pt-6 dark:border-gray-800">
-              <h4 className="mb-4 text-base font-semibold text-gray-800 dark:text-white/90">
-                Location & Regional Settings
-              </h4>
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Country <span className="text-error-500">*</span>
-                  </label>
-                  <select
-                    name="country"
-                    value={formData.country}
-                    onChange={handleChange}
-                    required
-                    className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
-                  >
-                    {COUNTRIES.map((country) => (
-                      <option key={country.value} value={country.value}>
-                        {country.flag} {country.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Currency <span className="text-error-500">*</span>
-                  </label>
-                  <select
-                    name="currency"
-                    value={formData.currency}
-                    onChange={handleChange}
-                    required
-                    className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
-                  >
-                    {CURRENCIES.map((currency) => (
-                      <option key={currency.value} value={currency.value}>
-                        {currency.symbol} {currency.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Timezone <span className="text-error-500">*</span>
-                  </label>
-                  <select
-                    name="timezone"
-                    value={formData.timezone}
-                    onChange={handleChange}
-                    required
-                    className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
-                  >
-                    {TIMEZONES.map((tz) => (
-                      <option key={tz.value} value={tz.value}>
-                        {tz.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <div className="flex-1">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleLogoUpload}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="h-10 rounded-lg bg-gray-100 px-4 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                >
+                  {uploading ? 'Uploading...' : 'Change Logo'}
+                </button>
+                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                  Recommended: Square image, JPEG/PNG/WebP, max 5MB
+                </p>
               </div>
             </div>
+          </div>
 
-            {/* Map Location Picker Section */}
-            <div className="border-t border-gray-200 pt-6 dark:border-gray-800">
-              <h4 className="mb-4 text-base font-semibold text-gray-800 dark:text-white/90">
-                Map Location
-              </h4>
-              <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">
-                Set the exact location of your merchant on the map. This will be displayed to customers and can be used for navigation.
-              </p>
-              <MapLocationPicker
-                latitude={formData.latitude}
-                longitude={formData.longitude}
-                onLocationChange={(lat, lng) => {
-                  setFormData(prev => ({
-                    ...prev,
-                    latitude: lat,
-                    longitude: lng,
-                  }));
-                }}
-                height="450px"
-              />
-            </div>
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Merchant Code <span className="text-error-500">*</span>
+            </label>
+            <input
+              type="text"
+              name="code"
+              value={formData.code}
+              onChange={handleChange}
+              required
+              disabled
+              className="h-11 w-full rounded-lg border border-gray-200 bg-gray-50 px-4 text-sm text-gray-500 cursor-not-allowed dark:border-gray-800 dark:bg-gray-800 dark:text-gray-400"
+            />
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Merchant code cannot be changed</p>
+          </div>
 
-            {/* Opening Hours Section */}
-            <div className="border-t border-gray-200 pt-6 dark:border-gray-800">
-              <h4 className="mb-4 text-base font-semibold text-gray-800 dark:text-white/90">
-                Opening Hours
-              </h4>
-              <div className="space-y-3">
-                {openingHours.map((hour) => (
-                  <div
-                    key={hour.dayOfWeek}
-                    className="flex items-center gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50"
-                  >
-                    {/* Day Name */}
-                    <div className="w-28 font-medium text-gray-800 dark:text-white/90">
-                      {DAYS[hour.dayOfWeek]}
-                    </div>
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Merchant Name <span className="text-error-500">*</span>
+            </label>
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+              className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+            />
+          </div>
 
-                    {/* Is Closed Checkbox */}
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={hour.isClosed}
-                        onChange={(e) => handleOpeningHourChange(hour.dayOfWeek, 'isClosed', e.target.checked)}
-                        className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 dark:border-gray-700"
-                      />
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Closed</span>
-                    </label>
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Email <span className="text-error-500">*</span>
+            </label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+              className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+            />
+          </div>
 
-                    {/* Time Inputs */}
-                    {!hour.isClosed && (
-                      <>
-                        <div className="flex items-center gap-2">
-                          <label className="text-sm text-gray-600 dark:text-gray-400">Open:</label>
-                          <input
-                            type="time"
-                            value={hour.openTime}
-                            onChange={(e) => handleOpeningHourChange(hour.dayOfWeek, 'openTime', e.target.value)}
-                            className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
-                          />
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <label className="text-sm text-gray-600 dark:text-gray-400">Close:</label>
-                          <input
-                            type="time"
-                            value={hour.closeTime}
-                            onChange={(e) => handleOpeningHourChange(hour.dayOfWeek, 'closeTime', e.target.value)}
-                            className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
-                          />
-                        </div>
-                      </>
-                    )}
-                  </div>
-                ))}
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Phone Number <span className="text-error-500">*</span>
+            </label>
+            <input
+              type="tel"
+              name="phoneNumber"
+              value={formData.phoneNumber}
+              onChange={handleChange}
+              required
+              className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Address <span className="text-error-500">*</span>
+            </label>
+            <textarea
+              name="address"
+              value={formData.address}
+              onChange={handleChange}
+              required
+              rows={3}
+              className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Description
+            </label>
+            <textarea
+              name="description"
+              value={formData.description}
+              onChange={handleChange}
+              rows={3}
+              className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+            />
+          </div>
+
+          {/* Store Open/Close Toggle */}
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Store Open Status
+                </label>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Toggle whether the store is currently accepting orders
+                </p>
               </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-4 border-t border-gray-200 pt-6 dark:border-gray-800">
               <button
                 type="button"
-                onClick={() => router.back()}
-                className="h-11 rounded-lg border border-gray-200 bg-white px-6 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-white/[0.03] dark:text-gray-300 dark:hover:bg-white/[0.05]"
+                onClick={() => setFormData(prev => ({ ...prev, isOpen: !prev.isOpen }))}
+                className={`relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 ${formData.isOpen ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
+                  }`}
               >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={submitting}
-                className="h-11 rounded-lg bg-brand-500 px-6 text-sm font-medium text-white hover:bg-brand-600 focus:outline-none focus:ring-3 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {submitting ? "Updating..." : "Update Merchant"}
+                <span
+                  className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${formData.isOpen ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                />
               </button>
             </div>
+            <div className="mt-3">
+              {formData.isOpen ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700 dark:bg-green-900/20 dark:text-green-400">
+                  <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
+                  Store is Open - Accepting Orders
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-700 dark:bg-red-900/20 dark:text-red-400">
+                  <div className="h-2 w-2 rounded-full bg-red-500"></div>
+                  Store is Closed - Not Accepting Orders
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Location & Settings Section */}
+          <div className="border-t border-gray-200 pt-6 dark:border-gray-800">
+            <h4 className="mb-4 text-base font-semibold text-gray-800 dark:text-white/90">
+              Location & Regional Settings
+            </h4>
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Country <span className="text-error-500">*</span>
+                </label>
+                <select
+                  name="country"
+                  value={formData.country}
+                  onChange={handleChange}
+                  required
+                  className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
+                >
+                  {COUNTRIES.map((country) => (
+                    <option key={country.value} value={country.value}>
+                      {country.flag} {country.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Currency <span className="text-error-500">*</span>
+                </label>
+                <select
+                  name="currency"
+                  value={formData.currency}
+                  onChange={handleChange}
+                  required
+                  className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
+                >
+                  {CURRENCIES.map((currency) => (
+                    <option key={currency.value} value={currency.value}>
+                      {currency.symbol} {currency.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Timezone <span className="text-error-500">*</span>
+                </label>
+                <select
+                  name="timezone"
+                  value={formData.timezone}
+                  onChange={handleChange}
+                  required
+                  className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
+                >
+                  {TIMEZONES.map((tz) => (
+                    <option key={tz.value} value={tz.value}>
+                      {tz.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Map Location Picker Section */}
+          <div className="border-t border-gray-200 pt-6 dark:border-gray-800">
+            <h4 className="mb-4 text-base font-semibold text-gray-800 dark:text-white/90">
+              Map Location
+            </h4>
+            <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">
+              Set the exact location of your merchant on the map. This will be displayed to customers and can be used for navigation.
+            </p>
+            <MapLocationPicker
+              latitude={formData.latitude}
+              longitude={formData.longitude}
+              onLocationChange={(lat, lng) => {
+                setFormData(prev => ({
+                  ...prev,
+                  latitude: lat,
+                  longitude: lng,
+                }));
+              }}
+              height="450px"
+            />
+          </div>
+
+          {/* Opening Hours Section */}
+          <div className="border-t border-gray-200 pt-6 dark:border-gray-800">
+            <h4 className="mb-4 text-base font-semibold text-gray-800 dark:text-white/90">
+              Opening Hours
+            </h4>
+            <div className="space-y-3">
+              {openingHours.map((hour) => (
+                <div
+                  key={hour.dayOfWeek}
+                  className="flex items-center gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50"
+                >
+                  {/* Day Name */}
+                  <div className="w-28 font-medium text-gray-800 dark:text-white/90">
+                    {DAYS[hour.dayOfWeek]}
+                  </div>
+
+                  {/* Is Closed Checkbox */}
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={hour.isClosed}
+                      onChange={(e) => handleOpeningHourChange(hour.dayOfWeek, 'isClosed', e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 dark:border-gray-700"
+                    />
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Closed</span>
+                  </label>
+
+                  {/* Time Inputs */}
+                  {!hour.isClosed && (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm text-gray-600 dark:text-gray-400">Open:</label>
+                        <input
+                          type="time"
+                          value={hour.openTime}
+                          onChange={(e) => handleOpeningHourChange(hour.dayOfWeek, 'openTime', e.target.value)}
+                          className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm text-gray-600 dark:text-gray-400">Close:</label>
+                        <input
+                          type="time"
+                          value={hour.closeTime}
+                          onChange={(e) => handleOpeningHourChange(hour.dayOfWeek, 'closeTime', e.target.value)}
+                          className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-4 border-t border-gray-200 pt-6 dark:border-gray-800">
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="h-11 rounded-lg border border-gray-200 bg-white px-6 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-white/[0.03] dark:text-gray-300 dark:hover:bg-white/[0.05]"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="h-11 rounded-lg bg-brand-500 px-6 text-sm font-medium text-white hover:bg-brand-600 focus:outline-none focus:ring-3 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {submitting ? "Updating..." : "Update Merchant"}
+            </button>
+          </div>
         </form>
       </div>
     </div>

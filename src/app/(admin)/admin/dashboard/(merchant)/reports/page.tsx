@@ -11,14 +11,38 @@ import { useRouter } from 'next/navigation';
 import { PeriodComparison, CustomerAnalytics, OperationalMetrics } from '@/components/reports';
 import { TopMenuItemsChart, HourlyDistributionChart } from '@/components/revenue';
 import { ReportsPageSkeleton } from '@/components/common/SkeletonLoaders';
-import { useMerchant } from '@/context/MerchantContext';
 
 export default function ReportsPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<any>(null);
-  
+  const [data, setData] = useState<{
+    periodComparison?: {
+      metrics: Array<{
+        label: string;
+        current: number;
+        previous: number;
+        format: 'currency' | 'number' | 'decimal';
+      }>;
+    };
+    customerAnalytics?: {
+      newCustomers: number;
+      returningCustomers: number;
+      retentionRate: number;
+      averageLifetimeValue: number;
+      churnRate: number;
+    };
+    operationalMetrics?: {
+      averagePrepTime: number;
+      peakHourEfficiency: number;
+      tableTurnoverRate: number;
+      orderFulfillmentRate: number;
+      hourlyPerformance: Array<{ hour: number; orderCount: number; efficiency: number }>;
+    };
+    topMenuItems?: Array<{ menuItemId: number; name: string; quantitySold: number; totalRevenue: number }>;
+    merchant?: { currency: string };
+  } | null>(null);
+
   // Date range state (same as revenue page)
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [startDate, setStartDate] = useState(() => {
@@ -100,7 +124,7 @@ export default function ReportsPage() {
       {/* Date Range & Export */}
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <select 
+          <select
             value={`${startDate}|${endDate}`}
             onChange={(e) => {
               const [start, end] = e.target.value.split('|');
@@ -153,42 +177,50 @@ export default function ReportsPage() {
         <>
           {/* Period Comparison */}
           <div className="mb-6">
-            <PeriodComparison
-              comparisonMode="custom"
-              metrics={data.periodComparison.metrics}              currency={data.merchant?.currency || 'AUD'}            />
+            {data.periodComparison && (
+              <PeriodComparison
+                comparisonMode="custom"
+                metrics={data.periodComparison.metrics}
+                currency={data.merchant?.currency || 'AUD'}
+              />
+            )}
           </div>
 
           {/* Customer Analytics */}
           <div className="mb-6">
-            <CustomerAnalytics data={data.customerAnalytics} />
+            {data.customerAnalytics && <CustomerAnalytics data={data.customerAnalytics} />}
           </div>
 
           {/* Operational Metrics */}
           <div className="mb-6">
-            <OperationalMetrics data={data.operationalMetrics} />
+            {data.operationalMetrics && <OperationalMetrics data={data.operationalMetrics} />}
           </div>
 
           {/* Top Menu Items & Hourly Distribution */}
           <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
             {/* Top Menu Items */}
-            <TopMenuItemsChart
-              data={data.topMenuItems.map((item: any) => ({
-                menuId: item.menuItemId.toString(),
-                menuName: item.name,
-                totalQuantity: item.quantitySold,
-                totalRevenue: item.totalRevenue,
-              }))}
-              currency={data.merchant?.currency || 'AUD'}
-            />
+            {data.topMenuItems && (
+              <TopMenuItemsChart
+                data={data.topMenuItems.map((item) => ({
+                  menuId: item.menuItemId.toString(),
+                  menuName: item.name,
+                  totalQuantity: item.quantitySold,
+                  totalRevenue: item.totalRevenue,
+                }))}
+                currency={data.merchant?.currency || 'AUD'}
+              />
+            )}
 
             {/* Hourly Distribution */}
-            <HourlyDistributionChart
-              data={data.operationalMetrics.hourlyPerformance.map((item: any) => ({
-                hour: item.hour,
-                orderCount: item.orderCount,
-                revenue: 0,
-              }))}
-            />
+            {data.operationalMetrics?.hourlyPerformance && (
+              <HourlyDistributionChart
+                data={data.operationalMetrics.hourlyPerformance.map((item) => ({
+                  hour: item.hour,
+                  orderCount: item.orderCount,
+                  revenue: 0,
+                }))}
+              />
+            )}
           </div>
         </>
       )}

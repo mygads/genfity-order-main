@@ -219,17 +219,17 @@ export function generateReceiptHTML(data: ReceiptData): string {
       <span>Subtotal:</span>
       <span>${formatCurrency(Number(order.subtotal), merchant.currency)}</span>
     </div>
-    ${Number((order as any).taxAmount) > 0 ? `<div class="row">
+    ${Number((order as unknown as { taxAmount?: number }).taxAmount) > 0 ? `<div class="row">
       <span>Tax:</span>
-      <span>${formatCurrency(Number((order as any).taxAmount), merchant.currency)}</span>
+      <span>${formatCurrency(Number((order as unknown as { taxAmount?: number }).taxAmount), merchant.currency)}</span>
     </div>` : ''}
-    ${Number((order as any).serviceChargeAmount) > 0 ? `<div class="row">
+    ${Number((order as unknown as { serviceChargeAmount?: number }).serviceChargeAmount) > 0 ? `<div class="row">
       <span>Service Charge:</span>
-      <span>${formatCurrency(Number((order as any).serviceChargeAmount), merchant.currency)}</span>
+      <span>${formatCurrency(Number((order as unknown as { serviceChargeAmount?: number }).serviceChargeAmount), merchant.currency)}</span>
     </div>` : ''}
-    ${Number((order as any).packagingFeeAmount) > 0 ? `<div class="row">
+    ${Number((order as unknown as { packagingFeeAmount?: number }).packagingFeeAmount) > 0 ? `<div class="row">
       <span>Packaging Fee:</span>
-      <span>${formatCurrency(Number((order as any).packagingFeeAmount), merchant.currency)}</span>
+      <span>${formatCurrency(Number((order as unknown as { packagingFeeAmount?: number }).packagingFeeAmount), merchant.currency)}</span>
     </div>` : ''}
     <div class="row total">
       <span>TOTAL:</span>

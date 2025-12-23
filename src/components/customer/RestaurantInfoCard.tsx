@@ -39,7 +39,6 @@ export default function RestaurantInfoCard({ name, openingHours, onClick }: Rest
 
     const now = new Date();
     const currentDay = now.getDay();
-    const currentTime = now.toTimeString().slice(0, 5);
 
     const todayHours = openingHours.find(h => h.dayOfWeek === currentDay);
 

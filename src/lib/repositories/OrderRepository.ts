@@ -47,14 +47,12 @@ class OrderRepository {
   }) {
     return prisma.$transaction(async (tx) => {
       // Create order
+      // Note: Customer info (name, email, phone) is stored via the customer relation to User table
       const order = await tx.order.create({
         data: {
           merchantId: orderData.merchantId,
           customerId: orderData.customerId,
           orderNumber: orderData.orderNumber,
-          customerName: orderData.customerName,
-          customerEmail: orderData.customerEmail,
-          customerPhone: orderData.customerPhone,
           orderType: orderData.orderType,
           tableNumber: orderData.tableNumber,
           status: orderData.status as OrderStatus,
@@ -62,7 +60,6 @@ class OrderRepository {
           taxAmount: orderData.taxAmount,
           totalAmount: orderData.totalAmount,
           notes: orderData.notes,
-          qrCodeUrl: orderData.qrCodeUrl,
         },
       });
 
@@ -98,14 +95,15 @@ class OrderRepository {
       }
 
       // Create initial status history
-      await tx.orderStatusHistory.create({
-        data: {
-          orderId: order.id,
-          fromStatus: null,
-          toStatus: orderData.status as OrderStatus,
-          note: 'Order placed',
-        },
-      });
+      // Note: orderStatusHistory model is not in current schema - commented out for now
+      // await tx.orderStatusHistory.create({
+      //   data: {
+      //     orderId: order.id,
+      //     fromStatus: null,
+      //     toStatus: orderData.status as OrderStatus,
+      //     note: 'Order placed',
+      //   },
+      // });
 
       return serializeData(order);
     });
@@ -136,11 +134,12 @@ class OrderRepository {
             },
           },
         },
-        statusHistory: {
-          orderBy: {
-            createdAt: 'desc',
-          },
-        },
+        // statusHistory relation doesn't exist in current schema - commented out
+        // statusHistory: {
+        //   orderBy: {
+        //     createdAt: 'desc',
+        //   },
+        // },
       },
     });
     return serializeData(result);
@@ -159,11 +158,12 @@ class OrderRepository {
             addons: true,
           },
         },
-        statusHistory: {
-          orderBy: {
-            createdAt: 'desc',
-          },
-        },
+        // statusHistory relation doesn't exist in current schema - commented out
+        // statusHistory: {
+        //   orderBy: {
+        //     createdAt: 'desc',
+        //   },
+        // },
       },
     });
     return serializeData(result);
@@ -188,11 +188,11 @@ class OrderRepository {
         ...(filters?.orderType && { orderType: filters.orderType as OrderType }),
         ...(filters?.startDate &&
           filters?.endDate && {
-            placedAt: {
-              gte: filters.startDate,
-              lte: filters.endDate,
-            },
-          }),
+          placedAt: {
+            gte: filters.startDate,
+            lte: filters.endDate,
+          },
+        }),
       },
       include: {
         customer: {
@@ -248,8 +248,8 @@ class OrderRepository {
   async updateStatus(
     orderId: bigint,
     newStatus: string,
-    changedByUserId?: bigint,
-    note?: string
+    _changedByUserId?: bigint,
+    _note?: string
   ) {
     return prisma.$transaction(async (tx) => {
       // Get current order
@@ -270,15 +270,16 @@ class OrderRepository {
       });
 
       // Create status history entry
-      await tx.orderStatusHistory.create({
-        data: {
-          orderId,
-          fromStatus: order.status,
-          toStatus: newStatus as OrderStatus,
-          changedByUserId,
-          note,
-        },
-      });
+      // Note: orderStatusHistory model is not in current schema - commented out
+      // await tx.orderStatusHistory.create({
+      //   data: {
+      //     orderId,
+      //     fromStatus: order.status,
+      //     toStatus: newStatus as OrderStatus,
+      //     changedByUserId,
+      //     note,
+      //   },
+      // });
 
       return serializeData(updatedOrder);
     });
@@ -286,25 +287,26 @@ class OrderRepository {
 
   /**
    * Get order status history
+   * Note: orderStatusHistory model is not in current schema - commented out
    */
-  async getStatusHistory(orderId: bigint) {
-    const results = await prisma.orderStatusHistory.findMany({
-      where: { orderId },
-      include: {
-        changedBy: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
-    return serializeData(results);
-  }
+  // async getStatusHistory(orderId: bigint) {
+  //   const results = await prisma.orderStatusHistory.findMany({
+  //     where: { orderId },
+  //     include: {
+  //       changedBy: {
+  //         select: {
+  //           id: true,
+  //           name: true,
+  //           email: true,
+  //         },
+  //       },
+  //     },
+  //     orderBy: {
+  //       createdAt: 'desc',
+  //     },
+  //   });
+  //   return serializeData(results);
+  // }
 
   /**
    * Get revenue report
@@ -343,11 +345,11 @@ class OrderRepository {
         status: 'COMPLETED',
         ...(startDate &&
           endDate && {
-            placedAt: {
-              gte: startDate,
-              lte: endDate,
-            },
-          }),
+          placedAt: {
+            gte: startDate,
+            lte: endDate,
+          },
+        }),
       },
       _sum: {
         totalAmount: true,
@@ -435,4 +437,5 @@ class OrderRepository {
   }
 }
 
-export default new OrderRepository();
+const orderRepository = new OrderRepository();
+export default orderRepository;

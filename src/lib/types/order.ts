@@ -367,3 +367,35 @@ export const ORDER_KITCHEN_INCLUDE: Prisma.OrderInclude = {
     },
   },
 } as const;
+
+/**
+ * Input for creating a new order
+ */
+export interface CreateOrderInput {
+  merchantId: bigint;
+  orderType: OrderType;
+  items: Array<{
+    menuId: bigint;
+    quantity: number;
+    notes?: string;
+    addons?: Array<{
+      addonItemId: bigint;
+      quantity: number;
+    }>;
+  }>;
+  customerName: string;
+  customerEmail: string;
+  customerPhone?: string;
+  tableNumber?: string;
+  notes?: string;
+  paymentMethod?: PaymentMethod;
+}
+
+/**
+ * Revenue report item
+ */
+export interface RevenueReportItem {
+  date: string;
+  revenue: number;
+  orderCount: number;
+}

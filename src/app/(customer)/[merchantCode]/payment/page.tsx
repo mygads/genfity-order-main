@@ -4,13 +4,13 @@
 export const dynamic = 'force-dynamic';
 
 import { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { getCustomerAuth, getTableNumber } from '@/lib/utils/localStorage';
 import type { OrderMode } from '@/lib/types/customer';
 import PaymentConfirmationModal from '@/components/modals/PaymentConfirmationModal';
 import { useCart } from '@/context/CartContext';
 import { calculateCartSubtotal } from '@/lib/utils/priceCalculator';
-import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';
 
 /**
  * Payment Page - Customer Order Payment
@@ -149,7 +149,7 @@ export default function PaymentPage() {
     if (merchantCode) {
       fetchMerchantSettings();
     }
-  }, [merchantCode]);
+  }, [merchantCode, mode]);
 
   /**
    * ✅ FIXED: Only redirect if NOT processing order
@@ -296,12 +296,12 @@ export default function PaymentPage() {
           quantity: item.quantity,
           notes: item.notes || undefined,
           // Aggregate duplicate addon entries into counts (cart stores duplicates to represent qty)
-          addons: Object.values((item.addons || []).reduce((acc: Record<string, any>, addon: any) => {
+          addons: Object.values((item.addons || []).reduce((acc: Record<string, { addonItemId: string; quantity: number }>, addon: { id: string | number }) => {
             const key = addon.id.toString();
             if (!acc[key]) acc[key] = { addonItemId: key, quantity: 0 };
             acc[key].quantity += 1;
             return acc;
-          }, {} as Record<string, any>)).map((s: any) => ({ addonItemId: s.addonItemId, quantity: s.quantity })),
+          }, {} as Record<string, { addonItemId: string; quantity: number }>)).map((s) => ({ addonItemId: s.addonItemId, quantity: s.quantity })),
         })),
       };
 
@@ -732,9 +732,11 @@ export default function PaymentPage() {
           }}
         >
           <div>
-            <img
+            <Image
               src="/images/cashier.png"
               alt="Pay at Cashier"
+              width={300}
+              height={300}
               style={{ maxWidth: '300px', height: 'auto' }}
             />
           </div>

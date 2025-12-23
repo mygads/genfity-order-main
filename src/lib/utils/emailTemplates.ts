@@ -4,15 +4,15 @@
  */
 
 // Base URL for logo (set in env or fallback)
-const getLogoUrl = () => process.env.NEXT_PUBLIC_APP_URL
-    ? `${process.env.NEXT_PUBLIC_APP_URL}/images/logo/logo.png`
-    : 'https://genfity.com/images/logo/logo.png';
+const _getLogoUrl = () => process.env.NEXT_PUBLIC_APP_URL
+  ? `${process.env.NEXT_PUBLIC_APP_URL}/images/logo/logo.png`
+  : 'https://genfity.com/images/logo/logo.png';
 
 /**
  * Shared email base template - Clean shadcn-inspired design
  */
-function getBaseTemplate(content: string, footerEmail: string): string {
-    return `
+function getBaseTemplate(content: string, _footerEmail: string): string {
+  return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -81,12 +81,12 @@ function getBaseTemplate(content: string, footerEmail: string): string {
  * Password Reset OTP Email Template
  */
 export function getPasswordResetOTPTemplate(params: {
-    name: string;
-    code: string;
-    expiresInMinutes: number;
-    supportEmail: string;
+  name: string;
+  code: string;
+  expiresInMinutes: number;
+  supportEmail: string;
 }): string {
-    const content = `
+  const content = `
     <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #171717; text-align: center;">
       Reset Your Password
     </h1>
@@ -118,7 +118,7 @@ export function getPasswordResetOTPTemplate(params: {
     </p>
   `;
 
-    return getBaseTemplate(content, params.supportEmail);
+  return getBaseTemplate(content, params.supportEmail);
 }
 
 /**
@@ -126,14 +126,14 @@ export function getPasswordResetOTPTemplate(params: {
  * Sent to new customers after their first order
  */
 export function getCustomerWelcomeTemplate(params: {
-    name: string;
-    email: string;
-    phone: string;
-    tempPassword: string;
-    loginUrl: string;
-    supportEmail: string;
+  name: string;
+  email: string;
+  phone: string;
+  tempPassword: string;
+  loginUrl: string;
+  supportEmail: string;
 }): string {
-    const content = `
+  const content = `
     <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #171717; text-align: center;">
       Welcome to Genfity
     </h1>
@@ -179,20 +179,20 @@ export function getCustomerWelcomeTemplate(params: {
     </p>
   `;
 
-    return getBaseTemplate(content, params.supportEmail);
+  return getBaseTemplate(content, params.supportEmail);
 }
 
 /**
  * Password Notification Template (for merchants/staff)
  */
 export function getPasswordNotificationTemplate(params: {
-    name: string;
-    email: string;
-    tempPassword: string;
-    dashboardUrl: string;
-    supportEmail: string;
+  name: string;
+  email: string;
+  tempPassword: string;
+  dashboardUrl: string;
+  supportEmail: string;
 }): string {
-    const content = `
+  const content = `
     <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #171717; text-align: center;">
       Your Account is Ready
     </h1>
@@ -238,25 +238,25 @@ export function getPasswordNotificationTemplate(params: {
     </p>
   `;
 
-    return getBaseTemplate(content, params.supportEmail);
+  return getBaseTemplate(content, params.supportEmail);
 }
 
 /**
  * Order Confirmation Template
  */
 export function getOrderConfirmationTemplate(params: {
-    customerName: string;
-    orderNumber: string;
-    merchantName: string;
-    orderType: string;
-    tableNumber?: string;
-    items: Array<{ name: string; quantity: number; price: number }>;
-    subtotal: number;
-    tax: number;
-    total: number;
-    trackingUrl: string;
+  customerName: string;
+  orderNumber: string;
+  merchantName: string;
+  orderType: string;
+  tableNumber?: string;
+  items: Array<{ name: string; quantity: number; price: number }>;
+  subtotal: number;
+  tax: number;
+  total: number;
+  trackingUrl: string;
 }): string {
-    const itemsHtml = params.items.map(item => `
+  const itemsHtml = params.items.map(item => `
     <tr>
       <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0;">
         <span style="font-size: 14px; color: #171717;">${item.name}</span>
@@ -268,7 +268,7 @@ export function getOrderConfirmationTemplate(params: {
     </tr>
   `).join('');
 
-    const content = `
+  const content = `
     <div style="text-align: center; margin-bottom: 24px;">
       <div style="display: inline-block; background-color: #f0fdf4; border-radius: 50%; padding: 16px; margin-bottom: 16px;">
         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2">
@@ -334,26 +334,26 @@ export function getOrderConfirmationTemplate(params: {
     </table>
   `;
 
-    return getBaseTemplate(content, 'support@genfity.com');
+  return getBaseTemplate(content, 'support@genfity.com');
 }
 
 /**
  * Order Completed Template
  */
 export function getOrderCompletedTemplate(params: {
-    customerName: string;
-    orderNumber: string;
-    merchantName: string;
-    orderType: string;
-    items: Array<{ name: string; quantity: number; price: number }>;
-    total: number;
-    completedAt: string;
+  customerName: string;
+  orderNumber: string;
+  merchantName: string;
+  orderType: string;
+  items: Array<{ name: string; quantity: number; price: number }>;
+  total: number;
+  completedAt: string;
 }): string {
-    const itemsList = params.items.map(item =>
-        `<li style="margin: 4px 0; font-size: 14px; color: #525252;">${item.name} × ${item.quantity}</li>`
-    ).join('');
+  const itemsList = params.items.map(item =>
+    `<li style="margin: 4px 0; font-size: 14px; color: #525252;">${item.name} × ${item.quantity}</li>`
+  ).join('');
 
-    const content = `
+  const content = `
     <div style="text-align: center; margin-bottom: 24px;">
       <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #171717;">
         Order Complete! 🎉
@@ -392,5 +392,5 @@ export function getOrderCompletedTemplate(params: {
     </p>
   `;
 
-    return getBaseTemplate(content, 'support@genfity.com');
+  return getBaseTemplate(content, 'support@genfity.com');
 }

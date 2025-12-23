@@ -2,7 +2,6 @@
 
 import React, { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import ViewAddonItemsModal from "@/components/addon-categories/ViewAddonItemsModal";
 import MenuRelationshipModal from "@/components/addon-categories/MenuRelationshipModal";
 import EmptyState from "@/components/ui/EmptyState";
@@ -25,6 +24,17 @@ interface AddonCategory {
   };
 }
 
+interface AddonItem {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number | string;
+  inputType: "SELECT" | "QTY";
+  isActive: boolean;
+  trackStock: boolean;
+  stockQty: number | null;
+}
+
 interface AddonCategoryFormData {
   name: string;
   description: string;
@@ -36,11 +46,6 @@ interface AddonCategoryFormData {
 interface AddonCategoriesApiResponse {
   success: boolean;
   data: AddonCategory[];
-}
-
-interface MerchantApiResponse {
-  success: boolean;
-  data: { currency: string };
 }
 
 export default function AddonCategoriesPage() {
@@ -55,7 +60,7 @@ export default function AddonCategoriesPage() {
     show: boolean;
     categoryId: string | null;
     categoryName: string;
-    items: unknown[];
+    items: AddonItem[];
   }>({ show: false, categoryId: null, categoryName: "", items: [] });
   
   const [viewRelationshipsModal, setViewRelationshipsModal] = useState<{
@@ -285,7 +290,7 @@ export default function AddonCategoriesPage() {
       }
     } catch (err) {
       console.error('Failed to fetch items:', err);
-      showError('Failed to load items');
+      setError('Failed to load items');
     }
   };
 
@@ -426,7 +431,7 @@ export default function AddonCategoriesPage() {
         const menuCount = relationshipsData.data?.length || 0;
 
         if (menuCount > 0) {
-          const menuNames = relationshipsData.data.slice(0, 3).map((m: any) => m.name).join(", ");
+          const menuNames = relationshipsData.data.slice(0, 3).map((m: { name: string }) => m.name).join(", ");
           const remainingCount = menuCount - 3;
           const menuList = remainingCount > 0 ? `${menuNames}, and ${remainingCount} more` : menuNames;
           

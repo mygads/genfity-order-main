@@ -29,6 +29,75 @@ export interface OrderExportData {
   completedAt?: string;
 }
 
+// Input order type for formatOrderForExport
+interface OrderItemAddon {
+  addonItem?: { name: string };
+}
+
+interface OrderItem {
+  quantity: number;
+  menu?: { name: string };
+  addons?: OrderItemAddon[];
+}
+
+interface OrderPayment {
+  status?: string;
+  paymentMethod?: string;
+  paidAt?: Date | string;
+}
+
+interface OrderInput {
+  orderNumber: string;
+  orderType: string;
+  status: string;
+  customer?: { name?: string; phone?: string };
+  tableNumber?: string;
+  orderItems?: OrderItem[];
+  subtotal?: number | string;
+  taxAmount?: number | string;
+  totalAmount?: number | string;
+  payment?: OrderPayment;
+  placedAt: Date | string;
+  completedAt?: Date | string;
+}
+
+// Analytics data types
+interface PopularItem {
+  menuName: string;
+  quantity: number;
+  revenue: number;
+  orderCount: number;
+}
+
+interface RevenueByDate {
+  date: string;
+  revenue: number;
+  orderCount: number;
+}
+
+interface PaymentMethodData {
+  count: number;
+  amount: number;
+}
+
+interface AnalyticsData {
+  statistics: {
+    totalOrders: number;
+    completedOrders: number;
+    cancelledOrders: number;
+    averageOrderValue: number;
+    ordersByStatus: Record<string, number>;
+  };
+  paymentStats: {
+    totalRevenue: number;
+    completedPayments: number;
+    pendingPayments: number;
+    byMethod: Record<string, PaymentMethodData>;
+  };
+  popularItems: PopularItem[];
+  revenueByDate: RevenueByDate[];
+}
+
 // ===== CSV EXPORT =====
 
 /**
@@ -127,12 +196,12 @@ export function downloadExcel(data: OrderExportData[], filename: string) {
 /**
  * Format order data for export
  */
-export function formatOrderForExport(order: any): OrderExportData {
+export function formatOrderForExport(order: OrderInput): OrderExportData {
   // Format items list
   const items = order.orderItems
-    ?.map((item: any) => {
+    ?.map((item: OrderItem) => {
       const addons = item.addons
-        ?.map((addon: any) => `  + ${addon.addonItem?.name || 'Unknown'}`)
+        ?.map((addon: OrderItemAddon) => `  + ${addon.addonItem?.name || 'Unknown'}`)
         .join('\n');
       return `${item.quantity}x ${item.menu?.name || 'Unknown'}${addons ? '\n' + addons : ''}`;
     })
@@ -164,7 +233,7 @@ export function formatOrderForExport(order: any): OrderExportData {
 /**
  * Format multiple orders for export
  */
-export function formatOrdersForExport(orders: any[]): OrderExportData[] {
+export function formatOrdersForExport(orders: OrderInput[]): OrderExportData[] {
   return orders.map(formatOrderForExport);
 }
 
@@ -173,7 +242,7 @@ export function formatOrdersForExport(orders: any[]): OrderExportData[] {
 /**
  * Export orders to CSV
  */
-export function exportOrdersToCSV(orders: any[], filename?: string) {
+export function exportOrdersToCSV(orders: OrderInput[], filename?: string) {
   const formattedData = formatOrdersForExport(orders);
   const defaultFilename = `orders_${new Date().toISOString().split('T')[0]}.csv`;
   downloadCSV(formattedData, filename || defaultFilename);
@@ -182,7 +251,7 @@ export function exportOrdersToCSV(orders: any[], filename?: string) {
 /**
  * Export orders to Excel
  */
-export function exportOrdersToExcel(orders: any[], filename?: string) {
+export function exportOrdersToExcel(orders: OrderInput[], filename?: string) {
   const formattedData = formatOrdersForExport(orders);
   const defaultFilename = `orders_${new Date().toISOString().split('T')[0]}.xlsx`;
   downloadExcel(formattedData, filename || defaultFilename);
@@ -193,7 +262,7 @@ export function exportOrdersToExcel(orders: any[], filename?: string) {
 /**
  * Export analytics data to Excel with multiple sheets
  */
-export function exportAnalyticsToExcel(analyticsData: any, filename?: string) {
+export function exportAnalyticsToExcel(analyticsData: AnalyticsData, filename?: string) {
   const workbook = XLSX.utils.book_new();
 
   // Sheet 1: Summary Statistics
@@ -211,7 +280,7 @@ export function exportAnalyticsToExcel(analyticsData: any, filename?: string) {
   XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary');
 
   // Sheet 2: Popular Items
-  const popularItemsData = analyticsData.popularItems.map((item: any) => ({
+  const popularItemsData = analyticsData.popularItems.map((item: PopularItem) => ({
     'Menu Item': item.menuName,
     'Quantity Sold': item.quantity,
     Revenue: item.revenue,
@@ -222,7 +291,7 @@ export function exportAnalyticsToExcel(analyticsData: any, filename?: string) {
   XLSX.utils.book_append_sheet(workbook, popularItemsSheet, 'Popular Items');
 
   // Sheet 3: Revenue by Date
-  const revenueByDateData = analyticsData.revenueByDate.map((item: any) => ({
+  const revenueByDateData = analyticsData.revenueByDate.map((item: RevenueByDate) => ({
     Date: item.date,
     Revenue: item.revenue,
     'Order Count': item.orderCount,
@@ -244,7 +313,7 @@ export function exportAnalyticsToExcel(analyticsData: any, filename?: string) {
 
   // Sheet 5: Payment Methods
   const paymentMethodData = Object.entries(analyticsData.paymentStats.byMethod).map(
-    ([method, data]: [string, any]) => ({
+    ([method, data]: [string, PaymentMethodData]) => ({
       'Payment Method': method,
       Count: data.count,
       Amount: data.amount,

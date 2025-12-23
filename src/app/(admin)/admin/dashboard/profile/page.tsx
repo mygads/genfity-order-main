@@ -6,7 +6,7 @@
 
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import { getAdminToken } from '@/lib/utils/adminAuth';
 import { useToast } from '@/hooks/useToast';
@@ -41,11 +41,9 @@ export default function ProfilePage() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  useEffect(() => {
-    fetchProfile();
-  }, []);
 
-  const fetchProfile = async () => {
+
+  const fetchProfile = useCallback(async () => {
     setLoading(true);
     try {
       const token = getAdminToken();
@@ -71,11 +69,15 @@ export default function ProfilePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [error]);
+
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate password confirmation
     if (newPassword && newPassword !== confirmPassword) {
       error('Validation Error', 'New passwords do not match');
@@ -159,11 +161,11 @@ export default function ProfilePage() {
             profilePictureUrl: data.data.url,
           });
         }
-        
+
         // Save to localStorage and dispatch event for navbar update
         localStorage.setItem('profilePictureUrl', data.data.url);
         window.dispatchEvent(new Event('profilePictureUpdated'));
-        
+
         success('Success', 'Profile picture uploaded successfully');
       } else {
         error('Error', data.message || 'Failed to upload picture');
@@ -209,7 +211,7 @@ export default function ProfilePage() {
           <h3 className="mb-4 text-lg font-semibold text-gray-800 dark:text-white/90">
             Profile Picture
           </h3>
-          
+
           <div className="flex flex-col items-center">
             <div className="relative mb-4 h-32 w-32 overflow-hidden rounded-full border-4 border-gray-200 dark:border-gray-700">
               {profile.profilePictureUrl ? (
@@ -270,14 +272,12 @@ export default function ProfilePage() {
             </div>
             <div>
               <p className="text-xs text-gray-500 dark:text-gray-400">Status</p>
-              <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                profile.isActive
-                  ? 'bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400'
-                  : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
-              }`}>
-                <span className={`h-1.5 w-1.5 rounded-full ${
-                  profile.isActive ? 'bg-success-500' : 'bg-gray-500'
-                }`}></span>
+              <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${profile.isActive
+                ? 'bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400'
+                : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+                }`}>
+                <span className={`h-1.5 w-1.5 rounded-full ${profile.isActive ? 'bg-success-500' : 'bg-gray-500'
+                  }`}></span>
                 {profile.isActive ? 'Active' : 'Inactive'}
               </span>
             </div>

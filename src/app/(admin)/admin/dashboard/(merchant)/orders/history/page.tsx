@@ -38,7 +38,7 @@ export default function OrderHistoryPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [orderData, setOrderData] = useState<OrderData | null>(null);
-  const [merchant, setMerchant] = useState<{ currency: string } | null>(null);
+  const [_merchant, setMerchant] = useState<{ currency: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -123,7 +123,7 @@ export default function OrderHistoryPage() {
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Order History</h1>
         <p className="text-sm text-gray-600 dark:text-gray-400">
           View and manage all past orders
-          </p>
+        </p>
       </div>
 
       {/* Date Range Filter */}
@@ -142,7 +142,6 @@ export default function OrderHistoryPage() {
       {orderData && (
         <OrderHistoryTable
           orders={orderData.orders}
-          currency={merchant?.currency || 'AUD'}
           onViewOrder={handleViewOrder}
           loading={loading}
         />

@@ -67,7 +67,7 @@ export function bigIntToString(value: bigint): string {
  * @param value - Value to check
  * @returns True if value is Decimal
  */
-function isDecimal(value: any): boolean {
+function isDecimal(value: unknown): boolean {
   return (
     value instanceof Decimal ||
     (typeof value === 'object' &&
@@ -104,7 +104,7 @@ export function serializeData<T>(obj: T): T {
 
   // Handle Prisma Decimal (both instanceof and duck-typing check)
   if (isDecimal(obj)) {
-    return parseFloat((obj as any).toString()) as T;
+    return parseFloat((obj as { toString(): string }).toString()) as T;
   }
 
   // Handle Date

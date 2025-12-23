@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
-import Image from 'next/image';
 import MenuDetailModal from '@/components/menu/MenuDetailModal';
 import { useCart } from '@/context/CartContext';
 import type { CartItem } from '@/context/CartContext';
@@ -61,7 +60,7 @@ export default function ViewOrderPage() {
   const [editingCartItem, setEditingCartItem] = useState<CartItem | null>(null);
   const [removeItemId, setRemoveItemId] = useState<string | null>(null);
   const [removeItemName, setRemoveItemName] = useState<string>('');
-  const [relatedMenus, setRelatedMenus] = useState<RelatedMenuItem[]>([]);
+  const [_relatedMenus, _setRelatedMenus] = useState<RelatedMenuItem[]>([]);
   const [showNotesModal, setShowNotesModal] = useState(false);
 
   // Initialize cart on mount
@@ -101,7 +100,7 @@ export default function ViewOrderPage() {
           const filteredMenus = menusData.data
             .filter((menu: RelatedMenuItem) => !cartMenuIds.includes(menu.id.toString()))
             .slice(0, 4);
-          setRelatedMenus(filteredMenus);
+          _setRelatedMenus(filteredMenus);
         }
       } catch (error) {
         console.error('Failed to fetch merchant data:', error);
@@ -139,7 +138,7 @@ export default function ViewOrderPage() {
   };
 
   // Handle adding related menu item
-  const handleAddRelatedItem = async (menuId: string) => {
+  const _handleAddRelatedItem = async (menuId: string) => {
     try {
       const response = await fetch(`/api/public/merchants/${merchantCode}/menus/${menuId}`);
       const data = await response.json();
@@ -155,7 +154,7 @@ export default function ViewOrderPage() {
           notes: ''
         });
         // Remove from related menus list
-        setRelatedMenus(prev => prev.filter(m => m.id !== menuId));
+        _setRelatedMenus(prev => prev.filter(m => m.id !== menuId));
       }
     } catch (error) {
       console.error('Failed to add related item:', error);
@@ -189,7 +188,7 @@ export default function ViewOrderPage() {
 
       if (cachedMenus) {
         const menus = JSON.parse(cachedMenus);
-        const cachedMenu = menus.find((m: any) => m.id.toString() === item.menuId.toString());
+        const cachedMenu = menus.find((m: { id: string | number }) => m.id.toString() === item.menuId.toString());
 
         if (cachedMenu) {
           console.log('✅ [VIEW ORDER] Using cached menu + addons for edit:', item.menuId);
@@ -776,7 +775,6 @@ export default function ViewOrderPage() {
             editMode={true}
             existingCartItem={editingCartItem}
             onClose={handleCloseModal}
-            prefetchedAddons={selectedMenu.addonCategories || []}
           />
         )
       }

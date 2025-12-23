@@ -47,7 +47,7 @@ function VerifyCodeForm() {
             // First time visiting - start with cooldown active
             setResendTimer(60);
         }
-    }, [email]);
+    }, [email, RESEND_COOLDOWN_MS]);
 
     // Countdown timer for resend
     useEffect(() => {

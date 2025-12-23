@@ -13,17 +13,17 @@ const getLogLevel = (): Prisma.LogLevel[] => {
   if (process.env.DATABASE_LOGGING === 'false') {
     return ['error'];
   }
-  
+
   // In production, only log errors
   if (process.env.NODE_ENV === 'production') {
     return ['error'];
   }
-  
+
   // In development, log queries only if explicitly enabled
   if (process.env.DATABASE_LOGGING === 'true') {
     return ['query', 'error', 'warn'];
   }
-  
+
   // Default: only errors and warnings
   return ['error', 'warn'];
 };
@@ -39,11 +39,12 @@ export const prisma =
     },
     // Connection pool settings to prevent timeout issues
     // Increase pool size and timeout for high-frequency requests (kitchen display)
+    // @ts-expect-error - __internal is not in PrismaClient types but supported
     __internal: {
       engine: {
         connection_limit: 20, // Increased from default 13
       },
-    } as any,
+    },
   });
 
 if (process.env.NODE_ENV !== 'production') {

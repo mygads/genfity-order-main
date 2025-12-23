@@ -41,7 +41,6 @@ interface Order {
 
 interface OrderHistoryTableProps {
   orders: Order[];
-  currency?: string;
   onViewOrder?: (orderId: string | number) => void;
   loading?: boolean;
 }
@@ -92,7 +91,6 @@ const PaymentStatusBadge: React.FC<{ status: PaymentStatus }> = ({ status }) => 
 
 export const OrderHistoryTable: React.FC<OrderHistoryTableProps> = ({
   orders,
-  currency = 'AUD',
   onViewOrder,
   loading = false,
 }) => {
@@ -139,8 +137,8 @@ export const OrderHistoryTable: React.FC<OrderHistoryTableProps> = ({
 
     // Sort
     filtered.sort((a, b) => {
-      let aValue: any = a[sortField];
-      let bValue: any = b[sortField];
+      let aValue: string | number | Date = a[sortField] as string | number | Date;
+      let bValue: string | number | Date = b[sortField] as string | number | Date;
 
       if (sortField === 'placedAt') {
         aValue = new Date(a.placedAt).getTime();

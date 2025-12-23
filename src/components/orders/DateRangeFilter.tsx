@@ -93,10 +93,10 @@ export const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
     }
   };
 
-  const handleCustomDateChange = (field: 'start' | 'end', value: string) => {
-    const newDate = new Date(value);
+  const handleCustomDateChange = (field: 'start' | 'end', dateValue: string) => {
+    const newDate = new Date(dateValue);
     onChange({
-      ...dateRange,
+      ...value,
       [field]: newDate,
     });
   };
@@ -109,11 +109,10 @@ export const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
           <button
             key={preset.id}
             onClick={() => handlePresetClick(preset.id)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-150 ${
-              selectedPreset === preset.id
-                ? 'bg-brand-500 text-white'
-                : 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
-            }`}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-150 ${selectedPreset === preset.id
+              ? 'bg-brand-500 text-white'
+              : 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+              }`}
           >
             {preset.label}
           </button>

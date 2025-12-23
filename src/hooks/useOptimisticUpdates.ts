@@ -3,7 +3,7 @@
  * Patterns for implementing optimistic UI updates with SWR
  */
 
-import useSWR, { mutate } from 'swr';
+import { mutate } from 'swr';
 import useSWRMutation from 'swr/mutation';
 
 /**
@@ -15,10 +15,10 @@ import useSWRMutation from 'swr/mutation';
  */
 export function useOptimisticMenuToggle(menuId: string) {
   const key = `/api/merchant/menu/${menuId}`;
-  
+
   return useSWRMutation(
     key,
-    async (url, { arg }: { arg: void }) => {
+    async (url) => {
       const token = localStorage.getItem('accessToken');
       const res = await fetch(url, {
         method: 'PATCH',
@@ -28,12 +28,13 @@ export function useOptimisticMenuToggle(menuId: string) {
         },
         body: JSON.stringify({ action: 'toggleActive' }),
       });
-      
+
       if (!res.ok) throw new Error('Failed to toggle menu');
       return res.json();
     },
     {
       // Optimistic update
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       optimisticData: (currentData: any) => {
         if (!currentData) return currentData;
         return {
@@ -62,7 +63,7 @@ export function useOptimisticMenuToggle(menuId: string) {
  */
 export function useOptimisticOrderUpdate() {
   const ordersKey = '/api/merchant/orders';
-  
+
   return useSWRMutation(
     ordersKey,
     async (url, { arg }: { arg: { orderId: string; status: string } }) => {
@@ -75,17 +76,19 @@ export function useOptimisticOrderUpdate() {
         },
         body: JSON.stringify({ status: arg.status }),
       });
-      
+
       if (!res.ok) throw new Error('Failed to update order');
       return res.json();
     },
     {
       // Optimistic update for order list
-      optimisticData: (currentData: any, { arg }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      optimisticData: (currentData: any, { arg }: { arg: { orderId: string; status: string } }) => {
         if (!currentData?.data) return currentData;
-        
+
         return {
           ...currentData,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           data: currentData.data.map((order: any) =>
             order.id === arg.orderId
               ? { ...order, status: arg.status }
@@ -120,13 +123,13 @@ export function useOptimisticStockUpdate() {
         },
         body: JSON.stringify({ stockQty: arg.stockQty }),
       });
-      
+
       if (!res.ok) throw new Error('Failed to update stock');
       return res.json();
     },
     {
       // Optimistic UI for menu list
-      onSuccess: (data, key, config) => {
+      onSuccess: (_data, _key, _config) => {
         // Revalidate menu list
         mutate('/api/merchant/menu');
       },
@@ -144,9 +147,10 @@ export function useOptimisticStockUpdate() {
  */
 export function useOptimisticInlineEdit() {
   const menusKey = '/api/merchant/menu';
-  
+
   return useSWRMutation(
     menusKey,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     async (url, { arg }: { arg: { id: string; field: string; value: any } }) => {
       const token = localStorage.getItem('accessToken');
       const res = await fetch(`/api/merchant/menu/${arg.id}`, {
@@ -157,17 +161,19 @@ export function useOptimisticInlineEdit() {
         },
         body: JSON.stringify({ [arg.field]: arg.value }),
       });
-      
+
       if (!res.ok) throw new Error('Failed to update');
       return res.json();
     },
     {
       // Optimistic inline edit
-      optimisticData: (currentData: any, { arg }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      optimisticData: (currentData: any, { arg }: { arg: { id: string; field: string; value: any } }) => {
         if (!currentData?.data) return currentData;
-        
+
         return {
           ...currentData,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           data: currentData.data.map((item: any) =>
             item.id === arg.id
               ? { ...item, [arg.field]: arg.value }
@@ -178,9 +184,10 @@ export function useOptimisticInlineEdit() {
       populateCache: (result, currentData) => {
         // Update with server response
         if (!currentData?.data) return currentData;
-        
+
         return {
           ...currentData,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           data: currentData.data.map((item: any) =>
             item.id === result.data.id ? result.data : item
           ),
@@ -211,7 +218,7 @@ export async function revalidateKey(key: string) {
  */
 export async function prefetchData(url: string) {
   const token = localStorage.getItem('accessToken');
-  
+
   await mutate(
     url,
     fetch(url, {

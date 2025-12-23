@@ -26,8 +26,9 @@ export const DraggableOrderCard: React.FC<DraggableOrderCardProps> = ({
   order,
   onClick,
   onStatusChange,
-  isFirst = false,
-  isLast = false,
+  // isFirst and isLast are currently unused/kept for drag styling if needed
+  isFirst: _isFirst = false,
+  isLast: _isLast = false,
   currency = 'AUD',
 }) => {
   const {
@@ -56,7 +57,7 @@ export const DraggableOrderCard: React.FC<DraggableOrderCardProps> = ({
       {...listeners}
       className={`${dragDisabled ? 'opacity-50 cursor-not-allowed' : ''} ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
     >
-      <OrderCard 
+      <OrderCard
         order={order}
         draggable={!dragDisabled}
         onClick={onClick}

@@ -46,7 +46,7 @@ const DEFAULT_FILTERS: OrderFilters = {
 };
 
 export default function MerchantOrdersPage() {
-  const router = useRouter();
+  const _router = useRouter();
 
   // State management
   const [viewMode, setViewMode] = useState<ViewMode>('kanban-card');
@@ -72,7 +72,7 @@ export default function MerchantOrdersPage() {
 
   // Use MerchantContext
   const { merchant: merchantData, isLoading: merchantLoading } = useMerchant();
-  
+
   useEffect(() => {
     if (!merchantLoading && merchantData) {
       setMerchantId(BigInt(merchantData.id));
@@ -88,7 +88,7 @@ export default function MerchantOrdersPage() {
       setMerchantCurrency(merchantData.currency || 'AUD');
       setLoading(false);
     }
-  }, [router]);
+  }, [merchantData]);
 
   useEffect(() => {
     fetchMerchantId();

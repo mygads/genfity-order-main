@@ -5,8 +5,7 @@
 
 'use client';
 
-import { motion, AnimatePresence } from 'framer-motion';
-import { usePathname } from 'next/navigation';
+import { motion, type Transition } from 'framer-motion';
 import { ReactNode, useState, useEffect } from 'react';
 
 /**
@@ -61,10 +60,10 @@ export function ScaleTransition({ children }: { children: ReactNode }) {
  * Page Transition Wrapper
  * Simple transition that only runs on client to avoid hydration errors
  */
-export function PageTransition({ 
-  children, 
-  type = 'fade' 
-}: { 
+export function PageTransition({
+  children,
+  type = 'fade'
+}: {
   children: ReactNode;
   type?: 'fade' | 'slide' | 'scale';
 }) {
@@ -79,21 +78,25 @@ export function PageTransition({
     return <>{children}</>;
   }
 
-  const variants = {
+  const variants: Record<'fade' | 'slide' | 'scale', {
+    initial: { opacity?: number; y?: number; scale?: number };
+    animate: { opacity?: number; y?: number; scale?: number };
+    transition: Transition;
+  }> = {
     fade: {
       initial: { opacity: 0 },
       animate: { opacity: 1 },
-      transition: { duration: 0.2, ease: 'easeInOut' },
+      transition: { duration: 0.2, ease: 'easeInOut' as const },
     },
     slide: {
       initial: { opacity: 0, y: 20 },
       animate: { opacity: 1, y: 0 },
-      transition: { duration: 0.3, ease: 'easeOut' },
+      transition: { duration: 0.3, ease: 'easeOut' as const },
     },
     scale: {
       initial: { opacity: 0, scale: 0.95 },
       animate: { opacity: 1, scale: 1 },
-      transition: { duration: 0.2, ease: 'easeInOut' },
+      transition: { duration: 0.2, ease: 'easeInOut' as const },
     },
   };
 
@@ -114,10 +117,10 @@ export function PageTransition({
  * Stagger Children Animation
  * Animate child elements in sequence
  */
-export function StaggerContainer({ 
+export function StaggerContainer({
   children,
-  staggerDelay = 0.1 
-}: { 
+  staggerDelay = 0.1
+}: {
   children: ReactNode;
   staggerDelay?: number;
 }) {

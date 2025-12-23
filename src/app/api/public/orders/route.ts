@@ -34,6 +34,73 @@ import { serializeBigInt, decimalToNumber } from '@/lib/utils/serializer';
 import emailService from '@/lib/services/EmailService';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
+import { Decimal } from '@prisma/client/runtime/library';
+
+// ===== TYPE DEFINITIONS =====
+
+interface OrderItemAddonInput {
+  addonItemId: string;
+  quantity?: number;
+}
+
+interface OrderItemInput {
+  menuId: string;
+  quantity: number;
+  notes?: string;
+  addons?: OrderItemAddonInput[];
+}
+
+interface _OrderRequestBody {
+  merchantCode: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone?: string;
+  orderType: 'DINE_IN' | 'TAKEAWAY';
+  tableNumber?: string;
+  items: OrderItemInput[];
+  notes?: string;
+  paymentMethod?: string;
+}
+
+interface AddonData {
+  addonItemId: bigint;
+  addonName: string;
+  addonPrice: Decimal;
+  quantity: number;
+  subtotal: number;
+}
+
+interface OrderItemData {
+  menuId: bigint;
+  menuName: string;
+  menuPrice: number;
+  quantity: number;
+  subtotal: number;
+  notes?: string;
+  addons: AddonData[];
+}
+
+interface MerchantWithConfig {
+  id: bigint;
+  code: string;
+  name: string;
+  isActive: boolean;
+  isOpen: boolean;
+  serviceChargeRate?: number | null;
+  packagingFeeAmount?: number | null;
+  taxRate?: number | null;
+  taxIncluded?: boolean;
+  // Additional config properties
+  enableTax?: boolean;
+  taxPercentage?: number | null;
+  enableServiceCharge?: boolean;
+  serviceChargePercent?: number | null;
+  enablePackagingFee?: boolean;
+}
+
+interface PrismaError {
+  code?: string;
+}
 
 /**
  * POST /api/public/orders
@@ -62,11 +129,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Get merchant by code (cast as any to support new fee fields until prisma generate completes)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // Get merchant by code
     const merchant = await prisma.merchant.findUnique({
       where: { code: body.merchantCode },
-    }) as any;
+    }) as MerchantWithConfig | null;
 
     if (!merchant || !merchant.isActive) {
       return NextResponse.json(
@@ -216,9 +282,10 @@ export async function POST(req: NextRequest) {
         }).catch(err => {
           console.error('❌ [ORDER] Welcome email error:', err);
         });
-      } catch (createError: any) {
+      } catch (createError: unknown) {
         // Handle race condition - email was created between check and create
-        if (createError.code === 'P2002') {
+        const prismaError = createError as PrismaError;
+        if (prismaError.code === 'P2002') {
           console.log('⚠️ [ORDER] Race condition - fetching existing customer');
           customer = await prisma.user.findFirst({
             where: {
@@ -267,7 +334,7 @@ export async function POST(req: NextRequest) {
     const round2 = (num: number): number => Math.round(num * 100) / 100;
 
     // ✅ PERFORMANCE: Batch fetch all menus in ONE query
-    const menuIds = body.items.map((item: any) => BigInt(item.menuId));
+    const menuIds = body.items.map((item: OrderItemInput) => BigInt(item.menuId));
     const menus = await prisma.menu.findMany({
       where: {
         id: { in: menuIds },
@@ -290,8 +357,8 @@ export async function POST(req: NextRequest) {
     const menuMap = new Map(menus.map(m => [m.id.toString(), m]));
 
     // ✅ PERFORMANCE: Batch fetch all addon items in ONE query
-    const allAddonIds = body.items.flatMap((item: any) =>
-      (item.addons || []).map((a: any) => BigInt(a.addonItemId))
+    const allAddonIds = body.items.flatMap((item: OrderItemInput) =>
+      (item.addons || []).map((a: OrderItemAddonInput) => BigInt(a.addonItemId))
     );
     const addons = allAddonIds.length > 0
       ? await prisma.addonItem.findMany({
@@ -301,7 +368,7 @@ export async function POST(req: NextRequest) {
     const addonMap = new Map(addons.map(a => [a.id.toString(), a]));
 
     let subtotal = 0;
-    const orderItemsData: any[] = [];
+    const orderItemsData: OrderItemData[] = [];
 
     for (const item of body.items) {
       const menu = menuMap.get(item.menuId.toString());
@@ -330,7 +397,7 @@ export async function POST(req: NextRequest) {
       console.log(`💰 [MENU PRICE] ${menu.name}: ${menu.isPromo && menu.promoPrice ? `PROMO ${menuPrice} (was ${decimalToNumber(menu.price)})` : menuPrice}`);
 
       // ✅ Process addons using pre-fetched map
-      const addonData: any[] = [];
+      const addonData: AddonData[] = [];
       if (item.addons && item.addons.length > 0) {
         for (const addonItem of item.addons) {
           const addon = addonMap.get(addonItem.addonItemId.toString());
@@ -507,7 +574,7 @@ export async function POST(req: NextRequest) {
       });
 
       // 2. Create OrderItems and track for addon creation
-      const createdItems: any[] = [];
+      const createdItems: Array<{ id: bigint }> = [];
 
       for (const itemData of orderItemsData) {
         const orderItem = await tx.orderItem.create({
@@ -522,10 +589,9 @@ export async function POST(req: NextRequest) {
           },
         });
 
-        // 3. Create OrderItemAddons for this item
         if (itemData.addons && itemData.addons.length > 0) {
           await tx.orderItemAddon.createMany({
-            data: itemData.addons.map((addon: any) => ({
+            data: itemData.addons.map((addon: AddonData) => ({
               orderItemId: orderItem.id,
               addonItemId: addon.addonItemId,
               addonName: addon.addonName,

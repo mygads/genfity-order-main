@@ -168,6 +168,10 @@ export class MenuRepository {
     stockQty?: number;
     dailyStockTemplate?: number;
     autoResetStock?: boolean;
+    promoPrice?: number;
+    promoStartDate?: Date;
+    promoEndDate?: Date;
+    lastStockResetAt?: Date;
     createdByUserId?: bigint;
   }) {
     const result = await prisma.menu.create({
@@ -195,6 +199,10 @@ export class MenuRepository {
     stockQty?: number;
     dailyStockTemplate?: number;
     autoResetStock?: boolean;
+    promoPrice?: number;
+    promoStartDate?: Date;
+    promoEndDate?: Date;
+    lastStockResetAt?: Date;
     updatedByUserId?: bigint;
   }) {
     const result = await prisma.menu.update({
@@ -267,12 +275,12 @@ export class MenuRepository {
   async setMenuCategories(menuId: bigint, categoryIds: bigint[]) {
     // Remove all existing categories
     await this.removeAllMenuCategories(menuId);
-    
+
     // Add new categories
     if (categoryIds.length > 0) {
       return await this.addMenuCategories(menuId, categoryIds);
     }
-    
+
     return [];
   }
 

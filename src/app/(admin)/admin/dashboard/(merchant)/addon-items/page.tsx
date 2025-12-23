@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import AddonItemFormModal from "@/components/addon-items/AddonItemFormModal";
 import AddonItemsTable from "@/components/addon-items/AddonItemsTable";
 import AddonItemsFilters from "@/components/addon-items/AddonItemsFilters";
@@ -44,10 +43,6 @@ interface AddonItemFormData {
   stockQty: string;
   dailyStockTemplate: string;
   autoResetStock: boolean;
-}
-
-interface Merchant {
-  currency: string;
 }
 
 export default function AddonItemsPage() {
@@ -300,7 +295,7 @@ export default function AddonItemsPage() {
     }
   };
 
-  const handleCancel = () => {
+  const _handleCancel = () => {
     setShowForm(false);
     setEditingId(null);
     resetForm();

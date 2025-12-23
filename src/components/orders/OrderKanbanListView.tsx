@@ -67,11 +67,11 @@ export const OrderKanbanListView: React.FC<OrderKanbanListViewProps> = ({
   selectedOrders = new Set(),
   bulkMode = false,
   onToggleSelection,
-  currency = 'AUD',
+  currency: _currency = 'AUD',
   onRefreshReady,
 }) => {
   const _merchantId = merchantId;
-  
+
   const [activeId, setActiveId] = useState<string | null>(null);
   const [orders, setOrders] = useState<OrderListItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -107,10 +107,10 @@ export const OrderKanbanListView: React.FC<OrderKanbanListViewProps> = ({
       }
 
       const result = await response.json();
-      
+
       if (result.success && result.data) {
         const fetchedOrders: OrderListItem[] = result.data;
-        
+
         // Smart comparison - only update if data actually changed
         const newDataString = JSON.stringify(fetchedOrders);
         if (previousDataRef.current !== newDataString) {
@@ -158,7 +158,7 @@ export const OrderKanbanListView: React.FC<OrderKanbanListViewProps> = ({
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
-    
+
     setActiveId(null);
 
     if (!over) return;
@@ -254,7 +254,7 @@ export const OrderKanbanListView: React.FC<OrderKanbanListViewProps> = ({
   // Droppable Column Component
   const DroppableColumn = ({ status, children }: { status: OrderStatus; children: React.ReactNode }) => {
     const { setNodeRef, isOver } = useDroppable({ id: status });
-    
+
     const currentOrder = activeId ? orders.find(o => String(o.id) === activeId) : null;
     const isInvalid = currentOrder ? !canTransitionStatus(currentOrder.status as OrderStatus, status) : false;
 
@@ -264,10 +264,10 @@ export const OrderKanbanListView: React.FC<OrderKanbanListViewProps> = ({
         className={`
           flex flex-col gap-2 min-h-[400px] rounded-lg p-3 bg-white dark:bg-gray-900
           transition-all duration-200 border
-          ${isInvalid 
-            ? 'border-2 border-dashed border-error-400 bg-error-50/50 dark:border-error-600 dark:bg-error-900/20' 
-            : isOver 
-              ? 'border-2 border-brand-400 bg-brand-50/70 dark:border-brand-600 dark:bg-brand-900/20' 
+          ${isInvalid
+            ? 'border-2 border-dashed border-error-400 bg-error-50/50 dark:border-error-600 dark:bg-error-900/20'
+            : isOver
+              ? 'border-2 border-brand-400 bg-brand-50/70 dark:border-brand-600 dark:bg-brand-900/20'
               : 'border-gray-200 dark:border-gray-800'
           }
         `}
@@ -312,8 +312,8 @@ export const OrderKanbanListView: React.FC<OrderKanbanListViewProps> = ({
 
               {/* Droppable List Items */}
               <DroppableColumn status={status}>
-                <SortableContext 
-                  items={statusOrders.map(o => String(o.id))} 
+                <SortableContext
+                  items={statusOrders.map(o => String(o.id))}
                   strategy={verticalListSortingStrategy}
                 >
                   {statusOrders.length === 0 ? (
@@ -327,9 +327,8 @@ export const OrderKanbanListView: React.FC<OrderKanbanListViewProps> = ({
                       <DraggableOrderTabListCard
                         key={order.id}
                         order={order}
-                        onOrderClick={onOrderClick || (() => {})}
+                        onOrderClick={onOrderClick || (() => { })}
                         onStatusChange={handleStatusChange}
-                        currency={currency}
                         bulkMode={bulkMode}
                         selectedOrders={selectedOrders}
                         onToggleSelection={onToggleSelection}
@@ -349,7 +348,6 @@ export const OrderKanbanListView: React.FC<OrderKanbanListViewProps> = ({
         {activeOrder ? (
           <OrderTabListCard
             order={activeOrder}
-            currency={currency}
           />
         ) : null}
       </DragOverlay>

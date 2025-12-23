@@ -21,7 +21,6 @@ interface DraggableOrderTabListCardProps {
   selectedOrders?: Set<string>;
   bulkMode?: boolean;
   onToggleSelection?: (orderId: string) => void;
-  currency?: string;
   showQuickActions?: boolean;
 }
 
@@ -32,7 +31,6 @@ export const DraggableOrderTabListCard: React.FC<DraggableOrderTabListCardProps>
   selectedOrders = new Set(),
   bulkMode = false,
   onToggleSelection,
-  currency = 'AUD',
   showQuickActions = true,
 }) => {
   const {
@@ -56,8 +54,8 @@ export const DraggableOrderTabListCard: React.FC<DraggableOrderTabListCardProps>
   const isSelected = selectedOrders.has(String(order.id));
 
   return (
-    <div 
-      ref={setNodeRef} 
+    <div
+      ref={setNodeRef}
       style={style}
       {...attributes}
       {...listeners}
@@ -66,7 +64,6 @@ export const DraggableOrderTabListCard: React.FC<DraggableOrderTabListCardProps>
         order={order}
         onClick={() => onOrderClick(order)}
         onStatusChange={onStatusChange}
-        currency={currency}
         bulkMode={bulkMode}
         isSelected={isSelected}
         onToggleSelection={onToggleSelection}

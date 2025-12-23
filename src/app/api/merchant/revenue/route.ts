@@ -4,7 +4,6 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import orderService from '@/lib/services/OrderService';
 import prisma from '@/lib/db/client';
 import { withMerchant } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/middleware/auth';

@@ -25,7 +25,8 @@ import {
   FaSpinner,
   FaChevronDown,
 } from 'react-icons/fa';
-import { ORDER_STATUS_COLORS, PAYMENT_STATUS_COLORS } from '@/lib/constants/orderConstants';
+import Image from 'next/image';
+import { ORDER_STATUS_COLORS } from '@/lib/constants/orderConstants';
 import { getNextPossibleStatuses } from '@/lib/utils/orderStatusRules';
 import { useToast } from '@/context/ToastContext';
 import type { OrderWithDetails } from '@/lib/types/order';
@@ -135,7 +136,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
       if (data.success) {
         setOrder(data.data);
         onUpdate?.();
-        
+
         // Show success toast
         const statusLabels: Record<OrderStatus, string> = {
           PENDING: 'Pending',
@@ -195,14 +196,15 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
         await fetchOrderDetails();
         onUpdate?.();
         setShowPaymentModal(false);
-        
+
         // Show success toast
         const methodLabels: Record<PaymentMethod, string> = {
           CASH_ON_COUNTER: 'Cash',
           CARD_ON_COUNTER: 'Card',
-          ONLINE: 'Online',
           BANK_TRANSFER: 'Bank Transfer',
           E_WALLET: 'E-Wallet',
+          QRIS: 'QRIS',
+          CREDIT_CARD: 'Credit Card',
         };
         showSuccess(`Payment recorded successfully (${methodLabels[paymentMethod]})`, 'Payment Recorded');
       } else {
@@ -372,10 +374,11 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                         <div className="relative flex-shrink-0">
                           <div className="h-16 w-16 overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800">
                             {item.menu?.imageUrl ? (
-                              <img
+                              <Image
                                 src={item.menu.imageUrl}
                                 alt={item.menuName}
-                                className="h-full w-full object-cover"
+                                fill
+                                className="object-cover"
                               />
                             ) : (
                               <div className="flex h-full w-full items-center justify-center">
@@ -469,22 +472,22 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                     </div>
                   )}
 
-                  {/* Service Charge - cast as any for new schema fields */}
-                  {Number((order as any).serviceChargeAmount) > 0 && (
+                  {/* Service Charge - cast for new schema fields */}
+                  {Number((order as unknown as { serviceChargeAmount?: number }).serviceChargeAmount) > 0 && (
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-gray-600 dark:text-gray-400">Service Charge</span>
                       <span className="text-gray-900 dark:text-white">
-                        {formatCurrency(Number((order as any).serviceChargeAmount))}
+                        {formatCurrency(Number((order as unknown as { serviceChargeAmount?: number }).serviceChargeAmount))}
                       </span>
                     </div>
                   )}
 
                   {/* Packaging Fee */}
-                  {Number((order as any).packagingFeeAmount) > 0 && (
+                  {Number((order as unknown as { packagingFeeAmount?: number }).packagingFeeAmount) > 0 && (
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-gray-600 dark:text-gray-400">Packaging Fee</span>
                       <span className="text-gray-900 dark:text-white">
-                        {formatCurrency(Number((order as any).packagingFeeAmount))}
+                        {formatCurrency(Number((order as unknown as { packagingFeeAmount?: number }).packagingFeeAmount))}
                       </span>
                     </div>
                   )}

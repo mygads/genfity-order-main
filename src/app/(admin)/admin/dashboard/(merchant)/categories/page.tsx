@@ -2,7 +2,6 @@
 
 import React, { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import Image from "next/image";
 import CategoryDnDList from "@/components/ui/CategoryDnDList";
 import EmptyState from "@/components/ui/EmptyState";
@@ -112,7 +111,7 @@ export default function MerchantCategoriesPage() {
       prevFiltersRef.current.filterStatus !== filterStatus ||
       prevFiltersRef.current.sortBy !== sortBy;
 
-    const categoriesChanged = prevCategoriesLengthRef.current !== categories.length;
+    const _categoriesChanged = prevCategoriesLengthRef.current !== categories.length;
 
     // Update refs
     prevCategoriesLengthRef.current = categories.length;

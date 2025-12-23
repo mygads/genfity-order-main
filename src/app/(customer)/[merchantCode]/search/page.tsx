@@ -10,7 +10,7 @@ import MenuInCartModal from '@/components/menu/MenuInCartModal';
 import { useCart } from '@/context/CartContext';
 import type { CartItem } from '@/context/CartContext';
 import { formatCurrency } from '@/lib/utils/format';
-import { extractAddonDataFromMenus } from '@/lib/utils/addonExtractor';
+import { extractAddonDataFromMenus, type CachedAddonCategory } from '@/lib/utils/addonExtractor';
 
 interface MenuItem {
   id: string;
@@ -70,7 +70,7 @@ export default function SearchPage() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [allMenuItems, setAllMenuItems] = useState<MenuItem[]>([]);
-  const [menuAddonsCache, setMenuAddonsCache] = useState<Record<string, any>>({});
+  const [menuAddonsCache, setMenuAddonsCache] = useState<Record<string, CachedAddonCategory[]>>({});
   const [merchantInfo, setMerchantInfo] = useState<MerchantInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMenu, setSelectedMenu] = useState<MenuItem | null>(null);
@@ -105,7 +105,7 @@ export default function SearchPage() {
           const cachedData = JSON.parse(cached);
           setMerchantInfo(cachedData);
           return;
-        } catch (err) { }
+        } catch { }
       }
 
       try {
@@ -145,7 +145,7 @@ export default function SearchPage() {
 
           setIsLoading(false);
           return;
-        } catch (err) { }
+        } catch { }
       }
 
       setIsLoading(true);
@@ -380,8 +380,8 @@ export default function SearchPage() {
                       );
                     }}
                     className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-all ${selectedCategories.includes(cat.id)
-                        ? 'bg-orange-500 text-white border-orange-500'
-                        : 'bg-white text-gray-700 border-gray-300 hover:border-orange-400'
+                      ? 'bg-orange-500 text-white border-orange-500'
+                      : 'bg-white text-gray-700 border-gray-300 hover:border-orange-400'
                       }`}
                   >
                     {cat.name}
@@ -406,8 +406,8 @@ export default function SearchPage() {
                     );
                   }}
                   className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-all ${selectedDietaryFilters.includes(filter.key)
-                      ? filter.color + ' border-current'
-                      : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'
+                    ? filter.color + ' border-current'
+                    : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'
                     }`}
                 >
                   {filter.label}

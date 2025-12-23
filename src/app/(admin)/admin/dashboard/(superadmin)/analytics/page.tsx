@@ -87,30 +87,30 @@ export default function AnalyticsPage() {
   const [period, setPeriod] = useState('month');
 
   useEffect(() => {
+    const fetchAnalytics = async () => {
+      setLoading(true);
+      try {
+        const token = getAdminToken();
+        const response = await fetch(`/api/admin/analytics?period=${period}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          setAnalytics(data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching analytics:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchAnalytics();
   }, [period]);
-
-  const fetchAnalytics = async () => {
-    setLoading(true);
-    try {
-      const token = getAdminToken();
-      const response = await fetch(`/api/admin/analytics?period=${period}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        setAnalytics(data.data);
-      }
-    } catch (error) {
-      console.error('Error fetching analytics:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Format currency with proper symbol based on merchant currency
   const formatCurrency = (amount: number, currency: string) => {
@@ -121,13 +121,13 @@ export default function AnalyticsPage() {
       EUR: '€',
       GBP: '£',
     };
-    
+
     const symbol = currencySymbols[currency] || currency;
-    
+
     if (currency === 'IDR') {
       return `${symbol} ${amount.toLocaleString('id-ID', { maximumFractionDigits: 0 })}`;
     }
-    
+
     return `${symbol}${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
@@ -181,7 +181,7 @@ export default function AnalyticsPage() {
 
       {/* Date Range Selector */}
       <div className="mb-6 flex items-center gap-3">
-        <select 
+        <select
           value={period}
           onChange={(e) => setPeriod(e.target.value)}
           className="h-10 rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
@@ -361,7 +361,7 @@ export default function AnalyticsPage() {
             const avgValue = analytics.avgOrderValueByType.find(a => a.type === item.type);
             const totalOrders = analytics.orderTypeDistribution.reduce((sum, t) => sum + t.count, 0);
             const percentage = (item.count / totalOrders) * 100;
-            
+
             return (
               <div
                 key={item.type}

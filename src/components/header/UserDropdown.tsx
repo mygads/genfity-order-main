@@ -1,6 +1,5 @@
 "use client";
 import Image from "next/image";
-import Link from "next/link";
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Dropdown } from "../ui/dropdown/Dropdown";

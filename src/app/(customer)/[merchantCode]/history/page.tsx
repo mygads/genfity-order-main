@@ -97,7 +97,6 @@ export default function OrderHistoryPage() {
 
     // ✅ 5. Fetch orders if authenticated
     fetchOrders(customerAuth);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router, merchantCode, mode]);
 
   /**

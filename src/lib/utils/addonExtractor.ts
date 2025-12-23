@@ -31,6 +31,30 @@ interface MenuWithAddons {
   addonCategories?: AddonCategory[];
 }
 
+export interface CachedAddon {
+  id: string;
+  categoryId: string;
+  name: string;
+  description: string | null;
+  price: number;
+  inputType: 'SELECT' | 'QTY';
+  isAvailable: boolean;
+  trackStock: boolean;
+  stockQty: number | null;
+  displayOrder: number;
+}
+
+export interface CachedAddonCategory {
+  id: string;
+  name: string;
+  description: string | null;
+  type: 'required' | 'optional';
+  minSelections: number;
+  maxSelections: number;
+  displayOrder: number;
+  addons: CachedAddon[];
+}
+
 /**
  * Extract addon data from menu items and transform to cache format
  * @param menus - Array of menu items from API
@@ -39,8 +63,8 @@ interface MenuWithAddons {
  * ✅ IMPORTANT: Always sets an entry for every menu (even empty array)
  * so that MenuDetailModal knows not to fetch from API
  */
-export function extractAddonDataFromMenus(menus: MenuWithAddons[]): Record<string, any[]> {
-  const addonCache: Record<string, any[]> = {};
+export function extractAddonDataFromMenus(menus: MenuWithAddons[]): Record<string, CachedAddonCategory[]> {
+  const addonCache: Record<string, CachedAddonCategory[]> = {};
 
   menus.forEach((menu) => {
     // ✅ Always set cache entry - empty array if no addons
@@ -59,7 +83,7 @@ export function extractAddonDataFromMenus(menus: MenuWithAddons[]): Record<strin
           name: item.name,
           description: item.description,
           price: item.price,
-          inputType: item.inputType,
+          inputType: item.inputType as 'SELECT' | 'QTY',
           isAvailable: item.isActive && (!item.trackStock || (item.stockQty !== null && item.stockQty > 0)),
           trackStock: item.trackStock,
           stockQty: item.stockQty,

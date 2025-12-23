@@ -45,11 +45,11 @@ interface OrderChartsProps {
 
 // ===== CUSTOM TOOLTIP =====
 
-const CustomTooltip = ({ active, payload, currency = 'AUD' }: any) => {
+const CustomTooltip = ({ active, payload, currency = 'AUD' }: { active?: boolean; payload?: Array<{ color: string; name: string; value: number }>; currency?: string }) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-3 shadow-lg">
-        {payload.map((entry: any, index: number) => (
+        {payload.map((entry: { color: string; name: string; value: number }, index: number) => (
           <div key={index} className="flex items-center gap-2 mb-1">
             <div
               className="w-3 h-3 rounded"
@@ -59,9 +59,9 @@ const CustomTooltip = ({ active, payload, currency = 'AUD' }: any) => {
               {entry.name}:{' '}
               {entry.name.includes('Revenue')
                 ? new Intl.NumberFormat('en-AU', {
-                    style: 'currency',
-                    currency: currency,
-                  }).format(entry.value)
+                  style: 'currency',
+                  currency: currency,
+                }).format(entry.value)
                 : entry.value}
             </span>
           </div>

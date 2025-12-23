@@ -18,7 +18,6 @@ import { OrderStatus } from '@prisma/client';
 interface OrderListCardProps {
   order: OrderListItem;
   onClick?: () => void;
-  currency?: string;
   bulkMode?: boolean;
   isSelected?: boolean;
   onToggleSelection?: (orderId: string) => void;
@@ -31,7 +30,6 @@ interface OrderListCardProps {
 export const OrderListCard: React.FC<OrderListCardProps> = ({
   order,
   onClick,
-  currency = 'AUD',
   bulkMode = false,
   isSelected = false,
   onToggleSelection,

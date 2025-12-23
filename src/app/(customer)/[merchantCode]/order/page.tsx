@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import OrderPageHeader from '@/components/customer/OrderPageHeader';
 import CategoryTabs from '@/components/customer/CategoryTabs';
@@ -110,10 +110,11 @@ export default function MenuBrowsePage() {
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [allMenuItems, setAllMenuItems] = useState<MenuItem[]>([]); // Store all items
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [menuAddonsCache, setMenuAddonsCache] = useState<Record<string, any>>({}); // Cache for menu addons
   const [merchantInfo, setMerchantInfo] = useState<MerchantInfo | null>(null);
   const [tableNumber, setTableNumber] = useState<string | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string>('all'); // 'all' = show all sections (for filtering)
+  const [selectedCategory] = useState<string>('all'); // 'all' = show all sections (for filtering)
   const [activeScrollTab, setActiveScrollTab] = useState<string>('all'); // Active tab based on scroll position (for highlight only)
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMenu, setSelectedMenu] = useState<MenuItem | null>(null);
@@ -222,7 +223,7 @@ export default function MenuBrowsePage() {
           console.log('✅ [MERCHANT] Using cached merchant info');
           setMerchantInfo(cachedData);
           return;
-        } catch (err) {
+        } catch {
           console.warn('⚠️ [MERCHANT] Failed to parse cached merchant info, fetching fresh');
         }
       }
@@ -271,7 +272,7 @@ export default function MenuBrowsePage() {
           setMenuAddonsCache(addons);
           setIsLoading(false);
           return;
-        } catch (err) {
+        } catch {
           console.warn('⚠️ [MENU] Failed to parse cached data, fetching fresh');
         }
       }
@@ -480,7 +481,7 @@ export default function MenuBrowsePage() {
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('resize', updateHeaderHeight);
     };
-  }, [mode, tableNumber, selectedCategory, activeScrollTab]);
+  }, [mode, tableNumber, selectedCategory, activeScrollTab, categories]);
 
   // ✅ MEMOIZED: Filter items by selected category
   const displayedItems = useMemo(() =>

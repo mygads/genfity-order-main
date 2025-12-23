@@ -113,7 +113,7 @@ export class AddonRepository {
 
     return await prisma.addonCategory.update({
       where: { id },
-      data: { 
+      data: {
         isActive: !category.isActive,
         updatedByUserId: userId,
       },
@@ -229,10 +229,15 @@ export class AddonRepository {
    * Create new addon item
    */
   async createAddonItem(merchantId: bigint, data: CreateAddonItemDTO, userId?: bigint) {
+    // Convert addonCategoryId to bigint if string
+    const categoryId = typeof data.addonCategoryId === 'string'
+      ? BigInt(data.addonCategoryId)
+      : data.addonCategoryId;
+
     // Verify category belongs to merchant
     const category = await prisma.addonCategory.findFirst({
       where: {
-        id: data.addonCategoryId,
+        id: categoryId,
         merchantId,
       },
     });
@@ -243,7 +248,7 @@ export class AddonRepository {
 
     // Get the highest displayOrder for this category
     const highestOrder = await prisma.addonItem.findFirst({
-      where: { addonCategoryId: data.addonCategoryId },
+      where: { addonCategoryId: categoryId },
       orderBy: { displayOrder: 'desc' },
       select: { displayOrder: true },
     });
@@ -252,7 +257,7 @@ export class AddonRepository {
 
     return await prisma.addonItem.create({
       data: {
-        addonCategoryId: data.addonCategoryId,
+        addonCategoryId: categoryId,
         name: data.name,
         description: data.description || null,
         price: data.price ?? 0,
@@ -302,8 +307,8 @@ export class AddonRepository {
       if (data.trackStock) {
         updateData.stockQty = data.stockQty !== undefined ? data.stockQty : 0;
         updateData.dailyStockTemplate = data.dailyStockTemplate !== undefined ? data.dailyStockTemplate : null;
-        updateData.autoResetStock = data.dailyStockTemplate !== undefined && data.dailyStockTemplate !== null 
-          ? (data.autoResetStock || false) 
+        updateData.autoResetStock = data.dailyStockTemplate !== undefined && data.dailyStockTemplate !== null
+          ? (data.autoResetStock || false)
           : false;
       } else {
         updateData.stockQty = null;
@@ -342,7 +347,7 @@ export class AddonRepository {
 
     return await prisma.addonItem.update({
       where: { id },
-      data: { 
+      data: {
         isActive: !item.isActive,
         updatedByUserId: userId,
       },

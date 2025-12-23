@@ -31,7 +31,8 @@ export default function ViewAddonItemsModal({
   categoryName,
   categoryId,
   items,
-  currency,
+  // currency prop is currently unused but kept for interface consistency
+  currency: _currency,
   onClose,
   onRefresh,
 }: ViewAddonItemsModalProps) {
@@ -168,7 +169,7 @@ export default function ViewAddonItemsModal({
   // Action handlers with optimistic updates
   const handleToggleActive = async (id: string) => {
     // Optimistic update - toggle status immediately
-    setSortedItems(prev => prev.map(item => 
+    setSortedItems(prev => prev.map(item =>
       item.id === id ? { ...item, isActive: !item.isActive } : item
     ));
 
@@ -289,8 +290,8 @@ export default function ViewAddonItemsModal({
 
   const handleSaveEdit = async (itemId: string) => {
     // Optimistic update - update item immediately
-    setSortedItems(prev => prev.map(item => 
-      item.id === itemId 
+    setSortedItems(prev => prev.map(item =>
+      item.id === itemId
         ? { ...item, name: editData.name, price: parseFloat(editData.price) || 0 }
         : item
     ));
@@ -572,11 +573,10 @@ export default function ViewAddonItemsModal({
                             className="w-24 rounded border border-brand-300 bg-white px-2 py-1 text-sm font-semibold text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-brand-700 dark:bg-gray-800 dark:text-white/90"
                           />
                         ) : (
-                          <span className={`text-sm font-semibold ${
-                            formatPrice(item.price) === 'Free' 
-                              ? 'text-success-600 dark:text-success-400' 
+                          <span className={`text-sm font-semibold ${formatPrice(item.price) === 'Free'
+                              ? 'text-success-600 dark:text-success-400'
                               : 'text-gray-800 dark:text-white/90'
-                          }`}>
+                            }`}>
                             {formatPrice(item.price)}
                           </span>
                         )}

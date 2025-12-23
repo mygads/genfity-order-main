@@ -38,15 +38,15 @@ export default function StaffManagementPage() {
   const [showAddModal, setShowAddModal] = useState(false);
 
   // SWR hook for data fetching with caching
-  const { 
-    data: staffResponse, 
-    error: staffError, 
+  const {
+    data: staffResponse,
+    error: staffError,
     isLoading,
-    mutate: mutateStaff 
+    mutate: mutateStaff
   } = useSWRStatic<StaffApiResponse>('/api/merchant/staff');
 
   // Extract data from SWR response
-  const staff = staffResponse?.data?.staff || [];
+  const staff = React.useMemo(() => staffResponse?.data?.staff || [], [staffResponse]);
   const loading = isLoading;
 
   // Function to refetch data (for backwards compatibility)
@@ -274,20 +274,18 @@ export default function StaffManagementPage() {
                         </p>
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
-                          member.role === 'MERCHANT_OWNER'
+                        <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${member.role === 'MERCHANT_OWNER'
                             ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
                             : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                        }`}>
+                          }`}>
                           {member.role === 'MERCHANT_OWNER' ? 'Owner' : 'Staff'}
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
-                          member.isActive
+                        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${member.isActive
                             ? 'bg-success-100 text-success-700 dark:bg-success-900/30 dark:text-success-400'
                             : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                        }`}>
+                          }`}>
                           <span className={`h-1.5 w-1.5 rounded-full ${member.isActive ? 'bg-success-500' : 'bg-gray-400'}`}></span>
                           {member.isActive ? 'Active' : 'Inactive'}
                         </span>

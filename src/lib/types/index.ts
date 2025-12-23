@@ -18,7 +18,7 @@ export type {
   Order,
   OrderItem,
   OrderItemAddon,
-  OrderStatusHistory,
+  // OrderStatusHistory removed
   UserRole,
   MerchantRole,
   SessionStatus,

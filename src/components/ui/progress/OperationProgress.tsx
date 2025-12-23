@@ -18,8 +18,7 @@ interface Step {
 interface OperationProgressProps {
   /** Steps in the operation */
   steps: Step[];
-  /** Current step index */
-  currentStep?: number;
+
   /** Overall progress (0-100) */
   overallProgress?: number;
   /** Show step details */
@@ -30,7 +29,6 @@ interface OperationProgressProps {
 
 export function OperationProgress({
   steps,
-  currentStep = 0,
   overallProgress,
   showDetails = true,
   compact = false,
@@ -112,15 +110,14 @@ export function OperationProgress({
             {/* Step info */}
             <div className="flex-1 min-w-0">
               <p
-                className={`truncate ${
-                  step.status === 'completed'
+                className={`truncate ${step.status === 'completed'
                     ? 'text-green-600 dark:text-green-400'
                     : step.status === 'in-progress'
-                    ? 'font-medium text-brand-600 dark:text-brand-400'
-                    : step.status === 'error'
-                    ? 'text-red-600 dark:text-red-400'
-                    : 'text-gray-500 dark:text-gray-400'
-                }`}
+                      ? 'font-medium text-brand-600 dark:text-brand-400'
+                      : step.status === 'error'
+                        ? 'text-red-600 dark:text-red-400'
+                        : 'text-gray-500 dark:text-gray-400'
+                  }`}
               >
                 {step.label}
               </p>
@@ -132,23 +129,22 @@ export function OperationProgress({
             {/* Status text */}
             {showDetails && !compact && (
               <span
-                className={`flex-shrink-0 text-xs ${
-                  step.status === 'completed'
+                className={`flex-shrink-0 text-xs ${step.status === 'completed'
                     ? 'text-green-500'
                     : step.status === 'in-progress'
-                    ? 'text-brand-500'
-                    : step.status === 'error'
-                    ? 'text-red-500'
-                    : 'text-gray-400'
-                }`}
+                      ? 'text-brand-500'
+                      : step.status === 'error'
+                        ? 'text-red-500'
+                        : 'text-gray-400'
+                  }`}
               >
                 {step.status === 'completed'
                   ? 'Done'
                   : step.status === 'in-progress'
-                  ? 'Processing...'
-                  : step.status === 'error'
-                  ? 'Failed'
-                  : 'Pending'}
+                    ? 'Processing...'
+                    : step.status === 'error'
+                      ? 'Failed'
+                      : 'Pending'}
               </span>
             )}
           </motion.div>

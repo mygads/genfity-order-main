@@ -38,7 +38,8 @@ interface AddonItemsTableProps {
 export default function AddonItemsTable({
   items,
   categories,
-  currency,
+  // currency prop is currently unused but kept for interface consistency
+  currency: _currency,
   onEdit,
   onToggleActive,
   onDelete,
@@ -60,7 +61,7 @@ export default function AddonItemsTable({
   };
 
   const getInputTypeBadgeColor = (type: string): string => {
-    return type === "SELECT" 
+    return type === "SELECT"
       ? "bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400"
       : "bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400";
   };
@@ -111,24 +112,22 @@ export default function AddonItemsTable({
                 </span>
               </td>
               <td className="px-4 py-4">
-                <span className={`text-sm font-semibold ${
-                  formatPrice(item.price) === 'Free' 
-                    ? 'text-success-600 dark:text-success-400' 
+                <span className={`text-sm font-semibold ${formatPrice(item.price) === 'Free'
+                    ? 'text-success-600 dark:text-success-400'
                     : 'text-gray-800 dark:text-white/90'
-                }`}>
+                  }`}>
                   {formatPrice(item.price)}
                 </span>
               </td>
               <td className="px-4 py-4">
                 {item.trackStock ? (
                   <div className="space-y-1.5">
-                    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                      (item.stockQty || 0) > 10
+                    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${(item.stockQty || 0) > 10
                         ? 'bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400'
                         : (item.stockQty || 0) > 0
-                        ? 'bg-warning-100 text-warning-700 dark:bg-warning-900/20 dark:text-warning-400'
-                        : 'bg-error-100 text-error-700 dark:bg-error-900/20 dark:text-error-400'
-                    }`}>
+                          ? 'bg-warning-100 text-warning-700 dark:bg-warning-900/20 dark:text-warning-400'
+                          : 'bg-error-100 text-error-700 dark:bg-error-900/20 dark:text-error-400'
+                      }`}>
                       {item.stockQty || 0} pcs
                     </span>
                     {item.dailyStockTemplate !== null && (
@@ -162,11 +161,10 @@ export default function AddonItemsTable({
               <td className="px-4 py-4">
                 <button
                   onClick={() => onToggleActive(item.id, item.isActive)}
-                  className={`inline-flex cursor-pointer rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                    item.isActive 
-                      ? 'bg-success-100 text-success-700 hover:bg-success-200 dark:bg-success-900/20 dark:text-success-400 dark:hover:bg-success-900/30' 
+                  className={`inline-flex cursor-pointer rounded-full px-3 py-1 text-xs font-medium transition-colors ${item.isActive
+                      ? 'bg-success-100 text-success-700 hover:bg-success-200 dark:bg-success-900/20 dark:text-success-400 dark:hover:bg-success-900/30'
                       : 'bg-error-100 text-error-700 hover:bg-error-200 dark:bg-error-900/20 dark:text-error-400 dark:hover:bg-error-900/30'
-                  }`}
+                    }`}
                   title={item.isActive ? "Click to deactivate" : "Click to activate"}
                 >
                   {item.isActive ? '● Active' : '○ Inactive'}

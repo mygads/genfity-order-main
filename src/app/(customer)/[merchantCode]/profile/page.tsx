@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState, useEffect } from 'react';
+import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams, useParams } from 'next/navigation';
 import { getCustomerAuth, clearCustomerAuth } from '@/lib/utils/localStorage';
 import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';

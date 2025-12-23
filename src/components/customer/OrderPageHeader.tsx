@@ -1,7 +1,6 @@
 'use client';
 
 import { ArrowLeft, Search, Menu, User } from 'lucide-react';
-import Image from 'next/image';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { getCustomerAuth } from '@/lib/utils/localStorage';
 import { useState, useEffect } from 'react';
@@ -31,7 +30,8 @@ interface OrderPageHeaderProps {
  */
 export default function OrderPageHeader({
   merchantName,
-  merchantLogo,
+  // merchantLogo prop is currently unused but kept for interface consistency
+  merchantLogo: _merchantLogo,
   isSticky,
   onBackClick,
   tableNumber,

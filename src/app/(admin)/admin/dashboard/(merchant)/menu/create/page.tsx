@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import Image from "next/image";
-import { FieldLabelWithTooltip } from "@/components/ui/Tooltip";
 
 interface Merchant {
   id: string;

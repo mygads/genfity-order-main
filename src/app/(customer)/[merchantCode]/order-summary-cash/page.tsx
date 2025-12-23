@@ -129,15 +129,16 @@ export default function OrderSummaryCashPage() {
         /**
          * ✅ Convert Decimal.js serialized object to number
          */
-        const convertDecimal = (value: any): number => {
+        const convertDecimal = (value: unknown): number => {
           if (!value) return 0;
           if (typeof value === 'number') return value;
           if (typeof value === 'string') return parseFloat(value) || 0;
 
-          if (typeof value === 'object' && value.d && Array.isArray(value.d)) {
-            const sign = value.s || 1;
-            const exponent = value.e ?? 0;
-            const digits = value.d[0] || 0;
+          if (typeof value === 'object' && value !== null && 'd' in value && Array.isArray((value as { d: number[] }).d)) {
+            const decimalObj = value as { s?: number; e?: number; d: number[] };
+            const sign = decimalObj.s || 1;
+            const exponent = decimalObj.e ?? 0;
+            const digits = decimalObj.d[0] || 0;
             const digitsLength = digits.toString().length;
             const result = sign * digits * Math.pow(10, exponent - digitsLength + 1);
 
@@ -158,13 +159,20 @@ export default function OrderSummaryCashPage() {
         });
 
         // ✅ FIX: Convert Decimal di order items
-        const convertedOrderItems = data.data.orderItems.map((item: any) => ({
+        const convertedOrderItems = data.data.orderItems.map((item: {
+          menuName: string;
+          quantity: number;
+          menuPrice: unknown;
+          subtotal: unknown;
+          notes?: string;
+          addons: Array<{ addonName?: string; addonItemName?: string; quantity: number; addonPrice?: unknown; price?: unknown }>;
+        }) => ({
           menuName: item.menuName,
           quantity: item.quantity,
           price: convertDecimal(item.menuPrice),      // ✅ Convert menuPrice
           subtotal: convertDecimal(item.subtotal),    // ✅ Convert subtotal
           notes: item.notes,
-          addons: item.addons.map((addon: any) => ({
+          addons: item.addons.map((addon) => ({
             addonItemName: addon.addonName || addon.addonItemName, // ✅ Support both field names
             quantity: addon.quantity,
             price: convertDecimal(addon.addonPrice || addon.price), // ✅ Support both field names
@@ -253,7 +261,7 @@ export default function OrderSummaryCashPage() {
   /**
    * ✅ Handle "View History" button click
    */
-  const handleViewHistory = () => {
+  const _handleViewHistory = () => {
     console.log('📜 Viewing order history');
     router.push(`/${merchantCode}/history?mode=${mode}`);
   };

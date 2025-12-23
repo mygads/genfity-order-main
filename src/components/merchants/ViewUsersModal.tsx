@@ -65,7 +65,7 @@ export default function ViewUsersModal({
       } else {
         showError('Error', data.message || 'Failed to load users');
       }
-    } catch (err) {
+    } catch {
       showError('Error', 'An error occurred while loading users');
     } finally {
       setIsLoading(false);
@@ -115,7 +115,7 @@ export default function ViewUsersModal({
       } else {
         showError('Error', data.message || 'Failed to unbind user');
       }
-    } catch (err) {
+    } catch {
       showError('Error', 'An error occurred while unbinding user');
     } finally {
       setUnbindingUserId(null);

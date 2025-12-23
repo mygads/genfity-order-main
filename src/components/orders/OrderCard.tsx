@@ -32,9 +32,10 @@ export const OrderCard: React.FC<OrderCardProps> = ({
   showQuickActions = true,
   onClick,
   onStatusChange,
-  onViewDetails,
+  // Props unused in this component but kept for interface consistency
+  onViewDetails: _onViewDetails,
   className = '',
-  currency = 'AUD',
+  currency: _currency = 'AUD',
 }) => {
   const [showUnpaidConfirm, setShowUnpaidConfirm] = useState(false);
 
@@ -221,7 +222,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
               onClick={(e) => {
                 e.stopPropagation();
                 // Check if order is unpaid
-                if (order.payment?.status !== 'PAID') {
+                if (order.payment?.status !== 'COMPLETED') {
                   setShowUnpaidConfirm(true);
                 } else {
                   onStatusChange('IN_PROGRESS');
@@ -266,7 +267,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           )}
         </div>
       )}
-      
+
       {/* Unpaid Order Confirmation Modal */}
       <ConfirmationModal
         isOpen={showUnpaidConfirm}

@@ -10,7 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import addonService from '@/lib/services/AddonService';
 import { withMerchant } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/types/auth';
-import { ValidationError, NotFoundError } from '@/lib/constants/errors';
+import { ValidationError } from '@/lib/constants/errors';
 import { serializeBigInt } from '@/lib/utils/serializer';
 import prisma from '@/lib/db/client';
 

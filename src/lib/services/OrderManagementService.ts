@@ -41,7 +41,7 @@ export class OrderManagementService {
     filters: OrderFilters = {}
   ): Promise<{ orders: OrderListItem[] | OrderWithDetails[]; total: number }> {
     const where = buildOrderWhereInput(merchantId, filters);
-    
+
     // Use kitchen include if includeItems is true (for kitchen display)
     const includeConfig = filters.includeItems ? ORDER_KITCHEN_INCLUDE : ORDER_LIST_INCLUDE;
 
@@ -147,7 +147,7 @@ export class OrderManagementService {
       try {
         await emailService.sendOrderCompleted({
           to: updated.customer.email,
-          customerName: updated.customerName || updated.customer.name || 'Customer',
+          customerName: updated.customer?.name || 'Customer',
           orderNumber: updated.orderNumber,
           merchantName: updated.merchant?.name || 'Restaurant',
           orderType: updated.orderType as 'DINE_IN' | 'TAKEAWAY',

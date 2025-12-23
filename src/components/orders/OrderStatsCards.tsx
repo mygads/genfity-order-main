@@ -25,7 +25,6 @@ interface OrderStatsCardsProps {
     pendingPayments: number;
   };
   loading?: boolean;
-  currency?: string;
 }
 
 interface StatCardProps {
@@ -86,11 +85,10 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, subtitle, icon, trend
           {trend && (
             <div className="mt-2 flex items-center gap-1">
               <span
-                className={`text-xs font-medium ${
-                  trend.isPositive
+                className={`text-xs font-medium ${trend.isPositive
                     ? 'text-success-600 dark:text-success-400'
                     : 'text-error-600 dark:text-error-400'
-                }`}
+                  }`}
               >
                 {trend.isPositive ? '↑' : '↓'} {Math.abs(trend.value)}%
               </span>
@@ -127,7 +125,6 @@ export const OrderStatsCards: React.FC<OrderStatsCardsProps> = ({
   statistics,
   paymentStats,
   loading = false,
-  currency = 'AUD',
 }) => {
   // Format currency
   const formatCurrency = (amount: number) => {

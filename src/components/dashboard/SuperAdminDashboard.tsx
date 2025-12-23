@@ -4,7 +4,7 @@ type Order = {
   id: bigint;
   orderNumber: string;
   status: string;
-  totalAmount: any; // Decimal
+  totalAmount: number | { toString(): string }; // Decimal
   createdAt: Date;
 };
 

@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Image from 'next/image';
+import Link from 'next/link';
 import { FileIcon, FolderIcon, PlusIcon, EyeIcon } from '@/icons';
 
 /**
@@ -93,6 +94,7 @@ export default function MenuBuilderTabs({
   const [selectedAddonCategories, setSelectedAddonCategories] = useState<number[]>(
     initialData?.addonCategoryIds || []
   );
+  const [imageError, setImageError] = useState(false);
 
   const {
     register,
@@ -131,6 +133,11 @@ export default function MenuBuilderTabs({
 
   const watchIsPromo = watch('isPromo');
   const watchTrackStock = watch('trackStock');
+  const watchImageUrl = watch('imageUrl');
+
+  useEffect(() => {
+    setImageError(false);
+  }, [watchImageUrl]);
 
   // Track the uploaded image URL (only for newly uploaded images, not initial data)
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
@@ -471,14 +478,16 @@ export default function MenuBuilderTabs({
                   }`}>
                   {watch('imageUrl') ? (
                     <div className="relative aspect-square overflow-hidden rounded-xl">
-                      <img
-                        src={watch('imageUrl') || ''}
-                        alt="Preview"
-                        className="h-full w-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                        }}
-                      />
+                      {watch('imageUrl') && !imageError ? (
+                        <Image
+                          src={watch('imageUrl') || ''}
+                          alt="Preview"
+                          fill
+                          className="object-cover"
+                          onError={() => setImageError(true)}
+                          unoptimized
+                        />
+                      ) : null}
                       <button
                         type="button"
                         onClick={() => setValue('imageUrl', '')}
@@ -544,8 +553,8 @@ export default function MenuBuilderTabs({
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               {/* Promo Section */}
               <div className={`rounded-2xl border-2 p-5 transition-all ${watchIsPromo
-                  ? 'border-error-300 bg-error-50/50 dark:border-error-700 dark:bg-error-900/10'
-                  : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-800 dark:bg-gray-900/50 dark:hover:border-gray-700'
+                ? 'border-error-300 bg-error-50/50 dark:border-error-700 dark:bg-error-900/10'
+                : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-800 dark:bg-gray-900/50 dark:hover:border-gray-700'
                 }`}>
                 <div className="mb-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -606,8 +615,8 @@ export default function MenuBuilderTabs({
 
               {/* Stock Management */}
               <div className={`rounded-2xl border-2 p-5 transition-all ${watchTrackStock
-                  ? 'border-warning-300 bg-warning-50/50 dark:border-warning-700 dark:bg-warning-900/10'
-                  : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-800 dark:bg-gray-900/50 dark:hover:border-gray-700'
+                ? 'border-warning-300 bg-warning-50/50 dark:border-warning-700 dark:bg-warning-900/10'
+                : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-800 dark:bg-gray-900/50 dark:hover:border-gray-700'
                 }`}>
                 <div className="mb-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -931,14 +940,16 @@ export default function MenuBuilderTabs({
               <div className="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900/50">
                 {watch('imageUrl') && (
                   <div className="mb-4 overflow-hidden rounded-lg">
-                    <img
-                      src={watch('imageUrl') || ''}
-                      alt={watch('name')}
-                      className="h-64 w-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                      }}
-                    />
+                    {!imageError && (
+                      <Image
+                        src={watch('imageUrl') || ''}
+                        alt={watch('name')}
+                        fill
+                        className="object-cover"
+                        onError={() => setImageError(true)}
+                        unoptimized
+                      />
+                    )}
                   </div>
                 )}
 
@@ -950,7 +961,7 @@ export default function MenuBuilderTabs({
                 {(watch('isSpicy') || watch('isBestSeller') || watch('isSignature') || watch('isRecommended')) && (
                   <div className="mt-3 flex flex-wrap gap-1.5">
                     {watch('isSpicy') && (
-                      <div 
+                      <div
                         className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-orange-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
                         title="Spicy"
                       >
@@ -963,7 +974,7 @@ export default function MenuBuilderTabs({
                       </div>
                     )}
                     {watch('isBestSeller') && (
-                      <div 
+                      <div
                         className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-amber-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
                         title="Best Seller"
                       >
@@ -976,7 +987,7 @@ export default function MenuBuilderTabs({
                       </div>
                     )}
                     {watch('isSignature') && (
-                      <div 
+                      <div
                         className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-purple-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
                         title="Signature"
                       >
@@ -989,7 +1000,7 @@ export default function MenuBuilderTabs({
                       </div>
                     )}
                     {watch('isRecommended') && (
-                      <div 
+                      <div
                         className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-green-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
                         title="Recommended"
                       >
@@ -1106,12 +1117,12 @@ export default function MenuBuilderTabs({
               Cancel
             </button>
           ) : (
-            <a
+            <Link
               href="/admin/dashboard/menu"
               className="inline-flex h-11 items-center rounded-lg border border-gray-200 bg-white px-6 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
             >
               ← Back to Menu
-            </a>
+            </Link>
           )}
 
           <div className="flex gap-3">

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, RefreshCw, Bell, Phone } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Bell } from 'lucide-react';
 import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';
 import { formatCurrency } from '@/lib/utils/format';
 
@@ -83,14 +83,15 @@ export default function OrderTrackPage() {
             }
 
             // Convert decimal values
-            const convertDecimal = (value: any): number => {
+            const convertDecimal = (value: unknown): number => {
                 if (!value) return 0;
                 if (typeof value === 'number') return value;
                 if (typeof value === 'string') return parseFloat(value) || 0;
-                if (typeof value === 'object' && value.d && Array.isArray(value.d)) {
-                    const sign = value.s || 1;
-                    const exponent = value.e ?? 0;
-                    const digits = value.d[0] || 0;
+                if (typeof value === 'object' && value !== null && 'd' in value && Array.isArray((value as { d: number[] }).d)) {
+                    const decimalObj = value as { s?: number; e?: number; d: number[] };
+                    const sign = decimalObj.s || 1;
+                    const exponent = decimalObj.e ?? 0;
+                    const digits = decimalObj.d[0] || 0;
                     const digitsLength = digits.toString().length;
                     return sign * digits * Math.pow(10, exponent - digitsLength + 1);
                 }
@@ -107,7 +108,12 @@ export default function OrderTrackPage() {
                 totalAmount: convertDecimal(data.data.totalAmount),
                 createdAt: data.data.createdAt,
                 updatedAt: data.data.updatedAt,
-                orderItems: data.data.orderItems?.map((item: any) => ({
+                orderItems: data.data.orderItems?.map((item: {
+                    menuName: string;
+                    quantity: number;
+                    menuPrice: unknown;
+                    notes?: string;
+                }) => ({
                     menuName: item.menuName,
                     quantity: item.quantity,
                     menuPrice: convertDecimal(item.menuPrice),

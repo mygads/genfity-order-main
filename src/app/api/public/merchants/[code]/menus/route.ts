@@ -44,7 +44,12 @@ export async function GET(
     const categoryId = searchParams.get('category');
 
     // Build where condition
-    const whereCondition: any = {
+    const whereCondition: {
+      merchantId: bigint;
+      isActive: boolean;
+      deletedAt: null;
+      categories?: { some: { categoryId: bigint } };
+    } = {
       merchantId: merchant.id,
       isActive: true,
       deletedAt: null, // ✅ Exclude soft-deleted menus

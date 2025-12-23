@@ -879,9 +879,9 @@ span.flatpickr-weekday,
  * ✅ Hide scrollbar for horizontal scroll containers
  * Cross-browser compatible scrollbar hiding
  * 
- * @usage
+ * Usage:
  * <div className="overflow-x-auto scrollbar-hide">
- *   {/* Content */
+ *   Content here
  * </div>
  */
 .scrollbar-hide {

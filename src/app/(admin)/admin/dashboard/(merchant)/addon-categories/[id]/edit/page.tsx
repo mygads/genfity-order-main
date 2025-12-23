@@ -80,7 +80,7 @@ export default function EditAddonCategoryPage() {
 
   const [category, setCategory] = useState<AddonCategory | null>(null);
   const [items, setItems] = useState<AddonItem[]>([]);
-  const [merchant, setMerchant] = useState<{ currency: string }>({ currency: "AUD" });
+  const [_merchant, _setMerchant] = useState<{ currency: string }>({ currency: "AUD" });
 
   const [showItemForm, setShowItemForm] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -186,7 +186,7 @@ export default function EditAddonCategoryPage() {
       if (merchantRes.ok) {
         const merchantData = await merchantRes.json();
         if (merchantData.success && merchantData.data) {
-          setMerchant({ currency: merchantData.data.currency || "AUD" });
+          _setMerchant({ currency: merchantData.data.currency || "AUD" });
         }
       }
     } catch (err) {

@@ -55,7 +55,7 @@ async function handleGet(
       },
     });
 
-    const menus = menuCategories.map((mc: any) => mc.menu);
+    const menus = menuCategories.map((mc: { menu: unknown }) => mc.menu);
 
     return NextResponse.json({
       success: true,

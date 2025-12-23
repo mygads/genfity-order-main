@@ -50,7 +50,7 @@ export const OrderTabListView: React.FC<OrderTabListViewProps> = ({
   selectedOrders = new Set(),
   bulkMode = false,
   onToggleSelection,
-  currency = 'AUD',
+  currency: _currency = 'AUD',
   onRefreshReady,
 }) => {
   const _merchantId = merchantId;
@@ -203,10 +203,10 @@ export const OrderTabListView: React.FC<OrderTabListViewProps> = ({
               >
                 {/* Status Indicator Dot */}
                 <div className={`w-2 h-2 rounded-full ${status === 'PENDING' ? 'bg-warning-500' :
-                    status === 'ACCEPTED' ? 'bg-blue-500' :
-                      status === 'IN_PROGRESS' ? 'bg-orange-500' :
-                        status === 'READY' ? 'bg-success-500' :
-                          'bg-gray-400'
+                  status === 'ACCEPTED' ? 'bg-blue-500' :
+                    status === 'IN_PROGRESS' ? 'bg-orange-500' :
+                      status === 'READY' ? 'bg-success-500' :
+                        'bg-gray-400'
                   } ${isActive && status === 'PENDING' ? 'animate-pulse' : ''}`} />
 
                 <span>{statusConfig.label}</span>
@@ -258,7 +258,6 @@ export const OrderTabListView: React.FC<OrderTabListViewProps> = ({
                 order={order}
                 onClick={() => onOrderClick?.(order)}
                 onStatusChange={handleStatusChange}
-                currency={currency}
                 bulkMode={bulkMode}
                 isSelected={selectedOrders.has(String(order.id))}
                 onToggleSelection={onToggleSelection}

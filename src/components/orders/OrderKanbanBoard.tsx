@@ -75,7 +75,7 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
 }) => {
   // merchantId is for future use when implementing merchant-specific filtering
   const _merchantId = merchantId;
-  
+
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const [showUnpaidConfirm, setShowUnpaidConfirm] = useState(false);
@@ -215,7 +215,7 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
   // Handle drag end
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
-    
+
     setActiveId(null);
     setOverId(null);
 
@@ -250,7 +250,7 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
     }
 
     // Check if dragging from ACCEPTED to IN_PROGRESS with unpaid order
-    if (order.status === 'ACCEPTED' && newStatus === 'IN_PROGRESS' && order.payment?.status !== 'PAID') {
+    if (order.status === 'ACCEPTED' && newStatus === 'IN_PROGRESS' && order.payment?.status !== PaymentStatus.COMPLETED) {
       setPendingStatusChange({ orderId, newStatus });
       setShowUnpaidConfirm(true);
       return;
@@ -268,7 +268,7 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
   const updateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
     // Save current scroll positions for all columns
     const scrollPositions = new Map<Element, { scrollTop: number; scrollLeft: number }>();
-    
+
     // Save scroll position of main container and all column containers
     const mainContainer = document.querySelector('.grid.grid-cols-1.md\\:grid-cols-2.lg\\:grid-cols-4');
     if (mainContainer && mainContainer.parentElement) {
@@ -277,7 +277,7 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
         scrollLeft: mainContainer.parentElement.scrollLeft,
       });
     }
-    
+
     // Save scroll positions of all order list containers within columns
     const columnContainers = document.querySelectorAll('.space-y-3');
     columnContainers.forEach(container => {
@@ -291,7 +291,7 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
 
     // Optimistic update using SWR mutate
     const currentData = data;
-    
+
     // Update local data optimistically
     mutate(
       {
@@ -316,7 +316,7 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
       });
 
       const responseData = await response.json();
-      
+
       if (!response.ok || !responseData.success) {
         console.error('Order status update failed:', {
           status: response.status,
@@ -352,7 +352,7 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
       console.error('Error updating order status:', err);
       // Revert optimistic update by refetching
       await mutate();
-      
+
       // Restore scroll positions after revert
       setTimeout(() => {
         scrollPositions.forEach((position, container) => {
@@ -360,13 +360,13 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
           container.scrollLeft = position.scrollLeft;
         });
       }, 0);
-      
+
       showError(err instanceof Error ? err.message : 'Failed to update order', 'Update Failed');
     }
   };
 
   // Find active order for drag overlay
-  const activeOrder = activeId 
+  const activeOrder = activeId
     ? orders.find(o => String(o.id) === activeId)
     : null;
 
@@ -430,17 +430,17 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
                   )}
                 </>
               )}
-              
+
               {/* Main dragged card */}
               <div className="relative">
-                <OrderCard 
-                  order={activeOrder} 
-                  draggable 
+                <OrderCard
+                  order={activeOrder}
+                  draggable
                   className={isCurrentlyOverInvalid ? 'ring-4 ring-error-400 dark:ring-error-600' : ''}
                   currency={currency}
                 />
               </div>
-              
+
               {/* Bulk count badge */}
               {bulkMode && selectedOrders.size > 1 && selectedOrders.has(String(activeOrder.id)) && (
                 <div className="absolute -top-3 -right-3 z-20">
@@ -449,7 +449,7 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
                   </div>
                 </div>
               )}
-              
+
               {/* Invalid drop indicator */}
               {isCurrentlyOverInvalid && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">

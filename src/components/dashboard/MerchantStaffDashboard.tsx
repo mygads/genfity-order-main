@@ -13,14 +13,14 @@ type Merchant = {
 type Menu = {
   id: bigint;
   name: string;
-  price: any; // Decimal
+  price: number | { toString(): string }; // Decimal
   imageUrl?: string | null;
 };
 
 type OrderItem = {
   id: bigint;
   quantity: number;
-  menuPrice: any; // Decimal
+  menuPrice: number | { toString(): string }; // Decimal
   menu: Menu;
 };
 
@@ -28,7 +28,7 @@ type Order = {
   id: bigint;
   orderNumber: string;
   status: string;
-  totalAmount: any; // Decimal
+  totalAmount: number | { toString(): string }; // Decimal
   createdAt: Date;
   orderItems: OrderItem[];
 };

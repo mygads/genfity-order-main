@@ -62,7 +62,7 @@ class AuthService {
 
     // Step 2: Find user by email
     const user = await userRepository.findByEmail(credentials.email);
-    
+
     if (!user) {
       throw new AuthenticationError(
         'Invalid email or password',
@@ -167,7 +167,7 @@ class AuthService {
         email: user.email,
         role: user.role,
         merchantId: merchantIdString,
-        profilePictureUrl: user.profilePictureUrl,
+        profilePictureUrl: user.profilePictureUrl ?? undefined,
       },
       accessToken,
       refreshToken,
@@ -211,14 +211,14 @@ class AuthService {
   } | null> {
     // Verify JWT signature and expiry
     const payload = verifyAccessToken(token);
-    
+
     if (!payload) {
       return null;
     }
 
     // Check if session is still valid in database
     const isValid = await sessionRepository.isValid(payload.sessionId);
-    
+
     if (!isValid) {
       return null;
     }
@@ -277,8 +277,10 @@ class AuthService {
 
     // Get merchant info if user is merchant owner/staff
     let merchantId: bigint | undefined;
-    if (session.user.merchantUsers && session.user.merchantUsers.length > 0) {
-      merchantId = session.user.merchantUsers[0].merchantId;
+    // Note: merchantUsers may be included by session repository but not in static type
+    const userWithMerchant = session.user as unknown as { merchantUsers?: Array<{ merchantId: bigint }> };
+    if (userWithMerchant.merchantUsers && userWithMerchant.merchantUsers.length > 0) {
+      merchantId = userWithMerchant.merchantUsers[0].merchantId;
     }
 
     // Generate new tokens

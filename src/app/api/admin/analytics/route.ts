@@ -25,7 +25,7 @@ async function getAnalyticsHandler(
   // Calculate date range
   const now = new Date();
   let startDate: Date;
-  
+
   if (period === 'year') {
     startDate = new Date(now.getFullYear(), 0, 1); // Jan 1st
   } else {
@@ -132,12 +132,12 @@ async function getAnalyticsHandler(
   });
 
   const merchantsByRevenue = merchantsWithRevenue
-    .map((merchant: { id: bigint; name: string; currency: string; orders: Array<{ totalAmount: any }> }) => ({
+    .map((merchant: { id: bigint; name: string; currency: string; orders: Array<{ totalAmount: number | { toString(): string } }> }) => ({
       merchantId: merchant.id.toString(),
       merchantName: merchant.name,
       currency: merchant.currency,
       revenue: merchant.orders.reduce(
-        (sum: number, order: { totalAmount: any }) => sum + Number(order.totalAmount),
+        (sum: number, order: { totalAmount: number | { toString(): string } }) => sum + Number(order.totalAmount),
         0
       ),
     }))
@@ -237,7 +237,7 @@ async function getAnalyticsHandler(
   // 10. Revenue by currency (multi-currency support)
   const revenueByCurrency = await prisma.$queryRaw<Array<{
     currency: string;
-    total_revenue: any;
+    total_revenue: number | { toString(): string };
     order_count: bigint;
   }>>`
     SELECT 
@@ -322,37 +322,37 @@ async function getAnalyticsHandler(
         month: row.month,
         count: Number(row.count),
       })),
-      
+
       // New metrics aligned with database schema
       orderStatusDistribution: orderStatusDistribution.map((row: { status: string; _count: { id: number } }) => ({
         status: row.status,
         count: row._count.id,
       })),
-      paymentMethodBreakdown: paymentMethodBreakdown.map((row: { paymentMethod: string; _count: { id: number }; _sum: { amount: any } }) => ({
+      paymentMethodBreakdown: paymentMethodBreakdown.map((row: { paymentMethod: string; _count: { id: number }; _sum: { amount: number | { toString(): string } | null } }) => ({
         method: row.paymentMethod,
         count: row._count.id,
         totalAmount: Number(row._sum.amount || 0),
       })),
-      paymentStatusDistribution: paymentStatusDistribution.map((row: { status: string; _count: { id: number }; _sum: { amount: any } }) => ({
+      paymentStatusDistribution: paymentStatusDistribution.map((row: { status: string; _count: { id: number }; _sum: { amount: number | { toString(): string } | null } }) => ({
         status: row.status,
         count: row._count.id,
         totalAmount: Number(row._sum.amount || 0),
       })),
-      revenueByCurrency: revenueByCurrency.map((row: { currency: string; total_revenue: any; order_count: bigint }) => ({
+      revenueByCurrency: revenueByCurrency.map((row: { currency: string; total_revenue: number | { toString(): string }; order_count: bigint }) => ({
         currency: row.currency,
         totalRevenue: Number(row.total_revenue || 0),
         orderCount: Number(row.order_count),
       })),
       activeMerchants,
       totalMerchants,
-      
+
       // Order Type Analytics
-      orderTypeDistribution: orderTypeDistribution.map((row: { orderType: string; _count: { id: number }; _sum: { totalAmount: any } }) => ({
+      orderTypeDistribution: orderTypeDistribution.map((row: { orderType: string; _count: { id: number }; _sum: { totalAmount: number | { toString(): string } | null } }) => ({
         type: row.orderType,
         count: row._count.id,
         totalRevenue: Number(row._sum.totalAmount || 0),
       })),
-      avgOrderValueByType: avgOrderValueByType.map((row: { orderType: string; _avg: { totalAmount: any } }) => ({
+      avgOrderValueByType: avgOrderValueByType.map((row: { orderType: string; _avg: { totalAmount: number | { toString(): string } | null } }) => ({
         type: row.orderType,
         avgValue: Number(row._avg.totalAmount || 0),
       })),

@@ -64,7 +64,7 @@ interface RevenueAnalytics {
  */
 export default function MerchantRevenuePage() {
   const router = useRouter();
-  const { merchant } = useMerchant();
+  const { merchant: _merchant } = useMerchant();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [analytics, setAnalytics] = useState<RevenueAnalytics | null>(null);
@@ -122,15 +122,6 @@ export default function MerchantRevenuePage() {
     fetchRevenue();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startDate, endDate]);
-
-  const handleQuickSelect = (days: number) => {
-    const end = new Date();
-    const start = new Date();
-    start.setDate(start.getDate() - days);
-
-    setEndDate(end.toISOString().split('T')[0]);
-    setStartDate(start.toISOString().split('T')[0]);
-  };
 
   const handleExportCSV = () => {
     if (!analytics) return;

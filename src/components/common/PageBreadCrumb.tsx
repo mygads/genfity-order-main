@@ -50,16 +50,17 @@ const PageBreadcrumb: React.FC<BreadcrumbProps> = ({ pageTitle, customItems }) =
       'create': 'Create',
     };
 
-    let currentPath = '';
-    
+
+
     // Skip admin and route groups, start from dashboard
     let startIndex = segments.findIndex(seg => seg === 'dashboard');
     if (startIndex === -1) startIndex = 0;
 
     for (let i = startIndex; i < segments.length; i++) {
       const segment = segments[i];
-      currentPath += `/${segment}`;
-      
+      let _currentPath = '';
+      _currentPath += `/${segment}`;
+
       // Skip route groups like (admin), (merchant), etc
       if (segment.startsWith('(') && segment.endsWith(')')) {
         continue;
@@ -104,7 +105,7 @@ const PageBreadcrumb: React.FC<BreadcrumbProps> = ({ pageTitle, customItems }) =
           {/* Dynamic breadcrumb items */}
           {breadcrumbItems.map((item, index) => {
             const isLast = index === breadcrumbItems.length - 1;
-            
+
             return (
               <li key={index} className="flex items-center gap-1.5">
                 {item.path && !isLast ? (
