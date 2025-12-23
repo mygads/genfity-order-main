@@ -499,11 +499,11 @@ export async function POST(req: NextRequest) {
           status: 'PENDING',
           subtotal,
           taxAmount,
-          serviceChargeAmount,
-          packagingFeeAmount,
+          // Note: serviceChargeAmount and packagingFeeAmount are calculated but not stored in DB
+          // They are included in totalAmount
           totalAmount,
           notes: body.notes || null,
-        } as any, // Type assertion for new schema fields
+        },
       });
 
       // 2. Create OrderItems and track for addon creation
