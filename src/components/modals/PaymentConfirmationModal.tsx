@@ -7,13 +7,6 @@ interface PaymentConfirmationModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
-  totalAmount: number;
-  currency?: string;
-  breakdown?: {
-    subtotal: number;
-    serviceCharge?: number;
-    tax: number;
-  };
 }
 
 /**

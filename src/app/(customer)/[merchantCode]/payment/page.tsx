@@ -847,13 +847,6 @@ export default function PaymentPage() {
         isOpen={showConfirmModal}
         onClose={() => setShowConfirmModal(false)}
         onConfirm={handleConfirmPayment}
-        totalAmount={totalPayment}
-        currency={merchantCurrency}
-        breakdown={{
-          subtotal: cartSubtotal,
-          serviceCharge: serviceChargeAmount,
-          tax: taxAmount,
-        }}
       />
     </>
   );
