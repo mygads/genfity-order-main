@@ -591,36 +591,56 @@ export default function MenuDetailModal({
                   </span>
                 )}
                 {menu.isRecommended && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-500 text-white text-xs font-semibold rounded-full">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
-                    </svg>
-                    Recommended
-                  </span>
+                  <div
+                    className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-green-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
+                    title="Recommended"
+                  >
+                    <Image
+                      src="/images/menu-badges/recommended.png"
+                      alt="Recommended"
+                      fill
+                      className="object-cover transition-opacity duration-300 group-hover:opacity-80"
+                    />
+                  </div>
                 )}
                 {menu.isBestSeller && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-500 text-white text-xs font-semibold rounded-full">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                    </svg>
-                    Best Seller
-                  </span>
+                  <div
+                    className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-amber-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
+                    title="Best Seller"
+                  >
+                    <Image
+                      src="/images/menu-badges/best-seller.png"
+                      alt="Best Seller"
+                      fill
+                      className="object-cover transition-opacity duration-300 group-hover:opacity-80"
+                    />
+                  </div>
                 )}
                 {menu.isSignature && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-500 text-white text-xs font-semibold rounded-full">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M9 11.75c-.69 0-1.25.56-1.25 1.25s.56 1.25 1.25 1.25 1.25-.56 1.25-1.25-.56-1.25-1.25-1.25zm6 0c-.69 0-1.25.56-1.25 1.25s.56 1.25 1.25 1.25 1.25-.56 1.25-1.25-.56-1.25-1.25-1.25zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8 0-.29.02-.58.05-.86 2.36-1.05 4.23-2.98 5.21-5.37C11.07 8.33 14.05 10 17.42 10c.78 0 1.53-.09 2.25-.26.21.71.33 1.47.33 2.26 0 4.41-3.59 8-8 8z" />
-                    </svg>
-                    Signature
-                  </span>
+                  <div
+                    className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-purple-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
+                    title="Signature"
+                  >
+                    <Image
+                      src="/images/menu-badges/signature.png"
+                      alt="Signature"
+                      fill
+                      className="object-cover transition-opacity duration-300 group-hover:opacity-80"
+                    />
+                  </div>
                 )}
                 {menu.isSpicy && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-500 text-white text-xs font-semibold rounded-full">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M17.66 11.2C17.43 10.9 17.15 10.64 16.89 10.38C16.22 9.78 15.46 9.35 14.82 8.72C13.33 7.26 13 4.85 13.95 3C13.95 3 12.17 4.59 11.5 6.31C11.08 7.29 11.03 8.2 11.11 9.19C11.12 9.48 11.13 9.78 11.05 10.06C10.89 10.65 10.45 11.14 9.94 11.45C9.74 11.57 9.54 11.67 9.33 11.68C9.04 11.69 8.76 11.54 8.55 11.34C8.24 11.05 8.06 10.65 7.96 10.25C7.87 9.93 7.84 9.59 7.78 9.27C7.29 9.72 6.86 10.25 6.53 10.83C5.73 12.18 5.5 13.82 5.89 15.34C6.49 17.69 8.74 19.54 11.06 19.93C13.54 20.35 16.24 19.59 17.85 17.58C19.65 15.28 19.84 12.27 17.66 11.2" />
-                    </svg>
-                    Spicy
-                  </span>
+                  <div
+                    className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-orange-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
+                    title="Spicy"
+                  >
+                    <Image
+                      src="/images/menu-badges/spicy.png"
+                      alt="Spicy"
+                      fill
+                      className="object-cover transition-opacity duration-300 group-hover:opacity-80"
+                    />
+                  </div>
                 )}
               </div>
             )}
@@ -730,9 +750,27 @@ export default function MenuDetailModal({
 
                           return (
                             <div key={addon.id} className="flex items-center justify-between py-2">
-                              {/* Left side: Name + Price */}
-                              <div className="flex">
-                                <span className={`text-sm ${!addon.isAvailable ? 'text-gray-400 dark:text-gray-500 line-through' : 'text-gray-800 dark:text-white'}`}>
+                              {/* Left side: Name + Price - Clickable to toggle selection */}
+                              <div
+                                className={`flex flex-1 cursor-pointer select-none ${addon.isAvailable && !isMaxReached ? 'hover:opacity-80' : ''}`}
+                                onClick={() => {
+                                  if (!addon.isAvailable) return;
+                                  if (isSingleChoice) {
+                                    handleRadioSelect(category.id, addon.id);
+                                  } else if (isQuantityType) {
+                                    // For QTY type: increment by 1 if not max reached
+                                    if (!isMaxReached || isSelected) {
+                                      handleAddonQtyChange(addon.id, isSelected ? 0 : 1); // Toggle: add 1 if not selected
+                                    }
+                                  } else {
+                                    // Checkbox type
+                                    if (!isMaxReached || isSelected) {
+                                      handleCheckboxToggle(category.id, addon.id);
+                                    }
+                                  }
+                                }}
+                              >
+                                <span className={`text-sm ${!addon.isAvailable ? 'text-gray-400 dark:text-gray-500 line-through' : isSelected ? 'text-gray-800 dark:text-white font-semibold' : 'text-gray-800 dark:text-white'}`}>
                                   {addon.name}
                                 </span>
                                 {addon.price > 0 && (
