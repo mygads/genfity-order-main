@@ -429,8 +429,23 @@ export default function MenuBrowsePage() {
       // This only affects tab highlight, not menu filtering
       // Only runs when selectedCategory is 'all' (showing all sections)
       if (selectedCategory === 'all') {
-        let currentCategory = 'all';
+        let currentCategory = '';
+
+        // Check special sections first (in order: promo, best-seller, recommendation)
+        const specialSections = ['promo', 'best-seller', 'recommendation'];
+        for (const sectionId of specialSections) {
+          const element = sectionRefs.current[sectionId];
+          if (element) {
+            const rect = element.getBoundingClientRect();
+            if (rect.top <= totalStickyHeight + 50 && rect.bottom > totalStickyHeight) {
+              currentCategory = sectionId;
+            }
+          }
+        }
+
+        // Then check regular categories
         for (const [categoryId, element] of Object.entries(sectionRefs.current)) {
+          if (specialSections.includes(categoryId)) continue; // Skip special sections
           if (element) {
             const rect = element.getBoundingClientRect();
             // Section is active when its top is at or above the sticky area 
@@ -441,8 +456,16 @@ export default function MenuBrowsePage() {
           }
         }
 
+        // Default to first available special category or first category
+        if (!currentCategory) {
+          if (sectionRefs.current['promo']) currentCategory = 'promo';
+          else if (sectionRefs.current['best-seller']) currentCategory = 'best-seller';
+          else if (sectionRefs.current['recommendation']) currentCategory = 'recommendation';
+          else if (categories.length > 0) currentCategory = categories[0].id;
+        }
+
         // Only update if different to avoid unnecessary re-renders
-        if (activeScrollTab !== currentCategory) {
+        if (currentCategory && activeScrollTab !== currentCategory) {
           setActiveScrollTab(currentCategory);
         }
       }
@@ -486,6 +509,21 @@ export default function MenuBrowsePage() {
     allMenuItems.filter(item => item.isRecommended),
     [allMenuItems]
   );
+
+  // ✅ MEMOIZED: Build special categories for CategoryTabs
+  const specialCategories = useMemo(() => {
+    const result: { id: string; name: string }[] = [];
+    if (promoItems.length > 0) {
+      result.push({ id: 'promo', name: 'Promo' });
+    }
+    if (bestSellerItems.length > 0) {
+      result.push({ id: 'best-seller', name: 'Best Seller' });
+    }
+    if (recommendationItems.length > 0) {
+      result.push({ id: 'recommendation', name: 'Recommendation' });
+    }
+    return result;
+  }, [promoItems.length, bestSellerItems.length, recommendationItems.length]);
 
   // ========================================
   // RENDER - NEW LAYOUT
@@ -595,21 +633,23 @@ export default function MenuBrowsePage() {
             >
               <CategoryTabs
                 categories={categories}
+                specialCategories={specialCategories}
                 activeTab={selectedCategory === 'all' ? activeScrollTab : selectedCategory}
                 onTabClick={(categoryId: string) => {
-                  if (categoryId === 'all') {
-                    // Reset to all mode - show all sections
-                    setSelectedCategory('all');
-                    setActiveScrollTab('all');
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  } else if (selectedCategory === 'all') {
-                    // User clicked a category while viewing all - just scroll to it
-                    setActiveScrollTab(categoryId);
-                    sectionRefs.current[categoryId]?.scrollIntoView({ behavior: 'smooth' });
-                  } else {
-                    // User is in single category mode - switch to that category
-                    setSelectedCategory(categoryId);
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  // User clicked a category - scroll to it
+                  setActiveScrollTab(categoryId);
+
+                  // Since we're always in 'all' mode now, scroll to the section
+                  const stickyHeaderHeight = mode === 'dinein' && tableNumber ? 95 : 55;
+                  const totalStickyHeight = stickyHeaderHeight + 48; // Header + tabs
+                  const element = sectionRefs.current[categoryId];
+
+                  if (element) {
+                    const elementTop = element.getBoundingClientRect().top + window.scrollY;
+                    window.scrollTo({
+                      top: elementTop - totalStickyHeight - 10, // 10px extra padding
+                      behavior: 'smooth'
+                    });
                   }
                 }}
               />
@@ -621,7 +661,11 @@ export default function MenuBrowsePage() {
                 {/* Promo Section */}
                 {promoItems.length > 0 && (
                   <>
-                    <div className="mt-4">
+                    <div
+                      className="mt-4"
+                      ref={(el) => { sectionRefs.current['promo'] = el; }}
+                      data-category-section="promo"
+                    >
                       <HorizontalMenuSection
                         title="Promo"
                         items={promoItems}
@@ -643,7 +687,11 @@ export default function MenuBrowsePage() {
                 {/* Best Seller Section */}
                 {bestSellerItems.length > 0 && (
                   <>
-                    <div className="mt-4">
+                    <div
+                      className="mt-4"
+                      ref={(el) => { sectionRefs.current['best-seller'] = el; }}
+                      data-category-section="best-seller"
+                    >
                       <HorizontalMenuSection
                         title="Best Seller"
                         items={bestSellerItems}
@@ -664,7 +712,11 @@ export default function MenuBrowsePage() {
                 {/* Recommendation Section */}
                 {recommendationItems.length > 0 && (
                   <>
-                    <div className="mt-4">
+                    <div
+                      className="mt-4"
+                      ref={(el) => { sectionRefs.current['recommendation'] = el; }}
+                      data-category-section="recommendation"
+                    >
                       <HorizontalMenuSection
                         title="Recommendation"
                         items={recommendationItems}
