@@ -9,6 +9,7 @@ import RestaurantInfoCard from '@/components/customer/RestaurantInfoCard';
 import TableNumberCard from '@/components/customer/TableNumberCard';
 import HorizontalMenuSection from '@/components/customer/HorizontalMenuSection';
 import DetailedMenuSection from '@/components/customer/DetailedMenuSection';
+import RecentOrdersSection from '@/components/customer/RecentOrdersSection';
 import FloatingCartButton from '@/components/cart/FloatingCartButton';
 import MenuDetailModal from '@/components/menu/MenuDetailModal';
 import MenuInCartModal from '@/components/menu/MenuInCartModal';
@@ -675,6 +676,26 @@ export default function OrderClientPage({
             {/* Show ALL sections when 'all' is selected */}
             {selectedCategory === 'all' ? (
               <>
+                {/* ========================================
+                    RECENT ORDERS SECTION (Order Again)
+                    Only shows for logged-in customers with completed orders
+                ======================================== */}
+                <div className="mt-4">
+                  <RecentOrdersSection
+                    merchantCode={merchantCode}
+                    currency={merchantInfo?.currency || 'AUD'}
+                    onMenuClick={(menuId) => {
+                      const menuItem = allMenuItems.find(m => m.id === menuId);
+                      if (menuItem) {
+                        handleOpenMenu(menuItem);
+                      }
+                    }}
+                    getItemQuantityInCart={getMenuQuantityInCart}
+                    onIncreaseQty={handleIncreaseQtyFromCard}
+                    onDecreaseQty={handleDecreaseQtyFromCard}
+                  />
+                </div>
+
                 {/* Promo Section */}
                 {promoItems.length > 0 && (
                   <>
