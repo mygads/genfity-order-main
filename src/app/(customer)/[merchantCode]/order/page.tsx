@@ -1,72 +1,19 @@
-'use client';
-
-import { useEffect, useState, useRef, useMemo } from 'react';
-import { useParams, useSearchParams, useRouter } from 'next/navigation';
-import OrderPageHeader from '@/components/customer/OrderPageHeader';
-import CategoryTabs from '@/components/customer/CategoryTabs';
-import RestaurantBanner from '@/components/customer/RestaurantBanner';
-import RestaurantInfoCard from '@/components/customer/RestaurantInfoCard';
-import TableNumberCard from '@/components/customer/TableNumberCard';
-import HorizontalMenuSection from '@/components/customer/HorizontalMenuSection';
-import DetailedMenuSection from '@/components/customer/DetailedMenuSection';
-import FloatingCartButton from '@/components/cart/FloatingCartButton';
-import MenuDetailModal from '@/components/menu/MenuDetailModal';
-import MenuInCartModal from '@/components/menu/MenuInCartModal';
-import { Alert, EmptyState } from '@/components/ui';
-import { useCart } from '@/context/CartContext';
-import type { CartItem } from '@/context/CartContext';
-import OutletInfoModal from '@/components/customer/OutletInfoModal';
+import { Suspense } from 'react';
 import { CustomerOrderSkeleton } from '@/components/common/SkeletonLoaders';
-import { getTableNumber } from '@/lib/utils/localStorage';
-import TableNumberModal from '@/components/customer/TableNumberModal';
-import { extractAddonDataFromMenus } from '@/lib/utils/addonExtractor';
-import { throttle } from '@/lib/utils/throttle';
+import OrderClientPage from '../../../../components/customer/OrderClientPage';
 
-interface MenuItem {
-  id: string; // ✅ String from API (BigInt serialized)
-  name: string;
-  description: string;
-  price: number; // ✅ From API: decimalToNumber(Decimal) → number with 2 decimal precision
-  imageUrl: string | null;
-  stockQty: number | null;
-  categoryId: string | null;
-  categories: Array<{ id: string; name: string }>;
-  isActive: boolean;
-  trackStock: boolean;
-  isPromo?: boolean;
-  isSpicy?: boolean;
-  isBestSeller?: boolean;
-  isSignature?: boolean;
-  isRecommended?: boolean;
-  promoPrice?: number; // ✅ From API: decimalToNumber(Decimal) → number with 2 decimal precision
+// ISR: Revalidate every 60 seconds
+export const revalidate = 60;
+
+interface OrderPageProps {
+  params: Promise<{
+    merchantCode: string;
+  }>;
+  searchParams: Promise<{
+    mode?: string;
+  }>;
 }
 
-interface Category {
-  id: string;
-  name: string;
-  description?: string;
-  sortOrder: number;
-}
-
-/**
- * ✅ NEW: Opening Hours Interface
- * @specification copilot-instructions.md - Database Schema
- */
-interface OpeningHour {
-  id: string;
-  merchantId: string;
-  dayOfWeek: number; // 0 = Sunday, 6 = Saturday
-  openTime: string; // "09:00"
-  closeTime: string; // "22:00"
-  isClosed: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-/**
- * ✅ NEW: Merchant Info Interface
- * @specification copilot-instructions.md - Database Schema
- */
 interface MerchantInfo {
   id: string;
   code: string;
@@ -85,816 +32,150 @@ interface MerchantInfo {
   currency: string;
   enableTax: boolean;
   taxPercentage: number;
-  openingHours: OpeningHour[];
+  openingHours: Array<{
+    id: string;
+    merchantId: string;
+    dayOfWeek: number;
+    openTime: string;
+    closeTime: string;
+    isClosed: boolean;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+}
+
+interface Category {
+  id: string;
+  name: string;
+  description?: string;
+  sortOrder: number;
+}
+
+interface MenuItem {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  imageUrl: string | null;
+  stockQty: number | null;
+  categoryId: string | null;
+  categories: Array<{ id: string; name: string }>;
+  isActive: boolean;
+  trackStock: boolean;
+  isPromo?: boolean;
+  isSpicy?: boolean;
+  isBestSeller?: boolean;
+  isSignature?: boolean;
+  isRecommended?: boolean;
+  promoPrice?: number;
+}
+
+interface InitialData {
+  merchant: MerchantInfo | null;
+  categories: Category[];
+  menus: MenuItem[];
 }
 
 /**
- * ✅ FIXED: Menu Browse Page with Proper Sticky Positioning
- * 
- * @improvements
- * - Fixed sticky category pills scrolling issue
- * - Proper scroll container hierarchy
- * - Header + Category pills stay fixed
- * - Only content section scrolls
- * - Mobile-optimized layout
- * 
- * @specification copilot-instructions.md - UI/UX Standards
+ * Fetch initial data server-side for ISR
  */
-export default function MenuBrowsePage() {
-  const params = useParams();
-  const searchParams = useSearchParams();
-  const router = useRouter();
+async function getInitialData(merchantCode: string): Promise<InitialData> {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
-  const merchantCode = params.merchantCode as string;
-  const mode = searchParams.get('mode') || 'takeaway';
+  try {
+    const [merchantRes, categoriesRes, menusRes] = await Promise.all([
+      fetch(`${baseUrl}/api/public/merchants/${merchantCode}`, {
+        next: { revalidate: 60 },
+      }),
+      fetch(`${baseUrl}/api/public/merchants/${merchantCode}/categories`, {
+        next: { revalidate: 60 },
+      }),
+      fetch(`${baseUrl}/api/public/merchants/${merchantCode}/menus`, {
+        next: { revalidate: 60 },
+      }),
+    ]);
 
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [allMenuItems, setAllMenuItems] = useState<MenuItem[]>([]); // Store all items
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [menuAddonsCache, setMenuAddonsCache] = useState<Record<string, any>>({}); // Cache for menu addons
-  const [merchantInfo, setMerchantInfo] = useState<MerchantInfo | null>(null);
-  const [tableNumber, setTableNumber] = useState<string | null>(null);
-  const [selectedCategory] = useState<string>('all'); // 'all' = show all sections (for filtering)
-  const [activeScrollTab, setActiveScrollTab] = useState<string>('all'); // Active tab based on scroll position (for highlight only)
-  const [isLoading, setIsLoading] = useState(true);
-  const [selectedMenu, setSelectedMenu] = useState<MenuItem | null>(null);
-  const [editingCartItem, setEditingCartItem] = useState<CartItem | null>(null);
-  const [cartOptionsMenu, setCartOptionsMenu] = useState<MenuItem | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [showTableModal, setShowTableModal] = useState(false); // Table number modal state
-  const [showOutletInfo, setShowOutletInfo] = useState(false); // Outlet info modal state
-  const [isSticky, setIsSticky] = useState(false); // Track if header should be sticky
-  const [isCategoryTabsSticky, setIsCategoryTabsSticky] = useState(false); // Track if category tabs should be sticky
-  const [showTableBadge, setShowTableBadge] = useState(false); // Track if table badge should be shown in header
-  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({}); // References to category sections
-  const { initializeCart, cart, updateItem, removeItem } = useCart();
-  const autoRefreshIntervalRef = useRef<NodeJS.Timeout | null>(null); // Auto-refresh interval
+    const [merchantData, categoriesData, menusData] = await Promise.all([
+      merchantRes.json(),
+      categoriesRes.json(),
+      menusRes.json(),
+    ]);
 
-  const getMenuCartItems = (menuId: string): CartItem[] => {
-    if (!cart) return [];
-    return cart.items.filter((item) => item.menuId === menuId);
-  };
-
-  const handleOpenMenu = (item: MenuItem) => {
-    const quantityInCart = getMenuQuantityInCart(item.id);
-    if (quantityInCart > 0) {
-      setCartOptionsMenu(item);
-      return;
-    }
-
-    setEditingCartItem(null);
-    setSelectedMenu(item);
-  };
-
-  const handleCloseMenuDetail = () => {
-    setSelectedMenu(null);
-    setEditingCartItem(null);
-  };
-
-  /**
-   * Handle increasing quantity for a menu from horizontal card
-   * Opens the cart options modal since there might be multiple configurations
-   */
-  const handleIncreaseQtyFromCard = (menuId: string) => {
-    const menuItem = allMenuItems.find(m => m.id === menuId);
-    if (menuItem) {
-      setCartOptionsMenu(menuItem);
-    }
-  };
-
-  /**
-   * Handle decreasing quantity for a menu from horizontal card
-   * Opens the cart options modal to choose which configuration to decrease
-   */
-  const handleDecreaseQtyFromCard = (menuId: string) => {
-    const menuItem = allMenuItems.find(m => m.id === menuId);
-    if (menuItem) {
-      setCartOptionsMenu(menuItem);
-    }
-  };
-
-  /**
-   * Get total quantity of a menu item in cart (including all variants with different addons)
-   */
-  const getMenuQuantityInCart = (menuId: string): number => {
-    if (!cart) return 0;
-    return cart.items
-      .filter(item => item.menuId === menuId)
-      .reduce((sum, item) => sum + item.quantity, 0);
-  };
-
-  // ========================================
-  // Load Table Number & Always Show Modal for Dinein
-  // ========================================
-  useEffect(() => {
-    if (mode === 'dinein') {
-      const tableData = getTableNumber(merchantCode);
-
-      // Always show modal for dinein mode
-      setShowTableModal(true);
-
-      if (tableData?.tableNumber) {
-        setTableNumber(tableData.tableNumber);
-      }
-    }
-  }, [merchantCode, mode]);
-
-  // ========================================
-  // Handle Outlet Info Modal via URL
-  // ========================================
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const showInfo = params.get('outlet-info') === 'true';
-    setShowOutletInfo(showInfo);
-  }, [searchParams]);
-
-  // ========================================
-  // Fetch Merchant Info with Cache
-  // ========================================
-  useEffect(() => {
-    const fetchMerchantInfo = async () => {
-      // Check cache first
-      const cacheKey = `merchant_info_${merchantCode}`;
-      const cached = sessionStorage.getItem(cacheKey);
-
-      if (cached) {
-        try {
-          const cachedData = JSON.parse(cached);
-          console.log('✅ [MERCHANT] Using cached merchant info');
-          setMerchantInfo(cachedData);
-          return;
-        } catch {
-          console.warn('⚠️ [MERCHANT] Failed to parse cached merchant info, fetching fresh');
-        }
-      }
-
-      console.log('🔄 [MERCHANT] Fetching fresh merchant info');
-      try {
-        const response = await fetch(`/api/public/merchants/${merchantCode}`);
-        const data = await response.json();
-
-        if (data.success) {
-          setMerchantInfo(data.data);
-          // Cache the data
-          sessionStorage.setItem(cacheKey, JSON.stringify(data.data));
-        } else {
-          console.error('❌ [MERCHANT] Failed to fetch merchant info:', data.message);
-        }
-      } catch (err) {
-        console.error('❌ [MERCHANT] Error fetching merchant info:', err);
-      }
+    return {
+      merchant: merchantData.success ? merchantData.data : null,
+      categories: categoriesData.success
+        ? categoriesData.data.sort((a: Category, b: Category) => a.sortOrder - b.sortOrder)
+        : [],
+      menus: menusData.success
+        ? menusData.data
+          .filter((item: MenuItem) => item.isActive)
+          .map((item: MenuItem) => ({
+            ...item,
+            price: typeof item.price === 'string' ? parseFloat(item.price) : item.price,
+          }))
+        : [],
     };
-
-    fetchMerchantInfo();
-  }, [merchantCode]);
-
-  // ========================================
-  // Fetch Menu Data with Cache
-  // ========================================
-  useEffect(() => {
-    const fetchData = async () => {
-      // Check cache first
-      const categoriesCacheKey = `categories_${merchantCode}`;
-      const menusCacheKey = `menus_${merchantCode}`;
-      const addonsCacheKey = `addons_cache_${merchantCode}`;
-      const cachedCategories = sessionStorage.getItem(categoriesCacheKey);
-      const cachedMenus = sessionStorage.getItem(menusCacheKey);
-      const cachedAddons = sessionStorage.getItem(addonsCacheKey);
-
-      if (cachedCategories && cachedMenus && cachedAddons) {
-        try {
-          const categories = JSON.parse(cachedCategories);
-          const menus = JSON.parse(cachedMenus);
-          const addons = JSON.parse(cachedAddons);
-          console.log('✅ [MENU] Using cached menu and addon data');
-          setCategories(categories);
-          setAllMenuItems(menus);
-          setMenuAddonsCache(addons);
-          setIsLoading(false);
-          return;
-        } catch {
-          console.warn('⚠️ [MENU] Failed to parse cached data, fetching fresh');
-        }
-      }
-
-      // Fetch from API
-      console.log('🔄 [MENU] Fetching fresh menu data');
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const [categoriesRes, menusRes] = await Promise.all([
-          fetch(`/api/public/merchants/${merchantCode}/categories`),
-          fetch(`/api/public/merchants/${merchantCode}/menus`),
-        ]);
-
-        const categoriesData = await categoriesRes.json();
-        const menusData = await menusRes.json();
-
-        if (categoriesData.success) {
-          const sorted = categoriesData.data.sort((a: Category, b: Category) => a.sortOrder - b.sortOrder);
-          setCategories(sorted);
-          sessionStorage.setItem(categoriesCacheKey, JSON.stringify(sorted));
-        }
-
-        if (menusData.success) {
-          const activeItems = menusData.data
-            .filter((item: MenuItem) => item.isActive)
-            .map((item: MenuItem) => ({
-              ...item,
-              price: typeof item.price === 'string' ? parseFloat(item.price) : item.price,
-            }));
-          setAllMenuItems(activeItems);
-          sessionStorage.setItem(menusCacheKey, JSON.stringify(activeItems));
-
-          // ✅ Extract addon data using utility function
-          const newAddonCache = extractAddonDataFromMenus(menusData.data);
-          setMenuAddonsCache(newAddonCache);
-          sessionStorage.setItem(addonsCacheKey, JSON.stringify(newAddonCache));
-          console.log('✅ [ADDONS] Extracted addon data from initial fetch. Cached', Object.keys(newAddonCache).length, 'menus');
-        } else {
-          setError(menusData.message || 'Failed to load menu');
-        }
-      } catch (err) {
-        console.error('Error fetching data:', err);
-        setError('Failed to load menu. Please try again.');
-      } finally {
-        setIsLoading(false);
-      }
+  } catch (error) {
+    console.error('Failed to fetch initial data:', error);
+    return {
+      merchant: null,
+      categories: [],
+      menus: [],
     };
+  }
+}
 
-    fetchData();
-  }, [merchantCode]);
+/**
+ * GENFITY - Order Page (Server Component with ISR)
+ * 
+ * ISR + Client Polling Hybrid Strategy:
+ * - Server fetches initial data every 60 seconds (ISR)
+ * - Client polls for updates every 15 seconds
+ * - Best of both worlds: fast initial load + real-time updates
+ */
+export default async function OrderPage({ params, searchParams }: OrderPageProps) {
+  const { merchantCode } = await params;
+  const { mode = 'takeaway' } = await searchParams;
 
-  // ========================================
-  // Auto-refresh menu data AND addon data every 10 seconds in background
-  // ========================================
-  useEffect(() => {
-    if (allMenuItems.length === 0) return;
+  // Fetch initial data server-side (ISR cached)
+  const initialData = await getInitialData(merchantCode);
 
-    const autoRefreshData = async () => {
-      try {
-        console.log('🔄 [AUTO-REFRESH] Fetching latest menu and addon data...');
-
-        // Fetch menus (includes addon categories and items with stock info)
-        const menusResponse = await fetch(`/api/public/merchants/${merchantCode}/menus`);
-        const menusData = await menusResponse.json();
-
-        if (menusData.success) {
-          const activeItems = menusData.data
-            .filter((item: MenuItem) => item.isActive)
-            .map((item: MenuItem) => ({
-              ...item,
-              price: typeof item.price === 'string' ? parseFloat(item.price) : item.price,
-            }));
-
-          // Update menus state and cache
-          setAllMenuItems(activeItems);
-          sessionStorage.setItem(`menus_${merchantCode}`, JSON.stringify(activeItems));
-
-          // ✅ Extract addon data using utility function
-          const newAddonCache = extractAddonDataFromMenus(menusData.data);
-          setMenuAddonsCache(newAddonCache);
-          sessionStorage.setItem(`addons_cache_${merchantCode}`, JSON.stringify(newAddonCache));
-
-          console.log('✅ [AUTO-REFRESH] Menu and addon data updated');
-        }
-      } catch (err) {
-        console.error('❌ [AUTO-REFRESH] Failed to refresh data:', err);
-      }
-    };
-
-    // Set up interval for auto-refresh every 15 seconds
-    autoRefreshIntervalRef.current = setInterval(autoRefreshData, 15000);
-
-    // Cleanup interval on unmount
-    return () => {
-      if (autoRefreshIntervalRef.current) {
-        clearInterval(autoRefreshIntervalRef.current);
-        console.log('🛑 [AUTO-REFRESH] Stopped auto-refresh');
-      }
-    };
-  }, [allMenuItems.length, merchantCode]);
-
-  useEffect(() => {
-    initializeCart(merchantCode, mode as 'dinein' | 'takeaway');
-  }, [merchantCode, mode, initializeCart]);
-
-  // ========================================
-  // Sticky Header & Tabs Logic (Matches Reference Exactly)
-  // ========================================
-  useEffect(() => {
-    const updateHeaderHeight = () => {
-      const header = document.querySelector('[data-header]') as HTMLElement;
-      if (header) {
-        const height = header.offsetHeight;
-        document.documentElement.style.setProperty('--header-height', `${height}px`);
-      }
-    };
-
-    // ✅ THROTTLED: Scroll handler with 100ms throttle for better performance
-    const handleScroll = throttle(() => {
-      // Header height is 55px + optional 40px table bar
-      const stickyHeaderHeight = mode === 'dinein' && tableNumber ? 95 : 55;
-      // Category tabs are 48px when sticky
-      const totalStickyHeight = stickyHeaderHeight + 48;
-
-      // Check if 75% of banner has been scrolled past (for header)
-      const bannerElement = document.querySelector('[data-banner]');
-      if (bannerElement) {
-        const rect = bannerElement.getBoundingClientRect();
-        const bannerHeight = rect.height;
-        const scrolledPastBanner = rect.top + (bannerHeight * 0.75);
-
-        // Header becomes sticky when 75% of banner has been scrolled past
-        setIsSticky(scrolledPastBanner <= 0);
-      }
-
-      // Check if CategoryTabs should be sticky (separate detection)
-      const categoryTabsElement = document.querySelector('[data-category-tabs-trigger]');
-      if (categoryTabsElement) {
-        const rect = categoryTabsElement.getBoundingClientRect();
-        // CategoryTabs become sticky when top of trigger reaches header bottom
-        setIsCategoryTabsSticky(rect.top <= stickyHeaderHeight);
-      }
-
-      // Check if TableNumberCard has been scrolled past (for showing table badge in header)
-      const tableNumberElement = document.querySelector('[data-table-number-card]');
-      if (tableNumberElement) {
-        const rect = tableNumberElement.getBoundingClientRect();
-        // Show table badge when TableNumberCard starts being covered by header OR has scrolled past
-        setShowTableBadge(rect.top <= 55);
-      }
-
-      // Update active tab based on scroll position (scroll spy)
-      // This only affects tab highlight, not menu filtering
-      // Only runs when selectedCategory is 'all' (showing all sections)
-      if (selectedCategory === 'all') {
-        let currentCategory = '';
-
-        // Check special sections first (in order: promo, best-seller, recommendation)
-        const specialSections = ['promo', 'best-seller', 'recommendation'];
-        for (const sectionId of specialSections) {
-          const element = sectionRefs.current[sectionId];
-          if (element) {
-            const rect = element.getBoundingClientRect();
-            if (rect.top <= totalStickyHeight + 50 && rect.bottom > totalStickyHeight) {
-              currentCategory = sectionId;
-            }
-          }
-        }
-
-        // Then check regular categories
-        for (const [categoryId, element] of Object.entries(sectionRefs.current)) {
-          if (specialSections.includes(categoryId)) continue; // Skip special sections
-          if (element) {
-            const rect = element.getBoundingClientRect();
-            // Section is active when its top is at or above the sticky area 
-            // and its bottom is still visible
-            if (rect.top <= totalStickyHeight + 50 && rect.bottom > totalStickyHeight) {
-              currentCategory = categoryId;
-            }
-          }
-        }
-
-        // Default to first available special category or first category
-        if (!currentCategory) {
-          if (sectionRefs.current['promo']) currentCategory = 'promo';
-          else if (sectionRefs.current['best-seller']) currentCategory = 'best-seller';
-          else if (sectionRefs.current['recommendation']) currentCategory = 'recommendation';
-          else if (categories.length > 0) currentCategory = categories[0].id;
-        }
-
-        // Only update if different to avoid unnecessary re-renders
-        if (currentCategory && activeScrollTab !== currentCategory) {
-          setActiveScrollTab(currentCategory);
-        }
-      }
-    }, 100); // 100ms throttle
-
-    // Update header height on mount and window resize
-    updateHeaderHeight();
-    window.addEventListener('scroll', handleScroll);
-    window.addEventListener('resize', updateHeaderHeight);
-
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('resize', updateHeaderHeight);
-    };
-  }, [mode, tableNumber, selectedCategory, activeScrollTab, categories]);
-
-  // ✅ MEMOIZED: Filter items by selected category
-  const displayedItems = useMemo(() =>
-    selectedCategory === 'all'
-      ? allMenuItems
-      : allMenuItems.filter(item =>
-        item.categories?.some(cat => cat.id === selectedCategory)
-      ),
-    [allMenuItems, selectedCategory]
-  );
-
-  // ✅ MEMOIZED: Get promo items
-  const promoItems = useMemo(() =>
-    allMenuItems.filter(item => item.isPromo && item.promoPrice),
-    [allMenuItems]
-  );
-
-  // ✅ MEMOIZED: Get "Best Seller" items
-  const bestSellerItems = useMemo(() =>
-    allMenuItems.filter(item => item.isBestSeller),
-    [allMenuItems]
-  );
-
-  // ✅ MEMOIZED: Get "Recommendation" items
-  const recommendationItems = useMemo(() =>
-    allMenuItems.filter(item => item.isRecommended),
-    [allMenuItems]
-  );
-
-  // ✅ MEMOIZED: Build special categories for CategoryTabs
-  const specialCategories = useMemo(() => {
-    const result: { id: string; name: string }[] = [];
-    if (promoItems.length > 0) {
-      result.push({ id: 'promo', name: 'Promo' });
-    }
-    if (bestSellerItems.length > 0) {
-      result.push({ id: 'best-seller', name: 'Best Seller' });
-    }
-    if (recommendationItems.length > 0) {
-      result.push({ id: 'recommendation', name: 'Recommendation' });
-    }
-    return result;
-  }, [promoItems.length, bestSellerItems.length, recommendationItems.length]);
-
-  // ========================================
-  // RENDER - NEW LAYOUT
-  // ========================================
   return (
-    <>
-      {/* ======================================== 
-          ORDER PAGE HEADER (New Component - Matches Reference)
-          Positioned absolutely above banner when not sticky
-      ======================================== */}
-      <OrderPageHeader
-        merchantName={merchantInfo?.name || merchantCode}
-        merchantLogo={merchantInfo?.logoUrl || null}
-        isSticky={isSticky}
-        tableNumber={tableNumber}
-        mode={mode as 'dinein' | 'takeaway'}
-        showTableBadge={showTableBadge}
-        onBackClick={() => {
-          localStorage.removeItem(`mode_${merchantCode}`);
-          router.push(`/${merchantCode}`);
-        }}
-        onSearchClick={() => {
-          router.push(`/${merchantCode}/search?mode=${mode}&ref=${encodeURIComponent(`/${merchantCode}/order?mode=${mode}`)}`);
-        }}
-      />
-
-      {/* Hero Section (Restaurant Banner) - Header overlays on top */}
-      <div className="relative" data-banner>
-        {isLoading ? (
-          /* Banner Loading Skeleton */
-          <div className="w-full h-48 bg-gray-200 dark:bg-gray-800 animate-pulse" />
-        ) : (
-          <RestaurantBanner
-            imageUrl={merchantInfo?.logoUrl}
-            bannerUrl={merchantInfo?.bannerUrl}
-            merchantName={merchantInfo?.name || merchantCode}
-          />
-        )}
-      </div>
-
-      {/* ========================================
-          MAIN CONTENT
-      ======================================== */}
-      <div className="pb-24">
-        {/* Error Alert */}
-        {error && (
-          <div className="px-4 pt-4">
-            <Alert
-              variant="error"
-              title="Error Loading Menu"
-              message={error}
-            />
-          </div>
-        )}
-
-        {isLoading ? (
-          <CustomerOrderSkeleton />
-        ) : (
-          <>
-            {/* Restaurant Info Card - No divider above, floating style like Burjo */}
-            <div className="px-4 -mt-6 relative z-10">
-              {merchantInfo && (
-                <RestaurantInfoCard
-                  name={merchantInfo.name}
-                  openingHours={merchantInfo.openingHours}
-                  onClick={() => {
-                    // Update URL without page reload
-                    const params = new URLSearchParams(window.location.search);
-                    params.set('outlet-info', 'true');
-                    window.history.pushState({}, '', `?${params.toString()}`);
-                    setShowOutletInfo(true);
-                  }}
-                />
-              )}
-            </div>
-
-            {/* Table Number (Dinein Only) - No divider between components like Burjo */}
-            {mode === 'dinein' && tableNumber && (
-              <div className="px-4 my-2" data-table-number-card>
-                <TableNumberCard tableNumber={tableNumber} />
-              </div>
-            )}
-
-            {/* ========================================
-                CATEGORY TABS (Sticky independently when scrolled to)
-            ======================================== */}
-            {/* Trigger point for CategoryTabs sticky detection */}
-            <div data-category-tabs-trigger className="h-0" />
-
-            {/* Placeholder spacer - shown when CategoryTabs is fixed to prevent content jump */}
-            {isCategoryTabsSticky && (
-              <div className="h-[48px]" aria-hidden="true" />
-            )}
-
-            {/* CategoryTabs - Always rendered, positioned based on its own sticky state */}
-            <div
-              data-category-tabs
-              className={`transition-all duration-300 ${isCategoryTabsSticky
-                ? 'fixed left-0 right-0 z-40'
-                : 'relative'
-                } max-w-[500px] mx-auto bg-white`}
-              style={{
-                top: isCategoryTabsSticky
-                  ? (mode === 'dinein' && tableNumber ? '95px' : '55px') // 55px header + optional 40px table bar
-                  : 'auto',
-              }}
-            >
-              <CategoryTabs
-                categories={categories}
-                specialCategories={specialCategories}
-                activeTab={selectedCategory === 'all' ? activeScrollTab : selectedCategory}
-                onTabClick={(categoryId: string) => {
-                  // User clicked a category - scroll to it
-                  setActiveScrollTab(categoryId);
-
-                  // Since we're always in 'all' mode now, scroll to the section
-                  const stickyHeaderHeight = mode === 'dinein' && tableNumber ? 95 : 55;
-                  const totalStickyHeight = stickyHeaderHeight + 48; // Header + tabs
-                  const element = sectionRefs.current[categoryId];
-
-                  if (element) {
-                    const elementTop = element.getBoundingClientRect().top + window.scrollY;
-                    window.scrollTo({
-                      top: elementTop - totalStickyHeight - 10, // 10px extra padding
-                      behavior: 'smooth'
-                    });
-                  }
-                }}
-              />
-            </div>
-
-            {/* Show ALL sections when 'all' is selected */}
-            {selectedCategory === 'all' ? (
-              <>
-                {/* Promo Section */}
-                {promoItems.length > 0 && (
-                  <>
-                    <div
-                      className="mt-4"
-                      ref={(el) => { sectionRefs.current['promo'] = el; }}
-                      data-category-section="promo"
-                    >
-                      <HorizontalMenuSection
-                        title="Promo"
-                        items={promoItems}
-                        currency={merchantInfo?.currency || 'AUD'}
-                        onItemClick={(item) => handleOpenMenu(item as MenuItem)}
-                        getItemQuantityInCart={getMenuQuantityInCart}
-                        onIncreaseQty={handleIncreaseQtyFromCard}
-                        onDecreaseQty={handleDecreaseQtyFromCard}
-                        isPromoSection={true}
-                      />
-                    </div>
-                    {/* Divider */}
-                    <div className="px-4 mt-6">
-                      <hr className="border-gray-200 dark:border-gray-700" />
-                    </div>
-                  </>
-                )}
-
-                {/* Best Seller Section */}
-                {bestSellerItems.length > 0 && (
-                  <>
-                    <div
-                      className="mt-4"
-                      ref={(el) => { sectionRefs.current['best-seller'] = el; }}
-                      data-category-section="best-seller"
-                    >
-                      <HorizontalMenuSection
-                        title="Best Seller"
-                        items={bestSellerItems}
-                        currency={merchantInfo?.currency || 'AUD'}
-                        onItemClick={(item) => handleOpenMenu(item as MenuItem)}
-                        getItemQuantityInCart={getMenuQuantityInCart}
-                        onIncreaseQty={handleIncreaseQtyFromCard}
-                        onDecreaseQty={handleDecreaseQtyFromCard}
-                      />
-                    </div>
-                    {/* Divider */}
-                    <div className="px-4 mt-6">
-                      <hr className="border-gray-200 dark:border-gray-700" />
-                    </div>
-                  </>
-                )}
-
-                {/* Recommendation Section */}
-                {recommendationItems.length > 0 && (
-                  <>
-                    <div
-                      className="mt-4"
-                      ref={(el) => { sectionRefs.current['recommendation'] = el; }}
-                      data-category-section="recommendation"
-                    >
-                      <HorizontalMenuSection
-                        title="Recommendation"
-                        items={recommendationItems}
-                        currency={merchantInfo?.currency || 'AUD'}
-                        onItemClick={(item) => handleOpenMenu(item as MenuItem)}
-                        getItemQuantityInCart={getMenuQuantityInCart}
-                        onIncreaseQty={handleIncreaseQtyFromCard}
-                        onDecreaseQty={handleDecreaseQtyFromCard}
-                      />
-                    </div>
-                    {/* Divider */}
-                    <div className="px-4 mt-6">
-                      <hr className="border-gray-200 dark:border-gray-700" />
-                    </div>
-                  </>
-                )}
-
-                {/* All Categories Detailed Sections */}
-                {categories.map((category, index) => {
-                  const categoryItems = allMenuItems.filter(item =>
-                    item.categories?.some(cat => cat.id === category.id)
-                  );
-
-                  if (categoryItems.length === 0) return null;
-
-                  return (
-                    <div
-                      key={category.id}
-                      ref={(el) => {
-                        sectionRefs.current[category.id] = el;
-                      }}
-                      data-category-section={category.id}
-                    >
-                      <div className="mt-4">
-                        <DetailedMenuSection
-                          title={category.name.toUpperCase()}
-                          items={categoryItems}
-                          currency={merchantInfo?.currency || 'AUD'}
-                          onAddItem={(item) => handleOpenMenu(item as MenuItem)}
-                          getItemQuantityInCart={getMenuQuantityInCart}
-                          onIncreaseQty={handleIncreaseQtyFromCard}
-                          onDecreaseQty={handleDecreaseQtyFromCard}
-                        />
-                      </div>
-                      {/* Divider between categories */}
-                      {index < categories.length - 1 && (
-                        <div className="px-4 mt-6">
-                          <hr className="border-gray-200 dark:border-gray-700" />
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </>
-            ) : (
-              /* Show single category when specific category selected */
-              <>
-                <div className="px-4 mt-4">
-                  <hr className="border-gray-200 dark:border-gray-700" />
-                </div>
-                <div className="mt-4">
-                  <DetailedMenuSection
-                    title={categories.find(c => c.id === selectedCategory)?.name.toUpperCase() || ''}
-                    items={displayedItems}
-                    currency={merchantInfo?.currency || 'AUD'}
-                    onAddItem={(item) => handleOpenMenu(item as MenuItem)}
-                    getItemQuantityInCart={getMenuQuantityInCart}
-                    onIncreaseQty={handleIncreaseQtyFromCard}
-                    onDecreaseQty={handleDecreaseQtyFromCard}
-                  />
-                </div>
-              </>
-            )}
-
-            {/* Empty State */}
-            {displayedItems.length === 0 && !isLoading && selectedCategory !== 'all' && (
-              <div className="px-4 mt-6">
-                <EmptyState
-                  title="No Menu Items"
-                  description="No items available in this category"
-                />
-              </div>
-            )}
-          </>
-        )}
-      </div>
-
-      {/* ========================================
-          FLOATING CART BUTTON
-      ======================================== */}
-      <FloatingCartButton merchantCode={merchantCode} mode={mode as 'dinein' | 'takeaway'} />
-
-      {/* ========================================
-          MENU DETAIL MODAL
-      ======================================== */}
-      {selectedMenu && (
-        <MenuDetailModal
-          menu={selectedMenu}
-          merchantCode={merchantCode}
-          mode={mode}
-          currency={merchantInfo?.currency || 'AUD'}
-          editMode={Boolean(editingCartItem)}
-          existingCartItem={editingCartItem}
-          onClose={handleCloseMenuDetail}
-          prefetchedAddons={menuAddonsCache[selectedMenu.id]}
-        />
-      )}
-
-      {cartOptionsMenu && (
-        <MenuInCartModal
-          menuName={cartOptionsMenu.name}
-          currency={merchantInfo?.currency || 'AUD'}
-          items={getMenuCartItems(cartOptionsMenu.id)}
-          onClose={() => setCartOptionsMenu(null)}
-          onCreateAnother={() => {
-            setEditingCartItem(null);
-            setSelectedMenu(cartOptionsMenu);
-            setCartOptionsMenu(null);
-          }}
-          onEditItem={(item) => {
-            setEditingCartItem(item);
-            setSelectedMenu(cartOptionsMenu);
-            setCartOptionsMenu(null);
-          }}
-          onIncreaseQty={(item) => {
-            updateItem(item.cartItemId, { quantity: item.quantity + 1 });
-          }}
-          onDecreaseQty={(item) => {
-            const nextQty = item.quantity - 1;
-            if (nextQty <= 0) {
-              removeItem(item.cartItemId);
-              return;
-            }
-            updateItem(item.cartItemId, { quantity: nextQty });
-          }}
-        />
-      )}
-
-      {/* ========================================
-          TABLE NUMBER MODAL (Dinein Only)
-      ======================================== */}
-      <TableNumberModal
+    <Suspense fallback={<CustomerOrderSkeleton />}>
+      <OrderClientPage
         merchantCode={merchantCode}
-        isOpen={showTableModal}
-        onClose={() => {
-          // Allow closing modal - user can cancel if they want
-          setShowTableModal(false);
-        }}
-        onConfirm={(number: string) => {
-          setTableNumber(number);
-          setShowTableModal(false);
-          console.log('✅ Table number confirmed:', number);
-        }}
+        mode={mode}
+        initialMerchant={initialData.merchant}
+        initialCategories={initialData.categories}
+        initialMenus={initialData.menus}
       />
-
-      {/* ========================================
-          OUTLET INFO MODAL
-      ======================================== */}
-      {merchantInfo && (
-        <OutletInfoModal
-          isOpen={showOutletInfo}
-          onClose={() => {
-            // Remove URL param when closing
-            const params = new URLSearchParams(window.location.search);
-            params.delete('outlet-info');
-            const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
-            window.history.pushState({}, '', newUrl);
-            setShowOutletInfo(false);
-          }}
-          merchant={{
-            name: merchantInfo.name,
-            address: merchantInfo.address,
-            phone: merchantInfo.phone,
-            openingHours: merchantInfo.openingHours.map(h => ({ ...h, is24Hours: (h as { is24Hours?: boolean }).is24Hours ?? false })),
-          }}
-        />
-      )}
-    </>
+    </Suspense>
   );
+}
+
+/**
+ * Generate metadata for SEO
+ */
+export async function generateMetadata({ params }: OrderPageProps) {
+  const { merchantCode } = await params;
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+
+  try {
+    const res = await fetch(`${baseUrl}/api/public/merchants/${merchantCode}`);
+    const data = await res.json();
+
+    if (data.success) {
+      return {
+        title: `Menu - ${data.data.name} | Genfity Order`,
+        description: `Browse and order food from ${data.data.name}`,
+      };
+    }
+  } catch {
+    // Fallback
+  }
+
+  return {
+    title: 'Order Menu | Genfity',
+    description: 'Browse and order your favorite food',
+  };
 }
