@@ -26,6 +26,11 @@ export const ERROR_CODES = {
   USER_ALREADY_EXISTS: 'USER_ALREADY_EXISTS',
   EMAIL_ALREADY_EXISTS: 'EMAIL_ALREADY_EXISTS',
   MUST_CHANGE_PASSWORD: 'MUST_CHANGE_PASSWORD',
+  PASSWORD_NOT_SET: 'PASSWORD_NOT_SET',
+  
+  // Customer
+  CUSTOMER_NOT_FOUND: 'CUSTOMER_NOT_FOUND',
+  CUSTOMER_INACTIVE: 'CUSTOMER_INACTIVE',
   
   // Merchant
   MERCHANT_NOT_FOUND: 'MERCHANT_NOT_FOUND',
@@ -87,6 +92,11 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   USER_ALREADY_EXISTS: 'User already exists',
   EMAIL_ALREADY_EXISTS: 'Email already registered',
   MUST_CHANGE_PASSWORD: 'You must change your password before continuing',
+  PASSWORD_NOT_SET: 'Password has not been set. Please set your password first',
+  
+  // Customer
+  CUSTOMER_NOT_FOUND: 'Customer not found',
+  CUSTOMER_INACTIVE: 'Customer account is inactive',
   
   // Merchant
   MERCHANT_NOT_FOUND: 'Merchant not found',

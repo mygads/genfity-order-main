@@ -22,7 +22,7 @@ import { serializeData } from '@/lib/utils/serializer';
 import { ValidationError, NotFoundError, ERROR_CODES } from '@/lib/constants/errors';
 import { validateRequired, validateEmail } from '@/lib/utils/validators';
 import { hashPassword, generateTempPassword } from '@/lib/utils/passwordHasher';
-import userRepository from '@/lib/repositories/UserRepository';
+import customerRepository from '@/lib/repositories/CustomerRepository';
 import orderRepository from '@/lib/repositories/OrderRepository';
 import merchantService from '@/lib/services/MerchantService';
 import menuService from '@/lib/services/MenuService';
@@ -72,9 +72,11 @@ export class OrderService {
      * 2. If exists → use existing customer (update name/email if different)
      * 3. If not exists → create new customer with temp password & send email
      * 4. Return customer object for order creation
+     * 
+     * Note: Customers are now stored in a separate Customer table (not User table)
      */
     let customer = input.customerPhone
-      ? await userRepository.findByPhone(input.customerPhone)
+      ? await customerRepository.findByPhone(input.customerPhone)
       : null;
 
     let _isNewCustomer = false;
@@ -84,18 +86,15 @@ export class OrderService {
       console.log('👤 [ORDER SERVICE] Registering new customer with phone:', input.customerPhone);
 
       // Generate proper temporary password
-      // Generate proper temporary password
       const tempPassword = generateTempPassword(12);
       const hashedPassword = await hashPassword(tempPassword);
 
-      // Create customer account
-      // @ts-expect-error - userRepository.create may have type issues
-      customer = await userRepository.create({
+      // Create customer account in Customer table
+      customer = await customerRepository.create({
         name: input.customerName,
         email: input.customerEmail,
         phone: input.customerPhone,
         passwordHash: hashedPassword,
-        role: 'CUSTOMER',
         isActive: true,
         mustChangePassword: false, // Guest checkout doesn't require password change
       });
@@ -129,7 +128,7 @@ export class OrderService {
       // Update name & email if different (phone stays the same as primary identifier)
       const needsUpdate = customer.name !== input.customerName || customer.email !== input.customerEmail;
       if (needsUpdate) {
-        await userRepository.update(customer.id, {
+        await customerRepository.update(customer.id, {
           name: input.customerName,
           email: input.customerEmail,
         });

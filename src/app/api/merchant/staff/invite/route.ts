@@ -60,8 +60,9 @@ async function inviteStaffHandler(
     throw new ConflictError('User is already a staff member', ERROR_CODES.EMAIL_ALREADY_EXISTS);
   }
 
-  // Check if user is SUPER_ADMIN or CUSTOMER
-  if (existingUser.role === 'SUPER_ADMIN' || existingUser.role === 'CUSTOMER') {
+  // Check if user is SUPER_ADMIN (cannot be added as staff)
+  // Note: CUSTOMER role no longer exists in User table (customers are in separate table)
+  if (existingUser.role === 'SUPER_ADMIN') {
     throw new ValidationError('Cannot add this user as staff', ERROR_CODES.VALIDATION_ERROR);
   }
 

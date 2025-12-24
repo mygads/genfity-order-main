@@ -45,7 +45,7 @@ export async function GET(
      * 
      * Order {
      *   customerId: BigInt? @map("customer_id")          // ✅ Nullable customer
-     *   customer: User? @relation("CustomerOrders")      // ✅ Get customer data
+     *   customer: Customer?                               // ✅ Separate Customer table
      *   merchant: Merchant                                // ✅ Get merchant data
      *   orderItems: OrderItem[] {
      *     addons: OrderItemAddon[]                        // ✅ Nested addons

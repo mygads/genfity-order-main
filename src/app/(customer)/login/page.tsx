@@ -179,7 +179,7 @@ function LoginForm() {
       // Save auth to localStorage
       saveCustomerAuth({
         accessToken: data.data.accessToken,
-        user: data.data.user,
+        customer: data.data.customer,
         expiresAt: data.data.expiresAt,
       });
 

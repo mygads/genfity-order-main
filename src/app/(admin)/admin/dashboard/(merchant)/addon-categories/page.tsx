@@ -979,13 +979,13 @@ export default function AddonCategoriesPage() {
                     </p>
                   </div>
                   <p className="text-sm text-gray-700 dark:text-gray-300">
-                    Are you sure you want to delete "<span className="font-medium">{deleteConfirm.name}</span>"?
+                    Are you sure you want to delete &ldquo;<span className="font-medium">{deleteConfirm.name}</span>&rdquo;?
                     This will break the menu configurations.
                   </p>
                 </div>
               ) : (
                 <p className="mb-6 text-sm text-gray-700 dark:text-gray-300">
-                  Are you sure you want to delete "<span className="font-medium">{deleteConfirm.name}</span>"?
+                  Are you sure you want to delete &ldquo;<span className="font-medium">{deleteConfirm.name}</span>&rdquo;?
                   This will also delete all addon items in this category.
                 </p>
               )}

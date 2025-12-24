@@ -88,7 +88,7 @@ function ProfileContent() {
           <div className="w-18 h-18 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
             {auth ? (
               <span className="text-xl font-bold text-gray-600 dark:text-gray-300">
-                {auth.user.name.charAt(0).toUpperCase()}
+                {auth.customer.name.charAt(0).toUpperCase()}
               </span>
             ) : (
               <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-gray-400">
@@ -103,10 +103,10 @@ function ProfileContent() {
             {auth ? (
               <>
                 <h2 className="text-base font-semibold text-gray-900 dark:text-white">
-                  Hi, {auth.user.name}
+                  Hi, {auth.customer.name}
                 </h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {auth.user.phone || auth.user.email}
+                  {auth.customer.phone || auth.customer.email}
                 </p>
               </>
             ) : (

@@ -3,10 +3,11 @@ import prisma from '@/lib/db/client';
 import crypto from 'crypto';
 
 /**
- * Verify Reset Code API Endpoint
+ * Verify Reset Code API Endpoint (Customer)
  * POST /api/public/auth/verify-reset-code
  * 
  * Verifies the 6-digit code and returns a token for password reset.
+ * Uses Customer table (separate from admin users)
  */
 export async function POST(request: NextRequest) {
     try {
@@ -40,11 +41,10 @@ export async function POST(request: NextRequest) {
 
         const emailTrimmed = email.trim().toLowerCase();
 
-        // Find user by email
-        const user = await prisma.user.findFirst({
+        // Find customer by email in Customer table
+        const customer = await prisma.customer.findUnique({
             where: {
                 email: emailTrimmed,
-                role: 'CUSTOMER',
             },
             select: {
                 id: true,
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
             },
         });
 
-        if (!user || !user.resetToken) {
+        if (!customer || !customer.resetToken) {
             return NextResponse.json(
                 {
                     success: false,
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Parse stored token (format: CODE:EXPIRY_TIMESTAMP)
-        const [storedCode, expiryStr] = user.resetToken.split(':');
+        const [storedCode, expiryStr] = customer.resetToken.split(':');
         const expiryTimestamp = parseInt(expiryStr, 10);
 
         // Check if code matches
@@ -85,8 +85,8 @@ export async function POST(request: NextRequest) {
         // Check if code expired
         if (Date.now() > expiryTimestamp) {
             // Clear expired token
-            await prisma.user.update({
-                where: { id: user.id },
+            await prisma.customer.update({
+                where: { id: customer.id },
                 data: { resetToken: null },
             });
 
@@ -105,9 +105,9 @@ export async function POST(request: NextRequest) {
         const resetPasswordToken = crypto.randomBytes(32).toString('hex');
         const resetPasswordExpiry = Date.now() + 15 * 60 * 1000; // 15 minutes
 
-        // Update user with new reset token for password change
-        await prisma.user.update({
-            where: { id: user.id },
+        // Update customer with new reset token for password change
+        await prisma.customer.update({
+            where: { id: customer.id },
             data: { resetToken: `RESET:${resetPasswordToken}:${resetPasswordExpiry}` },
         });
 

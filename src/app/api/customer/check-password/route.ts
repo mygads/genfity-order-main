@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
 import prisma from '@/lib/db/client';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+import { withCustomer, CustomerAuthContext } from '@/lib/middleware/auth';
 
 /**
  * Check if Customer Has Password
@@ -25,73 +23,29 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
  * @returns {boolean} data.hasPassword - Whether user has password set
  * @returns {string} message - Success/error message
  */
-export async function GET(request: NextRequest) {
+export const GET = withCustomer(async (
+  _request: NextRequest,
+  context: CustomerAuthContext,
+) => {
   try {
     // ========================================
-    // AUTHENTICATION
+    // DATABASE QUERY - Customer Table
     // ========================================
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'UNAUTHORIZED',
-          message: 'Token tidak valid',
-          statusCode: 401,
-        },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.split(' ')[1];
-    let decoded: { customerId?: string };
-
-    try {
-      decoded = jwt.verify(token, JWT_SECRET) as { customerId?: string };
-    } catch {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'UNAUTHORIZED',
-          message: 'Token tidak valid atau kadaluarsa',
-          statusCode: 401,
-        },
-        { status: 401 }
-      );
-    }
-
-    const customerId = decoded.customerId ? BigInt(decoded.customerId) : null;
-    if (!customerId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'UNAUTHORIZED',
-          message: 'Token tidak valid',
-          statusCode: 401,
-        },
-        { status: 401 }
-      );
-    }
-
-    // ========================================
-    // DATABASE QUERY
-    // ========================================
-    const user = await prisma.user.findUnique({
+    const customer = await prisma.customer.findUnique({
       where: {
-        id: customerId,
-        role: 'CUSTOMER',
+        id: context.customerId,
       },
       select: {
         passwordHash: true,
       },
     });
 
-    if (!user) {
+    if (!customer) {
       return NextResponse.json(
         {
           success: false,
-          error: 'USER_NOT_FOUND',
-          message: 'User tidak ditemukan',
+          error: 'CUSTOMER_NOT_FOUND',
+          message: 'Customer tidak ditemukan',
           statusCode: 404,
         },
         { status: 404 }
@@ -99,7 +53,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if password exists (not empty string)
-    const hasPassword = user.passwordHash !== null && user.passwordHash !== '';
+    const hasPassword = customer.passwordHash !== null && customer.passwordHash !== '';
 
     return NextResponse.json(
       {
@@ -124,4 +78,5 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
+

@@ -1337,7 +1337,7 @@ export default function MerchantCategoriesPage() {
               </div>
 
               <p className="mb-6 text-sm text-gray-700 dark:text-gray-300">
-                Are you sure you want to delete "<span className="font-medium">{deleteConfirm.name}</span>"?
+                Are you sure you want to delete &ldquo;<span className="font-medium">{deleteConfirm.name}</span>&rdquo;?
                 This will permanently remove it from your menu.
               </p>
 

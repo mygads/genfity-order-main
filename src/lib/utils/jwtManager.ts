@@ -9,7 +9,7 @@ import { JWTPayload, RefreshTokenPayload, UserRole } from '@/lib/types/auth';
 interface DecodedToken {
   userId: string;
   sessionId: string;
-  role: UserRole;
+  role: UserRole | 'CUSTOMER'; // CUSTOMER is virtual role for customer auth
   email: string;
   merchantId?: string;
   iat: number;

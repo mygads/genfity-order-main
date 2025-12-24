@@ -12,7 +12,7 @@
  * - Latest status from order_status_history
  * 
  * @security
- * - JWT Bearer token required
+ * - JWT Bearer token required (Customer token)
  * - Customer can only see their own orders
  * 
  * @response
@@ -26,68 +26,27 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
-import { verifyCustomerToken } from '@/lib/utils/auth';
+import { withCustomer, CustomerAuthContext } from '@/lib/middleware/auth';
 import { serializeBigInt } from '@/lib/utils/serializer';
 
 /**
  * GET /api/customer/orders
  * Fetch all orders for authenticated customer
  */
-export async function GET(req: NextRequest) {
+export const GET = withCustomer(async (
+  _request: NextRequest,
+  context: CustomerAuthContext,
+) => {
   try {
-    // ========================================
-    // STEP 1: Authentication (STEP_02)
-    // ========================================
-    
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'UNAUTHORIZED',
-          message: 'Token tidak ditemukan',
-          statusCode: 401,
-        },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.substring(7);
-    const decoded = await verifyCustomerToken(token);
-    
-    if (!decoded) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'INVALID_TOKEN',
-          message: 'Token tidak valid',
-          statusCode: 401,
-        },
-        { status: 401 }
-      );
-    }
-
-    console.log('👤 Fetching orders for customer:', decoded.customerId);
+    console.log('👤 Fetching orders for customer:', context.customerId.toString());
 
     // ========================================
-    // STEP 2: Fetch Orders (STEP_01 Schema)
+    // Fetch Orders from Customer table relation
     // ========================================
     
-    /**
-     * ✅ SCHEMA VERIFIED: Order table structure
-     * 
-     * Order {
-     *   customerId: BigInt? @map("customer_id")          // ✅ Nullable
-     *   customer: User? @relation("CustomerOrders")      // ✅ Correct relation name
-     *   merchant: Merchant
-     *   orderItems: OrderItem[]
-     *   payment: Payment?                                 // ✅ 1:1 relation
-     *   placedAt: DateTime @default(now())               // ✅ Indexed for orderBy
-     * }
-     */
     const orders = await prisma.order.findMany({
       where: {
-        customerId: BigInt(decoded.customerId), // ✅ Match schema: nullable BigInt
+        customerId: context.customerId,
       },
       include: {
         merchant: {
@@ -106,30 +65,16 @@ export async function GET(req: NextRequest) {
         },
       },
       orderBy: {
-        placedAt: 'desc', // ✅ Use indexed field for performance
+        placedAt: 'desc',
       },
     });
 
-    console.log(`📦 Found ${orders.length} orders for customer ${decoded.customerId}`);
+    console.log(`📦 Found ${orders.length} orders for customer ${context.customerId.toString()}`);
 
     // ========================================
-    // STEP 3: Format Response
+    // Format Response
     // ========================================
     
-    /**
-     * Transform Prisma result to match frontend interface
-     * 
-     * @interface OrderHistoryItem (from page.tsx)
-     * - id: bigint
-     * - orderNumber: string
-     * - merchantName: string
-     * - merchantCode: string
-     * - mode: 'dinein' | 'takeaway'
-     * - status: string
-     * - totalAmount: number
-     * - placedAt: string
-     * - itemsCount: number
-     */
     const formattedOrders = orders.map((order) => ({
       id: order.id,
       orderNumber: order.orderNumber,
@@ -156,10 +101,6 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error('Get customer orders error:', error);
 
-    // ========================================
-    // ERROR HANDLING (STEP_05)
-    // ========================================
-    
     return NextResponse.json(
       {
         success: false,
@@ -170,4 +111,4 @@ export async function GET(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

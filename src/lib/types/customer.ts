@@ -58,12 +58,11 @@ export interface TableNumber {
  */
 export interface CustomerAuth {
   accessToken: string;
-  user: {
+  customer: {
     id: bigint;
     name: string;
     email: string;
     phone?: string;
-    role: 'CUSTOMER';
   };
   expiresAt: string;
 }

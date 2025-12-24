@@ -177,9 +177,9 @@ export default function PaymentPage() {
   // Auto-fill form if authenticated
   useEffect(() => {
     if (auth) {
-      setName(auth.user.name);
-      setEmail(auth.user.email);
-      setPhone(auth.user.phone || '');
+      setName(auth.customer.name);
+      setEmail(auth.customer.email);
+      setPhone(auth.customer.phone || '');
     }
   }, [auth]);
 
@@ -565,11 +565,11 @@ export default function PaymentPage() {
                   setName(e.target.value);
                   if (fieldErrors.name) setFieldErrors(prev => ({ ...prev, name: undefined }));
                 }}
-                disabled={!!(auth && auth.user.name)}
+                disabled={!!(auth && auth.customer.name)}
                 className={`w-full h-12 pl-11 pr-4 border-2 rounded-xl text-sm focus:outline-none transition-colors ${fieldErrors.name
                   ? 'border-red-500 ring-1 ring-red-500 focus:border-red-500 focus:ring-red-500'
                   : 'border-gray-300 focus:ring-1 focus:ring-[#f05a28] focus:border-[#f05a28]'
-                  } ${(auth && auth.user.name) ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}`}
+                  } ${(auth && auth.customer.name) ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}`}
                 placeholder="Full Name"
               />
             </div>
@@ -609,11 +609,11 @@ export default function PaymentPage() {
                   setPhone(e.target.value);
                   if (fieldErrors.phone) setFieldErrors(prev => ({ ...prev, phone: undefined }));
                 }}
-                disabled={!!(auth && auth.user.phone)}
+                disabled={!!(auth && auth.customer.phone)}
                 className={`w-full h-12 pl-11 pr-4 border-2 rounded-xl text-sm focus:outline-none transition-colors ${fieldErrors.phone
                   ? 'border-red-500 ring-1 ring-red-500 focus:border-red-500 focus:ring-red-500'
                   : 'border-gray-300 focus:ring-1 focus:ring-[#f05a28] focus:border-[#f05a28]'
-                  } ${(auth && auth.user.phone) ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}`}
+                  } ${(auth && auth.customer.phone) ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}`}
                 placeholder="Phone Number"
               />
             </div>
@@ -652,11 +652,11 @@ export default function PaymentPage() {
                   setEmail(e.target.value);
                   if (fieldErrors.email) setFieldErrors(prev => ({ ...prev, email: undefined }));
                 }}
-                disabled={!!(auth && auth.user.email)}
+                disabled={!!(auth && auth.customer.email)}
                 className={`w-full h-12 pl-11 pr-4 border-2 rounded-xl text-sm focus:outline-none transition-colors ${fieldErrors.email
                   ? 'border-red-500 ring-1 ring-red-500 focus:border-red-500 focus:ring-red-500'
                   : 'border-gray-300 focus:ring-1 focus:ring-[#f05a28] focus:border-[#f05a28]'
-                  } ${(auth && auth.user.email) ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}`}
+                  } ${(auth && auth.customer.email) ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}`}
                 placeholder="Email"
               />
             </div>

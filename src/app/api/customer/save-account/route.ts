@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import prisma from '@/lib/db/client';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-const JWT_EXPIRES_IN = '30d';
+import customerAuthService from '@/lib/services/CustomerAuthService';
 
 interface SaveAccountRequestBody {
   email: string;
@@ -37,7 +34,7 @@ interface SaveAccountRequestBody {
  * @returns {Object} data - New authentication data
  * @returns {string} data.accessToken - New JWT token
  * @returns {number} data.expiresAt - Token expiry timestamp
- * @returns {Object} data.user - User profile data
+ * @returns {Object} data.customer - Customer profile data
  */
 export async function POST(request: NextRequest) {
   try {
@@ -88,17 +85,15 @@ export async function POST(request: NextRequest) {
     const phoneTrimmed = phone?.trim() || null;
 
     // ========================================
-    // FIND EXISTING USER BY EMAIL
+    // FIND EXISTING CUSTOMER BY EMAIL
     // ========================================
     
     /**
-     * ✅ UPDATED: Find user by email to update their account
-     * Allows updating name, email, phone, and setting password
+     * ✅ UPDATED: Find customer by email in Customer table
      */
-    const existingUser = await prisma.user.findFirst({
+    const existingCustomer = await prisma.customer.findUnique({
       where: {
         email: emailTrimmed,
-        role: 'CUSTOMER',
       },
       select: {
         id: true,
@@ -110,11 +105,11 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    if (!existingUser) {
+    if (!existingCustomer) {
       return NextResponse.json(
         {
           success: false,
-          error: 'USER_NOT_FOUND',
+          error: 'CUSTOMER_NOT_FOUND',
           message: 'Akun tidak ditemukan',
           statusCode: 404,
         },
@@ -123,7 +118,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if account is active
-    if (!existingUser.isActive) {
+    if (!existingCustomer.isActive) {
       return NextResponse.json(
         {
           success: false,
@@ -135,8 +130,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user already has password
-    if (existingUser.passwordHash && existingUser.passwordHash !== '') {
+    // Check if customer already has password
+    if (existingCustomer.passwordHash && existingCustomer.passwordHash !== '') {
       return NextResponse.json(
         {
           success: false,
@@ -155,74 +150,45 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
     // ========================================
-    // UPDATE USER WITH PASSWORD AND INFO
+    // UPDATE CUSTOMER WITH PASSWORD AND INFO
     // ========================================
     
-    /**
-     * ✅ UPDATED: Update user information
-     * - Set password (if empty)
-     * - Update name (always)
-     * - Update phone (always, can be null)
-     * - Update lastLoginAt timestamp
-     */
-    await prisma.user.update({
-      where: { id: existingUser.id },
+    await prisma.customer.update({
+      where: { id: existingCustomer.id },
       data: {
         passwordHash: hashedPassword,
         name: nameTrimmed,
         phone: phoneTrimmed,
+        mustChangePassword: false,
         lastLoginAt: new Date(),
       },
     });
 
     // ========================================
-    // GENERATE NEW JWT TOKEN
-    // ========================================
-    const payload = {
-      customerId: existingUser.id.toString(),
-      email: emailTrimmed,
-      name: nameTrimmed,
-      role: 'CUSTOMER',
-    };
-
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
-    const expiresAt = Date.now() + 30 * 24 * 60 * 60 * 1000; // 30 days
-
-    // ========================================
-    // CREATE NEW USER SESSION
+    // LOGIN AND GET TOKEN
     // ========================================
     const userAgent = request.headers.get('user-agent') || 'Unknown';
     const ipAddress = request.headers.get('x-forwarded-for') || 
                       request.headers.get('x-real-ip') || 
                       'Unknown';
 
-    await prisma.userSession.create({
-      data: {
-        userId: existingUser.id,
-        token,
-        deviceInfo: userAgent,
-        ipAddress,
-        status: 'ACTIVE',
-        expiresAt: new Date(expiresAt),
-        refreshExpiresAt: null,
-      },
-    });
+    // Use CustomerAuthService to login (creates session and generates tokens)
+    const loginResult = await customerAuthService.login(
+      { email: emailTrimmed, password },
+      userAgent,
+      ipAddress
+    );
 
-    console.log('✅ [SAVE ACCOUNT] Password set for customer:', existingUser.id.toString());
+    console.log('✅ [SAVE ACCOUNT] Password set for customer:', existingCustomer.id.toString());
 
     return NextResponse.json(
       {
         success: true,
         data: {
-          accessToken: token,
-          expiresAt,
-          user: {
-            id: existingUser.id.toString(),
-            email: emailTrimmed,
-            name: nameTrimmed,
-            phone: phoneTrimmed,
-            role: 'CUSTOMER',
-          },
+          accessToken: loginResult.accessToken,
+          refreshToken: loginResult.refreshToken,
+          expiresIn: loginResult.expiresIn,
+          customer: loginResult.customer,
         },
         message: 'Akun berhasil disimpan',
         statusCode: 200,

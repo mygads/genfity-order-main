@@ -1,9 +1,10 @@
 /**
  * Create User Modal Component
- * For Super Admin to create users with any role
+ * For Super Admin to create admin/merchant users
  * 
  * Features:
- * - Create users with role: SUPER_ADMIN, MERCHANT_OWNER, MERCHANT_STAFF, CUSTOMER
+ * - Create users with role: SUPER_ADMIN, MERCHANT_OWNER, MERCHANT_STAFF
+ * - Note: Customers are managed in separate Customer table (not here)
  * - Optional merchant assignment for MERCHANT_OWNER and MERCHANT_STAFF
  * - Direct password setting (no email notification)
  * - Validates 1 owner per merchant rule
@@ -43,7 +44,7 @@ export default function CreateUserModal({ isOpen, onClose, onSuccess }: CreateUs
     email: '',
     phone: '',
     password: '',
-    role: 'MERCHANT_STAFF' as 'SUPER_ADMIN' | 'MERCHANT_OWNER' | 'MERCHANT_STAFF' | 'CUSTOMER',
+    role: 'MERCHANT_STAFF' as 'SUPER_ADMIN' | 'MERCHANT_OWNER' | 'MERCHANT_STAFF',
     merchantId: '',
   });
 
@@ -283,13 +284,11 @@ export default function CreateUserModal({ isOpen, onClose, onSuccess }: CreateUs
               <option value="MERCHANT_STAFF">Merchant Staff</option>
               <option value="MERCHANT_OWNER">Merchant Owner</option>
               <option value="SUPER_ADMIN">Super Admin</option>
-              <option value="CUSTOMER">Customer</option>
             </select>
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
               {formData.role === 'SUPER_ADMIN' && 'Full system access'}
               {formData.role === 'MERCHANT_OWNER' && 'Full access to one merchant'}
               {formData.role === 'MERCHANT_STAFF' && 'Limited access to one merchant'}
-              {formData.role === 'CUSTOMER' && 'Customer ordering access'}
             </p>
           </div>
 

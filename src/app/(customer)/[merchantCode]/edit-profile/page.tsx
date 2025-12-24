@@ -39,9 +39,9 @@ function EditProfileContent() {
             return;
         }
 
-        setName(auth.user.name || '');
-        setPhone(auth.user.phone || '');
-        setEmail(auth.user.email || '');
+        setName(auth.customer.name || '');
+        setPhone(auth.customer.phone || '');
+        setEmail(auth.customer.email || '');
     }, [auth, router, merchantCode, mode]);
 
     const handleBack = () => {
@@ -83,10 +83,10 @@ function EditProfileContent() {
                 // Update local auth state with new name/email
                 const updatedAuth = {
                     ...auth,
-                    user: {
-                        ...auth.user,
+                    customer: {
+                        ...auth.customer,
                         name: name.trim(),
-                        email: email.trim() || auth.user.email,
+                        email: email.trim() || auth.customer.email,
                     },
                 };
                 saveCustomerAuth(updatedAuth);

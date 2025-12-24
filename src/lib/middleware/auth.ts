@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import authService from '@/lib/services/AuthService';
+import customerAuthService from '@/lib/services/CustomerAuthService';
 import { extractTokenFromHeader } from '@/lib/utils/jwtManager';
 import { AuthenticationError, AuthorizationError, ERROR_CODES } from '@/lib/constants/errors';
 import { handleError } from '@/lib/middleware/errorHandler';
@@ -19,6 +20,15 @@ export interface AuthContext {
   role: UserRole;
   email: string;
   merchantId?: bigint; // For MERCHANT_OWNER and MERCHANT_STAFF
+}
+
+/**
+ * Customer authentication context (separate from admin users)
+ */
+export interface CustomerAuthContext {
+  customerId: bigint;
+  sessionId: bigint;
+  email: string;
 }
 
 /**
@@ -135,15 +145,44 @@ export function withMerchantOwner(
 
 /**
  * Middleware for Customer routes
+ * Uses separate customer authentication system
  */
 export function withCustomer(
   handler: (
     request: NextRequest,
-    context: AuthContext,
+    context: CustomerAuthContext,
     routeContext: { params: Promise<Record<string, string>> }
   ) => Promise<NextResponse>
 ) {
-  return withAuth(handler, ['CUSTOMER']);
+  return async (request: NextRequest, routeContext: { params: Promise<Record<string, string>> }) => {
+    try {
+      // Extract token from Authorization header
+      const authHeader = request.headers.get('authorization');
+      const token = extractTokenFromHeader(authHeader);
+
+      if (!token) {
+        throw new AuthenticationError(
+          'Authorization token required',
+          ERROR_CODES.UNAUTHORIZED
+        );
+      }
+
+      // Verify customer token
+      const customerContext = await customerAuthService.verifyToken(token);
+
+      if (!customerContext) {
+        throw new AuthenticationError(
+          'Invalid or expired token',
+          ERROR_CODES.TOKEN_INVALID
+        );
+      }
+
+      // Call the actual handler with customer context
+      return await handler(request, customerContext, routeContext);
+    } catch (error) {
+      return handleError(error);
+    }
+  };
 }
 
 /**
@@ -163,6 +202,28 @@ export async function optionalAuth(
 
     const userContext = await authService.verifyToken(token);
     return userContext as AuthContext | null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Optional customer authentication - doesn't fail if no token
+ * Returns null if not authenticated
+ */
+export async function optionalCustomerAuth(
+  request: NextRequest
+): Promise<CustomerAuthContext | null> {
+  try {
+    const authHeader = request.headers.get('authorization');
+    const token = extractTokenFromHeader(authHeader);
+
+    if (!token) {
+      return null;
+    }
+
+    const customerContext = await customerAuthService.verifyToken(token);
+    return customerContext;
   } catch {
     return null;
   }

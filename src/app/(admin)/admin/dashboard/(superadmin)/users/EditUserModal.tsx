@@ -53,7 +53,7 @@ export default function EditUserModal({ isOpen, onClose, onSuccess, user }: Edit
     email: '',
     phone: '',
     password: '', // Optional - only if changing password
-    role: 'MERCHANT_STAFF' as 'SUPER_ADMIN' | 'MERCHANT_OWNER' | 'MERCHANT_STAFF' | 'CUSTOMER',
+    role: 'MERCHANT_STAFF' as 'SUPER_ADMIN' | 'MERCHANT_OWNER' | 'MERCHANT_STAFF',
     merchantId: '',
   });
 
@@ -65,7 +65,7 @@ export default function EditUserModal({ isOpen, onClose, onSuccess, user }: Edit
         email: user.email,
         phone: user.phone || '',
         password: '',
-        role: user.role as 'SUPER_ADMIN' | 'MERCHANT_OWNER' | 'MERCHANT_STAFF' | 'CUSTOMER',
+        role: user.role as 'SUPER_ADMIN' | 'MERCHANT_OWNER' | 'MERCHANT_STAFF',
         merchantId: user.merchantId || '',
       });
       fetchMerchants();
@@ -318,13 +318,11 @@ export default function EditUserModal({ isOpen, onClose, onSuccess, user }: Edit
               <option value="MERCHANT_STAFF">Merchant Staff</option>
               <option value="MERCHANT_OWNER">Merchant Owner</option>
               <option value="SUPER_ADMIN">Super Admin</option>
-              <option value="CUSTOMER">Customer</option>
             </select>
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
               {formData.role === 'SUPER_ADMIN' && 'Full system access'}
               {formData.role === 'MERCHANT_OWNER' && 'Full access to one merchant'}
               {formData.role === 'MERCHANT_STAFF' && 'Limited access to one merchant'}
-              {formData.role === 'CUSTOMER' && 'Customer ordering access'}
             </p>
           </div>
 

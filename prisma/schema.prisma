@@ -14,7 +14,7 @@ model User {
   phone               String?
   passwordHash        String          @map("password_hash")
   profilePictureUrl   String?         @map("profile_picture_url")
-  role                UserRole        @default(CUSTOMER)
+  role                UserRole        @default(MERCHANT_STAFF)
   isActive            Boolean         @default(true) @map("is_active")
   mustChangePassword  Boolean         @default(false) @map("must_change_password")
   resetToken          String?         @map("reset_token")
@@ -35,7 +35,6 @@ model User {
   menusDeleted        Menu[]          @relation("MenuDeletedBy")
   menusUpdated        Menu[]          @relation("MenuUpdatedBy")
   merchantUsers       MerchantUser[]
-  ordersAsCustomer    Order[]         @relation("CustomerOrders")
   paymentsRecorded    Payment[]       @relation("PaymentRecordedBy")
   preferences         UserPreference?
   sessions            UserSession[]
@@ -82,6 +81,51 @@ model UserPreference {
 
   @@index([userId])
   @@map("user_preferences")
+}
+
+// ============================================
+// CUSTOMER (Separate from Admin/Merchant Users)
+// ============================================
+
+model Customer {
+  id                  BigInt            @id @default(autoincrement())
+  name                String
+  email               String            @unique
+  phone               String?
+  passwordHash        String?           @map("password_hash")
+  isActive            Boolean           @default(true) @map("is_active")
+  mustChangePassword  Boolean           @default(false) @map("must_change_password")
+  resetToken          String?           @map("reset_token")
+  resetTokenExpiresAt DateTime?         @map("reset_token_expires_at") @db.Timestamptz(6)
+  lastLoginAt         DateTime?         @map("last_login_at") @db.Timestamptz(6)
+  createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  
+  orders              Order[]
+  sessions            CustomerSession[]
+
+  @@index([email])
+  @@index([phone])
+  @@map("customers")
+}
+
+model CustomerSession {
+  id               BigInt        @id @default(autoincrement())
+  customerId       BigInt        @map("customer_id")
+  token            String        @unique
+  deviceInfo       String?       @map("device_info")
+  ipAddress        String?       @map("ip_address")
+  status           SessionStatus @default(ACTIVE)
+  expiresAt        DateTime      @map("expires_at") @db.Timestamptz(6)
+  refreshExpiresAt DateTime?     @map("refresh_expires_at") @db.Timestamptz(6)
+  createdAt        DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+  customer         Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@index([token])
+  @@index([status])
+  @@map("customer_sessions")
 }
 
 model MerchantUser {
@@ -344,7 +388,7 @@ model Order {
   completedAt          DateTime?   @map("completed_at") @db.Timestamptz(6)
   estimatedReadyAt     DateTime?   @map("estimated_ready_at") @db.Timestamptz(6)
   orderItems           OrderItem[]
-  customer             User?       @relation("CustomerOrders", fields: [customerId], references: [id])
+  customer             Customer?   @relation(fields: [customerId], references: [id])
   merchant             Merchant    @relation(fields: [merchantId], references: [id], onDelete: Cascade)
   payment              Payment?
 
@@ -505,11 +549,9 @@ model SpecialPriceItem {
 }
 
 enum UserRole {
-
   SUPER_ADMIN
   MERCHANT_OWNER
   MERCHANT_STAFF
-  CUSTOMER
 }
 
 enum MerchantRole {

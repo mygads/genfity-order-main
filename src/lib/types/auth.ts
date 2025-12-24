@@ -2,7 +2,7 @@
  * Authentication Types
  */
 
-export type UserRole = 'SUPER_ADMIN' | 'MERCHANT_OWNER' | 'MERCHANT_STAFF' | 'CUSTOMER';
+export type UserRole = 'SUPER_ADMIN' | 'MERCHANT_OWNER' | 'MERCHANT_STAFF';
 export type SessionStatus = 'ACTIVE' | 'REVOKED' | 'EXPIRED';
 
 export interface LoginRequest {
@@ -28,7 +28,7 @@ export interface LoginResponse {
 export interface JWTPayload {
   userId: bigint;
   sessionId: bigint;
-  role: UserRole;
+  role: UserRole | 'CUSTOMER'; // CUSTOMER is virtual role for customer auth
   email: string;
   merchantId?: bigint;
   iat?: number;

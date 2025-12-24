@@ -1,13 +1,15 @@
 /**
  * User Role Constants
  * Based on STEP_01_DATABASE_DESIGN.txt
+ * 
+ * Note: CUSTOMER is no longer part of User roles.
+ * Customers are stored in a separate Customer table with their own authentication.
  */
 
 export const USER_ROLES = {
   SUPER_ADMIN: 'SUPER_ADMIN',
   MERCHANT_OWNER: 'MERCHANT_OWNER',
   MERCHANT_STAFF: 'MERCHANT_STAFF',
-  CUSTOMER: 'CUSTOMER',
 } as const;
 
 export type UserRole = typeof USER_ROLES[keyof typeof USER_ROLES];

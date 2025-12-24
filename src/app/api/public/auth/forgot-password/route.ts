@@ -4,14 +4,16 @@ import crypto from 'crypto';
 import emailService from '@/lib/services/EmailService';
 
 /**
- * Forgot Password API Endpoint
+ * Forgot Password API Endpoint (Customer)
  * POST /api/public/auth/forgot-password
  * 
  * Features:
  * - Generates a 6-digit verification code
  * - Sends email with OTP code
  * - Rate limiting: 1 request per 3 minutes per email
- * - Code expires in 10 minutes
+ * - Code expires in 60 minutes
+ * 
+ * Uses Customer table (separate from admin users)
  */
 
 // ✅ In-memory rate limit store (for serverless, consider Redis)
@@ -50,7 +52,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // ✅ Rate Limiting Check (3 minutes cooldown per email)
+        // ✅ Rate Limiting Check (1 minute cooldown per email)
         const lastRequestTime = rateLimitStore.get(emailTrimmed);
         const now = Date.now();
 
@@ -72,11 +74,10 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Find user by email
-        const user = await prisma.user.findFirst({
+        // Find customer by email in Customer table
+        const customer = await prisma.customer.findUnique({
             where: {
                 email: emailTrimmed,
-                role: 'CUSTOMER',
             },
             select: {
                 id: true,
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest) {
         });
 
         // Return error if email not found
-        if (!user) {
+        if (!customer) {
             console.log('🔐 [FORGOT-PASSWORD] Email not found:', emailTrimmed);
             return NextResponse.json(
                 {
@@ -106,9 +107,9 @@ export async function POST(request: NextRequest) {
         const expiryTimestamp = Date.now() + CODE_EXPIRY_MINUTES * 60 * 1000;
         const resetToken = `${verificationCode}:${expiryTimestamp}`;
 
-        // Update user with reset token
-        await prisma.user.update({
-            where: { id: user.id },
+        // Update customer with reset token
+        await prisma.customer.update({
+            where: { id: customer.id },
             data: { resetToken },
         });
 
@@ -120,8 +121,8 @@ export async function POST(request: NextRequest) {
 
         // ✅ Send email with verification code
         const emailSent = await emailService.sendPasswordResetOTP({
-            to: user.email,
-            name: user.name || 'Customer',
+            to: customer.email,
+            name: customer.name || 'Customer',
             code: verificationCode,
             expiresInMinutes: CODE_EXPIRY_MINUTES,
         });
@@ -137,8 +138,8 @@ export async function POST(request: NextRequest) {
                 success: true,
                 data: {
                     emailSent,
-                    lastSentAt: now, // ✅ For frontend to persist resend countdown
-                    retryAfterMs: RATE_LIMIT_WINDOW_MS, // ✅ How long to wait before resend
+                    lastSentAt: now,
+                    retryAfterMs: RATE_LIMIT_WINDOW_MS,
                     // In development, return the code for testing
                     ...(process.env.NODE_ENV === 'development' && { code: verificationCode }),
                 },

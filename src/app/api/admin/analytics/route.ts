@@ -34,10 +34,9 @@ async function getAnalyticsHandler(
     startDate.setDate(now.getDate() - 30);
   }
 
-  // 1. Customer registrations using Prisma count
-  const customerRegistrations = await prisma.user.count({
+  // 1. Customer registrations using Customer table (separate from User)
+  const customerRegistrations = await prisma.customer.count({
     where: {
-      role: 'CUSTOMER',
       createdAt: {
         gte: startDate,
       },
@@ -159,7 +158,7 @@ async function getAnalyticsHandler(
     ORDER BY month ASC
   `;
 
-  // 6. Customer growth over time using Prisma raw query
+  // 6. Customer growth over time using Customer table
   const customerGrowth = await prisma.$queryRaw<Array<{
     month: Date;
     count: bigint;
@@ -167,9 +166,8 @@ async function getAnalyticsHandler(
     SELECT 
       DATE_TRUNC('month', created_at) as month,
       CAST(COUNT(*) AS BIGINT) as count
-    FROM users
-    WHERE role = 'CUSTOMER'
-      AND created_at >= ${startDate}
+    FROM customers
+    WHERE created_at >= ${startDate}
     GROUP BY month
     ORDER BY month ASC
   `;

@@ -3,10 +3,11 @@ import prisma from '@/lib/db/client';
 import bcrypt from 'bcryptjs';
 
 /**
- * Reset Password API Endpoint
+ * Reset Password API Endpoint (Customer)
  * POST /api/public/auth/reset-password
  * 
- * Sets a new password for the user after verification.
+ * Sets a new password for the customer after verification.
+ * Uses Customer table (separate from admin users)
  */
 export async function POST(request: NextRequest) {
     try {
@@ -52,11 +53,10 @@ export async function POST(request: NextRequest) {
 
         const emailTrimmed = email.trim().toLowerCase();
 
-        // Find user by email
-        const user = await prisma.user.findFirst({
+        // Find customer by email in Customer table
+        const customer = await prisma.customer.findUnique({
             where: {
                 email: emailTrimmed,
-                role: 'CUSTOMER',
             },
             select: {
                 id: true,
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
             },
         });
 
-        if (!user || !user.resetToken) {
+        if (!customer || !customer.resetToken) {
             return NextResponse.json(
                 {
                     success: false,
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Parse stored token (format: RESET:TOKEN:EXPIRY_TIMESTAMP)
-        const parts = user.resetToken.split(':');
+        const parts = customer.resetToken.split(':');
         if (parts.length !== 3 || parts[0] !== 'RESET') {
             return NextResponse.json(
                 {
@@ -110,8 +110,8 @@ export async function POST(request: NextRequest) {
         // Check if token expired
         if (Date.now() > expiryTimestamp) {
             // Clear expired token
-            await prisma.user.update({
-                where: { id: user.id },
+            await prisma.customer.update({
+                where: { id: customer.id },
                 data: { resetToken: null },
             });
 
@@ -129,9 +129,9 @@ export async function POST(request: NextRequest) {
         // Hash the new password
         const passwordHash = await bcrypt.hash(password, 10);
 
-        // Update user password and clear reset token
-        await prisma.user.update({
-            where: { id: user.id },
+        // Update customer password and clear reset token
+        await prisma.customer.update({
+            where: { id: customer.id },
             data: {
                 passwordHash,
                 resetToken: null,
@@ -141,10 +141,10 @@ export async function POST(request: NextRequest) {
 
         console.log('🔐 [RESET-PASSWORD] Password reset successful for:', emailTrimmed);
 
-        // Invalidate all existing sessions for security
-        await prisma.userSession.updateMany({
+        // Invalidate all existing customer sessions for security
+        await prisma.customerSession.updateMany({
             where: {
-                userId: user.id,
+                customerId: customer.id,
                 status: 'ACTIVE',
             },
             data: {
@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
             },
         });
 
-        console.log('🔐 [RESET-PASSWORD] All sessions revoked for:', emailTrimmed);
+        console.log('🔐 [RESET-PASSWORD] All customer sessions revoked for:', emailTrimmed);
 
         return NextResponse.json(
             {

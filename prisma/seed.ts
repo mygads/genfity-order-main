@@ -180,26 +180,26 @@ async function main() {
       merchantCode: 'PIZZA01',
       merchantRole: 'STAFF' as const,
     },
-    // Customer Users
+  ];
+
+  // Customer data - separate from admin users
+  const customersData = [
     {
       name: 'Alice Customer',
       email: 'alice@example.com',
       password: '1234abcd',
-      role: 'CUSTOMER' as const,
       phone: '+61400111222',
     },
     {
       name: 'Bob Customer',
       email: 'bob@example.com',
       password: '1234abcd',
-      role: 'CUSTOMER' as const,
       phone: '+61400333444',
     },
     {
       name: 'Charlie Customer',
       email: 'charlie@example.com',
       password: '1234abcd',
-      role: 'CUSTOMER' as const,
       phone: '+61400555666',
     },
   ];
@@ -216,7 +216,6 @@ async function main() {
         data: {
           name: userData.name,
           email: userData.email,
-          phone: userData.phone,
           passwordHash: hashedPassword,
           role: userData.role,
           isActive: true,
@@ -241,6 +240,34 @@ async function main() {
       console.log(`✅ User created: ${userData.name} (${userData.role})`);
     } else {
       console.log(`✅ User ${userData.name} already exists`);
+    }
+  }
+
+  // ============================================
+  // 3.5 CREATE CUSTOMERS (Separate Table)
+  // ============================================
+  for (const customerData of customersData) {
+    const existing = await prisma.customer.findUnique({
+      where: { email: customerData.email },
+    });
+
+    if (!existing) {
+      const hashedPassword = await bcrypt.hash(customerData.password, 10);
+
+      await prisma.customer.create({
+        data: {
+          name: customerData.name,
+          email: customerData.email,
+          phone: customerData.phone,
+          passwordHash: hashedPassword,
+          isActive: true,
+          mustChangePassword: false,
+        },
+      });
+
+      console.log(`✅ Customer created: ${customerData.name}`);
+    } else {
+      console.log(`✅ Customer ${customerData.name} already exists`);
     }
   }
 

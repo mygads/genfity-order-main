@@ -89,7 +89,8 @@ async function createUserHandler(
   validateEmail(body.email);
 
   // Validate role
-  const validRoles = ['SUPER_ADMIN', 'MERCHANT_OWNER', 'MERCHANT_STAFF', 'CUSTOMER'];
+  // Note: CUSTOMER role is no longer in User table - customers have separate table
+  const validRoles = ['SUPER_ADMIN', 'MERCHANT_OWNER', 'MERCHANT_STAFF'];
   if (!validRoles.includes(body.role)) {
     throw new ValidationError('Invalid role');
   }

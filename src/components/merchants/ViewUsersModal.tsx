@@ -236,7 +236,7 @@ export default function ViewUsersModal({
         <ConfirmDialog
           isOpen={confirmDialog.isOpen}
           title="Unbind User"
-          message={`Are you sure you want to unbind ${confirmDialog.userName} from this merchant? The user's role will be changed to CUSTOMER.`}
+          message={`Are you sure you want to unbind ${confirmDialog.userName} from this merchant? They will no longer have access to this merchant's dashboard.`}
           confirmText="Unbind"
           variant="danger"
           onConfirm={handleUnbind}

@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import prisma from '@/lib/db/client';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-const JWT_EXPIRES_IN = '30d'; // 30 days for customers
+import customerAuthService from '@/lib/services/CustomerAuthService';
 
 interface LoginRequestBody {
   email?: string;
@@ -18,24 +15,24 @@ interface LoginRequestBody {
  * POST /api/public/auth/customer-login
  * 
  * @description
- * Seamless authentication for customers:
+ * Seamless authentication for customers (separate from admin users):
  * - Login with email OR phone number + password
- * - If user has password → require password verification
- * - If user has no password → passwordless login (legacy)
- * - Auto-register new users
- * - Session duration: 30 days
+ * - If customer has password → require password verification
+ * - If customer has no password → passwordless login (legacy)
+ * - Auto-register new customers
+ * - Session duration: 1 year (stored in CustomerSession table)
  * 
  * @session
- * - JWT token expires in 30 days
- * - UserSession record created in database for tracking
+ * - JWT token expires in 1 year
+ * - CustomerSession record created in database for tracking
  * - Session can be revoked by updating status to 'REVOKED'
  * - Token stored in localStorage on client side
  * 
  * @security
  * - Email/Phone validation
  * - Password hashing with bcrypt (10 rounds)
- * - JWT token with 30-day expiry
- * - UserSession tracking with device info
+ * - JWT token with 1-year expiry
+ * - CustomerSession tracking with device info
  */
 export async function POST(request: NextRequest) {
   try {
@@ -90,16 +87,15 @@ export async function POST(request: NextRequest) {
     }
 
     // ========================================
-    // DATABASE QUERY - Find by email or phone
+    // DATABASE QUERY - Find by email or phone in Customer table
     // ========================================
 
-    const existingUser = await prisma.user.findFirst({
+    const existingCustomer = await prisma.customer.findFirst({
       where: {
         OR: [
           ...(emailTrimmed ? [{ email: emailTrimmed }] : []),
           ...(phoneTrimmed ? [{ phone: phoneTrimmed }] : []),
         ],
-        role: 'CUSTOMER',
       },
       select: {
         id: true,
@@ -107,23 +103,22 @@ export async function POST(request: NextRequest) {
         name: true,
         phone: true,
         passwordHash: true,
-        role: true,
         isActive: true,
       },
     });
 
-    let userId: bigint;
-    let userName: string;
-    let userEmail: string;
-    let userPhone: string | null;
+    let customerId: bigint;
+    let customerName: string;
+    let customerEmail: string;
+    let customerPhone: string | null;
 
-    if (existingUser) {
+    if (existingCustomer) {
       // ========================================
-      // EXISTING USER - LOGIN FLOW
+      // EXISTING CUSTOMER - LOGIN FLOW
       // ========================================
 
       // Check if account is active
-      if (!existingUser.isActive) {
+      if (!existingCustomer.isActive) {
         return NextResponse.json(
           {
             success: false,
@@ -135,9 +130,9 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Check if user has a password set
-      if (existingUser.passwordHash && existingUser.passwordHash.length > 0) {
-        // Password required for this user
+      // Check if customer has a password set
+      if (existingCustomer.passwordHash && existingCustomer.passwordHash.length > 0) {
+        // Password required for this customer
         if (!password) {
           return NextResponse.json(
             {
@@ -151,7 +146,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Verify password
-        const passwordValid = await bcrypt.compare(password, existingUser.passwordHash);
+        const passwordValid = await bcrypt.compare(password, existingCustomer.passwordHash);
         if (!passwordValid) {
           return NextResponse.json(
             {
@@ -165,27 +160,26 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      userId = existingUser.id;
-      userName = name?.trim() || existingUser.name;
-      userEmail = existingUser.email;
-      userPhone = phoneTrimmed || existingUser.phone;
+      customerId = existingCustomer.id;
+      customerName = name?.trim() || existingCustomer.name;
+      customerEmail = existingCustomer.email;
+      customerPhone = phoneTrimmed || existingCustomer.phone;
 
-      // Update user info
-      await prisma.user.update({
-        where: { id: userId },
+      // Update customer info
+      await prisma.customer.update({
+        where: { id: customerId },
         data: {
-          ...(name && name.trim() !== existingUser.name ? { name: name.trim() } : {}),
+          ...(name && name.trim() !== existingCustomer.name ? { name: name.trim() } : {}),
           lastLoginAt: new Date(),
         },
       });
 
     } else {
       // ========================================
-      // NEW USER - REGISTER FLOW (only if no password provided)
+      // NEW CUSTOMER - REGISTER FLOW (only if no password provided)
       // ========================================
 
-      // ✅ FIX: If user provided password but account doesn't exist → invalid credentials
-      // This prevents confusing "name required" error when trying to login
+      // ✅ FIX: If customer provided password but account doesn't exist → invalid credentials
       if (password && password.length > 0) {
         return NextResponse.json(
           {
@@ -225,18 +219,17 @@ export async function POST(request: NextRequest) {
       }
 
       // Hash password if provided
-      let passwordHash = '';
+      let passwordHash: string | null = null;
       if (password && password.length >= 6) {
         passwordHash = await bcrypt.hash(password, 10);
       }
 
-      const newUser = await prisma.user.create({
+      const newCustomer = await prisma.customer.create({
         data: {
           email: emailTrimmed,
           name: name.trim(),
           phone: phoneTrimmed || null,
           passwordHash,
-          role: 'CUSTOMER',
           isActive: true,
           lastLoginAt: new Date(),
         },
@@ -245,28 +238,14 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      userId = newUser.id;
-      userName = name.trim();
-      userEmail = emailTrimmed;
-      userPhone = phoneTrimmed || null;
+      customerId = newCustomer.id;
+      customerName = name.trim();
+      customerEmail = emailTrimmed;
+      customerPhone = phoneTrimmed || null;
     }
 
     // ========================================
-    // JWT GENERATION - 30 days expiry
-    // ========================================
-
-    const payload = {
-      customerId: userId.toString(),
-      email: userEmail,
-      name: userName,
-      role: 'CUSTOMER',
-    };
-
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
-    const expiresAt = Date.now() + 30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
-
-    // ========================================
-    // CREATE USER SESSION RECORD
+    // CREATE CUSTOMER SESSION - 1 year expiry
     // ========================================
 
     const userAgent = request.headers.get('user-agent') || 'Unknown';
@@ -274,35 +253,107 @@ export async function POST(request: NextRequest) {
       request.headers.get('x-real-ip') ||
       'Unknown';
 
-    await prisma.userSession.create({
+    // If customer has password, use CustomerAuthService.login
+    // Otherwise, create session manually for passwordless login
+    if (existingCustomer?.passwordHash && password) {
+      // Use the auth service for proper login
+      const loginResult = await customerAuthService.login(
+        { email: customerEmail, password },
+        userAgent,
+        ipAddress
+      );
+
+      console.log('✅ [AUTH] Customer logged in via password:', customerId.toString());
+
+      return NextResponse.json(
+        {
+          success: true,
+          data: {
+            accessToken: loginResult.accessToken,
+            refreshToken: loginResult.refreshToken,
+            expiresIn: loginResult.expiresIn,
+            customer: {
+              id: customerId.toString(),
+              email: customerEmail,
+              name: customerName,
+              phone: customerPhone,
+            },
+          },
+          message: 'Login successful',
+          statusCode: 200,
+        },
+        { status: 200 }
+      );
+    }
+
+    // Passwordless login or new registration - create session manually
+    const { generateAccessToken, generateRefreshToken } = await import('@/lib/utils/jwtManager');
+    
+    const sessionDuration = 365 * 24 * 60 * 60; // 1 year in seconds
+    const refreshDuration = sessionDuration * 2;
+
+    const expiresAt = new Date();
+    expiresAt.setSeconds(expiresAt.getSeconds() + sessionDuration);
+
+    const refreshExpiresAt = new Date();
+    refreshExpiresAt.setSeconds(refreshExpiresAt.getSeconds() + refreshDuration);
+
+    const accessToken = generateAccessToken({
+      userId: customerId,
+      sessionId: BigInt(0), // Will update after session creation
+      role: 'CUSTOMER',
+      email: customerEmail,
+    }, sessionDuration);
+
+    const refreshToken = generateRefreshToken({
+      userId: customerId,
+      sessionId: BigInt(0),
+    }, refreshDuration);
+
+    // Create customer session
+    const session = await prisma.customerSession.create({
       data: {
-        userId,
-        token,
+        customerId,
+        token: accessToken,
         deviceInfo: userAgent,
         ipAddress,
         status: 'ACTIVE',
-        expiresAt: new Date(expiresAt),
-        refreshExpiresAt: null,
+        expiresAt,
+        refreshExpiresAt,
       },
     });
 
-    console.log('✅ [AUTH] Session created for customer:', userId.toString(), '- expires:', new Date(expiresAt).toISOString());
+    // Generate final token with correct session ID
+    const finalAccessToken = generateAccessToken({
+      userId: customerId,
+      sessionId: session.id,
+      role: 'CUSTOMER',
+      email: customerEmail,
+    }, sessionDuration);
+
+    // Update session with final token
+    await prisma.customerSession.update({
+      where: { id: session.id },
+      data: { token: finalAccessToken },
+    });
+
+    console.log('✅ [AUTH] Customer session created:', customerId.toString(), '- expires:', expiresAt.toISOString());
 
     return NextResponse.json(
       {
         success: true,
         data: {
-          accessToken: token,
-          expiresAt,
-          user: {
-            id: userId.toString(),
-            email: userEmail,
-            name: userName,
-            phone: userPhone,
-            role: 'CUSTOMER',
+          accessToken: finalAccessToken,
+          refreshToken,
+          expiresIn: sessionDuration,
+          customer: {
+            id: customerId.toString(),
+            email: customerEmail,
+            name: customerName,
+            phone: customerPhone,
           },
         },
-        message: existingUser ? 'Login successful' : 'Account created successfully',
+        message: existingCustomer ? 'Login successful' : 'Account created successfully',
         statusCode: 200,
       },
       { status: 200 }

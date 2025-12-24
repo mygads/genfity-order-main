@@ -1,66 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
 import prisma from '@/lib/db/client';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-
-interface JWTPayload {
-    customerId: string;
-    email: string;
-    name: string;
-    role: string;
-}
+import { withCustomer, CustomerAuthContext } from '@/lib/middleware/auth';
+import { serializeBigInt } from '@/lib/utils/serializer';
 
 /**
  * Customer Profile API
  * GET /api/customer/profile - Get profile
  * PUT /api/customer/profile - Update profile
  * 
- * @security JWT Bearer token required
+ * @security JWT Bearer token required (Customer token)
  */
 
 /**
  * Get customer profile
  */
-export async function GET(request: NextRequest) {
+export const GET = withCustomer(async (
+    _request: NextRequest,
+    context: CustomerAuthContext,
+) => {
     try {
-        // Get token from Authorization header
-        const authHeader = request.headers.get('Authorization');
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    error: 'UNAUTHORIZED',
-                    message: 'Authentication required',
-                    statusCode: 401,
-                },
-                { status: 401 }
-            );
-        }
-
-        const token = authHeader.substring(7);
-
-        // Verify JWT
-        let decoded: JWTPayload;
-        try {
-            decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
-        } catch {
-            return NextResponse.json(
-                {
-                    success: false,
-                    error: 'INVALID_TOKEN',
-                    message: 'Invalid or expired token',
-                    statusCode: 401,
-                },
-                { status: 401 }
-            );
-        }
-
-        // Get user from database
-        const user = await prisma.user.findFirst({
+        // Get customer from database
+        const customer = await prisma.customer.findUnique({
             where: {
-                id: BigInt(decoded.customerId),
-                role: 'CUSTOMER',
+                id: context.customerId,
                 isActive: true,
             },
             select: {
@@ -68,17 +30,17 @@ export async function GET(request: NextRequest) {
                 email: true,
                 name: true,
                 phone: true,
-                profilePictureUrl: true,
                 createdAt: true,
+                lastLoginAt: true,
             },
         });
 
-        if (!user) {
+        if (!customer) {
             return NextResponse.json(
                 {
                     success: false,
-                    error: 'USER_NOT_FOUND',
-                    message: 'User not found',
+                    error: 'CUSTOMER_NOT_FOUND',
+                    message: 'Customer not found',
                     statusCode: 404,
                 },
                 { status: 404 }
@@ -88,14 +50,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json(
             {
                 success: true,
-                data: {
-                    id: user.id.toString(),
-                    email: user.email,
-                    name: user.name,
-                    phone: user.phone,
-                    profilePictureUrl: user.profilePictureUrl,
-                    createdAt: user.createdAt.toISOString(),
-                },
+                data: serializeBigInt(customer),
                 statusCode: 200,
             },
             { status: 200 }
@@ -112,50 +67,21 @@ export async function GET(request: NextRequest) {
             { status: 500 }
         );
     }
-}
+});
 
 /**
  * Update customer profile
  */
-export async function PUT(request: NextRequest) {
+export const PUT = withCustomer(async (
+    request: NextRequest,
+    context: CustomerAuthContext,
+) => {
     try {
-        // Get token from Authorization header
-        const authHeader = request.headers.get('Authorization');
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    error: 'UNAUTHORIZED',
-                    message: 'Authentication required',
-                    statusCode: 401,
-                },
-                { status: 401 }
-            );
-        }
-
-        const token = authHeader.substring(7);
-
-        // Verify JWT
-        let decoded: JWTPayload;
-        try {
-            decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
-        } catch {
-            return NextResponse.json(
-                {
-                    success: false,
-                    error: 'INVALID_TOKEN',
-                    message: 'Invalid or expired token',
-                    statusCode: 401,
-                },
-                { status: 401 }
-            );
-        }
-
         // Parse request body
         const body = await request.json();
-        const { name, email } = body;
+        const { name, email, phone } = body;
 
-        // Validate
+        // Validate name
         if (name && (typeof name !== 'string' || name.trim().length < 1)) {
             return NextResponse.json(
                 {
@@ -168,6 +94,7 @@ export async function PUT(request: NextRequest) {
             );
         }
 
+        // Validate email format
         if (email && (typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))) {
             return NextResponse.json(
                 {
@@ -180,17 +107,17 @@ export async function PUT(request: NextRequest) {
             );
         }
 
-        // Check if email is already used by another user
+        // Check if email is already used by another customer
         if (email) {
             const emailTrimmed = email.trim().toLowerCase();
-            const existingUser = await prisma.user.findFirst({
+            const existingCustomer = await prisma.customer.findFirst({
                 where: {
                     email: emailTrimmed,
-                    id: { not: BigInt(decoded.customerId) },
+                    id: { not: context.customerId },
                 },
             });
 
-            if (existingUser) {
+            if (existingCustomer) {
                 return NextResponse.json(
                     {
                         success: false,
@@ -203,34 +130,30 @@ export async function PUT(request: NextRequest) {
             }
         }
 
-        // Update user
-        const updatedUser = await prisma.user.update({
-            where: { id: BigInt(decoded.customerId) },
+        // Update customer
+        const updatedCustomer = await prisma.customer.update({
+            where: { id: context.customerId },
             data: {
                 ...(name && { name: name.trim() }),
                 ...(email && { email: email.trim().toLowerCase() }),
+                ...(phone !== undefined && { phone: phone?.trim() || null }),
             },
             select: {
                 id: true,
                 email: true,
                 name: true,
                 phone: true,
-                profilePictureUrl: true,
+                createdAt: true,
+                lastLoginAt: true,
             },
         });
 
-        console.log('✅ [PROFILE] Profile updated for:', decoded.customerId);
+        console.log('✅ [PROFILE] Profile updated for customer:', context.customerId.toString());
 
         return NextResponse.json(
             {
                 success: true,
-                data: {
-                    id: updatedUser.id.toString(),
-                    email: updatedUser.email,
-                    name: updatedUser.name,
-                    phone: updatedUser.phone,
-                    profilePictureUrl: updatedUser.profilePictureUrl,
-                },
+                data: serializeBigInt(updatedCustomer),
                 message: 'Profile updated successfully',
                 statusCode: 200,
             },
@@ -248,4 +171,4 @@ export async function PUT(request: NextRequest) {
             { status: 500 }
         );
     }
-}
+});

@@ -17,21 +17,14 @@ async function handleGet(req: NextRequest, context: AuthContext) {
   try {
     const { userId, role } = context;
 
-    // Block CUSTOMER role
-    if (role === 'CUSTOMER') {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'FORBIDDEN',
-          message: 'Customers cannot access admin dashboard',
-          statusCode: 403,
-        },
-        { status: 403 }
-      );
-    }
+    // Note: Customers use separate auth system and cannot access admin routes
+    // The withAuth middleware already validates User roles (not Customer)
 
     // Super Admin Dashboard Data
     if (role === 'SUPER_ADMIN') {
+      // Get customer count from Customer table (separate from User)
+      const totalCustomers = await prisma.customer.count();
+
       const [
         totalMerchants,
         activeMerchants,
@@ -42,7 +35,7 @@ async function handleGet(req: NextRequest, context: AuthContext) {
       ] = await Promise.all([
         prisma.merchant.count(),
         prisma.merchant.count({ where: { isActive: true } }),
-        prisma.user.count({ where: { role: { not: 'CUSTOMER' } } }),
+        prisma.user.count(), // All users are admin/merchant/staff (no CUSTOMER in User table)
         prisma.order.count(),
         prisma.merchant.findMany({
           take: 5,

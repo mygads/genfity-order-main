@@ -187,45 +187,22 @@ export async function POST(req: NextRequest) {
 
     // ========================================
     // STEP 1: Find or create customer (Email-Primary)
+    // Now uses separate Customer table (not User table)
     // ========================================
 
-    // First check if email exists as CUSTOMER
-    let customer = await prisma.user.findFirst({
+    // Find customer by email in Customer table
+    let customer = await prisma.customer.findUnique({
       where: {
         email: body.customerEmail.toLowerCase(),
-        role: 'CUSTOMER',
       },
     });
 
     if (!customer) {
-      // Check if email exists with a different role (admin, owner, staff, etc.)
-      const existingUser = await prisma.user.findFirst({
-        where: {
-          email: body.customerEmail.toLowerCase(),
-        },
-        select: { role: true },
-      });
-
-      if (existingUser) {
-        // Email belongs to non-customer account - reject
-        console.log('⚠️ [ORDER] Email belongs to non-customer account:', existingUser.role);
-        return NextResponse.json(
-          {
-            success: false,
-            error: 'EMAIL_RESERVED',
-            message: 'This email is associated with a merchant account. Please use a different email.',
-            statusCode: 400,
-          },
-          { status: 400 }
-        );
-      }
-
-      // ✅ NEW: Check if phone is already used by another customer with different email
+      // ✅ Check if phone is already used by another customer with different email
       if (body.customerPhone) {
-        const phoneOwner = await prisma.user.findFirst({
+        const phoneOwner = await prisma.customer.findFirst({
           where: {
             phone: body.customerPhone,
-            role: 'CUSTOMER',
             email: { not: body.customerEmail.toLowerCase() },
           },
           select: { email: true },
@@ -253,13 +230,12 @@ export async function POST(req: NextRequest) {
       const hashedPassword = await bcrypt.hash(tempPassword, 10);
 
       try {
-        customer = await prisma.user.create({
+        customer = await prisma.customer.create({
           data: {
             name: body.customerName,
             email: body.customerEmail.toLowerCase(),
             phone: body.customerPhone || null,
             passwordHash: hashedPassword,
-            role: 'CUSTOMER',
             isActive: true,
             mustChangePassword: true, // ✅ Force password change on first login
           },
@@ -287,10 +263,9 @@ export async function POST(req: NextRequest) {
         const prismaError = createError as PrismaError;
         if (prismaError.code === 'P2002') {
           console.log('⚠️ [ORDER] Race condition - fetching existing customer');
-          customer = await prisma.user.findFirst({
+          customer = await prisma.customer.findUnique({
             where: {
               email: body.customerEmail.toLowerCase(),
-              role: 'CUSTOMER',
             },
           });
         } else {
@@ -303,7 +278,7 @@ export async function POST(req: NextRequest) {
       // ✅ Update name/phone if different (keep customer data fresh)
       // Phone can be changed because email is the primary identifier
       if (customer.name !== body.customerName || customer.phone !== (body.customerPhone || null)) {
-        await prisma.user.update({
+        await prisma.customer.update({
           where: { id: customer.id },
           data: {
             name: body.customerName,

@@ -189,7 +189,7 @@ export function getCustomerAuth(): CustomerAuth | null {
     const auth = JSON.parse(data) as CustomerAuth;
     
     // Convert string ID back to bigint
-    auth.user.id = BigInt(auth.user.id);
+    auth.customer.id = BigInt(auth.customer.id);
 
     // Check if token expired
     if (new Date(auth.expiresAt) < new Date()) {
@@ -199,8 +199,8 @@ export function getCustomerAuth(): CustomerAuth | null {
     }
 
     console.log('🔐 [AUTH] Valid auth found:', {
-      userId: auth.user.id.toString(),
-      email: auth.user.email,
+      customerId: auth.customer.id.toString(),
+      email: auth.customer.email,
       expiresAt: new Date(auth.expiresAt).toISOString(),
     });
 
@@ -221,17 +221,17 @@ export function saveCustomerAuth(auth: CustomerAuth): void {
     // Convert bigint to string for JSON serialization
     const serializable = {
       ...auth,
-      user: {
-        ...auth.user,
-        id: auth.user.id.toString(),
+      customer: {
+        ...auth.customer,
+        id: auth.customer.id.toString(),
       },
     };
 
     localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(serializable));
     
     console.log('🔐 [AUTH] Auth saved to localStorage:', {
-      userId: auth.user.id.toString(),
-      email: auth.user.email,
+      customerId: auth.customer.id.toString(),
+      email: auth.customer.email,
       expiresAt: new Date(auth.expiresAt).toISOString(),
     });
 
