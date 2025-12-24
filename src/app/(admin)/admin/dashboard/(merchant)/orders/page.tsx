@@ -158,7 +158,7 @@ export default function MerchantOrdersPage() {
     kanbanRefreshRef.current?.();
   };
 
-  const handleManualRefresh = () => {
+  const _handleManualRefresh = () => {
     // Trigger refresh via ref callback
     kanbanRefreshRef.current?.();
   };

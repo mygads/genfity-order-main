@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { CustomerOrderSkeleton } from '@/components/common/SkeletonLoaders';
 import { FormPageSkeleton } from '@/components/common/SkeletonLoaders';
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import Image from "next/image";
@@ -51,7 +50,7 @@ export default function CreateMenuPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [merchant, setMerchant] = useState<Merchant | null>(null);
+  const [_merchant, setMerchant] = useState<Merchant | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);

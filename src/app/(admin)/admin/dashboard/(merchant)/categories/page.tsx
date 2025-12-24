@@ -3,7 +3,6 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import CategoryDnDList from "@/components/ui/CategoryDnDList";
 import EmptyState from "@/components/ui/EmptyState";
 import { exportCategories } from "@/lib/utils/excelExport";
 import { useSWRStatic } from "@/hooks/useSWRWithAuth";
@@ -408,8 +407,8 @@ export default function MerchantCategoriesPage() {
     setPendingReorder(null);
   };
 
-  // Bulk selection handlers
-  const handleSelectAllCategories = (checked: boolean) => {
+  // Bulk selection handlers (prefixed with _ as they may be used in future features)
+  const _handleSelectAllCategories = (checked: boolean) => {
     if (checked) {
       const allIds = filteredCategories.map(cat => cat.id);
       setSelectedCategories(allIds);
@@ -418,7 +417,7 @@ export default function MerchantCategoriesPage() {
     }
   };
 
-  const handleSelectCategory = (id: string, checked: boolean) => {
+  const _handleSelectCategory = (id: string, checked: boolean) => {
     if (checked) {
       setSelectedCategories(prev => [...prev, id]);
     } else {
@@ -464,7 +463,7 @@ export default function MerchantCategoriesPage() {
     }
   };
 
-  const handleInlineUpdate = async (id: string, field: 'name' | 'description', value: string) => {
+  const _handleInlineUpdate = async (id: string, field: 'name' | 'description', value: string) => {
     try {
       const token = localStorage.getItem("accessToken");
       if (!token) {

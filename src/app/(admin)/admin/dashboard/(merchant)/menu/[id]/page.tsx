@@ -148,15 +148,6 @@ export default function MenuDetailPage() {
     })}`;
   };
 
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return "-";
-    return new Date(dateString).toLocaleDateString("en-AU", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  };
-
   // Note: isPromoActive removed - promo is now managed via SpecialPrice page
 
   if (loading) {

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
@@ -53,11 +53,7 @@ export default function EditSpecialPricePage() {
     const [isActive, setIsActive] = useState(true);
     const [priceItems, setPriceItems] = useState<PriceItem[]>([]);
 
-    useEffect(() => {
-        fetchData();
-    }, [priceId]);
-
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         try {
             const token = localStorage.getItem("accessToken");
             if (!token) {
@@ -116,7 +112,11 @@ export default function EditSpecialPricePage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [priceId, router]);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
 
     const handleMenuBookChange = (bookId: string) => {
         setSelectedMenuBookId(bookId);

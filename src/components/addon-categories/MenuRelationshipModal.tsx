@@ -89,7 +89,7 @@ export default function MenuRelationshipModal({
     });
   };
 
-  const handleNavigateToMenu = (menuId: string) => {
+  const _handleNavigateToMenu = (menuId: string) => {
     router.push(`/admin/dashboard/menu/edit/${menuId}`);
     onClose();
   };

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
@@ -30,11 +30,7 @@ export default function SpecialPricesPage() {
     const [deleting, setDeleting] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
 
-    useEffect(() => {
-        fetchData();
-    }, []);
-
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         try {
             setLoading(true);
             const token = localStorage.getItem("accessToken");
@@ -59,7 +55,11 @@ export default function SpecialPricesPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [router]);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
 
     const handleDelete = async (id: string) => {
         try {

@@ -117,7 +117,7 @@ async function handlePut(
         } = body;
 
         const updated = await prisma.$transaction(async (tx) => {
-            const specialPrice = await tx.specialPrice.update({
+            const _specialPrice = await tx.specialPrice.update({
                 where: { id: BigInt(id) },
                 data: {
                     name: name?.trim() || existing.name,

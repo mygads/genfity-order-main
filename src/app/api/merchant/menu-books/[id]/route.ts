@@ -112,7 +112,7 @@ async function handlePut(
         const { name, description, isActive, menuIds } = body;
 
         const updated = await prisma.$transaction(async (tx) => {
-            const menuBook = await tx.menuBook.update({
+            const _menuBook = await tx.menuBook.update({
                 where: { id: BigInt(id) },
                 data: {
                     name: name?.trim() || existing.name,

@@ -167,7 +167,7 @@ export default function ViewAddonItemsModal({
   };
 
   // Action handlers with optimistic updates
-  const handleToggleActive = async (id: string) => {
+  const _handleToggleActive = async (id: string) => {
     // Optimistic update - toggle status immediately
     setSortedItems(prev => prev.map(item =>
       item.id === id ? { ...item, isActive: !item.isActive } : item
@@ -222,7 +222,7 @@ export default function ViewAddonItemsModal({
     }
   };
 
-  const handleSetOutOfStock = async (id: string, name: string) => {
+  const _handleSetOutOfStock = async (id: string, name: string) => {
     if (!confirm(`Set "${name}" to out of stock?`)) return;
 
     try {
@@ -275,7 +275,7 @@ export default function ViewAddonItemsModal({
   };
 
   // Inline edit handlers
-  const handleStartEdit = (item: AddonItem) => {
+  const _handleStartEdit = (item: AddonItem) => {
     setEditingItemId(item.id);
     setEditData({
       name: item.name,
@@ -283,12 +283,12 @@ export default function ViewAddonItemsModal({
     });
   };
 
-  const handleCancelEdit = () => {
+  const _handleCancelEdit = () => {
     setEditingItemId(null);
     setEditData({ name: "", price: "" });
   };
 
-  const handleSaveEdit = async (itemId: string) => {
+  const _handleSaveEdit = async (itemId: string) => {
     // Optimistic update - update item immediately
     setSortedItems(prev => prev.map(item =>
       item.id === itemId

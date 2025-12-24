@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
@@ -27,11 +27,7 @@ export default function MenuBooksPage() {
     const [deleting, setDeleting] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
 
-    useEffect(() => {
-        fetchMenuBooks();
-    }, []);
-
-    const fetchMenuBooks = async () => {
+    const fetchMenuBooks = useCallback(async () => {
         try {
             setLoading(true);
             const token = localStorage.getItem("accessToken");
@@ -56,7 +52,11 @@ export default function MenuBooksPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [router]);
+
+    useEffect(() => {
+        fetchMenuBooks();
+    }, [fetchMenuBooks]);
 
     const handleDelete = async (id: string) => {
         try {

@@ -23,7 +23,7 @@ async function handleGet(req: NextRequest, context: AuthContext) {
     // Super Admin Dashboard Data
     if (role === 'SUPER_ADMIN') {
       // Get customer count from Customer table (separate from User)
-      const totalCustomers = await prisma.customer.count();
+      const _totalCustomers = await prisma.customer.count();
 
       const [
         totalMerchants,

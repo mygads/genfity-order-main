@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
@@ -49,11 +49,7 @@ export default function CreateSpecialPricePage() {
     const [endTime, setEndTime] = useState("23:59");
     const [priceItems, setPriceItems] = useState<PriceItem[]>([]);
 
-    useEffect(() => {
-        fetchMenuBooks();
-    }, []);
-
-    const fetchMenuBooks = async () => {
+    const fetchMenuBooks = useCallback(async () => {
         try {
             const token = localStorage.getItem("accessToken");
             if (!token) {
@@ -75,7 +71,11 @@ export default function CreateSpecialPricePage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [router]);
+
+    useEffect(() => {
+        fetchMenuBooks();
+    }, [fetchMenuBooks]);
 
     const handleMenuBookChange = (bookId: string) => {
         setSelectedMenuBookId(bookId);

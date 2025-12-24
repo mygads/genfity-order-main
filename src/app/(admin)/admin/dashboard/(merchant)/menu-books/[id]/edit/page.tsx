@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
@@ -28,11 +28,7 @@ export default function EditMenuBookPage() {
     const [selectedMenuIds, setSelectedMenuIds] = useState<string[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
 
-    useEffect(() => {
-        fetchData();
-    }, [bookId]);
-
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         try {
             const token = localStorage.getItem("accessToken");
             if (!token) {
@@ -70,7 +66,11 @@ export default function EditMenuBookPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [bookId, router]);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
 
     const filteredMenus = useMemo(() => {
         if (!searchQuery.trim()) return menus;
