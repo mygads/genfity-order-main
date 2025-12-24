@@ -120,6 +120,28 @@ function isWithinSchedule(scheduleStart?: string | null, scheduleEnd?: string | 
 }
 
 /**
+ * Check if store is currently open based on opening hours
+ */
+function isStoreOpen(openingHours: OpeningHour[]): boolean {
+  if (!openingHours || openingHours.length === 0) return true;
+
+  const now = new Date();
+  const dayOfWeek = now.getDay();
+  const currentTime = now.toTimeString().slice(0, 5);
+
+  const todayHours = openingHours.find(h => h.dayOfWeek === dayOfWeek);
+
+  if (!todayHours) return false;
+  if (todayHours.isClosed) return false;
+
+  if (todayHours.openTime && todayHours.closeTime) {
+    return currentTime >= todayHours.openTime && currentTime <= todayHours.closeTime;
+  }
+
+  return true;
+}
+
+/**
  * ✅ ISR + Client Polling: Menu Browse Page
  * 
  * @architecture
@@ -223,11 +245,19 @@ export default function OrderClientPage({
   };
 
   // ========================================
-  // Validate Mode & Redirect if Not Enabled
+  // Validate Store Open & Mode Availability
   // ========================================
   useEffect(() => {
     if (!merchantInfo) return;
     
+    // First check if store is open
+    const storeOpen = isStoreOpen(merchantInfo.openingHours);
+    if (!storeOpen) {
+      // Store is closed, redirect to merchant page (shows closed UI)
+      router.replace(`/${merchantCode}`);
+      return;
+    }
+
     const isDineInEnabled = merchantInfo.isDineInEnabled ?? true;
     const isTakeawayEnabled = merchantInfo.isTakeawayEnabled ?? true;
 
