@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
-import Link from "next/link";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
+import AdminFormFooter from "@/components/common/AdminFormFooter";
 import { FormPageSkeleton } from '@/components/common/SkeletonLoaders';
 import Image from "next/image";
 import ManageMenuAddonCategoriesModal from "@/components/menu/ManageMenuAddonCategoriesModal";
@@ -902,49 +902,15 @@ export default function EditMenuPage() {
             )}
           </div>
 
-          {/* Action Buttons */}
-          <div className="mt-8 flex items-center justify-end gap-4 border-t border-gray-200 pt-6 dark:border-gray-800">
-            <Link
-              href="/admin/dashboard/menu"
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-6 text-sm font-medium text-gray-700 transition-all hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-            >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-              Back
-            </Link>
-            {hasChanges() ? (
-              <button
-                type="submit"
-                disabled={submitting}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary-500 px-6 text-sm font-medium text-white shadow-lg shadow-primary-500/25 transition-all hover:bg-primary-600 hover:shadow-primary-500/30 focus:outline-none focus:ring-4 focus:ring-primary-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {submitting ? (
-                  <>
-                    <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    Updating...
-                  </>
-                ) : (
-                  <>
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    Update Menu Item
-                  </>
-                )}
-              </button>
-            ) : (
-              <span className="inline-flex h-11 items-center gap-2 rounded-xl bg-gray-100 px-6 text-sm font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400">
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                No changes
-              </span>
-            )}
-          </div>
+          {/* Fixed Footer */}
+          <AdminFormFooter
+            onCancel={() => router.push("/admin/dashboard/menu")}
+            isSubmitting={submitting}
+            submitLabel="Update Menu Item"
+            submittingLabel="Updating..."
+            cancelLabel="Back"
+            disabled={!hasChanges()}
+          />
         </form>
       </div>
 

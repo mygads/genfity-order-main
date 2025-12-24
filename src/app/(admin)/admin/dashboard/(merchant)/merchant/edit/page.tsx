@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
+import AdminFormFooter from "@/components/common/AdminFormFooter";
+import TabsNavigation from "@/components/common/TabsNavigation";
 import { useToast } from "@/hooks/useToast";
 import ToastContainer from "@/components/ui/ToastContainer";
 import { COUNTRIES, CURRENCIES, TIMEZONES } from "@/lib/constants/location";
@@ -54,9 +56,19 @@ interface OpeningHour {
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
+// Tab configuration
+const TABS = [
+  { id: "basic", label: "Basic Info" },
+  { id: "sale-modes", label: "Sale Modes" },
+  { id: "fees", label: "Fees & Charges" },
+  { id: "location", label: "Location" },
+  { id: "hours", label: "Opening Hours" },
+];
+
 /**
  * Edit Merchant Page for Merchant Owner/Staff
  * Allows merchant owners to edit their own merchant information
+ * Organized into tabs for better UX
  */
 export default function EditMerchantPage() {
   const router = useRouter();
@@ -68,6 +80,7 @@ export default function EditMerchantPage() {
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
+  const [activeTab, setActiveTab] = useState("basic");
 
   const [formData, setFormData] = useState<MerchantFormData>({
     name: "",
@@ -114,12 +127,11 @@ export default function EditMerchantPage() {
 
   useEffect(() => {
     fetchMerchant();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchMerchant = async () => {
     try {
-      setLoading(true);
       const token = localStorage.getItem("accessToken");
       if (!token) {
         router.push("/admin/login");
@@ -132,20 +144,20 @@ export default function EditMerchantPage() {
         },
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error("Failed to fetch merchant");
+        throw new Error(data.message || "Failed to fetch merchant");
       }
 
-      const data = await response.json();
-      const merchant = data.data?.merchant || data.data;
-
+      const merchant = data.data;
       setFormData({
         name: merchant.name || "",
         code: merchant.code || "",
         description: merchant.description || "",
         address: merchant.address || "",
         email: merchant.email || "",
-        phoneNumber: merchant.phone || "",
+        phoneNumber: merchant.phoneNumber || "",
         logoUrl: merchant.logoUrl || "",
         bannerUrl: merchant.bannerUrl || "",
         country: merchant.country || "Australia",
@@ -371,6 +383,653 @@ export default function EditMerchantPage() {
     }
   };
 
+  // ==================== TAB CONTENT COMPONENTS ====================
+
+  /**
+   * Basic Info Tab - Logo, banner, name, contact info, description
+   */
+  const BasicInfoTab = () => (
+    <div className="space-y-6">
+      {/* Logo Upload */}
+      <div>
+        <label className="mb-3 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Store Logo
+        </label>
+        <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
+          Square image (1:1 ratio). Displayed on mode selection page and header.
+        </p>
+        <div className="flex items-center gap-5">
+          <div className="relative h-20 w-20 overflow-hidden rounded-lg border-2 border-gray-200 dark:border-gray-700">
+            {formData.logoUrl ? (
+              <Image
+                src={formData.logoUrl}
+                alt={formData.name}
+                fill
+                className="object-cover"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center bg-brand-100 text-xl font-bold text-brand-600 dark:bg-brand-900/20 dark:text-brand-400">
+                {formData.name.charAt(0).toUpperCase()}
+              </div>
+            )}
+          </div>
+          <div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleLogoUpload}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="inline-flex h-9 items-center rounded-lg bg-gray-100 px-4 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+            >
+              {uploading ? 'Uploading...' : 'Change Logo'}
+            </button>
+            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              All image formats supported. Max 5MB
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Banner Upload */}
+      <div>
+        <label className="mb-3 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Store Banner
+        </label>
+        <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
+          Wide image (2:1 ratio recommended). Displayed at the top of order page.
+        </p>
+        <div className="flex flex-col gap-3">
+          <div className="relative h-32 w-full overflow-hidden rounded-lg border-2 border-gray-200 dark:border-gray-700">
+            {formData.bannerUrl ? (
+              <Image
+                src={formData.bannerUrl}
+                alt={`${formData.name} banner`}
+                fill
+                className="object-cover"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center bg-gray-100 dark:bg-gray-800">
+                <div className="text-center">
+                  <svg className="mx-auto h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">No banner uploaded</p>
+                </div>
+              </div>
+            )}
+          </div>
+          <div>
+            <input
+              ref={bannerInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleBannerUpload}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => bannerInputRef.current?.click()}
+              disabled={uploadingBanner}
+              className="inline-flex h-9 items-center rounded-lg bg-gray-100 px-4 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+            >
+              {uploadingBanner ? 'Uploading...' : 'Change Banner'}
+            </button>
+            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              All image formats supported. Max 5MB. Recommended: 800x400px (2:1)
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Merchant Code (read-only) */}
+      <div>
+        <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Merchant Code
+        </label>
+        <input
+          type="text"
+          name="code"
+          value={formData.code}
+          disabled
+          className="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-gray-500 dark:border-gray-800 dark:bg-gray-900/50 dark:text-gray-400"
+        />
+        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Cannot be changed</p>
+      </div>
+
+      {/* Store Name */}
+      <div>
+        <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Store Name <span className="text-red-500">*</span>
+        </label>
+        <input
+          type="text"
+          name="name"
+          value={formData.name}
+          onChange={handleChange}
+          required
+          className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+        />
+      </div>
+
+      {/* Email & Phone Grid */}
+      <div className="grid gap-5 md:grid-cols-2">
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Email <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="email"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            required
+            className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+          />
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Phone Number <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="tel"
+            name="phoneNumber"
+            value={formData.phoneNumber}
+            onChange={handleChange}
+            required
+            className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+          />
+        </div>
+      </div>
+
+      {/* Description */}
+      <div>
+        <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Description
+        </label>
+        <textarea
+          name="description"
+          value={formData.description}
+          onChange={handleChange}
+          rows={3}
+          className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+        />
+      </div>
+    </div>
+  );
+
+  /**
+   * Sale Modes Tab - Dine in, Takeaway toggles, labels, schedules, tables
+   */
+  const SaleModesTab = () => (
+    <div className="space-y-6">
+      <p className="text-sm text-gray-500 dark:text-gray-400">
+        Configure which ordering modes are available for customers. At least one mode must be enabled.
+      </p>
+
+      {/* Mode Toggles */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {/* Dine In Toggle */}
+        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">Dine In</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Allow customers to order for eating at your place</p>
+            </div>
+            <label className="relative inline-flex cursor-pointer items-center">
+              <input
+                type="checkbox"
+                checked={formData.isDineInEnabled}
+                onChange={(e) => {
+                  if (!e.target.checked && !formData.isTakeawayEnabled) {
+                    showError("Error", "At least one sale mode must be enabled");
+                    return;
+                  }
+                  setFormData(prev => ({ ...prev, isDineInEnabled: e.target.checked }));
+                }}
+                className="peer sr-only"
+              />
+              <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
+            </label>
+          </div>
+        </div>
+
+        {/* Takeaway Toggle */}
+        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">Takeaway / Pick Up</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Allow customers to order for takeaway</p>
+            </div>
+            <label className="relative inline-flex cursor-pointer items-center">
+              <input
+                type="checkbox"
+                checked={formData.isTakeawayEnabled}
+                onChange={(e) => {
+                  if (!e.target.checked && !formData.isDineInEnabled) {
+                    showError("Error", "At least one sale mode must be enabled");
+                    return;
+                  }
+                  setFormData(prev => ({ ...prev, isTakeawayEnabled: e.target.checked }));
+                }}
+                className="peer sr-only"
+              />
+              <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
+            </label>
+          </div>
+        </div>
+      </div>
+
+      {/* Custom Labels */}
+      <div>
+        <h4 className="mb-3 text-sm font-medium text-gray-900 dark:text-white">Custom Button Labels</h4>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Dine In Button Label
+            </label>
+            <input
+              type="text"
+              value={formData.dineInLabel}
+              onChange={(e) => setFormData(prev => ({ ...prev, dineInLabel: e.target.value }))}
+              placeholder="Dine In"
+              className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+            />
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Leave empty to use default</p>
+          </div>
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Takeaway Button Label
+            </label>
+            <input
+              type="text"
+              value={formData.takeawayLabel}
+              onChange={(e) => setFormData(prev => ({ ...prev, takeawayLabel: e.target.value }))}
+              placeholder="Takeaway"
+              className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+            />
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Leave empty to use default</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Mode Schedules */}
+      <div className="space-y-4">
+        <div>
+          <h4 className="text-sm font-medium text-gray-900 dark:text-white">Mode Schedules</h4>
+          <p className="text-xs text-gray-500 dark:text-gray-400">Set time ranges when each mode is available. Leave empty for 24/7 availability.</p>
+        </div>
+        
+        {/* Dine In Schedule */}
+        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
+          <p className="mb-3 text-sm font-medium text-gray-700 dark:text-gray-300">Dine In Available Hours</p>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="mb-1 block text-xs text-gray-500 dark:text-gray-400">From</label>
+              <input
+                type="time"
+                value={formData.dineInScheduleStart}
+                onChange={(e) => setFormData(prev => ({ ...prev, dineInScheduleStart: e.target.value }))}
+                className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-gray-500 dark:text-gray-400">To</label>
+              <input
+                type="time"
+                value={formData.dineInScheduleEnd}
+                onChange={(e) => setFormData(prev => ({ ...prev, dineInScheduleEnd: e.target.value }))}
+                className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Takeaway Schedule */}
+        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
+          <p className="mb-3 text-sm font-medium text-gray-700 dark:text-gray-300">Takeaway Available Hours</p>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="mb-1 block text-xs text-gray-500 dark:text-gray-400">From</label>
+              <input
+                type="time"
+                value={formData.takeawayScheduleStart}
+                onChange={(e) => setFormData(prev => ({ ...prev, takeawayScheduleStart: e.target.value }))}
+                className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-gray-500 dark:text-gray-400">To</label>
+              <input
+                type="time"
+                value={formData.takeawayScheduleEnd}
+                onChange={(e) => setFormData(prev => ({ ...prev, takeawayScheduleEnd: e.target.value }))}
+                className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Total Tables */}
+      <div>
+        <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Total Tables
+        </label>
+        <input
+          type="number"
+          min="0"
+          max="999"
+          value={formData.totalTables ?? ""}
+          onChange={(e) => setFormData(prev => ({ ...prev, totalTables: e.target.value ? parseInt(e.target.value) : null }))}
+          placeholder="e.g. 20"
+          className="h-10 w-full max-w-[200px] rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+        />
+        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Number of tables for QR code generation. Leave empty if not applicable.</p>
+      </div>
+    </div>
+  );
+
+  /**
+   * Fees & Charges Tab - Tax, service charge, packaging fee
+   */
+  const FeesTab = () => (
+    <div className="space-y-6">
+      <p className="text-sm text-gray-500 dark:text-gray-400">
+        Configure tax, service charge, and packaging fee for your orders.
+      </p>
+
+      {/* Tax Settings */}
+      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <p className="text-sm font-medium text-gray-900 dark:text-white">Enable Tax</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Apply tax percentage to all orders</p>
+          </div>
+          <label className="relative inline-flex cursor-pointer items-center">
+            <input
+              type="checkbox"
+              checked={formData.enableTax}
+              onChange={(e) => setFormData(prev => ({ ...prev, enableTax: e.target.checked }))}
+              className="peer sr-only"
+            />
+            <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
+          </label>
+        </div>
+        {formData.enableTax && (
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Tax Percentage (%)
+            </label>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              value={formData.taxPercentage}
+              onChange={(e) => setFormData(prev => ({ ...prev, taxPercentage: parseFloat(e.target.value) || 0 }))}
+              className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+              placeholder="e.g. 10"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Service Charge Settings */}
+      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <p className="text-sm font-medium text-gray-900 dark:text-white">Enable Service Charge</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Apply service charge percentage to all orders</p>
+          </div>
+          <label className="relative inline-flex cursor-pointer items-center">
+            <input
+              type="checkbox"
+              checked={formData.enableServiceCharge}
+              onChange={(e) => setFormData(prev => ({ ...prev, enableServiceCharge: e.target.checked }))}
+              className="peer sr-only"
+            />
+            <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
+          </label>
+        </div>
+        {formData.enableServiceCharge && (
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Service Charge Percentage (%)
+            </label>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              value={formData.serviceChargePercent}
+              onChange={(e) => setFormData(prev => ({ ...prev, serviceChargePercent: parseFloat(e.target.value) || 0 }))}
+              className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+              placeholder="e.g. 5"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Packaging Fee Settings */}
+      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <p className="text-sm font-medium text-gray-900 dark:text-white">Enable Packaging Fee</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Apply fixed packaging fee for takeaway orders only</p>
+          </div>
+          <label className="relative inline-flex cursor-pointer items-center">
+            <input
+              type="checkbox"
+              checked={formData.enablePackagingFee}
+              onChange={(e) => setFormData(prev => ({ ...prev, enablePackagingFee: e.target.checked }))}
+              className="peer sr-only"
+            />
+            <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
+          </label>
+        </div>
+        {formData.enablePackagingFee && (
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Packaging Fee Amount ({formData.currency === 'AUD' ? 'A$' : formData.currency})
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={formData.packagingFeeAmount}
+              onChange={(e) => setFormData(prev => ({ ...prev, packagingFeeAmount: parseFloat(e.target.value) || 0 }))}
+              className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+              placeholder="e.g. 2.00"
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  /**
+   * Location Tab - Address, country, currency, timezone, map
+   */
+  const LocationTab = () => (
+    <div className="space-y-6">
+      {/* Address */}
+      <div>
+        <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Address <span className="text-red-500">*</span>
+        </label>
+        <textarea
+          name="address"
+          value={formData.address}
+          onChange={handleChange}
+          required
+          rows={2}
+          className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+        />
+      </div>
+
+      {/* Regional Settings */}
+      <div className="grid gap-5 md:grid-cols-3">
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Country <span className="text-red-500">*</span>
+          </label>
+          <select
+            name="country"
+            value={formData.country}
+            onChange={handleChange}
+            required
+            className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+          >
+            {COUNTRIES.map((country) => (
+              <option key={country.value} value={country.value}>
+                {country.flag} {country.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Currency <span className="text-red-500">*</span>
+          </label>
+          <select
+            name="currency"
+            value={formData.currency}
+            onChange={handleChange}
+            required
+            className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+          >
+            {CURRENCIES.map((currency) => (
+              <option key={currency.value} value={currency.value}>
+                {currency.symbol} {currency.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Timezone <span className="text-red-500">*</span>
+          </label>
+          <select
+            name="timezone"
+            value={formData.timezone}
+            onChange={handleChange}
+            required
+            className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+          >
+            {TIMEZONES.map((tz) => (
+              <option key={tz.value} value={tz.value}>
+                {tz.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Map Location Picker */}
+      <div>
+        <h4 className="mb-3 text-sm font-medium text-gray-900 dark:text-white">
+          Store Location on Map
+        </h4>
+        <p className="mb-3 text-sm text-gray-500 dark:text-gray-400">
+          Set your store&apos;s location for customers to find and navigate to your store.
+        </p>
+        <MapLocationPicker
+          latitude={formData.latitude}
+          longitude={formData.longitude}
+          onLocationChange={(lat, lng) => {
+            setFormData(prev => ({
+              ...prev,
+              latitude: lat,
+              longitude: lng,
+            }));
+          }}
+          height="350px"
+        />
+      </div>
+    </div>
+  );
+
+  /**
+   * Opening Hours Tab - 7-day schedule
+   */
+  const OpeningHoursTab = () => (
+    <div className="space-y-4">
+      <p className="text-sm text-gray-500 dark:text-gray-400">
+        Set your store&apos;s operating hours for each day of the week.
+      </p>
+      <div className="space-y-2">
+        {openingHours.map((hour) => (
+          <div
+            key={hour.dayOfWeek}
+            className="flex items-center gap-4 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-900/50"
+          >
+            <div className="w-24 text-sm font-medium text-gray-900 dark:text-white">
+              {DAYS[hour.dayOfWeek]}
+            </div>
+
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={hour.isClosed}
+                onChange={(e) => handleOpeningHourChange(hour.dayOfWeek, 'isClosed', e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+              />
+              <span className="text-sm text-gray-500 dark:text-gray-400">Closed</span>
+            </label>
+
+            {!hour.isClosed && (
+              <div className="flex flex-1 items-center gap-3">
+                <input
+                  type="time"
+                  value={hour.openTime}
+                  onChange={(e) => handleOpeningHourChange(hour.dayOfWeek, 'openTime', e.target.value)}
+                  className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                />
+                <span className="text-gray-400">—</span>
+                <input
+                  type="time"
+                  value={hour.closeTime}
+                  onChange={(e) => handleOpeningHourChange(hour.dayOfWeek, 'closeTime', e.target.value)}
+                  className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                />
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  // ==================== RENDER ACTIVE TAB CONTENT ====================
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case "basic":
+        return <BasicInfoTab />;
+      case "sale-modes":
+        return <SaleModesTab />;
+      case "fees":
+        return <FeesTab />;
+      case "location":
+        return <LocationTab />;
+      case "hours":
+        return <OpeningHoursTab />;
+      default:
+        return <BasicInfoTab />;
+    }
+  };
+
+  // ==================== LOADING STATE ====================
+
   if (loading) {
     return (
       <div>
@@ -383,648 +1042,46 @@ export default function EditMerchantPage() {
     );
   }
 
+  // ==================== MAIN RENDER ====================
+
   return (
     <div>
       <ToastContainer toasts={toasts} />
       <PageBreadcrumb pageTitle="Edit Merchant" />
 
-      <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/3">
-        <div className="mb-6 border-b border-gray-200 pb-5 dark:border-gray-800">
+      <div className="mt-6 rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/3">
+        {/* Header */}
+        <div className="border-b border-gray-200 p-6 dark:border-gray-800">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
             Merchant Information
           </h2>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Update your store details and regional settings
+            Update your store details and settings
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Basic Information */}
-          <div className="space-y-5">
-            {/* Logo Upload */}
-            <div>
-              <label className="mb-3 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Store Logo
-              </label>
-              <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
-                Square image (1:1 ratio). Displayed on mode selection page and header.
-              </p>
-              <div className="flex items-center gap-5">
-                <div className="relative h-20 w-20 overflow-hidden rounded-lg border-2 border-gray-200 dark:border-gray-700">
-                  {formData.logoUrl ? (
-                    <Image
-                      src={formData.logoUrl}
-                      alt={formData.name}
-                      fill
-                      className="object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-brand-100 text-xl font-bold text-brand-600 dark:bg-brand-900/20 dark:text-brand-400">
-                      {formData.name.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleLogoUpload}
-                    className="hidden"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploading}
-                    className="inline-flex h-9 items-center rounded-lg bg-gray-100 px-4 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                  >
-                    {uploading ? 'Uploading...' : 'Change Logo'}
-                  </button>
-                  <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                    All image formats supported. Max 5MB
-                  </p>
-                </div>
-              </div>
-            </div>
+        {/* Tabs Navigation */}
+        <div className="px-6 pt-4">
+          <TabsNavigation
+            tabs={TABS}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+          />
+        </div>
 
-            {/* Banner Upload */}
-            <div>
-              <label className="mb-3 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Store Banner
-              </label>
-              <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
-                Wide image (2:1 ratio recommended). Displayed at the top of order page.
-              </p>
-              <div className="flex flex-col gap-3">
-                <div className="relative h-32 w-full overflow-hidden rounded-lg border-2 border-gray-200 dark:border-gray-700">
-                  {formData.bannerUrl ? (
-                    <Image
-                      src={formData.bannerUrl}
-                      alt={`${formData.name} banner`}
-                      fill
-                      className="object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-gray-100 dark:bg-gray-800">
-                      <div className="text-center">
-                        <svg className="mx-auto h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">No banner uploaded</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <input
-                    ref={bannerInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleBannerUpload}
-                    className="hidden"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => bannerInputRef.current?.click()}
-                    disabled={uploadingBanner}
-                    className="inline-flex h-9 items-center rounded-lg bg-gray-100 px-4 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                  >
-                    {uploadingBanner ? 'Uploading...' : 'Change Banner'}
-                  </button>
-                  <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                    All image formats supported. Max 5MB. Recommended: 800x400px (2:1)
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Merchant Code */}
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Merchant Code
-              </label>
-              <input
-                type="text"
-                name="code"
-                value={formData.code}
-                disabled
-                className="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-gray-500 dark:border-gray-800 dark:bg-gray-900/50 dark:text-gray-400"
-              />
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Cannot be changed</p>
-            </div>
-
-            {/* Store Name */}
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Store Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                required
-                className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
-              />
-            </div>
-
-            {/* Email & Phone Grid */}
-            <div className="grid gap-5 md:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Email <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                  className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Phone Number <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="tel"
-                  name="phoneNumber"
-                  value={formData.phoneNumber}
-                  onChange={handleChange}
-                  required
-                  className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
-                />
-              </div>
-            </div>
-
-            {/* Address */}
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Address <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                name="address"
-                value={formData.address}
-                onChange={handleChange}
-                required
-                rows={2}
-                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
-              />
-            </div>
-
-            {/* Description */}
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Description
-              </label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                rows={2}
-                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
-              />
-            </div>
+        {/* Tab Content */}
+        <form onSubmit={handleSubmit}>
+          <div className="p-6">
+            {renderTabContent()}
           </div>
 
-          {/* Regional Settings */}
-          <div className="space-y-5 border-t border-gray-200 pt-6 dark:border-gray-800">
-            <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-              Regional Settings
-            </h3>
-            <div className="grid gap-5 md:grid-cols-3">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Country <span className="text-red-500">*</span>
-                </label>
-                <select
-                  name="country"
-                  value={formData.country}
-                  onChange={handleChange}
-                  required
-                  className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
-                >
-                  {COUNTRIES.map((country) => (
-                    <option key={country.value} value={country.value}>
-                      {country.flag} {country.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Currency <span className="text-red-500">*</span>
-                </label>
-                <select
-                  name="currency"
-                  value={formData.currency}
-                  onChange={handleChange}
-                  required
-                  className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
-                >
-                  {CURRENCIES.map((currency) => (
-                    <option key={currency.value} value={currency.value}>
-                      {currency.symbol} {currency.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Timezone <span className="text-red-500">*</span>
-                </label>
-                <select
-                  name="timezone"
-                  value={formData.timezone}
-                  onChange={handleChange}
-                  required
-                  className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
-                >
-                  {TIMEZONES.map((tz) => (
-                    <option key={tz.value} value={tz.value}>
-                      {tz.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Sale Modes */}
-          <div className="space-y-5 border-t border-gray-200 pt-6 dark:border-gray-800">
-            <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-              Sale Modes
-            </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Configure which ordering modes are available for customers. At least one mode must be enabled.
-            </p>
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {/* Dine In Toggle */}
-              <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">Dine In</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Allow customers to order for eating at your place</p>
-                  </div>
-                  <label className="relative inline-flex cursor-pointer items-center">
-                    <input
-                      type="checkbox"
-                      checked={formData.isDineInEnabled}
-                      onChange={(e) => {
-                        // Prevent disabling both modes
-                        if (!e.target.checked && !formData.isTakeawayEnabled) {
-                          showError("Error", "At least one sale mode must be enabled");
-                          return;
-                        }
-                        setFormData(prev => ({ ...prev, isDineInEnabled: e.target.checked }));
-                      }}
-                      className="peer sr-only"
-                    />
-                    <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
-                  </label>
-                </div>
-              </div>
-
-              {/* Takeaway Toggle */}
-              <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">Takeaway / Pick Up</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Allow customers to order for takeaway</p>
-                  </div>
-                  <label className="relative inline-flex cursor-pointer items-center">
-                    <input
-                      type="checkbox"
-                      checked={formData.isTakeawayEnabled}
-                      onChange={(e) => {
-                        // Prevent disabling both modes
-                        if (!e.target.checked && !formData.isDineInEnabled) {
-                          showError("Error", "At least one sale mode must be enabled");
-                          return;
-                        }
-                        setFormData(prev => ({ ...prev, isTakeawayEnabled: e.target.checked }));
-                      }}
-                      className="peer sr-only"
-                    />
-                    <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            {/* Custom Labels */}
-            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Dine In Button Label
-                </label>
-                <input
-                  type="text"
-                  value={formData.dineInLabel}
-                  onChange={(e) => setFormData(prev => ({ ...prev, dineInLabel: e.target.value }))}
-                  placeholder="Dine In"
-                  className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
-                />
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Leave empty to use default</p>
-              </div>
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Takeaway Button Label
-                </label>
-                <input
-                  type="text"
-                  value={formData.takeawayLabel}
-                  onChange={(e) => setFormData(prev => ({ ...prev, takeawayLabel: e.target.value }))}
-                  placeholder="Takeaway"
-                  className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
-                />
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Leave empty to use default</p>
-              </div>
-            </div>
-
-            {/* Mode Schedules */}
-            <div className="mt-4 space-y-4">
-              <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">Mode Schedules</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Set time ranges when each mode is available. Leave empty for 24/7 availability.</p>
-              </div>
-              
-              {/* Dine In Schedule */}
-              <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
-                <p className="mb-3 text-sm font-medium text-gray-700 dark:text-gray-300">Dine In Available Hours</p>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="mb-1 block text-xs text-gray-500 dark:text-gray-400">From</label>
-                    <input
-                      type="time"
-                      value={formData.dineInScheduleStart}
-                      onChange={(e) => setFormData(prev => ({ ...prev, dineInScheduleStart: e.target.value }))}
-                      className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs text-gray-500 dark:text-gray-400">To</label>
-                    <input
-                      type="time"
-                      value={formData.dineInScheduleEnd}
-                      onChange={(e) => setFormData(prev => ({ ...prev, dineInScheduleEnd: e.target.value }))}
-                      className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Takeaway Schedule */}
-              <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
-                <p className="mb-3 text-sm font-medium text-gray-700 dark:text-gray-300">Takeaway Available Hours</p>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="mb-1 block text-xs text-gray-500 dark:text-gray-400">From</label>
-                    <input
-                      type="time"
-                      value={formData.takeawayScheduleStart}
-                      onChange={(e) => setFormData(prev => ({ ...prev, takeawayScheduleStart: e.target.value }))}
-                      className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs text-gray-500 dark:text-gray-400">To</label>
-                    <input
-                      type="time"
-                      value={formData.takeawayScheduleEnd}
-                      onChange={(e) => setFormData(prev => ({ ...prev, takeawayScheduleEnd: e.target.value }))}
-                      className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Total Tables */}
-            <div className="mt-4">
-              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Total Tables
-              </label>
-              <input
-                type="number"
-                min="0"
-                max="999"
-                value={formData.totalTables ?? ""}
-                onChange={(e) => setFormData(prev => ({ ...prev, totalTables: e.target.value ? parseInt(e.target.value) : null }))}
-                placeholder="e.g. 20"
-                className="h-10 w-full max-w-[200px] rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
-              />
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Number of tables for QR code generation. Leave empty if not applicable.</p>
-            </div>
-          </div>
-
-          {/* Fees & Charges */}
-          <div className="space-y-5 border-t border-gray-200 pt-6 dark:border-gray-800">
-            <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-              Fees & Charges
-            </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Configure tax, service charge, and packaging fee for your orders.
-            </p>
-
-            {/* Tax Settings */}
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">Enable Tax</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Apply tax percentage to all orders</p>
-                </div>
-                <label className="relative inline-flex cursor-pointer items-center">
-                  <input
-                    type="checkbox"
-                    checked={formData.enableTax}
-                    onChange={(e) => setFormData(prev => ({ ...prev, enableTax: e.target.checked }))}
-                    className="peer sr-only"
-                  />
-                  <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
-                </label>
-              </div>
-              {formData.enableTax && (
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Tax Percentage (%)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.01"
-                    value={formData.taxPercentage}
-                    onChange={(e) => setFormData(prev => ({ ...prev, taxPercentage: parseFloat(e.target.value) || 0 }))}
-                    className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
-                    placeholder="e.g. 10"
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Service Charge Settings */}
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">Enable Service Charge</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Apply service charge percentage to all orders</p>
-                </div>
-                <label className="relative inline-flex cursor-pointer items-center">
-                  <input
-                    type="checkbox"
-                    checked={formData.enableServiceCharge}
-                    onChange={(e) => setFormData(prev => ({ ...prev, enableServiceCharge: e.target.checked }))}
-                    className="peer sr-only"
-                  />
-                  <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
-                </label>
-              </div>
-              {formData.enableServiceCharge && (
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Service Charge Percentage (%)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.01"
-                    value={formData.serviceChargePercent}
-                    onChange={(e) => setFormData(prev => ({ ...prev, serviceChargePercent: parseFloat(e.target.value) || 0 }))}
-                    className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
-                    placeholder="e.g. 5"
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Packaging Fee Settings */}
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">Enable Packaging Fee</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Apply fixed packaging fee for takeaway orders only</p>
-                </div>
-                <label className="relative inline-flex cursor-pointer items-center">
-                  <input
-                    type="checkbox"
-                    checked={formData.enablePackagingFee}
-                    onChange={(e) => setFormData(prev => ({ ...prev, enablePackagingFee: e.target.checked }))}
-                    className="peer sr-only"
-                  />
-                  <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
-                </label>
-              </div>
-              {formData.enablePackagingFee && (
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Packaging Fee Amount (A$)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={formData.packagingFeeAmount}
-                    onChange={(e) => setFormData(prev => ({ ...prev, packagingFeeAmount: parseFloat(e.target.value) || 0 }))}
-                    className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
-                    placeholder="e.g. 2.00"
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Store Location */}
-          <div className="space-y-4 border-t border-gray-200 pt-6 dark:border-gray-800">
-            <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-              Store Location
-            </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Set your store&apos;s location for customers to find and navigate to your store.
-            </p>
-            <MapLocationPicker
-              latitude={formData.latitude}
-              longitude={formData.longitude}
-              onLocationChange={(lat, lng) => {
-                setFormData(prev => ({
-                  ...prev,
-                  latitude: lat,
-                  longitude: lng,
-                }));
-              }}
-              height="350px"
-            />
-          </div>
-
-          {/* Opening Hours */}
-          <div className="space-y-4 border-t border-gray-200 pt-6 dark:border-gray-800">
-            <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-              Opening Hours
-            </h3>
-            <div className="space-y-2">
-              {openingHours.map((hour) => (
-                <div
-                  key={hour.dayOfWeek}
-                  className="flex items-center gap-4 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-900/50"
-                >
-                  <div className="w-24 text-sm font-medium text-gray-900 dark:text-white">
-                    {DAYS[hour.dayOfWeek]}
-                  </div>
-
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={hour.isClosed}
-                      onChange={(e) => handleOpeningHourChange(hour.dayOfWeek, 'isClosed', e.target.checked)}
-                      className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
-                    />
-                    <span className="text-sm text-gray-500 dark:text-gray-400">Closed</span>
-                  </label>
-
-                  {!hour.isClosed && (
-                    <div className="flex flex-1 items-center gap-3">
-                      <input
-                        type="time"
-                        value={hour.openTime}
-                        onChange={(e) => handleOpeningHourChange(hour.dayOfWeek, 'openTime', e.target.value)}
-                        className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
-                      />
-                      <span className="text-gray-400">—</span>
-                      <input
-                        type="time"
-                        value={hour.closeTime}
-                        onChange={(e) => handleOpeningHourChange(hour.dayOfWeek, 'closeTime', e.target.value)}
-                        className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
-                      />
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex items-center justify-end gap-3 border-t border-gray-200 pt-6 dark:border-gray-800">
-            <button
-              type="button"
-              onClick={() => router.push("/admin/dashboard/merchant/view")}
-              className="h-10 rounded-lg border border-gray-200 bg-white px-5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-white/3 dark:text-gray-300 dark:hover:bg-white/5"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="h-10 rounded-lg bg-brand-500 px-5 text-sm font-medium text-white hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {submitting ? "Saving..." : "Save Changes"}
-            </button>
-          </div>
+          {/* Fixed Footer */}
+          <AdminFormFooter
+            onCancel={() => router.push("/admin/dashboard/merchant/view")}
+            isSubmitting={submitting}
+            submitLabel="Save Changes"
+            submittingLabel="Saving..."
+          />
         </form>
       </div>
     </div>

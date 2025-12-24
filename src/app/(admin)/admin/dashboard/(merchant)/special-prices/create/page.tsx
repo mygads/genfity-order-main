@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
+import AdminFormFooter from "@/components/common/AdminFormFooter";
 
 interface MenuBook {
     id: string;
@@ -376,22 +376,13 @@ export default function CreateSpecialPricePage() {
                         </div>
                     )}
 
-                    {/* Actions */}
-                    <div className="flex items-center justify-end gap-3 border-t border-gray-200 pt-6 dark:border-gray-700">
-                        <Link
-                            href="/admin/dashboard/special-prices"
-                            className="rounded-lg border border-gray-300 px-6 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300"
-                        >
-                            Cancel
-                        </Link>
-                        <button
-                            type="submit"
-                            disabled={submitting}
-                            className="rounded-lg bg-primary-500 px-6 py-2.5 text-sm font-medium text-white shadow-lg shadow-primary-500/25 hover:bg-primary-600 disabled:opacity-50"
-                        >
-                            {submitting ? "Creating..." : "Create Special Price"}
-                        </button>
-                    </div>
+                    {/* Fixed Footer */}
+                    <AdminFormFooter
+                        onCancel={() => router.push("/admin/dashboard/special-prices")}
+                        isSubmitting={submitting}
+                        submitLabel="Create Special Price"
+                        submittingLabel="Creating..."
+                    />
                 </form>
             </div>
         </div>

@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
+import AdminFormFooter from "@/components/common/AdminFormFooter";
 import { useToast } from "@/hooks/useToast";
 import ToastContainer from "@/components/ui/ToastContainer";
 import { COUNTRIES, CURRENCIES, TIMEZONES } from "@/lib/constants/location";
@@ -604,22 +605,13 @@ export default function EditMerchantPage() {
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-4 border-t border-gray-200 pt-6 dark:border-gray-800">
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="h-11 rounded-lg border border-gray-200 bg-white px-6 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-white/[0.03] dark:text-gray-300 dark:hover:bg-white/[0.05]"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="h-11 rounded-lg bg-brand-500 px-6 text-sm font-medium text-white hover:bg-brand-600 focus:outline-none focus:ring-3 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {submitting ? "Updating..." : "Update Merchant"}
-            </button>
-          </div>
+          {/* Fixed Footer */}
+          <AdminFormFooter
+            onCancel={() => router.back()}
+            isSubmitting={submitting}
+            submitLabel="Update Merchant"
+            submittingLabel="Updating..."
+          />
         </form>
       </div>
     </div>

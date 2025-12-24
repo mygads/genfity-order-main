@@ -8,6 +8,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
+import AdminFormFooter from '@/components/common/AdminFormFooter';
 import { getAdminToken } from '@/lib/utils/adminAuth';
 import { useToast } from '@/hooks/useToast';
 import Image from 'next/image';
@@ -393,30 +394,14 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              {/* Submit Button */}
-              <div className="flex justify-end gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={fetchProfile}
-                  className="rounded-lg border border-gray-200 px-6 py-2.5 text-sm font-medium text-gray-700 transition-all hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
-                >
-                  Reset
-                </button>
-                <button
-                  type="submit"
-                  disabled={updating}
-                  className="flex items-center gap-2 rounded-lg bg-brand-500 px-6 py-2.5 text-sm font-medium text-white transition-all hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {updating ? (
-                    <>
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-                      Updating...
-                    </>
-                  ) : (
-                    'Save Changes'
-                  )}
-                </button>
-              </div>
+              {/* Fixed Footer */}
+              <AdminFormFooter
+                onCancel={fetchProfile}
+                cancelLabel="Reset"
+                isSubmitting={updating}
+                submitLabel="Save Changes"
+                submittingLabel="Updating..."
+              />
             </form>
           </div>
         </div>
