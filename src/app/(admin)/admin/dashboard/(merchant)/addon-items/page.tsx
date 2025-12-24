@@ -8,6 +8,7 @@ import AddonItemsFilters from "@/components/addon-items/AddonItemsFilters";
 import { AddonItemsPageSkeleton } from "@/components/common/SkeletonLoaders";
 import { useMerchant } from "@/context/MerchantContext";
 import { useToast } from "@/context/ToastContext";
+import CreateOptionModal from "@/components/common/CreateOptionModal";
 
 interface AddonCategory {
   id: string;
@@ -51,6 +52,9 @@ export default function AddonItemsPage() {
   const { showSuccess, showError } = useToast();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+
+  // Create option modal state
+  const [showCreateOptionModal, setShowCreateOptionModal] = useState(false);
 
   const [items, setItems] = useState<AddonItem[]>([]);
   const [filteredItems, setFilteredItems] = useState<AddonItem[]>([]);
@@ -378,7 +382,7 @@ export default function AddonItemsPage() {
               </p>
             </div>
             <button
-              onClick={() => setShowForm(true)}
+              onClick={() => setShowCreateOptionModal(true)}
               className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary-500 px-6 text-sm font-medium text-white hover:bg-primary-600 focus:outline-none focus:ring-3 focus:ring-primary-500/20"
             >
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -533,6 +537,18 @@ export default function AddonItemsPage() {
           </div>
         </div>
       )}
+
+      {/* Create Option Modal */}
+      <CreateOptionModal
+        isOpen={showCreateOptionModal}
+        onClose={() => setShowCreateOptionModal(false)}
+        title="Add Addon Item"
+        description="Choose how you want to add addon items"
+        singleCreateLabel="Create Single Item"
+        bulkUploadLabel="Bulk Upload from Excel"
+        onSingleCreate={() => setShowForm(true)}
+        onBulkUpload={() => router.push('/admin/dashboard/addon-items/bulk-upload')}
+      />
     </div>
   );
 }

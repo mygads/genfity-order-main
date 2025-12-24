@@ -14,6 +14,7 @@ import ManageMenuCategoriesModal from "@/components/menu/ManageMenuCategoriesMod
 import { useSWRWithAuth, useSWRStatic } from "@/hooks/useSWRWithAuth";
 import { MenuPageSkeleton } from "@/components/common/SkeletonLoaders";
 import { useMerchant } from "@/context/MerchantContext";
+import CreateOptionModal from "@/components/common/CreateOptionModal";
 
 interface MenuAddonCategory {
   addonCategoryId: string;
@@ -97,6 +98,8 @@ export default function MerchantMenuPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  // Create option modal state
+  const [showCreateOptionModal, setShowCreateOptionModal] = useState(false);
 
   // Note: Promo feature moved to Special Prices page
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
@@ -618,15 +621,15 @@ export default function MerchantMenuPage() {
                 </svg>
                 Export
               </button>
-              <Link
-                href="/admin/dashboard/menu/create"
+              <button
+                onClick={() => setShowCreateOptionModal(true)}
                 className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary-500 px-6 text-sm font-medium text-white hover:bg-primary-600 focus:outline-none focus:ring-3 focus:ring-primary-500/20"
               >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
                 Add Menu Item
-              </Link>
+              </button>
             </div>
           </div>
 
@@ -1191,6 +1194,18 @@ export default function MerchantMenuPage() {
           </div>
         </div>
       )}
+
+      {/* Create Option Modal */}
+      <CreateOptionModal
+        isOpen={showCreateOptionModal}
+        onClose={() => setShowCreateOptionModal(false)}
+        title="Add Menu Item"
+        description="Choose how you want to add menu items"
+        singleCreateLabel="Create Single Item"
+        bulkUploadLabel="Bulk Upload from Excel"
+        onSingleCreate={() => router.push('/admin/dashboard/menu/create')}
+        onBulkUpload={() => router.push('/admin/dashboard/menu/bulk-upload')}
+      />
     </div>
   );
 }

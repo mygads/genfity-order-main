@@ -898,6 +898,35 @@ span.flatpickr-weekday,
 }
 
 /**
+ * ✅ Customer page container - hide scrollbar completely
+ * Applied to customer layout wrapper to hide native browser scrollbar
+ */
+.customer-page-container {
+  /* Firefox */
+  scrollbar-width: none;
+  /* IE 10+ */
+  -ms-overflow-style: none;
+}
+
+.customer-page-container::-webkit-scrollbar {
+  /* Chrome, Safari, Edge, Opera */
+  display: none;
+}
+
+/* Also hide scrollbar on body when customer page is active */
+body:has(.customer-page-container) {
+  /* Firefox */
+  scrollbar-width: none;
+  /* IE 10+ */
+  -ms-overflow-style: none;
+}
+
+body:has(.customer-page-container)::-webkit-scrollbar {
+  /* Chrome, Safari, Edge, Opera */
+  display: none;
+}
+
+/**
  * ✅ Optional: Thin scrollbar variant (if needed elsewhere)
  */
 .scrollbar-thin {
