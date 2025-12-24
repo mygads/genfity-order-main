@@ -226,34 +226,20 @@ export default function OrderClientPage({
   }, []);
 
   // ========================================
-  // Fetch Merchant Info with Cache
+  // Fetch Merchant Info (Always Fresh - No Blocking Cache)
   // ========================================
   useEffect(() => {
     const fetchMerchantInfo = async () => {
-      // Check cache first
-      const cacheKey = `merchant_info_${merchantCode}`;
-      const cached = sessionStorage.getItem(cacheKey);
-
-      if (cached) {
-        try {
-          const cachedData = JSON.parse(cached);
-          console.log('✅ [MERCHANT] Using cached merchant info');
-          setMerchantInfo(cachedData);
-          return;
-        } catch {
-          console.warn('⚠️ [MERCHANT] Failed to parse cached merchant info, fetching fresh');
-        }
-      }
-
-      console.log('🔄 [MERCHANT] Fetching fresh merchant info');
+      // Always fetch fresh data to ensure latest banner/logo
+      console.log('🔄 [MERCHANT] Fetching merchant info');
       try {
         const response = await fetch(`/api/public/merchants/${merchantCode}`);
         const data = await response.json();
 
         if (data.success) {
           setMerchantInfo(data.data);
-          // Cache the data
-          sessionStorage.setItem(cacheKey, JSON.stringify(data.data));
+          // Update cache for other pages
+          sessionStorage.setItem(`merchant_info_${merchantCode}`, JSON.stringify(data.data));
         } else {
           console.error('❌ [MERCHANT] Failed to fetch merchant info:', data.message);
         }
@@ -344,14 +330,23 @@ export default function OrderClientPage({
   }, [merchantCode]);
 
   // ========================================
-  // Auto-refresh menu data AND addon data every 10 seconds in background
+  // Auto-refresh menu data, addon data, AND merchant info every 15 seconds in background
   // ========================================
   useEffect(() => {
     if (allMenuItems.length === 0) return;
 
     const autoRefreshData = async () => {
       try {
-        console.log('🔄 [AUTO-REFRESH] Fetching latest menu and addon data...');
+        console.log('🔄 [AUTO-REFRESH] Fetching latest data...');
+
+        // Fetch merchant info (for banner/logo updates)
+        const merchantResponse = await fetch(`/api/public/merchants/${merchantCode}`);
+        const merchantData = await merchantResponse.json();
+
+        if (merchantData.success) {
+          setMerchantInfo(merchantData.data);
+          sessionStorage.setItem(`merchant_info_${merchantCode}`, JSON.stringify(merchantData.data));
+        }
 
         // Fetch menus (includes addon categories and items with stock info)
         const menusResponse = await fetch(`/api/public/merchants/${merchantCode}/menus`);
@@ -374,7 +369,7 @@ export default function OrderClientPage({
           setMenuAddonsCache(newAddonCache);
           sessionStorage.setItem(`addons_cache_${merchantCode}`, JSON.stringify(newAddonCache));
 
-          console.log('✅ [AUTO-REFRESH] Menu and addon data updated');
+          console.log('✅ [AUTO-REFRESH] All data updated');
         }
       } catch (err) {
         console.error('❌ [AUTO-REFRESH] Failed to refresh data:', err);

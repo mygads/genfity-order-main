@@ -14,7 +14,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  FaSync,
   FaCheckSquare,
   FaSquare,
   FaTimes,
@@ -25,6 +24,7 @@ import {
   FaTags,
   FaExpand,
   FaCompress,
+  FaSearch,
 } from 'react-icons/fa';
 import { OrderKanbanBoard } from '@/components/orders/OrderKanbanBoard';
 import { OrderKanbanListView } from '@/components/orders/OrderKanbanListView';
@@ -55,8 +55,8 @@ export default function MerchantOrdersPage() {
   const [merchantId, setMerchantId] = useState<bigint | null>(null);
   const [merchantCurrency, setMerchantCurrency] = useState<string>('AUD');
   const [loading, setLoading] = useState(true);
-  const [autoRefresh, setAutoRefresh] = useState(true);
   const [displayMode, setDisplayMode] = useState<'normal' | 'clean' | 'fullscreen'>('normal');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Ref to trigger manual refresh from OrderKanbanBoard
   const kanbanRefreshRef = React.useRef<(() => void) | null>(null);
@@ -253,6 +253,28 @@ export default function MerchantOrdersPage() {
             </p>
           </div>
 
+          {/* Search Bar */}
+          <div className="relative w-full lg:w-auto lg:min-w-[400px]">
+            <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+              <FaSearch className="h-4 w-4 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search order #, customer name, phone, or table..."
+              className="w-full h-11 pl-11 pr-10 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 placeholder-gray-400 shadow-sm focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:placeholder-gray-500 dark:focus:border-primary-500"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <FaTimes className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
           <div className="flex flex-wrap items-center gap-3">
             {/* View Mode Selector */}
             <div className="flex items-center gap-1 rounded-lg border border-gray-200 bg-white p-1 dark:border-gray-800 dark:bg-gray-900">
@@ -313,27 +335,6 @@ export default function MerchantOrdersPage() {
             >
               {bulkMode ? <FaCheckSquare /> : <FaSquare />}
               <span className="hidden sm:inline">Bulk Select</span>
-            </button>
-
-            {/* Auto Refresh Toggle */}
-            <button
-              onClick={() => setAutoRefresh(!autoRefresh)}
-              className={`flex h-10 items-center gap-2 rounded-lg border px-4 text-sm font-medium transition-colors ${autoRefresh
-                ? 'border-primary-200 bg-primary-50 text-primary-700 dark:border-primary-800 dark:bg-primary-900/20 dark:text-primary-400'
-                : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800'
-                }`}
-            >
-              <FaSync className={autoRefresh ? 'animate-spin' : ''} />
-              <span className="hidden sm:inline">Auto Refresh</span>
-            </button>
-
-            {/* Manual Refresh */}
-            <button
-              onClick={handleManualRefresh}
-              className="flex h-10 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
-            >
-              <FaSync />
-              <span className="hidden sm:inline">Refresh</span>
             </button>
 
             {/* Progressive Display Mode: Normal → Clean → Fullscreen */}
@@ -446,11 +447,12 @@ export default function MerchantOrdersPage() {
             {viewMode === 'kanban-card' && (
               <OrderKanbanBoard
                 merchantId={merchantId}
-                autoRefresh={autoRefresh}
+                autoRefresh={true}
                 refreshInterval={1000}
                 enableDragDrop={!bulkMode}
                 onOrderClick={handleOrderClick}
                 filters={filters}
+                searchQuery={searchQuery}
                 selectedOrders={selectedOrders}
                 bulkMode={bulkMode}
                 onToggleSelection={toggleOrderSelection}
@@ -466,11 +468,12 @@ export default function MerchantOrdersPage() {
             {viewMode === 'kanban-list' && (
               <OrderKanbanListView
                 merchantId={merchantId}
-                autoRefresh={autoRefresh}
+                autoRefresh={true}
                 refreshInterval={1000}
                 enableDragDrop={!bulkMode}
                 onOrderClick={handleOrderClick}
                 filters={filters}
+                searchQuery={searchQuery}
                 selectedOrders={selectedOrders}
                 bulkMode={bulkMode}
                 onToggleSelection={toggleOrderSelection}
@@ -484,10 +487,11 @@ export default function MerchantOrdersPage() {
             {viewMode === 'tab-list' && (
               <OrderTabListView
                 merchantId={merchantId}
-                autoRefresh={autoRefresh}
+                autoRefresh={true}
                 refreshInterval={1000}
                 onOrderClick={handleOrderClick}
                 filters={filters}
+                searchQuery={searchQuery}
                 selectedOrders={selectedOrders}
                 bulkMode={bulkMode}
                 onToggleSelection={toggleOrderSelection}

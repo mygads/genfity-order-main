@@ -27,6 +27,7 @@ interface OrderTabListViewProps {
     dateFrom?: string;
     dateTo?: string;
   };
+  searchQuery?: string;
   selectedOrders?: Set<string>;
   bulkMode?: boolean;
   onToggleSelection?: (orderId: string) => void;
@@ -47,6 +48,7 @@ export const OrderTabListView: React.FC<OrderTabListViewProps> = ({
   refreshInterval = 10000,
   onOrderClick,
   filters = {},
+  searchQuery = '',
   selectedOrders = new Set(),
   bulkMode = false,
   onToggleSelection,
@@ -163,6 +165,24 @@ export const OrderTabListView: React.FC<OrderTabListViewProps> = ({
       filteredOrders = filteredOrders.filter(
         (order) => order.payment?.status === filters.paymentStatus
       );
+    }
+
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase().trim();
+      filteredOrders = filteredOrders.filter((order) => {
+        const orderNumber = order.orderNumber?.toLowerCase() || '';
+        const customerName = order.customer?.name?.toLowerCase() || '';
+        const customerPhone = order.customer?.phone?.toLowerCase() || '';
+        const tableNumber = order.tableNumber?.toLowerCase() || '';
+
+        return (
+          orderNumber.includes(query) ||
+          customerName.includes(query) ||
+          customerPhone.includes(query) ||
+          tableNumber.includes(query)
+        );
+      });
     }
 
     return filteredOrders;

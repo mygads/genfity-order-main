@@ -42,6 +42,7 @@ interface OrderKanbanBoardProps {
     dateFrom?: string;
     dateTo?: string;
   };
+  searchQuery?: string;
   selectedOrders?: Set<string>;
   bulkMode?: boolean;
   onToggleSelection?: (orderId: string) => void;
@@ -65,6 +66,7 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
   enableDragDrop = true,
   onOrderClick,
   filters = {},
+  searchQuery = '',
   selectedOrders = new Set(),
   bulkMode = false,
   onToggleSelection,
@@ -174,6 +176,24 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
     }
     if (filters.dateTo && new Date(order.placedAt) > new Date(filters.dateTo)) {
       return false;
+    }
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase().trim();
+      const orderNumber = order.orderNumber?.toLowerCase() || '';
+      const customerName = order.customer?.name?.toLowerCase() || '';
+      const customerPhone = order.customer?.phone?.toLowerCase() || '';
+      const tableNumber = order.tableNumber?.toLowerCase() || '';
+
+      const matchesSearch =
+        orderNumber.includes(query) ||
+        customerName.includes(query) ||
+        customerPhone.includes(query) ||
+        tableNumber.includes(query);
+
+      if (!matchesSearch) {
+        return false;
+      }
     }
     return true;
   });

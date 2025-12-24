@@ -72,15 +72,15 @@ export async function verifyCustomerToken(
     // ========================================
     // VALIDATION (Security Constraint)
     // ========================================
-    
+
     if (!token || typeof token !== 'string') {
-      console.error('[AUTH] Invalid token format');
       return null;
     }
 
     // ✅ Get JWT_SECRET from environment
     const secret = process.env.JWT_SECRET;
     if (!secret) {
+      // This is a server configuration error - should be logged
       console.error('[AUTH] JWT_SECRET not configured');
       return null;
     }
@@ -88,7 +88,7 @@ export async function verifyCustomerToken(
     // ========================================
     // JWT VERIFICATION (jose library)
     // ========================================
-    
+
     const encoder = new TextEncoder();
     const secretKey = encoder.encode(secret);
 
@@ -96,19 +96,10 @@ export async function verifyCustomerToken(
       algorithms: ['HS256'],
     });
 
-    // ✅ DEBUG: Log full payload for troubleshooting
-    console.log('[AUTH] Token payload received:', {
-      customerId: payload.customerId,
-      userId: payload.userId, // Check if this exists instead
-      email: payload.email,
-      name: payload.name,
-      keys: Object.keys(payload), // ✅ Show all available keys
-    });
-
     // ========================================
     // PAYLOAD VALIDATION
     // ========================================
-    
+
     /**
      * ✅ CRITICAL CHECK: Verify payload has 'customerId' field
      * 
@@ -120,9 +111,7 @@ export async function verifyCustomerToken(
       !payload.email ||
       !payload.name
     ) {
-      console.error('[AUTH] Missing required fields in token payload');
-      console.error('[AUTH] Expected: customerId, email, name');
-      console.error('[AUTH] Received:', Object.keys(payload));
+      // Missing fields in token - expected failure, no logging needed
       return null;
     }
 
@@ -135,8 +124,9 @@ export async function verifyCustomerToken(
       exp: payload.exp || 0,
     };
 
-  } catch (error) {
-    console.error('[AUTH] Token verification failed:', error instanceof Error ? error.message : 'Unknown error');
+  } catch {
+    // Token verification failures are expected (expired, invalid, etc.)
+    // No need to log - just return null
     return null;
   }
 }

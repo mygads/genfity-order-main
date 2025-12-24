@@ -14,10 +14,13 @@ import { serializeData } from '@/lib/utils/serializer';
  * @returns NextResponse with error details
  */
 export function handleError(error: unknown): NextResponse<ApiErrorResponse> {
-  console.error('API Error:', error);
-
-  // Handle CustomError instances
+  // Handle CustomError instances (expected errors like auth failures, validation, etc.)
   if (error instanceof CustomError) {
+    // Only log server errors (5xx), not client errors (4xx)
+    if (error.statusCode >= 500) {
+      console.error('API Error:', error);
+    }
+
     return NextResponse.json<ApiErrorResponse>(
       {
         success: false,
@@ -29,12 +32,12 @@ export function handleError(error: unknown): NextResponse<ApiErrorResponse> {
     );
   }
 
-  // Handle Prisma errors
+  // Handle Prisma errors - these are unexpected, always log
   if (error && typeof error === 'object' && 'code' in error) {
     const prismaError = error as { code: string; meta?: Record<string, unknown> };
-    
+
+    // P2002: Unique constraint (409 Conflict) - expected in some cases, don't log
     if (prismaError.code === 'P2002') {
-      // Unique constraint violation
       return NextResponse.json<ApiErrorResponse>(
         {
           success: false,
@@ -45,9 +48,9 @@ export function handleError(error: unknown): NextResponse<ApiErrorResponse> {
         { status: 409 }
       );
     }
-    
+
+    // P2025: Record not found (404) - expected in some cases, don't log
     if (prismaError.code === 'P2025') {
-      // Record not found
       return NextResponse.json<ApiErrorResponse>(
         {
           success: false,
@@ -58,10 +61,14 @@ export function handleError(error: unknown): NextResponse<ApiErrorResponse> {
         { status: 404 }
       );
     }
+
+    // Other Prisma errors are unexpected - log them
+    console.error('Prisma Error:', error);
   }
 
-  // Handle generic errors
+  // Handle generic errors - these are unexpected, always log
   if (error instanceof Error) {
+    console.error('Unexpected Error:', error);
     return NextResponse.json<ApiErrorResponse>(
       {
         success: false,
@@ -76,7 +83,8 @@ export function handleError(error: unknown): NextResponse<ApiErrorResponse> {
     );
   }
 
-  // Unknown error
+  // Unknown error - always log
+  console.error('Unknown Error:', error);
   return NextResponse.json<ApiErrorResponse>(
     {
       success: false,
@@ -102,7 +110,7 @@ export function successResponse<T>(
 ): NextResponse {
   // Serialize BigInt to string to avoid JSON errors
   const serializedData = serializeData(data);
-  
+
   return NextResponse.json(
     {
       success: true,

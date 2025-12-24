@@ -43,8 +43,9 @@ export async function getAuthUser(): Promise<AuthUser | null> {
       merchantId: payload.merchantId ? BigInt(payload.merchantId) : undefined,
       sessionId: BigInt(payload.sessionId),
     };
-  } catch (error) {
-    console.error('Auth verification failed:', error);
+  } catch {
+    // Token verification failures are expected (expired, invalid, etc.)
+    // No need to log - just return null
     return null;
   }
 }

@@ -13,6 +13,8 @@
 
 'use client';
 
+import { useState, useEffect } from 'react';
+
 interface RestaurantBannerProps {
   imageUrl?: string | null;
   bannerUrl?: string | null;
@@ -20,8 +22,22 @@ interface RestaurantBannerProps {
 }
 
 export default function RestaurantBanner({ imageUrl, bannerUrl, merchantName }: RestaurantBannerProps) {
+  // Use a cache-busting parameter that updates every 30 seconds
+  // This ensures fresh images are loaded when banner is updated
+  const [cacheBuster, setCacheBuster] = useState(() => Math.floor(Date.now() / 30000));
+
+  useEffect(() => {
+    // Update cache buster when bannerUrl changes
+    setCacheBuster(Math.floor(Date.now() / 30000));
+  }, [bannerUrl]);
+
   // Use bannerUrl if available, otherwise fall back to imageUrl (logo)
-  const displayImage = bannerUrl || imageUrl || '/images/no-outlet.png';
+  const baseImage = bannerUrl || imageUrl || '/images/no-outlet.png';
+
+  // Add cache-busting for external URLs (blob storage) to prevent stale cached images
+  const displayImage = baseImage.startsWith('http')
+    ? `${baseImage}${baseImage.includes('?') ? '&' : '?'}v=${cacheBuster}`
+    : baseImage;
 
   return (
     <div
