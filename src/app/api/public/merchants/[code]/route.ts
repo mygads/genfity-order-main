@@ -64,6 +64,9 @@ export async function GET(
       description: merchantData.description,
       isActive: merchantData.isActive,
       isOpen: merchantData.isOpen,
+      // Sale mode settings
+      isDineInEnabled: merchantData.isDineInEnabled ?? true,
+      isTakeawayEnabled: merchantData.isTakeawayEnabled ?? true,
       // Tax settings
       enableTax: merchantData.enableTax,
       taxPercentage: merchantData.taxPercentage,

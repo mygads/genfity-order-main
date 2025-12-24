@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, RefreshCw, Bell } from 'lucide-react';
+import { ArrowLeft, RefreshCw } from 'lucide-react';
 import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';
 import { formatCurrency } from '@/lib/utils/format';
 

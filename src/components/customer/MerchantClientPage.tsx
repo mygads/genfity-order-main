@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import OutletInfoModal from '@/components/customer/OutletInfoModal';
 import RestaurantBanner from '@/components/customer/RestaurantBanner';
@@ -24,6 +24,8 @@ interface MerchantData {
     phone?: string;
     logoUrl?: string | null;
     bannerUrl?: string | null;
+    isDineInEnabled?: boolean;
+    isTakeawayEnabled?: boolean;
     openingHours: OpeningHour[];
 }
 
@@ -74,6 +76,10 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
     const [showOutletInfo, setShowOutletInfo] = useState(false);
 
     const storeOpen = isStoreOpen(merchant.openingHours);
+    
+    // Check which sale modes are enabled (default to true if not set)
+    const isDineInEnabled = merchant.isDineInEnabled ?? true;
+    const isTakeawayEnabled = merchant.isTakeawayEnabled ?? true;
 
     const handleModeSelect = (selectedMode: 'dinein' | 'takeaway') => {
         if (!storeOpen) return; // Prevent selection when store is closed
@@ -84,6 +90,19 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
         // Go directly to order page
         router.replace(`/${merchantCode}/order?mode=${selectedMode}`);
     };
+
+    // If only one mode is enabled, auto-redirect to order page
+    useEffect(() => {
+        if (!storeOpen) return;
+        
+        if (isDineInEnabled && !isTakeawayEnabled) {
+            // Only dine-in enabled, auto-redirect
+            router.replace(`/${merchantCode}/order?mode=dinein`);
+        } else if (!isDineInEnabled && isTakeawayEnabled) {
+            // Only takeaway enabled, auto-redirect
+            router.replace(`/${merchantCode}/order?mode=takeaway`);
+        }
+    }, [storeOpen, isDineInEnabled, isTakeawayEnabled, merchantCode, router]);
 
     return (
         <>
@@ -183,43 +202,59 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                 </div>
             </div>
 
-            {/* Mode Selection Section */}
-            <div className="px-3 mb-6">
-                <div className="text-center">
-                    <h3 className={`my-4 mb-4 text-base font-semibold text-gray-900 dark:text-white ${!storeOpen ? 'opacity-50' : ''}`}>
-                        How would you like to eat today?
-                    </h3>
+            {/* Mode Selection Section - Only show if both modes enabled */}
+            {isDineInEnabled && isTakeawayEnabled && (
+                <div className="px-3 mb-6">
+                    <div className="text-center">
+                        <h3 className={`my-4 mb-4 text-base font-semibold text-gray-900 dark:text-white ${!storeOpen ? 'opacity-50' : ''}`}>
+                            How would you like to eat today?
+                        </h3>
 
-                    {/* Mode Selection Buttons */}
-                    <div className="space-y-3">
-                        {/* Dine In Button */}
-                        <button
-                            id="mode-dinein"
-                            onClick={() => handleModeSelect('dinein')}
-                            disabled={!storeOpen}
-                            className={`w-full h-12 border rounded-lg text-base font-medium shadow-sm transition-colors duration-200 shadow-lg ${storeOpen
-                                ? 'border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800'
-                                : 'border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 cursor-not-allowed'
-                                }`}
-                        >
-                            Dine In
-                        </button>
+                        {/* Mode Selection Buttons */}
+                        <div className="space-y-3">
+                            {/* Dine In Button */}
+                            <button
+                                id="mode-dinein"
+                                onClick={() => handleModeSelect('dinein')}
+                                disabled={!storeOpen}
+                                className={`w-full h-12 border rounded-lg text-base font-medium shadow-sm transition-colors duration-200 shadow-lg ${storeOpen
+                                    ? 'border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800'
+                                    : 'border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 cursor-not-allowed'
+                                    }`}
+                            >
+                                Dine In
+                            </button>
 
-                        {/* Pick Up Button */}
-                        <button
-                            id="mode-takeaway"
-                            onClick={() => handleModeSelect('takeaway')}
-                            disabled={!storeOpen}
-                            className={`w-full h-12 border rounded-lg text-base font-medium shadow-sm transition-colors duration-200 shadow-lg ${storeOpen
-                                ? 'border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800'
-                                : 'border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 cursor-not-allowed'
-                                }`}
-                        >
-                            Pick Up
-                        </button>
+                            {/* Pick Up Button */}
+                            <button
+                                id="mode-takeaway"
+                                onClick={() => handleModeSelect('takeaway')}
+                                disabled={!storeOpen}
+                                className={`w-full h-12 border rounded-lg text-base font-medium shadow-sm transition-colors duration-200 shadow-lg ${storeOpen
+                                    ? 'border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800'
+                                    : 'border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 cursor-not-allowed'
+                                    }`}
+                            >
+                                Pick Up
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
+            )}
+
+            {/* Show message if no modes enabled */}
+            {!isDineInEnabled && !isTakeawayEnabled && (
+                <div className="px-3 mb-6">
+                    <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800 text-center">
+                        <p className="text-amber-700 dark:text-amber-300 font-medium">
+                            Ordering is currently unavailable
+                        </p>
+                        <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">
+                            Please contact the merchant for more information
+                        </p>
+                    </div>
+                </div>
+            )}
 
             {/* Footer - Powered by Genfity */}
             <div className="mt-auto px-4 py-4 text-center">

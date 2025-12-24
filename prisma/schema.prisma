@@ -170,6 +170,8 @@ model Merchant {
   createdAt              DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt              DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
   isOpen                 Boolean               @default(true) @map("is_open")
+  isDineInEnabled        Boolean               @default(true) @map("is_dine_in_enabled")
+  isTakeawayEnabled      Boolean               @default(true) @map("is_takeaway_enabled")
   latitude               Decimal?              @db.Decimal(10, 8)
   longitude              Decimal?              @db.Decimal(11, 8)
   timezone               String                @default("Australia/Sydney")

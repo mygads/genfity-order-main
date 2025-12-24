@@ -18,7 +18,7 @@ import { useCart } from '@/context/CartContext';
 import type { CartItem } from '@/context/CartContext';
 import OutletInfoModal from '@/components/customer/OutletInfoModal';
 import { CustomerOrderSkeleton } from '@/components/common/SkeletonLoaders';
-import { getTableNumber } from '@/lib/utils/localStorage';
+import { getTableNumber, saveTableNumber } from '@/lib/utils/localStorage';
 import TableNumberModal from '@/components/customer/TableNumberModal';
 import { extractAddonDataFromMenus } from '@/lib/utils/addonExtractor';
 import { throttle } from '@/lib/utils/throttle';
@@ -86,6 +86,8 @@ interface MerchantInfo {
   currency: string;
   enableTax: boolean;
   taxPercentage: number;
+  isDineInEnabled?: boolean;
+  isTakeawayEnabled?: boolean;
   openingHours: OpeningHour[];
 }
 
@@ -201,20 +203,68 @@ export default function OrderClientPage({
   };
 
   // ========================================
-  // Load Table Number & Always Show Modal for Dinein
+  // Validate Mode & Redirect if Not Enabled
   // ========================================
   useEffect(() => {
-    if (mode === 'dinein') {
-      const tableData = getTableNumber(merchantCode);
+    if (!merchantInfo) return;
+    
+    const isDineInEnabled = merchantInfo.isDineInEnabled ?? true;
+    const isTakeawayEnabled = merchantInfo.isTakeawayEnabled ?? true;
 
-      // Always show modal for dinein mode
-      setShowTableModal(true);
-
-      if (tableData?.tableNumber) {
-        setTableNumber(tableData.tableNumber);
+    // Check if current mode is disabled
+    if (mode === 'dinein' && !isDineInEnabled) {
+      // Redirect to merchant page or takeaway mode
+      if (isTakeawayEnabled) {
+        router.replace(`/${merchantCode}/order?mode=takeaway`);
+      } else {
+        router.replace(`/${merchantCode}`);
       }
+      return;
     }
-  }, [merchantCode, mode]);
+
+    if (mode === 'takeaway' && !isTakeawayEnabled) {
+      // Redirect to merchant page or dinein mode
+      if (isDineInEnabled) {
+        router.replace(`/${merchantCode}/order?mode=dinein`);
+      } else {
+        router.replace(`/${merchantCode}`);
+      }
+      return;
+    }
+  }, [merchantInfo, mode, merchantCode, router]);
+
+  // ========================================
+  // Handle Auto Table Number from URL (tableno param)
+  // ========================================
+  useEffect(() => {
+    if (mode !== 'dinein') return;
+
+    const params = new URLSearchParams(window.location.search);
+    const tablenoFromUrl = params.get('tableno');
+
+    if (tablenoFromUrl) {
+      // Auto-save table number from URL
+      saveTableNumber(merchantCode, tablenoFromUrl);
+      setTableNumber(tablenoFromUrl);
+      
+      // Remove tableno from URL without reload
+      params.delete('tableno');
+      const newUrl = `/${merchantCode}/order?${params.toString()}`;
+      router.replace(newUrl);
+      
+      // Don't show modal since table is auto-filled
+      setShowTableModal(false);
+      return;
+    }
+
+    // Normal dinein flow - show table modal
+    const tableData = getTableNumber(merchantCode);
+    setShowTableModal(true);
+
+    if (tableData?.tableNumber) {
+      setTableNumber(tableData.tableNumber);
+    }
+  }, [merchantCode, mode, router]);
 
   // ========================================
   // Handle Outlet Info Modal via URL

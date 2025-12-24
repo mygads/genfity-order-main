@@ -26,6 +26,9 @@ interface MerchantFormData {
   timezone: string;
   latitude?: number | null;
   longitude?: number | null;
+  // Sale mode settings
+  isDineInEnabled: boolean;
+  isTakeawayEnabled: boolean;
   // Fee settings
   enableTax: boolean;
   taxPercentage: number;
@@ -73,6 +76,9 @@ export default function EditMerchantPage() {
     timezone: "Australia/Sydney",
     latitude: null,
     longitude: null,
+    // Sale mode settings
+    isDineInEnabled: true,
+    isTakeawayEnabled: true,
     // Fee settings
     enableTax: false,
     taxPercentage: 0,
@@ -133,6 +139,9 @@ export default function EditMerchantPage() {
         timezone: merchant.timezone || "Australia/Sydney",
         latitude: merchant.latitude ? parseFloat(merchant.latitude) : null,
         longitude: merchant.longitude ? parseFloat(merchant.longitude) : null,
+        // Sale mode settings
+        isDineInEnabled: merchant.isDineInEnabled ?? true,
+        isTakeawayEnabled: merchant.isTakeawayEnabled ?? true,
         // Fee settings
         enableTax: merchant.enableTax || false,
         taxPercentage: merchant.taxPercentage ? parseFloat(merchant.taxPercentage) : 0,
@@ -620,6 +629,70 @@ export default function EditMerchantPage() {
                     </option>
                   ))}
                 </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Sale Modes */}
+          <div className="space-y-5 border-t border-gray-200 pt-6 dark:border-gray-800">
+            <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+              Sale Modes
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Configure which ordering modes are available for customers. At least one mode must be enabled.
+            </p>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {/* Dine In Toggle */}
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">Dine In</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Allow customers to order for eating at your place</p>
+                  </div>
+                  <label className="relative inline-flex cursor-pointer items-center">
+                    <input
+                      type="checkbox"
+                      checked={formData.isDineInEnabled}
+                      onChange={(e) => {
+                        // Prevent disabling both modes
+                        if (!e.target.checked && !formData.isTakeawayEnabled) {
+                          showError("Error", "At least one sale mode must be enabled");
+                          return;
+                        }
+                        setFormData(prev => ({ ...prev, isDineInEnabled: e.target.checked }));
+                      }}
+                      className="peer sr-only"
+                    />
+                    <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
+                  </label>
+                </div>
+              </div>
+
+              {/* Takeaway Toggle */}
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">Takeaway / Pick Up</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Allow customers to order for takeaway</p>
+                  </div>
+                  <label className="relative inline-flex cursor-pointer items-center">
+                    <input
+                      type="checkbox"
+                      checked={formData.isTakeawayEnabled}
+                      onChange={(e) => {
+                        // Prevent disabling both modes
+                        if (!e.target.checked && !formData.isDineInEnabled) {
+                          showError("Error", "At least one sale mode must be enabled");
+                          return;
+                        }
+                        setFormData(prev => ({ ...prev, isTakeawayEnabled: e.target.checked }));
+                      }}
+                      className="peer sr-only"
+                    />
+                    <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
+                  </label>
+                </div>
               </div>
             </div>
           </div>

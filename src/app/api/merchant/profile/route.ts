@@ -107,6 +107,9 @@ async function handlePut(req: NextRequest, authContext: AuthContext) {
         address: body.address,
         phoneNumber: body.phoneNumber,
         email: body.email,
+        // Sale mode settings
+        isDineInEnabled: body.isDineInEnabled,
+        isTakeawayEnabled: body.isTakeawayEnabled,
         // Tax settings
         enableTax: body.enableTax,
         taxRate: body.taxPercentage,

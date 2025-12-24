@@ -57,6 +57,9 @@ export interface UpdateMerchantInput {
   address?: string;
   phoneNumber?: string;
   email?: string;
+  // Sale mode settings
+  isDineInEnabled?: boolean;
+  isTakeawayEnabled?: boolean;
   // Tax settings
   enableTax?: boolean;
   taxRate?: number;
@@ -246,6 +249,9 @@ class MerchantService {
     if (input.address !== undefined) updateData.address = input.address;
     if (input.phoneNumber !== undefined) updateData.phone = input.phoneNumber; // Map to phone
     if (input.email !== undefined) updateData.email = input.email;
+    // Sale mode settings
+    if (input.isDineInEnabled !== undefined) updateData.isDineInEnabled = input.isDineInEnabled;
+    if (input.isTakeawayEnabled !== undefined) updateData.isTakeawayEnabled = input.isTakeawayEnabled;
     // Tax settings
     if (input.enableTax !== undefined) updateData.enableTax = input.enableTax;
     if (input.taxRate !== undefined) {
