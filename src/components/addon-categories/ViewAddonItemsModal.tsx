@@ -456,8 +456,6 @@ export default function ViewAddonItemsModal({
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Name</th>
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Type</th>
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Price</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Stock</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Status</th>
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Actions</th>
                   </tr>
                 </thead>
@@ -480,17 +478,11 @@ export default function ViewAddonItemsModal({
                         <div className="h-4 w-20 rounded bg-gray-200 dark:bg-gray-700"></div>
                       </td>
                       <td className="px-4 py-4">
-                        <div className="h-6 w-16 rounded-full bg-gray-200 dark:bg-gray-700"></div>
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="h-6 w-20 rounded-full bg-gray-200 dark:bg-gray-700"></div>
-                      </td>
-                      <td className="px-4 py-4">
                         <div className="flex items-center gap-2">
-                          <div className="h-9 w-9 rounded-lg bg-gray-200 dark:bg-gray-700"></div>
                           <div className="h-9 w-9 rounded-lg bg-gray-200 dark:bg-gray-700"></div>
                         </div>
                       </td>
+
                     </tr>
                   ))}
                 </tbody>
@@ -510,8 +502,6 @@ export default function ViewAddonItemsModal({
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Name</th>
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Type</th>
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Price</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Stock</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Status</th>
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Actions</th>
                   </tr>
                 </thead>
@@ -574,115 +564,27 @@ export default function ViewAddonItemsModal({
                           />
                         ) : (
                           <span className={`text-sm font-semibold ${formatPrice(item.price) === 'Free'
-                              ? 'text-success-600 dark:text-success-400'
-                              : 'text-gray-800 dark:text-white/90'
+                            ? 'text-success-600 dark:text-success-400'
+                            : 'text-gray-800 dark:text-white/90'
                             }`}>
                             {formatPrice(item.price)}
                           </span>
                         )}
                       </td>
                       <td className="px-4 py-4">
-                        {item.trackStock ? (
-                          <div className="flex items-center gap-2">
-                            <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${(item.stockQty || 0) > 10
-                              ? 'bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400'
-                              : (item.stockQty || 0) > 0
-                                ? 'bg-warning-100 text-warning-700 dark:bg-warning-900/20 dark:text-warning-400'
-                                : 'bg-error-100 text-error-700 dark:bg-error-900/20 dark:text-error-400'
-                              }`}>
-                              {item.stockQty || 0} pcs
-                            </span>
-                            <button
-                              onClick={() => setStockModal({
-                                show: true,
-                                itemId: item.id,
-                                itemName: item.name,
-                                currentStock: item.stockQty || 0,
-                                newStock: (item.stockQty || 0).toString(),
-                              })}
-                              className="text-brand-500 hover:text-brand-600"
-                              title="Update stock"
-                            >
-                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                              </svg>
-                            </button>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
-                            No tracking
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-4">
-                        <button
-                          onClick={() => handleToggleActive(item.id)}
-                          className={`inline-flex cursor-pointer rounded-full px-3 py-1 text-xs font-medium transition-colors ${item.isActive
-                            ? 'bg-success-100 text-success-700 hover:bg-success-200 dark:bg-success-900/20 dark:text-success-400 dark:hover:bg-success-900/30'
-                            : 'bg-error-100 text-error-700 hover:bg-error-200 dark:bg-error-900/20 dark:text-error-400 dark:hover:bg-error-900/30'
-                            }`}
-                        >
-                          {item.isActive ? '● Active' : '○ Inactive'}
-                        </button>
-                      </td>
-                      <td className="px-4 py-4">
                         <div className="flex items-center gap-2">
-                          {editingItemId === item.id ? (
-                            <>
-                              <button
-                                onClick={() => handleSaveEdit(item.id)}
-                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-success-200 bg-success-50 text-success-600 hover:bg-success-100 dark:border-success-900/50 dark:bg-success-900/20 dark:text-success-400"
-                                title="Save"
-                              >
-                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                </svg>
-                              </button>
-                              <button
-                                onClick={handleCancelEdit}
-                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400"
-                                title="Cancel"
-                              >
-                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <button
-                                onClick={() => handleStartEdit(item)}
-                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100 dark:border-blue-900/50 dark:bg-blue-900/20 dark:text-blue-400"
-                                title="Edit"
-                              >
-                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                </svg>
-                              </button>
-                              {item.trackStock && (item.stockQty || 0) > 0 && (
-                                <button
-                                  onClick={() => handleSetOutOfStock(item.id, item.name)}
-                                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-orange-200 bg-orange-50 text-orange-600 hover:bg-orange-100 dark:border-orange-900/50 dark:bg-orange-900/20 dark:text-orange-400"
-                                  title="Set Out of Stock"
-                                >
-                                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                                  </svg>
-                                </button>
-                              )}
-                              <button
-                                onClick={() => setDeleteConfirm({ show: true, itemId: item.id, itemName: item.name })}
-                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-error-200 bg-error-50 text-error-600 hover:bg-error-100 dark:border-error-900/50 dark:bg-error-900/20 dark:text-error-400"
-                                title="Delete"
-                              >
-                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                              </button>
-                            </>
-                          )}
+                          <button
+                            onClick={() => setDeleteConfirm({ show: true, itemId: item.id, itemName: item.name })}
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-error-200 bg-error-50 text-error-600 hover:bg-error-100 dark:border-error-900/50 dark:bg-error-900/20 dark:text-error-400"
+                            title="Delete"
+                          >
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
                         </div>
                       </td>
+
                     </tr>
                   ))}
                 </tbody>

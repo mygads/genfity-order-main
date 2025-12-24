@@ -64,8 +64,8 @@ export default function MenuRelationshipModal({
 
       if (data.success && Array.isArray(data.data)) {
         setMenus(data.data);
-        // Auto-expand all menus by default
-        setExpandedMenus(new Set(data.data.map((m: MenuRelationship) => m.id)));
+        // Default to collapsed for all menus
+        setExpandedMenus(new Set());
       } else {
         setMenus([]);
       }
@@ -270,15 +270,7 @@ export default function MenuRelationshipModal({
                               )}
                             </div>
                           </div>
-                          <button
-                            onClick={() => handleNavigateToMenu(menu.id)}
-                            className="inline-flex h-9 items-center gap-2 rounded-lg border border-brand-200 bg-brand-50 px-4 text-sm font-medium text-brand-700 hover:bg-brand-100 dark:border-brand-900/50 dark:bg-brand-900/20 dark:text-brand-400 dark:hover:bg-brand-900/30"
-                          >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                            Edit Menu
-                          </button>
+
                         </div>
 
                         {/* Expanded Details */}
@@ -290,7 +282,7 @@ export default function MenuRelationshipModal({
                                   Price
                                 </p>
                                 <p className="mt-1 font-medium text-gray-900 dark:text-white">
-                                  ${menu.price.toFixed(2)}
+                                  A${menu.price.toFixed(2)}
                                 </p>
                               </div>
                               <div>

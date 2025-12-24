@@ -45,8 +45,6 @@ export default function ManageMenuCategoriesModal({
 
   const [availableCategories, setAvailableCategories] = useState<MenuCategory[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [draggedItem, setDraggedItem] = useState<string | null>(null);
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (show) {
@@ -79,7 +77,7 @@ export default function ManageMenuCategoriesModal({
       const data = await response.json();
       if (data.success && Array.isArray(data.data)) {
         setAvailableCategories(
-          data.data.sort((a: MenuCategory, b: MenuCategory) => 
+          data.data.sort((a: MenuCategory, b: MenuCategory) =>
             (a.sortOrder || 0) - (b.sortOrder || 0)
           )
         );
@@ -100,42 +98,6 @@ export default function ManageMenuCategoriesModal({
         return [...prev, categoryId];
       }
     });
-  };
-
-  const handleDragStart = (e: React.DragEvent, categoryId: string) => {
-    setDraggedItem(categoryId);
-    e.dataTransfer.effectAllowed = "move";
-  };
-
-  const handleDragOver = (e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-    setDragOverIndex(index);
-  };
-
-  const handleDragLeave = () => {
-    setDragOverIndex(null);
-  };
-
-  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
-    e.preventDefault();
-    setDragOverIndex(null);
-
-    if (!draggedItem) return;
-
-    const draggedIndex = selectedCategories.findIndex((id) => id === draggedItem);
-    if (draggedIndex === -1 || draggedIndex === dropIndex) return;
-
-    const reordered = [...selectedCategories];
-    const [removed] = reordered.splice(draggedIndex, 1);
-    reordered.splice(dropIndex, 0, removed);
-
-    setSelectedCategories(reordered);
-  };
-
-  const handleDragEnd = () => {
-    setDraggedItem(null);
-    setDragOverIndex(null);
   };
 
   const handleSubmit = async () => {
@@ -191,7 +153,7 @@ export default function ManageMenuCategoriesModal({
               Manage Menu Categories - {menuName}
             </h3>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Select categories and drag to reorder display
+              Select which categories this menu belongs to
             </p>
           </div>
           <button
@@ -245,11 +207,10 @@ export default function ManageMenuCategoriesModal({
                       return (
                         <div
                           key={category.id}
-                          className={`rounded-lg border bg-white p-3 dark:bg-gray-900 ${
-                            isSelected
-                              ? "border-brand-300 bg-brand-50 dark:border-brand-700 dark:bg-brand-900/20"
-                              : "border-gray-200 dark:border-gray-700"
-                          }`}
+                          className={`rounded-lg border bg-white p-3 dark:bg-gray-900 ${isSelected
+                            ? "border-brand-300 bg-brand-50 dark:border-brand-700 dark:bg-brand-900/20"
+                            : "border-gray-200 dark:border-gray-700"
+                            }`}
                         >
                           <div className="flex items-start gap-3">
                             <input
@@ -308,29 +269,9 @@ export default function ManageMenuCategoriesModal({
                       return (
                         <div
                           key={categoryId}
-                          draggable
-                          onDragStart={(e) => handleDragStart(e, categoryId)}
-                          onDragOver={(e) => handleDragOver(e, index)}
-                          onDragLeave={handleDragLeave}
-                          onDrop={(e) => handleDrop(e, index)}
-                          onDragEnd={handleDragEnd}
-                          className={`cursor-move rounded-lg border bg-white p-3 transition-all dark:bg-gray-900 ${
-                            draggedItem === categoryId
-                              ? "opacity-50"
-                              : dragOverIndex === index
-                              ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20"
-                              : "border-gray-200 dark:border-gray-700"
-                          }`}
+                          className="rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900"
                         >
                           <div className="flex items-start gap-3">
-                            <div className="flex flex-col items-center text-gray-400">
-                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                              </svg>
-                              <span className="mt-1 text-xs font-semibold text-gray-600 dark:text-gray-400">
-                                {index + 1}
-                              </span>
-                            </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center justify-between">
                                 <p className="font-medium text-gray-800 dark:text-white/90">
@@ -364,6 +305,7 @@ export default function ManageMenuCategoriesModal({
                           </div>
                         </div>
                       );
+
                     })
                   )}
                 </div>

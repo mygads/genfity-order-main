@@ -854,7 +854,7 @@ export default function MerchantCategoriesPage() {
                             </span>
                           </td>
                           <td className="px-4 py-4 text-sm text-gray-700 dark:text-gray-300">
-                            {category._count?.menuItems || 0} menu
+                            {category._count?.menuItems || 0} menus
                           </td>
                           <td className="px-4 py-4">
                             <button
@@ -1052,7 +1052,7 @@ export default function MerchantCategoriesPage() {
 
                       {/* Menu Count */}
                       <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {category._count?.menuItems || 0} menu
+                        {category._count?.menuItems || 0} menus
                       </div>
                     </div>
                   ))}

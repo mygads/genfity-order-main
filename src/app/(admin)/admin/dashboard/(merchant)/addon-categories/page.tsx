@@ -53,7 +53,7 @@ export default function AddonCategoriesPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  
+
   const [filteredCategories, setFilteredCategories] = useState<AddonCategory[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [viewItemsModal, setViewItemsModal] = useState<{
@@ -62,20 +62,30 @@ export default function AddonCategoriesPage() {
     categoryName: string;
     items: AddonItem[];
   }>({ show: false, categoryId: null, categoryName: "", items: [] });
-  
+
   const [viewRelationshipsModal, setViewRelationshipsModal] = useState<{
     show: boolean;
     categoryId: string | null;
     categoryName: string;
   }>({ show: false, categoryId: null, categoryName: "" });
-  
+
+  // Single delete confirmation modal
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    show: boolean;
+    id: string;
+    name: string;
+    menuCount: number;
+    menuList: string;
+  }>({ show: false, id: "", name: "", menuCount: 0, menuList: "" });
+
   const [formData, setFormData] = useState<AddonCategoryFormData>({
+
     name: "",
     description: "",
     minSelection: 0,
     maxSelection: "",
   });
-  
+
   // Bulk selection states
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
@@ -87,11 +97,11 @@ export default function AddonCategoriesPage() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
   // SWR hooks for data fetching with caching
-  const { 
-    data: categoriesResponse, 
-    error: categoriesError, 
+  const {
+    data: categoriesResponse,
+    error: categoriesError,
     isLoading: categoriesLoading,
-    mutate: mutateCategories 
+    mutate: mutateCategories
   } = useSWRStatic<AddonCategoriesApiResponse>('/api/merchant/addon-categories');
 
   // Use MerchantContext instead of fetching
@@ -101,8 +111,8 @@ export default function AddonCategoriesPage() {
   const categories = useMemo(() => {
     return categoriesResponse?.success ? categoriesResponse.data : [];
   }, [categoriesResponse]);
-  
-  const merchant = merchantData 
+
+  const merchant = merchantData
     ? { currency: merchantData.currency || "AUD" }
     : { currency: "AUD" };
   const loading = categoriesLoading || merchantLoading;
@@ -138,7 +148,7 @@ export default function AddonCategoriesPage() {
 
     // Only reset page when filters actually change, not when categories data updates
     const prev = prevFiltersRef.current;
-    const filtersChanged = 
+    const filtersChanged =
       prev.searchQuery !== searchQuery ||
       prev.filterStatus !== filterStatus;
 
@@ -190,7 +200,7 @@ export default function AddonCategoriesPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
-    
+
     if (type === "number") {
       setFormData(prev => ({
         ...prev,
@@ -246,7 +256,7 @@ export default function AddonCategoriesPage() {
       setTimeout(() => setSuccess(null), 3000);
       setShowForm(false);
       setFormData({ name: "", description: "", minSelection: 0, maxSelection: "" });
-      
+
       fetchCategories();
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
@@ -351,7 +361,7 @@ export default function AddonCategoriesPage() {
 
   const handleBulkDeleteCategories = async () => {
     if (selectedCategories.length === 0) return;
-    
+
     try {
       const token = localStorage.getItem("accessToken");
       if (!token) {
@@ -378,7 +388,7 @@ export default function AddonCategoriesPage() {
 
       if (categoriesWithMenus.length > 0) {
         const confirmMessage = `⚠️ WARNING: ${categoriesWithMenus.length} of ${selectedCategories.length} selected addon categories are currently in use.\n\nTotal menus affected: ${totalMenusAffected}\n\nDeleting these categories will break menu configurations. Are you sure you want to continue?`;
-        
+
         if (!confirm(confirmMessage)) {
           setShowBulkDeleteConfirm(false);
           return;
@@ -413,6 +423,7 @@ export default function AddonCategoriesPage() {
     }
   };
 
+  // Show delete confirmation modal (fetch relationships first)
   const handleDelete = async (id: string, name: string) => {
     try {
       const token = localStorage.getItem("accessToken");
@@ -426,25 +437,38 @@ export default function AddonCategoriesPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
 
+      let menuCount = 0;
+      let menuList = "";
+
       if (relationshipsResponse.ok) {
         const relationshipsData = await relationshipsResponse.json();
-        const menuCount = relationshipsData.data?.length || 0;
+        menuCount = relationshipsData.data?.length || 0;
 
         if (menuCount > 0) {
           const menuNames = relationshipsData.data.slice(0, 3).map((m: { name: string }) => m.name).join(", ");
           const remainingCount = menuCount - 3;
-          const menuList = remainingCount > 0 ? `${menuNames}, and ${remainingCount} more` : menuNames;
-          
-          if (!confirm(
-            `⚠️ WARNING: This addon category is used by ${menuCount} menu item${menuCount > 1 ? 's' : ''}:\n\n${menuList}\n\nDeleting this category will break these menu configurations. Are you sure you want to continue?`
-          )) {
-            return;
-          }
-        } else {
-          if (!confirm(`Are you sure you want to delete "${name}"?`)) {
-            return;
-          }
+          menuList = remainingCount > 0 ? `${menuNames}, and ${remainingCount} more` : menuNames;
         }
+      }
+
+      // Show confirmation modal
+      setDeleteConfirm({ show: true, id, name, menuCount, menuList });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+      setTimeout(() => setError(null), 5000);
+    }
+  };
+
+  // Confirm and execute delete
+  const confirmDeleteCategory = async () => {
+    const { id } = deleteConfirm;
+    setDeleteConfirm({ show: false, id: "", name: "", menuCount: 0, menuList: "" });
+
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) {
+        router.push("/admin/login");
+        return;
       }
 
       const response = await fetch(`/api/merchant/addon-categories/${id}`, {
@@ -467,6 +491,7 @@ export default function AddonCategoriesPage() {
       setTimeout(() => setError(null), 5000);
     }
   };
+
 
   const handleCancel = () => {
     setShowForm(false);
@@ -506,7 +531,7 @@ export default function AddonCategoriesPage() {
                   </svg>
                 </button>
               </div>
-              
+
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -605,8 +630,8 @@ export default function AddonCategoriesPage() {
             items={viewItemsModal.items}
             currency={merchant.currency}
             onClose={() => setViewItemsModal({ show: false, categoryId: null, categoryName: "", items: [] })}
-            onRefresh={() => handleViewItems({ 
-              id: viewItemsModal.categoryId!, 
+            onRefresh={() => handleViewItems({
+              id: viewItemsModal.categoryId!,
               name: viewItemsModal.categoryName,
               description: null,
               minSelection: 0,
@@ -702,7 +727,7 @@ export default function AddonCategoriesPage() {
               </select>
             </div>
           </div>
-          
+
           {filteredCategories.length === 0 ? (
             <EmptyState
               type={categories.length === 0 ? "no-addon" : "no-results"}
@@ -729,7 +754,7 @@ export default function AddonCategoriesPage() {
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Name</th>
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Description</th>
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Selection</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Items</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Addons</th>
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Menus</th>
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Status</th>
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Actions</th>
@@ -764,11 +789,10 @@ export default function AddonCategoriesPage() {
                       <td className="px-4 py-4">
                         <button
                           onClick={() => handleToggleActive(category.id, category.isActive, category.name)}
-                          className={`inline-flex rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                            category.isActive 
-                              ? 'bg-success-100 text-success-700 hover:bg-success-200 dark:bg-success-900/20 dark:text-success-400 dark:hover:bg-success-900/30' 
-                              : 'bg-error-100 text-error-700 hover:bg-error-200 dark:bg-error-900/20 dark:text-error-400 dark:hover:bg-error-900/30'
-                          }`}>
+                          className={`inline-flex rounded-full px-3 py-1 text-xs font-medium transition-colors ${category.isActive
+                            ? 'bg-success-100 text-success-700 hover:bg-success-200 dark:bg-success-900/20 dark:text-success-400 dark:hover:bg-success-900/30'
+                            : 'bg-error-100 text-error-700 hover:bg-error-200 dark:bg-error-900/20 dark:text-error-400 dark:hover:bg-error-900/30'
+                            }`}>
                           {category.isActive ? '● Active' : '○ Inactive'}
                         </button>
                       </td>
@@ -838,11 +862,10 @@ export default function AddonCategoriesPage() {
                       <button
                         key={page}
                         onClick={() => paginate(page)}
-                        className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border text-sm font-medium ${
-                          currentPage === page
-                            ? 'border-primary-500 bg-primary-500 text-white'
-                            : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
-                        }`}
+                        className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border text-sm font-medium ${currentPage === page
+                          ? 'border-primary-500 bg-primary-500 text-white'
+                          : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                          }`}
                       >
                         {page}
                       </button>
@@ -882,9 +905,9 @@ export default function AddonCategoriesPage() {
                   </p>
                 </div>
               </div>
-              
+
               <p className="mb-6 text-sm text-gray-700 dark:text-gray-300">
-                Are you sure you want to delete {selectedCategories.length} addon category{selectedCategories.length > 1 ? 's' : ''}? 
+                Are you sure you want to delete {selectedCategories.length} addon category{selectedCategories.length > 1 ? 's' : ''}?
                 This will also delete all addon items in {selectedCategories.length > 1 ? 'these categories' : 'this category'}.
               </p>
 
@@ -905,7 +928,71 @@ export default function AddonCategoriesPage() {
             </div>
           </div>
         )}
+
+        {/* Single Delete Confirmation Modal */}
+        {deleteConfirm.show && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-lg dark:border-gray-800 dark:bg-gray-900">
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-error-100 dark:bg-error-900/20">
+                  <svg className="h-6 w-6 text-error-600 dark:text-error-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Delete Addon Category
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    This action cannot be undone
+                  </p>
+                </div>
+              </div>
+
+              {deleteConfirm.menuCount > 0 ? (
+                <div className="mb-6">
+                  <div className="mb-3 rounded-lg border border-warning-200 bg-warning-50 p-3 dark:border-warning-900/50 dark:bg-warning-900/20">
+                    <div className="flex items-center gap-2 text-sm font-medium text-warning-700 dark:text-warning-400">
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      Warning: This addon category is in use
+                    </div>
+                    <p className="mt-1 text-xs text-warning-600 dark:text-warning-500">
+                      Used by {deleteConfirm.menuCount} menu{deleteConfirm.menuCount > 1 ? 's' : ''}: {deleteConfirm.menuList}
+                    </p>
+                  </div>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                    Are you sure you want to delete "<span className="font-medium">{deleteConfirm.name}</span>"?
+                    This will break the menu configurations.
+                  </p>
+                </div>
+              ) : (
+                <p className="mb-6 text-sm text-gray-700 dark:text-gray-300">
+                  Are you sure you want to delete "<span className="font-medium">{deleteConfirm.name}</span>"?
+                  This will also delete all addon items in this category.
+                </p>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteConfirm({ show: false, id: "", name: "", menuCount: 0, menuList: "" })}
+                  className="flex-1 h-11 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDeleteCategory}
+                  className="flex-1 h-11 rounded-lg bg-error-600 text-sm font-medium text-white hover:bg-error-700"
+                >
+                  Delete Category
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+
     </div>
   );
 }
