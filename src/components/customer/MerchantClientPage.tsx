@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import OutletInfoModal from '@/components/customer/OutletInfoModal';
 import RestaurantBanner from '@/components/customer/RestaurantBanner';
 import RestaurantInfoCard from '@/components/customer/RestaurantInfoCard';
+import { isStoreEffectivelyOpen, isWithinSchedule as isWithinScheduleUtil } from '@/lib/utils/storeStatus';
+import { useToast } from '@/hooks/useToast';
 
 interface OpeningHour {
     id: string;
@@ -24,6 +26,8 @@ interface MerchantData {
     phone?: string;
     logoUrl?: string | null;
     bannerUrl?: string | null;
+    isOpen?: boolean; // Manual toggle from database
+    timezone?: string; // Merchant timezone
     isDineInEnabled?: boolean;
     isTakeawayEnabled?: boolean;
     dineInLabel?: string | null;
@@ -41,53 +45,11 @@ interface MerchantClientPageProps {
 }
 
 /**
- * Check if store is currently open based on opening hours
- */
-function isStoreOpen(openingHours: OpeningHour[]): boolean {
-    if (!openingHours || openingHours.length === 0) return true; // Default to open if no hours defined
-
-    const now = new Date();
-    const dayOfWeek = now.getDay(); // 0 = Sunday, 6 = Saturday
-    const currentTime = now.toTimeString().slice(0, 5); // "HH:MM"
-
-    const todayHours = openingHours.find(h => h.dayOfWeek === dayOfWeek);
-
-    // If no hours for today, assume closed
-    if (!todayHours) return false;
-
-    // If explicitly closed
-    if (todayHours.isClosed) return false;
-
-    // If 24 hours
-    if (todayHours.is24Hours) return true;
-
-    // Check time range
-    if (todayHours.openTime && todayHours.closeTime) {
-        return currentTime >= todayHours.openTime && currentTime <= todayHours.closeTime;
-    }
-
-    return true; // Default to open if times not defined
-}
-
-/**
  * Check if current time is within a schedule range
- * @param scheduleStart - Start time in "HH:MM" format
- * @param scheduleEnd - End time in "HH:MM" format
- * @returns true if current time is within schedule, or if no schedule is set
+ * Uses the unified utility from storeStatus.ts
  */
-function isWithinSchedule(scheduleStart?: string | null, scheduleEnd?: string | null): boolean {
-    // If no schedule is set, always available
-    if (!scheduleStart || !scheduleEnd) return true;
-
-    const now = new Date();
-    const currentTime = now.toTimeString().slice(0, 5); // "HH:MM"
-
-    // Handle overnight schedules (e.g., 21:00 to 02:00)
-    if (scheduleEnd < scheduleStart) {
-        return currentTime >= scheduleStart || currentTime <= scheduleEnd;
-    }
-
-    return currentTime >= scheduleStart && currentTime <= scheduleEnd;
+function isWithinSchedule(scheduleStart?: string | null, scheduleEnd?: string | null, timezone?: string): boolean {
+    return isWithinScheduleUtil(scheduleStart, scheduleEnd, timezone);
 }
 
 /**
@@ -100,17 +62,29 @@ function isWithinSchedule(scheduleStart?: string | null, scheduleEnd?: string | 
  */
 export default function MerchantClientPage({ merchant, merchantCode }: MerchantClientPageProps) {
     const router = useRouter();
+    const { showToast } = useToast();
     const [showOutletInfo, setShowOutletInfo] = useState(false);
 
-    const storeOpen = isStoreOpen(merchant.openingHours);
+    // Use unified store status utility (checks both isOpen toggle AND opening hours)
+    const storeOpen = isStoreEffectivelyOpen({
+        isOpen: merchant.isOpen,
+        openingHours: merchant.openingHours.map(h => ({
+            dayOfWeek: h.dayOfWeek,
+            openTime: h.openTime,
+            closeTime: h.closeTime,
+            isClosed: h.isClosed,
+            is24Hours: h.is24Hours,
+        })),
+        timezone: merchant.timezone,
+    });
     
     // Check which sale modes are enabled (default to true if not set)
     const isDineInEnabled = merchant.isDineInEnabled ?? true;
     const isTakeawayEnabled = merchant.isTakeawayEnabled ?? true;
 
     // Check if modes are within their scheduled hours
-    const isDineInWithinSchedule = isWithinSchedule(merchant.dineInScheduleStart, merchant.dineInScheduleEnd);
-    const isTakeawayWithinSchedule = isWithinSchedule(merchant.takeawayScheduleStart, merchant.takeawayScheduleEnd);
+    const isDineInWithinSchedule = isWithinSchedule(merchant.dineInScheduleStart, merchant.dineInScheduleEnd, merchant.timezone);
+    const isTakeawayWithinSchedule = isWithinSchedule(merchant.takeawayScheduleStart, merchant.takeawayScheduleEnd, merchant.timezone);
 
     // Mode is available if enabled AND within schedule
     const isDineInAvailable = isDineInEnabled && isDineInWithinSchedule;
@@ -121,17 +95,28 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
     const takeawayLabel = merchant.takeawayLabel || 'Pick Up';
 
     const handleModeSelect = (selectedMode: 'dinein' | 'takeaway') => {
-        if (!storeOpen) return; // Prevent selection when store is closed
-        
-        // Check if mode is available
-        if (selectedMode === 'dinein' && !isDineInAvailable) return;
-        if (selectedMode === 'takeaway' && !isTakeawayAvailable) return;
-
         // Save mode to localStorage
         localStorage.setItem(`mode_${merchantCode}`, selectedMode);
 
-        // Go directly to order page
+        // Always redirect to order page (it will handle closed/unavailable state)
         router.replace(`/${merchantCode}/order?mode=${selectedMode}`);
+        
+        // Show toast if mode is unavailable
+        if (selectedMode === 'dinein' && !isDineInAvailable) {
+            showToast({
+                variant: 'warning',
+                title: 'Mode Unavailable',
+                message: `${dineInLabel} is currently unavailable`,
+                duration: 4000
+            });
+        } else if (selectedMode === 'takeaway' && !isTakeawayAvailable) {
+            showToast({
+                variant: 'warning',
+                title: 'Mode Unavailable',
+                message: `${takeawayLabel} is currently unavailable`,
+                duration: 4000
+            });
+        }
     };
 
     // If only one mode is enabled and available, auto-redirect to order page
@@ -149,14 +134,15 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
 
     return (
         <>
-            {/* BANNER - Matching Order Page Style */}
+            {/* BANNER - Matching Order Page Style - Gray overlay when closed */}
             <RestaurantBanner
                 bannerUrl={merchant.bannerUrl}
                 imageUrl={merchant.logoUrl}
                 merchantName={merchant.name}
+                isClosed={!storeOpen}
             />
 
-            {/* Merchant Info Card - Matching Order Page Style */}
+            {/* Merchant Info Card - Shows CLOSED badge when closed, clickable to order page */}
             <div className="px-3 -mt-6 relative z-10">
                 <RestaurantInfoCard
                     name={merchant.name}
@@ -167,31 +153,12 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                         isClosed: h.isClosed,
                     }))}
                     onClick={() => setShowOutletInfo(true)}
+                    isClosed={!storeOpen}
                 />
             </div>
 
-            {/* Store Closed Banner */}
-            {!storeOpen && (
-                <div className="px-3 mt-4">
-                    <div className="p-4 bg-gray-100 dark:bg-gray-800 rounded-xl border border-gray-300 dark:border-gray-600 text-center">
-                        <div className="flex items-center justify-center gap-2 mb-2">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-500">
-                                <circle cx="12" cy="12" r="10" />
-                                <path d="M12 6v6l4 2" />
-                            </svg>
-                            <span className="text-lg font-semibold text-gray-700 dark:text-gray-300">
-                                Store is Currently Closed
-                            </span>
-                        </div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Please check our opening hours and come back later
-                        </p>
-                    </div>
-                </div>
-            )}
-
-            {/* How to use Genfity Order Section */}
-            <div className={`px-3 my-4 ${!storeOpen ? 'opacity-50' : ''}`}>
+            {/* How to use Genfity Order Section - Gray overlay when closed */}
+            <div className={`px-3 my-4 ${!storeOpen ? 'opacity-50 grayscale' : ''}`}>
                 <div className="text-center">
                     <h3 className="my-4 mb-2 text-base font-semibold text-gray-900 dark:text-white">
                         How to use Genfity Order
@@ -245,51 +212,65 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                 </div>
             </div>
 
-            {/* Mode Selection Section - Only show if both modes enabled */}
-            {isDineInEnabled && isTakeawayEnabled && (
-                <div className="px-3 mb-6">
+            {/* Mode Selection Section - Always show if at least one mode is configured */}
+            {(isDineInEnabled || isTakeawayEnabled) && (
+                <div className={`px-3 mb-6 ${!storeOpen ? 'opacity-60' : ''}`}>
                     <div className="text-center">
-                        <h3 className={`my-4 mb-4 text-base font-semibold text-gray-900 dark:text-white ${!storeOpen ? 'opacity-50' : ''}`}>
+                        <h3 className="my-4 mb-4 text-base font-semibold text-gray-900 dark:text-white">
                             How would you like to eat today?
                         </h3>
 
-                        {/* Mode Selection Buttons */}
+                        {/* Mode Selection Buttons - Always visible, grayed when unavailable */}
                         <div className="space-y-3">
-                            {/* Dine In Button */}
-                            <button
-                                id="mode-dinein"
-                                onClick={() => handleModeSelect('dinein')}
-                                disabled={!storeOpen || !isDineInAvailable}
-                                className={`w-full h-12 border rounded-lg text-base font-medium shadow-sm transition-colors duration-200 shadow-lg ${storeOpen && isDineInAvailable
-                                    ? 'border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800'
-                                    : 'border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 cursor-not-allowed'
+                            {/* Dine In Button - Always show if enabled */}
+                            {isDineInEnabled && (
+                                <button
+                                    id="mode-dinein"
+                                    onClick={() => handleModeSelect('dinein')}
+                                    className={`w-full h-12 border rounded-lg text-base font-medium shadow-sm transition-colors duration-200 shadow-lg flex items-center justify-center gap-2 ${
+                                        storeOpen && isDineInAvailable
+                                            ? 'border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800'
+                                            : 'border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800'
                                     }`}
-                            >
-                                {dineInLabel}
-                                {!isDineInWithinSchedule && isDineInEnabled && (
-                                    <span className="ml-2 text-xs text-gray-400">
-                                        ({merchant.dineInScheduleStart} - {merchant.dineInScheduleEnd})
-                                    </span>
-                                )}
-                            </button>
+                                >
+                                    <span>{dineInLabel}</span>
+                                    {(!storeOpen || !isDineInAvailable) && (
+                                        <span className="text-xs bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded">
+                                            UNAVAILABLE NOW
+                                        </span>
+                                    )}
+                                    {isDineInAvailable && !isDineInWithinSchedule && (
+                                        <span className="text-xs text-gray-400">
+                                            ({merchant.dineInScheduleStart} - {merchant.dineInScheduleEnd})
+                                        </span>
+                                    )}
+                                </button>
+                            )}
 
-                            {/* Pick Up Button */}
-                            <button
-                                id="mode-takeaway"
-                                onClick={() => handleModeSelect('takeaway')}
-                                disabled={!storeOpen || !isTakeawayAvailable}
-                                className={`w-full h-12 border rounded-lg text-base font-medium shadow-sm transition-colors duration-200 shadow-lg ${storeOpen && isTakeawayAvailable
-                                    ? 'border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800'
-                                    : 'border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 cursor-not-allowed'
+                            {/* Pick Up Button - Always show if enabled */}
+                            {isTakeawayEnabled && (
+                                <button
+                                    id="mode-takeaway"
+                                    onClick={() => handleModeSelect('takeaway')}
+                                    className={`w-full h-12 border rounded-lg text-base font-medium shadow-sm transition-colors duration-200 shadow-lg flex items-center justify-center gap-2 ${
+                                        storeOpen && isTakeawayAvailable
+                                            ? 'border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800'
+                                            : 'border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800'
                                     }`}
-                            >
-                                {takeawayLabel}
-                                {!isTakeawayWithinSchedule && isTakeawayEnabled && (
-                                    <span className="ml-2 text-xs text-gray-400">
-                                        ({merchant.takeawayScheduleStart} - {merchant.takeawayScheduleEnd})
-                                    </span>
-                                )}
-                            </button>
+                                >
+                                    <span>{takeawayLabel}</span>
+                                    {(!storeOpen || !isTakeawayAvailable) && (
+                                        <span className="text-xs bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded">
+                                            UNAVAILABLE NOW
+                                        </span>
+                                    )}
+                                    {isTakeawayAvailable && !isTakeawayWithinSchedule && (
+                                        <span className="text-xs text-gray-400">
+                                            ({merchant.takeawayScheduleStart} - {merchant.takeawayScheduleEnd})
+                                        </span>
+                                    )}
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>

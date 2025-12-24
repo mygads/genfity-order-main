@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { isStoreEffectivelyOpen, type OpeningHour } from "@/lib/utils/storeStatus";
 
 interface MerchantData {
   id: string;
@@ -11,6 +12,8 @@ interface MerchantData {
   logoUrl: string | null;
   isActive: boolean;
   isOpen: boolean;
+  openingHours: OpeningHour[];
+  timezone?: string;
 }
 
 interface MerchantBannerProps {
@@ -42,14 +45,37 @@ const MerchantBanner: React.FC<MerchantBannerProps> = ({ isExpanded }) => {
         const data = await response.json();
         const merchantData = data.data?.merchant || data.data;
         
-        // Use isOpen from database (controlled by merchant owner)
+        // Map openingHours to match OpeningHour type
+        const openingHours: OpeningHour[] = (merchantData.openingHours || []).map((h: {
+          dayOfWeek: number;
+          openTime?: string | null;
+          closeTime?: string | null;
+          isClosed: boolean;
+          is24Hours?: boolean;
+        }) => ({
+          dayOfWeek: h.dayOfWeek,
+          openTime: h.openTime,
+          closeTime: h.closeTime,
+          isClosed: h.isClosed,
+          is24Hours: h.is24Hours,
+        }));
+        
+        // Calculate effective open status using unified utility
+        const effectivelyOpen = isStoreEffectivelyOpen({
+          isOpen: merchantData.isOpen,
+          openingHours,
+          timezone: merchantData.timezone,
+        });
+        
         setMerchant({
           id: merchantData.id,
           name: merchantData.name,
           code: merchantData.code,
           logoUrl: merchantData.logoUrl,
           isActive: merchantData.isActive,
-          isOpen: merchantData.isOpen ?? true,
+          isOpen: effectivelyOpen,
+          openingHours,
+          timezone: merchantData.timezone,
         });
       }
     } catch (error) {

@@ -37,6 +37,7 @@ interface HorizontalMenuSectionProps {
     onIncreaseQty?: (menuId: string) => void;
     onDecreaseQty?: (menuId: string) => void;
     isPromoSection?: boolean; // Flag to show promo badge
+    storeOpen?: boolean; // When false, hide Add button
 }
 
 export default function HorizontalMenuSection({
@@ -49,6 +50,7 @@ export default function HorizontalMenuSection({
     onIncreaseQty,
     onDecreaseQty,
     isPromoSection = false,
+    storeOpen = true,
 }: HorizontalMenuSectionProps) {
     const formatPrice = (amount: number): string => {
         return new Intl.NumberFormat('en-US', {
@@ -211,15 +213,15 @@ export default function HorizontalMenuSection({
                                     </div>
 
                                     {/* Low Stock Indicator - Show when stock <= 10 */}
-                                    {isAvailable && item.trackStock && item.stockQty !== null && item.stockQty <= 10 && (
+                                    {isAvailable && storeOpen && item.trackStock && item.stockQty !== null && item.stockQty <= 10 && (
                                         <p style={{ fontSize: '12px', fontWeight: 500, color: '#f97316', marginTop: '4px' }}>
                                             Only {item.stockQty} left
                                         </p>
                                     )}
 
-                                    {/* Add Button - 28px height, 8px radius, orange border */}
+                                    {/* Add Button - 28px height, 8px radius, orange border - Hide when store closed */}
                                     <div style={{ marginTop: '6px' }}>
-                                        {isAvailable && (
+                                        {isAvailable && storeOpen && (
                                             isInCart ? (
                                                 <div
                                                     className="flex items-center justify-between"

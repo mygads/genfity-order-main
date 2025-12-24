@@ -22,6 +22,7 @@ import { getTableNumber, saveTableNumber } from '@/lib/utils/localStorage';
 import TableNumberModal from '@/components/customer/TableNumberModal';
 import { extractAddonDataFromMenus } from '@/lib/utils/addonExtractor';
 import { throttle } from '@/lib/utils/throttle';
+import { isStoreEffectivelyOpen, isWithinSchedule as isWithinScheduleUtil } from '@/lib/utils/storeStatus';
 
 interface MenuItem {
   id: string; // ✅ String from API (BigInt serialized)
@@ -83,6 +84,8 @@ interface MerchantInfo {
   bannerUrl: string | null;
   description: string;
   isActive: boolean;
+  isOpen?: boolean; // Manual toggle from database
+  timezone?: string; // Merchant timezone
   currency: string;
   enableTax: boolean;
   taxPercentage: number;
@@ -105,40 +108,10 @@ interface OrderClientPageProps {
 
 /**
  * Check if current time is within a schedule range
+ * Uses the unified utility from storeStatus.ts
  */
-function isWithinSchedule(scheduleStart?: string | null, scheduleEnd?: string | null): boolean {
-  if (!scheduleStart || !scheduleEnd) return true;
-
-  const now = new Date();
-  const currentTime = now.toTimeString().slice(0, 5);
-
-  if (scheduleEnd < scheduleStart) {
-    return currentTime >= scheduleStart || currentTime <= scheduleEnd;
-  }
-
-  return currentTime >= scheduleStart && currentTime <= scheduleEnd;
-}
-
-/**
- * Check if store is currently open based on opening hours
- */
-function isStoreOpen(openingHours: OpeningHour[]): boolean {
-  if (!openingHours || openingHours.length === 0) return true;
-
-  const now = new Date();
-  const dayOfWeek = now.getDay();
-  const currentTime = now.toTimeString().slice(0, 5);
-
-  const todayHours = openingHours.find(h => h.dayOfWeek === dayOfWeek);
-
-  if (!todayHours) return false;
-  if (todayHours.isClosed) return false;
-
-  if (todayHours.openTime && todayHours.closeTime) {
-    return currentTime >= todayHours.openTime && currentTime <= todayHours.closeTime;
-  }
-
-  return true;
+function isWithinSchedule(scheduleStart?: string | null, scheduleEnd?: string | null, timezone?: string): boolean {
+  return isWithinScheduleUtil(scheduleStart, scheduleEnd, timezone);
 }
 
 /**
@@ -245,51 +218,62 @@ export default function OrderClientPage({
   };
 
   // ========================================
-  // Validate Store Open & Mode Availability
+  // Calculate Store Open Status using unified utility
+  // ========================================
+  const storeOpen = useMemo(() => {
+    if (!merchantInfo) return true;
+    return isStoreEffectivelyOpen({
+      isOpen: merchantInfo.isOpen,
+      openingHours: merchantInfo.openingHours.map(h => ({
+        dayOfWeek: h.dayOfWeek,
+        openTime: h.openTime,
+        closeTime: h.closeTime,
+        isClosed: h.isClosed,
+      })),
+      timezone: merchantInfo.timezone,
+    });
+  }, [merchantInfo]);
+
+  // ========================================
+  // Validate Mode Availability (no redirect when store closed)
   // ========================================
   useEffect(() => {
     if (!merchantInfo) return;
     
-    // First check if store is open
-    const storeOpen = isStoreOpen(merchantInfo.openingHours);
-    if (!storeOpen) {
-      // Store is closed, redirect to merchant page (shows closed UI)
-      router.replace(`/${merchantCode}`);
-      return;
-    }
+    // Don't redirect when store is closed - just show modified UI
 
     const isDineInEnabled = merchantInfo.isDineInEnabled ?? true;
     const isTakeawayEnabled = merchantInfo.isTakeawayEnabled ?? true;
 
     // Check if modes are within their scheduled hours
-    const isDineInWithinSchedule = isWithinSchedule(merchantInfo.dineInScheduleStart, merchantInfo.dineInScheduleEnd);
-    const isTakeawayWithinSchedule = isWithinSchedule(merchantInfo.takeawayScheduleStart, merchantInfo.takeawayScheduleEnd);
+    const isDineInWithinSchedule = isWithinSchedule(merchantInfo.dineInScheduleStart, merchantInfo.dineInScheduleEnd, merchantInfo.timezone);
+    const isTakeawayWithinSchedule = isWithinSchedule(merchantInfo.takeawayScheduleStart, merchantInfo.takeawayScheduleEnd, merchantInfo.timezone);
 
     // Mode is available if enabled AND within schedule
     const isDineInAvailable = isDineInEnabled && isDineInWithinSchedule;
     const isTakeawayAvailable = isTakeawayEnabled && isTakeawayWithinSchedule;
 
-    // Check if current mode is disabled or outside schedule
-    if (mode === 'dinein' && !isDineInAvailable) {
-      // Redirect to merchant page or takeaway mode
-      if (isTakeawayAvailable) {
-        router.replace(`/${merchantCode}/order?mode=takeaway`);
-      } else {
-        router.replace(`/${merchantCode}`);
+    // Only redirect if mode is completely disabled (not due to store closed)
+    if (storeOpen) {
+      if (mode === 'dinein' && !isDineInAvailable) {
+        if (isTakeawayAvailable) {
+          router.replace(`/${merchantCode}/order?mode=takeaway`);
+        } else {
+          router.replace(`/${merchantCode}`);
+        }
+        return;
       }
-      return;
-    }
 
-    if (mode === 'takeaway' && !isTakeawayAvailable) {
-      // Redirect to merchant page or dinein mode
-      if (isDineInAvailable) {
-        router.replace(`/${merchantCode}/order?mode=dinein`);
-      } else {
-        router.replace(`/${merchantCode}`);
+      if (mode === 'takeaway' && !isTakeawayAvailable) {
+        if (isDineInAvailable) {
+          router.replace(`/${merchantCode}/order?mode=dinein`);
+        } else {
+          router.replace(`/${merchantCode}`);
+        }
+        return;
       }
-      return;
     }
-  }, [merchantInfo, mode, merchantCode, router]);
+  }, [merchantInfo, mode, merchantCode, router, storeOpen]);
 
   // ========================================
   // Handle Auto Table Number from URL (tableno param)
@@ -671,7 +655,7 @@ export default function OrderClientPage({
         }}
       />
 
-      {/* Hero Section (Restaurant Banner) - Header overlays on top */}
+      {/* Hero Section (Restaurant Banner) - Header overlays on top - Gray when closed */}
       <div className="relative" data-banner>
         {isLoading ? (
           /* Banner Loading Skeleton */
@@ -681,17 +665,23 @@ export default function OrderClientPage({
             imageUrl={merchantInfo?.logoUrl}
             bannerUrl={merchantInfo?.bannerUrl}
             merchantName={merchantInfo?.name || merchantCode}
+            isClosed={!storeOpen}
           />
         )}
       </div>
 
       {/* ========================================
-          MAIN CONTENT
+          MAIN CONTENT - Gray overlay when store is closed
       ======================================== */}
-      <div className="pb-24">
+      <div className={`pb-24 ${!storeOpen ? 'relative' : ''}`}>
+        {/* Gray overlay for content when store is closed */}
+        {!storeOpen && (
+          <div className="absolute inset-0 bg-gray-100/50 dark:bg-gray-900/50 pointer-events-none z-0" />
+        )}
+        
         {/* Error Alert */}
         {error && (
-          <div className="px-4 pt-4">
+          <div className="px-4 pt-4 relative z-10">
             <Alert
               variant="error"
               title="Error Loading Menu"
@@ -704,8 +694,8 @@ export default function OrderClientPage({
           <CustomerOrderSkeleton />
         ) : (
           <>
-            {/* Restaurant Info Card - No divider above, floating style like Burjo */}
-            <div className="px-4 -mt-6 relative z-10">
+            {/* Restaurant Info Card - Shows CLOSED badge when closed, not affected by overlay */}
+            <div className="px-4 -mt-6 relative z-20">
               {merchantInfo && (
                 <RestaurantInfoCard
                   name={merchantInfo.name}
@@ -717,13 +707,14 @@ export default function OrderClientPage({
                     window.history.pushState({}, '', `?${params.toString()}`);
                     setShowOutletInfo(true);
                   }}
+                  isClosed={!storeOpen}
                 />
               )}
             </div>
 
             {/* Table Number (Dinein Only) - No divider between components like Burjo */}
             {mode === 'dinein' && tableNumber && (
-              <div className="px-4 my-2" data-table-number-card>
+              <div className={`px-4 my-2 relative z-10 ${!storeOpen ? 'opacity-50' : ''}`} data-table-number-card>
                 <TableNumberCard tableNumber={tableNumber} />
               </div>
             )}
@@ -816,6 +807,7 @@ export default function OrderClientPage({
                         onIncreaseQty={handleIncreaseQtyFromCard}
                         onDecreaseQty={handleDecreaseQtyFromCard}
                         isPromoSection={true}
+                        storeOpen={storeOpen}
                       />
                     </div>
                     {/* Divider */}
@@ -841,6 +833,7 @@ export default function OrderClientPage({
                         getItemQuantityInCart={getMenuQuantityInCart}
                         onIncreaseQty={handleIncreaseQtyFromCard}
                         onDecreaseQty={handleDecreaseQtyFromCard}
+                        storeOpen={storeOpen}
                       />
                     </div>
                     {/* Divider */}
@@ -866,6 +859,7 @@ export default function OrderClientPage({
                         getItemQuantityInCart={getMenuQuantityInCart}
                         onIncreaseQty={handleIncreaseQtyFromCard}
                         onDecreaseQty={handleDecreaseQtyFromCard}
+                        storeOpen={storeOpen}
                       />
                     </div>
                     {/* Divider */}
@@ -900,6 +894,7 @@ export default function OrderClientPage({
                           getItemQuantityInCart={getMenuQuantityInCart}
                           onIncreaseQty={handleIncreaseQtyFromCard}
                           onDecreaseQty={handleDecreaseQtyFromCard}
+                          storeOpen={storeOpen}
                         />
                       </div>
                       {/* Divider between categories */}
@@ -963,6 +958,7 @@ export default function OrderClientPage({
           existingCartItem={editingCartItem}
           onClose={handleCloseMenuDetail}
           prefetchedAddons={menuAddonsCache[selectedMenu.id]}
+          storeOpen={storeOpen}
         />
       )}
 

@@ -2,6 +2,7 @@
 import StoreToggleButton from './StoreToggleButton';
 import Link from 'next/link';
 import Image from 'next/image';
+import { isStoreEffectivelyOpen, type OpeningHour } from '@/lib/utils/storeStatus';
 
 type Merchant = {
   id: bigint;
@@ -14,6 +15,8 @@ type Merchant = {
   logoUrl?: string | null;
   isActive: boolean;
   isOpen?: boolean;
+  openingHours?: OpeningHour[];
+  timezone?: string;
 };
 
 type Menu = {
@@ -154,15 +157,22 @@ export default function MerchantOwnerDashboard({
                 <span className="text-sm text-white/80">
                   {merchant.code} • {merchant.city || 'No city'}
                 </span>
-                {merchant.isOpen !== undefined && (
-                  <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${merchant.isOpen
-                    ? 'bg-white/20 text-white'
-                    : 'bg-red-500/20 text-red-100'
+                {(() => {
+                  const effectivelyOpen = isStoreEffectivelyOpen({
+                    isOpen: merchant.isOpen,
+                    openingHours: merchant.openingHours,
+                    timezone: merchant.timezone,
+                  });
+                  return (
+                    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${effectivelyOpen
+                      ? 'bg-white/20 text-white'
+                      : 'bg-red-500/20 text-red-100'
                     }`}>
-                    <div className={`h-2 w-2 rounded-full ${merchant.isOpen ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}></div>
-                    {merchant.isOpen ? 'Open' : 'Closed'}
-                  </span>
-                )}
+                      <div className={`h-2 w-2 rounded-full ${effectivelyOpen ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}></div>
+                      {effectivelyOpen ? 'Open' : 'Closed'}
+                    </span>
+                  );
+                })()}
               </div>
             </div>
           </div>

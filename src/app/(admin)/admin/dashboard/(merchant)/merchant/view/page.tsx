@@ -8,6 +8,7 @@ import dynamic from "next/dynamic";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { useAuth } from "@/hooks/useAuth";
 import MerchantQRCodeModal from "@/components/merchants/MerchantQRCodeModal";
+import { isStoreEffectivelyOpen } from "@/lib/utils/storeStatus";
 
 // Dynamically import map component
 const MapContent = dynamic(() => import("@/components/maps/MapContent"), { ssr: false });
@@ -292,17 +293,29 @@ export default function ViewMerchantPage() {
               )}
 
               {merchant.isActive && (
-                merchant.isOpen ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-success-100 px-3 py-1.5 text-xs font-medium text-success-700 dark:bg-success-900/20 dark:text-success-400">
-                    <div className="h-2 w-2 rounded-full bg-success-500 animate-pulse"></div>
-                    Store Open
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1.5 text-xs font-medium text-red-700 dark:bg-red-900/20 dark:text-red-400">
-                    <div className="h-2 w-2 rounded-full bg-red-500"></div>
-                    Store Closed
-                  </span>
-                )
+                (() => {
+                  const effectivelyOpen = isStoreEffectivelyOpen({
+                    isOpen: merchant.isOpen,
+                    openingHours: merchant.openingHours.map(h => ({
+                      dayOfWeek: h.dayOfWeek,
+                      openTime: h.openTime,
+                      closeTime: h.closeTime,
+                      isClosed: h.isClosed,
+                    })),
+                    timezone: merchant.timezone,
+                  });
+                  return effectivelyOpen ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-success-100 px-3 py-1.5 text-xs font-medium text-success-700 dark:bg-success-900/20 dark:text-success-400">
+                      <div className="h-2 w-2 rounded-full bg-success-500 animate-pulse"></div>
+                      Store Open
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1.5 text-xs font-medium text-red-700 dark:bg-red-900/20 dark:text-red-400">
+                      <div className="h-2 w-2 rounded-full bg-red-500"></div>
+                      Store Closed
+                    </span>
+                  );
+                })()
               )}
             </div>
 

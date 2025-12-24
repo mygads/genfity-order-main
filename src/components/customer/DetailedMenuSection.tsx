@@ -43,6 +43,7 @@ interface DetailedMenuSectionProps {
     getItemQuantityInCart?: (menuId: string) => number;
     onIncreaseQty?: (menuId: string) => void;
     onDecreaseQty?: (menuId: string) => void;
+    storeOpen?: boolean; // When false, hide Add button and apply gray overlay
 }
 
 export default function DetailedMenuSection({
@@ -53,6 +54,7 @@ export default function DetailedMenuSection({
     getItemQuantityInCart,
     onIncreaseQty,
     onDecreaseQty,
+    storeOpen = true,
 }: DetailedMenuSectionProps) {
     if (items.length === 0) return null;
 
@@ -231,15 +233,18 @@ export default function DetailedMenuSection({
                                         )}
                                     </div>
 
-                                    {/* Button Area - Add / Quantity / Sold out */}
+                                    {/* Button Area - Add / Quantity / Sold out - Hide when store closed */}
                                     <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
                                         {/* Low Stock Indicator */}
-                                        {isAvailable && item.trackStock && item.stockQty !== null && item.stockQty <= 10 && (
+                                        {isAvailable && storeOpen && item.trackStock && item.stockQty !== null && item.stockQty <= 10 && (
                                             <span style={{ fontSize: '12px', fontWeight: 500, color: '#f97316' }}>
                                                 Only {item.stockQty} left
                                             </span>
                                         )}
-                                        {!isAvailable ? (
+                                        {!storeOpen ? (
+                                            /* Store closed - no add button */
+                                            null
+                                        ) : !isAvailable ? (
                                             /* Sold out text */
                                             <span
                                                 style={{

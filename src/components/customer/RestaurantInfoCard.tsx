@@ -28,9 +28,10 @@ interface RestaurantInfoCardProps {
   name: string;
   openingHours: OpeningHour[];
   onClick?: () => void;
+  isClosed?: boolean; // When true, show red CLOSED badge
 }
 
-export default function RestaurantInfoCard({ name, openingHours, onClick }: RestaurantInfoCardProps) {
+export default function RestaurantInfoCard({ name, openingHours, onClick, isClosed = false }: RestaurantInfoCardProps) {
   // Calculate merchant status
   const getMerchantStatus = (): string => {
     if (!openingHours || openingHours.length === 0) {
@@ -76,27 +77,48 @@ export default function RestaurantInfoCard({ name, openingHours, onClick }: Rest
       tabIndex={0}
       aria-label={`${name} information`}
     >
-      <div>
-        <h2
-          className="font-bold"
-          style={{
-            fontSize: '16px',
-            fontWeight: 700,
-            color: '#212529',
-            fontFamily: 'Inter, sans-serif',
-          }}
-        >
-          {name}
-        </h2>
-        <p
-          style={{
-            fontSize: '14px',
-            color: '#666666',
-            fontFamily: 'Inter, sans-serif',
-          }}
-        >
-          {getMerchantStatus()}
-        </p>
+      <div className="flex items-center gap-3">
+        {/* CLOSED Badge - Show when store is closed */}
+        {isClosed && (
+          <span
+            className="shrink-0"
+            style={{
+              backgroundColor: '#EF4444',
+              color: '#FFFFFF',
+              padding: '4px 10px',
+              borderRadius: '6px',
+              fontSize: '12px',
+              fontWeight: 700,
+              fontFamily: 'Inter, sans-serif',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+            }}
+          >
+            Closed
+          </span>
+        )}
+        <div>
+          <h2
+            className="font-bold"
+            style={{
+              fontSize: '16px',
+              fontWeight: 700,
+              color: '#212529',
+              fontFamily: 'Inter, sans-serif',
+            }}
+          >
+            {name}
+          </h2>
+          <p
+            style={{
+              fontSize: '14px',
+              color: '#666666',
+              fontFamily: 'Inter, sans-serif',
+            }}
+          >
+            {getMerchantStatus()}
+          </p>
+        </div>
       </div>
       <ChevronRight style={{ color: '#999999', flexShrink: 0 }} width="20" height="20" />
     </div>

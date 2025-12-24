@@ -51,6 +51,7 @@ interface MenuDetailModalProps {
   existingCartItem?: CartItem | null;
   onClose: () => void;
   prefetchedAddons?: AddonCategory[]; // Prefetched addon data from parent
+  storeOpen?: boolean; // Whether store is open (hide Add button when closed)
 }
 
 /**
@@ -74,7 +75,8 @@ export default function MenuDetailModal({
   editMode = false,
   existingCartItem = null,
   onClose,
-  prefetchedAddons
+  prefetchedAddons,
+  storeOpen = true
 }: MenuDetailModalProps) {
   const { addItem, updateItem, initializeCart, cart } = useCart();
 
@@ -895,6 +897,8 @@ export default function MenuDetailModal({
         </div>
 
         {/* Fixed Bottom Bar - Burjo ESB Style */}
+        {/* Hide entire bottom bar when store is closed */}
+        {storeOpen && (
         <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[500px] bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 rounded-t-2xl z-310" style={{ boxShadow: '0 -4px 6px -1px rgba(0, 0, 0, 0.1), 0 -2px 4px -1px rgba(0, 0, 0, 0.06)' }}>
           {/* Total Order Row */}
           <div className="flex items-center justify-between px-4 py-4">
@@ -947,6 +951,7 @@ export default function MenuDetailModal({
             </button>
           </div>
         </div>
+        )}
 
         {/* Animation CSS */}
         <style jsx>{`

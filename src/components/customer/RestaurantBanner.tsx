@@ -19,9 +19,10 @@ interface RestaurantBannerProps {
   imageUrl?: string | null;
   bannerUrl?: string | null;
   merchantName: string;
+  isClosed?: boolean; // When true, apply gray overlay
 }
 
-export default function RestaurantBanner({ imageUrl, bannerUrl, merchantName }: RestaurantBannerProps) {
+export default function RestaurantBanner({ imageUrl, bannerUrl, merchantName, isClosed = false }: RestaurantBannerProps) {
   // Use a cache-busting parameter that updates every 30 seconds
   // This ensures fresh images are loaded when banner is updated
   const [cacheBuster, setCacheBuster] = useState(() => Math.floor(Date.now() / 30000));
@@ -48,7 +49,7 @@ export default function RestaurantBanner({ imageUrl, bannerUrl, merchantName }: 
       }}
     >
       {/* Banner Image */}
-      <div className="relative w-full h-full">
+      <div className={`relative w-full h-full ${isClosed ? 'grayscale opacity-60' : ''}`}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={displayImage}
@@ -60,6 +61,14 @@ export default function RestaurantBanner({ imageUrl, bannerUrl, merchantName }: 
           }}
         />
       </div>
+      
+      {/* Gray overlay when closed */}
+      {isClosed && (
+        <div 
+          className="absolute inset-0 bg-gray-900/30 pointer-events-none"
+          style={{ borderRadius: '0 0 8px 8px' }}
+        />
+      )}
     </div>
   );
 }
