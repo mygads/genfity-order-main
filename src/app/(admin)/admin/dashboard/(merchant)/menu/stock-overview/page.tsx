@@ -543,70 +543,9 @@ export default function StockOverviewPage() {
             </div>
           )}
 
-          {/* Stats Cards */}
-          <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <div className={`rounded-2xl border-2 p-5 transition-all cursor-pointer ${activeFilter === 'healthy' ? 'border-success-400 bg-success-50 dark:border-success-600 dark:bg-success-900/20' : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-800 dark:bg-gray-900/50'}`} onClick={() => setActiveFilter('healthy')}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Healthy Stock</p>
-                  <p className="mt-1 text-3xl font-bold text-gray-900 dark:text-white">{stats.healthy}</p>
-                  <p className="mt-1 text-xs text-gray-500">&gt; 5 units</p>
-                </div>
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-success-100 text-success-600 dark:bg-success-900/30 dark:text-success-400">
-                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-              </div>
-            </div>
 
-            <div className={`rounded-2xl border-2 p-5 transition-all cursor-pointer ${activeFilter === 'low' ? 'border-warning-400 bg-warning-50 dark:border-warning-600 dark:bg-warning-900/20' : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-800 dark:bg-gray-900/50'}`} onClick={() => setActiveFilter('low')}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Low Stock</p>
-                  <p className="mt-1 text-3xl font-bold text-gray-900 dark:text-white">{stats.lowStock}</p>
-                  <p className="mt-1 text-xs text-gray-500">1-5 units</p>
-                </div>
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-warning-100 text-warning-600 dark:bg-warning-900/30 dark:text-warning-400">
-                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                </div>
-              </div>
-            </div>
 
-            <div className={`rounded-2xl border-2 p-5 transition-all cursor-pointer ${activeFilter === 'out' ? 'border-error-400 bg-error-50 dark:border-error-600 dark:bg-error-900/20' : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-800 dark:bg-gray-900/50'}`} onClick={() => setActiveFilter('out')}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Out of Stock</p>
-                  <p className="mt-1 text-3xl font-bold text-gray-900 dark:text-white">{stats.outOfStock}</p>
-                  <p className="mt-1 text-xs text-gray-500">0 units</p>
-                </div>
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-error-100 text-error-600 dark:bg-error-900/30 dark:text-error-400">
-                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            <div className={`rounded-2xl border-2 p-5 transition-all cursor-pointer ${activeFilter === 'all' ? 'border-primary-400 bg-primary-50 dark:border-primary-600 dark:bg-primary-900/20' : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-800 dark:bg-gray-900/50'}`} onClick={() => setActiveFilter('all')}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Auto Reset</p>
-                  <p className="mt-1 text-3xl font-bold text-gray-900 dark:text-white">{stats.withTemplate}</p>
-                  <p className="mt-1 text-xs text-gray-500">Daily template</p>
-                </div>
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
-                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Tabs and Search */}
+          {/* Tabs, Filter, and Search */}
           <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             {/* Tabs */}
             <div className="inline-flex rounded-xl border border-gray-200 bg-gray-100 p-1 dark:border-gray-700 dark:bg-gray-800">
@@ -642,20 +581,32 @@ export default function StockOverviewPage() {
               </button>
             </div>
 
-            {/* Search */}
-            <div className="relative max-w-md flex-1">
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
-                <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
+            {/* Search and Status Filter */}
+            <div className="flex flex-wrap gap-3 items-center">
+              <div className="relative max-w-md flex-1">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search items..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-12 w-full rounded-xl border border-gray-200 bg-white pl-11 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                />
               </div>
-              <input
-                type="text"
-                placeholder="Search items..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-12 w-full rounded-xl border border-gray-200 bg-white pl-11 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-              />
+              <select
+                value={activeFilter}
+                onChange={(e) => setActiveFilter(e.target.value as FilterType)}
+                className="h-12 rounded-xl border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+              >
+                <option value="all">All Status</option>
+                <option value="healthy">Healthy ({stats.healthy})</option>
+                <option value="low">Low Stock ({stats.lowStock})</option>
+                <option value="out">Out of Stock ({stats.outOfStock})</option>
+              </select>
             </div>
           </div>
 

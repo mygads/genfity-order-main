@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { CustomerOrderSkeleton } from '@/components/common/SkeletonLoaders';
+import { FormPageSkeleton } from '@/components/common/SkeletonLoaders';
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import Image from "next/image";
 
@@ -356,15 +358,7 @@ export default function CreateMenuPage() {
 
 
   if (loading) {
-    return (
-      <div>
-        <PageBreadcrumb pageTitle="Create Menu Item" />
-        <div className="mt-6 py-10 text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary-500 border-r-transparent"></div>
-          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Loading...</p>
-        </div>
-      </div>
-    );
+    return <FormPageSkeleton />;
   }
 
   return (
@@ -452,7 +446,7 @@ export default function CreateMenuPage() {
                 </label>
                 <div className="relative max-w-xs">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-gray-500">
-                    {merchant?.currency === 'IDR' ? 'Rp' : 'A$'}
+                    $A
                   </span>
                   <input
                     type="number"

@@ -56,14 +56,21 @@ export default function AddonItemsTable({
     return category?.name || 'Unknown';
   };
 
-  const getInputTypeLabel = (type: string): string => {
-    return type === "SELECT" ? "Checkbox / Radio" : "Quantity (+/-)";
+  const getInputTypeLabel = (item: AddonItem): string => {
+    const category = item.addonCategory || categories.find(c => c.id === item.addonCategoryId);
+    if (!category) return item.inputType === "SELECT" ? "Selection" : "Quantity (+/-)";
+    const max = category.maxSelection;
+    if (item.inputType === "QTY") return "Quantity (+/-)";
+    return max === 1 ? "Radio" : "Checkbox";
   };
 
-  const getInputTypeBadgeColor = (type: string): string => {
-    return type === "SELECT"
-      ? "bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400"
-      : "bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400";
+  const getInputTypeBadgeColor = (item: AddonItem): string => {
+    const category = item.addonCategory || categories.find(c => c.id === item.addonCategoryId);
+    if (item.inputType === "QTY") return "bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400";
+    const max = category?.maxSelection;
+    return max === 1
+      ? "bg-purple-100 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400"
+      : "bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400";
   };
 
   if (items.length === 0) {
@@ -85,7 +92,6 @@ export default function AddonItemsTable({
             <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Category</th>
             <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Type</th>
             <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Price</th>
-            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Stock</th>
             <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Status</th>
             <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Actions</th>
           </tr>
@@ -107,63 +113,25 @@ export default function AddonItemsTable({
                 </span>
               </td>
               <td className="px-4 py-4">
-                <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${getInputTypeBadgeColor(item.inputType)}`}>
-                  {getInputTypeLabel(item.inputType)}
+                <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${getInputTypeBadgeColor(item)}`}>
+                  {getInputTypeLabel(item)}
                 </span>
               </td>
               <td className="px-4 py-4">
                 <span className={`text-sm font-semibold ${formatPrice(item.price) === 'Free'
-                    ? 'text-success-600 dark:text-success-400'
-                    : 'text-gray-800 dark:text-white/90'
+                  ? 'text-success-600 dark:text-success-400'
+                  : 'text-gray-800 dark:text-white/90'
                   }`}>
                   {formatPrice(item.price)}
                 </span>
               </td>
-              <td className="px-4 py-4">
-                {item.trackStock ? (
-                  <div className="space-y-1.5">
-                    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${(item.stockQty || 0) > 10
-                        ? 'bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400'
-                        : (item.stockQty || 0) > 0
-                          ? 'bg-warning-100 text-warning-700 dark:bg-warning-900/20 dark:text-warning-400'
-                          : 'bg-error-100 text-error-700 dark:bg-error-900/20 dark:text-error-400'
-                      }`}>
-                      {item.stockQty || 0} pcs
-                    </span>
-                    {item.dailyStockTemplate !== null && (
-                      <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
-                        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        <span>Template: {item.dailyStockTemplate}</span>
-                      </div>
-                    )}
-                    {item.autoResetStock && (
-                      <div className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/20 dark:text-blue-400">
-                        <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        Auto Reset
-                      </div>
-                    )}
-                    {item.lastStockResetAt && (
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        Reset: {new Date(item.lastStockResetAt).toLocaleDateString()}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    No tracking
-                  </span>
-                )}
-              </td>
+
               <td className="px-4 py-4">
                 <button
                   onClick={() => onToggleActive(item.id, item.isActive)}
                   className={`inline-flex cursor-pointer rounded-full px-3 py-1 text-xs font-medium transition-colors ${item.isActive
-                      ? 'bg-success-100 text-success-700 hover:bg-success-200 dark:bg-success-900/20 dark:text-success-400 dark:hover:bg-success-900/30'
-                      : 'bg-error-100 text-error-700 hover:bg-error-200 dark:bg-error-900/20 dark:text-error-400 dark:hover:bg-error-900/30'
+                    ? 'bg-success-100 text-success-700 hover:bg-success-200 dark:bg-success-900/20 dark:text-success-400 dark:hover:bg-success-900/30'
+                    : 'bg-error-100 text-error-700 hover:bg-error-200 dark:bg-error-900/20 dark:text-error-400 dark:hover:bg-error-900/30'
                     }`}
                   title={item.isActive ? "Click to deactivate" : "Click to activate"}
                 >

@@ -58,6 +58,7 @@ export default function AddonItemsPage() {
   const merchant = { currency: merchantData?.currency || "AUD" };
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
   const [formData, setFormData] = useState<AddonItemFormData>({
     addonCategoryId: "",
@@ -265,9 +266,11 @@ export default function AddonItemsPage() {
   };
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to delete "${name}"?`)) {
-      return;
-    }
+    setDeleteTarget({ id, name });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
 
     try {
       const token = localStorage.getItem("accessToken");
@@ -276,7 +279,7 @@ export default function AddonItemsPage() {
         return;
       }
 
-      const response = await fetch(`/api/merchant/addon-items/${id}`, {
+      const response = await fetch(`/api/merchant/addon-items/${deleteTarget.id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -292,6 +295,8 @@ export default function AddonItemsPage() {
       fetchData();
     } catch (err) {
       showError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setDeleteTarget(null);
     }
   };
 
@@ -497,6 +502,37 @@ export default function AddonItemsPage() {
           });
         }}
       />
+
+      {/* Delete Confirmation Modal */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-error-100 dark:bg-error-900/30">
+              <svg className="h-6 w-6 text-error-600 dark:text-error-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </div>
+            <h3 className="mb-2 text-lg font-semibold text-gray-900 dark:text-white">Delete Addon Item</h3>
+            <p className="mb-6 text-sm text-gray-600 dark:text-gray-400">
+              Are you sure you want to delete <span className="font-medium text-gray-900 dark:text-white">&quot;{deleteTarget.name}&quot;</span>? This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="h-11 flex-1 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="h-11 flex-1 rounded-lg bg-error-500 text-sm font-medium text-white hover:bg-error-600"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

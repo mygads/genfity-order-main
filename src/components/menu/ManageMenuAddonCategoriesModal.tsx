@@ -663,7 +663,7 @@ export default function ManageMenuAddonCategoriesModal({
             <button
               onClick={handleSubmit}
               disabled={submitting}
-              className="h-11 flex-1 rounded-lg bg-brand-500 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
+              className="h-11 flex-1 rounded-lg bg-orange-500 text-sm font-medium text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {submitting ? "Saving..." : "Save Changes"}
             </button>

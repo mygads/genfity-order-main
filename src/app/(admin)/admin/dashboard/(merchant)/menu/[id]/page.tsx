@@ -174,9 +174,21 @@ export default function MenuDetailPage() {
     return (
       <div>
         <PageBreadcrumb pageTitle="Menu Detail" />
-        <div className="mt-6 py-10 text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary-500 border-r-transparent"></div>
-          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Loading menu details...</p>
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950">
+          <div className="mb-6 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 animate-pulse rounded-xl bg-gray-200 dark:bg-gray-700"></div>
+              <div><div className="h-6 w-32 animate-pulse rounded bg-gray-200 dark:bg-gray-700"></div><div className="mt-2 h-4 w-48 animate-pulse rounded bg-gray-200 dark:bg-gray-700"></div></div>
+            </div>
+            <div className="flex gap-3"><div className="h-11 w-20 animate-pulse rounded-xl bg-gray-200 dark:bg-gray-700"></div><div className="h-11 w-28 animate-pulse rounded-xl bg-gray-200 dark:bg-gray-700"></div></div>
+          </div>
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+            <div className="space-y-6 lg:col-span-2">
+              <div><div className="h-8 w-64 animate-pulse rounded bg-gray-200 dark:bg-gray-700"></div><div className="mt-3 h-4 w-full max-w-md animate-pulse rounded bg-gray-200 dark:bg-gray-700"></div></div>
+              <div className="h-20 w-48 animate-pulse rounded-xl bg-gray-200 dark:bg-gray-700"></div>
+            </div>
+            <div className="h-64 w-full animate-pulse rounded-2xl bg-gray-200 dark:bg-gray-700"></div>
+          </div>
         </div>
       </div>
     );
@@ -267,8 +279,8 @@ export default function MenuDetailPage() {
                   )}
                 </div>
                 <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${menu.isActive
-                    ? 'bg-success-100 text-success-700 dark:bg-success-900/30 dark:text-success-400'
-                    : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                  ? 'bg-success-100 text-success-700 dark:bg-success-900/30 dark:text-success-400'
+                  : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
                   }`}>
                   <span className={`h-2 w-2 rounded-full ${menu.isActive ? 'bg-success-500' : 'bg-gray-400'}`}></span>
                   {menu.isActive ? 'Active' : 'Inactive'}
@@ -316,27 +328,9 @@ export default function MenuDetailPage() {
               {/* Price Section */}
               <div className="flex flex-wrap items-center gap-4">
                 <div className="rounded-xl border border-gray-200 bg-gray-50 px-5 py-3 dark:border-gray-700 dark:bg-gray-800/50">
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Regular Price</p>
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Price</p>
                   <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{formatPrice(menu.price)}</p>
                 </div>
-
-                {menu.isPromo && menu.promoPrice && (
-                  <div className={`rounded-xl border-2 px-5 py-3 ${isPromoActive()
-                      ? 'border-orange-300 bg-orange-50 dark:border-orange-700 dark:bg-orange-900/20'
-                      : 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50'
-                    }`}>
-                    <div className="flex items-center gap-2">
-                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Promo Price</p>
-                      {isPromoActive() && (
-                        <span className="rounded-full bg-orange-500 px-2 py-0.5 text-xs font-bold text-white">ACTIVE</span>
-                      )}
-                    </div>
-                    <p className="mt-1 text-2xl font-bold text-orange-600 dark:text-orange-400">{formatPrice(menu.promoPrice)}</p>
-                    <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
-                      {formatDate(menu.promoStartDate)} - {formatDate(menu.promoEndDate)}
-                    </p>
-                  </div>
-                )}
               </div>
 
               {/* Info Cards */}
@@ -358,10 +352,10 @@ export default function MenuDetailPage() {
                 {menu.trackStock && (
                   <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-gray-50/50 p-4 dark:border-gray-700 dark:bg-gray-800/30">
                     <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${(menu.stockQty || 0) > 10
-                        ? 'bg-success-100 text-success-600 dark:bg-success-900/30 dark:text-success-400'
-                        : (menu.stockQty || 0) > 0
-                          ? 'bg-warning-100 text-warning-600 dark:bg-warning-900/30 dark:text-warning-400'
-                          : 'bg-error-100 text-error-600 dark:bg-error-900/30 dark:text-error-400'
+                      ? 'bg-success-100 text-success-600 dark:bg-success-900/30 dark:text-success-400'
+                      : (menu.stockQty || 0) > 0
+                        ? 'bg-warning-100 text-warning-600 dark:bg-warning-900/30 dark:text-warning-400'
+                        : 'bg-error-100 text-error-600 dark:bg-error-900/30 dark:text-error-400'
                       }`}>
                       <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
@@ -371,8 +365,8 @@ export default function MenuDetailPage() {
                       <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Stock Available</p>
                       <div className="flex items-center gap-2">
                         <span className={`text-sm font-bold ${(menu.stockQty || 0) > 10 ? 'text-success-600 dark:text-success-400'
-                            : (menu.stockQty || 0) > 0 ? 'text-warning-600 dark:text-warning-400'
-                              : 'text-error-600 dark:text-error-400'
+                          : (menu.stockQty || 0) > 0 ? 'text-warning-600 dark:text-warning-400'
+                            : 'text-error-600 dark:text-error-400'
                           }`}>
                           {menu.stockQty || 0} pcs
                         </span>
@@ -399,8 +393,8 @@ export default function MenuDetailPage() {
 
               <div
                 className={`relative rounded-2xl border-2 transition-all overflow-hidden cursor-pointer ${menu.imageUrl
-                    ? 'border-primary-200 bg-primary-50/30 dark:border-primary-700 dark:bg-primary-900/10'
-                    : 'border-dashed border-gray-300 bg-gray-50 dark:border-gray-700 dark:bg-gray-900'
+                  ? 'border-primary-200 bg-primary-50/30 dark:border-primary-700 dark:bg-primary-900/10'
+                  : 'border-dashed border-gray-300 bg-gray-50 dark:border-gray-700 dark:bg-gray-900'
                   }`}
                 onClick={() => menu.imageUrl && setShowImageModal(true)}
               >
