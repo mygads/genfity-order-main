@@ -201,3 +201,98 @@ export function getStoreStatusText(merchant: MerchantStatus): { text: string; is
   
   return { text: 'Open Now', isOpen: true };
 }
+
+/**
+ * Calculate minutes until store closes
+ * 
+ * @param openingHours - Array of opening hours
+ * @param timezone - Merchant's timezone
+ * @returns Number of minutes until close, or null if not applicable
+ */
+export function getMinutesUntilClose(
+  openingHours?: OpeningHour[],
+  timezone?: string
+): number | null {
+  if (!openingHours || openingHours.length === 0) {
+    return null;
+  }
+
+  const { dayOfWeek, currentTime } = getCurrentTimeInTimezone(timezone);
+  const todayHours = openingHours.find(h => h.dayOfWeek === dayOfWeek);
+
+  // No hours for today or closed
+  if (!todayHours || todayHours.isClosed) {
+    return null;
+  }
+
+  // 24 hours operation - no closing time
+  if (todayHours.is24Hours) {
+    return null;
+  }
+
+  // Check if we have closing time
+  if (!todayHours.closeTime) {
+    return null;
+  }
+
+  // Parse times
+  const [currentHour, currentMinute] = currentTime.split(':').map(Number);
+  const [closeHour, closeMinute] = todayHours.closeTime.split(':').map(Number);
+
+  // Calculate minutes
+  const currentTotalMinutes = currentHour * 60 + currentMinute;
+  const closeTotalMinutes = closeHour * 60 + closeMinute;
+
+  const minutesRemaining = closeTotalMinutes - currentTotalMinutes;
+
+  // If already past closing time, return 0
+  return minutesRemaining > 0 ? minutesRemaining : 0;
+}
+
+/**
+ * Get next opening time for today or tomorrow
+ * 
+ * @param openingHours - Array of opening hours
+ * @param timezone - Merchant's timezone
+ * @returns String describing when store opens next, or null
+ */
+export function getNextOpeningTime(
+  openingHours?: OpeningHour[],
+  timezone?: string
+): string | null {
+  if (!openingHours || openingHours.length === 0) {
+    return null;
+  }
+
+  const { dayOfWeek, currentTime } = getCurrentTimeInTimezone(timezone);
+  const todayHours = openingHours.find(h => h.dayOfWeek === dayOfWeek);
+
+  // Check if opens later today
+  if (todayHours && !todayHours.isClosed && todayHours.openTime) {
+    if (currentTime < todayHours.openTime) {
+      return `Opens at ${todayHours.openTime}`;
+    }
+  }
+
+  // Find next open day
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  
+  for (let i = 1; i <= 7; i++) {
+    const nextDay = (dayOfWeek + i) % 7;
+    const nextDayHours = openingHours.find(h => h.dayOfWeek === nextDay);
+    
+    if (nextDayHours && !nextDayHours.isClosed) {
+      if (nextDayHours.is24Hours) {
+        return i === 1 ? 'Opens tomorrow' : `Opens ${dayNames[nextDay]}`;
+      }
+      if (nextDayHours.openTime) {
+        return i === 1 
+          ? `Opens tomorrow at ${nextDayHours.openTime}` 
+          : `Opens ${dayNames[nextDay]} at ${nextDayHours.openTime}`;
+      }
+    }
+  }
+
+  return null;
+}
+

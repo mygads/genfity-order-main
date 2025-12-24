@@ -325,9 +325,52 @@ export default function MerchantOwnerDashboard({
       </div>
 
       {/* Recent Orders & Top Selling */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Recent Orders - No Images */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Opening Hours Preview */}
         <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <svg className="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Opening Hours
+            </h3>
+            <Link
+              href="/admin/dashboard/merchant/edit"
+              className="text-xs text-brand-500 hover:text-brand-600 dark:text-brand-400"
+            >
+              Edit
+            </Link>
+          </div>
+          <div className="space-y-2">
+            {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day, idx) => {
+              const hours = merchant.openingHours?.find(h => h.dayOfWeek === idx);
+              const today = new Date().getDay();
+              const isToday = idx === today;
+              return (
+                <div
+                  key={day}
+                  className={`flex items-center justify-between py-1.5 px-2 rounded ${isToday ? 'bg-brand-50 dark:bg-brand-900/20' : ''}`}
+                >
+                  <span className={`text-sm ${isToday ? 'font-semibold text-brand-600 dark:text-brand-400' : 'text-gray-600 dark:text-gray-400'}`}>
+                    {day}
+                    {isToday && <span className="ml-1 text-xs">(Today)</span>}
+                  </span>
+                  <span className={`text-sm ${hours?.isClosed ? 'text-red-500' : 'text-gray-900 dark:text-white'}`}>
+                    {hours?.isClosed
+                      ? 'Closed'
+                      : hours?.openTime && hours?.closeTime
+                        ? `${hours.openTime} - ${hours.closeTime}`
+                        : 'Not Set'}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Recent Orders - No Images */}
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900 lg:col-span-2">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
               Recent Orders

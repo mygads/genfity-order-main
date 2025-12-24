@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import OutletInfoModal from '@/components/customer/OutletInfoModal';
 import RestaurantBanner from '@/components/customer/RestaurantBanner';
 import RestaurantInfoCard from '@/components/customer/RestaurantInfoCard';
-import { isStoreEffectivelyOpen, isWithinSchedule as isWithinScheduleUtil } from '@/lib/utils/storeStatus';
+import { useStoreStatus } from '@/hooks/useStoreStatus';
 import { useToast } from '@/hooks/useToast';
 
 interface OpeningHour {
@@ -26,16 +26,6 @@ interface MerchantData {
     phone?: string;
     logoUrl?: string | null;
     bannerUrl?: string | null;
-    isOpen?: boolean; // Manual toggle from database
-    timezone?: string; // Merchant timezone
-    isDineInEnabled?: boolean;
-    isTakeawayEnabled?: boolean;
-    dineInLabel?: string | null;
-    takeawayLabel?: string | null;
-    dineInScheduleStart?: string | null;
-    dineInScheduleEnd?: string | null;
-    takeawayScheduleStart?: string | null;
-    takeawayScheduleEnd?: string | null;
     openingHours: OpeningHour[];
 }
 
@@ -45,19 +35,11 @@ interface MerchantClientPageProps {
 }
 
 /**
- * Check if current time is within a schedule range
- * Uses the unified utility from storeStatus.ts
- */
-function isWithinSchedule(scheduleStart?: string | null, scheduleEnd?: string | null, timezone?: string): boolean {
-    return isWithinScheduleUtil(scheduleStart, scheduleEnd, timezone);
-}
-
-/**
  * GENFITY - Order Mode Selection Page (Client Component)
  * 
  * Handles:
  * - Mode selection (dine-in/takeaway)
- * - Store open/closed status with grayed out UI
+ * - Store open/closed status with grayed out UI (real-time via API)
  * - Outlet info modal
  */
 export default function MerchantClientPage({ merchant, merchantCode }: MerchantClientPageProps) {
@@ -65,34 +47,25 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
     const { showToast } = useToast();
     const [showOutletInfo, setShowOutletInfo] = useState(false);
 
-    // Use unified store status utility (checks both isOpen toggle AND opening hours)
-    const storeOpen = isStoreEffectivelyOpen({
-        isOpen: merchant.isOpen,
-        openingHours: merchant.openingHours.map(h => ({
-            dayOfWeek: h.dayOfWeek,
-            openTime: h.openTime,
-            closeTime: h.closeTime,
-            isClosed: h.isClosed,
-            is24Hours: h.is24Hours,
-        })),
-        timezone: merchant.timezone,
+    // Use real-time store status hook (fetches from API, not cached ISR data)
+    const {
+        storeOpen,
+        isDineInEnabled,
+        isTakeawayEnabled,
+        isDineInAvailable,
+        isTakeawayAvailable,
+        dineInLabel,
+        takeawayLabel,
+        minutesUntilClose,
+        openingHours: liveOpeningHours,
+        isLoading: isStatusLoading,
+    } = useStoreStatus(merchantCode, {
+        refreshInterval: 30000, // Refresh every 30 seconds
+        revalidateOnFocus: true,
     });
-    
-    // Check which sale modes are enabled (default to true if not set)
-    const isDineInEnabled = merchant.isDineInEnabled ?? true;
-    const isTakeawayEnabled = merchant.isTakeawayEnabled ?? true;
 
-    // Check if modes are within their scheduled hours
-    const isDineInWithinSchedule = isWithinSchedule(merchant.dineInScheduleStart, merchant.dineInScheduleEnd, merchant.timezone);
-    const isTakeawayWithinSchedule = isWithinSchedule(merchant.takeawayScheduleStart, merchant.takeawayScheduleEnd, merchant.timezone);
-
-    // Mode is available if enabled AND within schedule
-    const isDineInAvailable = isDineInEnabled && isDineInWithinSchedule;
-    const isTakeawayAvailable = isTakeawayEnabled && isTakeawayWithinSchedule;
-
-    // Custom labels (fallback to defaults)
-    const dineInLabel = merchant.dineInLabel || 'Dine In';
-    const takeawayLabel = merchant.takeawayLabel || 'Pick Up';
+    // Use live opening hours or fallback to cached ones during loading
+    const displayOpeningHours = liveOpeningHours.length > 0 ? liveOpeningHours : merchant.openingHours;
 
     const handleModeSelect = (selectedMode: 'dinein' | 'takeaway') => {
         // Save mode to localStorage
@@ -121,6 +94,7 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
 
     // If only one mode is enabled and available, auto-redirect to order page
     useEffect(() => {
+        if (isStatusLoading) return; // Wait for status to load
         if (!storeOpen) return;
         
         if (isDineInAvailable && !isTakeawayAvailable) {
@@ -130,10 +104,17 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
             // Only takeaway available, auto-redirect
             router.replace(`/${merchantCode}/order?mode=takeaway`);
         }
-    }, [storeOpen, isDineInAvailable, isTakeawayAvailable, merchantCode, router]);
+    }, [isStatusLoading, storeOpen, isDineInAvailable, isTakeawayAvailable, merchantCode, router]);
 
     return (
         <>
+            {/* Store Closing Soon Warning Banner */}
+            {storeOpen && minutesUntilClose !== null && minutesUntilClose <= 30 && minutesUntilClose > 0 && (
+                <div className="bg-amber-500 text-white px-4 py-2 text-center text-sm font-medium">
+                    ⚠️ Store closes in {minutesUntilClose} minute{minutesUntilClose !== 1 ? 's' : ''}
+                </div>
+            )}
+
             {/* BANNER - Matching Order Page Style - Gray overlay when closed */}
             <RestaurantBanner
                 bannerUrl={merchant.bannerUrl}
@@ -146,7 +127,7 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
             <div className="px-3 -mt-6 relative z-10">
                 <RestaurantInfoCard
                     name={merchant.name}
-                    openingHours={(merchant.openingHours || []).map(h => ({
+                    openingHours={(displayOpeningHours || []).map(h => ({
                         dayOfWeek: h.dayOfWeek,
                         openTime: h.openTime || '',
                         closeTime: h.closeTime || '',
@@ -239,11 +220,6 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                                             UNAVAILABLE NOW
                                         </span>
                                     )}
-                                    {isDineInAvailable && !isDineInWithinSchedule && (
-                                        <span className="text-xs text-gray-400">
-                                            ({merchant.dineInScheduleStart} - {merchant.dineInScheduleEnd})
-                                        </span>
-                                    )}
                                 </button>
                             )}
 
@@ -262,11 +238,6 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                                     {(!storeOpen || !isTakeawayAvailable) && (
                                         <span className="text-xs bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded">
                                             UNAVAILABLE NOW
-                                        </span>
-                                    )}
-                                    {isTakeawayAvailable && !isTakeawayWithinSchedule && (
-                                        <span className="text-xs text-gray-400">
-                                            ({merchant.takeawayScheduleStart} - {merchant.takeawayScheduleEnd})
                                         </span>
                                     )}
                                 </button>
@@ -306,7 +277,7 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                     name: merchant.name,
                     address: merchant.address,
                     phone: merchant.phone,
-                    openingHours: merchant.openingHours.map(h => ({
+                    openingHours: displayOpeningHours.map(h => ({
                         ...h,
                         is24Hours: h.is24Hours ?? false,
                     })),

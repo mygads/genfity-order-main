@@ -22,7 +22,7 @@ import { getTableNumber, saveTableNumber } from '@/lib/utils/localStorage';
 import TableNumberModal from '@/components/customer/TableNumberModal';
 import { extractAddonDataFromMenus } from '@/lib/utils/addonExtractor';
 import { throttle } from '@/lib/utils/throttle';
-import { isStoreEffectivelyOpen, isWithinSchedule as isWithinScheduleUtil } from '@/lib/utils/storeStatus';
+import { useStoreStatus } from '@/hooks/useStoreStatus';
 
 interface MenuItem {
   id: string; // ✅ String from API (BigInt serialized)
@@ -107,20 +107,13 @@ interface OrderClientPageProps {
 }
 
 /**
- * Check if current time is within a schedule range
- * Uses the unified utility from storeStatus.ts
- */
-function isWithinSchedule(scheduleStart?: string | null, scheduleEnd?: string | null, timezone?: string): boolean {
-  return isWithinScheduleUtil(scheduleStart, scheduleEnd, timezone);
-}
-
-/**
  * ✅ ISR + Client Polling: Menu Browse Page
  * 
  * @architecture
  * - Server fetches initial data every 60 seconds (ISR)
  * - Client polls for updates every 15 seconds
  * - Instant render from server-provided initial data
+ * - Store status fetched in real-time (not cached)
  * 
  * @specification copilot-instructions.md - UI/UX Standards
  */
@@ -132,6 +125,19 @@ export default function OrderClientPage({
   initialMenus,
 }: OrderClientPageProps) {
   const router = useRouter();
+
+  // Use real-time store status hook (fetches from API, not cached ISR data)
+  const {
+    storeOpen,
+    isDineInAvailable,
+    isTakeawayAvailable,
+    minutesUntilClose,
+    openingHours: liveOpeningHours,
+    isLoading: isStatusLoading,
+  } = useStoreStatus(merchantCode, {
+    refreshInterval: 30000, // Refresh every 30 seconds
+    revalidateOnFocus: true,
+  });
 
   // Initialize state from server-provided props (instant render, no loading)
 
@@ -163,6 +169,9 @@ export default function OrderClientPage({
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({}); // References to category sections
   const { initializeCart, cart, updateItem, removeItem } = useCart();
   const autoRefreshIntervalRef = useRef<NodeJS.Timeout | null>(null); // Auto-refresh interval
+
+  // Use live opening hours or fallback to cached ones during loading
+  const displayOpeningHours = liveOpeningHours.length > 0 ? liveOpeningHours : (merchantInfo?.openingHours || []);
 
   const getMenuCartItems = (menuId: string): CartItem[] => {
     if (!cart) return [];
@@ -218,40 +227,13 @@ export default function OrderClientPage({
   };
 
   // ========================================
-  // Calculate Store Open Status using unified utility
-  // ========================================
-  const storeOpen = useMemo(() => {
-    if (!merchantInfo) return true;
-    return isStoreEffectivelyOpen({
-      isOpen: merchantInfo.isOpen,
-      openingHours: merchantInfo.openingHours.map(h => ({
-        dayOfWeek: h.dayOfWeek,
-        openTime: h.openTime,
-        closeTime: h.closeTime,
-        isClosed: h.isClosed,
-      })),
-      timezone: merchantInfo.timezone,
-    });
-  }, [merchantInfo]);
-
-  // ========================================
   // Validate Mode Availability (no redirect when store closed)
   // ========================================
   useEffect(() => {
     if (!merchantInfo) return;
+    if (isStatusLoading) return; // Wait for status to load
     
     // Don't redirect when store is closed - just show modified UI
-
-    const isDineInEnabled = merchantInfo.isDineInEnabled ?? true;
-    const isTakeawayEnabled = merchantInfo.isTakeawayEnabled ?? true;
-
-    // Check if modes are within their scheduled hours
-    const isDineInWithinSchedule = isWithinSchedule(merchantInfo.dineInScheduleStart, merchantInfo.dineInScheduleEnd, merchantInfo.timezone);
-    const isTakeawayWithinSchedule = isWithinSchedule(merchantInfo.takeawayScheduleStart, merchantInfo.takeawayScheduleEnd, merchantInfo.timezone);
-
-    // Mode is available if enabled AND within schedule
-    const isDineInAvailable = isDineInEnabled && isDineInWithinSchedule;
-    const isTakeawayAvailable = isTakeawayEnabled && isTakeawayWithinSchedule;
 
     // Only redirect if mode is completely disabled (not due to store closed)
     if (storeOpen) {
@@ -273,7 +255,7 @@ export default function OrderClientPage({
         return;
       }
     }
-  }, [merchantInfo, mode, merchantCode, router, storeOpen]);
+  }, [merchantInfo, mode, merchantCode, router, storeOpen, isStatusLoading, isDineInAvailable, isTakeawayAvailable]);
 
   // ========================================
   // Handle Auto Table Number from URL (tableno param)
@@ -635,6 +617,13 @@ export default function OrderClientPage({
   // ========================================
   return (
     <>
+      {/* Store Closing Soon Warning Banner */}
+      {storeOpen && minutesUntilClose !== null && minutesUntilClose <= 30 && minutesUntilClose > 0 && (
+        <div className="bg-amber-500 text-white px-4 py-2 text-center text-sm font-medium sticky top-0 z-50">
+          ⚠️ Store closes in {minutesUntilClose} minute{minutesUntilClose !== 1 ? 's' : ''}
+        </div>
+      )}
+
       {/* ======================================== 
           ORDER PAGE HEADER (New Component - Matches Reference)
           Positioned absolutely above banner when not sticky
@@ -699,7 +688,12 @@ export default function OrderClientPage({
               {merchantInfo && (
                 <RestaurantInfoCard
                   name={merchantInfo.name}
-                  openingHours={merchantInfo.openingHours}
+                  openingHours={displayOpeningHours.map(h => ({
+                    dayOfWeek: h.dayOfWeek,
+                    openTime: h.openTime || '',
+                    closeTime: h.closeTime || '',
+                    isClosed: h.isClosed,
+                  }))}
                   onClick={() => {
                     // Update URL without page reload
                     const params = new URLSearchParams(window.location.search);
@@ -1027,7 +1021,7 @@ export default function OrderClientPage({
             name: merchantInfo.name,
             address: merchantInfo.address,
             phone: merchantInfo.phone,
-            openingHours: merchantInfo.openingHours.map(h => ({ ...h, is24Hours: (h as { is24Hours?: boolean }).is24Hours ?? false })),
+            openingHours: displayOpeningHours.map(h => ({ ...h, is24Hours: (h as { is24Hours?: boolean }).is24Hours ?? false })),
           }}
         />
       )}
