@@ -88,6 +88,10 @@ interface MerchantInfo {
   taxPercentage: number;
   isDineInEnabled?: boolean;
   isTakeawayEnabled?: boolean;
+  dineInScheduleStart?: string | null;
+  dineInScheduleEnd?: string | null;
+  takeawayScheduleStart?: string | null;
+  takeawayScheduleEnd?: string | null;
   openingHours: OpeningHour[];
 }
 
@@ -97,6 +101,22 @@ interface OrderClientPageProps {
   initialMerchant: MerchantInfo | null;
   initialCategories: Category[];
   initialMenus: MenuItem[];
+}
+
+/**
+ * Check if current time is within a schedule range
+ */
+function isWithinSchedule(scheduleStart?: string | null, scheduleEnd?: string | null): boolean {
+  if (!scheduleStart || !scheduleEnd) return true;
+
+  const now = new Date();
+  const currentTime = now.toTimeString().slice(0, 5);
+
+  if (scheduleEnd < scheduleStart) {
+    return currentTime >= scheduleStart || currentTime <= scheduleEnd;
+  }
+
+  return currentTime >= scheduleStart && currentTime <= scheduleEnd;
 }
 
 /**
@@ -211,10 +231,18 @@ export default function OrderClientPage({
     const isDineInEnabled = merchantInfo.isDineInEnabled ?? true;
     const isTakeawayEnabled = merchantInfo.isTakeawayEnabled ?? true;
 
-    // Check if current mode is disabled
-    if (mode === 'dinein' && !isDineInEnabled) {
+    // Check if modes are within their scheduled hours
+    const isDineInWithinSchedule = isWithinSchedule(merchantInfo.dineInScheduleStart, merchantInfo.dineInScheduleEnd);
+    const isTakeawayWithinSchedule = isWithinSchedule(merchantInfo.takeawayScheduleStart, merchantInfo.takeawayScheduleEnd);
+
+    // Mode is available if enabled AND within schedule
+    const isDineInAvailable = isDineInEnabled && isDineInWithinSchedule;
+    const isTakeawayAvailable = isTakeawayEnabled && isTakeawayWithinSchedule;
+
+    // Check if current mode is disabled or outside schedule
+    if (mode === 'dinein' && !isDineInAvailable) {
       // Redirect to merchant page or takeaway mode
-      if (isTakeawayEnabled) {
+      if (isTakeawayAvailable) {
         router.replace(`/${merchantCode}/order?mode=takeaway`);
       } else {
         router.replace(`/${merchantCode}`);
@@ -222,9 +250,9 @@ export default function OrderClientPage({
       return;
     }
 
-    if (mode === 'takeaway' && !isTakeawayEnabled) {
+    if (mode === 'takeaway' && !isTakeawayAvailable) {
       // Redirect to merchant page or dinein mode
-      if (isDineInEnabled) {
+      if (isDineInAvailable) {
         router.replace(`/${merchantCode}/order?mode=dinein`);
       } else {
         router.replace(`/${merchantCode}`);

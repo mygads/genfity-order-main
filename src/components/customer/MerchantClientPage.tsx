@@ -26,6 +26,12 @@ interface MerchantData {
     bannerUrl?: string | null;
     isDineInEnabled?: boolean;
     isTakeawayEnabled?: boolean;
+    dineInLabel?: string | null;
+    takeawayLabel?: string | null;
+    dineInScheduleStart?: string | null;
+    dineInScheduleEnd?: string | null;
+    takeawayScheduleStart?: string | null;
+    takeawayScheduleEnd?: string | null;
     openingHours: OpeningHour[];
 }
 
@@ -64,6 +70,27 @@ function isStoreOpen(openingHours: OpeningHour[]): boolean {
 }
 
 /**
+ * Check if current time is within a schedule range
+ * @param scheduleStart - Start time in "HH:MM" format
+ * @param scheduleEnd - End time in "HH:MM" format
+ * @returns true if current time is within schedule, or if no schedule is set
+ */
+function isWithinSchedule(scheduleStart?: string | null, scheduleEnd?: string | null): boolean {
+    // If no schedule is set, always available
+    if (!scheduleStart || !scheduleEnd) return true;
+
+    const now = new Date();
+    const currentTime = now.toTimeString().slice(0, 5); // "HH:MM"
+
+    // Handle overnight schedules (e.g., 21:00 to 02:00)
+    if (scheduleEnd < scheduleStart) {
+        return currentTime >= scheduleStart || currentTime <= scheduleEnd;
+    }
+
+    return currentTime >= scheduleStart && currentTime <= scheduleEnd;
+}
+
+/**
  * GENFITY - Order Mode Selection Page (Client Component)
  * 
  * Handles:
@@ -81,8 +108,24 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
     const isDineInEnabled = merchant.isDineInEnabled ?? true;
     const isTakeawayEnabled = merchant.isTakeawayEnabled ?? true;
 
+    // Check if modes are within their scheduled hours
+    const isDineInWithinSchedule = isWithinSchedule(merchant.dineInScheduleStart, merchant.dineInScheduleEnd);
+    const isTakeawayWithinSchedule = isWithinSchedule(merchant.takeawayScheduleStart, merchant.takeawayScheduleEnd);
+
+    // Mode is available if enabled AND within schedule
+    const isDineInAvailable = isDineInEnabled && isDineInWithinSchedule;
+    const isTakeawayAvailable = isTakeawayEnabled && isTakeawayWithinSchedule;
+
+    // Custom labels (fallback to defaults)
+    const dineInLabel = merchant.dineInLabel || 'Dine In';
+    const takeawayLabel = merchant.takeawayLabel || 'Pick Up';
+
     const handleModeSelect = (selectedMode: 'dinein' | 'takeaway') => {
         if (!storeOpen) return; // Prevent selection when store is closed
+        
+        // Check if mode is available
+        if (selectedMode === 'dinein' && !isDineInAvailable) return;
+        if (selectedMode === 'takeaway' && !isTakeawayAvailable) return;
 
         // Save mode to localStorage
         localStorage.setItem(`mode_${merchantCode}`, selectedMode);
@@ -91,18 +134,18 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
         router.replace(`/${merchantCode}/order?mode=${selectedMode}`);
     };
 
-    // If only one mode is enabled, auto-redirect to order page
+    // If only one mode is enabled and available, auto-redirect to order page
     useEffect(() => {
         if (!storeOpen) return;
         
-        if (isDineInEnabled && !isTakeawayEnabled) {
-            // Only dine-in enabled, auto-redirect
+        if (isDineInAvailable && !isTakeawayAvailable) {
+            // Only dine-in available, auto-redirect
             router.replace(`/${merchantCode}/order?mode=dinein`);
-        } else if (!isDineInEnabled && isTakeawayEnabled) {
-            // Only takeaway enabled, auto-redirect
+        } else if (!isDineInAvailable && isTakeawayAvailable) {
+            // Only takeaway available, auto-redirect
             router.replace(`/${merchantCode}/order?mode=takeaway`);
         }
-    }, [storeOpen, isDineInEnabled, isTakeawayEnabled, merchantCode, router]);
+    }, [storeOpen, isDineInAvailable, isTakeawayAvailable, merchantCode, router]);
 
     return (
         <>
@@ -216,26 +259,36 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                             <button
                                 id="mode-dinein"
                                 onClick={() => handleModeSelect('dinein')}
-                                disabled={!storeOpen}
-                                className={`w-full h-12 border rounded-lg text-base font-medium shadow-sm transition-colors duration-200 shadow-lg ${storeOpen
+                                disabled={!storeOpen || !isDineInAvailable}
+                                className={`w-full h-12 border rounded-lg text-base font-medium shadow-sm transition-colors duration-200 shadow-lg ${storeOpen && isDineInAvailable
                                     ? 'border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800'
                                     : 'border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 cursor-not-allowed'
                                     }`}
                             >
-                                Dine In
+                                {dineInLabel}
+                                {!isDineInWithinSchedule && isDineInEnabled && (
+                                    <span className="ml-2 text-xs text-gray-400">
+                                        ({merchant.dineInScheduleStart} - {merchant.dineInScheduleEnd})
+                                    </span>
+                                )}
                             </button>
 
                             {/* Pick Up Button */}
                             <button
                                 id="mode-takeaway"
                                 onClick={() => handleModeSelect('takeaway')}
-                                disabled={!storeOpen}
-                                className={`w-full h-12 border rounded-lg text-base font-medium shadow-sm transition-colors duration-200 shadow-lg ${storeOpen
+                                disabled={!storeOpen || !isTakeawayAvailable}
+                                className={`w-full h-12 border rounded-lg text-base font-medium shadow-sm transition-colors duration-200 shadow-lg ${storeOpen && isTakeawayAvailable
                                     ? 'border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800'
                                     : 'border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 cursor-not-allowed'
                                     }`}
                             >
-                                Pick Up
+                                {takeawayLabel}
+                                {!isTakeawayWithinSchedule && isTakeawayEnabled && (
+                                    <span className="ml-2 text-xs text-gray-400">
+                                        ({merchant.takeawayScheduleStart} - {merchant.takeawayScheduleEnd})
+                                    </span>
+                                )}
                             </button>
                         </div>
                     </div>

@@ -67,6 +67,13 @@ export async function GET(
       // Sale mode settings
       isDineInEnabled: merchantData.isDineInEnabled ?? true,
       isTakeawayEnabled: merchantData.isTakeawayEnabled ?? true,
+      dineInLabel: merchantData.dineInLabel,
+      takeawayLabel: merchantData.takeawayLabel,
+      dineInScheduleStart: merchantData.dineInScheduleStart,
+      dineInScheduleEnd: merchantData.dineInScheduleEnd,
+      takeawayScheduleStart: merchantData.takeawayScheduleStart,
+      takeawayScheduleEnd: merchantData.takeawayScheduleEnd,
+      totalTables: merchantData.totalTables,
       // Tax settings
       enableTax: merchantData.enableTax,
       taxPercentage: merchantData.taxPercentage,

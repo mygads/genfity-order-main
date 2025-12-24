@@ -190,6 +190,12 @@ const merchantNavGroups: NavGroup[] = [
         path: "/admin/dashboard/merchant/edit",
         roles: ["MERCHANT_OWNER"],
       },
+      {
+        icon: <TableIcon />,
+        name: "Table QR Codes",
+        path: "/admin/dashboard/qr-tables",
+        roles: ["MERCHANT_OWNER"],
+      },
     ],
   },
   {

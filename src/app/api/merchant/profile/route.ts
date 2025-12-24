@@ -110,6 +110,13 @@ async function handlePut(req: NextRequest, authContext: AuthContext) {
         // Sale mode settings
         isDineInEnabled: body.isDineInEnabled,
         isTakeawayEnabled: body.isTakeawayEnabled,
+        dineInLabel: body.dineInLabel,
+        takeawayLabel: body.takeawayLabel,
+        dineInScheduleStart: body.dineInScheduleStart,
+        dineInScheduleEnd: body.dineInScheduleEnd,
+        takeawayScheduleStart: body.takeawayScheduleStart,
+        takeawayScheduleEnd: body.takeawayScheduleEnd,
+        totalTables: body.totalTables,
         // Tax settings
         enableTax: body.enableTax,
         taxRate: body.taxPercentage,

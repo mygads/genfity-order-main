@@ -29,6 +29,13 @@ interface MerchantFormData {
   // Sale mode settings
   isDineInEnabled: boolean;
   isTakeawayEnabled: boolean;
+  dineInLabel: string;
+  takeawayLabel: string;
+  dineInScheduleStart: string;
+  dineInScheduleEnd: string;
+  takeawayScheduleStart: string;
+  takeawayScheduleEnd: string;
+  totalTables: number | null;
   // Fee settings
   enableTax: boolean;
   taxPercentage: number;
@@ -79,6 +86,13 @@ export default function EditMerchantPage() {
     // Sale mode settings
     isDineInEnabled: true,
     isTakeawayEnabled: true,
+    dineInLabel: "",
+    takeawayLabel: "",
+    dineInScheduleStart: "",
+    dineInScheduleEnd: "",
+    takeawayScheduleStart: "",
+    takeawayScheduleEnd: "",
+    totalTables: null,
     // Fee settings
     enableTax: false,
     taxPercentage: 0,
@@ -142,6 +156,13 @@ export default function EditMerchantPage() {
         // Sale mode settings
         isDineInEnabled: merchant.isDineInEnabled ?? true,
         isTakeawayEnabled: merchant.isTakeawayEnabled ?? true,
+        dineInLabel: merchant.dineInLabel || "",
+        takeawayLabel: merchant.takeawayLabel || "",
+        dineInScheduleStart: merchant.dineInScheduleStart || "",
+        dineInScheduleEnd: merchant.dineInScheduleEnd || "",
+        takeawayScheduleStart: merchant.takeawayScheduleStart || "",
+        takeawayScheduleEnd: merchant.takeawayScheduleEnd || "",
+        totalTables: merchant.totalTables ?? null,
         // Fee settings
         enableTax: merchant.enableTax || false,
         taxPercentage: merchant.taxPercentage ? parseFloat(merchant.taxPercentage) : 0,
@@ -694,6 +715,111 @@ export default function EditMerchantPage() {
                   </label>
                 </div>
               </div>
+            </div>
+
+            {/* Custom Labels */}
+            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Dine In Button Label
+                </label>
+                <input
+                  type="text"
+                  value={formData.dineInLabel}
+                  onChange={(e) => setFormData(prev => ({ ...prev, dineInLabel: e.target.value }))}
+                  placeholder="Dine In"
+                  className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                />
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Leave empty to use default</p>
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Takeaway Button Label
+                </label>
+                <input
+                  type="text"
+                  value={formData.takeawayLabel}
+                  onChange={(e) => setFormData(prev => ({ ...prev, takeawayLabel: e.target.value }))}
+                  placeholder="Takeaway"
+                  className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                />
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Leave empty to use default</p>
+              </div>
+            </div>
+
+            {/* Mode Schedules */}
+            <div className="mt-4 space-y-4">
+              <div>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">Mode Schedules</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Set time ranges when each mode is available. Leave empty for 24/7 availability.</p>
+              </div>
+              
+              {/* Dine In Schedule */}
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
+                <p className="mb-3 text-sm font-medium text-gray-700 dark:text-gray-300">Dine In Available Hours</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="mb-1 block text-xs text-gray-500 dark:text-gray-400">From</label>
+                    <input
+                      type="time"
+                      value={formData.dineInScheduleStart}
+                      onChange={(e) => setFormData(prev => ({ ...prev, dineInScheduleStart: e.target.value }))}
+                      className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs text-gray-500 dark:text-gray-400">To</label>
+                    <input
+                      type="time"
+                      value={formData.dineInScheduleEnd}
+                      onChange={(e) => setFormData(prev => ({ ...prev, dineInScheduleEnd: e.target.value }))}
+                      className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Takeaway Schedule */}
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
+                <p className="mb-3 text-sm font-medium text-gray-700 dark:text-gray-300">Takeaway Available Hours</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="mb-1 block text-xs text-gray-500 dark:text-gray-400">From</label>
+                    <input
+                      type="time"
+                      value={formData.takeawayScheduleStart}
+                      onChange={(e) => setFormData(prev => ({ ...prev, takeawayScheduleStart: e.target.value }))}
+                      className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs text-gray-500 dark:text-gray-400">To</label>
+                    <input
+                      type="time"
+                      value={formData.takeawayScheduleEnd}
+                      onChange={(e) => setFormData(prev => ({ ...prev, takeawayScheduleEnd: e.target.value }))}
+                      className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Total Tables */}
+            <div className="mt-4">
+              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Total Tables
+              </label>
+              <input
+                type="number"
+                min="0"
+                max="999"
+                value={formData.totalTables ?? ""}
+                onChange={(e) => setFormData(prev => ({ ...prev, totalTables: e.target.value ? parseInt(e.target.value) : null }))}
+                placeholder="e.g. 20"
+                className="h-10 w-full max-w-[200px] rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+              />
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Number of tables for QR code generation. Leave empty if not applicable.</p>
             </div>
           </div>
 

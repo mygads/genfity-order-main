@@ -60,6 +60,13 @@ export interface UpdateMerchantInput {
   // Sale mode settings
   isDineInEnabled?: boolean;
   isTakeawayEnabled?: boolean;
+  dineInLabel?: string | null;
+  takeawayLabel?: string | null;
+  dineInScheduleStart?: string | null;
+  dineInScheduleEnd?: string | null;
+  takeawayScheduleStart?: string | null;
+  takeawayScheduleEnd?: string | null;
+  totalTables?: number | null;
   // Tax settings
   enableTax?: boolean;
   taxRate?: number;
@@ -252,6 +259,13 @@ class MerchantService {
     // Sale mode settings
     if (input.isDineInEnabled !== undefined) updateData.isDineInEnabled = input.isDineInEnabled;
     if (input.isTakeawayEnabled !== undefined) updateData.isTakeawayEnabled = input.isTakeawayEnabled;
+    if (input.dineInLabel !== undefined) updateData.dineInLabel = input.dineInLabel;
+    if (input.takeawayLabel !== undefined) updateData.takeawayLabel = input.takeawayLabel;
+    if (input.dineInScheduleStart !== undefined) updateData.dineInScheduleStart = input.dineInScheduleStart;
+    if (input.dineInScheduleEnd !== undefined) updateData.dineInScheduleEnd = input.dineInScheduleEnd;
+    if (input.takeawayScheduleStart !== undefined) updateData.takeawayScheduleStart = input.takeawayScheduleStart;
+    if (input.takeawayScheduleEnd !== undefined) updateData.takeawayScheduleEnd = input.takeawayScheduleEnd;
+    if (input.totalTables !== undefined) updateData.totalTables = input.totalTables;
     // Tax settings
     if (input.enableTax !== undefined) updateData.enableTax = input.enableTax;
     if (input.taxRate !== undefined) {
