@@ -218,10 +218,6 @@ export default function MenuDetailPage() {
     );
   }
 
-  const categoryNames = menu.categories && menu.categories.length > 0
-    ? menu.categories.map(c => c.category.name).join(", ")
-    : menu.category?.name || "-";
-
   return (
     <div>
       <PageBreadcrumb pageTitle="Menu Detail" />
@@ -333,21 +329,55 @@ export default function MenuDetailPage() {
                 </div>
               </div>
 
-              {/* Info Cards */}
-              <div className="grid gap-4 sm:grid-cols-2">
-                {/* Category */}
-                <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-gray-50/50 p-4 dark:border-gray-700 dark:bg-gray-800/30">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400">
+              {/* Categories Section */}
+              <div className="rounded-2xl border-2 border-blue-200 bg-blue-50/50 p-5 dark:border-blue-700 dark:bg-blue-900/10">
+                <div className="mb-3 flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
                     <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                     </svg>
                   </div>
                   <div>
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Category</p>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{categoryNames}</p>
+                    <h4 className="text-sm font-semibold text-gray-800 dark:text-white">Menu Categories</h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {menu.categories && menu.categories.length > 0 
+                        ? `${menu.categories.length} categories assigned` 
+                        : 'No categories assigned'}
+                    </p>
                   </div>
                 </div>
 
+                {menu.categories && menu.categories.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {menu.categories.map((c) => (
+                      <span 
+                        key={c.categoryId} 
+                        className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-3 py-1.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                      >
+                        <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                        </svg>
+                        {c.category.name}
+                      </span>
+                    ))}
+                  </div>
+                ) : menu.category ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-3 py-1.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                    <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                    </svg>
+                    {menu.category.name}
+                  </span>
+                ) : (
+                  <div className="rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 py-4 text-center dark:border-gray-700 dark:bg-gray-900/50">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">No categories assigned</p>
+                    <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">Edit this menu to add categories</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Info Cards */}
+              <div className="grid gap-4 sm:grid-cols-2">
                 {/* Stock */}
                 {menu.trackStock && (
                   <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-gray-50/50 p-4 dark:border-gray-700 dark:bg-gray-800/30">

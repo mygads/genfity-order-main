@@ -124,7 +124,7 @@ export default function ViewMenuAddonCategoriesModal({
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-700 dark:bg-brand-900/20 dark:text-brand-400">
+                            <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-orange-100 text-xs font-semibold text-orange-700 dark:bg-orange-900/20 dark:text-orange-400">
                               {index + 1}
                             </span>
                             <h4 className="font-semibold text-gray-900 dark:text-white truncate">
@@ -144,7 +144,7 @@ export default function ViewMenuAddonCategoriesModal({
                           <div className="mt-2 flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
                             <span>Min: {mac.addonCategory.minSelection}</span>
                             <span>Max: {mac.addonCategory.maxSelection || '∞'}</span>
-                            <span className="font-medium text-brand-600 dark:text-brand-400">
+                            <span className="font-medium text-orange-600 dark:text-orange-400">
                               {sortedItems.length} items
                             </span>
                           </div>
@@ -267,7 +267,7 @@ export default function ViewMenuAddonCategoriesModal({
         <div className="border-t border-gray-200 px-6 py-4 dark:border-gray-800">
           <button
             onClick={onClose}
-            className="h-10 w-full rounded-lg bg-brand-500 text-sm font-medium text-white transition-colors hover:bg-brand-600"
+            className="h-10 w-full rounded-lg bg-orange-500 text-sm font-medium text-white transition-colors hover:bg-orange-600"
           >
             Close
           </button>
