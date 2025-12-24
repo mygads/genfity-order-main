@@ -41,10 +41,7 @@ interface MenuFormData {
   price: number;
   imageUrl?: string;
   isActive: boolean;
-  isPromo: boolean;
-  promoPrice?: number | null;
-  promoStartDate?: string | null;
-  promoEndDate?: string | null;
+  // Note: Promo fields removed - use SpecialPrice table
   trackStock: boolean;
   stockQty?: number | null;
   dailyStockTemplate?: number | null;
@@ -115,10 +112,7 @@ export default function MenuBuilderPage() {
             price: parseFloat(menuData.data.price),
             imageUrl: menuData.data.imageUrl,
             isActive: menuData.data.isActive,
-            isPromo: menuData.data.isPromo,
-            promoPrice: menuData.data.promoPrice ? parseFloat(menuData.data.promoPrice) : null,
-            promoStartDate: menuData.data.promoStartDate,
-            promoEndDate: menuData.data.promoEndDate,
+            // Note: Promo fields removed - use SpecialPrice table
             trackStock: menuData.data.trackStock,
             stockQty: menuData.data.stockQty,
             dailyStockTemplate: menuData.data.dailyStockTemplate,
@@ -164,9 +158,7 @@ export default function MenuBuilderPage() {
         ...data,
         imageUrl: data.imageUrl || null,
         description: data.description || undefined,
-        promoPrice: data.isPromo ? data.promoPrice : null,
-        promoStartDate: data.isPromo ? data.promoStartDate : null,
-        promoEndDate: data.isPromo ? data.promoEndDate : null,
+        // Note: Promo fields removed - use SpecialPrice table
         stockQty: data.trackStock ? data.stockQty : null,
         dailyStockTemplate: data.trackStock ? data.dailyStockTemplate : null,
       };

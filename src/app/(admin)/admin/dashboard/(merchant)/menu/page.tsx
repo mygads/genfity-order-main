@@ -45,9 +45,6 @@ interface MenuItem {
   name: string;
   description: string | null;
   price: string | number;
-  promoPrice: string | number | null;
-  promoStartDate: string | null;
-  promoEndDate: string | null;
   imageUrl: string | null;
   categoryId: string;
   category?: {
@@ -65,7 +62,7 @@ interface MenuItem {
   }>;
   addonCategories?: MenuAddonCategory[];
   isActive: boolean;
-  isPromo: boolean;
+  // Note: Promo is now managed via SpecialPrice table, not menu fields
   trackStock: boolean;
   stockQty: number | null;
   dailyStockTemplate: number | null;
@@ -101,9 +98,7 @@ export default function MerchantMenuPage() {
   const [success, setSuccess] = useState<string | null>(null);
 
 
-  // Promo feature moved to Special Prices
-  const selectedPromoMenu = null as MenuItem | null;
-  const setSelectedPromoMenu = (_menu: MenuItem | null) => { }; // disabled
+  // Note: Promo feature moved to Special Prices page
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [selectedMenuForAddons, setSelectedMenuForAddons] = useState<MenuItem | null>(null);
   const [showManageAddonsModal, setShowManageAddonsModal] = useState(false);
@@ -121,11 +116,10 @@ export default function MerchantMenuPage() {
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterStock, setFilterStock] = useState<string[]>([]);
-  const [filterPromo, setFilterPromo] = useState<string[]>([]);
+  // Note: Promo filter removed - promo is now managed via Special Prices page
 
   // Dropdown open states for multi-select filters
   const [isStockDropdownOpen, setIsStockDropdownOpen] = useState(false);
-  const [isPromoDropdownOpen, setIsPromoDropdownOpen] = useState(false);
 
   // SWR hooks for data fetching with caching
   const {
@@ -161,7 +155,7 @@ export default function MerchantMenuPage() {
   }, [mutateMenu]);
 
   // Refs to track previous filter values for page reset
-  const prevFiltersRef = useRef({ searchQuery, filterCategory, filterStatus, filterStock, filterPromo });
+  const prevFiltersRef = useRef({ searchQuery, filterCategory, filterStatus, filterStock });
 
   // Use useMemo for filtered items to avoid infinite loop
   const filteredMenuItems = useMemo(() => {
@@ -205,17 +199,10 @@ export default function MerchantMenuPage() {
       });
     }
 
-    // Promo filters
-    if (filterPromo.length > 0) {
-      filtered = filtered.filter(item => {
-        if (filterPromo.includes('on-promo') && item.isPromo) return true;
-        if (filterPromo.includes('regular-price') && !item.isPromo) return true;
-        return false;
-      });
-    }
+    // Note: Promo filtering removed - promo is now managed via Special Prices page
 
     return filtered;
-  }, [menuItems, searchQuery, filterCategory, filterStatus, filterStock, filterPromo]);
+  }, [menuItems, searchQuery, filterCategory, filterStatus, filterStock]);
 
   // Reset page when filters change
   useEffect(() => {
@@ -224,14 +211,13 @@ export default function MerchantMenuPage() {
       prev.searchQuery !== searchQuery ||
       prev.filterCategory !== filterCategory ||
       prev.filterStatus !== filterStatus ||
-      JSON.stringify(prev.filterStock) !== JSON.stringify(filterStock) ||
-      JSON.stringify(prev.filterPromo) !== JSON.stringify(filterPromo);
+      JSON.stringify(prev.filterStock) !== JSON.stringify(filterStock);
 
     if (filtersChanged) {
       setCurrentPage(1);
-      prevFiltersRef.current = { searchQuery, filterCategory, filterStatus, filterStock, filterPromo };
+      prevFiltersRef.current = { searchQuery, filterCategory, filterStatus, filterStock };
     }
-  }, [searchQuery, filterCategory, filterStatus, filterStock, filterPromo]);
+  }, [searchQuery, filterCategory, filterStatus, filterStock]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -239,15 +225,14 @@ export default function MerchantMenuPage() {
       const target = event.target as HTMLElement;
       if (!target.closest('.dropdown-container')) {
         setIsStockDropdownOpen(false);
-        setIsPromoDropdownOpen(false);
       }
     };
 
-    if (isStockDropdownOpen || isPromoDropdownOpen) {
+    if (isStockDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [isStockDropdownOpen, isPromoDropdownOpen]);
+  }, [isStockDropdownOpen]);
 
   // Pagination logic
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -782,83 +767,16 @@ export default function MerchantMenuPage() {
                 )}
               </div>
 
-              {/* Promo Filter - Multi-select via checkboxes in dropdown */}
-              <div className="dropdown-container relative">
-                <button
-                  type="button"
-                  onClick={() => setIsPromoDropdownOpen(!isPromoDropdownOpen)}
-                  className="flex h-10 min-w-[140px] items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 hover:bg-gray-50 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                >
-                  <span>
-                    {filterPromo.length === 0
-                      ? 'Promo Status'
-                      : filterPromo.length === 1
-                        ? filterPromo[0] === 'on-promo'
-                          ? 'On Promo'
-                          : 'Regular Price'
-                        : `${filterPromo.length} selected`
-                    }
-                  </span>
-                  <svg className={`h-4 w-4 transition-transform ${isPromoDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                {isPromoDropdownOpen && (
-                  <div className="absolute left-0 top-full z-50 mt-1 w-48 rounded-lg border border-gray-200 bg-white py-2 shadow-lg dark:border-gray-700 dark:bg-gray-800">
-                    <label className="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700">
-                      <input
-                        type="checkbox"
-                        checked={filterPromo.includes('on-promo')}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setFilterPromo([...filterPromo, 'on-promo']);
-                          } else {
-                            setFilterPromo(filterPromo.filter(p => p !== 'on-promo'));
-                          }
-                        }}
-                        className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-                      />
-                      <span className="flex-1 text-sm text-gray-700 dark:text-gray-300">On Promo</span>
-                    </label>
-                    <label className="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700">
-                      <input
-                        type="checkbox"
-                        checked={filterPromo.includes('regular-price')}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setFilterPromo([...filterPromo, 'regular-price']);
-                          } else {
-                            setFilterPromo(filterPromo.filter(p => p !== 'regular-price'));
-                          }
-                        }}
-                        className="h-4 w-4 rounded border-gray-300 text-gray-600 focus:ring-gray-500"
-                      />
-                      <span className="flex-1 text-sm text-gray-700 dark:text-gray-300">Regular Price</span>
-                    </label>
-                    {filterPromo.length > 0 && (
-                      <>
-                        <div className="my-1 border-t border-gray-200 dark:border-gray-700"></div>
-                        <button
-                          onClick={() => setFilterPromo([])}
-                          className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-gray-50 dark:text-red-400 dark:hover:bg-gray-700"
-                        >
-                          Clear Promo Filters
-                        </button>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
+              {/* Note: Promo filter removed - promo is now managed via Special Prices page */}
 
               {/* Clear All Filters Button */}
-              {(searchQuery || filterCategory !== 'all' || filterStatus !== 'all' || filterStock.length > 0 || filterPromo.length > 0) && (
+              {(searchQuery || filterCategory !== 'all' || filterStatus !== 'all' || filterStock.length > 0) && (
                 <button
                   onClick={() => {
                     setSearchQuery('');
                     setFilterCategory('all');
                     setFilterStatus('all');
                     setFilterStock([]);
-                    setFilterPromo([]);
                   }}
                   className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
                 >
@@ -1069,21 +987,7 @@ export default function MerchantMenuPage() {
                                     </svg>
                                     View Detail
                                   </Link>
-                                  {/* Setup Promo button hidden - feature moved to Special Prices */}
-                                  {false && (
-                                    <button
-                                      onClick={() => {
-                                        setSelectedPromoMenu(item);
-                                        setOpenDropdownId(null);
-                                      }}
-                                      className="flex w-full items-center gap-3 px-4 py-2 text-sm text-warning-600 hover:bg-warning-50 dark:text-warning-400 dark:hover:bg-warning-900/20"
-                                    >
-                                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                                      </svg>
-                                      Setup Promo
-                                    </button>
-                                  )}
+                                  {/* Note: Setup Promo button removed - promo is now managed via Special Prices page */}
                                   <button
                                     onClick={() => {
                                       setSelectedMenuForAddons(item);
@@ -1205,152 +1109,7 @@ export default function MerchantMenuPage() {
         </div>
       </div>
 
-      {/* Promo Modal */}
-      {selectedPromoMenu && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-800 dark:bg-gray-900">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-                Setup Promo: {selectedPromoMenu.name}
-              </h3>
-              <button
-                onClick={() => setSelectedPromoMenu(null)}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-              >
-                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="mb-4 rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Original Price: <span className="font-semibold text-gray-800 dark:text-white/90">{formatPrice(selectedPromoMenu.price)}</span>
-              </p>
-              {selectedPromoMenu.isPromo && selectedPromoMenu.promoPrice && (
-                <p className="mt-1 text-sm text-error-600 dark:text-error-400">
-                  Current Promo: <span className="font-semibold">{formatPrice(selectedPromoMenu.promoPrice)}</span>
-                </p>
-              )}
-            </div>
-
-            <form onSubmit={async (e) => {
-              e.preventDefault();
-              const formData = new FormData(e.currentTarget);
-              const isPromo = formData.get('isPromo') === 'on';
-              const promoPrice = formData.get('promoPrice') ? parseFloat(formData.get('promoPrice') as string) : undefined;
-              const promoStartDate = formData.get('promoStartDate') as string;
-              const promoEndDate = formData.get('promoEndDate') as string;
-
-              try {
-                const token = localStorage.getItem("accessToken");
-                if (!token) {
-                  router.push("/admin/login");
-                  return;
-                }
-
-                const response = await fetch(`/api/merchant/menu/${selectedPromoMenu.id}/setup-promo`, {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                  },
-                  body: JSON.stringify({
-                    isPromo,
-                    promoPrice,
-                    promoStartDate: promoStartDate || undefined,
-                    promoEndDate: promoEndDate || undefined,
-                  }),
-                });
-
-                if (!response.ok) {
-                  const data = await response.json();
-                  throw new Error(data.message || "Failed to setup promo");
-                }
-
-                setSuccess(isPromo ? `Promo activated for ${selectedPromoMenu.name}` : `Promo removed from ${selectedPromoMenu.name}`);
-                setTimeout(() => setSuccess(null), 3000);
-                setSelectedPromoMenu(null);
-                fetchData();
-              } catch (err) {
-                setError(err instanceof Error ? err.message : "An error occurred");
-                setTimeout(() => setError(null), 5000);
-              }
-            }}>
-              <div className="space-y-4">
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="isPromo"
-                    name="isPromo"
-                    defaultChecked={selectedPromoMenu.isPromo}
-                    className="h-4 w-4 rounded border-gray-300 text-primary-500 focus:ring-primary-500"
-                  />
-                  <label htmlFor="isPromo" className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Enable Promo
-                  </label>
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Promo Price
-                  </label>
-                  <input
-                    type="number"
-                    name="promoPrice"
-                    step="0.01"
-                    min="0"
-                    defaultValue={selectedPromoMenu.promoPrice ? parseFloat(selectedPromoMenu.promoPrice.toString()) : ''}
-                    placeholder="Enter promo price"
-                    className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Start Date
-                    </label>
-                    <input
-                      type="date"
-                      name="promoStartDate"
-                      defaultValue={selectedPromoMenu.promoStartDate ? new Date(selectedPromoMenu.promoStartDate).toISOString().split('T')[0] : ''}
-                      className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      End Date
-                    </label>
-                    <input
-                      type="date"
-                      name="promoEndDate"
-                      defaultValue={selectedPromoMenu.promoEndDate ? new Date(selectedPromoMenu.promoEndDate).toISOString().split('T')[0] : ''}
-                      className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-6 flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setSelectedPromoMenu(null)}
-                  className="flex-1 h-11 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 h-11 rounded-lg bg-warning-500 text-sm font-medium text-white hover:bg-warning-600"
-                >
-                  Save Promo
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Note: Promo Modal removed - promo is now managed via Special Prices page */}
 
       {/* Manage Addons Modal */}
       {showManageAddonsModal && selectedMenuForAddons && (

@@ -32,6 +32,7 @@ export interface MenuCategoryInput {
 
 /**
  * Menu item input
+ * Note: Promo pricing is now managed via SpecialPrice table, not on individual menu items
  */
 export interface MenuInput {
   merchantId: bigint;
@@ -41,14 +42,11 @@ export interface MenuInput {
   price: number;
   imageUrl?: string;
   isActive?: boolean;
-  isPromo?: boolean;
+  // Promo fields removed - use SpecialPrice table instead
   isSpicy?: boolean;
   isBestSeller?: boolean;
   isSignature?: boolean;
   isRecommended?: boolean;
-  promoPrice?: number;
-  promoStartDate?: Date;
-  promoEndDate?: Date;
   trackStock?: boolean;
   stockQty?: number;
   dailyStockTemplate?: number;
@@ -255,14 +253,11 @@ class MenuService {
       price: input.price,
       imageUrl: input.imageUrl,
       isActive: input.isActive ?? true,
-      isPromo: input.isPromo ?? false,
+      // Promo fields removed - use SpecialPrice table
       isSpicy: input.isSpicy ?? false,
       isBestSeller: input.isBestSeller ?? false,
       isSignature: input.isSignature ?? false,
       isRecommended: input.isRecommended ?? false,
-      promoPrice: input.promoPrice,
-      promoStartDate: input.promoStartDate,
-      promoEndDate: input.promoEndDate,
       trackStock: input.trackStock ?? false,
       stockQty: input.stockQty ?? undefined,
       dailyStockTemplate: input.dailyStockTemplate,
@@ -316,14 +311,11 @@ class MenuService {
       price: input.price,
       imageUrl: input.imageUrl,
       isActive: input.isActive,
-      isPromo: input.isPromo,
+      // Promo fields removed - use SpecialPrice table
       isSpicy: input.isSpicy,
       isBestSeller: input.isBestSeller,
       isSignature: input.isSignature,
       isRecommended: input.isRecommended,
-      promoPrice: input.promoPrice,
-      promoStartDate: input.promoStartDate,
-      promoEndDate: input.promoEndDate,
       trackStock: input.trackStock,
       stockQty: input.stockQty,
       dailyStockTemplate: input.dailyStockTemplate,
@@ -495,54 +487,7 @@ class MenuService {
     return resetCount;
   }
 
-  /**
-   * Setup promo for menu item
-   */
-  async setupMenuPromo(
-    menuId: bigint,
-    promoData: {
-      isPromo: boolean;
-      promoPrice?: number;
-      promoStartDate?: Date;
-      promoEndDate?: Date;
-    }
-  ): Promise<Menu> {
-    const menu = await menuRepository.findMenuById(menuId);
-    if (!menu) {
-      throw new NotFoundError(
-        'Menu item not found',
-        ERROR_CODES.MENU_NOT_FOUND
-      );
-    }
-
-    // Validate promo price
-    if (promoData.isPromo && promoData.promoPrice) {
-      if (promoData.promoPrice < 0) {
-        throw new ValidationError(
-          'Promo price must be greater than or equal to 0',
-          ERROR_CODES.VALIDATION_FAILED
-        );
-      }
-
-      const originalPrice = typeof menu.price === 'number'
-        ? menu.price
-        : parseFloat(menu.price.toString());
-
-      if (promoData.promoPrice >= originalPrice) {
-        throw new ValidationError(
-          'Promo price must be less than original price',
-          ERROR_CODES.VALIDATION_FAILED
-        );
-      }
-    }
-
-    return await menuRepository.updateMenu(menuId, {
-      isPromo: promoData.isPromo,
-      promoPrice: promoData.promoPrice,
-      promoStartDate: promoData.promoStartDate,
-      promoEndDate: promoData.promoEndDate,
-    });
-  }
+  // Note: setupMenuPromo method removed - promo pricing is now managed via SpecialPrice table
 
   // ========================================
   // ADDON CATEGORIES

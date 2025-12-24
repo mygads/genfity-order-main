@@ -251,7 +251,7 @@ model Menu {
   price              Decimal             @db.Decimal(10, 2)
   imageUrl           String?             @map("image_url")
   isActive           Boolean             @default(true) @map("is_active")
-  isPromo            Boolean             @default(false) @map("is_promo")
+  // Note: Promo fields removed - use SpecialPrice/SpecialPriceItem tables instead
   trackStock         Boolean             @default(false) @map("track_stock")
   stockQty           Int?                @map("stock_qty")
   createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -259,9 +259,6 @@ model Menu {
   autoResetStock     Boolean             @default(false) @map("auto_reset_stock")
   dailyStockTemplate Int?                @map("daily_stock_template")
   lastStockResetAt   DateTime?           @map("last_stock_reset_at") @db.Timestamptz(6)
-  promoEndDate       DateTime?           @map("promo_end_date") @db.Timestamptz(6)
-  promoPrice         Decimal?            @map("promo_price") @db.Decimal(10, 2)
-  promoStartDate     DateTime?           @map("promo_start_date") @db.Timestamptz(6)
   createdByUserId    BigInt?             @map("created_by_user_id")
   deletedAt          DateTime?           @map("deleted_at") @db.Timestamptz(6)
   deletedByUserId    BigInt?             @map("deleted_by_user_id")
@@ -284,7 +281,6 @@ model Menu {
   @@index([merchantId])
   @@index([categoryId])
   @@index([isActive])
-  @@index([isPromo])
   @@index([deletedAt])
   @@map("menus")
 }

@@ -8,11 +8,13 @@
  * - Menu details (name, description, price, image)
  * - Stock availability
  * - Active status
+ * - Promo info (computed from SpecialPrice table)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
 import { serializeBigInt, decimalToNumber } from '@/lib/utils/serializer';
+import { SpecialPriceService } from '@/lib/services/SpecialPriceService';
 
 /**
  * GET /api/public/merchants/[code]/menus/[id]
@@ -79,10 +81,7 @@ export async function GET(
         isActive: true,
         trackStock: true,
         dailyStockTemplate: true,
-        isPromo: true,
-        promoPrice: true,
-        promoStartDate: true,
-        promoEndDate: true,
+        // Note: Promo fields removed - computed from SpecialPrice table
         createdAt: true,
         updatedAt: true,
       },
@@ -100,6 +99,10 @@ export async function GET(
       );
     }
 
+    // Get active promo price from SpecialPrice table
+    const promoPrice = await SpecialPriceService.getActivePromoPrice(menu.id);
+    const isPromo = promoPrice !== null;
+
     // Serialize BigInt values
     const serializedMenu = serializeBigInt(menu);
 
@@ -109,7 +112,8 @@ export async function GET(
         data: {
           ...serializedMenu,
           price: decimalToNumber(menu.price), // Convert Decimal to number with precision
-          promoPrice: menu.promoPrice ? decimalToNumber(menu.promoPrice) : null,
+          isPromo, // Computed from SpecialPrice
+          promoPrice, // Computed from SpecialPrice
         },
         timestamp: new Date().toISOString(),
       },

@@ -22,8 +22,9 @@ interface RecentOrderItem {
     menuImageUrl: string | null;
     orderCount: number;
     isAvailable: boolean;
-    isPromo: boolean;
-    promoPrice: number | null;
+    // Note: isPromo/promoPrice removed from API - promo computed from SpecialPrice
+    isPromo?: boolean;
+    promoPrice?: number | null;
 }
 
 interface RecentOrdersSectionProps {

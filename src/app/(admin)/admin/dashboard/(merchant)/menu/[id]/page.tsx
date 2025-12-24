@@ -37,12 +37,9 @@ interface MenuDetail {
   name: string;
   description: string | null;
   price: string | number;
-  promoPrice: string | number | null;
-  promoStartDate: string | null;
-  promoEndDate: string | null;
+  // Note: Promo fields removed - use SpecialPrice table for promo management
   imageUrl: string | null;
   isActive: boolean;
-  isPromo: boolean;
   trackStock: boolean;
   stockQty: number | null;
   dailyStockTemplate: number | null;
@@ -160,15 +157,7 @@ export default function MenuDetailPage() {
     });
   };
 
-  const isPromoActive = () => {
-    if (!menu?.isPromo || !menu?.promoStartDate || !menu?.promoEndDate) {
-      return false;
-    }
-    const now = new Date();
-    const start = new Date(menu.promoStartDate);
-    const end = new Date(menu.promoEndDate);
-    return now >= start && now <= end;
-  };
+  // Note: isPromoActive removed - promo is now managed via SpecialPrice page
 
   if (loading) {
     return (

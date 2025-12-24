@@ -58,10 +58,7 @@ export const POST = withMerchant(async (req: NextRequest, { userId, merchantId }
         price: originalMenu.price,
         imageUrl: originalMenu.imageUrl,
         isActive: false, // Duplicates start as inactive
-        isPromo: false, // Don't copy promo status
-        promoPrice: null,
-        promoStartDate: null,
-        promoEndDate: null,
+        // Note: Promo fields removed - use SpecialPrice table
         trackStock: originalMenu.trackStock,
         stockQty: originalMenu.trackStock ? (originalMenu.dailyStockTemplate || 0) : null,
         dailyStockTemplate: originalMenu.dailyStockTemplate,

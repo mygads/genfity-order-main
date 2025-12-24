@@ -15,10 +15,7 @@ export interface MenuBuilderInput {
   price: number;
   imageUrl?: string | null;
   isActive?: boolean;
-  isPromo?: boolean;
-  promoPrice?: number | null;
-  promoStartDate?: Date | null;
-  promoEndDate?: Date | null;
+  // Note: Promo pricing is now managed via SpecialPrice table
   
   // Stock Management
   trackStock?: boolean;
@@ -73,10 +70,7 @@ export class MenuBuilderService {
           price: new Prisma.Decimal(input.price),
           imageUrl: input.imageUrl,
           isActive: input.isActive ?? true,
-          isPromo: input.isPromo ?? false,
-          promoPrice: input.promoPrice ? new Prisma.Decimal(input.promoPrice) : null,
-          promoStartDate: input.promoStartDate,
-          promoEndDate: input.promoEndDate,
+          // Promo fields removed - use SpecialPrice table
           trackStock: input.trackStock ?? false,
           stockQty: input.stockQty,
           dailyStockTemplate: input.dailyStockTemplate,
@@ -220,10 +214,7 @@ export class MenuBuilderService {
           price: new Prisma.Decimal(input.price),
           imageUrl: input.imageUrl,
           isActive: input.isActive,
-          isPromo: input.isPromo,
-          promoPrice: input.promoPrice ? new Prisma.Decimal(input.promoPrice) : null,
-          promoStartDate: input.promoStartDate,
-          promoEndDate: input.promoEndDate,
+          // Promo fields removed - use SpecialPrice table
           trackStock: input.trackStock,
           stockQty: input.stockQty,
           dailyStockTemplate: input.dailyStockTemplate,

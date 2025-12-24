@@ -72,6 +72,7 @@ async function handlePut(
     const menuId = BigInt(params?.id || '0');
     const body = await req.json();
 
+    // Note: Promo is now managed via SpecialPrice table, not menu fields
     const menu = await menuService.updateMenu(menuId, {
       categoryId: body.categoryId ? BigInt(body.categoryId) : undefined,
       name: body.name,
@@ -87,7 +88,6 @@ async function handlePut(
       stockQty: body.stockQty,
       dailyStockTemplate: body.dailyStockTemplate,
       autoResetStock: body.autoResetStock,
-      isPromo: body.isPromo,
     });
 
     return NextResponse.json({

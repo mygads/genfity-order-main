@@ -159,7 +159,7 @@ export class MenuRepository {
     price: number;
     imageUrl?: string;
     isActive?: boolean;
-    isPromo?: boolean;
+    // Note: Promo fields removed - use SpecialPrice table
     isSpicy?: boolean;
     isBestSeller?: boolean;
     isSignature?: boolean;
@@ -168,9 +168,6 @@ export class MenuRepository {
     stockQty?: number;
     dailyStockTemplate?: number;
     autoResetStock?: boolean;
-    promoPrice?: number;
-    promoStartDate?: Date;
-    promoEndDate?: Date;
     lastStockResetAt?: Date;
     createdByUserId?: bigint;
   }) {
@@ -190,7 +187,7 @@ export class MenuRepository {
     price?: number;
     imageUrl?: string;
     isActive?: boolean;
-    isPromo?: boolean;
+    // Note: Promo fields removed - use SpecialPrice table
     isSpicy?: boolean;
     isBestSeller?: boolean;
     isSignature?: boolean;
@@ -199,9 +196,6 @@ export class MenuRepository {
     stockQty?: number;
     dailyStockTemplate?: number;
     autoResetStock?: boolean;
-    promoPrice?: number;
-    promoStartDate?: Date;
-    promoEndDate?: Date;
     lastStockResetAt?: Date;
     updatedByUserId?: bigint;
   }) {

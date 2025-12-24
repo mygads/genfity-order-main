@@ -21,10 +21,7 @@ const menuBuilderSchema = z.object({
   price: z.number().positive('Harga harus lebih dari 0'),
   imageUrl: z.string().url().optional().or(z.literal('')).nullable(),
   isActive: z.boolean().optional().default(true),
-  isPromo: z.boolean().optional().default(false),
-  promoPrice: z.number().positive().optional().nullable(),
-  promoStartDate: z.string().datetime().optional().nullable(),
-  promoEndDate: z.string().datetime().optional().nullable(),
+  // Note: Promo fields removed - use SpecialPrice table instead
   trackStock: z.boolean().optional().default(false),
   stockQty: z.number().int().min(0).optional().nullable(),
   dailyStockTemplate: z.number().int().min(0).optional().nullable(),
@@ -100,12 +97,7 @@ export async function POST(request: NextRequest) {
 
     const input: MenuBuilderInput = {
       ...validation.data,
-      promoStartDate: validation.data.promoStartDate
-        ? new Date(validation.data.promoStartDate)
-        : undefined,
-      promoEndDate: validation.data.promoEndDate
-        ? new Date(validation.data.promoEndDate)
-        : undefined,
+      // Note: Promo fields removed - use SpecialPrice table
     };
 
     // Create menu
@@ -224,12 +216,7 @@ export async function PUT(request: NextRequest) {
 
     const input: MenuBuilderInput = {
       ...validation.data,
-      promoStartDate: validation.data.promoStartDate
-        ? new Date(validation.data.promoStartDate)
-        : undefined,
-      promoEndDate: validation.data.promoEndDate
-        ? new Date(validation.data.promoEndDate)
-        : undefined,
+      // Note: Promo fields removed - use SpecialPrice table
     };
 
     // Update menu

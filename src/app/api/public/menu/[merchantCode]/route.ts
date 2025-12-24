@@ -3,11 +3,13 @@
  * GET /api/public/menu/[merchantCode] - Get merchant menu with categories
  * 
  * ✅ FIXED: Support many-to-many menu-category relationship via MenuCategoryItem
+ * ✅ UPDATED: Promo prices now computed from SpecialPrice table
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
 import { serializeBigInt, decimalToNumber } from '@/lib/utils/serializer';
+import { SpecialPriceService } from '@/lib/services/SpecialPriceService';
 
 /**
  * GET /api/public/menu/[merchantCode]
@@ -88,6 +90,10 @@ export async function GET(
       },
     });
 
+    // Get active promo prices from SpecialPrice table
+    const menuIds = menus.map(m => m.id);
+    const activePromoPrices = await SpecialPriceService.getActivePromoPrices(menuIds);
+
     // Group menus by category (handle many-to-many)
     const menusByCategory = categories.map(category => {
       const categoryMenus = menus.filter(menu => 
@@ -101,43 +107,47 @@ export async function GET(
           description: category.description,
           sortOrder: category.sortOrder,
         },
-        menus: categoryMenus.map(menu => ({
-          id: menu.id.toString(),
-          name: menu.name,
-          description: menu.description,
-          price: decimalToNumber(menu.price),
-          imageUrl: menu.imageUrl,
-          isActive: menu.isActive,
-          isPromo: menu.isPromo,
-          isSpicy: menu.isSpicy,
-          isBestSeller: menu.isBestSeller,
-          isSignature: menu.isSignature,
-          isRecommended: menu.isRecommended,
-          promoPrice: menu.promoPrice ? decimalToNumber(menu.promoPrice) : null,
-          promoStartDate: menu.promoStartDate?.toISOString(),
-          promoEndDate: menu.promoEndDate?.toISOString(),
-          trackStock: menu.trackStock,
-          stockQty: menu.stockQty,
-          addonCategories: menu.addonCategories.map(mac => ({
-            id: mac.addonCategory.id.toString(),
-            name: mac.addonCategory.name,
-            description: mac.addonCategory.description,
-            minSelection: mac.addonCategory.minSelection,
-            maxSelection: mac.addonCategory.maxSelection,
-            isRequired: mac.isRequired,
-            displayOrder: mac.displayOrder,
-            addonItems: mac.addonCategory.addonItems.map(item => ({
-              id: item.id.toString(),
-              name: item.name,
-              description: item.description,
-              price: decimalToNumber(item.price),
-              inputType: item.inputType,
-              displayOrder: item.displayOrder,
-              trackStock: item.trackStock,
-              stockQty: item.stockQty,
+        menus: categoryMenus.map(menu => {
+          const menuIdStr = menu.id.toString();
+          const promoPrice = activePromoPrices.get(menuIdStr) ?? null;
+          const isPromo = promoPrice !== null;
+
+          return {
+            id: menuIdStr,
+            name: menu.name,
+            description: menu.description,
+            price: decimalToNumber(menu.price),
+            imageUrl: menu.imageUrl,
+            isActive: menu.isActive,
+            isPromo, // Computed from SpecialPrice
+            isSpicy: menu.isSpicy,
+            isBestSeller: menu.isBestSeller,
+            isSignature: menu.isSignature,
+            isRecommended: menu.isRecommended,
+            promoPrice, // Computed from SpecialPrice
+            trackStock: menu.trackStock,
+            stockQty: menu.stockQty,
+            addonCategories: menu.addonCategories.map(mac => ({
+              id: mac.addonCategory.id.toString(),
+              name: mac.addonCategory.name,
+              description: mac.addonCategory.description,
+              minSelection: mac.addonCategory.minSelection,
+              maxSelection: mac.addonCategory.maxSelection,
+              isRequired: mac.isRequired,
+              displayOrder: mac.displayOrder,
+              addonItems: mac.addonCategory.addonItems.map(item => ({
+                id: item.id.toString(),
+                name: item.name,
+                description: item.description,
+                price: decimalToNumber(item.price),
+                inputType: item.inputType,
+                displayOrder: item.displayOrder,
+                trackStock: item.trackStock,
+                stockQty: item.stockQty,
+              })),
             })),
-          })),
-        })),
+          };
+        }),
       };
     });
 

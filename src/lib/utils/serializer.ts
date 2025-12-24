@@ -26,7 +26,7 @@ import { Decimal } from '@prisma/client/runtime/library';
  * 
  * Database Schema:
  * - Menu.price: DECIMAL(10, 2)
- * - Menu.promoPrice: DECIMAL(10, 2)
+ * - SpecialPriceItem.promoPrice: DECIMAL(10, 2)
  * - AddonItem.price: DECIMAL(10, 2)
  * - OrderItem.menuPrice: DECIMAL(10, 2)
  * - OrderItemAddon.addonPrice: DECIMAL(10, 2)

@@ -35,6 +35,7 @@ import emailService from '@/lib/services/EmailService';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { Decimal } from '@prisma/client/runtime/library';
+import { SpecialPriceService } from '@/lib/services/SpecialPriceService';
 
 // ===== TYPE DEFINITIONS =====
 
@@ -342,6 +343,9 @@ export async function POST(req: NextRequest) {
       : [];
     const addonMap = new Map(addons.map(a => [a.id.toString(), a]));
 
+    // ✅ PROMO PRICE: Batch fetch active promo prices from SpecialPrice table
+    const activePromoPrices = await SpecialPriceService.getActivePromoPrices(menuIds);
+
     let subtotal = 0;
     const orderItemsData: OrderItemData[] = [];
 
@@ -361,15 +365,15 @@ export async function POST(req: NextRequest) {
         throw new ValidationError(`Insufficient stock for "${menu.name}"`);
       }
 
-      // ✅ PROMO PRICE: Use promo price if available
-      const effectivePrice = menu.isPromo && menu.promoPrice
-        ? decimalToNumber(menu.promoPrice)
-        : decimalToNumber(menu.price);
+      // ✅ PROMO PRICE: Use promo price from SpecialPrice table if available
+      const promoPrice = activePromoPrices.get(menu.id.toString());
+      const originalPrice = decimalToNumber(menu.price);
+      const effectivePrice = promoPrice ?? originalPrice;
 
       const menuPrice = round2(effectivePrice);
       let itemTotal = round2(menuPrice * item.quantity);
 
-      console.log(`💰 [MENU PRICE] ${menu.name}: ${menu.isPromo && menu.promoPrice ? `PROMO ${menuPrice} (was ${decimalToNumber(menu.price)})` : menuPrice}`);
+      console.log(`💰 [MENU PRICE] ${menu.name}: ${promoPrice !== undefined ? `PROMO ${menuPrice} (was ${originalPrice})` : menuPrice}`);
 
       // ✅ Process addons using pre-fetched map
       const addonData: AddonData[] = [];

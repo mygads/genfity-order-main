@@ -119,8 +119,6 @@ export async function GET(req: NextRequest) {
                                 isActive: true,
                                 trackStock: true,
                                 stockQty: true,
-                                isPromo: true,
-                                promoPrice: true,
                             },
                         },
                     },
@@ -138,6 +136,7 @@ export async function GET(req: NextRequest) {
         // ========================================
 
         // Map to track unique menus with their order count and last ordered date
+        // Note: Promo info is now managed via SpecialPrice table
         const menuMap = new Map<string, {
             menuId: string;
             menuName: string;
@@ -148,8 +147,6 @@ export async function GET(req: NextRequest) {
             isActive: boolean;
             trackStock: boolean;
             stockQty: number | null;
-            isPromo: boolean;
-            promoPrice: number | null;
         }>();
 
         for (const order of completedOrders) {
@@ -167,6 +164,7 @@ export async function GET(req: NextRequest) {
                     }
                 } else {
                     // Add new menu item
+                    // Note: Promo info will be computed via SpecialPrice when displaying
                     menuMap.set(menuIdStr, {
                         menuId: menuIdStr,
                         menuName: item.menu.name,
@@ -177,8 +175,6 @@ export async function GET(req: NextRequest) {
                         isActive: item.menu.isActive,
                         trackStock: item.menu.trackStock,
                         stockQty: item.menu.stockQty,
-                        isPromo: item.menu.isPromo || false,
-                        promoPrice: item.menu.promoPrice ? parseFloat(item.menu.promoPrice.toString()) : null,
                     });
                 }
             }
@@ -197,8 +193,7 @@ export async function GET(req: NextRequest) {
                 lastOrderedAt: item.lastOrderedAt.toISOString(),
                 orderCount: item.orderCount,
                 isAvailable: !item.trackStock || (item.stockQty !== null && item.stockQty > 0),
-                isPromo: item.isPromo,
-                promoPrice: item.promoPrice,
+                // Note: Promo will be computed client-side from current SpecialPrice
             }));
 
         console.log(`✅ Returning ${recentItems.length} unique recent menu items`);

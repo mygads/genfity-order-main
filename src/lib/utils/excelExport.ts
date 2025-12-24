@@ -87,13 +87,7 @@ export function exportMenuItems(data: unknown[], merchantCurrency = 'AUD'): void
           ? parseFloat(String(value)).toFixed(2) 
           : '0.00'
       },
-      { 
-        header: `Promo Price (${merchantCurrency})`, 
-        key: 'promoPrice',
-        format: (value) => value 
-          ? (typeof value === 'number' || typeof value === 'string' ? parseFloat(String(value)).toFixed(2) : '0.00')
-          : ''
-      },
+      // Note: Promo Price removed - use Special Prices export instead
       { 
         header: 'Status', 
         key: 'isActive',

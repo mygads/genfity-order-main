@@ -26,10 +26,7 @@ const menuBuilderSchema = z.object({
   price: z.number().positive('Harga harus lebih dari 0'),
   imageUrl: z.string().url().optional().or(z.literal('')),
   isActive: z.boolean(),
-  isPromo: z.boolean(),
-  promoPrice: z.number().positive().optional().nullable(),
-  promoStartDate: z.string().optional().nullable(),
-  promoEndDate: z.string().optional().nullable(),
+  // Note: Promo is now managed via Special Prices page, not on individual menu items
   trackStock: z.boolean(),
   stockQty: z.number().int().min(0).optional().nullable(),
   dailyStockTemplate: z.number().int().min(0).optional().nullable(),
@@ -113,10 +110,7 @@ export default function MenuBuilderTabs({
       price: initialData?.price || 0,
       imageUrl: initialData?.imageUrl || '',
       isActive: initialData?.isActive ?? true,
-      isPromo: initialData?.isPromo || false,
-      promoPrice: initialData?.promoPrice || null,
-      promoStartDate: initialData?.promoStartDate || null,
-      promoEndDate: initialData?.promoEndDate || null,
+      // Note: Promo is now managed via Special Prices page
       trackStock: initialData?.trackStock || false,
       stockQty: initialData?.stockQty || null,
       dailyStockTemplate: initialData?.dailyStockTemplate || null,
@@ -131,7 +125,6 @@ export default function MenuBuilderTabs({
     },
   });
 
-  const watchIsPromo = watch('isPromo');
   const watchTrackStock = watch('trackStock');
   const watchImageUrl = watch('imageUrl');
 
@@ -549,70 +542,8 @@ export default function MenuBuilderTabs({
             {/* Divider */}
             <div className="border-t border-gray-100 dark:border-gray-800" />
 
-            {/* Additional Settings Grid */}
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-              {/* Promo Section */}
-              <div className={`rounded-2xl border-2 p-5 transition-all ${watchIsPromo
-                ? 'border-error-300 bg-error-50/50 dark:border-error-700 dark:bg-error-900/10'
-                : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-800 dark:bg-gray-900/50 dark:hover:border-gray-700'
-                }`}>
-                <div className="mb-4 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${watchIsPromo ? 'bg-error-100 text-error-600 dark:bg-error-900/30 dark:text-error-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
-                      }`}>
-                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-semibold text-gray-800 dark:text-white">Promotional Pricing</h4>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Set a special discounted price</p>
-                    </div>
-                  </div>
-                  <label className="relative inline-flex cursor-pointer items-center">
-                    <input type="checkbox" {...register('isPromo')} className="peer sr-only" />
-                    <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-error-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-error-300/20 dark:bg-gray-700 dark:peer-focus:ring-error-800/20" />
-                  </label>
-                </div>
-
-                {watchIsPromo && (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                      <div>
-                        <label className="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">Promo Price</label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-gray-500">A$</span>
-                          <input
-                            type="number"
-                            {...register('promoPrice', { valueAsNumber: true })}
-                            className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-8 pr-3 text-sm text-gray-800 focus:border-error-400 focus:outline-none focus:ring-2 focus:ring-error-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-                            placeholder="0.00"
-                            min="0"
-                            step="0.01"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">Start Date</label>
-                        <input
-                          type="datetime-local"
-                          {...register('promoStartDate')}
-                          className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 focus:border-error-400 focus:outline-none focus:ring-2 focus:ring-error-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-                        />
-                      </div>
-                      <div>
-                        <label className="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">End Date</label>
-                        <input
-                          type="datetime-local"
-                          {...register('promoEndDate')}
-                          className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 focus:border-error-400 focus:outline-none focus:ring-2 focus:ring-error-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
+            {/* Additional Settings - Stock Management */}
+            <div className="grid grid-cols-1 gap-6">
               {/* Stock Management */}
               <div className={`rounded-2xl border-2 p-5 transition-all ${watchTrackStock
                 ? 'border-warning-300 bg-warning-50/50 dark:border-warning-700 dark:bg-warning-900/10'
@@ -1021,24 +952,11 @@ export default function MenuBuilderTabs({
                   </p>
                 )}
 
+                {/* Price display - Promo is now managed via SpecialPrice table */}
                 <div className="mt-4 flex items-baseline gap-2">
-                  {watch('isPromo') && watch('promoPrice') ? (
-                    <>
-                      <span className="text-2xl font-bold text-error-600 dark:text-error-400">
-                        ${watch('promoPrice')?.toFixed(2)}
-                      </span>
-                      <span className="text-lg text-gray-500 line-through dark:text-gray-400">
-                        ${watch('price')?.toFixed(2)}
-                      </span>
-                      <span className="ml-2 rounded-full bg-error-100 px-2 py-1 text-xs font-medium text-error-700 dark:bg-error-900/20 dark:text-error-400">
-                        PROMO
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-2xl font-bold text-gray-800 dark:text-white/90">
-                      ${watch('price')?.toFixed(2) || '0.00'}
-                    </span>
-                  )}
+                  <span className="text-2xl font-bold text-gray-800 dark:text-white/90">
+                    ${(watch('price') as number)?.toFixed(2) || '0.00'}
+                  </span>
                 </div>
 
                 {selectedCategories.length > 0 && (

@@ -2,15 +2,11 @@
  * Prisma Seed Script
  * Creates comprehensive sample data for GENFITY Online Ordering System
  */
-
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
-
 const prisma = new PrismaClient();
-
 async function main() {
   console.log('🌱 Seeding database...\n');
-
   // ============================================
   // 1. CREATE SUPER ADMIN
   // ============================================
@@ -18,13 +14,11 @@ async function main() {
   const existingAdmin = await prisma.user.findUnique({
     where: { email: 'admin@genfity.com' },
   });
-
   if (existingAdmin) {
     console.log('✅ Super Admin already exists');
     superAdmin = existingAdmin;
   } else {
     const hashedPassword = await bcrypt.hash('1234abcd', 10);
-
     superAdmin = await prisma.user.create({
       data: {
         name: 'Super Admin',
@@ -35,13 +29,11 @@ async function main() {
         mustChangePassword: false,
       },
     });
-
     console.log('✅ Super Admin created:');
     console.log('   Email: admin@genfity.com');
     console.log('   Password: 1234abcd');
     console.log('   ⚠️  Please change this password in production!\n');
   }
-
   // ============================================
   // 2. CREATE MERCHANTS
   // ============================================
@@ -98,13 +90,11 @@ async function main() {
       longitude: 153.0251,
     },
   ];
-
   const merchants = [];
   for (const merchantData of merchantsData) {
     const existing = await prisma.merchant.findUnique({
       where: { code: merchantData.code },
     });
-
     if (existing) {
       console.log(`✅ Merchant ${merchantData.name} already exists`);
       merchants.push(existing);
@@ -116,7 +106,6 @@ async function main() {
       console.log(`✅ Merchant created: ${merchantData.name} (${merchantData.code})`);
     }
   }
-
   // ============================================
   // 3. CREATE MERCHANT USERS
   // ============================================
@@ -181,7 +170,6 @@ async function main() {
       merchantRole: 'STAFF' as const,
     },
   ];
-
   // Customer data - separate from admin users
   const customersData = [
     {
@@ -203,15 +191,12 @@ async function main() {
       phone: '+61400555666',
     },
   ];
-
   for (const userData of usersData) {
     const existing = await prisma.user.findUnique({
       where: { email: userData.email },
     });
-
     if (!existing) {
       const hashedPassword = await bcrypt.hash(userData.password, 10);
-
       const user = await prisma.user.create({
         data: {
           name: userData.name,
@@ -222,7 +207,6 @@ async function main() {
           mustChangePassword: false,
         },
       });
-
       // Link to merchant if applicable
       if (userData.merchantCode) {
         const merchant = merchants.find((m) => m.code === userData.merchantCode);
@@ -236,13 +220,11 @@ async function main() {
           });
         }
       }
-
       console.log(`✅ User created: ${userData.name} (${userData.role})`);
     } else {
       console.log(`✅ User ${userData.name} already exists`);
     }
   }
-
   // ============================================
   // 3.5 CREATE CUSTOMERS (Separate Table)
   // ============================================
@@ -250,10 +232,8 @@ async function main() {
     const existing = await prisma.customer.findUnique({
       where: { email: customerData.email },
     });
-
     if (!existing) {
       const hashedPassword = await bcrypt.hash(customerData.password, 10);
-
       await prisma.customer.create({
         data: {
           name: customerData.name,
@@ -264,13 +244,11 @@ async function main() {
           mustChangePassword: false,
         },
       });
-
       console.log(`✅ Customer created: ${customerData.name}`);
     } else {
       console.log(`✅ Customer ${customerData.name} already exists`);
     }
   }
-
   // ============================================
   // 4. CREATE OPENING HOURS FOR MERCHANTS
   // ============================================
@@ -278,7 +256,6 @@ async function main() {
     const existingHours = await prisma.merchantOpeningHour.count({
       where: { merchantId: merchant.id },
     });
-
     if (existingHours === 0) {
       // Monday - Friday: 7:00 AM - 9:00 PM
       for (let day = 1; day <= 5; day++) {
@@ -292,7 +269,6 @@ async function main() {
           },
         });
       }
-
       // Saturday: 8:00 AM - 10:00 PM
       await prisma.merchantOpeningHour.create({
         data: {
@@ -303,7 +279,6 @@ async function main() {
           isClosed: false,
         },
       });
-
       // Sunday: 9:00 AM - 8:00 PM
       await prisma.merchantOpeningHour.create({
         data: {
@@ -314,17 +289,14 @@ async function main() {
           isClosed: false,
         },
       });
-
       console.log(`✅ Opening hours created for ${merchant.name}`);
     }
   }
-
   // ============================================
   // 5. KOPI KENANGAN - MENU CATEGORIES
   // ============================================
   const kopiMerchant = merchants.find((m) => m.code === 'KOPI001')!;
   const kopiOwner = await prisma.user.findUnique({ where: { email: 'owner@kopikenangan.com.au' } });
-
   const kopiCategories = [
     { name: 'Hot Coffee', description: 'Freshly brewed hot coffee beverages', sortOrder: 1 },
     { name: 'Iced Coffee', description: 'Refreshing iced coffee drinks', sortOrder: 2 },
@@ -332,13 +304,11 @@ async function main() {
     { name: 'Pastries', description: 'Fresh baked goods', sortOrder: 4 },
     { name: 'Snacks', description: 'Light bites and snacks', sortOrder: 5 },
   ];
-
   const kopiCategoriesCreated = [];
   for (const cat of kopiCategories) {
     const existing = await prisma.menuCategory.findFirst({
       where: { merchantId: kopiMerchant.id, name: cat.name },
     });
-
     if (!existing) {
       const created = await prisma.menuCategory.create({
         data: {
@@ -356,7 +326,6 @@ async function main() {
       kopiCategoriesCreated.push(existing);
     }
   }
-
   // ============================================
   // 6. KOPI KENANGAN - MENU ITEMS
   // ============================================
@@ -368,7 +337,6 @@ async function main() {
       description: 'Strong and bold single shot of Italian espresso',
       price: 4.5,
       trackStock: false,
-      isPromo: false,
     },
     {
       categories: ['Hot Coffee'],
@@ -376,7 +344,6 @@ async function main() {
       description: 'Espresso with hot water for a smooth taste',
       price: 5.0,
       trackStock: false,
-      isPromo: false,
     },
     {
       categories: ['Hot Coffee'],
@@ -384,7 +351,6 @@ async function main() {
       description: 'Classic Italian coffee with steamed milk and foam',
       price: 5.5,
       trackStock: false,
-      isPromo: false,
     },
     {
       categories: ['Hot Coffee'],
@@ -392,8 +358,6 @@ async function main() {
       description: 'Australian favorite with smooth microfoam',
       price: 5.5,
       trackStock: false,
-      isPromo: true,
-      promoPrice: 4.5,
     },
     {
       categories: ['Hot Coffee'],
@@ -401,7 +365,6 @@ async function main() {
       description: 'Creamy espresso with steamed milk',
       price: 5.5,
       trackStock: false,
-      isPromo: false,
     },
     {
       categories: ['Hot Coffee'],
@@ -409,7 +372,6 @@ async function main() {
       description: 'Espresso with chocolate and steamed milk',
       price: 6.0,
       trackStock: false,
-      isPromo: false,
     },
     // Iced Coffee
     {
@@ -418,7 +380,6 @@ async function main() {
       description: 'Chilled espresso with cold milk over ice',
       price: 6.0,
       trackStock: false,
-      isPromo: false,
     },
     {
       categories: ['Iced Coffee'],
@@ -426,7 +387,6 @@ async function main() {
       description: 'Espresso and cold water over ice',
       price: 5.5,
       trackStock: false,
-      isPromo: false,
     },
     {
       categories: ['Iced Coffee'],
@@ -434,8 +394,6 @@ async function main() {
       description: 'Smooth and less acidic cold-steeped coffee',
       price: 6.5,
       trackStock: false,
-      isPromo: true,
-      promoPrice: 5.5,
     },
     {
       categories: ['Iced Coffee'],
@@ -443,7 +401,6 @@ async function main() {
       description: 'Strong coffee with sweetened condensed milk',
       price: 6.5,
       trackStock: false,
-      isPromo: false,
     },
     // Non-Coffee
     {
@@ -452,7 +409,6 @@ async function main() {
       description: 'Japanese matcha with steamed milk',
       price: 6.0,
       trackStock: false,
-      isPromo: false,
     },
     {
       categories: ['Non-Coffee'],
@@ -460,7 +416,6 @@ async function main() {
       description: 'Sweet and creamy Thai-style tea',
       price: 5.5,
       trackStock: false,
-      isPromo: false,
     },
     {
       categories: ['Non-Coffee'],
@@ -468,7 +423,6 @@ async function main() {
       description: 'Rich Belgian chocolate with steamed milk',
       price: 5.5,
       trackStock: false,
-      isPromo: false,
     },
     {
       categories: ['Non-Coffee'],
@@ -476,7 +430,6 @@ async function main() {
       description: 'Refreshing iced tea with fresh lemon',
       price: 4.5,
       trackStock: false,
-      isPromo: false,
     },
     // Pastries
     {
@@ -488,7 +441,6 @@ async function main() {
       stockQty: 20,
       dailyStockTemplate: 20,
       autoResetStock: true,
-      isPromo: false,
     },
     {
       categories: ['Pastries'],
@@ -499,7 +451,6 @@ async function main() {
       stockQty: 15,
       dailyStockTemplate: 15,
       autoResetStock: true,
-      isPromo: false,
     },
     {
       categories: ['Pastries'],
@@ -510,7 +461,6 @@ async function main() {
       stockQty: 12,
       dailyStockTemplate: 12,
       autoResetStock: true,
-      isPromo: false,
     },
     {
       categories: ['Pastries'],
@@ -521,7 +471,6 @@ async function main() {
       stockQty: 10,
       dailyStockTemplate: 10,
       autoResetStock: true,
-      isPromo: false,
     },
     // Snacks
     {
@@ -530,7 +479,6 @@ async function main() {
       description: 'Grilled toast with melted cheese',
       price: 5.5,
       trackStock: false,
-      isPromo: false,
     },
     {
       categories: ['Snacks'],
@@ -539,7 +487,6 @@ async function main() {
       price: 3.5,
       trackStock: true,
       stockQty: 30,
-      isPromo: false,
     },
     {
       categories: ['Snacks'],
@@ -550,15 +497,12 @@ async function main() {
       stockQty: 15,
       dailyStockTemplate: 15,
       autoResetStock: true,
-      isPromo: false,
     },
   ];
-
   for (const item of kopiMenuItems) {
     const existing = await prisma.menu.findFirst({
       where: { merchantId: kopiMerchant.id, name: item.name },
     });
-
     if (!existing) {
       const menuItem = await prisma.menu.create({
         data: {
@@ -571,14 +515,10 @@ async function main() {
           stockQty: item.stockQty,
           dailyStockTemplate: item.dailyStockTemplate,
           autoResetStock: item.autoResetStock,
-          isPromo: item.isPromo,
-          promoPrice: item.promoPrice,
-          promoStartDate: item.isPromo ? new Date('2025-11-01') : undefined,
-          promoEndDate: item.isPromo ? new Date('2025-12-31') : undefined,
+          // Note: Promo fields removed - use SpecialPrice table instead
           createdByUserId: kopiOwner?.id,
         },
       });
-
       // Link to categories
       for (const categoryName of item.categories) {
         const category = kopiCategoriesCreated.find((c) => c.name === categoryName);
@@ -591,11 +531,9 @@ async function main() {
           });
         }
       }
-
       console.log(`✅ Menu item created: ${item.name} (Kopi Kenangan)`);
     }
   }
-
   // ============================================
   // 7. KOPI KENANGAN - ADDON CATEGORIES & ITEMS
   // ============================================
@@ -671,12 +609,10 @@ async function main() {
       ],
     },
   ];
-
   for (const addonCat of kopiAddonCategories) {
     const existingCat = await prisma.addonCategory.findFirst({
       where: { merchantId: kopiMerchant.id, name: addonCat.name },
     });
-
     let addonCategory;
     if (!existingCat) {
       addonCategory = await prisma.addonCategory.create({
@@ -694,13 +630,11 @@ async function main() {
     } else {
       addonCategory = existingCat;
     }
-
     // Create addon items
     for (const item of addonCat.items) {
       const existingItem = await prisma.addonItem.findFirst({
         where: { addonCategoryId: addonCategory.id, name: item.name },
       });
-
       if (!existingItem) {
         await prisma.addonItem.create({
           data: {
@@ -718,7 +652,6 @@ async function main() {
       }
     }
   }
-
   // Link addon categories to hot coffee menus
   const hotCoffeeMenus = await prisma.menu.findMany({
     where: {
@@ -732,7 +665,6 @@ async function main() {
       },
     },
   });
-
   const sizeAddon = await prisma.addonCategory.findFirst({
     where: { merchantId: kopiMerchant.id, name: 'Coffee Size' },
   });
@@ -748,7 +680,6 @@ async function main() {
   const toppingsAddon = await prisma.addonCategory.findFirst({
     where: { merchantId: kopiMerchant.id, name: 'Toppings' },
   });
-
   for (const menu of hotCoffeeMenus) {
     if (sizeAddon) {
       const existing = await prisma.menuAddonCategory.findUnique({
@@ -851,9 +782,7 @@ async function main() {
       }
     }
   }
-
   console.log('✅ Linked addon categories to hot coffee menus\n');
-
   console.log('');
   console.log('═══════════════════════════════════════════════');
   console.log('🎉 DATABASE SEEDED SUCCESSFULLY!');
@@ -884,7 +813,6 @@ async function main() {
   console.log('');
   console.log('═══════════════════════════════════════════════');
 }
-
 main()
   .catch((e) => {
     console.error('❌ Error seeding database:', e);
