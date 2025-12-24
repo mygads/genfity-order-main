@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
@@ -10,6 +10,22 @@ interface Merchant {
   id: string;
   name: string;
   currency: string;
+}
+
+interface Category {
+  id: string;
+  name: string;
+  description?: string | null;
+  isActive?: boolean;
+}
+
+interface AddonCategory {
+  id: string;
+  name: string;
+  description?: string | null;
+  minSelection: number;
+  maxSelection: number | null;
+  isActive: boolean;
 }
 
 interface MenuFormData {
@@ -55,8 +71,34 @@ export default function CreateMenuPage() {
     autoResetStock: false,
   });
 
+  // Category and Addon Category state
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [addonCategories, setAddonCategories] = useState<AddonCategory[]>([]);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  const [selectedAddonCategoryIds, setSelectedAddonCategoryIds] = useState<{ id: string; isRequired: boolean }[]>([]);
+  const [categorySearch, setCategorySearch] = useState("");
+  const [addonCategorySearch, setAddonCategorySearch] = useState("");
+  const [showCategorySection, setShowCategorySection] = useState(false);
+  const [showAddonSection, setShowAddonSection] = useState(false);
+
+  // Filtered categories
+  const filteredCategories = useMemo(() => {
+    if (!categorySearch.trim()) return categories;
+    return categories.filter(cat =>
+      cat.name.toLowerCase().includes(categorySearch.toLowerCase())
+    );
+  }, [categories, categorySearch]);
+
+  const filteredAddonCategories = useMemo(() => {
+    if (!addonCategorySearch.trim()) return addonCategories;
+    return addonCategories.filter(cat =>
+      cat.name.toLowerCase().includes(addonCategorySearch.toLowerCase())
+    );
+  }, [addonCategories, addonCategorySearch]);
+
   useEffect(() => {
-    const fetchMerchant = async () => {
+
+    const fetchData = async () => {
       try {
         setLoading(true);
         const token = localStorage.getItem("accessToken");
@@ -65,28 +107,52 @@ export default function CreateMenuPage() {
           return;
         }
 
-        const response = await fetch("/api/merchant/profile", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        // Fetch merchant, categories, and addon categories in parallel
+        const [merchantRes, categoriesRes, addonCategoriesRes] = await Promise.all([
+          fetch("/api/merchant/profile", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch("/api/merchant/categories", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch("/api/merchant/addon-categories", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
 
-        if (!response.ok) {
+        if (!merchantRes.ok) {
           throw new Error("Failed to fetch merchant profile");
         }
 
-        const data = await response.json();
-        if (data.success && data.data) {
-          setMerchant(data.data);
+        const merchantData = await merchantRes.json();
+        if (merchantData.success && merchantData.data) {
+          setMerchant(merchantData.data);
+        }
+
+        if (categoriesRes.ok) {
+          const categoriesData = await categoriesRes.json();
+          if (categoriesData.success && Array.isArray(categoriesData.data)) {
+            setCategories(categoriesData.data);
+          }
+        }
+
+        if (addonCategoriesRes.ok) {
+          const addonData = await addonCategoriesRes.json();
+          if (addonData.success && Array.isArray(addonData.data)) {
+            setAddonCategories(addonData.data);
+          }
         }
       } catch (err) {
-        console.error("Fetch merchant error:", err);
+        console.error("Fetch data error:", err);
         setError(err instanceof Error ? err.message : "An error occurred");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchMerchant();
+    fetchData();
   }, [router]);
+
 
   // Cleanup function to delete orphaned uploaded image
   const deleteUploadedImage = async (imageUrl: string) => {
@@ -245,6 +311,39 @@ export default function CreateMenuPage() {
         throw new Error(data.message || "Failed to create menu item");
       }
 
+      const menuId = data.data?.id;
+
+      // Assign categories if any selected
+      if (menuId && selectedCategoryIds.length > 0) {
+        await fetch(`/api/merchant/menu/${menuId}/categories`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ categoryIds: selectedCategoryIds }),
+        });
+      }
+
+      // Assign addon categories if any selected
+      if (menuId && selectedAddonCategoryIds.length > 0) {
+        const addonPromises = selectedAddonCategoryIds.map((cat, index) =>
+          fetch(`/api/merchant/menu/${menuId}/addon-categories`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              addonCategoryId: cat.id,
+              isRequired: cat.isRequired,
+              displayOrder: index,
+            }),
+          })
+        );
+        await Promise.all(addonPromises);
+      }
+
       // Mark form as submitted to prevent image cleanup
       setFormSubmitted(true);
       setUploadedImageUrl(null);
@@ -254,6 +353,7 @@ export default function CreateMenuPage() {
       setSubmitting(false);
     }
   };
+
 
   if (loading) {
     return (
@@ -398,8 +498,8 @@ export default function CreateMenuPage() {
               </label>
 
               <div className={`relative rounded-2xl border-2 border-dashed transition-all ${formData.imageUrl
-                  ? 'border-success-300 bg-success-50/50 dark:border-success-700 dark:bg-success-900/10'
-                  : 'border-gray-300 bg-gray-50 hover:border-primary-400 hover:bg-primary-50/50 dark:border-gray-700 dark:bg-gray-900 dark:hover:border-primary-600'
+                ? 'border-success-300 bg-success-50/50 dark:border-success-700 dark:bg-success-900/10'
+                : 'border-gray-300 bg-gray-50 hover:border-primary-400 hover:bg-primary-50/50 dark:border-gray-700 dark:bg-gray-900 dark:hover:border-primary-600'
                 }`}>
                 {formData.imageUrl ? (
                   <div className="relative aspect-square overflow-hidden rounded-xl">
@@ -470,12 +570,231 @@ export default function CreateMenuPage() {
           {/* Divider */}
           <div className="my-8 border-t border-gray-100 dark:border-gray-800" />
 
+          {/* Category & Addon Selection - Collapsible Sections */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 mb-8">
+            {/* Category Selection Card */}
+            <div className={`rounded-2xl border-2 p-5 transition-all ${showCategorySection
+              ? 'border-blue-300 bg-blue-50/50 dark:border-blue-700 dark:bg-blue-900/10'
+              : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-800 dark:bg-gray-900/50 dark:hover:border-gray-700'
+              }`}>
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${showCategorySection ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'}`}>
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-800 dark:text-white">Menu Categories</h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Optional - Group this item</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowCategorySection(!showCategorySection)}
+                  className={`inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-medium transition-colors ${showCategorySection
+                    ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400'
+                    }`}
+                >
+                  {showCategorySection ? 'Hide' : 'Add Categories'}
+                  <svg className={`h-4 w-4 transition-transform ${showCategorySection ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              </div>
+
+              {showCategorySection && (
+                <div className="space-y-3">
+                  {selectedCategoryIds.length > 0 && (
+                    <div className="flex flex-wrap gap-2 pb-2">
+                      {selectedCategoryIds.map(catId => {
+                        const cat = categories.find(c => c.id === catId);
+                        return cat ? (
+                          <span key={catId} className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                            {cat.name}
+                            <button
+                              type="button"
+                              onClick={() => setSelectedCategoryIds(prev => prev.filter(id => id !== catId))}
+                              className="hover:text-blue-900 dark:hover:text-blue-200"
+                            >
+                              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </span>
+                        ) : null;
+                      })}
+                    </div>
+                  )}
+                  <input
+                    type="text"
+                    placeholder="Search categories..."
+                    value={categorySearch}
+                    onChange={(e) => setCategorySearch(e.target.value)}
+                    className="h-9 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90"
+                  />
+                  <div className="max-h-40 overflow-y-auto space-y-1.5">
+                    {filteredCategories.map(cat => {
+                      const isSelected = selectedCategoryIds.includes(cat.id);
+                      return (
+                        <label key={cat.id} className={`flex cursor-pointer items-center gap-2 rounded-lg border p-2 transition-colors ${isSelected
+                          ? 'border-blue-300 bg-blue-50 dark:border-blue-700 dark:bg-blue-900/20'
+                          : 'border-gray-200 bg-white hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700'
+                          }`}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => {
+                              if (isSelected) {
+                                setSelectedCategoryIds(prev => prev.filter(id => id !== cat.id));
+                              } else {
+                                setSelectedCategoryIds(prev => [...prev, cat.id]);
+                              }
+                            }}
+                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-gray-700 dark:text-gray-300">{cat.name}</span>
+                        </label>
+                      );
+                    })}
+                    {filteredCategories.length === 0 && (
+                      <p className="py-2 text-center text-xs text-gray-500">No categories found</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Addon Category Selection Card */}
+            <div className={`rounded-2xl border-2 p-5 transition-all ${showAddonSection
+              ? 'border-purple-300 bg-purple-50/50 dark:border-purple-700 dark:bg-purple-900/10'
+              : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-800 dark:bg-gray-900/50 dark:hover:border-gray-700'
+              }`}>
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${showAddonSection ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'}`}>
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-800 dark:text-white">Addon Categories</h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Optional - Add customizations</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAddonSection(!showAddonSection)}
+                  className={`inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-medium transition-colors ${showAddonSection
+                    ? 'bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-400'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400'
+                    }`}
+                >
+                  {showAddonSection ? 'Hide' : 'Add Addons'}
+                  <svg className={`h-4 w-4 transition-transform ${showAddonSection ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              </div>
+
+              {showAddonSection && (
+                <div className="space-y-3">
+                  {selectedAddonCategoryIds.length > 0 && (
+                    <div className="flex flex-wrap gap-2 pb-2">
+                      {selectedAddonCategoryIds.map(selected => {
+                        const cat = addonCategories.find(c => c.id === selected.id);
+                        return cat ? (
+                          <span key={selected.id} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${selected.isRequired
+                            ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                            : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
+                            }`}>
+                            {cat.name}
+                            {selected.isRequired && <span className="text-[10px]">(Required)</span>}
+                            <button
+                              type="button"
+                              onClick={() => setSelectedAddonCategoryIds(prev => prev.filter(s => s.id !== selected.id))}
+                              className="hover:opacity-70"
+                            >
+                              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </span>
+                        ) : null;
+                      })}
+                    </div>
+                  )}
+                  <input
+                    type="text"
+                    placeholder="Search addon categories..."
+                    value={addonCategorySearch}
+                    onChange={(e) => setAddonCategorySearch(e.target.value)}
+                    className="h-9 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90"
+                  />
+                  <div className="max-h-40 overflow-y-auto space-y-1.5">
+                    {filteredAddonCategories.map(cat => {
+                      const selected = selectedAddonCategoryIds.find(s => s.id === cat.id);
+                      const isSelected = !!selected;
+                      return (
+                        <div key={cat.id} className={`flex items-center justify-between gap-2 rounded-lg border p-2 transition-colors ${isSelected
+                          ? 'border-purple-300 bg-purple-50 dark:border-purple-700 dark:bg-purple-900/20'
+                          : 'border-gray-200 bg-white hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700'
+                          }`}>
+                          <label className="flex cursor-pointer items-center gap-2 flex-1">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => {
+                                if (isSelected) {
+                                  setSelectedAddonCategoryIds(prev => prev.filter(s => s.id !== cat.id));
+                                } else {
+                                  setSelectedAddonCategoryIds(prev => [...prev, { id: cat.id, isRequired: false }]);
+                                }
+                              }}
+                              className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                            />
+                            <div>
+                              <span className="text-sm text-gray-700 dark:text-gray-300">{cat.name}</span>
+                              <span className="ml-2 text-xs text-gray-400">
+                                Min: {cat.minSelection} | Max: {cat.maxSelection || '∞'}
+                              </span>
+                            </div>
+                          </label>
+                          {isSelected && (
+                            <label className="flex items-center gap-1.5">
+                              <input
+                                type="checkbox"
+                                checked={selected?.isRequired || false}
+                                onChange={() => {
+                                  setSelectedAddonCategoryIds(prev =>
+                                    prev.map(s => s.id === cat.id ? { ...s, isRequired: !s.isRequired } : s)
+                                  );
+                                }}
+                                className="h-3.5 w-3.5 rounded border-gray-300 text-red-500 focus:ring-red-500"
+                              />
+                              <span className="text-xs text-gray-500">Required</span>
+                            </label>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {filteredAddonCategories.length === 0 && (
+                      <p className="py-2 text-center text-xs text-gray-500">No addon categories found</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Settings Cards Row */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+
             {/* Stock Management Card */}
             <div className={`rounded-2xl border-2 p-5 transition-all ${formData.trackStock
-                ? 'border-warning-300 bg-warning-50/50 dark:border-warning-700 dark:bg-warning-900/10'
-                : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-800 dark:bg-gray-900/50 dark:hover:border-gray-700'
+              ? 'border-warning-300 bg-warning-50/50 dark:border-warning-700 dark:bg-warning-900/10'
+              : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-800 dark:bg-gray-900/50 dark:hover:border-gray-700'
               }`}>
               <div className="mb-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
@@ -55,6 +55,13 @@ interface Merchant {
   currency: string;
 }
 
+interface Category {
+  id: string;
+  name: string;
+  description?: string | null;
+  isActive?: boolean;
+}
+
 export default function EditMenuPage() {
   const router = useRouter();
   const params = useParams();
@@ -73,6 +80,13 @@ export default function EditMenuPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [originalFormData, setOriginalFormData] = useState<MenuFormData | null>(null);
 
+  // Category selection state
+  const [allCategories, setAllCategories] = useState<Category[]>([]);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  const [originalCategoryIds, setOriginalCategoryIds] = useState<string[]>([]);
+  const [categorySearch, setCategorySearch] = useState("");
+  const [showCategorySection, setShowCategorySection] = useState(false);
+
   const [formData, setFormData] = useState<MenuFormData>({
     name: "",
     description: "",
@@ -88,6 +102,14 @@ export default function EditMenuPage() {
     dailyStockTemplate: "",
     autoResetStock: false,
   });
+
+  // Filtered categories
+  const filteredCategories = useMemo(() => {
+    if (!categorySearch.trim()) return allCategories;
+    return allCategories.filter(cat =>
+      cat.name.toLowerCase().includes(categorySearch.toLowerCase())
+    );
+  }, [allCategories, categorySearch]);
 
   // Check if form has changes compared to original data
   const hasChanges = (): boolean => {
@@ -105,7 +127,8 @@ export default function EditMenuPage() {
       formData.trackStock !== originalFormData.trackStock ||
       formData.stockQty !== originalFormData.stockQty ||
       formData.dailyStockTemplate !== originalFormData.dailyStockTemplate ||
-      formData.autoResetStock !== originalFormData.autoResetStock
+      formData.autoResetStock !== originalFormData.autoResetStock ||
+      JSON.stringify(selectedCategoryIds.sort()) !== JSON.stringify(originalCategoryIds.sort())
     );
   };
 
@@ -119,11 +142,14 @@ export default function EditMenuPage() {
           return;
         }
 
-        const [menuResponse, merchantResponse] = await Promise.all([
+        const [menuResponse, merchantResponse, categoriesResponse] = await Promise.all([
           fetch(`/api/merchant/menu/${menuId}`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
           fetch("/api/merchant/profile", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch("/api/merchant/categories", {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
@@ -137,6 +163,14 @@ export default function EditMenuPage() {
 
         if (merchantData.success && merchantData.data) {
           setMerchant(merchantData.data);
+        }
+
+        // Set all categories
+        if (categoriesResponse.ok) {
+          const categoriesData = await categoriesResponse.json();
+          if (categoriesData.success && Array.isArray(categoriesData.data)) {
+            setAllCategories(categoriesData.data);
+          }
         }
 
         if (menuData.success && menuData.data) {
@@ -161,6 +195,14 @@ export default function EditMenuPage() {
 
           if (menu.addonCategories) {
             setAddonCategories(menu.addonCategories);
+          }
+
+          // Set current menu categories
+          if (menu.categories && Array.isArray(menu.categories)) {
+            const catIds = menu.categories.map((c: { categoryId: string }) => c.categoryId);
+            setSelectedCategoryIds(catIds);
+            setOriginalCategoryIds(catIds);
+            if (catIds.length > 0) setShowCategorySection(true);
           }
         } else {
           throw new Error("Menu item not found");
@@ -330,7 +372,21 @@ export default function EditMenuPage() {
         throw new Error(data.message || "Failed to update menu item");
       }
 
+      // Update categories if changed
+      const categoriesChanged = JSON.stringify(selectedCategoryIds.sort()) !== JSON.stringify(originalCategoryIds.sort());
+      if (categoriesChanged) {
+        await fetch(`/api/merchant/menu/${menuId}/categories`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ categoryIds: selectedCategoryIds }),
+        });
+      }
+
       router.push("/admin/dashboard/menu");
+
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
       setSubmitting(false);
@@ -558,8 +614,105 @@ export default function EditMenuPage() {
           {/* Divider */}
           <div className="my-8 border-t border-gray-100 dark:border-gray-800" />
 
+          {/* Category Selection Section */}
+          <div className="mb-8">
+            <div className={`rounded-2xl border-2 p-5 transition-all ${showCategorySection
+              ? 'border-blue-300 bg-blue-50/50 dark:border-blue-700 dark:bg-blue-900/10'
+              : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-800 dark:bg-gray-900/50 dark:hover:border-gray-700'
+              }`}>
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${showCategorySection ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'}`}>
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-800 dark:text-white">Menu Categories</h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{selectedCategoryIds.length} categories selected</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowCategorySection(!showCategorySection)}
+                  className={`inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-medium transition-colors ${showCategorySection
+                    ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400'
+                    }`}
+                >
+                  {showCategorySection ? 'Hide' : 'Manage'}
+                  <svg className={`h-4 w-4 transition-transform ${showCategorySection ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              </div>
+
+              {showCategorySection && (
+                <div className="space-y-3">
+                  {selectedCategoryIds.length > 0 && (
+                    <div className="flex flex-wrap gap-2 pb-2">
+                      {selectedCategoryIds.map(catId => {
+                        const cat = allCategories.find(c => c.id === catId);
+                        return cat ? (
+                          <span key={catId} className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                            {cat.name}
+                            <button
+                              type="button"
+                              onClick={() => setSelectedCategoryIds(prev => prev.filter(id => id !== catId))}
+                              className="hover:text-blue-900 dark:hover:text-blue-200"
+                            >
+                              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </span>
+                        ) : null;
+                      })}
+                    </div>
+                  )}
+                  <input
+                    type="text"
+                    placeholder="Search categories..."
+                    value={categorySearch}
+                    onChange={(e) => setCategorySearch(e.target.value)}
+                    className="h-9 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90"
+                  />
+                  <div className="max-h-40 overflow-y-auto space-y-1.5">
+                    {filteredCategories.map(cat => {
+                      const isSelected = selectedCategoryIds.includes(cat.id);
+                      return (
+                        <label key={cat.id} className={`flex cursor-pointer items-center gap-2 rounded-lg border p-2 transition-colors ${isSelected
+                          ? 'border-blue-300 bg-blue-50 dark:border-blue-700 dark:bg-blue-900/20'
+                          : 'border-gray-200 bg-white hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700'
+                          }`}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => {
+                              if (isSelected) {
+                                setSelectedCategoryIds(prev => prev.filter(id => id !== cat.id));
+                              } else {
+                                setSelectedCategoryIds(prev => [...prev, cat.id]);
+                              }
+                            }}
+                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-gray-700 dark:text-gray-300">{cat.name}</span>
+                        </label>
+                      );
+                    })}
+                    {filteredCategories.length === 0 && (
+                      <p className="py-2 text-center text-xs text-gray-500">No categories found</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Settings Cards Row */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+
             {/* Stock Management Card */}
             <div className={`rounded-2xl border-2 p-5 transition-all ${formData.trackStock
               ? 'border-warning-300 bg-warning-50/50 dark:border-warning-700 dark:bg-warning-900/10'

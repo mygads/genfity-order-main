@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 
 interface MenuCategory {
   id: string;
@@ -53,6 +53,26 @@ export default function ManageMenuCategoriesModal({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [show]);
+
+  // Search state
+  const [availableSearch, setAvailableSearch] = useState("");
+  const [selectedSearch, setSelectedSearch] = useState("");
+
+  // Filtered categories using useMemo
+  const filteredAvailableCategories = useMemo(() => {
+    if (!availableSearch.trim()) return availableCategories;
+    return availableCategories.filter(cat =>
+      cat.name.toLowerCase().includes(availableSearch.toLowerCase())
+    );
+  }, [availableCategories, availableSearch]);
+
+  const filteredSelectedCategories = useMemo(() => {
+    if (!selectedSearch.trim()) return selectedCategories;
+    return selectedCategories.filter(catId => {
+      const category = availableCategories.find(c => c.id === catId);
+      return category?.name.toLowerCase().includes(selectedSearch.toLowerCase());
+    });
+  }, [selectedCategories, availableCategories, selectedSearch]);
 
   const initializeSelectedCategories = () => {
     const selected = currentCategories.map((cat) => cat.categoryId);
@@ -195,13 +215,24 @@ export default function ManageMenuCategoriesModal({
                 <h4 className="mb-3 font-semibold text-gray-800 dark:text-white/90">
                   Available Categories
                 </h4>
-                <div className="space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/50">
-                  {availableCategories.length === 0 ? (
+                {/* Search Input */}
+                <div className="mb-3">
+                  <input
+                    type="text"
+                    placeholder="Search available categories..."
+                    value={availableSearch}
+                    onChange={(e) => setAvailableSearch(e.target.value)}
+                    className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90 dark:placeholder:text-white/40"
+                  />
+                </div>
+                <div className="space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/50 max-h-[350px] overflow-y-auto">
+                  {filteredAvailableCategories.length === 0 ? (
                     <p className="py-4 text-center text-sm text-gray-500 dark:text-gray-400">
-                      No categories available
+                      {availableSearch ? "No matching categories" : "No categories available"}
                     </p>
                   ) : (
-                    availableCategories.map((category) => {
+                    filteredAvailableCategories.map((category) => {
+
                       const isSelected = selectedCategories.includes(category.id);
 
                       return (
@@ -256,13 +287,24 @@ export default function ManageMenuCategoriesModal({
                 <h4 className="mb-3 font-semibold text-gray-800 dark:text-white/90">
                   Selected Categories ({selectedCategories.length})
                 </h4>
-                <div className="space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/50">
-                  {selectedCategories.length === 0 ? (
+                {/* Search Input */}
+                <div className="mb-3">
+                  <input
+                    type="text"
+                    placeholder="Search selected categories..."
+                    value={selectedSearch}
+                    onChange={(e) => setSelectedSearch(e.target.value)}
+                    className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90 dark:placeholder:text-white/40"
+                  />
+                </div>
+                <div className="space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/50 max-h-[350px] overflow-y-auto">
+                  {filteredSelectedCategories.length === 0 ? (
                     <p className="py-4 text-center text-sm text-gray-500 dark:text-gray-400">
-                      No categories selected
+                      {selectedSearch ? "No matching categories" : "No categories selected"}
                     </p>
                   ) : (
-                    selectedCategories.map((categoryId, index) => {
+                    filteredSelectedCategories.map((categoryId) => {
+
                       const category = getCategoryInfo(categoryId);
                       if (!category) return null;
 

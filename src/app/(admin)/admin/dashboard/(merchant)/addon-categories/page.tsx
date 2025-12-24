@@ -78,8 +78,10 @@ export default function AddonCategoriesPage() {
     menuList: string;
   }>({ show: false, id: "", name: "", menuCount: 0, menuList: "" });
 
-  const [formData, setFormData] = useState<AddonCategoryFormData>({
+  // Editing state - null means creating new, string ID means editing
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
 
+  const [formData, setFormData] = useState<AddonCategoryFormData>({
     name: "",
     description: "",
     minSelection: 0,
@@ -220,6 +222,8 @@ export default function AddonCategoriesPage() {
     setError(null);
     setSuccess(null);
 
+    const isEditing = !!editingCategoryId;
+
     try {
       const token = localStorage.getItem("accessToken");
       if (!token) {
@@ -227,8 +231,10 @@ export default function AddonCategoriesPage() {
         return;
       }
 
-      const url = "/api/merchant/addon-categories";
-      const method = "POST";
+      const url = isEditing
+        ? `/api/merchant/addon-categories/${editingCategoryId}`
+        : "/api/merchant/addon-categories";
+      const method = isEditing ? "PUT" : "POST";
 
       const payload = {
         name: formData.name,
@@ -249,12 +255,13 @@ export default function AddonCategoriesPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to create addon category');
+        throw new Error(data.message || `Failed to ${isEditing ? 'update' : 'create'} addon category`);
       }
 
-      setSuccess('Addon category created successfully!');
+      setSuccess(`Addon category ${isEditing ? 'updated' : 'created'} successfully!`);
       setTimeout(() => setSuccess(null), 3000);
       setShowForm(false);
+      setEditingCategoryId(null);
       setFormData({ name: "", description: "", minSelection: 0, maxSelection: "" });
 
       fetchCategories();
@@ -266,8 +273,16 @@ export default function AddonCategoriesPage() {
     }
   };
 
-  const handleNavigateToEdit = (categoryId: string) => {
-    router.push(`/admin/dashboard/addon-categories/${categoryId}/edit`);
+  // Open edit modal with category data
+  const handleEdit = (category: AddonCategory) => {
+    setEditingCategoryId(category.id);
+    setFormData({
+      name: category.name,
+      description: category.description || "",
+      minSelection: category.minSelection,
+      maxSelection: category.maxSelection !== null ? category.maxSelection : "",
+    });
+    setShowForm(true);
   };
 
   const handleViewItems = async (category: AddonCategory) => {
@@ -495,6 +510,7 @@ export default function AddonCategoriesPage() {
 
   const handleCancel = () => {
     setShowForm(false);
+    setEditingCategoryId(null);
     setFormData({ name: "", description: "", minSelection: 0, maxSelection: "" });
     setError(null);
     setSuccess(null);
@@ -520,7 +536,7 @@ export default function AddonCategoriesPage() {
             <div className="w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-800 dark:bg-gray-900">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-                  Create New Addon Category
+                  {editingCategoryId ? 'Edit Addon Category' : 'Create New Addon Category'}
                 </h3>
                 <button
                   onClick={handleCancel}
@@ -613,7 +629,7 @@ export default function AddonCategoriesPage() {
                     disabled={submitting}
                     className="flex-1 h-11 rounded-lg bg-primary-500 text-sm font-medium text-white hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {submitting ? "Saving..." : "Create Category"}
+                    {submitting ? "Saving..." : (editingCategoryId ? "Update Category" : "Create Category")}
                   </button>
                 </div>
               </form>
@@ -818,9 +834,9 @@ export default function AddonCategoriesPage() {
                             </svg>
                           </button>
                           <button
-                            onClick={() => handleNavigateToEdit(category.id)}
+                            onClick={() => handleEdit(category)}
                             className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                            title="Edit Category & Manage Items"
+                            title="Edit Category"
                           >
                             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />

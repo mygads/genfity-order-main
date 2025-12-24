@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 
 interface AddonItem {
   id: string;
@@ -74,6 +74,26 @@ export default function ManageMenuAddonCategoriesModal({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [show]);
+
+  // Search state
+  const [availableSearch, setAvailableSearch] = useState("");
+  const [selectedSearch, setSelectedSearch] = useState("");
+
+  // Filtered categories using useMemo
+  const filteredAvailableCategories = useMemo(() => {
+    if (!availableSearch.trim()) return availableCategories;
+    return availableCategories.filter(cat =>
+      cat.name.toLowerCase().includes(availableSearch.toLowerCase())
+    );
+  }, [availableCategories, availableSearch]);
+
+  const filteredSelectedCategories = useMemo(() => {
+    if (!selectedSearch.trim()) return selectedCategories;
+    return selectedCategories.filter(selected => {
+      const category = availableCategories.find(c => c.id === selected.id);
+      return category?.name.toLowerCase().includes(selectedSearch.toLowerCase());
+    });
+  }, [selectedCategories, availableCategories, selectedSearch]);
 
   const initializeSelectedCategories = () => {
     const selected = currentAddonCategories.map((cat, index) => ({
@@ -295,24 +315,34 @@ export default function ManageMenuAddonCategoriesModal({
                 <h4 className="mb-3 font-semibold text-gray-800 dark:text-white/90">
                   Available Addon Categories
                 </h4>
-                <div className="space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/50">
-                  {availableCategories.length === 0 ? (
+                {/* Search Input */}
+                <div className="mb-3">
+                  <input
+                    type="text"
+                    placeholder="Search available categories..."
+                    value={availableSearch}
+                    onChange={(e) => setAvailableSearch(e.target.value)}
+                    className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90 dark:placeholder:text-white/40"
+                  />
+                </div>
+                <div className="space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/50 max-h-[400px] overflow-y-auto">
+                  {filteredAvailableCategories.length === 0 ? (
                     <p className="py-4 text-center text-sm text-gray-500 dark:text-gray-400">
-                      No addon categories available
+                      {availableSearch ? "No matching categories" : "No addon categories available"}
                     </p>
                   ) : (
-                    availableCategories.map((category) => {
+                    filteredAvailableCategories.map((category) => {
+
                       const isSelected = selectedCategories.some((c) => c.id === category.id);
                       const isExpanded = expandedCategory === category.id;
 
                       return (
                         <div
                           key={category.id}
-                          className={`rounded-lg border bg-white dark:bg-gray-900 ${
-                            isSelected
-                              ? "border-brand-300 bg-brand-50 dark:border-brand-700 dark:bg-brand-900/20"
-                              : "border-gray-200 dark:border-gray-700"
-                          }`}
+                          className={`rounded-lg border bg-white dark:bg-gray-900 ${isSelected
+                            ? "border-brand-300 bg-brand-50 dark:border-brand-700 dark:bg-brand-900/20"
+                            : "border-gray-200 dark:border-gray-700"
+                            }`}
                         >
                           <div className="flex items-start gap-3 p-3">
                             <input
@@ -330,11 +360,10 @@ export default function ManageMenuAddonCategoriesModal({
                                   <p className="font-medium text-gray-800 dark:text-white/90">
                                     {category.name}
                                   </p>
-                                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                                    category.isActive
-                                      ? 'bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400'
-                                      : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-                                  }`}>
+                                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${category.isActive
+                                    ? 'bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400'
+                                    : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                                    }`}>
                                     {category.isActive ? 'Active' : 'Inactive'}
                                   </span>
                                   <svg
@@ -366,13 +395,12 @@ export default function ManageMenuAddonCategoriesModal({
                                   {category.addonItems.map((item) => {
                                     const itemPrice = typeof item.price === 'string' ? parseFloat(item.price) : item.price;
                                     const formattedPrice = itemPrice === 0 ? 'Free' : `A$ ${itemPrice.toFixed(2)}`;
-                                    
+
                                     return (
                                       <div
                                         key={item.id}
-                                        className={`rounded-lg border border-gray-200 bg-white p-2.5 dark:border-gray-700 dark:bg-gray-800/50 ${
-                                          !item.isActive ? 'opacity-40' : ''
-                                        }`}
+                                        className={`rounded-lg border border-gray-200 bg-white p-2.5 dark:border-gray-700 dark:bg-gray-800/50 ${!item.isActive ? 'opacity-40' : ''
+                                          }`}
                                       >
                                         <div className="flex items-start justify-between gap-2">
                                           <div className="flex-1 min-w-0">
@@ -438,13 +466,25 @@ export default function ManageMenuAddonCategoriesModal({
                 <h4 className="mb-3 font-semibold text-gray-800 dark:text-white/90">
                   Selected Categories ({selectedCategories.length})
                 </h4>
-                <div className="space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/50">
-                  {selectedCategories.length === 0 ? (
+                {/* Search Input */}
+                <div className="mb-3">
+                  <input
+                    type="text"
+                    placeholder="Search selected categories..."
+                    value={selectedSearch}
+                    onChange={(e) => setSelectedSearch(e.target.value)}
+                    className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90 dark:placeholder:text-white/40"
+                  />
+                </div>
+                <div className="space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/50 max-h-[400px] overflow-y-auto">
+                  {filteredSelectedCategories.length === 0 ? (
                     <p className="py-4 text-center text-sm text-gray-500 dark:text-gray-400">
-                      No categories selected
+                      {selectedSearch ? "No matching categories" : "No categories selected"}
                     </p>
                   ) : (
-                    selectedCategories.map((selected, index) => {
+                    filteredSelectedCategories.map((selected) => {
+                      const index = selectedCategories.findIndex(s => s.id === selected.id);
+
                       const category = getCategoryInfo(selected.id);
                       if (!category) return null;
                       const isExpanded = expandedCategory === selected.id;
@@ -458,13 +498,12 @@ export default function ManageMenuAddonCategoriesModal({
                           onDragLeave={handleDragLeave}
                           onDrop={(e) => handleDrop(e, index)}
                           onDragEnd={handleDragEnd}
-                          className={`rounded-lg border bg-white transition-all dark:bg-gray-900 ${
-                            draggedItem === selected.id
-                              ? "opacity-50"
-                              : dragOverIndex === index
+                          className={`rounded-lg border bg-white transition-all dark:bg-gray-900 ${draggedItem === selected.id
+                            ? "opacity-50"
+                            : dragOverIndex === index
                               ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20"
                               : "border-gray-200 dark:border-gray-700"
-                          }`}
+                            }`}
                         >
                           <div className="flex items-start gap-3 p-3">
                             <div className="flex cursor-move flex-col items-center text-gray-400">
@@ -485,11 +524,10 @@ export default function ManageMenuAddonCategoriesModal({
                                     <p className="font-medium text-gray-800 dark:text-white/90">
                                       {category.name}
                                     </p>
-                                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                                      category.isActive
-                                        ? 'bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400'
-                                        : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-                                    }`}>
+                                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${category.isActive
+                                      ? 'bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400'
+                                      : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                                      }`}>
                                       {category.isActive ? 'Active' : 'Inactive'}
                                     </span>
                                     <svg
@@ -543,13 +581,12 @@ export default function ManageMenuAddonCategoriesModal({
                                   {category.addonItems.map((item) => {
                                     const itemPrice = typeof item.price === 'string' ? parseFloat(item.price) : item.price;
                                     const formattedPrice = itemPrice === 0 ? 'Free' : `A$ ${itemPrice.toFixed(2)}`;
-                                    
+
                                     return (
                                       <div
                                         key={item.id}
-                                        className={`rounded-lg border border-gray-200 bg-white p-2.5 dark:border-gray-700 dark:bg-gray-800/50 ${
-                                          !item.isActive ? 'opacity-40' : ''
-                                        }`}
+                                        className={`rounded-lg border border-gray-200 bg-white p-2.5 dark:border-gray-700 dark:bg-gray-800/50 ${!item.isActive ? 'opacity-40' : ''
+                                          }`}
                                       >
                                         <div className="flex items-start justify-between gap-2">
                                           <div className="flex-1 min-w-0">

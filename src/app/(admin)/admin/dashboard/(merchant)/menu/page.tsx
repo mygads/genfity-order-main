@@ -643,34 +643,35 @@ export default function MerchantMenuPage() {
             </div>
           </div>
 
-          {/* Search and Filters - Minimalist Dropdown Design */}
-          <div className="mb-5 space-y-4">
-            {/* Search Bar */}
-            <div className="relative">
-              <svg className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <input
-                type="text"
-                placeholder="Search menu items by name or description..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-11 w-full rounded-lg border border-gray-200 bg-white pl-11 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                >
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              )}
-            </div>
-
-            {/* Filter Dropdowns - Compact Layout */}
+          {/* Search and Filters - Inline Layout */}
+          <div className="mb-5">
             <div className="flex flex-wrap items-center gap-3">
+              {/* Search Bar - Takes remaining space */}
+              <div className="relative flex-1 min-w-[200px]">
+                <svg className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Search menu items..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-11 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+
+              {/* Filters - On the right */}
+
               {/* Category Filter */}
               <select
                 value={filterCategory}
@@ -896,7 +897,6 @@ export default function MerchantMenuPage() {
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Category</th>
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Attributes</th>
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Price</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Stock</th>
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Status</th>
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Actions</th>
                   </tr>
@@ -1041,29 +1041,6 @@ export default function MerchantMenuPage() {
                             </div>
                           )}
                         </div>
-                      </td>
-                      <td className="px-4 py-4">
-                        {item.trackStock ? (
-                          <div className="space-y-1">
-                            <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${(item.stockQty || 0) > 10
-                              ? 'bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400'
-                              : (item.stockQty || 0) > 0
-                                ? 'bg-warning-100 text-warning-700 dark:bg-warning-900/20 dark:text-warning-400'
-                                : 'bg-error-100 text-error-700 dark:bg-error-900/20 dark:text-error-400'
-                              }`}>
-                              {item.stockQty || 0} pcs
-                            </span>
-                            {item.autoResetStock && item.dailyStockTemplate && (
-                              <p className="text-xs text-gray-500 dark:text-gray-400">
-                                {item.dailyStockTemplate}/day
-                              </p>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
-                            No tracking
-                          </span>
-                        )}
                       </td>
                       <td className="px-4 py-4">
                         <button
