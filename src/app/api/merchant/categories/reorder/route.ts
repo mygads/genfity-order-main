@@ -42,8 +42,16 @@ export const POST = withMerchant(async (req: NextRequest, { userId, merchantId }
       );
     }
 
-    // Update all categories in a transaction
-    const updatePromises = categories.map((cat) =>
+    // Normalize sort orders: ensure sequential values starting from 0 (no gaps, no duplicates)
+    // Sort by the provided sortOrder first, then normalize
+    const sortedCategories = [...categories].sort((a, b) => a.sortOrder - b.sortOrder);
+    const normalizedCategories = sortedCategories.map((cat, index) => ({
+      id: cat.id,
+      sortOrder: index, // Sequential: 0, 1, 2, 3, ...
+    }));
+
+    // Update all categories in a transaction with normalized values
+    const updatePromises = normalizedCategories.map((cat) =>
       prisma.menuCategory.update({
         where: { id: BigInt(cat.id) },
         data: {

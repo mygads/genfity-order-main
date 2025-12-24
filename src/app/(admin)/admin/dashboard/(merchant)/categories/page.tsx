@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import CategoryDnDList from "@/components/ui/CategoryDnDList";
 import EmptyState from "@/components/ui/EmptyState";
-import { HelpTooltip } from "@/components/ui/Tooltip";
 import { exportCategories } from "@/lib/utils/excelExport";
 import { useSWRStatic } from "@/hooks/useSWRWithAuth";
 import { CategoriesPageSkeleton } from "@/components/common/SkeletonLoaders";
@@ -34,8 +33,6 @@ interface MenuItem {
 interface CategoryFormData {
   name: string;
   description: string;
-  displayOrder: number;
-  sortOrder: number;
 }
 
 // Response type for SWR
@@ -57,20 +54,27 @@ export default function MerchantCategoriesPage() {
   const [availableMenus, setAvailableMenus] = useState<MenuItem[]>([]);
   const [categoryMenus, setCategoryMenus] = useState<MenuItem[]>([]);
   const [sortBy, setSortBy] = useState<string>("manual");
-  const [useDragDrop, setUseDragDrop] = useState<boolean>(false);
   const [hasUnsavedOrder, setHasUnsavedOrder] = useState<boolean>(false);
   const [pendingReorder, setPendingReorder] = useState<Category[] | null>(null);
   const [loadingMenus, setLoadingMenus] = useState<boolean>(false);
+
+  // Menu search states for Manage Menus modal
+  const [availableMenuSearch, setAvailableMenuSearch] = useState<string>("");
+  const [categoryMenuSearch, setCategoryMenuSearch] = useState<string>("");
+
+  // Tab state: "list" or "display"
+  const [activeTab, setActiveTab] = useState<"list" | "display">("list");
 
   // Bulk selection states
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
+  // Single delete confirmation
+  const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; id: string; name: string }>({ show: false, id: "", name: "" });
+
   const [formData, setFormData] = useState<CategoryFormData>({
     name: "",
     description: "",
-    displayOrder: 1,
-    sortOrder: 0,
   });
 
   // Pagination & Filter states
@@ -253,7 +257,7 @@ export default function MerchantCategoriesPage() {
       setSuccess(`Category ${editingId ? 'updated' : 'created'} successfully!`);
       setShowForm(false);
       setEditingId(null);
-      setFormData({ name: "", description: "", displayOrder: 1, sortOrder: 0 });
+      setFormData({ name: "", description: "" });
 
       fetchCategories();
     } catch (err) {
@@ -268,8 +272,6 @@ export default function MerchantCategoriesPage() {
     setFormData({
       name: category.name,
       description: category.description || "",
-      displayOrder: category.displayOrder,
-      sortOrder: category.sortOrder,
     });
     setShowForm(true);
     setError(null);
@@ -305,10 +307,15 @@ export default function MerchantCategoriesPage() {
     }
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to delete "${name}"?`)) {
-      return;
-    }
+  // Show delete confirmation modal
+  const handleDelete = (id: string, name: string) => {
+    setDeleteConfirm({ show: true, id, name });
+  };
+
+  // Confirm and execute delete
+  const confirmDelete = async () => {
+    const { id } = deleteConfirm;
+    setDeleteConfirm({ show: false, id: "", name: "" });
 
     try {
       const token = localStorage.getItem("accessToken");
@@ -341,7 +348,7 @@ export default function MerchantCategoriesPage() {
   const handleCancel = () => {
     setShowForm(false);
     setEditingId(null);
-    setFormData({ name: "", description: "", displayOrder: 1, sortOrder: 0 });
+    setFormData({ name: "", description: "" });
     setError(null);
     setSuccess(null);
   };
@@ -676,25 +683,6 @@ export default function MerchantCategoriesPage() {
                   />
                 </div>
 
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Display Order (Customer Page) <span className="text-error-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    name="sortOrder"
-                    value={formData.sortOrder}
-                    onChange={handleChange}
-                    required
-                    min="0"
-                    placeholder="0"
-                    className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                  />
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    Lower numbers appear first in customer menu (0 = first)
-                  </p>
-                </div>
-
                 <div className="flex gap-3 pt-4">
                   <button
                     type="button"
@@ -717,270 +705,364 @@ export default function MerchantCategoriesPage() {
         )}
 
         <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
-          <div className="mb-5 flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">Categories List</h3>
-            <div className="flex items-center gap-3">
-              {selectedCategories.length > 0 && (
-                <>
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
-                    {selectedCategories.length} selected
-                  </span>
-                  <button
-                    onClick={() => setShowBulkDeleteConfirm(true)}
-                    className="inline-flex h-11 items-center gap-2 rounded-lg border border-error-300 bg-error-50 px-4 text-sm font-medium text-error-700 hover:bg-error-100 dark:border-error-700 dark:bg-error-900/20 dark:text-error-400 dark:hover:bg-error-900/30"
-                  >
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                    Delete {selectedCategories.length}
-                  </button>
-                </>
-              )}
-              {hasUnsavedOrder && (
-                <>
-                  <button
-                    onClick={handleCancelOrder}
-                    className="inline-flex h-11 items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-3 focus:ring-gray-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                  >
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSaveOrder}
-                    className="inline-flex h-11 items-center gap-2 rounded-lg bg-success-600 px-4 text-sm font-medium text-white hover:bg-success-700 focus:outline-none focus:ring-3 focus:ring-success-500/20"
-                  >
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    Save Order
-                  </button>
-                </>
-              )}
+          {/* Tab Navigation */}
+          <div className="mb-5 border-b border-gray-200 dark:border-gray-700">
+            <nav className="-mb-px flex gap-6">
               <button
-                onClick={() => {
-                  try {
-                    exportCategories(categories);
-                    setSuccess('Categories exported successfully!');
-                    setTimeout(() => setSuccess(null), 3000);
-                  } catch (err) {
-                    setError(err instanceof Error ? err.message : 'Export failed');
-                    setTimeout(() => setError(null), 5000);
-                  }
-                }}
-                disabled={categories.length === 0}
-                className="inline-flex h-11 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                title="Export to Excel"
+                onClick={() => setActiveTab("list")}
+                className={`border-b-2 pb-3 text-sm font-medium transition-colors ${activeTab === "list"
+                  ? "border-primary-500 text-primary-600 dark:text-primary-400"
+                  : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                  }`}
               >
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Export
+                Category List
               </button>
               <button
-                onClick={() => setShowForm(true)}
-                className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary-500 px-6 text-sm font-medium text-white hover:bg-primary-600 focus:outline-none focus:ring-3 focus:ring-primary-500/20"
+                onClick={() => setActiveTab("display")}
+                className={`border-b-2 pb-3 text-sm font-medium transition-colors ${activeTab === "display"
+                  ? "border-primary-500 text-primary-600 dark:text-primary-400"
+                  : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                  }`}
               >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Add Category
+                Category Display
               </button>
-            </div>
+            </nav>
           </div>
 
-          {/* Search and Filters */}
-          <div className="mb-5 grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div>
-              <input
-                type="text"
-                placeholder="Search categories..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                <input
-                  type="checkbox"
-                  checked={useDragDrop}
-                  onChange={(e) => setUseDragDrop(e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                />
-                Drag & Drop
-              </label>
-              <HelpTooltip content="Enable drag and drop to reorder categories manually" />
-            </div>
-            <div>
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
-              >
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </div>
-            {!useDragDrop && (
-              <div>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
-                >
-                  <option value="manual">Manual Order</option>
-                  <option value="name-asc">Name (A-Z)</option>
-                  <option value="name-desc">Name (Z-A)</option>
-                  <option value="menu-count">Menu Count (Most)</option>
-                </select>
-              </div>
-            )}
-          </div>
-
-          {filteredCategories.length === 0 ? (
-            <EmptyState
-              type={categories.length === 0 ? "no-category" : "no-results"}
-              title={categories.length === 0 ? undefined : "No categories match your filters"}
-              description={categories.length === 0 ? undefined : "Try adjusting your filters"}
-              action={categories.length === 0 ? { label: "Create First Category", onClick: () => setShowForm(true) } : undefined}
-            />
-          ) : useDragDrop ? (
-            <CategoryDnDList
-              categories={filteredCategories}
-              onReorder={handleReorder}
-              onEdit={handleEdit}
-              onDelete={(id, name) => handleDelete(id, name)}
-              onToggleActive={(id, isActive, name) => handleToggleActive(id, isActive, name)}
-              onManageMenus={handleManageMenus}
-              onInlineUpdate={handleInlineUpdate}
-              selectedIds={selectedCategories}
-              onSelectAll={handleSelectAllCategories}
-              onSelect={handleSelectCategory}
-              bulkSelectionMode={true}
-            />
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full table-auto">
-                <thead>
-                  <tr className="bg-gray-50 text-left dark:bg-gray-900/50">
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Name</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Description</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Display Order</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Menus</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Status</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                  {currentItems.map((category) => (
-                    <tr key={category.id} className="hover:bg-gray-50 dark:hover:bg-gray-900/30">
-                      <td className="px-4 py-4 text-sm font-medium text-gray-800 dark:text-white/90">{category.name}</td>
-                      <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">{category.description || '-'}</td>
-                      <td className="px-4 py-4">
-                        <span className="inline-flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300">
-                          <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                          </svg>
-                          {category.sortOrder}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4">
-                        <span className="inline-flex rounded-full bg-brand-100 px-3 py-1 text-xs font-medium text-brand-700 dark:bg-brand-900/20 dark:text-brand-400">
-                          {category._count?.menuItems || 0} items
-                        </span>
-                      </td>
-                      <td className="px-4 py-4">
-                        <button
-                          onClick={() => handleToggleActive(category.id, category.isActive, category.name)}
-                          className={`inline-flex rounded-full px-3 py-1 text-xs font-medium transition-colors ${category.isActive
-                            ? 'bg-success-100 text-success-700 hover:bg-success-200 dark:bg-success-900/20 dark:text-success-400 dark:hover:bg-success-900/30'
-                            : 'bg-error-100 text-error-700 hover:bg-error-200 dark:bg-error-900/20 dark:text-error-400 dark:hover:bg-error-900/30'
-                            }`}>
-                          {category.isActive ? '● Active' : '○ Inactive'}
-                        </button>
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleManageMenus(category)}
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-brand-200 bg-brand-50 text-primary-600 hover:bg-brand-100 dark:border-brand-900/50 dark:bg-brand-900/20 dark:text-brand-400 dark:hover:bg-brand-900/30"
-                            title="Manage Menus"
-                          >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => handleEdit(category)}
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                            title="Edit"
-                          >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => handleDelete(category.id, category.name)}
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-error-200 bg-error-50 text-error-600 hover:bg-error-100 dark:border-error-900/50 dark:bg-error-900/20 dark:text-error-400 dark:hover:bg-error-900/30"
-                            title="Delete"
-                          >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="mt-5 flex items-center justify-between border-t border-gray-200 pt-5 dark:border-gray-800">
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
-                    Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredCategories.length)} of {filteredCategories.length} categories
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => paginate(currentPage - 1)}
-                      disabled={currentPage === 1}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                    >
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                      </svg>
-                    </button>
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+          {/* Tab Content */}
+          {activeTab === "list" ? (
+            <>
+              {/* Category List Tab */}
+              <div className="mb-5 flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">Categories List</h3>
+                <div className="flex items-center gap-3">
+                  {selectedCategories.length > 0 && (
+                    <>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        {selectedCategories.length} selected
+                      </span>
                       <button
-                        key={page}
-                        onClick={() => paginate(page)}
-                        className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border text-sm font-medium ${currentPage === page
-                          ? 'border-primary-500 bg-primary-500 text-white'
-                          : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
-                          }`}
+                        onClick={() => setShowBulkDeleteConfirm(true)}
+                        className="inline-flex h-11 items-center gap-2 rounded-lg border border-error-300 bg-error-50 px-4 text-sm font-medium text-error-700 hover:bg-error-100 dark:border-error-700 dark:bg-error-900/20 dark:text-error-400 dark:hover:bg-error-900/30"
                       >
-                        {page}
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        Delete {selectedCategories.length}
                       </button>
-                    ))}
-                    <button
-                      onClick={() => paginate(currentPage + 1)}
-                      disabled={currentPage === totalPages}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                    >
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </button>
-                  </div>
+                    </>
+                  )}
+                  <button
+                    onClick={() => {
+                      try {
+                        exportCategories(categories);
+                        setSuccess('Categories exported successfully!');
+                        setTimeout(() => setSuccess(null), 3000);
+                      } catch (err) {
+                        setError(err instanceof Error ? err.message : 'Export failed');
+                        setTimeout(() => setError(null), 5000);
+                      }
+                    }}
+                    disabled={categories.length === 0}
+                    className="inline-flex h-11 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                    title="Export to Excel"
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Export
+                  </button>
+                  <button
+                    onClick={() => setShowForm(true)}
+                    className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary-500 px-6 text-sm font-medium text-white hover:bg-primary-600 focus:outline-none focus:ring-3 focus:ring-primary-500/20"
+                  >
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    Add Category
+                  </button>
+                </div>
+              </div>
+
+              {/* Search and Filters */}
+              <div className="mb-5 grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div>
+                  <input
+                    type="text"
+                    placeholder="Search categories..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                  />
+                </div>
+                <div>
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
+                  >
+                    <option value="all">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+                <div>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
+                  >
+                    <option value="manual">Manual Order</option>
+                    <option value="name-asc">Name (A-Z)</option>
+                    <option value="name-desc">Name (Z-A)</option>
+                    <option value="menu-count">Menu Count (Most)</option>
+                  </select>
+                </div>
+              </div>
+
+              {filteredCategories.length === 0 ? (
+                <EmptyState
+                  type={categories.length === 0 ? "no-category" : "no-results"}
+                  title={categories.length === 0 ? undefined : "No categories match your filters"}
+                  description={categories.length === 0 ? undefined : "Try adjusting your filters"}
+                  action={categories.length === 0 ? { label: "Create First Category", onClick: () => setShowForm(true) } : undefined}
+                />
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full table-auto">
+                    <thead>
+                      <tr className="bg-gray-50 text-left dark:bg-gray-900/50">
+                        <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Name</th>
+                        <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Description</th>
+                        <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Display</th>
+                        <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Items</th>
+                        <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Status</th>
+                        <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                      {currentItems.map((category) => (
+                        <tr key={category.id} className="hover:bg-gray-50 dark:hover:bg-gray-900/30">
+                          <td className="px-4 py-4 text-sm font-medium text-gray-800 dark:text-white/90">{category.name}</td>
+                          <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">{category.description || '-'}</td>
+                          <td className="px-4 py-4">
+                            <span className="inline-flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300">
+                              <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                              </svg>
+                              {category.sortOrder + 1}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4 text-sm text-gray-700 dark:text-gray-300">
+                            {category._count?.menuItems || 0} menu
+                          </td>
+                          <td className="px-4 py-4">
+                            <button
+                              onClick={() => handleToggleActive(category.id, category.isActive, category.name)}
+                              className={`inline-flex rounded-full px-3 py-1 text-xs font-medium transition-colors ${category.isActive
+                                ? 'bg-success-100 text-success-700 hover:bg-success-200 dark:bg-success-900/20 dark:text-success-400 dark:hover:bg-success-900/30'
+                                : 'bg-error-100 text-error-700 hover:bg-error-200 dark:bg-error-900/20 dark:text-error-400 dark:hover:bg-error-900/30'
+                                }`}>
+                              {category.isActive ? '● Active' : '○ Inactive'}
+                            </button>
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleManageMenus(category)}
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-brand-200 bg-brand-50 text-primary-600 hover:bg-brand-100 dark:border-brand-900/50 dark:bg-brand-900/20 dark:text-brand-400 dark:hover:bg-brand-900/30"
+                                title="Manage Menus"
+                              >
+                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                                </svg>
+                              </button>
+                              <button
+                                onClick={() => handleEdit(category)}
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                                title="Edit"
+                              >
+                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                              </button>
+                              <button
+                                onClick={() => handleDelete(category.id, category.name)}
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-error-200 bg-error-50 text-error-600 hover:bg-error-100 dark:border-error-900/50 dark:bg-error-900/20 dark:text-error-400 dark:hover:bg-error-900/30"
+                                title="Delete"
+                              >
+                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+
+                  {/* Pagination */}
+                  {totalPages > 1 && (
+                    <div className="mt-5 flex items-center justify-between border-t border-gray-200 pt-5 dark:border-gray-800">
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                        Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredCategories.length)} of {filteredCategories.length} categories
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => paginate(currentPage - 1)}
+                          disabled={currentPage === 1}
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                        >
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                          </svg>
+                        </button>
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                          <button
+                            key={page}
+                            onClick={() => paginate(page)}
+                            className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border text-sm font-medium ${currentPage === page
+                              ? 'border-primary-500 bg-primary-500 text-white'
+                              : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                              }`}
+                          >
+                            {page}
+                          </button>
+                        ))}
+                        <button
+                          onClick={() => paginate(currentPage + 1)}
+                          disabled={currentPage === totalPages}
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                        >
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
+            </>
+          ) : (
+            <>
+              {/* Category Display Tab - Drag and Drop Reordering */}
+              <div className="mb-5 flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">Category Display Order</h3>
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    Drag and drop to reorder how categories appear to customers
+                  </p>
+                </div>
+                {hasUnsavedOrder && (
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={handleCancelOrder}
+                      className="inline-flex h-11 items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-3 focus:ring-gray-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSaveOrder}
+                      className="inline-flex h-11 items-center gap-2 rounded-lg bg-success-600 px-4 text-sm font-medium text-white hover:bg-success-700 focus:outline-none focus:ring-3 focus:ring-success-500/20"
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Save Order
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {categories.length === 0 ? (
+                <EmptyState
+                  type="no-category"
+                  action={{ label: "Create First Category", onClick: () => { setActiveTab("list"); setShowForm(true); } }}
+                />
+              ) : (
+                <div className="space-y-2">
+                  <div className="mb-3 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                    <span>Drag to reorder categories</span>
+                  </div>
+                  {(pendingReorder || categories).sort((a, b) => a.sortOrder - b.sortOrder).map((category, index) => (
+                    <div
+                      key={category.id}
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData("text/plain", index.toString());
+                      }}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.currentTarget.classList.add("border-primary-300", "border-dashed");
+                      }}
+                      onDragLeave={(e) => {
+                        e.currentTarget.classList.remove("border-primary-300", "border-dashed");
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.currentTarget.classList.remove("border-primary-300", "border-dashed");
+                        const fromIndex = parseInt(e.dataTransfer.getData("text/plain"));
+                        const toIndex = index;
+                        if (fromIndex !== toIndex) {
+                          const sortedCategories = (pendingReorder || categories).sort((a, b) => a.sortOrder - b.sortOrder);
+                          const reordered = [...sortedCategories];
+                          const [removed] = reordered.splice(fromIndex, 1);
+                          reordered.splice(toIndex, 0, removed);
+                          const updated = reordered.map((cat, idx) => ({
+                            ...cat,
+                            sortOrder: idx,
+                            displayOrder: idx + 1,
+                          }));
+                          handleReorder(updated);
+                        }
+                      }}
+                      className="group flex items-center gap-4 rounded-lg border border-gray-200 bg-white p-4 transition-all hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600 cursor-grab active:cursor-grabbing"
+                    >
+                      {/* Drag Handle */}
+                      <div className="text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300">
+                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                      </div>
+
+                      {/* Order Number */}
+                      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gray-100 text-sm font-semibold text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+                        {index + 1}
+                      </div>
+
+                      {/* Category Name */}
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-medium text-gray-800 dark:text-white/90">
+                          {category.name}
+                        </h4>
+                        {category.description && (
+                          <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400 truncate">
+                            {category.description}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Menu Count */}
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        {category._count?.menuItems || 0} menu
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+            </>
           )}
         </div>
+
 
         {/* Manage Menus Modal */}
         {selectedCategory && (
@@ -1003,10 +1085,17 @@ export default function MerchantCategoriesPage() {
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 {/* Available Menus */}
                 <div>
-                  <h4 className="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  <h4 className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
                     Available Menus {!loadingMenus && `(${availableMenus.filter(m => !categoryMenus.find(cm => cm.id === m.id)).length})`}
                   </h4>
-                  <div className="space-y-2 max-h-96 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                  <input
+                    type="text"
+                    placeholder="Search available menus..."
+                    value={availableMenuSearch}
+                    onChange={(e) => setAvailableMenuSearch(e.target.value)}
+                    className="mb-3 h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90 dark:placeholder:text-white/30"
+                  />
+                  <div className="space-y-2 max-h-80 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-3">
                     {loadingMenus ? (
                       // Skeleton Rows
                       Array.from({ length: 3 }).map((_, idx) => (
@@ -1023,7 +1112,9 @@ export default function MerchantCategoriesPage() {
                       <>
                         {availableMenus
                           .filter(menu => !categoryMenus.find(cm => cm.id === menu.id))
+                          .filter(menu => availableMenuSearch === "" || menu.name.toLowerCase().includes(availableMenuSearch.toLowerCase()))
                           .map((menu) => (
+
                             <div
                               key={menu.id}
                               className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800"
@@ -1083,10 +1174,17 @@ export default function MerchantCategoriesPage() {
 
                 {/* Category Menus */}
                 <div>
-                  <h4 className="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  <h4 className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
                     Menus in Category {!loadingMenus && `(${categoryMenus.length})`}
                   </h4>
-                  <div className="space-y-2 max-h-96 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                  <input
+                    type="text"
+                    placeholder="Search menus in category..."
+                    value={categoryMenuSearch}
+                    onChange={(e) => setCategoryMenuSearch(e.target.value)}
+                    className="mb-3 h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90 dark:placeholder:text-white/30"
+                  />
+                  <div className="space-y-2 max-h-80 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-3">
                     {loadingMenus ? (
                       // Skeleton Rows
                       Array.from({ length: 3 }).map((_, idx) => (
@@ -1101,54 +1199,57 @@ export default function MerchantCategoriesPage() {
                       ))
                     ) : (
                       <>
-                        {categoryMenus.map((menu) => (
-                          <div
-                            key={menu.id}
-                            className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800"
-                          >
-                            {menu.imageUrl ? (
-                              <Image
-                                src={menu.imageUrl}
-                                alt={menu.name}
-                                width={48}
-                                height={48}
-                                className="rounded-lg object-cover"
-                                unoptimized
-                              />
-                            ) : (
-                              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700">
-                                <svg className="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                              </div>
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <p className="text-sm font-medium text-gray-800 dark:text-white/90 truncate">
-                                  {menu.name}
-                                </p>
-                                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${menu.isActive
-                                  ? 'bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400'
-                                  : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-                                  }`}>
-                                  {menu.isActive ? 'Active' : 'Inactive'}
-                                </span>
-                              </div>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">
-                                {formatPrice(menu.price)}
-                              </p>
-                            </div>
-                            <button
-                              onClick={() => handleRemoveMenuFromCategory(menu.id)}
-                              className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-error-50 text-error-600 hover:bg-error-100 dark:bg-error-900/20 dark:text-error-400 dark:hover:bg-error-900/30"
-                              title="Remove from category"
+                        {categoryMenus
+                          .filter(menu => categoryMenuSearch === "" || menu.name.toLowerCase().includes(categoryMenuSearch.toLowerCase()))
+                          .map((menu) => (
+
+                            <div
+                              key={menu.id}
+                              className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800"
                             >
-                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                              </svg>
-                            </button>
-                          </div>
-                        ))}
+                              {menu.imageUrl ? (
+                                <Image
+                                  src={menu.imageUrl}
+                                  alt={menu.name}
+                                  width={48}
+                                  height={48}
+                                  className="rounded-lg object-cover"
+                                  unoptimized
+                                />
+                              ) : (
+                                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700">
+                                  <svg className="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                  </svg>
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <p className="text-sm font-medium text-gray-800 dark:text-white/90 truncate">
+                                    {menu.name}
+                                  </p>
+                                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${menu.isActive
+                                    ? 'bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400'
+                                    : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                                    }`}>
+                                    {menu.isActive ? 'Active' : 'Inactive'}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  {formatPrice(menu.price)}
+                                </p>
+                              </div>
+                              <button
+                                onClick={() => handleRemoveMenuFromCategory(menu.id)}
+                                className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-error-50 text-error-600 hover:bg-error-100 dark:bg-error-900/20 dark:text-error-400 dark:hover:bg-error-900/30"
+                                title="Remove from category"
+                              >
+                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+                          ))}
                         {categoryMenus.length === 0 && (
                           <p className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
                             No menus in this category yet
@@ -1214,7 +1315,51 @@ export default function MerchantCategoriesPage() {
             </div>
           </div>
         )}
+
+        {/* Single Delete Confirmation Modal */}
+        {deleteConfirm.show && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-lg dark:border-gray-800 dark:bg-gray-900">
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-error-100 dark:bg-error-900/20">
+                  <svg className="h-6 w-6 text-error-600 dark:text-error-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Delete Category
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    This action cannot be undone
+                  </p>
+                </div>
+              </div>
+
+              <p className="mb-6 text-sm text-gray-700 dark:text-gray-300">
+                Are you sure you want to delete "<span className="font-medium">{deleteConfirm.name}</span>"?
+                This will permanently remove it from your menu.
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteConfirm({ show: false, id: "", name: "" })}
+                  className="flex-1 h-11 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="flex-1 h-11 rounded-lg bg-error-600 text-sm font-medium text-white hover:bg-error-700"
+                >
+                  Delete Category
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+
     </div>
   );
 }

@@ -110,14 +110,27 @@ class MenuService {
       );
     }
 
+    // Auto-assign sortOrder: find max sortOrder and add 1, or use 0 if no categories exist
+    let sortOrder = input.sortOrder;
+    if (sortOrder === undefined || sortOrder === null) {
+      const existingCategories = await menuRepository.findAllCategories(input.merchantId);
+      if (existingCategories.length > 0) {
+        const maxSortOrder = Math.max(...existingCategories.map(c => c.sortOrder ?? 0));
+        sortOrder = maxSortOrder + 1;
+      } else {
+        sortOrder = 0;
+      }
+    }
+
     return await menuRepository.createCategory({
       merchantId: input.merchantId,
       name: input.name.trim(),
       description: input.description?.trim(),
-      sortOrder: input.sortOrder ?? 0,
+      sortOrder,
       createdByUserId: input.userId,
     });
   }
+
 
   /**
    * Update menu category

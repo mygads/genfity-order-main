@@ -44,12 +44,8 @@ export async function GET(
     const categoryId = searchParams.get('category');
 
     // Build where condition
-    const whereCondition: {
-      merchantId: bigint;
-      isActive: boolean;
-      deletedAt: null;
-      categories?: { some: { categoryId: bigint } };
-    } = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const whereCondition: any = {
       merchantId: merchant.id,
       isActive: true,
       deletedAt: null, // ✅ Exclude soft-deleted menus
@@ -57,12 +53,21 @@ export async function GET(
 
     // Add category filter if provided (via many-to-many relation)
     if (categoryId) {
-      whereCondition.categories = {
-        some: {
-          categoryId: BigInt(categoryId),
-        },
-      };
+      if (categoryId === 'uncategorized') {
+        // Virtual "All Menu" category: menus with no categories
+        whereCondition.categories = {
+          none: {},
+        };
+      } else {
+        // Regular category filter
+        whereCondition.categories = {
+          some: {
+            categoryId: BigInt(categoryId),
+          },
+        };
+      }
     }
+
 
     // Get menus with their categories and addon categories
     const menus = await prisma.menu.findMany({
