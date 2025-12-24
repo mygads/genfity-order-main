@@ -101,7 +101,9 @@ export default function MerchantMenuPage() {
   const [success, setSuccess] = useState<string | null>(null);
 
 
-  const [selectedPromoMenu, setSelectedPromoMenu] = useState<MenuItem | null>(null);
+  // Promo feature moved to Special Prices
+  const selectedPromoMenu = null as MenuItem | null;
+  const setSelectedPromoMenu = (_menu: MenuItem | null) => { }; // disabled
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [selectedMenuForAddons, setSelectedMenuForAddons] = useState<MenuItem | null>(null);
   const [showManageAddonsModal, setShowManageAddonsModal] = useState(false);
@@ -1017,29 +1019,13 @@ export default function MerchantMenuPage() {
                         </div>
                       </td>
                       <td className="px-4 py-4">
-                        <div className="space-y-1">
-                          {item.isPromo && item.promoPrice ? (
-                            <>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 line-through">
-                                {formatPrice(item.price)}
-                              </p>
-                              <p className="text-sm font-semibold text-error-600 dark:text-error-400">
-                                {formatPrice(item.promoPrice)}
-                              </p>
-                              <span className="inline-flex rounded bg-error-100 px-2 py-0.5 text-xs font-medium text-error-700 dark:bg-error-900/20 dark:text-error-400">
-                                PROMO
-                              </span>
-                            </>
-                          ) : (
-                            <div className="flex items-center gap-1">
-                              <span className={`text-sm font-semibold ${formatPrice(item.price) === 'Free'
-                                ? 'text-success-600 dark:text-success-400'
-                                : 'text-gray-800 dark:text-white/90'
-                                }`}>
-                                {formatPrice(item.price)}
-                              </span>
-                            </div>
-                          )}
+                        <div className="flex items-center gap-1">
+                          <span className={`text-sm font-semibold ${formatPrice(item.price) === 'Free'
+                            ? 'text-success-600 dark:text-success-400'
+                            : 'text-gray-800 dark:text-white/90'
+                            }`}>
+                            {formatPrice(item.price)}
+                          </span>
                         </div>
                       </td>
                       <td className="px-4 py-4">
@@ -1083,18 +1069,21 @@ export default function MerchantMenuPage() {
                                     </svg>
                                     View Detail
                                   </Link>
-                                  <button
-                                    onClick={() => {
-                                      setSelectedPromoMenu(item);
-                                      setOpenDropdownId(null);
-                                    }}
-                                    className="flex w-full items-center gap-3 px-4 py-2 text-sm text-warning-600 hover:bg-warning-50 dark:text-warning-400 dark:hover:bg-warning-900/20"
-                                  >
-                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                                    </svg>
-                                    Setup Promo
-                                  </button>
+                                  {/* Setup Promo button hidden - feature moved to Special Prices */}
+                                  {false && (
+                                    <button
+                                      onClick={() => {
+                                        setSelectedPromoMenu(item);
+                                        setOpenDropdownId(null);
+                                      }}
+                                      className="flex w-full items-center gap-3 px-4 py-2 text-sm text-warning-600 hover:bg-warning-50 dark:text-warning-400 dark:hover:bg-warning-900/20"
+                                    >
+                                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                                      </svg>
+                                      Setup Promo
+                                    </button>
+                                  )}
                                   <button
                                     onClick={() => {
                                       setSelectedMenuForAddons(item);

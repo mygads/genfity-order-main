@@ -135,6 +135,8 @@ model Merchant {
   openingHours           MerchantOpeningHour[]
   merchantUsers          MerchantUser[]
   orders                 Order[]
+  menuBooks              MenuBook[]
+  specialPrices          SpecialPrice[]
 
   @@index([code])
   @@index([isActive])
@@ -232,6 +234,8 @@ model Menu {
   merchant           Merchant            @relation(fields: [merchantId], references: [id], onDelete: Cascade)
   updatedBy          User?               @relation("MenuUpdatedBy", fields: [updatedByUserId], references: [id])
   orderItems         OrderItem[]
+  menuBookItems      MenuBookItem[]
+  specialPriceItems  SpecialPriceItem[]
 
   @@index([merchantId])
   @@index([categoryId])
@@ -420,7 +424,88 @@ model Payment {
   @@map("payments")
 }
 
+// ============================================
+// MENU BOOKS & SPECIAL PRICES
+// ============================================
+
+model MenuBook {
+  id            BigInt         @id @default(autoincrement())
+  merchantId    BigInt         @map("merchant_id")
+  name          String
+  description   String?
+  isActive      Boolean        @default(true) @map("is_active")
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  merchant      Merchant       @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  items         MenuBookItem[]
+  specialPrices SpecialPrice[]
+
+  @@index([merchantId])
+  @@index([isActive])
+  @@map("menu_books")
+}
+
+model MenuBookItem {
+  id          BigInt   @id @default(autoincrement())
+  menuBookId  BigInt   @map("menu_book_id")
+  menuId      BigInt   @map("menu_id")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  menuBook    MenuBook @relation(fields: [menuBookId], references: [id], onDelete: Cascade)
+  menu        Menu     @relation(fields: [menuId], references: [id], onDelete: Cascade)
+
+  @@unique([menuBookId, menuId])
+  @@index([menuBookId])
+  @@index([menuId])
+  @@map("menu_book_items")
+}
+
+model SpecialPrice {
+  id             BigInt             @id @default(autoincrement())
+  merchantId     BigInt             @map("merchant_id")
+  menuBookId     BigInt             @map("menu_book_id")
+  name           String
+  startDate      DateTime           @map("start_date") @db.Date
+  endDate        DateTime           @map("end_date") @db.Date
+  applicableDays Int[]              @map("applicable_days")
+  isAllDay       Boolean            @default(true) @map("is_all_day")
+  startTime      String?            @map("start_time")
+  endTime        String?            @map("end_time")
+  isActive       Boolean            @default(true) @map("is_active")
+  createdAt      DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  merchant       Merchant           @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  menuBook       MenuBook           @relation(fields: [menuBookId], references: [id], onDelete: Cascade)
+  priceItems     SpecialPriceItem[]
+
+  @@index([merchantId])
+  @@index([menuBookId])
+  @@index([isActive])
+  @@index([startDate, endDate])
+  @@map("special_prices")
+}
+
+model SpecialPriceItem {
+  id             BigInt       @id @default(autoincrement())
+  specialPriceId BigInt       @map("special_price_id")
+  menuId         BigInt       @map("menu_id")
+  promoPrice     Decimal      @map("promo_price") @db.Decimal(10, 2)
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  specialPrice   SpecialPrice @relation(fields: [specialPriceId], references: [id], onDelete: Cascade)
+  menu           Menu         @relation(fields: [menuId], references: [id], onDelete: Cascade)
+
+  @@unique([specialPriceId, menuId])
+  @@index([specialPriceId])
+  @@index([menuId])
+  @@map("special_price_items")
+}
+
 enum UserRole {
+
   SUPER_ADMIN
   MERCHANT_OWNER
   MERCHANT_STAFF

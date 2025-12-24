@@ -114,6 +114,12 @@ const merchantNavGroups: NavGroup[] = [
     title: "Menu Management",
     items: [
       {
+        icon: <BoxIconLine />,
+        name: "Stock Management",
+        path: "/admin/dashboard/menu/stock-overview",
+        roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+      },
+      {
         icon: <FileIcon />,
         name: "Menu Builder",
         path: "/admin/dashboard/menu/builder/new",
@@ -132,12 +138,6 @@ const merchantNavGroups: NavGroup[] = [
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
       },
       {
-        icon: <BoxIconLine />,
-        name: "Stock Management",
-        path: "/admin/dashboard/menu/stock-overview",
-        roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
-      },
-      {
         icon: <FolderIcon />,
         name: "Addon Categories",
         path: "/admin/dashboard/addon-categories",
@@ -149,8 +149,21 @@ const merchantNavGroups: NavGroup[] = [
         path: "/admin/dashboard/addon-items",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
       },
+      {
+        icon: <FolderIcon />,
+        name: "Menu Books",
+        path: "/admin/dashboard/menu-books",
+        roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+      },
+      {
+        icon: <ListIcon />,
+        name: "Special Prices",
+        path: "/admin/dashboard/special-prices",
+        roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+      },
     ],
   },
+
   {
     title: "Reports",
     items: [
@@ -240,7 +253,7 @@ const AppSidebar: React.FC = () => {
       handleScroll();
       // Check again after content loads
       const timer = setTimeout(handleScroll, 500);
-      
+
       return () => {
         scrollContainer.removeEventListener('scroll', handleScroll);
         clearTimeout(timer);
@@ -400,8 +413,8 @@ const AppSidebar: React.FC = () => {
                 <div key={groupIndex}>
                   <h2
                     className={`mb-3 text-xs font-semibold uppercase flex leading-5 text-gray-500 dark:text-gray-400 ${!isExpanded && !isHovered
-                        ? "lg:justify-center"
-                        : "justify-start"
+                      ? "lg:justify-center"
+                      : "justify-start"
                       }`}
                   >
                     {isExpanded || isHovered || isMobileOpen ? (
@@ -421,8 +434,8 @@ const AppSidebar: React.FC = () => {
                         >
                           <span
                             className={`${isActive(nav.path)
-                                ? "menu-item-icon-active"
-                                : "menu-item-icon-inactive"
+                              ? "menu-item-icon-active"
+                              : "menu-item-icon-inactive"
                               }`}
                           >
                             {nav.icon}
@@ -441,7 +454,7 @@ const AppSidebar: React.FC = () => {
         </nav>
         {/* {isExpanded || isHovered || isMobileOpen ? <SidebarWidget /> : null} */}
       </div>
-      
+
       {/* Dashboard Version - Fixed at bottom */}
       {/* Scroll Indicator */}
       {showScrollIndicator && (
