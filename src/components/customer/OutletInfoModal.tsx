@@ -38,9 +38,11 @@ export default function OutletInfoModal({ isOpen, onClose, merchant, merchantCod
     const [copySuccess, setCopySuccess] = useState(false);
     const [isClosing, setIsClosing] = useState(false);
 
-    // Generate share URL
+    // Generate share URL - avoid double slash when merchantCode is empty
     const shareUrl = typeof window !== 'undefined'
-        ? `${window.location.origin}/${merchantCode || ''}/order?mode=dinein`
+        ? merchantCode
+            ? `${window.location.origin}/${merchantCode}/order?mode=dinein`
+            : window.location.origin
         : '';
 
     // Handle smooth close
@@ -197,7 +199,7 @@ export default function OutletInfoModal({ isOpen, onClose, merchant, merchantCod
 
                             {(merchant.address || (merchant.latitude && merchant.longitude)) && (
                                 <a
-                                    href={merchant.latitude && merchant.longitude 
+                                    href={merchant.latitude && merchant.longitude
                                         ? `https://www.google.com/maps/search/?api=1&query=${merchant.latitude},${merchant.longitude}`
                                         : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(merchant.address || '')}`
                                     }

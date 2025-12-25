@@ -8,6 +8,15 @@
  */
 
 import * as XLSX from 'xlsx';
+import { formatInTimeZone } from 'date-fns-tz';
+
+// ===== EXPORT OPTIONS =====
+
+export interface ExportOptions {
+  timezone?: string;
+  currency?: string;
+  locale?: string;
+}
 
 // ===== TYPES =====
 
@@ -194,9 +203,35 @@ export function downloadExcel(data: OrderExportData[], filename: string) {
 // ===== DATA FORMATTING =====
 
 /**
- * Format order data for export
+ * Format currency for export with locale-aware formatting
  */
-export function formatOrderForExport(order: OrderInput): OrderExportData {
+function formatCurrencyForExport(amount: number, options?: ExportOptions): string {
+  const currency = options?.currency || 'AUD';
+  const locale = currency === 'IDR' ? 'id-ID' : 'en-AU';
+
+  return new Intl.NumberFormat(locale, {
+    minimumFractionDigits: currency === 'IDR' ? 0 : 2,
+    maximumFractionDigits: currency === 'IDR' ? 0 : 2,
+  }).format(amount);
+}
+
+/**
+ * Format date for export using merchant timezone
+ */
+function formatDateForExport(date: Date | string, options?: ExportOptions): string {
+  if (!date) return '-';
+  const tz = options?.timezone || 'Australia/Sydney';
+  try {
+    return formatInTimeZone(new Date(date), tz, 'yyyy-MM-dd HH:mm:ss');
+  } catch {
+    return new Date(date).toLocaleString();
+  }
+}
+
+/**
+ * Format order data for export with timezone and currency options
+ */
+export function formatOrderForExport(order: OrderInput, options?: ExportOptions): OrderExportData {
   // Format items list
   const items = order.orderItems
     ?.map((item: OrderItem) => {
@@ -221,38 +256,38 @@ export function formatOrderForExport(order: OrderInput): OrderExportData {
     paymentStatus: order.payment?.status || 'PENDING',
     paymentMethod: order.payment?.paymentMethod || '-',
     paidAt: order.payment?.paidAt
-      ? new Date(order.payment.paidAt).toLocaleString()
+      ? formatDateForExport(order.payment.paidAt, options)
       : '-',
-    placedAt: new Date(order.placedAt).toLocaleString(),
+    placedAt: formatDateForExport(order.placedAt, options),
     completedAt: order.completedAt
-      ? new Date(order.completedAt).toLocaleString()
+      ? formatDateForExport(order.completedAt, options)
       : '-',
   };
 }
 
 /**
- * Format multiple orders for export
+ * Format multiple orders for export with options
  */
-export function formatOrdersForExport(orders: OrderInput[]): OrderExportData[] {
-  return orders.map(formatOrderForExport);
+export function formatOrdersForExport(orders: OrderInput[], options?: ExportOptions): OrderExportData[] {
+  return orders.map(order => formatOrderForExport(order, options));
 }
 
 // ===== EXPORT FUNCTIONS =====
 
 /**
- * Export orders to CSV
+ * Export orders to CSV with timezone and currency options
  */
-export function exportOrdersToCSV(orders: OrderInput[], filename?: string) {
-  const formattedData = formatOrdersForExport(orders);
+export function exportOrdersToCSV(orders: OrderInput[], filename?: string, options?: ExportOptions) {
+  const formattedData = formatOrdersForExport(orders, options);
   const defaultFilename = `orders_${new Date().toISOString().split('T')[0]}.csv`;
   downloadCSV(formattedData, filename || defaultFilename);
 }
 
 /**
- * Export orders to Excel
+ * Export orders to Excel with timezone and currency options
  */
-export function exportOrdersToExcel(orders: OrderInput[], filename?: string) {
-  const formattedData = formatOrdersForExport(orders);
+export function exportOrdersToExcel(orders: OrderInput[], filename?: string, options?: ExportOptions) {
+  const formattedData = formatOrdersForExport(orders, options);
   const defaultFilename = `orders_${new Date().toISOString().split('T')[0]}.xlsx`;
   downloadExcel(formattedData, filename || defaultFilename);
 }

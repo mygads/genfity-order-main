@@ -20,6 +20,8 @@ import {
 } from 'react-icons/fa';
 import { OrderStatus, PaymentStatus, OrderType } from '@prisma/client';
 import { exportOrdersToCSV, exportOrdersToExcel } from '@/lib/utils/exportOrders';
+import { useMerchant } from '@/context/MerchantContext';
+import { getCurrencySymbol } from '@/lib/utils/format';
 
 // ===== TYPES =====
 
@@ -94,6 +96,11 @@ export const OrderHistoryTable: React.FC<OrderHistoryTableProps> = ({
   onViewOrder,
   loading = false,
 }) => {
+  const { currency } = useMerchant();
+  const currencySymbol = getCurrencySymbol(currency);
+  // Derive timezone from currency until timezone is added to merchant settings
+  const timezone = currency === 'IDR' ? 'Asia/Jakarta' : 'Australia/Sydney';
+
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'ALL'>('ALL');
   const [paymentFilter, setPaymentFilter] = useState<PaymentStatus | 'ALL'>('ALL');
@@ -102,10 +109,13 @@ export const OrderHistoryTable: React.FC<OrderHistoryTableProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(20);
 
-  // Format currency - default to AUD
+  // Format currency using merchant currency
   const formatCurrency = (amount: number) => {
     if (amount === 0) return 'Free';
-    return `A$${amount.toFixed(2)}`;
+    if (currency === 'IDR') {
+      return `Rp ${new Intl.NumberFormat('id-ID', { minimumFractionDigits: 0 }).format(Math.round(amount))}`;
+    }
+    return `${currencySymbol}${amount.toFixed(2)}`;
   };
 
   // Filter and sort orders
@@ -182,13 +192,15 @@ export const OrderHistoryTable: React.FC<OrderHistoryTableProps> = ({
     );
   };
 
-  // Export handlers
+  // Export handlers with timezone and currency options
+  const exportOptions = { timezone, currency };
+
   const handleExportCSV = () => {
-    exportOrdersToCSV(filteredAndSortedOrders);
+    exportOrdersToCSV(filteredAndSortedOrders, undefined, exportOptions);
   };
 
   const handleExportExcel = () => {
-    exportOrdersToExcel(filteredAndSortedOrders);
+    exportOrdersToExcel(filteredAndSortedOrders, undefined, exportOptions);
   };
 
   if (loading) {

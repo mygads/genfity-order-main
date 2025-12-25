@@ -4,8 +4,9 @@ import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { useToast } from "@/context/ToastContext";
-import { FaDownload, FaTrash, FaEdit, FaCheck, FaTimes, FaArrowLeft, FaSave, FaFileExcel, FaChevronDown, FaChevronUp, FaExclamationCircle } from "react-icons/fa";
+import { FaDownload, FaTrash, FaEdit, FaCheck, FaTimes, FaArrowLeft, FaSave, FaFileExcel, FaChevronDown, FaChevronUp, FaExclamationCircle, FaUpload, FaExclamationTriangle } from "react-icons/fa";
 import * as XLSX from "xlsx";
+import { useMerchant } from "@/context/MerchantContext";
 
 interface MenuUploadItem {
   rowIndex: number;
@@ -23,9 +24,11 @@ interface MenuUploadItem {
   stockQty: number | null;
   dailyStockTemplate: number | null;
   autoResetStock: boolean;
-  errors: string[];
+  errors: string[];       // Blocking errors
+  warnings: string[];     // Non-blocking warnings
   isEditing: boolean;
   isExpanded: boolean; // For card expansion
+  existingMenuId?: string; // If this matches an existing menu
 }
 
 interface Category {
@@ -46,6 +49,7 @@ interface Category {
 export default function MenuBulkUploadPage() {
   const router = useRouter();
   const { showSuccess, showError } = useToast();
+  const { currency } = useMerchant();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [uploading, setUploading] = useState(false);
@@ -54,6 +58,8 @@ export default function MenuBulkUploadPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [fileName, setFileName] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
+  const [existingMenus, setExistingMenus] = useState<Array<{ id: string; name: string }>>([]);
+  const [exporting, setExporting] = useState(false);
 
   /**
    * Fetch categories for validation
@@ -78,10 +84,100 @@ export default function MenuBulkUploadPage() {
     }
   }, []);
 
-  // Fetch categories on mount
+  /**
+   * Fetch existing menus for duplicate detection
+   */
+  const fetchExistingMenus = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) return;
+
+      const response = await fetch("/api/merchant/menu?limit=1000", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && Array.isArray(data.data)) {
+          setExistingMenus(data.data.map((m: { id: string; name: string }) => ({ id: m.id, name: m.name })));
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch existing menus:", error);
+    }
+  }, []);
+
+  // Fetch categories and existing menus on mount
   useEffect(() => {
     fetchCategories();
-  }, [fetchCategories]);
+    fetchExistingMenus();
+  }, [fetchCategories, fetchExistingMenus]);
+
+  /**
+   * Export current menu items to Excel for editing
+   */
+  const exportCurrentMenu = async () => {
+    setExporting(true);
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) {
+        router.push("/admin/login");
+        return;
+      }
+
+      const response = await fetch("/api/merchant/menu?limit=1000", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch menu items");
+      }
+
+      const data = await response.json();
+      const menus = data.data || [];
+
+      if (menus.length === 0) {
+        showError("No menu items to export");
+        return;
+      }
+
+      // Format for Excel export
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const exportData = menus.map((menu: any) => ({
+        "Name *": menu.name,
+        "Description": menu.description || "",
+        "Price *": Number(menu.price),
+        "Categories (comma-separated)": menu.categories?.map((c: { category: { name: string } }) => c.category?.name).filter(Boolean).join(", ") || "",
+        "Is Active": menu.isActive ? "Yes" : "No",
+        "Is Spicy": menu.isSpicy ? "Yes" : "No",
+        "Is Best Seller": menu.isBestSeller ? "Yes" : "No",
+        "Is Signature": menu.isSignature ? "Yes" : "No",
+        "Is Recommended": menu.isRecommended ? "Yes" : "No",
+        "Track Stock": menu.trackStock ? "Yes" : "No",
+        "Stock Qty": menu.stockQty || "",
+        "Daily Stock Template": menu.dailyStockTemplate || "",
+        "Auto Reset Stock": menu.autoResetStock ? "Yes" : "No",
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      ws['!cols'] = [
+        { wch: 25 }, { wch: 50 }, { wch: 12 }, { wch: 30 },
+        { wch: 10 }, { wch: 10 }, { wch: 15 }, { wch: 12 },
+        { wch: 15 }, { wch: 12 }, { wch: 10 }, { wch: 18 }, { wch: 15 },
+      ];
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Menu Items");
+      XLSX.writeFile(wb, `menu_export_${new Date().toISOString().split('T')[0]}.xlsx`);
+
+      showSuccess(`Exported ${menus.length} menu items`);
+    } catch (error) {
+      console.error("Failed to export menu:", error);
+      showError(error instanceof Error ? error.message : "Failed to export menu");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   /**
    * Generate and download Excel template
@@ -121,7 +217,7 @@ export default function MenuBulkUploadPage() {
     ];
 
     const ws = XLSX.utils.json_to_sheet(templateData);
-    
+
     // Set column widths
     ws['!cols'] = [
       { wch: 25 }, // Name
@@ -168,9 +264,11 @@ export default function MenuBulkUploadPage() {
 
   /**
    * Validate a single menu item - Only name and price are required
+   * Returns errors (blocking) and warnings (non-blocking recommendations)
    */
-  const validateItem = (item: MenuUploadItem): string[] => {
+  const validateItem = (item: MenuUploadItem): { errors: string[], warnings: string[] } => {
     const errors: string[] = [];
+    const warnings: string[] = [];
 
     // Required: Name
     if (!item.name || item.name.trim() === "") {
@@ -187,10 +285,16 @@ export default function MenuBulkUploadPage() {
       errors.push("Stock quantity cannot be negative");
     }
 
-    // Optional: Category validation - warn if category name doesn't exist (not an error)
-    // We no longer block on category not found - will just skip that category
+    // Warnings for optional but recommended fields
+    if (!item.selectedCategoryIds || item.selectedCategoryIds.length === 0) {
+      warnings.push("No category assigned - item may be hard to find");
+    }
 
-    return errors;
+    if (!item.description || item.description.trim() === "") {
+      warnings.push("No description - consider adding one");
+    }
+
+    return { errors, warnings };
   };
 
   /**
@@ -264,15 +368,18 @@ export default function MenuBulkUploadPage() {
           dailyStockTemplate: parseNumber(r["Daily Stock Template"]),
           autoResetStock: parseBoolean(r["Auto Reset Stock"]),
           errors: [],
+          warnings: [],
           isEditing: false,
           isExpanded: false,
         };
 
         // Map category names to IDs
         item.selectedCategoryIds = mapCategoryNamesToIds(item.categoryNames);
-        
+
         // Validate item
-        item.errors = validateItem(item);
+        const validation = validateItem(item);
+        item.errors = validation.errors;
+        item.warnings = validation.warnings;
         return item;
       });
 
@@ -284,7 +391,7 @@ export default function MenuBulkUploadPage() {
     } finally {
       setUploading(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categories, showError, showSuccess]);
 
   /**
@@ -326,7 +433,7 @@ export default function MenuBulkUploadPage() {
    * Toggle edit mode for an item
    */
   const toggleEdit = (index: number) => {
-    setItems(prev => prev.map((item, i) => 
+    setItems(prev => prev.map((item, i) =>
       i === index ? { ...item, isEditing: !item.isEditing, isExpanded: !item.isEditing ? true : item.isExpanded } : item
     ));
   };
@@ -335,7 +442,7 @@ export default function MenuBulkUploadPage() {
    * Toggle expanded view for an item
    */
   const toggleExpanded = (index: number) => {
-    setItems(prev => prev.map((item, i) => 
+    setItems(prev => prev.map((item, i) =>
       i === index ? { ...item, isExpanded: !item.isExpanded } : item
     ));
   };
@@ -346,9 +453,9 @@ export default function MenuBulkUploadPage() {
   const updateItem = (index: number, field: keyof MenuUploadItem, value: unknown) => {
     setItems(prev => prev.map((item, i) => {
       if (i !== index) return item;
-      
+
       const updated = { ...item, [field]: value };
-      
+
       // If updating selectedCategoryIds, also update categoryNames for display
       if (field === "selectedCategoryIds" && Array.isArray(value)) {
         const names = (value as string[])
@@ -357,8 +464,10 @@ export default function MenuBulkUploadPage() {
           .join(", ");
         updated.categoryNames = names;
       }
-      
-      updated.errors = validateItem(updated);
+
+      const validation = validateItem(updated);
+      updated.errors = validation.errors;
+      updated.warnings = validation.warnings;
       return updated;
     }));
   };
@@ -369,19 +478,21 @@ export default function MenuBulkUploadPage() {
   const toggleCategory = (index: number, categoryId: string) => {
     setItems(prev => prev.map((item, i) => {
       if (i !== index) return item;
-      
+
       const currentIds = item.selectedCategoryIds || [];
       const newIds = currentIds.includes(categoryId)
         ? currentIds.filter(id => id !== categoryId)
         : [...currentIds, categoryId];
-      
+
       const names = newIds
         .map(id => categories.find(c => c.id === id)?.name)
         .filter(Boolean)
         .join(", ");
-      
+
       const updated = { ...item, selectedCategoryIds: newIds, categoryNames: names };
-      updated.errors = validateItem(updated);
+      const validation = validateItem(updated);
+      updated.errors = validation.errors;
+      updated.warnings = validation.warnings;
       return updated;
     }));
   };
@@ -421,8 +532,8 @@ export default function MenuBulkUploadPage() {
       // Map category names to IDs (use selectedCategoryIds if available, fallback to categoryNames)
       const itemsWithCategoryIds = items.map(item => {
         // Use selectedCategoryIds directly if available, otherwise map from names
-        const categoryIds = item.selectedCategoryIds.length > 0 
-          ? item.selectedCategoryIds 
+        const categoryIds = item.selectedCategoryIds.length > 0
+          ? item.selectedCategoryIds
           : mapCategoryNamesToIds(item.categoryNames);
 
         return {
@@ -478,8 +589,9 @@ export default function MenuBulkUploadPage() {
     }
   };
 
-  // Count items with errors
+  // Count items with errors and warnings
   const errorCount = items.filter(item => item.errors.length > 0).length;
+  const warningCount = items.filter(item => item.warnings && item.warnings.length > 0).length;
   const validCount = items.length - errorCount;
 
   return (
@@ -521,17 +633,39 @@ export default function MenuBulkUploadPage() {
               <span className="text-sm font-bold">1</span>
             </div>
             <div className="flex-1">
-              <h4 className="font-medium text-gray-900 dark:text-white">Download Template</h4>
+              <h4 className="font-medium text-gray-900 dark:text-white">Download Template or Export Current Menu</h4>
               <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Download the Excel template with the correct column format. Fill in your menu items and save the file.
+                Download a blank template or export your current menu items for editing. Re-upload to update existing items.
               </p>
-              <button
-                onClick={downloadTemplate}
-                className="mt-3 inline-flex items-center gap-2 rounded-lg bg-green-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-green-600"
-              >
-                <FaDownload className="h-4 w-4" />
-                Download Template
-              </button>
+              <div className="mt-3 flex flex-wrap gap-3">
+                <button
+                  onClick={downloadTemplate}
+                  className="inline-flex items-center gap-2 rounded-lg bg-green-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-green-600"
+                >
+                  <FaDownload className="h-4 w-4" />
+                  Download Template
+                </button>
+                <button
+                  onClick={exportCurrentMenu}
+                  disabled={exporting}
+                  className="inline-flex items-center gap-2 rounded-lg border border-primary-200 bg-primary-50 px-4 py-2.5 text-sm font-medium text-primary-700 hover:bg-primary-100 disabled:opacity-50 dark:border-primary-800 dark:bg-primary-900/30 dark:text-primary-400"
+                >
+                  {exporting ? (
+                    <>
+                      <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Exporting...
+                    </>
+                  ) : (
+                    <>
+                      <FaUpload className="h-4 w-4" />
+                      Export Current Menu
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -550,11 +684,10 @@ export default function MenuBulkUploadPage() {
 
               {/* Upload Zone */}
               <div
-                className={`mt-4 relative rounded-xl border-2 border-dashed p-8 text-center transition-colors ${
-                  dragActive
-                    ? "border-primary-500 bg-primary-50 dark:bg-primary-900/20"
-                    : "border-gray-300 dark:border-gray-700"
-                }`}
+                className={`mt-4 relative rounded-xl border-2 border-dashed p-8 text-center transition-colors ${dragActive
+                  ? "border-primary-500 bg-primary-50 dark:bg-primary-900/20"
+                  : "border-gray-300 dark:border-gray-700"
+                  }`}
                 onDragEnter={handleDrag}
                 onDragLeave={handleDrag}
                 onDragOver={handleDrag}
@@ -567,12 +700,12 @@ export default function MenuBulkUploadPage() {
                   onChange={handleFileInputChange}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 />
-                
+
                 <div className="flex flex-col items-center gap-3">
                   <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
                     <FaFileExcel className="h-7 w-7 text-green-600" />
                   </div>
-                  
+
                   {fileName ? (
                     <div className="text-center">
                       <p className="font-medium text-gray-900 dark:text-white">{fileName}</p>
@@ -624,6 +757,12 @@ export default function MenuBulkUploadPage() {
                         <FaCheck className="h-3.5 w-3.5" />
                         {validCount} valid
                       </span>
+                      {warningCount > 0 && (
+                        <span className="flex items-center gap-1.5 text-amber-600">
+                          <FaExclamationTriangle className="h-3.5 w-3.5" />
+                          {warningCount} warnings
+                        </span>
+                      )}
                       {errorCount > 0 && (
                         <span className="flex items-center gap-1.5 text-red-600">
                           <FaTimes className="h-3.5 w-3.5" />
@@ -631,7 +770,7 @@ export default function MenuBulkUploadPage() {
                         </span>
                       )}
                     </div>
-                    
+
                     <button
                       onClick={handleClear}
                       className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
@@ -639,7 +778,7 @@ export default function MenuBulkUploadPage() {
                       <FaTimes className="h-4 w-4" />
                       Clear
                     </button>
-                    
+
                     <button
                       onClick={handleSave}
                       disabled={saving || errorCount > 0}
@@ -676,7 +815,7 @@ export default function MenuBulkUploadPage() {
                 <div className="col-span-2">Status</div>
                 <div className="col-span-1 text-right">Actions</div>
               </div>
-              
+
               {/* Table Body */}
               <div className="divide-y divide-gray-100 dark:divide-gray-800">
                 {items.map((item, index) => (
@@ -687,7 +826,7 @@ export default function MenuBulkUploadPage() {
                       <div className="col-span-2 lg:col-span-1 text-sm text-gray-500 dark:text-gray-400">
                         #{item.rowIndex}
                       </div>
-                      
+
                       {/* Name */}
                       <div className="col-span-10 lg:col-span-3">
                         {item.isEditing ? (
@@ -702,7 +841,7 @@ export default function MenuBulkUploadPage() {
                           <span className="text-sm font-medium text-gray-900 dark:text-white">{item.name || "-"}</span>
                         )}
                       </div>
-                      
+
                       {/* Price */}
                       <div className="col-span-4 lg:col-span-2">
                         {item.isEditing ? (
@@ -718,7 +857,7 @@ export default function MenuBulkUploadPage() {
                           <span className="text-sm text-gray-600 dark:text-gray-400">{item.price?.toLocaleString() || "0"}</span>
                         )}
                       </div>
-                      
+
                       {/* Categories */}
                       <div className="col-span-4 lg:col-span-3">
                         <div className="flex flex-wrap gap-1">
@@ -743,7 +882,7 @@ export default function MenuBulkUploadPage() {
                           )}
                         </div>
                       </div>
-                      
+
                       {/* Status */}
                       <div className="col-span-2 lg:col-span-2">
                         {item.errors.length > 0 ? (
@@ -758,7 +897,7 @@ export default function MenuBulkUploadPage() {
                           </span>
                         )}
                       </div>
-                      
+
                       {/* Actions */}
                       <div className="col-span-2 lg:col-span-1 flex items-center justify-end gap-1">
                         <button
@@ -770,11 +909,10 @@ export default function MenuBulkUploadPage() {
                         </button>
                         <button
                           onClick={() => toggleEdit(index)}
-                          className={`rounded-lg p-2 ${
-                            item.isEditing
-                              ? "bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400"
-                              : "text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
-                          }`}
+                          className={`rounded-lg p-2 ${item.isEditing
+                            ? "bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400"
+                            : "text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+                            }`}
                           title={item.isEditing ? "Done" : "Edit"}
                         >
                           {item.isEditing ? <FaCheck className="h-3 w-3" /> : <FaEdit className="h-3 w-3" />}
@@ -788,7 +926,7 @@ export default function MenuBulkUploadPage() {
                         </button>
                       </div>
                     </div>
-                    
+
                     {/* Expanded Details */}
                     {(item.isExpanded || item.isEditing) && (
                       <div className="border-t border-gray-100 bg-gray-50/50 px-4 py-4 dark:border-gray-800 dark:bg-gray-800/30">
@@ -803,7 +941,7 @@ export default function MenuBulkUploadPage() {
                             </ul>
                           </div>
                         )}
-                        
+
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                           {/* Description */}
                           <div>
@@ -820,7 +958,7 @@ export default function MenuBulkUploadPage() {
                               <p className="text-sm text-gray-600 dark:text-gray-400">{item.description || "-"}</p>
                             )}
                           </div>
-                          
+
                           {/* Categories Selection */}
                           <div>
                             <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Categories</label>
@@ -846,14 +984,14 @@ export default function MenuBulkUploadPage() {
                               </div>
                             ) : (
                               <p className="text-sm text-gray-600 dark:text-gray-400">
-                                {item.selectedCategoryIds.length > 0 
+                                {item.selectedCategoryIds.length > 0
                                   ? item.selectedCategoryIds.map(id => categories.find(c => c.id === id)?.name).filter(Boolean).join(", ")
                                   : item.categoryNames || "-"
                                 }
                               </p>
                             )}
                           </div>
-                          
+
                           {/* Flags */}
                           <div>
                             <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Flags</label>
@@ -890,7 +1028,7 @@ export default function MenuBulkUploadPage() {
                               </div>
                             )}
                           </div>
-                          
+
                           {/* Stock Settings */}
                           <div className="lg:col-span-3">
                             <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Stock Settings</label>
@@ -941,7 +1079,7 @@ export default function MenuBulkUploadPage() {
                               </div>
                             ) : (
                               <p className="text-sm text-gray-600 dark:text-gray-400">
-                                {item.trackStock 
+                                {item.trackStock
                                   ? `Stock: ${item.stockQty ?? 0} | Daily: ${item.dailyStockTemplate ?? "-"} | Auto Reset: ${item.autoResetStock ? "Yes" : "No"}`
                                   : "Not tracking stock"
                                 }
