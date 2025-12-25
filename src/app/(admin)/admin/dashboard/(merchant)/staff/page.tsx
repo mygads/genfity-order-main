@@ -7,9 +7,11 @@ import { useToast } from "@/hooks/useToast";
 import ToastContainer from "@/components/ui/ToastContainer";
 import InviteStaffModal from "@/components/staff/InviteStaffModal";
 import AddStaffModal from "@/components/staff/AddStaffModal";
+import StaffPermissionsModal from "@/components/staff/StaffPermissionsModal";
 import { useSWRStatic } from "@/hooks/useSWRWithAuth";
 import { StaffPageSkeleton } from "@/components/common/SkeletonLoaders";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { useAdminAuth } from "@/hooks/useAdminAuth";
 
 interface Staff {
   id: string;
@@ -20,6 +22,7 @@ interface Staff {
   role: string;
   isActive: boolean;
   joinedAt: string;
+  permissions?: string[];
 }
 
 interface StaffApiResponse {
@@ -33,11 +36,15 @@ export default function StaffManagementPage() {
   const router = useRouter();
   const { t } = useTranslation();
   const { toasts, success: showSuccess, error: showError } = useToast();
+  const { user } = useAdminAuth();
 
   const [filteredStaff, setFilteredStaff] = useState<Staff[]>([]);
   const [search, setSearch] = useState("");
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showPermissionsModal, setShowPermissionsModal] = useState(false);
+  const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
+  const [permissionsLoading, setPermissionsLoading] = useState(false);
 
   // SWR hook for data fetching with caching
   const {
@@ -134,6 +141,88 @@ export default function StaffManagementPage() {
       showError("Error", err instanceof Error ? err.message : "Failed to remove staff");
     }
   };
+
+  /**
+   * Open permissions modal for a staff member
+   */
+  const handleOpenPermissions = (staffMember: Staff) => {
+    setSelectedStaff(staffMember);
+    setShowPermissionsModal(true);
+  };
+
+  /**
+   * Save updated permissions for a staff member
+   */
+  const handleSavePermissions = async (permissions: string[]) => {
+    if (!selectedStaff) return;
+
+    setPermissionsLoading(true);
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) {
+        router.push("/admin/login");
+        return;
+      }
+
+      const response = await fetch(`/api/merchant/staff/${selectedStaff.id}/permissions`, {
+        method: "PUT",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ permissions }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || "Failed to update permissions");
+      }
+
+      showSuccess("Success", t("admin.staff.permissionsSaved"));
+      setShowPermissionsModal(false);
+      setSelectedStaff(null);
+      fetchStaff();
+    } catch (err) {
+      showError("Error", err instanceof Error ? err.message : t("admin.staff.permissionsSaveError"));
+    } finally {
+      setPermissionsLoading(false);
+    }
+  };
+
+  /**
+   * Toggle staff active status
+   */
+  const handleToggleStatus = async (staffMember: Staff) => {
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) {
+        router.push("/admin/login");
+        return;
+      }
+
+      const response = await fetch(`/api/merchant/staff/${staffMember.id}/permissions`, {
+        method: "PATCH",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ isActive: !staffMember.isActive }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || "Failed to update status");
+      }
+
+      showSuccess("Success", `${staffMember.name} ${!staffMember.isActive ? 'activated' : 'deactivated'}`);
+      fetchStaff();
+    } catch (err) {
+      showError("Error", err instanceof Error ? err.message : "Failed to update status");
+    }
+  };
+
+  // Check if current user is owner
+  const isCurrentUserOwner = user?.role === 'MERCHANT_OWNER';
 
   return (
     <div>
@@ -302,17 +391,54 @@ export default function StaffManagementPage() {
                         </p>
                       </td>
                       <td className="px-6 py-4">
-                        {member.role !== 'MERCHANT_OWNER' && (
-                          <button
-                            onClick={() => handleDeleteStaff(member)}
-                            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-error-600 transition-colors hover:bg-error-50 dark:text-error-400 dark:hover:bg-error-900/20"
-                          >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                            Remove
-                          </button>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {/* Permissions button - only for non-owners, and only owner can see */}
+                          {member.role !== 'MERCHANT_OWNER' && isCurrentUserOwner && (
+                            <button
+                              onClick={() => handleOpenPermissions(member)}
+                              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-brand-600 transition-colors hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-brand-900/20"
+                              title={t("admin.staff.managePermissions")}
+                            >
+                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                              </svg>
+                              {t("admin.staff.permissions")}
+                            </button>
+                          )}
+                          {/* Toggle status button - only for non-owners, and only owner can see */}
+                          {member.role !== 'MERCHANT_OWNER' && isCurrentUserOwner && (
+                            <button
+                              onClick={() => handleToggleStatus(member)}
+                              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                                member.isActive
+                                  ? 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
+                                  : 'text-success-600 hover:bg-success-50 dark:text-success-400 dark:hover:bg-success-900/20'
+                              }`}
+                              title={t("admin.staff.toggleStatus")}
+                            >
+                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                {member.isActive ? (
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                                ) : (
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                )}
+                              </svg>
+                              {member.isActive ? t("admin.staff.inactive") : t("admin.staff.active")}
+                            </button>
+                          )}
+                          {/* Delete button - only for non-owners */}
+                          {member.role !== 'MERCHANT_OWNER' && (
+                            <button
+                              onClick={() => handleDeleteStaff(member)}
+                              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-error-600 transition-colors hover:bg-error-50 dark:text-error-400 dark:hover:bg-error-900/20"
+                            >
+                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                              
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -345,6 +471,21 @@ export default function StaffManagementPage() {
             showSuccess("Success", "Staff added successfully");
             fetchStaff();
           }}
+        />
+      )}
+
+      {showPermissionsModal && selectedStaff && (
+        <StaffPermissionsModal
+          isOpen={showPermissionsModal}
+          onClose={() => {
+            setShowPermissionsModal(false);
+            setSelectedStaff(null);
+          }}
+          onSave={handleSavePermissions}
+          staffName={selectedStaff.name}
+          currentPermissions={selectedStaff.permissions || []}
+          isOwner={selectedStaff.role === 'MERCHANT_OWNER'}
+          isLoading={permissionsLoading}
         />
       )}
     </div>

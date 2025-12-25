@@ -5,6 +5,34 @@ import { useTranslation } from '@/lib/i18n/useTranslation';
 import type { Locale } from '@/lib/i18n';
 
 // ============================================================================
+// Flag SVG Components
+// ============================================================================
+
+const AustraliaFlag = ({ className = "w-5 h-4" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 640 480" xmlns="http://www.w3.org/2000/svg">
+    <path fill="#00008B" d="M0 0h640v480H0z"/>
+    <path fill="#FFF" d="M0 0v27.95L307.037 250h38.647v-27.95L38.647 0H0zm345.684 0v27.95L38.647 250H0v-27.95L307.037 0h38.647z"/>
+    <path fill="#FFF" d="M144.035 0v250h57.614V0h-57.614zM0 83.333v83.334h345.684V83.333H0z"/>
+    <path fill="#C8102E" d="M0 100v50h345.684v-50H0zM155.573 0v250h34.538V0h-34.538zM0 250l115.228-83.333h25.765L25.765 250H0zM0 0l115.228 83.333H89.463L0 18.633V0zm204.691 83.333L319.919 0h25.765L230.456 83.333h-25.765zm140.993 166.667l-115.228-83.333h25.765l89.463 64.7v18.633z"/>
+    <path fill="#FFF" d="M299.642 392.523l-10.565 26.692 22.24-16.795h-27.89l22.24 16.795-10.565-26.692zm-64.89-136.19l-7.043 17.795 14.827-11.197h-18.593l14.826 11.197-7.043-17.795zm0 119.048l-7.043 17.794 14.827-11.196h-18.593l14.826 11.196-7.043-17.794zm64.89-59.524l-7.043 17.795 14.827-11.197h-18.593l14.826 11.197-7.043-17.795zm64.89 0l-7.043 17.795 14.827-11.197h-18.593l14.826 11.197-7.043-17.795zm-32.445 59.524l-7.043 17.794 14.827-11.196h-18.593l14.826 11.196-7.043-17.794z"/>
+    <path fill="#FFF" d="M107.684 188.095l-14.087 35.59 29.654-22.393h-37.187l29.654 22.393-14.087-35.59z"/>
+  </svg>
+);
+
+const IndonesiaFlag = ({ className = "w-5 h-4" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 640 480" xmlns="http://www.w3.org/2000/svg">
+    <path fill="#E70011" d="M0 0h640v240H0z"/>
+    <path fill="#FFF" d="M0 240h640v240H0z"/>
+  </svg>
+);
+
+const FlagIcon = ({ locale, className = "w-5 h-4" }: { locale: Locale; className?: string }) => {
+  if (locale === 'en') return <AustraliaFlag className={className} />;
+  if (locale === 'id') return <IndonesiaFlag className={className} />;
+  return null;
+};
+
+// ============================================================================
 // Types
 // ============================================================================
 
@@ -43,7 +71,7 @@ export function LanguageSelector({
   className = '',
   dropdownPosition = 'right',
 }: LanguageSelectorProps) {
-  const { locale, setLocale, localeFlag, localeName, availableLocales, isInitialized } = useTranslation();
+  const { locale, setLocale, localeName, availableLocales, isInitialized } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   
@@ -103,7 +131,7 @@ export function LanguageSelector({
         aria-expanded={isOpen}
         aria-haspopup="listbox"
       >
-        <span className="text-base leading-none">{localeFlag}</span>
+        <FlagIcon locale={locale} className="w-5 h-4 rounded-sm overflow-hidden" />
         {mode === 'compact' && (
           <span className="uppercase text-xs">{locale.toUpperCase()}</span>
         )}
@@ -151,7 +179,7 @@ export function LanguageSelector({
                 }
               `}
             >
-              <span className="text-base leading-none">{loc.flag}</span>
+              <FlagIcon locale={loc.code} className="w-5 h-4 rounded-sm overflow-hidden" />
               <span>{loc.name}</span>
               {locale === loc.code && (
                 <svg className="w-4 h-4 ml-auto" fill="currentColor" viewBox="0 0 20 20">
@@ -184,7 +212,7 @@ interface LanguageToggleProps {
  * Single button that toggles between EN and ID
  */
 export function LanguageToggle({ className = '' }: LanguageToggleProps) {
-  const { locale, toggleLocale, localeFlag, isInitialized } = useTranslation();
+  const { locale, toggleLocale, isInitialized } = useTranslation();
   
   if (!isInitialized) {
     return (
@@ -217,7 +245,7 @@ export function LanguageToggle({ className = '' }: LanguageToggleProps) {
       aria-label={`Switch to ${locale === 'en' ? 'Indonesian' : 'English'}`}
       title={`Switch to ${locale === 'en' ? 'Indonesian' : 'English'}`}
     >
-      <span className="text-base leading-none">{localeFlag}</span>
+      <FlagIcon locale={locale} className="w-5 h-4 rounded-sm overflow-hidden" />
       <span className="uppercase text-xs">{locale}</span>
     </button>
   );

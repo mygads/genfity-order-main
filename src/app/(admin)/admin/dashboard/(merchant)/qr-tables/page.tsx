@@ -230,9 +230,46 @@ export default function QRTablesPage() {
     return (
       <div>
         <PageBreadcrumb pageTitle={t("admin.qrTables.title")} />
-        <div className="mt-6 py-10 text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-brand-500 border-r-transparent"></div>
-          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Loading...</p>
+        
+        {/* Skeleton Loader */}
+        <div className="mt-6 space-y-6">
+          {/* Settings Card Skeleton */}
+          <div className="rounded-2xl border border-gray-200 bg-white p-4 sm:p-6 dark:border-gray-800 dark:bg-white/3">
+            <div className="mb-6 border-b border-gray-200 pb-5 dark:border-gray-800">
+              <div className="h-6 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-2"></div>
+              <div className="h-4 w-96 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i}>
+                  <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-2"></div>
+                  <div className="h-11 w-full bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* QR Codes Grid Skeleton */}
+          <div className="rounded-2xl border border-gray-200 bg-white p-4 sm:p-6 dark:border-gray-800 dark:bg-white/3">
+            <div className="mb-6 border-b border-gray-200 pb-5 dark:border-gray-800">
+              <div className="h-5 w-40 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-2"></div>
+              <div className="h-4 w-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
+              {Array.from({ length: 12 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="flex flex-col items-center rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900"
+                >
+                  <div className="w-[120px] h-[120px] bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+                  <div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-2"></div>
+                  <div className="h-8 w-full bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse mt-2"></div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     );

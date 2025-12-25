@@ -50,6 +50,15 @@ export default function RecentOrdersSection({
 
     // Format price based on currency
     const formatPrice = (amount: number): string => {
+        if (currency === 'IDR') {
+            return `Rp ${new Intl.NumberFormat('id-ID', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0,
+            }).format(Math.round(amount))}`;
+        }
+        if (currency === 'AUD') {
+            return `A$${amount.toFixed(2)}`;
+        }
         return new Intl.NumberFormat('en-US', {
             style: 'currency',
             currency: currency,

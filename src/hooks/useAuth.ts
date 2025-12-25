@@ -5,6 +5,9 @@ import { clearAdminAuth } from "@/lib/utils/adminAuth";
 interface User {
   id: string;
   role: string;
+  merchantId?: string;
+  permissions?: string[];
+  merchantRole?: string;
 }
 
 /**
@@ -20,9 +23,27 @@ export function useAuth() {
     const token = localStorage.getItem("accessToken");
     const userId = localStorage.getItem("userId");
     const userRole = localStorage.getItem("userRole");
+    const merchantId = localStorage.getItem("merchantId");
+    
+    // Get permissions from localStorage
+    const permissionsStr = localStorage.getItem("staffPermissions");
+    let permissions: string[] | undefined;
+    try {
+      permissions = permissionsStr ? JSON.parse(permissionsStr) : undefined;
+    } catch {
+      permissions = undefined;
+    }
+    
+    const merchantRole = localStorage.getItem("merchantRole") || undefined;
 
     if (token && userId && userRole) {
-      setUser({ id: userId, role: userRole });
+      setUser({ 
+        id: userId, 
+        role: userRole, 
+        merchantId: merchantId || undefined,
+        permissions,
+        merchantRole,
+      });
     }
 
     setLoading(false);
@@ -46,12 +67,34 @@ export function useAuth() {
     }
   };
 
+  /**
+   * Check if user has a specific permission
+   * Owners always have all permissions
+   */
+  const hasPermission = (permission: string): boolean => {
+    if (!user) return false;
+    if (user.role === 'MERCHANT_OWNER' || user.merchantRole === 'OWNER') return true;
+    return user.permissions?.includes(permission) ?? false;
+  };
+
+  /**
+   * Check if user has any of the specified permissions
+   */
+  const hasAnyPermission = (permissions: string[]): boolean => {
+    if (!user) return false;
+    if (user.role === 'MERCHANT_OWNER' || user.merchantRole === 'OWNER') return true;
+    return permissions.some(p => user.permissions?.includes(p) ?? false);
+  };
+
   return {
     user,
     loading,
     logout,
     requireAuth,
     requireRole,
+    hasPermission,
+    hasAnyPermission,
     isAuthenticated: !!user,
+    isOwner: user?.role === 'MERCHANT_OWNER' || user?.merchantRole === 'OWNER',
   };
 }

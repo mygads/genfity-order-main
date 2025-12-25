@@ -157,6 +157,11 @@ model MerchantUser {
   merchantId BigInt       @map("merchant_id")
   userId     BigInt       @map("user_id")
   role       MerchantRole @default(STAFF)
+  // Staff Permissions - JSON array of permission keys
+  // null means all permissions (for OWNER), empty array means no permissions
+  // Example: ["orders", "menu", "categories", "stock"]
+  permissions String[]    @default([])
+  isActive    Boolean     @default(true) @map("is_active")
   createdAt  DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt  DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
   merchant   Merchant     @relation(fields: [merchantId], references: [id], onDelete: Cascade)
@@ -165,6 +170,7 @@ model MerchantUser {
   @@unique([merchantId, userId])
   @@index([merchantId])
   @@index([userId])
+  @@index([isActive])
   @@map("merchant_users")
 }
 

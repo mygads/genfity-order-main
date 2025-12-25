@@ -246,9 +246,57 @@ export default function ViewMerchantPage() {
     return (
       <div>
         <PageBreadcrumb pageTitle={t("admin.merchant.pageTitle")} />
-        <div className="mt-6 py-10 text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-brand-500 border-r-transparent"></div>
-          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">{t("admin.merchant.loading")}</p>
+        
+        {/* Skeleton Loader */}
+        <div className="mt-6 space-y-6">
+          {/* Header Skeleton */}
+          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-white/3">
+            {/* Banner Skeleton */}
+            <div className="h-40 w-full bg-gray-200 dark:bg-gray-700 animate-pulse"></div>
+            
+            <div className="px-6 py-8">
+              {/* Logo & Info Skeleton */}
+              <div className="flex flex-col items-center text-center">
+                <div className="h-24 w-24 rounded-2xl bg-gray-200 dark:bg-gray-700 animate-pulse"></div>
+                <div className="mt-4 h-6 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                <div className="mt-2 h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                
+                {/* Status Badges Skeleton */}
+                <div className="mt-3 flex items-center gap-2">
+                  <div className="h-7 w-20 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse"></div>
+                  <div className="h-7 w-24 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse"></div>
+                </div>
+                
+                {/* Description Skeleton */}
+                <div className="mt-4 space-y-2">
+                  <div className="h-4 w-96 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                  <div className="h-4 w-80 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                </div>
+              </div>
+              
+              {/* Action Buttons Skeleton */}
+              <div className="mt-6 flex flex-wrap justify-center gap-3">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="h-10 w-32 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+                ))}
+              </div>
+            </div>
+          </div>
+          
+          {/* Content Sections Skeleton */}
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/3">
+              <div className="h-5 w-40 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-5"></div>
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+                {Array.from({ length: 4 }).map((_, j) => (
+                  <div key={j}>
+                    <div className="h-3 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-2"></div>
+                    <div className="h-4 w-full bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     );

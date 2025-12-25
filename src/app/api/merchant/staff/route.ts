@@ -15,6 +15,7 @@ import { withMerchantOwner } from '@/lib/middleware/auth';
 import { AuthContext } from '@/lib/types/auth';
 import userRepository from '@/lib/repositories/UserRepository';
 import merchantService from '@/lib/services/MerchantService';
+import emailService from '@/lib/services/EmailService';
 import { hashPassword } from '@/lib/utils/passwordHasher';
 import { validateEmail, validateRequired } from '@/lib/utils/validators';
 import { ConflictError, ERROR_CODES, ValidationError } from '@/lib/constants/errors';
@@ -73,8 +74,9 @@ async function getStaffHandler(
       email: ms.user.email,
       phone: ms.user.phone,
       role: ms.user.role,
-      isActive: ms.user.isActive,
+      isActive: ms.isActive, // Use MerchantUser.isActive, not User.isActive
       joinedAt: ms.createdAt.toISOString(),
+      permissions: ms.permissions, // Include permissions
     }))
     .sort((a, b) => {
       // MERCHANT_OWNER always first
@@ -112,6 +114,16 @@ async function createStaffHandler(
     );
   }
 
+  // Get merchant info for email
+  const merchant = await prisma.merchant.findUnique({
+    where: { id: BigInt(merchantId) },
+    select: { name: true, code: true },
+  });
+
+  if (!merchant) {
+    throw new ValidationError('Merchant not found', ERROR_CODES.NOT_FOUND);
+  }
+
   // Hash password provided by merchant owner
   const hashedPassword = await hashPassword(body.password);
 
@@ -128,6 +140,22 @@ async function createStaffHandler(
 
   // Link staff to merchant
   await merchantService.addStaff(merchantId, staff.id, 'STAFF');
+
+  // Send welcome email to staff
+  try {
+    await emailService.sendStaffWelcome({
+      to: body.email,
+      name: body.name,
+      email: body.email,
+      password: body.password, // Send plain password in email
+      merchantName: merchant.name,
+      merchantCode: merchant.code,
+    });
+    console.log('✅ Staff welcome email sent to:', body.email);
+  } catch (emailError) {
+    console.error('❌ Failed to send staff welcome email:', emailError);
+    // Don't fail the request if email fails
+  }
 
   return successResponse(
     { staff },

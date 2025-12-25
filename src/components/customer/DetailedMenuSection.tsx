@@ -63,7 +63,7 @@ export default function DetailedMenuSection({
 
     const formatPrice = (amount: number): string => {
         if (currency === 'IDR') {
-            return `Rp${new Intl.NumberFormat('id-ID').format(amount)}`;
+            return `Rp ${new Intl.NumberFormat('id-ID').format(amount)}`;
         }
         const symbol = currency === 'AUD' ? 'A$' : currency === 'USD' ? '$' : currency;
         return `${symbol}${amount.toFixed(2)}`;
@@ -209,10 +209,10 @@ export default function DetailedMenuSection({
                                 )}
 
                                 {/* Bottom Row: Price + Button */}
-                                <div 
-                                    style={{ 
-                                        display: 'flex', 
-                                        justifyContent: 'space-between', 
+                                <div
+                                    style={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
                                         alignItems: 'center',
                                         marginTop: 'auto',
                                         paddingTop: '8px',

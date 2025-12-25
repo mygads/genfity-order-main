@@ -252,7 +252,7 @@ function LoginForm() {
               />
               <Image
                 className="hidden dark:block"
-                src="/images/logo/logo-dark.png"
+                src="/images/logo/logo-dark-mode.png"
                 alt="Genfity"
                 width={200}
                 height={100}

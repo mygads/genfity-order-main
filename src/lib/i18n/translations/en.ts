@@ -117,7 +117,7 @@ const en = {
   "auth.dontHaveAccount": "Don't have an account?",
   "auth.continueAsGuest": "Continue as Guest",
   "auth.loginAsGuest": "Login as Guest",
-  
+
   // Form fields
   "auth.email": "Email",
   "auth.emailAddress": "Email Address",
@@ -130,7 +130,7 @@ const en = {
   "auth.phone": "Phone",
   "auth.phoneNumber": "Phone Number",
   "auth.phoneOptional": "Phone Number (optional)",
-  
+
   // Placeholders
   "auth.placeholder.email": "your@email.com",
   "auth.placeholder.emailOrPhone": "your@email.com or +628xxx",
@@ -139,7 +139,7 @@ const en = {
   "auth.placeholder.passwordCreate": "Create password (min. 6 chars)",
   "auth.placeholder.confirmPassword": "Re-enter your password",
   "auth.placeholder.name": "Enter your full name",
-  
+
   // Messages
   "auth.signingIn": "Signing in...",
   "auth.signingOut": "Signing out...",
@@ -166,7 +166,7 @@ const en = {
   "auth.passwordMinChars": "Minimum 6 characters",
   "auth.passwordsMatch": "✓ Passwords match",
   "auth.passwordsDontMatch": "✗ Passwords do not match",
-  
+
   // Errors
   "auth.error.invalidCredentials": "Invalid email/phone or password",
   "auth.error.emailRequired": "Email is required",
@@ -177,7 +177,7 @@ const en = {
   "auth.error.loginFailed": "Login failed. Please try again.",
   "auth.error.nameRequired": "Name is required",
   "auth.error.invalidEmailOrPhone": "Please enter a valid email or phone number",
-  
+
   // Login page specific
   "auth.yesSignIn": "Yes, Sign In",
   "auth.signInBenefits": "Sign in to track orders and earn rewards",
@@ -190,7 +190,7 @@ const en = {
   // ============================================================================
   // CUSTOMER - Customer-facing content
   // ============================================================================
-  
+
   // Mode selection
   "customer.mode.howToEat": "How would you like to eat today?",
   "customer.mode.dineIn": "Dine In",
@@ -200,18 +200,18 @@ const en = {
   "customer.mode.unavailableNow": "UNAVAILABLE NOW",
   "customer.mode.orderingUnavailable": "Ordering is currently unavailable",
   "customer.mode.contactMerchant": "Please contact the merchant for more information",
-  
+
   // Opening hours
   "customer.hours.unknown": "Unknown hours",
   "customer.hours.closedToday": "Closed today",
   "customer.hours.openToday": "Open today, {hours}",
-  
+
   // How to use steps
   "customer.howTo.title": "How to use Genfity Order",
   "customer.howTo.step1": "Order",
   "customer.howTo.step2": "Pay",
   "customer.howTo.step3": "Eat",
-  
+
   // Menu page
   "customer.menu.title": "Menu",
   "customer.menu.searchPlaceholder": "What are you craving today?",
@@ -242,7 +242,7 @@ const en = {
   "customer.menu.tags": "Tags",
   "customer.menu.clearFilters": "Clear All Filters",
   "customer.menu.notAvailable": "Not Available",
-  
+
   // Cart
   "customer.cart.title": "Your Order",
   "customer.cart.empty": "Your cart is empty",
@@ -259,7 +259,7 @@ const en = {
   "customer.cart.continueToPayment": "Continue to Payment",
   "customer.cart.checkout": "CHECK OUT",
   "customer.cart.total": "Total",
-  
+
   // Payment
   "customer.payment.title": "Payment",
   "customer.payment.paymentDetails": "Payment Details",
@@ -282,14 +282,14 @@ const en = {
   "customer.payment.error.emailRequired": "Email is required",
   "customer.payment.error.invalidEmail": "Please enter a valid email",
   "customer.payment.error.tableRequired": "Table number is required",
-  
+
   // Order
   "order.title": "Order",
   "order.type": "Order Type",
   "order.orderedItems": "Ordered Items",
   "order.paymentDetails": "Payment Details",
   "order.totalPayment": "Total Payment",
-  
+
   // Order Summary
   "customer.orderSummary.title": "Order Summary",
   "customer.orderSummary.orderedItems": "Ordered Items",
@@ -299,7 +299,7 @@ const en = {
   "customer.orderSummary.orderNotFound": "Order Not Found",
   "customer.orderSummary.backToMenu": "Back to Menu",
   "customer.orderSummary.inclPB1": "Incl. PB1",
-  
+
   // Order Tracking
   "customer.track.title": "Track Order",
   "customer.track.orderNumber": "Order #",
@@ -318,7 +318,7 @@ const en = {
   "customer.track.estimated.accepted": "~10-15 min",
   "customer.track.estimated.inProgress": "~5-10 min",
   "customer.track.estimated.ready": "Ready now!",
-  
+
   // Order statuses
   "customer.status.pending": "Pending",
   "customer.status.pendingDesc": "Waiting for acceptance",
@@ -334,7 +334,7 @@ const en = {
   "customer.status.cancelledDesc": "Order was cancelled",
   "customer.status.inProgress": "In Progress",
   "customer.status.confirmed": "Confirmed",
-  
+
   // Order History
   "customer.history.title": "Order History",
   "customer.history.allOrders": "All",
@@ -347,12 +347,12 @@ const en = {
   "customer.history.viewOrder": "View Order",
   "customer.history.trackOrder": "Track Order",
   "customer.history.reorder": "Re-order",
-  
+
   // Re-order
   "customer.reorder.success": "{count} item(s) added to cart",
   "customer.reorder.partialSuccess": "{added} item(s) added, {skipped} unavailable",
   "customer.reorder.noAvailableItems": "No items available for re-order",
-  
+
   // Profile
   "customer.profile.title": "Profile",
   "customer.profile.editProfile": "Edit Profile",
@@ -362,14 +362,14 @@ const en = {
   "customer.profile.signOutMessage": "You will be signed out from your account",
   "customer.profile.profileUpdated": "Profile updated successfully!",
   "customer.profile.updateFailed": "Failed to update profile",
-  
+
   // Table number modal
   "customer.table.title": "Table Number",
   "customer.table.enterNumber": "Enter your table number",
   "customer.table.placeholder": "Example: 21",
   "customer.table.between": "Table number must be between 1-50",
   "customer.table.invalid": "Enter a number between 1-50",
-  
+
   // Store status
   "customer.store.open": "Open",
   "customer.store.closed": "Closed",
@@ -377,7 +377,7 @@ const en = {
   "customer.store.closesIn": "Store closes in {minutes} minutes",
   "customer.store.today": "Today:",
   "customer.store.unknown": "Unknown",
-  
+
   // Loading states
   "customer.loading.restaurant": "Loading restaurant...",
   "customer.loading.menu": "Loading menu...",
@@ -398,7 +398,7 @@ const en = {
   "customer.search.recentSearches": "Recent Searches",
   "customer.search.startTyping": "Start typing to search",
   "customer.search.clear": "Clear",
-  
+
   // Order Summary Page (order-summary-cash)
   "customer.orderSummary.orderType": "Order Type",
   "customer.orderSummary.orderNumber": "Order Number",
@@ -407,7 +407,7 @@ const en = {
   // ============================================================================
   // ADMIN - Dashboard content
   // ============================================================================
-  
+
   // Dashboard home
   "admin.dashboard.title": "Dashboard",
   "admin.dashboard.todaysRevenue": "Today's Revenue",
@@ -445,7 +445,7 @@ const en = {
   "admin.dashboard.notConnected": "Not Connected to Any Merchant",
   "admin.dashboard.needHelp": "Need Help?",
   "admin.dashboard.contactAdmin": "Contact your administrator to request access to a merchant account.",
-  
+
   // Navigation
   "admin.nav.main": "Main",
   "admin.nav.dashboard": "Dashboard",
@@ -477,12 +477,12 @@ const en = {
   "admin.nav.reportsAnalytics": "Reports & Analytics",
   "admin.nav.revenue": "Revenue",
   "admin.nav.reports": "Reports",
-  
+
   // Sidebar messages
   "admin.sidebar.noMerchant.title": "No Merchant Connected",
   "admin.sidebar.noMerchant.description": "You are not connected to any merchant. Please contact the merchant owner or super admin for assistance.",
   "admin.sidebar.dashboardVersion": "Dashboard Version",
-  
+
   // Header & User Dropdown
   "admin.header.myProfile": "My Profile",
   "admin.header.signOut": "Sign out",
@@ -491,7 +491,7 @@ const en = {
   "admin.header.role.merchantOwner": "Merchant Owner",
   "admin.header.role.merchantStaff": "Merchant Staff",
   "admin.header.role.user": "User",
-  
+
   // Orders page
   "admin.orders.title": "Order Management",
   "admin.orders.subtitle": "Manage and track orders in real-time with drag & drop",
@@ -514,7 +514,7 @@ const en = {
   "admin.orders.orderNotFound": "Order not found",
   "admin.orders.table": "Table",
   "admin.orders.orderNote": "Order Note",
-  
+
   // Order statuses
   "admin.status.pending": "Pending",
   "admin.status.accepted": "Accepted",
@@ -522,14 +522,14 @@ const en = {
   "admin.status.ready": "Ready",
   "admin.status.completed": "Completed",
   "admin.status.cancelled": "Cancelled",
-  
+
   // Payment statuses
   "admin.payment.unpaid": "Unpaid",
   "admin.payment.paid": "Paid",
   "admin.payment.failed": "Failed",
   "admin.payment.refunded": "Refunded",
   "admin.payment.cancelled": "Cancelled",
-  
+
   // Payment methods
   "admin.paymentMethod.cash": "Cash",
   "admin.paymentMethod.card": "Card",
@@ -537,7 +537,7 @@ const en = {
   "admin.paymentMethod.eWallet": "E-Wallet",
   "admin.paymentMethod.qris": "QRIS",
   "admin.paymentMethod.creditCard": "Credit Card",
-  
+
   // Kitchen display
   "admin.kitchen.title": "Kitchen",
   "admin.kitchen.pending": "Pending",
@@ -555,7 +555,7 @@ const en = {
   "admin.kitchen.table": "Table",
   "admin.kitchen.takeaway": "Takeaway",
   "admin.kitchen.orderNote": "Order Note",
-  
+
   // Order queue
   "admin.queue.title": "Order Ready Queue",
   "admin.queue.readyForPickup": "ready for pickup",
@@ -580,13 +580,13 @@ const en = {
   "admin.queue.takeaway": "Takeaway",
   "admin.queue.table": "Table",
   "admin.queue.loadingQueue": "Loading queue...",
-  
+
   // Order history
   "admin.history.title": "Order History",
   "admin.history.subtitle": "View and manage all past orders",
   "admin.history.noOrders": "No Orders Found",
   "admin.history.tryDifferentDate": "Try selecting a different date range.",
-  
+
   // Menu management
   "admin.menu.title": "Menu Items",
   "admin.menu.listTitle": "Menu Items List",
@@ -649,7 +649,7 @@ const en = {
   "admin.menu.addDescription": "Add description...",
   "admin.menu.free": "Free",
   "admin.menu.uncategorized": "Uncategorized",
-  
+
   // Menu Detail
   "admin.menu.detail.title": "Menu Detail",
   "admin.menu.detail.subtitle": "View menu item information",
@@ -677,7 +677,7 @@ const en = {
   "admin.menu.detail.required": "Required",
   "admin.menu.detail.min": "Min",
   "admin.menu.detail.max": "Max",
-  
+
   // Categories
   "admin.categories.title": "Categories",
   "admin.categories.listTitle": "Categories List",
@@ -734,7 +734,7 @@ const en = {
   "admin.categories.updateCategory": "Update Category",
   "admin.categories.categoryDisplay": "Category Display",
   "admin.categories.dragDropHint": "Drag and drop to reorder categories",
-  
+
   // Addon categories
   "admin.addonCategories.title": "Addon Categories",
   "admin.addonCategories.listTitle": "Addon Categories List",
@@ -780,7 +780,7 @@ const en = {
   "admin.addonCategories.deleteSuccess": "Addon category deleted successfully",
   "admin.addonCategories.createSuccess": "Addon category created successfully",
   "admin.addonCategories.updateSuccess": "Addon category updated successfully",
-  
+
   // Addon items
   "admin.addonItems.title": "Addon Items",
   "admin.addonItems.listTitle": "Addon Items List",
@@ -800,7 +800,7 @@ const en = {
   "admin.addonItems.createSuccess": "Addon item created successfully",
   "admin.addonItems.updateSuccess": "Addon item updated successfully",
   "admin.addonItems.duplicateSuccess": "Addon item duplicated successfully",
-  
+
   // Stock
   "admin.stock.title": "Stock Overview",
   "admin.stock.trackStock": "Track Stock",
@@ -809,7 +809,7 @@ const en = {
   "admin.stock.autoReset": "Auto Reset Stock",
   "admin.stock.lowStock": "Low Stock",
   "admin.stock.outOfStock": "Out of Stock",
-  
+
   // Revenue
   "admin.revenue.title": "Revenue",
   "admin.revenue.last7Days": "Last 7 Days",
@@ -833,7 +833,7 @@ const en = {
   "admin.revenue.allIncome": "All income",
   "admin.revenue.perOrder": "Per order",
   "admin.revenue.avg": "Avg:",
-  
+
   // Staff
   "admin.staff.title": "Staff",
   "admin.staff.subtitle": "Staff Members",
@@ -850,7 +850,77 @@ const en = {
   "admin.staff.staffRole": "Staff",
   "admin.staff.noStaff": "No staff found",
   "admin.staff.noStaffYet": "No staff members yet",
-  
+  "admin.staff.permissions": "Permissions",
+  "admin.staff.managePermissions": "Manage Permissions",
+  "admin.staff.permissionsTitle": "Staff Permissions",
+  "admin.staff.permissionsDescription": "Select which features this staff member can access.",
+  "admin.staff.permissionsSaved": "Permissions saved successfully",
+  "admin.staff.permissionsSaveError": "Failed to save permissions",
+  "admin.staff.allPermissions": "All Permissions",
+  "admin.staff.noPermissions": "No Permissions",
+  "admin.staff.selectAll": "Select All",
+  "admin.staff.deselectAll": "Deselect All",
+  "admin.staff.leaveMerchant": "Leave Store",
+  "admin.staff.leaveMerchantConfirm": "Are you sure you want to leave this store? You will lose access to all store features.",
+  "admin.staff.leaveMerchantSuccess": "You have left the store successfully",
+  "admin.staff.leaveMerchantError": "Failed to leave store",
+  "admin.staff.active": "Active",
+  "admin.staff.inactive": "Inactive",
+  "admin.staff.toggleStatus": "Toggle Status",
+  "admin.staff.accessDenied": "Access Denied",
+  "admin.staff.noPermissionToAccess": "You do not have permission to access this feature. Please contact the store owner.",
+
+  // Permission groups
+  "admin.permissions.group.business": "Business Overview",
+  "admin.permissions.group.catalog": "Catalog Management",
+  "admin.permissions.group.operations": "Operations",
+  "admin.permissions.group.management": "Management",
+
+  // Permission group titles
+  "admin.permissions.orderManagement": "Order Management",
+  "admin.permissions.menuManagement": "Menu Management",
+  "admin.permissions.reportsAnalytics": "Reports & Analytics",
+
+  // Permission names with descriptions
+  "admin.permissions.dashboard": "Dashboard",
+  "admin.permissions.dashboardDesc": "Access main dashboard overview",
+  "admin.permissions.orders": "Orders",
+  "admin.permissions.ordersDesc": "View and manage customer orders",
+  "admin.permissions.ordersKitchen": "Kitchen Display",
+  "admin.permissions.ordersKitchenDesc": "Access kitchen order display",
+  "admin.permissions.ordersHistory": "Order History",
+  "admin.permissions.ordersHistoryDesc": "View past orders and history",
+  "admin.permissions.menu": "Menu Items",
+  "admin.permissions.menuDesc": "Create and edit menu items",
+  "admin.permissions.menuStock": "Stock Management",
+  "admin.permissions.menuStockDesc": "Manage item stock levels",
+  "admin.permissions.menuBuilder": "Menu Builder",
+  "admin.permissions.menuBuilderDesc": "Build and customize menus",
+  "admin.permissions.categories": "Categories",
+  "admin.permissions.categoriesDesc": "Manage menu categories",
+  "admin.permissions.addonCategories": "Add-on Categories",
+  "admin.permissions.addonCategoriesDesc": "Manage add-on categories",
+  "admin.permissions.addonItems": "Add-on Items",
+  "admin.permissions.addonItemsDesc": "Manage individual add-ons",
+  "admin.permissions.menuBooks": "Menu Books",
+  "admin.permissions.menuBooksDesc": "Organize menus into books",
+  "admin.permissions.specialPrices": "Special Prices",
+  "admin.permissions.specialPricesDesc": "Set promotional pricing",
+  "admin.permissions.reportsDesc": "View sales reports",
+  "admin.permissions.revenueDesc": "Access revenue analytics",
+  "admin.permissions.merchantSettings": "Store Settings",
+  "admin.permissions.merchantSettingsDesc": "Edit store configuration",
+  "admin.permissions.qrTablesDesc": "Manage QR codes and tables",
+
+  // Permission Templates
+  "admin.permissions.templates.title": "Quick Templates",
+  "admin.permissions.templates.cashier": "Cashier",
+  "admin.permissions.templates.cashierDesc": "Order management and history access",
+  "admin.permissions.templates.kitchenStaff": "Kitchen Staff",
+  "admin.permissions.templates.kitchenStaffDesc": "Kitchen display and stock management",
+  "admin.permissions.templates.manager": "Manager",
+  "admin.permissions.templates.managerDesc": "Full access except staff management",
+
   // QR Tables
   "admin.qrTables.title": "QR Tables",
   "admin.qrTables.subtitle": "Generate QR codes for table ordering",
@@ -864,7 +934,7 @@ const en = {
   "admin.qrTables.goToSettings": "Go to Merchant Settings",
   "admin.qrTables.downloadSuccess": "QR codes downloaded successfully",
   "admin.qrTables.downloadError": "Failed to download QR codes",
-  
+
   // Reports
   "admin.reports.title": "Reports & Analytics",
   "admin.reports.subtitle": "Comprehensive business intelligence and performance metrics",
@@ -875,7 +945,7 @@ const en = {
   "admin.reports.noData": "No Reports Data",
   "admin.reports.noDataDesc": "There are no orders in the selected date range.",
   "admin.reports.exportPDFSoon": "PDF export will be implemented soon",
-  
+
   // Merchant settings
   "admin.merchant.title": "Merchant Settings",
   "admin.merchant.pageTitle": "Merchant Details",
@@ -926,7 +996,7 @@ const en = {
   "admin.merchant.noStaff": "No staff members",
   "admin.merchant.code": "Code",
   "admin.merchant.closed": "Closed",
-  
+
   // Merchant Edit Form
   "admin.merchantEdit.pageTitle": "Edit Merchant",
   "admin.merchantEdit.storeLogo": "Store Logo",
@@ -982,7 +1052,7 @@ const en = {
   "admin.merchantEdit.success": "Merchant information updated successfully!",
   "admin.merchantEdit.errorUpdate": "Failed to update merchant",
   "admin.merchantEdit.errorLoad": "Failed to load merchant data",
-  
+
   // Special hours
   "admin.specialHours.title": "Special Hours",
   "admin.specialHours.addSpecialHours": "+ Add Special Hours",
@@ -993,7 +1063,7 @@ const en = {
   "admin.specialHours.deleted": "Special hour deleted",
   "admin.specialHours.failedToSave": "Failed to save special hours",
   "admin.specialHours.failedToDelete": "Failed to delete special hour",
-  
+
   // Special Prices
   "admin.specialPrices.title": "Special Prices",
   "admin.specialPrices.subtitle": "Time-based promotional pricing for menu books",
@@ -1021,7 +1091,7 @@ const en = {
   "admin.specialPrices.cancel": "Cancel",
   "admin.specialPrices.delete": "Delete",
   "admin.specialPrices.deleting": "Deleting...",
-  
+
   // Menu Books
   "admin.menuBooks.title": "Menu Books",
   "admin.menuBooks.subtitle": "Organize menu items into collections",
@@ -1046,20 +1116,20 @@ const en = {
   "admin.menuBooks.cancel": "Cancel",
   "admin.menuBooks.delete": "Delete",
   "admin.menuBooks.deleting": "Deleting...",
-  
+
   // Profile page
   "admin.profile.title": "Profile",
   "admin.profile.profilePicture": "Profile Picture",
   "admin.profile.changePicture": "Change Picture",
   "admin.profile.profileInfo": "Profile Information",
   "admin.profile.saveChanges": "Save Changes",
-  
+
   // Roles
   "admin.roles.superAdmin": "Super Admin",
   "admin.roles.merchantOwner": "Merchant Owner",
   "admin.roles.merchantStaff": "Merchant Staff",
   "admin.roles.customer": "Customer",
-  
+
   // Super admin
   "admin.superadmin.merchants": "Merchants Management",
   "admin.superadmin.allMerchants": "All Merchants",
@@ -1079,25 +1149,25 @@ const en = {
   "admin.superadmin.revenueByCurrency": "Revenue by Currency",
   "admin.superadmin.orderStatusDist": "Order Status Distribution",
   "admin.superadmin.paymentMethodBreakdown": "Payment Method Breakdown",
-  
+
   // Analytics
   "admin.analytics.sales": "Sales Analytics",
   "admin.analytics.customers": "Customer Analytics",
   "admin.analytics.menuPerformance": "Menu Performance",
-  
+
   // Image upload
   "admin.upload.uploading": "Uploading...",
   "admin.upload.failed": "Upload failed",
   "admin.upload.invalidType": "Invalid file type. Please upload an image file.",
   "admin.upload.tooLarge": "File size must be less than {size}MB.",
-  
+
   // Location
   "admin.location.notFound": "Location not found. Please try a different search term.",
   "admin.location.geolocationNotSupported": "Geolocation is not supported by your browser",
-  
+
   // Form hints
   "admin.hint.ctrlEnterSave": "Press Ctrl+Enter to save, Esc to cancel",
-  
+
   // Admin Login page
   "admin.login.welcomeBack": "Welcome Back",
   "admin.login.signInPrompt": "Please sign in to your account",
@@ -1118,20 +1188,25 @@ const en = {
   "admin.login.error.passwordMin8": "Password must be at least 8 characters",
   "admin.login.error.adminOnly": "Access denied. This page is for administrators only.",
   "admin.login.error.networkError": "Network error. Please try again.",
-  
+  "admin.login.selectMerchant.title": "Select Store",
+  "admin.login.selectMerchant.description": "You have access to multiple stores. Please select which one to manage.",
+  "admin.login.selectMerchant.open": "Open",
+  "admin.login.selectMerchant.closed": "Closed",
+  "admin.login.selectMerchant.loading": "Switching store...",
+
   // Error messages
   "admin.error.loadingFailed": "Error Loading",
   "admin.error.saveFailed": "Failed to save",
   "admin.error.deleteFailed": "Failed to delete",
   "admin.error.loadFailed": "Failed to load data",
-  
+
   // ============================================================================
   // ADDITIONAL PAGES - Settings, Forgot Password, Stock, Bulk Upload, etc.
   // ============================================================================
-  
+
   // Settings redirect page
   "admin.settings.redirecting": "Redirecting to Merchant Settings...",
-  
+
   // Forgot Password page
   "admin.forgotPassword.title": "Forgot Password",
   "admin.forgotPassword.subtitle": "Enter your email to reset password",
@@ -1151,7 +1226,7 @@ const en = {
   "admin.forgotPassword.error.emailRequired": "Email is required",
   "admin.forgotPassword.error.invalidEmail": "Invalid email format",
   "admin.forgotPassword.error.sendFailed": "Failed to send reset email",
-  
+
   // Stock Overview page - Additional keys
   "admin.stock.subtitle": "Monitor and manage inventory levels",
   "admin.stock.totalItems": "Total Items",
@@ -1176,7 +1251,7 @@ const en = {
   "admin.stock.itemsSelected": "{count} item(s) selected",
   "admin.stock.updateFailed": "Failed to update stock",
   "admin.stock.resetFailed": "Failed to reset to template",
-  
+
   // Bulk Upload pages (Menu & Addon)
   "admin.bulkUpload.title": "Bulk Upload",
   "admin.bulkUpload.menuTitle": "Menu Bulk Upload",
@@ -1213,7 +1288,7 @@ const en = {
   "admin.bulkUpload.validationError.priceInvalid": "Price must be a positive number",
   "admin.bulkUpload.validationError.categoryRequired": "At least one category is required",
   "admin.bulkUpload.validationError.categoryNotFound": "Category not found",
-  
+
   // Menu Builder page
   "admin.menuBuilder.title": "Menu Builder",
   "admin.menuBuilder.createNew": "Create New Menu",
@@ -1222,7 +1297,7 @@ const en = {
   "admin.menuBuilder.cancelConfirm": "Cancel changes? Unsaved data will be lost.",
   "admin.menuBuilder.saveSuccess": "Menu saved successfully",
   "admin.menuBuilder.saveFailed": "Failed to save menu",
-  
+
   // Landing page
   "landing.title": "Order Your Favorite Food",
   "landing.subtitle": "Fast, simple, and seamless ordering experience",
@@ -1233,7 +1308,7 @@ const en = {
   "landing.feature.payAtCounter": "Pay at counter",
   "landing.feature.mobileOptimized": "Mobile optimized",
   "landing.footer": "© 2025 GENFITY. All rights reserved.",
-  
+
   // Super Admin - additional keys
   "admin.superadmin.storeOpen": "Store Open",
   "admin.superadmin.storeClosed": "Store Closed",
@@ -1258,7 +1333,7 @@ const en = {
   "admin.superadmin.topMerchantsByOrders": "Top Merchants by Orders",
   "admin.superadmin.topMerchantsByRevenue": "Top Merchants by Revenue",
   "admin.superadmin.orderTypeDistribution": "Order Type Distribution",
-  
+
   // Merchant Edit - Location Tab
   "admin.merchantEdit.address": "Address",
   "admin.merchantEdit.country": "Country",

@@ -111,7 +111,7 @@ const id = {
   "auth.dontHaveAccount": "Belum punya akun?",
   "auth.continueAsGuest": "Lanjutkan sebagai Tamu",
   "auth.loginAsGuest": "Masuk sebagai Tamu",
-  
+
   // Form fields
   "auth.email": "Email",
   "auth.emailAddress": "Alamat Email",
@@ -124,7 +124,7 @@ const id = {
   "auth.phone": "Telepon",
   "auth.phoneNumber": "Nomor Telepon",
   "auth.phoneOptional": "Nomor Telepon (opsional)",
-  
+
   // Placeholders
   "auth.placeholder.email": "email@anda.com",
   "auth.placeholder.emailOrPhone": "email@anda.com atau +628xxx",
@@ -133,7 +133,7 @@ const id = {
   "auth.placeholder.passwordCreate": "Buat kata sandi (min. 6 karakter)",
   "auth.placeholder.confirmPassword": "Masukkan ulang kata sandi",
   "auth.placeholder.name": "Masukkan nama lengkap",
-  
+
   // Messages
   "auth.signingIn": "Sedang masuk...",
   "auth.signingOut": "Sedang keluar...",
@@ -160,7 +160,7 @@ const id = {
   "auth.passwordMinChars": "Minimal 6 karakter",
   "auth.passwordsMatch": "✓ Kata sandi cocok",
   "auth.passwordsDontMatch": "✗ Kata sandi tidak cocok",
-  
+
   // Errors
   "auth.error.invalidCredentials": "Email/telepon atau kata sandi salah",
   "auth.error.emailRequired": "Email wajib diisi",
@@ -171,7 +171,7 @@ const id = {
   "auth.error.loginFailed": "Gagal masuk. Silakan coba lagi.",
   "auth.error.nameRequired": "Nama wajib diisi",
   "auth.error.invalidEmailOrPhone": "Masukkan email atau nomor telepon yang valid",
-  
+
   // Login page specific
   "auth.yesSignIn": "Ya, Masuk",
   "auth.signInBenefits": "Masuk untuk lacak pesanan dan dapatkan hadiah",
@@ -184,7 +184,7 @@ const id = {
   // ============================================================================
   // CUSTOMER - Konten pelanggan
   // ============================================================================
-  
+
   // Mode selection
   "customer.mode.howToEat": "Mau makan di mana hari ini?",
   "customer.mode.dineIn": "Makan di Tempat",
@@ -194,18 +194,18 @@ const id = {
   "customer.mode.unavailableNow": "TIDAK TERSEDIA",
   "customer.mode.orderingUnavailable": "Pemesanan sedang tidak tersedia",
   "customer.mode.contactMerchant": "Silakan hubungi merchant untuk informasi lebih lanjut",
-  
+
   // Opening hours
   "customer.hours.unknown": "Jam tidak diketahui",
   "customer.hours.closedToday": "Tutup hari ini",
   "customer.hours.openToday": "Buka hari ini, {hours}",
-  
+
   // How to use steps
   "customer.howTo.title": "Cara Pesan di Genfity Order",
   "customer.howTo.step1": "Pesan",
   "customer.howTo.step2": "Bayar",
   "customer.howTo.step3": "Makan",
-  
+
   // Menu page
   "customer.menu.title": "Menu",
   "customer.menu.searchPlaceholder": "Mau makan apa hari ini?",
@@ -236,7 +236,7 @@ const id = {
   "customer.menu.tags": "Tag",
   "customer.menu.clearFilters": "Hapus Semua Filter",
   "customer.menu.notAvailable": "Tidak Tersedia",
-  
+
   // Cart
   "customer.cart.title": "Pesanan Anda",
   "customer.cart.empty": "Keranjang kosong",
@@ -253,7 +253,7 @@ const id = {
   "customer.cart.continueToPayment": "Lanjut ke Pembayaran",
   "customer.cart.checkout": "CHECKOUT",
   "customer.cart.total": "Total",
-  
+
   // Payment
   "customer.payment.title": "Pembayaran",
   "customer.payment.paymentDetails": "Detail Pembayaran",
@@ -276,14 +276,14 @@ const id = {
   "customer.payment.error.emailRequired": "Email wajib diisi",
   "customer.payment.error.invalidEmail": "Masukkan email yang valid",
   "customer.payment.error.tableRequired": "Nomor meja wajib diisi",
-  
+
   // Order
   "order.title": "Pesanan",
   "order.type": "Tipe Pesanan",
   "order.orderedItems": "Item Pesanan",
   "order.paymentDetails": "Rincian Pembayaran",
   "order.totalPayment": "Total Pembayaran",
-  
+
   // Order Summary
   "customer.orderSummary.title": "Ringkasan Pesanan",
   "customer.orderSummary.orderedItems": "Item yang Dipesan",
@@ -293,7 +293,7 @@ const id = {
   "customer.orderSummary.orderNotFound": "Pesanan Tidak Ditemukan",
   "customer.orderSummary.backToMenu": "Kembali ke Menu",
   "customer.orderSummary.inclPB1": "Termasuk PB1",
-  
+
   // Order Tracking
   "customer.track.title": "Lacak Pesanan",
   "customer.track.orderNumber": "Pesanan #",
@@ -312,7 +312,7 @@ const id = {
   "customer.track.estimated.accepted": "~10-15 menit",
   "customer.track.estimated.inProgress": "~5-10 menit",
   "customer.track.estimated.ready": "Siap sekarang!",
-  
+
   // Order statuses
   "customer.status.pending": "Menunggu",
   "customer.status.pendingDesc": "Menunggu konfirmasi",
@@ -328,7 +328,7 @@ const id = {
   "customer.status.cancelledDesc": "Pesanan dibatalkan",
   "customer.status.inProgress": "Sedang Diproses",
   "customer.status.confirmed": "Dikonfirmasi",
-  
+
   // Order History
   "customer.history.title": "Riwayat Pesanan",
   "customer.history.allOrders": "Semua",
@@ -341,12 +341,12 @@ const id = {
   "customer.history.viewOrder": "Lihat Pesanan",
   "customer.history.trackOrder": "Lacak Pesanan",
   "customer.history.reorder": "Pesan Lagi",
-  
+
   // Re-order
   "customer.reorder.success": "{count} item ditambahkan ke keranjang",
   "customer.reorder.partialSuccess": "{added} item ditambahkan, {skipped} tidak tersedia",
   "customer.reorder.noAvailableItems": "Tidak ada item yang tersedia untuk dipesan ulang",
-  
+
   // Profile
   "customer.profile.title": "Profil",
   "customer.profile.editProfile": "Ubah Profil",
@@ -356,14 +356,14 @@ const id = {
   "customer.profile.signOutMessage": "Anda akan keluar dari akun",
   "customer.profile.profileUpdated": "Profil berhasil diperbarui!",
   "customer.profile.updateFailed": "Gagal memperbarui profil",
-  
+
   // Table number modal
   "customer.table.title": "Nomor Meja",
   "customer.table.enterNumber": "Masukkan nomor meja Anda",
   "customer.table.placeholder": "Contoh: 21",
   "customer.table.between": "Nomor meja harus antara 1-50",
   "customer.table.invalid": "Masukkan nomor antara 1-50",
-  
+
   // Store status
   "customer.store.open": "Buka",
   "customer.store.closed": "Tutup",
@@ -371,7 +371,7 @@ const id = {
   "customer.store.closesIn": "Toko tutup dalam {minutes} menit",
   "customer.store.today": "Hari Ini:",
   "customer.store.unknown": "Tidak Diketahui",
-  
+
   // Loading states
   "customer.loading.restaurant": "Memuat restoran...",
   "customer.loading.menu": "Memuat menu...",
@@ -392,7 +392,7 @@ const id = {
   "customer.search.recentSearches": "Pencarian Terakhir",
   "customer.search.startTyping": "Ketik untuk mencari",
   "customer.search.clear": "Hapus",
-  
+
   // Order Summary Page (order-summary-cash)
   "customer.orderSummary.orderType": "Tipe Pesanan",
   "customer.orderSummary.orderNumber": "Nomor Pesanan",
@@ -401,7 +401,7 @@ const id = {
   // ============================================================================
   // ADMIN - Konten dashboard admin
   // ============================================================================
-  
+
   // Dashboard home
   "admin.dashboard.title": "Dashboard",
   "admin.dashboard.todaysRevenue": "Pendapatan Hari Ini",
@@ -439,7 +439,7 @@ const id = {
   "admin.dashboard.notConnected": "Tidak Terhubung ke Merchant",
   "admin.dashboard.needHelp": "Butuh Bantuan?",
   "admin.dashboard.contactAdmin": "Hubungi administrator Anda untuk meminta akses ke akun merchant.",
-  
+
   // Navigation
   "admin.nav.main": "Utama",
   "admin.nav.dashboard": "Dashboard",
@@ -471,12 +471,12 @@ const id = {
   "admin.nav.reportsAnalytics": "Laporan & Analitik",
   "admin.nav.revenue": "Pendapatan",
   "admin.nav.reports": "Laporan",
-  
+
   // Sidebar messages
   "admin.sidebar.noMerchant.title": "Tidak Terhubung ke Merchant",
   "admin.sidebar.noMerchant.description": "Anda tidak terhubung ke merchant manapun. Silakan hubungi pemilik merchant atau super admin untuk bantuan.",
   "admin.sidebar.dashboardVersion": "Versi Dashboard",
-  
+
   // Header & User Dropdown
   "admin.header.myProfile": "Profil Saya",
   "admin.header.signOut": "Keluar",
@@ -485,7 +485,7 @@ const id = {
   "admin.header.role.merchantOwner": "Pemilik Merchant",
   "admin.header.role.merchantStaff": "Staff Merchant",
   "admin.header.role.user": "Pengguna",
-  
+
   // Orders page
   "admin.orders.title": "Manajemen Pesanan",
   "admin.orders.subtitle": "Kelola dan lacak pesanan secara real-time dengan drag & drop",
@@ -508,7 +508,7 @@ const id = {
   "admin.orders.orderNotFound": "Pesanan tidak ditemukan",
   "admin.orders.table": "Meja",
   "admin.orders.orderNote": "Catatan Pesanan",
-  
+
   // Order statuses
   "admin.status.pending": "Menunggu",
   "admin.status.accepted": "Diterima",
@@ -516,14 +516,14 @@ const id = {
   "admin.status.ready": "Siap",
   "admin.status.completed": "Selesai",
   "admin.status.cancelled": "Dibatalkan",
-  
+
   // Payment statuses
   "admin.payment.unpaid": "Belum Bayar",
   "admin.payment.paid": "Lunas",
   "admin.payment.failed": "Gagal",
   "admin.payment.refunded": "Dikembalikan",
   "admin.payment.cancelled": "Dibatalkan",
-  
+
   // Payment methods
   "admin.paymentMethod.cash": "Tunai",
   "admin.paymentMethod.card": "Kartu",
@@ -531,7 +531,7 @@ const id = {
   "admin.paymentMethod.eWallet": "E-Wallet",
   "admin.paymentMethod.qris": "QRIS",
   "admin.paymentMethod.creditCard": "Kartu Kredit",
-  
+
   // Kitchen display
   "admin.kitchen.title": "Dapur",
   "admin.kitchen.pending": "Menunggu",
@@ -549,7 +549,7 @@ const id = {
   "admin.kitchen.table": "Meja",
   "admin.kitchen.takeaway": "Bawa Pulang",
   "admin.kitchen.orderNote": "Catatan Pesanan",
-  
+
   // Order queue
   "admin.queue.title": "Antrian Pesanan Siap",
   "admin.queue.readyForPickup": "siap diambil",
@@ -574,13 +574,13 @@ const id = {
   "admin.queue.takeaway": "Bawa Pulang",
   "admin.queue.table": "Meja",
   "admin.queue.loadingQueue": "Memuat antrian...",
-  
+
   // Order history
   "admin.history.title": "Riwayat Pesanan",
   "admin.history.subtitle": "Lihat dan kelola semua pesanan sebelumnya",
   "admin.history.noOrders": "Tidak Ada Pesanan",
   "admin.history.tryDifferentDate": "Coba pilih rentang tanggal yang berbeda.",
-  
+
   // Menu management
   "admin.menu.title": "Item Menu",
   "admin.menu.listTitle": "Daftar Item Menu",
@@ -643,7 +643,7 @@ const id = {
   "admin.menu.addDescription": "Tambah deskripsi...",
   "admin.menu.free": "Gratis",
   "admin.menu.uncategorized": "Tanpa Kategori",
-  
+
   // Menu Detail
   "admin.menu.detail.title": "Detail Menu",
   "admin.menu.detail.subtitle": "Lihat informasi item menu",
@@ -671,7 +671,7 @@ const id = {
   "admin.menu.detail.required": "Wajib",
   "admin.menu.detail.min": "Min",
   "admin.menu.detail.max": "Maks",
-  
+
   // Categories
   "admin.categories.title": "Kategori",
   "admin.categories.listTitle": "Daftar Kategori",
@@ -728,7 +728,7 @@ const id = {
   "admin.categories.updateCategory": "Perbarui Kategori",
   "admin.categories.categoryDisplay": "Tampilan Kategori",
   "admin.categories.dragDropHint": "Seret dan lepas untuk mengurutkan kategori",
-  
+
   // Addon categories
   "admin.addonCategories.title": "Kategori Addon",
   "admin.addonCategories.listTitle": "Daftar Kategori Addon",
@@ -774,7 +774,7 @@ const id = {
   "admin.addonCategories.deleteSuccess": "Kategori addon berhasil dihapus",
   "admin.addonCategories.createSuccess": "Kategori addon berhasil dibuat",
   "admin.addonCategories.updateSuccess": "Kategori addon berhasil diperbarui",
-  
+
   // Addon items
   "admin.addonItems.title": "Item Addon",
   "admin.addonItems.listTitle": "Daftar Item Addon",
@@ -794,7 +794,7 @@ const id = {
   "admin.addonItems.createSuccess": "Item addon berhasil dibuat",
   "admin.addonItems.updateSuccess": "Item addon berhasil diperbarui",
   "admin.addonItems.duplicateSuccess": "Item addon berhasil diduplikasi",
-  
+
   // Stock
   "admin.stock.title": "Ringkasan Stok",
   "admin.stock.trackStock": "Lacak Stok",
@@ -803,7 +803,7 @@ const id = {
   "admin.stock.autoReset": "Reset Stok Otomatis",
   "admin.stock.lowStock": "Stok Rendah",
   "admin.stock.outOfStock": "Stok Habis",
-  
+
   // Revenue
   "admin.revenue.title": "Pendapatan",
   "admin.revenue.last7Days": "7 Hari Terakhir",
@@ -827,7 +827,7 @@ const id = {
   "admin.revenue.allIncome": "Semua pendapatan",
   "admin.revenue.perOrder": "Per pesanan",
   "admin.revenue.avg": "Rata:",
-  
+
   // Staff
   "admin.staff.title": "Staff",
   "admin.staff.subtitle": "Anggota Staff",
@@ -844,7 +844,77 @@ const id = {
   "admin.staff.staffRole": "Staff",
   "admin.staff.noStaff": "Tidak ada staff ditemukan",
   "admin.staff.noStaffYet": "Belum ada anggota staff",
-  
+  "admin.staff.permissions": "Izin Akses",
+  "admin.staff.managePermissions": "Kelola Izin Akses",
+  "admin.staff.permissionsTitle": "Izin Akses Staff",
+  "admin.staff.permissionsDescription": "Pilih fitur yang dapat diakses oleh staff ini.",
+  "admin.staff.permissionsSaved": "Izin akses berhasil disimpan",
+  "admin.staff.permissionsSaveError": "Gagal menyimpan izin akses",
+  "admin.staff.allPermissions": "Semua Izin",
+  "admin.staff.noPermissions": "Tanpa Izin",
+  "admin.staff.selectAll": "Pilih Semua",
+  "admin.staff.deselectAll": "Batalkan Semua",
+  "admin.staff.leaveMerchant": "Keluar dari Toko",
+  "admin.staff.leaveMerchantConfirm": "Apakah Anda yakin ingin keluar dari toko ini? Anda akan kehilangan akses ke semua fitur toko.",
+  "admin.staff.leaveMerchantSuccess": "Anda telah keluar dari toko",
+  "admin.staff.leaveMerchantError": "Gagal keluar dari toko",
+  "admin.staff.active": "Aktif",
+  "admin.staff.inactive": "Tidak Aktif",
+  "admin.staff.toggleStatus": "Ubah Status",
+  "admin.staff.accessDenied": "Akses Ditolak",
+  "admin.staff.noPermissionToAccess": "Anda tidak memiliki izin untuk mengakses fitur ini. Silakan hubungi pemilik toko.",
+
+  // Permission groups
+  "admin.permissions.group.business": "Ringkasan Bisnis",
+  "admin.permissions.group.catalog": "Manajemen Katalog",
+  "admin.permissions.group.operations": "Operasional",
+  "admin.permissions.group.management": "Manajemen",
+
+  // Permission group titles
+  "admin.permissions.orderManagement": "Manajemen Pesanan",
+  "admin.permissions.menuManagement": "Manajemen Menu",
+  "admin.permissions.reportsAnalytics": "Laporan & Analitik",
+
+  // Permission names with descriptions
+  "admin.permissions.dashboard": "Dashboard",
+  "admin.permissions.dashboardDesc": "Akses ringkasan dashboard utama",
+  "admin.permissions.orders": "Pesanan",
+  "admin.permissions.ordersDesc": "Lihat dan kelola pesanan pelanggan",
+  "admin.permissions.ordersKitchen": "Tampilan Dapur",
+  "admin.permissions.ordersKitchenDesc": "Akses tampilan pesanan dapur",
+  "admin.permissions.ordersHistory": "Riwayat Pesanan",
+  "admin.permissions.ordersHistoryDesc": "Lihat pesanan dan riwayat lalu",
+  "admin.permissions.menu": "Item Menu",
+  "admin.permissions.menuDesc": "Buat dan edit item menu",
+  "admin.permissions.menuStock": "Manajemen Stok",
+  "admin.permissions.menuStockDesc": "Kelola level stok item",
+  "admin.permissions.menuBuilder": "Pembuat Menu",
+  "admin.permissions.menuBuilderDesc": "Buat dan kustomisasi menu",
+  "admin.permissions.categories": "Kategori",
+  "admin.permissions.categoriesDesc": "Kelola kategori menu",
+  "admin.permissions.addonCategories": "Kategori Add-on",
+  "admin.permissions.addonCategoriesDesc": "Kelola kategori add-on",
+  "admin.permissions.addonItems": "Item Add-on",
+  "admin.permissions.addonItemsDesc": "Kelola add-on individual",
+  "admin.permissions.menuBooks": "Buku Menu",
+  "admin.permissions.menuBooksDesc": "Atur menu ke dalam buku",
+  "admin.permissions.specialPrices": "Harga Spesial",
+  "admin.permissions.specialPricesDesc": "Atur harga promosi",
+  "admin.permissions.reportsDesc": "Lihat laporan penjualan",
+  "admin.permissions.revenueDesc": "Akses analitik pendapatan",
+  "admin.permissions.merchantSettings": "Pengaturan Toko",
+  "admin.permissions.merchantSettingsDesc": "Edit konfigurasi toko",
+  "admin.permissions.qrTablesDesc": "Kelola kode QR dan meja",
+
+  // Permission Templates
+  "admin.permissions.templates.title": "Template Cepat",
+  "admin.permissions.templates.cashier": "Kasir",
+  "admin.permissions.templates.cashierDesc": "Akses manajemen pesanan dan riwayat",
+  "admin.permissions.templates.kitchenStaff": "Staff Dapur",
+  "admin.permissions.templates.kitchenStaffDesc": "Tampilan dapur dan manajemen stok",
+  "admin.permissions.templates.manager": "Manajer",
+  "admin.permissions.templates.managerDesc": "Akses penuh kecuali manajemen staff",
+
   // QR Tables
   "admin.qrTables.title": "Meja QR",
   "admin.qrTables.subtitle": "Buat kode QR untuk pemesanan meja",
@@ -858,7 +928,7 @@ const id = {
   "admin.qrTables.goToSettings": "Pergi ke Pengaturan Merchant",
   "admin.qrTables.downloadSuccess": "Kode QR berhasil diunduh",
   "admin.qrTables.downloadError": "Gagal mengunduh kode QR",
-  
+
   // Reports
   "admin.reports.title": "Laporan & Analitik",
   "admin.reports.subtitle": "Inteligensi bisnis dan metrik kinerja komprehensif",
@@ -869,7 +939,7 @@ const id = {
   "admin.reports.noData": "Tidak Ada Data Laporan",
   "admin.reports.noDataDesc": "Tidak ada pesanan dalam rentang tanggal yang dipilih.",
   "admin.reports.exportPDFSoon": "Ekspor PDF akan segera tersedia",
-  
+
   // Merchant settings
   "admin.merchant.title": "Pengaturan Merchant",
   "admin.merchant.pageTitle": "Detail Merchant",
@@ -920,7 +990,7 @@ const id = {
   "admin.merchant.noStaff": "Tidak ada staf",
   "admin.merchant.code": "Kode",
   "admin.merchant.closed": "Tutup",
-  
+
   // Merchant Edit Form
   "admin.merchantEdit.pageTitle": "Ubah Merchant",
   "admin.merchantEdit.storeLogo": "Logo Toko",
@@ -976,7 +1046,7 @@ const id = {
   "admin.merchantEdit.success": "Informasi merchant berhasil diperbarui!",
   "admin.merchantEdit.errorUpdate": "Gagal memperbarui merchant",
   "admin.merchantEdit.errorLoad": "Gagal memuat data merchant",
-  
+
   // Special hours
   "admin.specialHours.title": "Jam Khusus",
   "admin.specialHours.addSpecialHours": "+ Tambah Jam Khusus",
@@ -987,7 +1057,7 @@ const id = {
   "admin.specialHours.deleted": "Jam khusus dihapus",
   "admin.specialHours.failedToSave": "Gagal menyimpan jam khusus",
   "admin.specialHours.failedToDelete": "Gagal menghapus jam khusus",
-  
+
   // Special Prices
   "admin.specialPrices.title": "Harga Spesial",
   "admin.specialPrices.subtitle": "Harga promosi berbasis waktu untuk buku menu",
@@ -1015,7 +1085,7 @@ const id = {
   "admin.specialPrices.cancel": "Batal",
   "admin.specialPrices.delete": "Hapus",
   "admin.specialPrices.deleting": "Menghapus...",
-  
+
   // Menu Books
   "admin.menuBooks.title": "Buku Menu",
   "admin.menuBooks.subtitle": "Kelola item menu ke dalam koleksi",
@@ -1040,20 +1110,20 @@ const id = {
   "admin.menuBooks.cancel": "Batal",
   "admin.menuBooks.delete": "Hapus",
   "admin.menuBooks.deleting": "Menghapus...",
-  
+
   // Profile page
   "admin.profile.title": "Profil",
   "admin.profile.profilePicture": "Foto Profil",
   "admin.profile.changePicture": "Ganti Foto",
   "admin.profile.profileInfo": "Informasi Profil",
   "admin.profile.saveChanges": "Simpan Perubahan",
-  
+
   // Roles
   "admin.roles.superAdmin": "Super Admin",
   "admin.roles.merchantOwner": "Pemilik Merchant",
   "admin.roles.merchantStaff": "Staff Merchant",
   "admin.roles.customer": "Pelanggan",
-  
+
   // Super admin
   "admin.superadmin.merchants": "Manajemen Merchant",
   "admin.superadmin.allMerchants": "Semua Merchant",
@@ -1073,25 +1143,25 @@ const id = {
   "admin.superadmin.revenueByCurrency": "Pendapatan per Mata Uang",
   "admin.superadmin.orderStatusDist": "Distribusi Status Pesanan",
   "admin.superadmin.paymentMethodBreakdown": "Rincian Metode Pembayaran",
-  
+
   // Analytics
   "admin.analytics.sales": "Analitik Penjualan",
   "admin.analytics.customers": "Analitik Pelanggan",
   "admin.analytics.menuPerformance": "Performa Menu",
-  
+
   // Image upload
   "admin.upload.uploading": "Mengunggah...",
   "admin.upload.failed": "Gagal mengunggah",
   "admin.upload.invalidType": "Tipe file tidak valid. Silakan unggah file gambar.",
   "admin.upload.tooLarge": "Ukuran file harus kurang dari {size}MB.",
-  
+
   // Location
   "admin.location.notFound": "Lokasi tidak ditemukan. Coba kata kunci lain.",
   "admin.location.geolocationNotSupported": "Geolokasi tidak didukung oleh browser Anda",
-  
+
   // Form hints
   "admin.hint.ctrlEnterSave": "Tekan Ctrl+Enter untuk simpan, Esc untuk batal",
-  
+
   // Admin Login page
   "admin.login.welcomeBack": "Selamat Datang Kembali",
   "admin.login.signInPrompt": "Silakan masuk ke akun Anda",
@@ -1112,20 +1182,25 @@ const id = {
   "admin.login.error.passwordMin8": "Password harus minimal 8 karakter",
   "admin.login.error.adminOnly": "Akses ditolak. Halaman ini hanya untuk administrator.",
   "admin.login.error.networkError": "Kesalahan jaringan. Silakan coba lagi.",
-  
+  "admin.login.selectMerchant.title": "Pilih Toko",
+  "admin.login.selectMerchant.description": "Anda memiliki akses ke beberapa toko. Silakan pilih toko yang ingin dikelola.",
+  "admin.login.selectMerchant.open": "Buka",
+  "admin.login.selectMerchant.closed": "Tutup",
+  "admin.login.selectMerchant.loading": "Beralih toko...",
+
   // Error messages
   "admin.error.loadingFailed": "Gagal Memuat",
   "admin.error.saveFailed": "Gagal menyimpan",
   "admin.error.deleteFailed": "Gagal menghapus",
   "admin.error.loadFailed": "Gagal memuat data",
-  
+
   // ============================================================================
   // ADDITIONAL PAGES - Settings, Forgot Password, Stock, Bulk Upload, etc.
   // ============================================================================
-  
+
   // Settings redirect page
   "admin.settings.redirecting": "Mengalihkan ke Pengaturan Merchant...",
-  
+
   // Forgot Password page
   "admin.forgotPassword.title": "Lupa Password",
   "admin.forgotPassword.subtitle": "Masukkan email untuk reset password",
@@ -1145,7 +1220,7 @@ const id = {
   "admin.forgotPassword.error.emailRequired": "Email wajib diisi",
   "admin.forgotPassword.error.invalidEmail": "Format email tidak valid",
   "admin.forgotPassword.error.sendFailed": "Gagal mengirim email reset",
-  
+
   // Stock Overview page - Additional keys
   "admin.stock.subtitle": "Pantau dan kelola level inventaris",
   "admin.stock.totalItems": "Total Item",
@@ -1170,7 +1245,7 @@ const id = {
   "admin.stock.itemsSelected": "{count} item terpilih",
   "admin.stock.updateFailed": "Gagal mengupdate stok",
   "admin.stock.resetFailed": "Gagal reset ke template",
-  
+
   // Bulk Upload pages (Menu & Addon)
   "admin.bulkUpload.title": "Upload Massal",
   "admin.bulkUpload.menuTitle": "Upload Menu Massal",
@@ -1207,7 +1282,7 @@ const id = {
   "admin.bulkUpload.validationError.priceInvalid": "Harga harus angka positif",
   "admin.bulkUpload.validationError.categoryRequired": "Minimal satu kategori wajib dipilih",
   "admin.bulkUpload.validationError.categoryNotFound": "Kategori tidak ditemukan",
-  
+
   // Menu Builder page
   "admin.menuBuilder.title": "Menu Builder",
   "admin.menuBuilder.createNew": "Buat Menu Baru",
@@ -1216,7 +1291,7 @@ const id = {
   "admin.menuBuilder.cancelConfirm": "Batalkan perubahan? Data yang belum disimpan akan hilang.",
   "admin.menuBuilder.saveSuccess": "Menu berhasil disimpan",
   "admin.menuBuilder.saveFailed": "Gagal menyimpan menu",
-  
+
   // Landing page
   "landing.title": "Pesan Makanan Favorit Anda",
   "landing.subtitle": "Pengalaman pemesanan yang cepat, simpel, dan mudah",
@@ -1227,7 +1302,7 @@ const id = {
   "landing.feature.payAtCounter": "Bayar di kasir",
   "landing.feature.mobileOptimized": "Optimal di mobile",
   "landing.footer": "© 2025 GENFITY. Hak cipta dilindungi.",
-  
+
   // Super Admin - additional keys
   "admin.superadmin.storeOpen": "Toko Buka",
   "admin.superadmin.storeClosed": "Toko Tutup",
@@ -1252,7 +1327,7 @@ const id = {
   "admin.superadmin.topMerchantsByOrders": "Merchant Teratas berdasarkan Pesanan",
   "admin.superadmin.topMerchantsByRevenue": "Merchant Teratas berdasarkan Pendapatan",
   "admin.superadmin.orderTypeDistribution": "Distribusi Jenis Pesanan",
-  
+
   // Merchant Edit - Location Tab
   "admin.merchantEdit.address": "Alamat",
   "admin.merchantEdit.country": "Negara",

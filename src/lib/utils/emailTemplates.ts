@@ -394,3 +394,61 @@ export function getOrderCompletedTemplate(params: {
 
   return getBaseTemplate(content, 'support@genfity.com');
 }
+
+/**
+ * Permission Update Notification Template
+ * Sent to staff when their permissions are updated
+ */
+export function getPermissionUpdateTemplate(params: {
+  name: string;
+  merchantName: string;
+  permissions: string[];
+  updatedBy: string;
+  dashboardUrl: string;
+}): string {
+  const permissionsList = params.permissions.length > 0
+    ? params.permissions.map(p => `<li style="margin: 4px 0; font-size: 14px; color: #525252;">${p}</li>`).join('')
+    : '<li style="margin: 4px 0; font-size: 14px; color: #a3a3a3;">No permissions assigned</li>';
+
+  const content = `
+    <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #171717; text-align: center;">
+      Your Permissions Updated
+    </h1>
+    <p style="margin: 0 0 24px 0; font-size: 14px; color: #737373; text-align: center;">
+      Hi ${params.name}, your access permissions at ${params.merchantName} have been updated.
+    </p>
+    
+    <!-- Permissions Box -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; border: 1px solid #e5e5e5; border-radius: 8px; margin: 24px 0;">
+      <tr>
+        <td style="padding: 20px;">
+          <p style="margin: 0 0 12px 0; font-size: 12px; color: #737373; text-transform: uppercase; letter-spacing: 0.5px;">Your Current Permissions</p>
+          <ul style="margin: 0; padding: 0 0 0 16px; list-style-type: disc;">
+            ${permissionsList}
+          </ul>
+        </td>
+      </tr>
+    </table>
+    
+    <p style="margin: 0 0 24px 0; font-size: 13px; color: #737373; text-align: center;">
+      Updated by: <strong style="color: #171717;">${params.updatedBy}</strong>
+    </p>
+    
+    <!-- CTA Button -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
+      <tr>
+        <td align="center">
+          <a href="${params.dashboardUrl}" style="display: inline-block; background-color: #171717; color: #ffffff; font-size: 14px; font-weight: 500; padding: 12px 32px; border-radius: 6px; text-decoration: none;">
+            Go to Dashboard
+          </a>
+        </td>
+      </tr>
+    </table>
+    
+    <p style="margin: 0; font-size: 12px; color: #a3a3a3; text-align: center;">
+      If you have any questions about your permissions, please contact your store owner.
+    </p>
+  `;
+
+  return getBaseTemplate(content, 'support@genfity.com');
+}

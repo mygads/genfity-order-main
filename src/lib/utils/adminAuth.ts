@@ -66,9 +66,28 @@ export function getAdminAuth(options?: { skipRedirect?: boolean }): AdminAuth | 
 }
 
 /**
+ * Extended auth data with permissions
+ */
+export interface ExtendedAdminAuth extends AdminAuth {
+  permissions?: string[];
+  merchantRole?: string;
+  merchants?: Array<{
+    merchantId: string;
+    merchantCode: string;
+    merchantName: string;
+    merchantLogo: string | null;
+    address: string | null;
+    city: string | null;
+    isOpen: boolean;
+    role: string;
+    permissions: string[];
+  }>;
+}
+
+/**
  * Save admin auth data to localStorage and cookies
  */
-export function saveAdminAuth(auth: AdminAuth): void {
+export function saveAdminAuth(auth: ExtendedAdminAuth): void {
   if (typeof window === 'undefined') return;
 
   try {
@@ -83,6 +102,17 @@ export function saveAdminAuth(auth: AdminAuth): void {
     localStorage.setItem('userEmail', auth.user.email);
     if (auth.user.merchantId) {
       localStorage.setItem('merchantId', auth.user.merchantId);
+    }
+    
+    // Save permissions and merchant role
+    if (auth.permissions) {
+      localStorage.setItem('staffPermissions', JSON.stringify(auth.permissions));
+    }
+    if (auth.merchantRole) {
+      localStorage.setItem('merchantRole', auth.merchantRole);
+    }
+    if (auth.merchants) {
+      localStorage.setItem('userMerchants', JSON.stringify(auth.merchants));
     }
     
     // Save token to cookie for middleware (httpOnly would be better but can't set from client)
@@ -109,12 +139,58 @@ export function clearAdminAuth(): void {
     localStorage.removeItem('userEmail');
     localStorage.removeItem('merchantId');
     localStorage.removeItem('profilePictureUrl');
+    localStorage.removeItem('staffPermissions');
+    localStorage.removeItem('merchantRole');
+    localStorage.removeItem('userMerchants');
     
     // Clear cookie
     document.cookie = 'auth_token=; path=/; max-age=0';
   } catch (error) {
     console.error('Error clearing admin auth:', error);
   }
+}
+
+/**
+ * Get user's staff permissions
+ */
+export function getStaffPermissions(): string[] | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const perms = localStorage.getItem('staffPermissions');
+    return perms ? JSON.parse(perms) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Get user's merchants (for multi-merchant users)
+ */
+export function getUserMerchants(): ExtendedAdminAuth['merchants'] | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const merchants = localStorage.getItem('userMerchants');
+    return merchants ? JSON.parse(merchants) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Check if user has a specific permission
+ */
+export function hasStaffPermission(permission: string): boolean {
+  const user = getAdminUser();
+  if (!user) return false;
+  
+  // Owners always have all permissions
+  if (user.role === 'MERCHANT_OWNER') return true;
+  
+  const merchantRole = typeof window !== 'undefined' ? localStorage.getItem('merchantRole') : null;
+  if (merchantRole === 'OWNER') return true;
+  
+  const permissions = getStaffPermissions();
+  return permissions?.includes(permission) ?? false;
 }
 
 /**

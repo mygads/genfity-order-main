@@ -16,7 +16,18 @@ export class UserRepository {
       include: {
         merchantUsers: {
           include: {
-            merchant: true,
+            merchant: {
+              select: {
+                id: true,
+                code: true,
+                name: true,
+                logoUrl: true,
+                address: true,
+                city: true,
+                isOpen: true,
+                isActive: true,
+              },
+            },
           },
         },
       },
@@ -32,7 +43,18 @@ export class UserRepository {
       include: {
         merchantUsers: {
           include: {
-            merchant: true,
+            merchant: {
+              select: {
+                id: true,
+                code: true,
+                name: true,
+                logoUrl: true,
+                address: true,
+                city: true,
+                isOpen: true,
+                isActive: true,
+              },
+            },
           },
         },
       },
@@ -90,7 +112,18 @@ export class UserRepository {
       include: {
         merchantUsers: {
           include: {
-            merchant: true,
+            merchant: {
+              select: {
+                id: true,
+                code: true,
+                name: true,
+                logoUrl: true,
+                address: true,
+                city: true,
+                isOpen: true,
+                isActive: true,
+              },
+            },
           },
         },
       },

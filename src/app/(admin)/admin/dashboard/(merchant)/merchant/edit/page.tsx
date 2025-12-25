@@ -87,13 +87,13 @@ export default function EditMerchantPage() {
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
   const [authToken, setAuthToken] = useState<string>("");
-  
+
   // Unsaved changes tracking
   const [originalFormData, setOriginalFormData] = useState<MerchantFormData | null>(null);
   const [originalOpeningHours, setOriginalOpeningHours] = useState<OpeningHour[]>([]);
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
   const [pendingTab, setPendingTab] = useState<string | null>(null);
-  
+
   // Collapsible sections
   const [showCustomLabels, setShowCustomLabels] = useState(false);
   const [showModeSchedules, setShowModeSchedules] = useState(false);
@@ -143,7 +143,7 @@ export default function EditMerchantPage() {
 
   useEffect(() => {
     fetchMerchant();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchMerchant = async () => {
@@ -225,7 +225,7 @@ export default function EditMerchantPage() {
         setOpeningHours(initialHours);
         setOriginalOpeningHours(JSON.parse(JSON.stringify(initialHours)));
       }
-      
+
       // Save original form data for change detection
       const originalData = {
         name: merchant.name || "",
@@ -268,13 +268,13 @@ export default function EditMerchantPage() {
   // Check if there are unsaved changes
   const hasUnsavedChanges = useCallback((): boolean => {
     if (!originalFormData) return false;
-    
+
     // Check form data changes
     const formChanged = JSON.stringify(formData) !== JSON.stringify(originalFormData);
-    
+
     // Check opening hours changes
     const hoursChanged = JSON.stringify(openingHours) !== JSON.stringify(originalOpeningHours);
-    
+
     return formChanged || hoursChanged;
   }, [formData, originalFormData, openingHours, originalOpeningHours]);
 
@@ -459,6 +459,11 @@ export default function EditMerchantPage() {
       setOriginalOpeningHours(JSON.parse(JSON.stringify(openingHours)));
 
       showSuccess("Success", "Merchant information updated successfully!");
+
+      // Refresh page to update navbar/currency display throughout the app
+      setTimeout(() => {
+        window.location.reload();
+      }, 500); // Small delay to show success toast
     } catch (err) {
       showError("Error", err instanceof Error ? err.message : "Failed to update merchant");
     } finally {
@@ -1007,13 +1012,13 @@ export default function EditMerchantPage() {
   const LocationTab = () => {
     // Get available timezones for selected country
     const availableTimezones = getTimezonesForCountry(formData.country);
-    
+
     // Handle country change with auto-sync
     const handleCountryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
       const newCountry = e.target.value;
       const newCurrency = getCurrencyForCountry(newCountry);
       const newTimezone = getDefaultTimezoneForCountry(newCountry);
-      
+
       setFormData(prev => ({
         ...prev,
         country: newCountry,
@@ -1021,7 +1026,7 @@ export default function EditMerchantPage() {
         timezone: newTimezone,
       }));
     };
-    
+
     return (
       <div className="space-y-6">
         {/* Address */}
@@ -1219,9 +1224,75 @@ export default function EditMerchantPage() {
     return (
       <div>
         <PageBreadcrumb pageTitle="Edit Merchant" />
-        <div className="mt-6 py-10 text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-brand-500 border-r-transparent"></div>
-          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Loading merchant...</p>
+
+        {/* Skeleton Loader */}
+        <div className="mt-6 rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/3">
+          {/* Header Skeleton */}
+          <div className="border-b border-gray-200 p-6 dark:border-gray-800">
+            <div className="h-6 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-2"></div>
+            <div className="h-4 w-96 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+          </div>
+
+          {/* Tabs Skeleton */}
+          <div className="border-b border-gray-200 px-6 dark:border-gray-800">
+            <div className="flex gap-4 overflow-x-auto">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="h-10 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse my-2"></div>
+              ))}
+            </div>
+          </div>
+
+          {/* Form Content Skeleton */}
+          <div className="p-6 space-y-6">
+            {/* Logo Upload Skeleton */}
+            <div>
+              <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
+              <div className="h-3 w-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
+              <div className="flex items-center gap-5">
+                <div className="h-20 w-20 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+                <div className="h-9 w-32 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+              </div>
+            </div>
+
+            {/* Banner Upload Skeleton */}
+            <div>
+              <div className="h-4 w-28 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-3"></div>
+              <div className="h-32 w-full bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse mb-3"></div>
+              <div className="h-9 w-32 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+            </div>
+
+            {/* Form Fields Skeleton */}
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i}>
+                <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-2"></div>
+                <div className="h-10 w-full bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+              </div>
+            ))}
+
+            {/* Grid Fields Skeleton */}
+            <div className="grid gap-5 md:grid-cols-2">
+              {Array.from({ length: 2 }).map((_, i) => (
+                <div key={i}>
+                  <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-2"></div>
+                  <div className="h-10 w-full bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+                </div>
+              ))}
+            </div>
+
+            {/* Textarea Skeleton */}
+            <div>
+              <div className="h-4 w-28 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-2"></div>
+              <div className="h-24 w-full bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+            </div>
+          </div>
+
+          {/* Footer Skeleton */}
+          <div className="border-t border-gray-200 p-6 dark:border-gray-800">
+            <div className="flex justify-end gap-3">
+              <div className="h-10 w-24 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+              <div className="h-10 w-32 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+            </div>
+          </div>
         </div>
       </div>
     );

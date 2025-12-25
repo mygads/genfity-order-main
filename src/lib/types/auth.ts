@@ -9,6 +9,20 @@ export interface LoginRequest {
   email: string;
   password: string;
   rememberMe?: boolean; // For admin, owner, staff - extends session to 1 week
+  merchantId?: string; // Optional: specify which merchant to login to (for multi-merchant users)
+}
+
+export interface MerchantInfo {
+  merchantId: string;
+  merchantCode: string;
+  merchantName: string;
+  merchantLogo: string | null;
+  address: string | null;
+  city: string | null;
+  isOpen: boolean;
+  role: string;
+  permissions: string[];
+  isActive: boolean;
 }
 
 export interface LoginResponse {
@@ -23,6 +37,11 @@ export interface LoginResponse {
   accessToken: string;
   refreshToken?: string;
   expiresIn?: number; // Token expiry in seconds
+  // Multi-merchant support
+  merchants?: MerchantInfo[]; // All merchants user has access to
+  needsMerchantSelection?: boolean; // True if user has multiple merchants
+  permissions?: string[]; // Current merchant permissions
+  merchantRole?: string; // Role at current merchant (OWNER/STAFF)
 }
 
 export interface JWTPayload {

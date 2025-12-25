@@ -63,7 +63,7 @@ export function saveCart(cart: LocalCart): void {
   try {
     const key = getCartKey(cart.merchantCode, cart.mode);
     localStorage.setItem(key, JSON.stringify(cart));
-    
+
     // Dispatch custom event for cross-component sync
     window.dispatchEvent(new CustomEvent('cartUpdated', { detail: cart }));
   } catch (error) {
@@ -80,7 +80,7 @@ export function clearCart(merchantCode: string, mode: 'dinein' | 'takeaway' = 'd
   try {
     const key = getCartKey(merchantCode, mode);
     localStorage.removeItem(key);
-    
+
     // Dispatch event
     window.dispatchEvent(new CustomEvent('cartUpdated', { detail: null }));
   } catch (error) {
@@ -187,7 +187,14 @@ export function getCustomerAuth(): CustomerAuth | null {
     }
 
     const auth = JSON.parse(data) as CustomerAuth;
-    
+
+    // Check if customer object exists and has required data
+    if (!auth.customer || !auth.customer.id) {
+      console.log('🔐 [AUTH] Invalid auth data (missing customer), clearing auth');
+      clearCustomerAuth();
+      return null;
+    }
+
     // Convert string ID back to bigint
     auth.customer.id = BigInt(auth.customer.id);
 
@@ -228,7 +235,7 @@ export function saveCustomerAuth(auth: CustomerAuth): void {
     };
 
     localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(serializable));
-    
+
     console.log('🔐 [AUTH] Auth saved to localStorage:', {
       customerId: auth.customer.id.toString(),
       email: auth.customer.email,
@@ -251,7 +258,7 @@ export function clearCustomerAuth(): void {
   try {
     console.log('🔐 [AUTH] Clearing customer auth from localStorage');
     localStorage.removeItem(STORAGE_KEYS.AUTH);
-    
+
     // Dispatch custom event for auth change (logout)
     window.dispatchEvent(new Event('customerAuthChange'));
     console.log('🔐 [AUTH] Auth cleared and event dispatched');

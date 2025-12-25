@@ -128,9 +128,79 @@ class AuthService {
     // Get merchant info if user is merchant owner/staff
     let merchantId: bigint | undefined;
     let merchantIdString: string | undefined;
+    let merchants: Array<{
+      merchantId: string;
+      merchantCode: string;
+      merchantName: string;
+      merchantLogo: string | null;
+      address: string | null;
+      city: string | null;
+      isOpen: boolean;
+      role: string;
+      permissions: string[];
+      isActive: boolean;
+    }> = [];
+    let needsMerchantSelection = false;
+    let currentMerchantPermissions: string[] = [];
+    let currentMerchantRole: string | undefined;
+
     if (user.merchantUsers && user.merchantUsers.length > 0) {
-      merchantId = user.merchantUsers[0].merchantId;
-      merchantIdString = merchantId?.toString();
+      // Build merchants list from merchantUsers
+      const { STAFF_PERMISSIONS } = await import('@/lib/constants/permissions');
+      
+      merchants = user.merchantUsers
+        .filter((mu: { isActive: boolean; merchant: { isActive: boolean } }) => mu.isActive && mu.merchant.isActive)
+        .map((mu: { 
+          merchantId: bigint; 
+          role: string; 
+          permissions: string[];
+          isActive: boolean;
+          merchant: { 
+            code: string; 
+            name: string; 
+            logoUrl: string | null;
+            address: string | null;
+            city: string | null;
+            isOpen: boolean;
+          } 
+        }) => ({
+          merchantId: mu.merchantId.toString(),
+          merchantCode: mu.merchant.code,
+          merchantName: mu.merchant.name,
+          merchantLogo: mu.merchant.logoUrl,
+          address: mu.merchant.address,
+          city: mu.merchant.city,
+          isOpen: mu.merchant.isOpen,
+          role: mu.role,
+          permissions: mu.role === 'OWNER' ? Object.values(STAFF_PERMISSIONS) : mu.permissions,
+          isActive: mu.isActive,
+        }));
+
+      // Check if user has multiple merchants
+      needsMerchantSelection = merchants.length > 1;
+
+      // If specific merchantId requested, use that; otherwise use first merchant
+      if (credentials.merchantId) {
+        const targetMerchant = merchants.find(m => m.merchantId === credentials.merchantId);
+        if (targetMerchant) {
+          merchantId = BigInt(credentials.merchantId);
+          merchantIdString = credentials.merchantId;
+          currentMerchantPermissions = targetMerchant.permissions;
+          currentMerchantRole = targetMerchant.role;
+        } else {
+          // Fallback to first merchant if requested one not found
+          merchantId = user.merchantUsers[0].merchantId;
+          merchantIdString = merchantId?.toString();
+          currentMerchantPermissions = merchants[0]?.permissions || [];
+          currentMerchantRole = merchants[0]?.role;
+        }
+      } else {
+        // Use first merchant by default
+        merchantId = user.merchantUsers[0].merchantId;
+        merchantIdString = merchantId?.toString();
+        currentMerchantPermissions = merchants[0]?.permissions || [];
+        currentMerchantRole = merchants[0]?.role;
+      }
     }
 
     // Step 5: Generate JWT with session ID and merchantId in payload
@@ -168,6 +238,11 @@ class AuthService {
       accessToken,
       refreshToken,
       expiresIn,
+      // Multi-merchant support
+      merchants: merchants.length > 0 ? merchants : undefined,
+      needsMerchantSelection,
+      permissions: currentMerchantPermissions.length > 0 ? currentMerchantPermissions : undefined,
+      merchantRole: currentMerchantRole,
     };
   }
 

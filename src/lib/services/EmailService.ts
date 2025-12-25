@@ -10,6 +10,7 @@ import {
   getOrderConfirmationTemplate,
   getOrderCompletedTemplate,
   getCustomerWelcomeTemplate,
+  getPermissionUpdateTemplate,
 } from '@/lib/utils/emailTemplates';
 
 // Track initialization to prevent duplicate logs
@@ -261,6 +262,183 @@ class EmailService {
     return this.sendEmail({
       to: params.to,
       subject: `${params.code} - Your Password Reset Code`,
+      html,
+    });
+  }
+
+  /**
+   * Send welcome email to new staff member
+   */
+  async sendStaffWelcome(params: {
+    to: string;
+    name: string;
+    email: string;
+    password: string;
+    merchantName: string;
+    merchantCode: string;
+  }): Promise<boolean> {
+    const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL}/admin/login`;
+    const supportEmail = process.env.EMAIL_FROM || 'support@genfity.com';
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Welcome to ${params.merchantName}</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 20px;">
+          <tr>
+            <td align="center">
+              <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                
+                <!-- Header -->
+                <tr>
+                  <td style="background: linear-gradient(135deg, #f97316 0%, #fb923c 100%); padding: 40px 30px; text-align: center;">
+                    <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">
+                      Welcome to ${params.merchantName}!
+                    </h1>
+                    <p style="margin: 10px 0 0 0; color: #ffffff; font-size: 16px; opacity: 0.95;">
+                      You've been added as a staff member
+                    </p>
+                  </td>
+                </tr>
+
+                <!-- Content -->
+                <tr>
+                  <td style="padding: 40px 30px;">
+                    <p style="margin: 0 0 20px 0; color: #333333; font-size: 16px; line-height: 1.6;">
+                      Hi <strong>${params.name}</strong>,
+                    </p>
+                    
+                    <p style="margin: 0 0 20px 0; color: #333333; font-size: 16px; line-height: 1.6;">
+                      You have been added as a staff member at <strong>${params.merchantName}</strong>. 
+                      You can now access the admin dashboard to manage orders, menu items, and more.
+                    </p>
+
+                    <!-- Credentials Box -->
+                    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; border: 2px solid #e2e8f0; border-radius: 8px; margin: 30px 0;">
+                      <tr>
+                        <td style="padding: 25px;">
+                          <h3 style="margin: 0 0 15px 0; color: #1e293b; font-size: 18px;">
+                            Your Login Credentials
+                          </h3>
+                          
+                          <table width="100%" cellpadding="8" cellspacing="0">
+                            <tr>
+                              <td style="color: #64748b; font-size: 14px; padding: 8px 0;">
+                                <strong>Email:</strong>
+                              </td>
+                              <td style="color: #1e293b; font-size: 14px; font-family: 'Courier New', monospace; padding: 8px 0;">
+                                ${params.email}
+                              </td>
+                            </tr>
+                            <tr>
+                              <td style="color: #64748b; font-size: 14px; padding: 8px 0;">
+                                <strong>Password:</strong>
+                              </td>
+                              <td style="color: #1e293b; font-size: 14px; font-family: 'Courier New', monospace; padding: 8px 0;">
+                                ${params.password}
+                              </td>
+                            </tr>
+                            <tr>
+                              <td style="color: #64748b; font-size: 14px; padding: 8px 0;">
+                                <strong>Merchant:</strong>
+                              </td>
+                              <td style="color: #1e293b; font-size: 14px; padding: 8px 0;">
+                                ${params.merchantName} (${params.merchantCode})
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <!-- Login Button -->
+                    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0;">
+                      <tr>
+                        <td align="center">
+                          <a href="${loginUrl}" style="display: inline-block; background-color: #f97316; color: #ffffff; text-decoration: none; padding: 14px 40px; border-radius: 8px; font-size: 16px; font-weight: bold; box-shadow: 0 2px 4px rgba(249, 115, 22, 0.3);">
+                            Login to Dashboard
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <!-- Security Notice -->
+                    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px; margin: 30px 0;">
+                      <tr>
+                        <td style="padding: 15px 20px;">
+                          <p style="margin: 0; color: #92400e; font-size: 14px; line-height: 1.5;">
+                            <strong>⚠️ Security Reminder:</strong><br>
+                            Please keep your password secure and do not share it with anyone. 
+                            We recommend changing your password after your first login.
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <p style="margin: 20px 0 0 0; color: #666666; font-size: 14px; line-height: 1.6;">
+                      If you have any questions or need assistance, please contact support at 
+                      <a href="mailto:${supportEmail}" style="color: #f97316; text-decoration: none;">${supportEmail}</a>
+                    </p>
+                  </td>
+                </tr>
+
+                <!-- Footer -->
+                <tr>
+                  <td style="background-color: #f8fafc; padding: 30px; text-align: center; border-top: 1px solid #e2e8f0;">
+                    <p style="margin: 0 0 10px 0; color: #64748b; font-size: 14px;">
+                      <strong>GENFITY</strong> - Online Ordering System
+                    </p>
+                    <p style="margin: 0; color: #94a3b8; font-size: 12px;">
+                      This is an automated email. Please do not reply to this message.
+                    </p>
+                  </td>
+                </tr>
+
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `;
+
+    return this.sendEmail({
+      to: params.to,
+      subject: `Welcome to ${params.merchantName} - Your Staff Account`,
+      html,
+    });
+  }
+
+  /**
+   * Send permission update notification to staff
+   */
+  async sendPermissionUpdateNotification(params: {
+    to: string;
+    name: string;
+    merchantName: string;
+    permissions: string[];
+    updatedBy: string;
+  }): Promise<boolean> {
+    const dashboardUrl = process.env.NEXT_PUBLIC_APP_URL
+      ? `${process.env.NEXT_PUBLIC_APP_URL}/admin/dashboard`
+      : 'https://genfity.com/admin/dashboard';
+
+    const html = getPermissionUpdateTemplate({
+      name: params.name,
+      merchantName: params.merchantName,
+      permissions: params.permissions,
+      updatedBy: params.updatedBy,
+      dashboardUrl,
+    });
+
+    return this.sendEmail({
+      to: params.to,
+      subject: `[${params.merchantName}] Your Permissions Have Been Updated`,
       html,
     });
   }

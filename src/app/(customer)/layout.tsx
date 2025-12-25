@@ -1,6 +1,8 @@
 'use client';
 
 import { CustomerLanguageProvider } from '@/context/LanguageContext';
+import { CartProvider } from '@/context/CartContext';
+import { ToastProvider } from '@/context/ToastContext';
 
 /**
  * Customer Layout Wrapper
@@ -25,12 +27,16 @@ interface CustomerLayoutProps {
 export default function CustomerLayout({ children }: CustomerLayoutProps) {
     return (
         <CustomerLanguageProvider>
-            <div className="min-h-screen bg-white">
-                {/* Centered container - mobile-first layout like Burjo reference */}
-                <div className="customer-page-container flex flex-col min-h-screen max-w-[500px] mx-auto bg-white scrollbar-hide">
-                    {children}
-                </div>
-            </div>
+            <CartProvider>
+                <ToastProvider>
+                    <div className="min-h-screen bg-white">
+                        {/* Centered container - mobile-first layout like Burjo reference */}
+                        <div className="customer-page-container flex flex-col min-h-screen max-w-[500px] mx-auto bg-white scrollbar-hide">
+                            {children}
+                        </div>
+                    </div>
+                </ToastProvider>
+            </CartProvider>
         </CustomerLanguageProvider>
     );
 }

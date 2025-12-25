@@ -186,6 +186,69 @@ export function withCustomer(
 }
 
 /**
+ * Middleware for Merchant routes with permission check
+ * Validates that staff has the required permission
+ */
+export function withMerchantPermission(
+  handler: (
+    request: NextRequest,
+    context: AuthContext,
+    routeContext: { params: Promise<Record<string, string>> }
+  ) => Promise<NextResponse>,
+  requiredPermission?: string
+) {
+  return async (request: NextRequest, routeContext: { params: Promise<Record<string, string>> }) => {
+    try {
+      // Authenticate user
+      const authContext = await authenticate(request);
+
+      // Check role
+      if (!['MERCHANT_OWNER', 'MERCHANT_STAFF'].includes(authContext.role)) {
+        throw new AuthorizationError(
+          'Merchant access required',
+          ERROR_CODES.FORBIDDEN
+        );
+      }
+
+      // If owner, always allow
+      if (authContext.role === 'MERCHANT_OWNER') {
+        return await handler(request, authContext, routeContext);
+      }
+
+      // For staff, check permission if specified
+      if (requiredPermission && authContext.merchantId) {
+        // Dynamically import to avoid circular dependency
+        const { default: staffPermissionService } = await import('@/lib/services/StaffPermissionService');
+        const { getPermissionForApi } = await import('@/lib/constants/permissions');
+        
+        // Get permission from API path if not explicitly specified
+        const permission = requiredPermission || getPermissionForApi(request.nextUrl.pathname);
+        
+        if (permission) {
+          const hasAccess = await staffPermissionService.checkPermission(
+            authContext.userId,
+            authContext.merchantId,
+            permission as import('@/lib/constants/permissions').StaffPermission
+          );
+          
+          if (!hasAccess) {
+            throw new AuthorizationError(
+              'You do not have permission to access this resource',
+              ERROR_CODES.FORBIDDEN
+            );
+          }
+        }
+      }
+
+      // Call the actual handler
+      return await handler(request, authContext, routeContext);
+    } catch (error) {
+      return handleError(error);
+    }
+  };
+}
+
+/**
  * Optional authentication - doesn't fail if no token
  * Returns null if not authenticated
  */

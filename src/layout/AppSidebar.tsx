@@ -7,6 +7,7 @@ import { useSidebar } from "../context/SidebarContext";
 import { useAuth } from "../hooks/useAuth";
 import { useTranslation } from "../lib/i18n/useTranslation";
 import type { TranslationKeys } from "../lib/i18n/translations/en";
+import { STAFF_PERMISSIONS, type StaffPermission } from "../lib/constants/permissions";
 import {
   GridIcon,
   HorizontaLDots,
@@ -26,6 +27,7 @@ type NavItem = {
   icon: React.ReactNode;
   path: string;
   roles?: string[];
+  permission?: StaffPermission; // Permission required for this item
 };
 
 type NavGroup = {
@@ -76,7 +78,7 @@ const superAdminNavGroups: NavGroup[] = [
   },
 ];
 
-// Merchant Menu Groups
+// Merchant Menu Groups - with permissions
 const merchantNavGroups: NavGroup[] = [
   {
     titleKey: "admin.nav.main",
@@ -86,6 +88,7 @@ const merchantNavGroups: NavGroup[] = [
         nameKey: "admin.nav.dashboard",
         path: "/admin/dashboard",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+        // Dashboard has no specific permission - always visible
       },
     ],
   },
@@ -97,18 +100,21 @@ const merchantNavGroups: NavGroup[] = [
         nameKey: "admin.nav.ordersKanban",
         path: "/admin/dashboard/orders",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+        permission: STAFF_PERMISSIONS.ORDERS,
       },
       {
         icon: <FaUtensils />,
         nameKey: "admin.nav.kitchenDisplay",
         path: "/admin/dashboard/orders/kitchen",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+        permission: STAFF_PERMISSIONS.ORDERS_KITCHEN,
       },
       {
         icon: <FaHistory />,
         nameKey: "admin.nav.orderHistory",
         path: "/admin/dashboard/orders/history",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+        permission: STAFF_PERMISSIONS.ORDERS_HISTORY,
       },
     ],
   },
@@ -120,48 +126,56 @@ const merchantNavGroups: NavGroup[] = [
         nameKey: "admin.nav.stockManagement",
         path: "/admin/dashboard/menu/stock-overview",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+        permission: STAFF_PERMISSIONS.MENU_STOCK,
       },
       {
         icon: <FileIcon />,
         nameKey: "admin.nav.menuBuilder",
         path: "/admin/dashboard/menu/builder/new",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+        permission: STAFF_PERMISSIONS.MENU_BUILDER,
       },
       {
         icon: <TableIcon />,
         nameKey: "admin.nav.menuItems",
         path: "/admin/dashboard/menu",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+        permission: STAFF_PERMISSIONS.MENU,
       },
       {
         icon: <FolderIcon />,
         nameKey: "admin.nav.categories",
         path: "/admin/dashboard/categories",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+        permission: STAFF_PERMISSIONS.CATEGORIES,
       },
       {
         icon: <FolderIcon />,
         nameKey: "admin.nav.addonCategories",
         path: "/admin/dashboard/addon-categories",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+        permission: STAFF_PERMISSIONS.ADDON_CATEGORIES,
       },
       {
         icon: <TableIcon />,
         nameKey: "admin.nav.addonItems",
         path: "/admin/dashboard/addon-items",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+        permission: STAFF_PERMISSIONS.ADDON_ITEMS,
       },
       {
         icon: <FolderIcon />,
         nameKey: "admin.nav.menuBooks",
         path: "/admin/dashboard/menu-books",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+        permission: STAFF_PERMISSIONS.MENU_BOOKS,
       },
       {
         icon: <ListIcon />,
         nameKey: "admin.nav.specialPrices",
         path: "/admin/dashboard/special-prices",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+        permission: STAFF_PERMISSIONS.SPECIAL_PRICES,
       },
     ],
   },
@@ -173,13 +187,15 @@ const merchantNavGroups: NavGroup[] = [
         icon: <PieChartIcon />,
         nameKey: "admin.nav.reports",
         path: "/admin/dashboard/reports",
-        roles: ["MERCHANT_OWNER"],
+        roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+        permission: STAFF_PERMISSIONS.REPORTS,
       },
       {
         icon: <PieChartIcon />,
         nameKey: "admin.nav.revenue",
         path: "/admin/dashboard/revenue",
-        roles: ["MERCHANT_OWNER"],
+        roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+        permission: STAFF_PERMISSIONS.REVENUE,
       },
     ],
   },
@@ -190,13 +206,15 @@ const merchantNavGroups: NavGroup[] = [
         icon: <BoxIconLine />,
         nameKey: "admin.nav.merchantSettings",
         path: "/admin/dashboard/merchant/edit",
-        roles: ["MERCHANT_OWNER"],
+        roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+        permission: STAFF_PERMISSIONS.MERCHANT_SETTINGS,
       },
       {
         icon: <TableIcon />,
         nameKey: "admin.nav.tableQRCodes",
         path: "/admin/dashboard/qr-tables",
-        roles: ["MERCHANT_OWNER"],
+        roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+        permission: STAFF_PERMISSIONS.QR_TABLES,
       },
     ],
   },
@@ -207,7 +225,7 @@ const merchantNavGroups: NavGroup[] = [
         icon: <UserCircleIcon />,
         nameKey: "admin.nav.staff",
         path: "/admin/dashboard/staff",
-        roles: ["MERCHANT_OWNER"],
+        roles: ["MERCHANT_OWNER"], // Staff management is OWNER-ONLY
       },
     ],
   },
@@ -216,7 +234,7 @@ const merchantNavGroups: NavGroup[] = [
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user, hasPermission, isOwner } = useAuth();
   const { t } = useTranslation();
   const [hasMerchant, setHasMerchant] = React.useState<boolean | null>(null);
   const [showScrollIndicator, setShowScrollIndicator] = useState(false);
@@ -280,11 +298,20 @@ const AppSidebar: React.FC = () => {
       // If no merchant, return empty groups
       if (hasMerchant === false) return [];
 
-      // Filter groups and items based on user role
+      // Filter groups and items based on user role AND permissions
       return merchantNavGroups
         .map(group => ({
           ...group,
-          items: group.items.filter(item => item.roles?.includes(user.role))
+          items: group.items.filter(item => {
+            // First check role
+            if (!item.roles?.includes(user.role)) return false;
+            
+            // If no permission required, allow
+            if (!item.permission) return true;
+            
+            // Check permission (owners always pass)
+            return isOwner || hasPermission(item.permission);
+          })
         }))
         .filter(group => group.items.length > 0); // Remove empty groups
     }
