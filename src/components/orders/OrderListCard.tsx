@@ -50,6 +50,7 @@ export const OrderListCard: React.FC<OrderListCardProps> = ({
     if (numAmount === 0) {
       return 'Free';
     }
+    // Default to AUD format
     return `A$${numAmount.toFixed(2)}`;
   };
 

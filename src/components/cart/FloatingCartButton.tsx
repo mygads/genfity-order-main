@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { useCart } from '@/context/CartContext';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 interface FloatingCartButtonProps {
   merchantCode: string;
@@ -23,6 +24,7 @@ interface FloatingCartButtonProps {
 export default function FloatingCartButton({ merchantCode, mode }: FloatingCartButtonProps) {
   const router = useRouter();
   const { cart, getItemCount, getTotal } = useCart();
+  const { t } = useTranslation();
   const [pulse, setPulse] = useState(false);
   const [prevItemCount, setPrevItemCount] = useState(0);
 
@@ -103,7 +105,7 @@ export default function FloatingCartButton({ merchantCode, mode }: FloatingCartB
         {/* CENTER: Total - White Background */}
         <div className="flex flex-col items-start justify-center px-3 py-2.5 flex-1 bg-white">
           <span className="text-[10px] text-gray-500 font-medium">
-            Total
+            {t('customer.cart.total')}
           </span>
           <span className="text-base font-bold text-gray-900">
             {formatPrice(totalPrice)}
@@ -113,7 +115,7 @@ export default function FloatingCartButton({ merchantCode, mode }: FloatingCartB
         {/* RIGHT: CHECK OUT - Orange Box */}
         <div className="flex items-center justify-center px-4 py-2.5 bg-orange-500 hover:bg-orange-600 transition-colors">
           <span className="text-sm font-bold text-white whitespace-nowrap">
-            CHECK OUT ({totalItems})
+            {t('customer.cart.checkout')} ({totalItems})
           </span>
         </div>
       </button>

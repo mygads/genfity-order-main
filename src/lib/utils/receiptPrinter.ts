@@ -3,6 +3,10 @@
  * 
  * Generate and print payment receipts
  * Supports both browser print and thermal printer format
+ * 
+ * Multi-language support:
+ * - IDR currency → Indonesian labels
+ * - AUD currency → English labels
  */
 
 import type { OrderWithDetails } from '@/lib/types/order';
@@ -23,10 +27,147 @@ export interface ReceiptData {
   };
 }
 
+// ============================================================================
+// RECEIPT LABELS - Multi-Language
+// ============================================================================
+
+interface ReceiptLabels {
+  orderNumber: string;
+  orderType: string;
+  table: string;
+  date: string;
+  subtotal: string;
+  tax: string;
+  serviceCharge: string;
+  packagingFee: string;
+  total: string;
+  paymentMethod: string;
+  amountPaid: string;
+  change: string;
+  paidAt: string;
+  servedBy: string;
+  thankYou: string;
+  comeAgain: string;
+  phone: string;
+  // Order types
+  orderTypeDineIn: string;
+  orderTypeTakeaway: string;
+  // Payment methods
+  paymentCash: string;
+  paymentCard: string;
+  paymentQris: string;
+  paymentTransfer: string;
+}
+
+const labelsEN: ReceiptLabels = {
+  orderNumber: 'Order #',
+  orderType: 'Order Type',
+  table: 'Table',
+  date: 'Date',
+  subtotal: 'Subtotal',
+  tax: 'Tax',
+  serviceCharge: 'Service Charge',
+  packagingFee: 'Packaging Fee',
+  total: 'TOTAL',
+  paymentMethod: 'Payment Method',
+  amountPaid: 'Amount Paid',
+  change: 'Change',
+  paidAt: 'Paid At',
+  servedBy: 'Served By',
+  thankYou: 'Thank you for your order!',
+  comeAgain: 'Please come again',
+  phone: 'Phone',
+  orderTypeDineIn: 'Dine In',
+  orderTypeTakeaway: 'Takeaway',
+  paymentCash: 'Cash',
+  paymentCard: 'Card',
+  paymentQris: 'QRIS',
+  paymentTransfer: 'Transfer',
+};
+
+const labelsID: ReceiptLabels = {
+  orderNumber: 'Pesanan #',
+  orderType: 'Tipe Pesanan',
+  table: 'Meja',
+  date: 'Tanggal',
+  subtotal: 'Subtotal',
+  tax: 'Pajak',
+  serviceCharge: 'Biaya Layanan',
+  packagingFee: 'Biaya Kemasan',
+  total: 'TOTAL',
+  paymentMethod: 'Metode Pembayaran',
+  amountPaid: 'Jumlah Dibayar',
+  change: 'Kembalian',
+  paidAt: 'Dibayar Pada',
+  servedBy: 'Dilayani Oleh',
+  thankYou: 'Terima kasih atas pesanan Anda!',
+  comeAgain: 'Silakan datang kembali',
+  phone: 'Telepon',
+  orderTypeDineIn: 'Makan di Tempat',
+  orderTypeTakeaway: 'Bawa Pulang',
+  paymentCash: 'Tunai',
+  paymentCard: 'Kartu',
+  paymentQris: 'QRIS',
+  paymentTransfer: 'Transfer',
+};
+
+/**
+ * Get receipt labels based on currency
+ * IDR → Indonesian, AUD → English
+ */
+function getLabels(currency: string): ReceiptLabels {
+  return currency === 'IDR' ? labelsID : labelsEN;
+}
+
+/**
+ * Format order type with locale
+ */
+function formatOrderType(orderType: string, labels: ReceiptLabels): string {
+  const typeMap: Record<string, string> = {
+    'DINE_IN': labels.orderTypeDineIn,
+    'TAKEAWAY': labels.orderTypeTakeaway,
+  };
+  return typeMap[orderType] || orderType;
+}
+
+/**
+ * Format payment method with locale
+ */
+function formatPaymentMethod(method: string, labels: ReceiptLabels): string {
+  const methodMap: Record<string, string> = {
+    'CASH': labels.paymentCash,
+    'CARD': labels.paymentCard,
+    'QRIS': labels.paymentQris,
+    'BANK_TRANSFER': labels.paymentTransfer,
+  };
+  return methodMap[method] || method.replace('_', ' ');
+}
+
+// ============================================================================
+// CURRENCY FORMATTING
+// ============================================================================
+
 /**
  * Format currency for display
+ * - IDR: Rp 10.000 (no decimals)
+ * - AUD: A$10.00 (2 decimals)
  */
 function formatCurrency(amount: number, currency: string): string {
+  // Special handling for AUD to show A$ prefix
+  if (currency === 'AUD') {
+    return `A$${amount.toFixed(2)}`;
+  }
+  
+  // Special handling for IDR - no decimals
+  if (currency === 'IDR') {
+    const formatted = new Intl.NumberFormat('id-ID', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(Math.round(amount));
+    return `Rp ${formatted}`;
+  }
+
+  // Fallback for other currencies
   return new Intl.NumberFormat('en-AU', {
     style: 'currency',
     currency: currency,
@@ -34,27 +175,37 @@ function formatCurrency(amount: number, currency: string): string {
 }
 
 /**
- * Format date for display
+ * Format date for display based on currency/locale
+ * IDR → Indonesian format, AUD → Australian format
  */
-function formatDateTime(date: Date): string {
-  return new Intl.DateTimeFormat('en-AU', {
+function formatDateTime(date: Date, currency: string): string {
+  const locale = currency === 'IDR' ? 'id-ID' : 'en-AU';
+  return new Intl.DateTimeFormat(locale, {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(date));
 }
 
+// ============================================================================
+// RECEIPT HTML GENERATION
+// ============================================================================
+
 /**
- * Generate HTML receipt content
+ * Generate HTML receipt content with multi-language support
+ * Language is determined by merchant currency:
+ * - IDR → Indonesian
+ * - AUD → English
  */
 export function generateReceiptHTML(data: ReceiptData): string {
   const { order, payment, merchant } = data;
+  const labels = getLabels(merchant.currency);
 
   return `
 <!DOCTYPE html>
-<html>
+<html lang="${merchant.currency === 'IDR' ? 'id' : 'en'}">
 <head>
   <meta charset="UTF-8">
-  <title>Payment Receipt - ${order.orderNumber}</title>
+  <title>${labels.orderNumber}${order.orderNumber}</title>
   <style>
     * {
       margin: 0;
@@ -155,29 +306,29 @@ export function generateReceiptHTML(data: ReceiptData): string {
   <div class="header">
     <h1>${merchant.name}</h1>
     ${merchant.address ? `<p>${merchant.address}</p>` : ''}
-    ${merchant.phone ? `<p>Phone: ${merchant.phone}</p>` : ''}
+    ${merchant.phone ? `<p>${labels.phone}: ${merchant.phone}</p>` : ''}
   </div>
 
   <!-- Order Info -->
   <div class="section">
     <div class="row">
-      <span class="label">Order #:</span>
+      <span class="label">${labels.orderNumber}:</span>
       <span>${order.orderNumber}</span>
     </div>
     <div class="row">
-      <span class="label">Order Type:</span>
-      <span>${order.orderType}</span>
+      <span class="label">${labels.orderType}:</span>
+      <span>${formatOrderType(order.orderType, labels)}</span>
     </div>
     ${order.tableNumber
       ? `<div class="row">
-      <span class="label">Table:</span>
+      <span class="label">${labels.table}:</span>
       <span>${order.tableNumber}</span>
     </div>`
       : ''
     }
     <div class="row">
-      <span class="label">Date:</span>
-      <span>${formatDateTime(order.placedAt)}</span>
+      <span class="label">${labels.date}:</span>
+      <span>${formatDateTime(order.placedAt, merchant.currency)}</span>
     </div>
   </div>
 
@@ -216,23 +367,23 @@ export function generateReceiptHTML(data: ReceiptData): string {
   <!-- Totals -->
   <div class="section">
     <div class="row">
-      <span>Subtotal:</span>
+      <span>${labels.subtotal}:</span>
       <span>${formatCurrency(Number(order.subtotal), merchant.currency)}</span>
     </div>
     ${Number((order as unknown as { taxAmount?: number }).taxAmount) > 0 ? `<div class="row">
-      <span>Tax:</span>
+      <span>${labels.tax}:</span>
       <span>${formatCurrency(Number((order as unknown as { taxAmount?: number }).taxAmount), merchant.currency)}</span>
     </div>` : ''}
     ${Number((order as unknown as { serviceChargeAmount?: number }).serviceChargeAmount) > 0 ? `<div class="row">
-      <span>Service Charge:</span>
+      <span>${labels.serviceCharge}:</span>
       <span>${formatCurrency(Number((order as unknown as { serviceChargeAmount?: number }).serviceChargeAmount), merchant.currency)}</span>
     </div>` : ''}
     ${Number((order as unknown as { packagingFeeAmount?: number }).packagingFeeAmount) > 0 ? `<div class="row">
-      <span>Packaging Fee:</span>
+      <span>${labels.packagingFee}:</span>
       <span>${formatCurrency(Number((order as unknown as { packagingFeeAmount?: number }).packagingFeeAmount), merchant.currency)}</span>
     </div>` : ''}
     <div class="row total">
-      <span>TOTAL:</span>
+      <span>${labels.total}:</span>
       <span>${formatCurrency(Number(order.totalAmount), merchant.currency)}</span>
     </div>
   </div>
@@ -240,27 +391,27 @@ export function generateReceiptHTML(data: ReceiptData): string {
   <!-- Payment Info -->
   <div class="section">
     <div class="row">
-      <span class="label">Payment Method:</span>
-      <span>${payment.method.replace('_', ' ')}</span>
+      <span class="label">${labels.paymentMethod}:</span>
+      <span>${formatPaymentMethod(payment.method, labels)}</span>
     </div>
     <div class="row">
-      <span class="label">Amount Paid:</span>
+      <span class="label">${labels.amountPaid}:</span>
       <span>${formatCurrency(payment.amount, merchant.currency)}</span>
     </div>
     ${payment.amount > Number(order.totalAmount)
       ? `<div class="row">
-      <span class="label">Change:</span>
+      <span class="label">${labels.change}:</span>
       <span>${formatCurrency(payment.amount - Number(order.totalAmount), merchant.currency)}</span>
     </div>`
       : ''
     }
     <div class="row">
-      <span class="label">Paid At:</span>
-      <span>${formatDateTime(payment.paidAt)}</span>
+      <span class="label">${labels.paidAt}:</span>
+      <span>${formatDateTime(payment.paidAt, merchant.currency)}</span>
     </div>
     ${payment.paidByName
       ? `<div class="row">
-      <span class="label">Served By:</span>
+      <span class="label">${labels.servedBy}:</span>
       <span>${payment.paidByName}</span>
     </div>`
       : ''
@@ -269,13 +420,17 @@ export function generateReceiptHTML(data: ReceiptData): string {
 
   <!-- Footer -->
   <div class="footer">
-    <p>Thank you for your order!</p>
-    <p>Please come again</p>
+    <p>${labels.thankYou}</p>
+    <p>${labels.comeAgain}</p>
   </div>
 </body>
 </html>
   `;
 }
+
+// ============================================================================
+// PRINT FUNCTIONS
+// ============================================================================
 
 /**
  * Print receipt in browser
@@ -307,6 +462,8 @@ export function printReceipt(data: ReceiptData): void {
  * For future integration with thermal printers like Epson TM-T88, Star Micronics
  */
 export function generateThermalPrinterData(data: ReceiptData): Uint8Array {
+  const labels = getLabels(data.merchant.currency);
+  
   // ESC/POS commands
   const ESC = 0x1b;
   const GS = 0x1d;
@@ -329,7 +486,7 @@ export function generateThermalPrinterData(data: ReceiptData): Uint8Array {
     commands.push(...stringToBytes(`${data.merchant.address}\n`));
   }
   if (data.merchant.phone) {
-    commands.push(...stringToBytes(`Phone: ${data.merchant.phone}\n`));
+    commands.push(...stringToBytes(`${labels.phone}: ${data.merchant.phone}\n`));
   }
 
   // Line separator
@@ -339,8 +496,8 @@ export function generateThermalPrinterData(data: ReceiptData): Uint8Array {
   commands.push(ESC, 0x61, 0x00);
 
   // Order details
-  commands.push(...stringToBytes(`Order #: ${data.order.orderNumber}\n`));
-  commands.push(...stringToBytes(`Date: ${formatDateTime(data.order.placedAt)}\n`));
+  commands.push(...stringToBytes(`${labels.orderNumber}: ${data.order.orderNumber}\n`));
+  commands.push(...stringToBytes(`${labels.date}: ${formatDateTime(data.order.placedAt, data.merchant.currency)}\n`));
 
   // Items (implement remaining ESC/POS commands as needed)
   // ... (truncated for brevity, full implementation would include all items, totals, etc.)

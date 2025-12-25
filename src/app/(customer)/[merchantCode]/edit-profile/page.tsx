@@ -4,6 +4,7 @@ import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams, useParams } from 'next/navigation';
 import { getCustomerAuth, saveCustomerAuth } from '@/lib/utils/localStorage';
 import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 /**
  * Edit Profile Page - Burjo ESB Style
@@ -19,6 +20,7 @@ function EditProfileContent() {
     const router = useRouter();
     const params = useParams();
     const searchParams = useSearchParams();
+    const { t } = useTranslation();
 
     const [auth, setAuth] = useState(getCustomerAuth());
     const [name, setName] = useState('');
@@ -57,7 +59,7 @@ function EditProfileContent() {
 
         // Validation
         if (!name.trim()) {
-            setError('Name is required');
+            setError(t('auth.error.nameRequired'));
             return;
         }
 
@@ -98,11 +100,11 @@ function EditProfileContent() {
                     handleBack();
                 }, 1000);
             } else {
-                setError(data.message || 'Failed to update profile');
+                setError(data.message || t('customer.profile.updateFailed'));
             }
         } catch (err) {
             console.error('Error updating profile:', err);
-            setError('Failed to update profile. Please try again.');
+            setError(t('customer.profile.updateFailed'));
         } finally {
             setIsSaving(false);
         }
@@ -127,7 +129,7 @@ function EditProfileContent() {
                         </svg>
                     </button>
                     <h1 className="flex-1 text-center font-semibold text-gray-900 dark:text-white text-base pr-10">
-                        Edit Profile
+                        {t('customer.profile.editProfile')}
                     </h1>
                 </div>
             </header>
@@ -144,14 +146,14 @@ function EditProfileContent() {
                 {/* Success Message */}
                 {success && (
                     <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                        <p className="text-sm text-green-600 dark:text-green-400">Profile updated successfully!</p>
+                        <p className="text-sm text-green-600 dark:text-green-400">{t('customer.profile.profileUpdated')}</p>
                     </div>
                 )}
 
                 {/* Name Field */}
                 <div className="mb-6">
                     <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">
-                        Name
+                        {t('auth.name')}
                     </label>
                     <input
                         type="text"
@@ -165,7 +167,7 @@ function EditProfileContent() {
                 {/* Phone Field (Read-only) */}
                 <div className="mb-6">
                     <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">
-                        WhatsApp Number
+                        {t('auth.phoneNumber')}
                     </label>
                     <input
                         type="text"
@@ -179,7 +181,7 @@ function EditProfileContent() {
                 {/* Email Field */}
                 <div className="mb-6">
                     <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">
-                        Email
+                        {t('auth.email')}
                     </label>
                     <input
                         type="email"
@@ -201,10 +203,10 @@ function EditProfileContent() {
                     {isSaving ? (
                         <>
                             <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                            Saving...
+                            {t('common.saving')}
                         </>
                     ) : (
-                        'Save'
+                        t('common.save')
                     )}
                 </button>
             </div>

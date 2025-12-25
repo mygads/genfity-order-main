@@ -47,6 +47,20 @@ export const PaymentVerificationModal: React.FC<PaymentVerificationModalProps> =
   if (!isOpen) return null;
 
   const formatCurrency = (amount: number) => {
+    // Special handling for AUD to show A$ prefix
+    if (merchantInfo.currency === 'AUD') {
+      return `A$${amount.toFixed(2)}`;
+    }
+    
+    // Special handling for IDR - no decimals
+    if (merchantInfo.currency === 'IDR') {
+      const formatted = new Intl.NumberFormat('id-ID', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(Math.round(amount));
+      return `Rp ${formatted}`;
+    }
+    
     return new Intl.NumberFormat('en-AU', {
       style: 'currency',
       currency: merchantInfo.currency,

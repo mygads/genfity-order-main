@@ -55,7 +55,22 @@ export const OrderCard: React.FC<OrderCardProps> = ({
     if (numAmount === 0) {
       return 'Free';
     }
-    return `A$${numAmount.toFixed(2)}`;
+    
+    // Special handling for AUD to show A$ prefix
+    if (_currency === 'AUD') {
+      return `A$${numAmount.toFixed(2)}`;
+    }
+    
+    // Special handling for IDR - no decimals
+    if (_currency === 'IDR') {
+      const formatted = new Intl.NumberFormat('id-ID', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(Math.round(numAmount));
+      return `Rp ${formatted}`;
+    }
+    
+    return `${_currency} ${numAmount.toFixed(2)}`;
   };
 
   const timeAgo = formatDistanceToNow(new Date(order.placedAt), { addSuffix: true });

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { ChevronLeftIcon } from '@/icons';
 import Label from '@/components/form/Label';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 /**
  * Forgot Password Page
@@ -23,6 +24,7 @@ import Label from '@/components/form/Label';
  * API Endpoint: POST /api/auth/forgot-password
  */
 export default function ForgotPasswordPage() {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -36,11 +38,11 @@ export default function ForgotPasswordPage() {
     try {
       // Input validation
       if (!email) {
-        throw new Error('Email is required');
+        throw new Error(t('admin.forgotPassword.error.emailRequired'));
       }
 
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        throw new Error('Invalid email format');
+        throw new Error(t('admin.forgotPassword.error.invalidEmail'));
       }
 
       // Call forgot password API
@@ -57,7 +59,7 @@ export default function ForgotPasswordPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to send reset email');
+        throw new Error(data.message || t('admin.forgotPassword.error.sendFailed'));
       }
 
       // Show success message
@@ -80,7 +82,7 @@ export default function ForgotPasswordPage() {
             className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
           >
             <ChevronLeftIcon />
-            Back to login
+            {t('admin.forgotPassword.backToLogin')}
           </Link>
         </div>
 
@@ -90,10 +92,10 @@ export default function ForgotPasswordPage() {
               {/* Header */}
               <div className="mb-5 sm:mb-8">
                 <h1 className="mb-2 font-semibold text-gray-800 text-title-sm dark:text-white/90 sm:text-title-md">
-                  Forgot Password
+                  {t('admin.forgotPassword.title')}
                 </h1>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Enter your email address and we will send you a link to reset your password
+                  {t('admin.forgotPassword.subtitle')}
                 </p>
               </div>
 
@@ -143,7 +145,7 @@ export default function ForgotPasswordPage() {
                       disabled={isLoading}
                       className="w-full inline-flex items-center justify-center font-medium gap-2 rounded-lg transition px-4 py-3 text-sm bg-brand-500 text-white shadow-theme-xs hover:bg-brand-600 disabled:bg-brand-300 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      {isLoading ? 'Sending...' : 'Send reset link'}
+                      {isLoading ? t('admin.forgotPassword.sending') : t('admin.forgotPassword.sendResetLink')}
                     </button>
                   </div>
                 </div>
@@ -157,14 +159,10 @@ export default function ForgotPasswordPage() {
                   <span className="text-green-500 font-bold text-xl">✓</span>
                   <div>
                     <p className="text-sm font-semibold text-green-600 dark:text-green-400">
-                      Email Sent
+                      {t('admin.forgotPassword.successTitle')}
                     </p>
                     <p className="text-sm text-green-600 dark:text-green-400 mt-1">
-                      We have sent a password reset link to <strong>{email}</strong>
-                    </p>
-                    <p className="text-sm text-green-600 dark:text-green-400 mt-2">
-                      Please check your email and click the link to reset your password. 
-                      The link will expire in 1 hour.
+                      {t('admin.forgotPassword.successMessage')}
                     </p>
                   </div>
                 </div>
@@ -175,7 +173,7 @@ export default function ForgotPasswordPage() {
                   href="/admin/login"
                   className="inline-flex items-center justify-center font-medium gap-2 rounded-lg transition px-4 py-3 text-sm bg-brand-500 text-white shadow-theme-xs hover:bg-brand-600"
                 >
-                  Back to login
+                  {t('admin.forgotPassword.returnToLogin')}
                 </Link>
               </div>
             </div>
@@ -188,10 +186,10 @@ export default function ForgotPasswordPage() {
         <div className="max-w-md text-white">
           <div className="mb-8">
             <h2 className="text-3xl font-bold mb-4">
-              Need Help?
+              {t('admin.forgotPassword.needHelp')}
             </h2>
             <p className="text-white/80 text-lg">
-              Reset your password securely with email verification
+              {t('admin.forgotPassword.helpSubtitle')}
             </p>
           </div>
           <div className="space-y-4">
@@ -200,9 +198,8 @@ export default function ForgotPasswordPage() {
                 <span className="text-sm">1</span>
               </div>
               <div>
-                <h3 className="font-semibold mb-1">Enter Your Email</h3>
-                <p className="text-sm text-white/70">
-                  Provide the email address associated with your account
+                <p className="text-sm text-white/90">
+                  {t('admin.forgotPassword.step1')}
                 </p>
               </div>
             </div>
@@ -211,9 +208,8 @@ export default function ForgotPasswordPage() {
                 <span className="text-sm">2</span>
               </div>
               <div>
-                <h3 className="font-semibold mb-1">Check Your Email</h3>
-                <p className="text-sm text-white/70">
-                  We will send you a secure link to reset your password
+                <p className="text-sm text-white/90">
+                  {t('admin.forgotPassword.step2')}
                 </p>
               </div>
             </div>
@@ -222,9 +218,8 @@ export default function ForgotPasswordPage() {
                 <span className="text-sm">3</span>
               </div>
               <div>
-                <h3 className="font-semibold mb-1">Create New Password</h3>
-                <p className="text-sm text-white/70">
-                  Click the link and set a new secure password
+                <p className="text-sm text-white/90">
+                  {t('admin.forgotPassword.step3')}
                 </p>
               </div>
             </div>

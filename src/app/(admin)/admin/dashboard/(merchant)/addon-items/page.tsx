@@ -11,6 +11,7 @@ import { useMerchant } from "@/context/MerchantContext";
 import { useToast } from "@/context/ToastContext";
 import CreateOptionModal from "@/components/common/CreateOptionModal";
 import DuplicateAddonItemModal from "@/components/modals/DuplicateAddonItemModal";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface AddonCategory {
   id: string;
@@ -50,6 +51,7 @@ interface AddonItemFormData {
 
 export default function AddonItemsPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { merchant: merchantData } = useMerchant();
   const { showSuccess, showError } = useToast();
   const [loading, setLoading] = useState(true);
@@ -401,7 +403,7 @@ export default function AddonItemsPage() {
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
-                Add Item
+                {t("admin.addonItems.createItem")}
               </button>
             </div>
           </div>
@@ -422,7 +424,7 @@ export default function AddonItemsPage() {
           {filteredItems.length === 0 ? (
             <div className="py-10 text-center">
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                {items.length === 0 ? "No addon items found" : "No items match your filters"}
+                {items.length === 0 ? t("admin.addonItems.noItems") : t("admin.addonItems.noMatch")}
               </p>
               {items.length === 0 && (
                 <button
@@ -432,7 +434,7 @@ export default function AddonItemsPage() {
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
-                  Create First Addon Item
+                  {t("admin.addonItems.createItem")}
                 </button>
               )}
             </div>

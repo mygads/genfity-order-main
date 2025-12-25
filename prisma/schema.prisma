@@ -71,7 +71,7 @@ model UserPreference {
   timezone           String   @default("Asia/Jakarta")
   dateFormat         String   @default("DD/MM/YYYY") @map("date_format")
   timeFormat         String   @default("24h") @map("time_format")
-  currency           String   @default("IDR")
+  currency           String   @default("AUD")
   emailNotifications Boolean  @default(true) @map("email_notifications")
   orderNotifications Boolean  @default(true) @map("order_notifications")
   marketingEmails    Boolean  @default(false) @map("marketing_emails")
@@ -100,13 +100,37 @@ model Customer {
   lastLoginAt         DateTime?         @map("last_login_at") @db.Timestamptz(6)
   createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt           DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  // Customer segmentation fields
+  totalOrders         Int               @default(0) @map("total_orders")
+  totalSpent          Decimal           @default(0) @map("total_spent") @db.Decimal(10, 2)
+  lastOrderAt         DateTime?         @map("last_order_at") @db.Timestamptz(6)
   
   orders              Order[]
   sessions            CustomerSession[]
+  favorites           CustomerFavorite[]
 
   @@index([email])
   @@index([phone])
+  @@index([totalOrders])
+  @@index([lastOrderAt])
   @@map("customers")
+}
+
+// Customer Favorite Menus
+model CustomerFavorite {
+  id          BigInt   @id @default(autoincrement())
+  customerId  BigInt   @map("customer_id")
+  merchantId  BigInt   @map("merchant_id")
+  menuId      BigInt   @map("menu_id")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([customerId, menuId])
+  @@index([customerId])
+  @@index([merchantId])
+  @@index([menuId])
+  @@map("customer_favorites")
 }
 
 model CustomerSession {
@@ -331,6 +355,13 @@ model Menu {
   isBestSeller       Boolean             @default(false) @map("is_best_seller")
   isSignature        Boolean             @default(false) @map("is_signature")
   isRecommended      Boolean             @default(false) @map("is_recommended")
+  // Menu Scheduling - Auto-enable/disable based on time
+  scheduleEnabled    Boolean             @default(false) @map("schedule_enabled")
+  scheduleStartTime  String?             @map("schedule_start_time") // HH:MM format
+  scheduleEndTime    String?             @map("schedule_end_time") // HH:MM format
+  scheduleDays       Int[]               @default([]) @map("schedule_days") // 0=Sun, 1=Mon, ... 6=Sat
+  // Cost for profit calculation
+  costPrice          Decimal?            @map("cost_price") @db.Decimal(10, 2)
   addonCategories    MenuAddonCategory[]
   categories         MenuCategoryItem[]
   category           MenuCategory?       @relation(fields: [categoryId], references: [id])
@@ -346,6 +377,8 @@ model Menu {
   @@index([categoryId])
   @@index([isActive])
   @@index([deletedAt])
+  @@index([scheduleEnabled])
+  @@index([name]) // For search optimization
   @@map("menus")
 }
 

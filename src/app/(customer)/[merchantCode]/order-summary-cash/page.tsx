@@ -9,6 +9,7 @@ import type { OrderMode } from '@/lib/types/customer';
 import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';
 import NewOrderConfirmationModal from '@/components/modals/NewOrderConfirmationModal';
 import { QRCodeSVG } from 'qrcode.react';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 // ✅ Order Summary Data Interface
 interface OrderSummaryData {
@@ -72,6 +73,7 @@ export default function OrderSummaryCashPage() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { t } = useTranslation();
 
   const merchantCode = params.merchantCode as string;
   const orderNumber = searchParams.get('orderNumber') || '';
@@ -233,6 +235,15 @@ export default function OrderSummaryCashPage() {
     if (merchantInfo.currency === 'AUD') {
       return `A$${amount.toFixed(2)}`;
     }
+    
+    // Special handling for IDR - no decimals
+    if (merchantInfo.currency === 'IDR') {
+      const formatted = new Intl.NumberFormat('id-ID', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(Math.round(amount));
+      return `Rp ${formatted}`;
+    }
 
     return new Intl.NumberFormat('en-AU', {
       style: 'currency',
@@ -282,14 +293,14 @@ export default function OrderSummaryCashPage() {
         <div className="text-center max-w-sm">
           <div className="text-6xl mb-4">❌</div>
           <p className="text-base text-gray-900 dark:text-white font-semibold mb-2">
-            Order Not Found
+            {t('customer.orderSummary.orderNotFound')}
           </p>
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">{error}</p>
           <button
             onClick={() => router.push(`/${merchantCode}/order?mode=${mode}`)}
             className="px-6 py-3 bg-orange-500 text-white text-sm font-semibold rounded-lg hover:bg-orange-600 transition-all active:scale-[0.98]"
           >
-            Back to Menu
+            {t('customer.orderSummary.backToMenu')}
           </button>
         </div>
       </div>
@@ -314,7 +325,7 @@ export default function OrderSummaryCashPage() {
               lineHeight: '24px'
             }}
           >
-            Order Summary
+            {t('customer.orderSummary.title')}
           </h1>
         </div>
       </header>
@@ -334,10 +345,10 @@ export default function OrderSummaryCashPage() {
             backgroundColor: 'rgba(240, 90, 40, 0.1)'
           }}
         >
-          <span className="text-gray-700">Order Type</span>
+          <span className="text-gray-700">{t('customer.orderSummary.orderType')}</span>
           <div className="flex items-center gap-2">
             <span className="font-medium text-gray-900">
-              {mode === 'dinein' ? 'Dine In' : 'Pick Up'}
+              {mode === 'dinein' ? t('customer.mode.dineIn') : t('customer.mode.pickUp')}
             </span>
             <svg
               style={{ width: '18px', height: '18px', color: '#1ca406' }}
@@ -363,7 +374,7 @@ export default function OrderSummaryCashPage() {
             className="text-sm "
             style={{ color: '#212529' }}
           >
-            Order Number
+            {t('customer.orderSummary.orderNumber')}
           </span>
 
           {/* Order Number Box - ESB Style */}
@@ -475,7 +486,7 @@ export default function OrderSummaryCashPage() {
               textAlign: 'start'
             }}
           >
-            <strong>Show the QR code</strong> or <strong>7-digit order number</strong> to our cashier.
+            {t('customer.orderSummary.showQRInstruction')}
           </span>
         </div>
       </div>
@@ -502,7 +513,7 @@ export default function OrderSummaryCashPage() {
           style={{ paddingTop: '16px', paddingLeft: '12px', paddingRight: '12px', height: '35px' }}
         >
           <h1 className="mb-0" style={{ fontSize: '16px', fontWeight: 600, color: '#212529' }}>
-            Ordered Items
+            {t('customer.orderSummary.orderedItems')}
           </h1>
         </div>
 
@@ -613,7 +624,7 @@ export default function OrderSummaryCashPage() {
                 onClick={() => setShowFeeDetails(!showFeeDetails)}
               >
                 <div className="flex items-center">
-                  Incl. other fees
+                  {t('customer.payment.inclFees')}
                   <svg
                     style={{
                       width: '24px',
@@ -652,7 +663,7 @@ export default function OrderSummaryCashPage() {
                         paddingLeft: '8px'
                       }}
                     >
-                      <div>Incl. PB1</div>
+                      <div>{t('customer.orderSummary.inclPB1')}</div>
                       <div>{formatCurrency(order.taxAmount)}</div>
                     </div>
                   )}
@@ -665,7 +676,7 @@ export default function OrderSummaryCashPage() {
                         paddingLeft: '24px'
                       }}
                     >
-                      <div>Service Charge</div>
+                      <div>{t('customer.payment.serviceCharge')}</div>
                       <div>{formatCurrency(order.serviceChargeAmount)}</div>
                     </div>
                   )}
@@ -678,7 +689,7 @@ export default function OrderSummaryCashPage() {
                         paddingLeft: '24px'
                       }}
                     >
-                      <div>Packaging Fee</div>
+                      <div>{t('customer.payment.packagingFee')}</div>
                       <div>{formatCurrency(order.packagingFeeAmount)}</div>
                     </div>
                   )}
@@ -701,7 +712,7 @@ export default function OrderSummaryCashPage() {
               className="flex-grow"
               style={{ color: '#212529' }}
             >
-              Total
+              {t('customer.payment.total')}
             </div>
             <div style={{ color: '#f05a28', fontWeight: 700 }}>
               {formatCurrency(order.totalAmount)}
@@ -731,7 +742,7 @@ export default function OrderSummaryCashPage() {
             padding: '4.8px 16px'
           }}
         >
-          New Order
+          {t('customer.orderSummary.newOrder')}
         </button>
       </main>
 

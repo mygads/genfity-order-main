@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface MenuBook {
     id: string;
@@ -20,6 +21,7 @@ interface MenuBook {
 
 export default function MenuBooksPage() {
     const router = useRouter();
+    const { t } = useTranslation();
     const [loading, setLoading] = useState(true);
     const [menuBooks, setMenuBooks] = useState<MenuBook[]>([]);
     const [error, setError] = useState<string | null>(null);
@@ -114,7 +116,7 @@ export default function MenuBooksPage() {
     if (loading) {
         return (
             <div>
-                <PageBreadcrumb pageTitle="Menu Books" />
+                <PageBreadcrumb pageTitle={t("admin.menuBooks.title")} />
                 <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950">
                     {/* Skeleton Header */}
                     <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -169,15 +171,15 @@ export default function MenuBooksPage() {
 
     return (
         <div>
-            <PageBreadcrumb pageTitle="Menu Books" />
+            <PageBreadcrumb pageTitle={t("admin.menuBooks.title")} />
 
             <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950">
                 {/* Header */}
                 <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Menu Books</h2>
+                        <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t("admin.menuBooks.title")}</h2>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Group menus together for special pricing
+                            {t("admin.menuBooks.subtitle")}
                         </p>
                     </div>
                     <Link
@@ -187,7 +189,7 @@ export default function MenuBooksPage() {
                         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                         </svg>
-                        Create Menu Book
+                        {t("admin.menuBooks.create")}
                     </Link>
                 </div>
 
@@ -195,7 +197,7 @@ export default function MenuBooksPage() {
                 <div className="mb-6">
                     <input
                         type="text"
-                        placeholder="Search menu books..."
+                        placeholder={t("admin.menuBooks.searchPlaceholder")}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="h-11 w-full max-w-md rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
@@ -215,19 +217,19 @@ export default function MenuBooksPage() {
                         <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                         </svg>
-                        <h3 className="mt-4 text-lg font-semibold text-gray-900 dark:text-white">No menu books yet</h3>
-                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Create your first menu book to get started</p>
+                        <h3 className="mt-4 text-lg font-semibold text-gray-900 dark:text-white">{t("admin.menuBooks.noMenuBooks")}</h3>
+                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t("admin.menuBooks.noMenuBooksDesc")}</p>
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="w-full">
                             <thead>
                                 <tr className="border-b border-gray-200 dark:border-gray-700">
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">Name</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">Menus</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">Special Prices</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">Status</th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">Actions</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">{t("admin.menuBooks.name")}</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">{t("admin.menuBooks.items")}</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">{t("admin.menuBooks.specialPrices")}</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">{t("admin.menuBooks.status")}</th>
+                                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">{t("admin.menuBooks.actions")}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -259,7 +261,7 @@ export default function MenuBooksPage() {
                                                     : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400"
                                                     }`}
                                             >
-                                                {book.isActive ? "Active" : "Inactive"}
+                                                {book.isActive ? t("admin.menuBooks.active") : t("admin.menuBooks.inactive")}
                                             </button>
                                         </td>
                                         <td className="px-4 py-4 text-right">
@@ -294,23 +296,23 @@ export default function MenuBooksPage() {
             {deleteId && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
                     <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900">
-                        <h3 className="text-lg font-bold text-gray-900 dark:text-white">Delete Menu Book?</h3>
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t("admin.menuBooks.deleteConfirm")}</h3>
                         <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                            This action cannot be undone. Menu books with associated special prices cannot be deleted.
+                            {t("admin.menuBooks.deleteWarning")}
                         </p>
                         <div className="mt-6 flex justify-end gap-3">
                             <button
                                 onClick={() => setDeleteId(null)}
                                 className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
                             >
-                                Cancel
+                                {t("admin.menuBooks.cancel")}
                             </button>
                             <button
                                 onClick={() => handleDelete(deleteId)}
                                 disabled={deleting}
                                 className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
                             >
-                                {deleting ? "Deleting..." : "Delete"}
+                                {deleting ? t("admin.menuBooks.deleting") : t("admin.menuBooks.delete")}
                             </button>
                         </div>
                     </div>

@@ -244,6 +244,16 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   const formatCurrency = (amount: number | string) => {
     const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
     if (numAmount === 0) return 'Free';
+    
+    // Use merchantCurrency state (fetched from merchant profile, defaults to AUD)
+    if (merchantCurrency === 'IDR') {
+      const formatted = new Intl.NumberFormat('id-ID', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(Math.round(numAmount));
+      return `Rp ${formatted}`;
+    }
+    // Default: AUD
     return `A$${numAmount.toLocaleString('en-AU', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,

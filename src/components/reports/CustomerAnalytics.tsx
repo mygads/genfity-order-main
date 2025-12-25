@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { ApexOptions } from 'apexcharts';
+import { formatCurrency } from '@/lib/utils/format';
 
 const ReactApexChart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
@@ -15,9 +16,10 @@ interface CustomerData {
 
 interface CustomerAnalyticsProps {
   data: CustomerData;
+  currency?: string;
 }
 
-export default function CustomerAnalytics({ data }: CustomerAnalyticsProps) {
+export default function CustomerAnalytics({ data, currency = 'AUD' }: CustomerAnalyticsProps) {
   // Donut Chart Options
   const donutOptions: ApexOptions = {
     chart: {
@@ -97,15 +99,6 @@ export default function CustomerAnalytics({ data }: CustomerAnalyticsProps) {
 
   const donutSeries = [data.returningCustomers, data.newCustomers];
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
-
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
       {/* Header */}
@@ -152,7 +145,7 @@ export default function CustomerAnalytics({ data }: CustomerAnalyticsProps) {
               Avg. Customer Lifetime Value
             </div>
             <div className="text-xl font-bold text-gray-900 dark:text-white/90">
-              {formatCurrency(data.averageLifetimeValue)}
+              {formatCurrency(data.averageLifetimeValue, currency)}
             </div>
           </div>
 

@@ -7,6 +7,7 @@ import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { useToast } from "@/hooks/useToast";
 import ToastContainer from "@/components/ui/ToastContainer";
 import { DownloadIcon } from "@/icons";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface MerchantData {
   code: string;
@@ -23,6 +24,7 @@ const PREVIEW_SIZE = 120;
  */
 export default function QRTablesPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { toasts, success: showSuccess, error: showError } = useToast();
   const hiddenQrRef = useRef<HTMLDivElement>(null);
 
@@ -227,7 +229,7 @@ export default function QRTablesPage() {
   if (loading) {
     return (
       <div>
-        <PageBreadcrumb pageTitle="Table QR Codes" />
+        <PageBreadcrumb pageTitle={t("admin.qrTables.title")} />
         <div className="mt-6 py-10 text-center">
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-brand-500 border-r-transparent"></div>
           <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Loading...</p>
@@ -239,7 +241,7 @@ export default function QRTablesPage() {
   return (
     <div>
       <ToastContainer toasts={toasts} />
-      <PageBreadcrumb pageTitle="Table QR Codes" />
+      <PageBreadcrumb pageTitle={t("admin.qrTables.title")} />
 
       <div className="mt-6 space-y-6">
         {/* Settings Card */}
@@ -350,7 +352,7 @@ export default function QRTablesPage() {
 
                   {/* Table Label */}
                   <p className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">
-                    Table {tableNumber}
+                    {t("admin.qrTables.table")} {tableNumber}
                   </p>
 
                   {/* Download Button - Always visible */}
@@ -361,7 +363,7 @@ export default function QRTablesPage() {
                     className="mt-2 flex h-8 w-full items-center justify-center gap-1.5 rounded-lg bg-orange-500 text-xs font-medium text-white transition-colors hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <DownloadIcon className="h-3.5 w-3.5" />
-                    {downloadingTable === tableNumber ? "..." : "Download"}
+                    {downloadingTable === tableNumber ? "..." : t("admin.qrTables.download")}
                   </button>
                 </div>
               ))}
@@ -388,10 +390,10 @@ export default function QRTablesPage() {
               </svg>
             </div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              No Tables Configured
+              {t("admin.qrTables.noTables")}
             </h3>
             <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-              Enter the number of tables above to generate QR codes for each table.
+              {t("admin.qrTables.noTablesDesc")}
             </p>
           </div>
         )}

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { saveCustomerAuth } from '@/lib/utils/localStorage';
 import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 /**
  * Customer Login Page - Burjo ESB Style
@@ -19,6 +20,7 @@ import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { t } = useTranslation();
 
   const [showAuthChoice, setShowAuthChoice] = useState(true);
   const [name, setName] = useState('');
@@ -128,7 +130,7 @@ function LoginForm() {
     try {
       // Validate name field (only required in save-account mode)
       if (isSaveAccountMode && !name.trim()) {
-        setError('Full name is required');
+        setError(t('auth.error.nameRequired'));
         setIsLoading(false);
         return;
       }
@@ -137,7 +139,7 @@ function LoginForm() {
 
       // Validate email or phone
       if (!inputValue) {
-        setError('Email or phone number is required');
+        setError(t('auth.error.emailRequired'));
         setIsLoading(false);
         return;
       }
@@ -146,7 +148,7 @@ function LoginForm() {
       const isPhoneInput = isPhoneNumber(inputValue);
 
       if (!isEmailInput && !isPhoneInput) {
-        setError('Please enter a valid email or phone number');
+        setError(t('auth.error.invalidEmailOrPhone'));
         setIsLoading(false);
         return;
       }
@@ -229,7 +231,7 @@ function LoginForm() {
             </svg>
           </button>
           <h1 className="flex-1 text-center font-semibold text-gray-900 dark:text-white text-base pr-10">
-            {showAuthChoice ? 'Welcome' : 'Sign In'}
+            {showAuthChoice ? t('auth.welcome') : t('auth.signIn')}
           </h1>
         </div>
       </header>
@@ -276,7 +278,7 @@ function LoginForm() {
               {/* Question */}
               <div className="text-center py-4">
                 <p className="text-base font-semibold text-gray-900 dark:text-white">
-                  Already have an account?
+                  {t('auth.alreadyHaveAccount')}
                 </p>
               </div>
 
@@ -285,7 +287,7 @@ function LoginForm() {
                 onClick={handleYesLogin}
                 className="w-full h-12 bg-orange-500 text-white text-base font-semibold rounded-lg hover:bg-orange-600 transition-all duration-200 active:scale-[0.98]"
               >
-                Yes, Sign In
+                {t('auth.yesSignIn')}
               </button>
 
               {/* Continue as Guest Button */}
@@ -293,12 +295,12 @@ function LoginForm() {
                 onClick={handleGuestCheckout}
                 className="w-full h-12 border-2 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-base font-semibold rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200 active:scale-[0.98]"
               >
-                Continue as Guest
+                {t('auth.continueAsGuest')}
               </button>
 
               {/* Info Text */}
               <p className="text-xs text-center text-gray-500 dark:text-gray-400 pt-4">
-                Sign in to save your order history and speed up checkout
+                {t('auth.signInBenefits')}
               </p>
             </div>
           ) : (
@@ -311,10 +313,10 @@ function LoginForm() {
                     <div className="text-2xl">💾</div>
                     <div className="flex-1">
                       <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
-                        Save & Secure Your Account
+                        {t('auth.saveAccountTitle')}
                       </h3>
                       <p className="text-xs text-gray-600 dark:text-gray-400">
-                        Update your information and set a password to secure your account
+                        {t('auth.saveAccountDesc')}
                       </p>
                     </div>
                   </div>
@@ -333,7 +335,7 @@ function LoginForm() {
                 {isSaveAccountMode && (
                   <div>
                     <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">
-                      Full Name
+                      {t('auth.fullName')}
                     </label>
                     <input
                       id="name"
@@ -342,7 +344,7 @@ function LoginForm() {
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       className="w-full h-12 px-4 border-b border-gray-300 dark:border-gray-600 text-base text-gray-900 dark:text-white placeholder-gray-400 bg-white dark:bg-gray-900 focus:outline-none focus:border-orange-500 transition-all"
-                      placeholder="Your full name"
+                      placeholder={t('auth.placeholder.name')}
                     />
                   </div>
                 )}
@@ -350,7 +352,7 @@ function LoginForm() {
                 {/* Email or Phone Input */}
                 <div>
                   <label className="block text-sm text-gray-900 dark:text-gray-400 mb-2">
-                    Email or Phone Number
+                    {t('auth.emailOrPhone')}
                   </label>
                   <input
                     id="emailOrPhone"
@@ -359,7 +361,7 @@ function LoginForm() {
                     value={emailOrPhone}
                     onChange={(e) => setEmailOrPhone(e.target.value)}
                     className="w-full h-12 px-4 border-b border-gray-300 dark:border-gray-600 text-base text-gray-900 dark:text-white placeholder-gray-400 bg-white dark:bg-gray-900 focus:outline-none focus:border-orange-500 transition-all"
-                    placeholder="your@email.com or +628xxx"
+                    placeholder={t('auth.placeholder.emailOrPhone')}
                   />
                 </div>
 
@@ -367,7 +369,7 @@ function LoginForm() {
                 {isSaveAccountMode && (
                   <div>
                     <label className="block text-sm text-gray-900 dark:text-gray-400 mb-2">
-                      Phone Number (optional)
+                      {t('auth.phoneOptional')}
                     </label>
                     <input
                       id="phone"
@@ -375,7 +377,7 @@ function LoginForm() {
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       className="w-full h-12 px-4 border-b border-gray-300 dark:border-gray-600 text-base text-gray-900 dark:text-white placeholder-gray-400 bg-white dark:bg-gray-900 focus:outline-none focus:border-orange-500 transition-all"
-                      placeholder="+62xxx or +61xxx"
+                      placeholder={t('auth.placeholder.phone')}
                     />
                   </div>
                 )}
@@ -383,7 +385,7 @@ function LoginForm() {
                 {/* Password Input */}
                 <div>
                   <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">
-                    Password
+                    {t('auth.password')}
                   </label>
                   <div className="relative">
                     <input
@@ -393,7 +395,7 @@ function LoginForm() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="w-full h-12 px-4 pr-12 border-b border-gray-300 dark:border-gray-600 text-base text-gray-900 dark:text-white placeholder-gray-400 bg-white dark:bg-gray-900 focus:outline-none focus:border-orange-500 transition-all"
-                      placeholder={isSaveAccountMode ? 'Create password (min. 6 chars)' : 'Your password'}
+                      placeholder={isSaveAccountMode ? t('auth.placeholder.passwordCreate') : t('auth.placeholder.password')}
                     />
                     <button
                       type="button"
@@ -423,7 +425,7 @@ function LoginForm() {
                       onClick={handleForgotPassword}
                       className="text-sm text-orange-500 hover:underline"
                     >
-                      Forgot password?
+                      {t('auth.forgotPassword')}
                     </button>
                   </div>
                 )}
@@ -437,17 +439,17 @@ function LoginForm() {
                   {isLoading ? (
                     <span className="flex items-center justify-center gap-2">
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      {isSaveAccountMode ? 'Saving...' : 'Signing in...'}
+                      {isSaveAccountMode ? t('common.saving') : t('auth.signingIn')}
                     </span>
                   ) : (
-                    isSaveAccountMode ? 'Save Account' : 'Sign In'
+                    isSaveAccountMode ? t('auth.saveAccount') : t('auth.signIn')
                   )}
                 </button>
               </form>
 
               {/* Sign Up Info */}
               <p className="text-xs text-center text-gray-500 dark:text-gray-400 pt-4">
-                Don&apos;t have an account? You can create one during checkout
+                {t('auth.noAccountInfo')}
               </p>
             </div>
           )}
@@ -470,7 +472,7 @@ function LoginForm() {
 
       {/* Powered By Footer */}
       <div className="py-6 text-center text-xs text-gray-500 dark:text-gray-400">
-        Powered By{' '}
+        {t('common.poweredBy')}{' '}
         <a
           href="https://genfity.com"
           target="_blank"

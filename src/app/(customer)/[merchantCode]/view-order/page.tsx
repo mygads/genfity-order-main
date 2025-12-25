@@ -9,6 +9,7 @@ import { formatCurrency } from '@/lib/utils/format';
 import { calculateCartSubtotal } from '@/lib/utils/priceCalculator';
 import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';
 import OtherNotesModal from '@/components/modals/OtherNotesModal';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 interface MenuItem {
   id: string;
@@ -43,6 +44,7 @@ export default function ViewOrderPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { t } = useTranslation();
 
   const merchantCode = params.merchantCode as string;
   const mode = (searchParams.get('mode') || 'takeaway') as 'dinein' | 'takeaway';
@@ -235,7 +237,7 @@ export default function ViewOrderPage() {
             </svg>
           </button>
           <h1 className="flex-1 text-center font-semibold text-gray-900 dark:text-white text-base pr-10">
-            Order
+            {t('order.title')}
           </h1>
         </div>
       </header>
@@ -255,10 +257,10 @@ export default function ViewOrderPage() {
               backgroundColor: 'rgba(240, 90, 40, 0.1)'
             }}
           >
-            <span className="text-gray-700">Order Type</span>
+            <span className="text-gray-700">{t('order.type')}</span>
             <div className="flex items-center gap-2">
               <span className="font-medium text-gray-900">
-                {mode === 'dinein' ? 'Dine In' : 'Pick Up'}
+                {mode === 'dinein' ? t('customer.mode.dineIn') : t('customer.mode.pickUp')}
               </span>
               <svg
                 style={{ width: '18px', height: '18px', color: '#212529' }}
@@ -314,7 +316,7 @@ export default function ViewOrderPage() {
               />
               {/* Pick Up Now Text */}
               <div className="ml-3 flex flex-col">
-                <span style={{ fontWeight: 700, color: '#212529' }}>Pick Up Now</span>
+                <span style={{ fontWeight: 700, color: '#212529' }}>{t('customer.mode.pickUpNow')}</span>
               </div>
             </div>
           </section>
@@ -334,7 +336,7 @@ export default function ViewOrderPage() {
                 lineHeight: '24px'
               }}
             >
-              Ordered Items ({cart.items.length})
+              {t('order.orderedItems')} ({cart.items.length})
             </h2>
             <button
               onClick={handleAddItem}
@@ -348,7 +350,7 @@ export default function ViewOrderPage() {
                 backgroundColor: 'transparent'
               }}
             >
-              + Add Item
+              {t('customer.cart.addItem')}
             </button>
           </div>
 
@@ -405,7 +407,7 @@ export default function ViewOrderPage() {
                       >
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                       </svg>
-                      <span>Edit</span>
+                      <span>{t('common.edit')}</span>
                     </button>
                   </div>
 
@@ -449,7 +451,7 @@ export default function ViewOrderPage() {
                           color: '#6c757d'
                         }}
                       >
-                        {item.notes || 'No notes yet'}
+                        {item.notes || t('customer.cart.noNotes')}
                       </p>
                     </div>
                   </div>
@@ -560,7 +562,7 @@ export default function ViewOrderPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
             </svg>
             <span style={{ color: generalNotes ? '#1A1A1A' : '#808080' }}>
-              {generalNotes || 'Add another notes'}
+              {generalNotes || t('customer.cart.addNotes')}
             </span>
           </div>
         </section>
@@ -588,7 +590,7 @@ export default function ViewOrderPage() {
                 color: '#101828'
               }}
             >
-              Payment Details
+              {t('order.paymentDetails')}
             </h2>
 
             {/* Details Content */}
@@ -709,7 +711,7 @@ export default function ViewOrderPage() {
                   className="flex flex-grow mt-1"
                   style={{ lineHeight: '17px', color: '#212529' }}
                 >
-                  Total
+                  {t('customer.cart.total')}
                 </div>
                 <div style={{ color: '#f05a28' }}>
                   {formatCurrency(total, merchantCurrency)}
@@ -737,7 +739,7 @@ export default function ViewOrderPage() {
               className="flex items-center"
               style={{ lineHeight: 1, color: '#667085', fontSize: '14px' }}
             >
-              Total Payment
+              {t('order.totalPayment')}
             </div>
             <div
               className="flex items-center"
@@ -757,7 +759,7 @@ export default function ViewOrderPage() {
                 fontSize: '14px'
               }}
             >
-              Continue to Payment
+              {t('customer.cart.continueToPayment')}
             </button>
           </div>
         </div>
@@ -798,10 +800,10 @@ export default function ViewOrderPage() {
                   </svg>
                 </div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
-                  Remove Item?
+                  {t('customer.cart.removeItem')}
                 </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Are you sure you want to remove <strong>{removeItemName}</strong> from your cart?
+                  {t('customer.cart.removeConfirm').replace('{item}', '')} <strong>{removeItemName}</strong>?
                 </p>
               </div>
               <div className="flex gap-3">
@@ -812,13 +814,13 @@ export default function ViewOrderPage() {
                   }}
                   className="flex-1 h-12 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   onClick={handleConfirmRemove}
                   className="flex-1 h-12 bg-red-500 text-white font-semibold rounded-xl hover:bg-red-600 transition-colors"
                 >
-                  Remove
+                  {t('common.remove')}
                 </button>
               </div>
             </div>

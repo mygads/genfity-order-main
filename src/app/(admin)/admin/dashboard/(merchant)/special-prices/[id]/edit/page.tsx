@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import AdminFormFooter from "@/components/common/AdminFormFooter";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface MenuBook {
     id: string;
@@ -36,6 +37,7 @@ export default function EditSpecialPricePage() {
     const router = useRouter();
     const params = useParams();
     const priceId = params.id as string;
+    const { } = useTranslation();
 
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);

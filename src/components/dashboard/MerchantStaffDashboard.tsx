@@ -8,6 +8,7 @@ type Merchant = {
   address?: string | null;
   logoUrl?: string | null;
   isActive: boolean;
+  currency?: string;
 };
 
 type Menu = {
@@ -77,6 +78,15 @@ export default function MerchantStaffDashboard({
   };
 
   const formatCurrency = (amount: number) => {
+    const currency = merchant.currency || 'AUD';
+    if (currency === 'IDR') {
+      const formatted = new Intl.NumberFormat('id-ID', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(Math.round(amount));
+      return `Rp ${formatted}`;
+    }
+    // Default: AUD
     return `A$${amount.toLocaleString('en-AU', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,

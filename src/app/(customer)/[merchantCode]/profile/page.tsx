@@ -4,6 +4,8 @@ import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams, useParams } from 'next/navigation';
 import { getCustomerAuth, clearCustomerAuth } from '@/lib/utils/localStorage';
 import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';
+import { useTranslation } from '@/lib/i18n/useTranslation';
+import LanguageSelectorModal from '@/components/customer/LanguageSelectorModal';
 
 /**
  * Profile Page - Burjo ESB Style
@@ -12,6 +14,7 @@ import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState
  * - Guest login prompt if not authenticated (with Login button)
  * - User info (Hi, Name + phone) with Edit button if authenticated
  * - Order History link
+ * - Language selector
  * - Logout button if authenticated
  * - Powered By footer
  */
@@ -20,9 +23,11 @@ function ProfileContent() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
+  const { t, localeFlag, localeName } = useTranslation();
 
   const [auth, setAuth] = useState(getCustomerAuth());
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showLanguageModal, setShowLanguageModal] = useState(false);
 
   const merchantCode = params.merchantCode as string;
   const mode = searchParams.get('mode') || 'dinein';
@@ -75,7 +80,7 @@ function ProfileContent() {
             </svg>
           </button>
           <h1 className="flex-1 text-center font-semibold text-gray-900 dark:text-white text-base pr-10">
-            Profile
+            {t('customer.profile.title')}
           </h1>
         </div>
       </header>
@@ -112,13 +117,13 @@ function ProfileContent() {
             ) : (
               <div>
                 <h2 className="text-base font-semibold text-gray-900 dark:text-white mb-2">
-                  Login as Guest
+                  {t('auth.loginAsGuest')}
                 </h2>
                 <button
                   onClick={handleLogin}
                   className="w-full py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition-colors"
                 >
-                  Login
+                  {t('auth.login')}
                 </button>
               </div>
             )}
@@ -130,7 +135,7 @@ function ProfileContent() {
               onClick={handleEditProfile}
               className="text-orange-500 hover:text-orange-600 text-sm font-medium"
             >
-              Edit
+              {t('common.edit')}
             </button>
           )}
         </div>
@@ -150,8 +155,25 @@ function ProfileContent() {
               <path d="M10 9H8" />
             </svg>
             <span className="flex-1 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
-              Order History
+              {t('customer.profile.orderHistory')}
             </span>
+          </button>
+
+          {/* Language Selector */}
+          <button
+            onClick={() => setShowLanguageModal(true)}
+            className="w-full flex items-center gap-3 px-4 py-4 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow"
+          >
+            <span className="text-xl">{localeFlag}</span>
+            <span className="flex-1 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
+              {t('common.language')}
+            </span>
+            <span className="text-sm text-gray-500 dark:text-gray-400">
+              {localeName}
+            </span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
+              <path d="M9 18l6-6-6-6" />
+            </svg>
           </button>
 
           {/* Privacy Policy */}
@@ -163,7 +185,7 @@ function ProfileContent() {
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
             </svg>
             <span className="flex-1 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
-              Privacy Policy
+              {t('customer.profile.privacyPolicy')}
             </span>
           </button>
         </div>
@@ -181,14 +203,14 @@ function ProfileContent() {
               <polyline points="16,17 21,12 16,7" />
               <line x1="21" y1="12" x2="9" y2="12" />
             </svg>
-            Logout
+            {t('auth.logout')}
           </button>
         </div>
       )}
 
       {/* Powered By Footer */}
       <div className="py-4 text-center text-xs text-gray-400">
-        Powered By <span className="font-semibold">GENFITY</span>
+        {t('common.poweredBy')} <span className="font-semibold">GENFITY</span>
       </div>
 
       {/* Logout Confirmation Modal */}
@@ -204,10 +226,10 @@ function ProfileContent() {
                 ⚠️
               </div>
               <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
-                Sign Out?
+                {t('customer.profile.signOutConfirm')}
               </h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                You will be signed out from your account
+                {t('customer.profile.signOutMessage')}
               </p>
             </div>
 
@@ -216,18 +238,24 @@ function ProfileContent() {
                 onClick={() => setShowLogoutConfirm(false)}
                 className="flex-1 h-11 border-2 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white text-sm font-semibold rounded-xl hover:border-gray-400 dark:hover:border-gray-600 transition-all active:scale-[0.98]"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 onClick={handleLogout}
                 className="flex-1 h-11 bg-red-500 text-white text-sm font-semibold rounded-xl hover:bg-red-600 transition-all active:scale-[0.98]"
               >
-                Sign Out
+                {t('auth.signOut')}
               </button>
             </div>
           </div>
         </>
       )}
+
+      {/* Language Selector Modal */}
+      <LanguageSelectorModal
+        isOpen={showLanguageModal}
+        onClose={() => setShowLanguageModal(false)}
+      />
     </div>
   );
 }

@@ -2,12 +2,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import React, { useState } from "react";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 
 export default function NotificationDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const [notifying, setNotifying] = useState(true);
+  const { t } = useTranslation();
 
   function toggleDropdown() {
     setIsOpen(!isOpen);
@@ -56,7 +58,7 @@ export default function NotificationDropdown() {
       >
         <div className="flex items-center justify-between pb-3 mb-3 border-b border-gray-100 dark:border-gray-700">
           <h5 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
-            Notification
+            {t("admin.header.notification")}
           </h5>
           <button
             onClick={toggleDropdown}

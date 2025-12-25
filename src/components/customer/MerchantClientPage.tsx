@@ -5,8 +5,10 @@ import { useRouter } from 'next/navigation';
 import OutletInfoModal from '@/components/customer/OutletInfoModal';
 import RestaurantBanner from '@/components/customer/RestaurantBanner';
 import RestaurantInfoCard from '@/components/customer/RestaurantInfoCard';
+import LanguageSelectorModal from '@/components/customer/LanguageSelectorModal';
 import { useStoreStatus } from '@/hooks/useStoreStatus';
 import { useToast } from '@/hooks/useToast';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 interface OpeningHour {
     id: string;
@@ -41,11 +43,14 @@ interface MerchantClientPageProps {
  * - Mode selection (dine-in/takeaway)
  * - Store open/closed status with grayed out UI (real-time via API)
  * - Outlet info modal
+ * - Language selector (top right)
  */
 export default function MerchantClientPage({ merchant, merchantCode }: MerchantClientPageProps) {
     const router = useRouter();
     const { showToast } = useToast();
+    const { t, localeFlag } = useTranslation();
     const [showOutletInfo, setShowOutletInfo] = useState(false);
+    const [showLanguageModal, setShowLanguageModal] = useState(false);
 
     // Use real-time store status hook (fetches from API, not cached ISR data)
     const {
@@ -110,6 +115,25 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
 
     return (
         <>
+            {/* Language Selector Button - Top Right */}
+            <div className="absolute top-3 right-3 z-10">
+                <button
+                    onClick={() => setShowLanguageModal(true)}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-full shadow-md hover:bg-white dark:hover:bg-gray-800 transition-colors"
+                    aria-label={t('common.selectLanguage') || 'Select Language'}
+                >
+                    <span className="text-lg">{localeFlag}</span>
+                    <svg
+                        className="w-4 h-4 text-gray-600 dark:text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
+            </div>
+
             {/* Special Hours Banner - Show when today has special hours */}
             {todaySpecialHour && !todaySpecialHour.isClosed && specialHourName && (
                 <div className="bg-blue-500 text-white px-4 py-2 text-center text-sm font-medium">
@@ -130,7 +154,7 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
             {/* Store Closing Soon Warning Banner */}
             {storeOpen && minutesUntilClose !== null && minutesUntilClose <= 30 && minutesUntilClose > 0 && (
                 <div className="bg-amber-500 text-white px-4 py-2 text-center text-sm font-medium">
-                    ⚠️ Store closes in {minutesUntilClose} minute{minutesUntilClose !== 1 ? 's' : ''}
+                    ⚠️ {t('customer.store.closesIn', { minutes: minutesUntilClose })}
                 </div>
             )}
 
@@ -161,7 +185,7 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
             <div className={`px-3 my-4 ${!storeOpen ? 'opacity-50 grayscale' : ''}`}>
                 <div className="text-center">
                     <h3 className="my-4 mb-2 text-base font-semibold text-gray-900 dark:text-white">
-                        How to use Genfity Order
+                        {t('customer.howTo.title')}
                     </h3>
 
                     {/* Steps: Order → Pay → Eat */}
@@ -171,10 +195,10 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                                 src="/images/step-order.png"
-                                alt="Order"
+                                alt={t('customer.howTo.step1')}
                                 className="w-14 h-14 mb-1"
                             />
-                            <span className="text-xs text-gray-700 dark:text-gray-300 font-medium">Order</span>
+                            <span className="text-xs text-gray-700 dark:text-gray-300 font-medium">{t('customer.howTo.step1')}</span>
                         </div>
 
                         {/* Arrow */}
@@ -187,10 +211,10 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                                 src="/images/step-pay.png"
-                                alt="Pay"
+                                alt={t('customer.howTo.step2')}
                                 className="w-14 h-14 mb-1"
                             />
-                            <span className="text-xs text-gray-700 dark:text-gray-300 font-medium">Pay</span>
+                            <span className="text-xs text-gray-700 dark:text-gray-300 font-medium">{t('customer.howTo.step2')}</span>
                         </div>
 
                         {/* Arrow */}
@@ -203,10 +227,10 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                                 src="/images/step-eat.png"
-                                alt="Eat"
+                                alt={t('customer.howTo.step3')}
                                 className="w-14 h-14 mb-1"
                             />
-                            <span className="text-xs text-gray-700 dark:text-gray-300 font-medium">Eat</span>
+                            <span className="text-xs text-gray-700 dark:text-gray-300 font-medium">{t('customer.howTo.step3')}</span>
                         </div>
                     </div>
                 </div>
@@ -217,7 +241,7 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                 <div className={`px-3 mb-6 ${!storeOpen ? 'opacity-60' : ''}`}>
                     <div className="text-center">
                         <h3 className="my-4 mb-4 text-base font-semibold text-gray-900 dark:text-white">
-                            How would you like to eat today?
+                            {t('customer.mode.howToEat')}
                         </h3>
 
                         {/* Mode Selection Buttons - Always visible, grayed when unavailable */}
@@ -236,7 +260,7 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                                     <span>{dineInLabel}</span>
                                     {(!storeOpen || !isDineInAvailable) && (
                                         <span className="text-xs bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded">
-                                            UNAVAILABLE NOW
+                                            {t('customer.mode.unavailableNow')}
                                         </span>
                                     )}
                                 </button>
@@ -256,7 +280,7 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                                     <span>{takeawayLabel}</span>
                                     {(!storeOpen || !isTakeawayAvailable) && (
                                         <span className="text-xs bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded">
-                                            UNAVAILABLE NOW
+                                            {t('customer.mode.unavailableNow')}
                                         </span>
                                     )}
                                 </button>
@@ -271,10 +295,10 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                 <div className="px-3 mb-6">
                     <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800 text-center">
                         <p className="text-amber-700 dark:text-amber-300 font-medium">
-                            Ordering is currently unavailable
+                            {t('customer.mode.orderingUnavailable')}
                         </p>
                         <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">
-                            Please contact the merchant for more information
+                            {t('customer.mode.contactMerchant')}
                         </p>
                     </div>
                 </div>
@@ -283,7 +307,7 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
             {/* Footer - Powered by Genfity */}
             <div className="mt-auto px-4 py-4 text-center">
                 <div className="flex items-center justify-center gap-2 text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">Powered by</span>
+                    <span className="text-gray-600 dark:text-gray-400">{t('common.poweredBy')}</span>
                     <span className="font-semibold text-gray-900 dark:text-white">Genfity</span>
                 </div>
             </div>
@@ -301,6 +325,12 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                         is24Hours: h.is24Hours ?? false,
                     })),
                 }}
+            />
+
+            {/* Language Selector Modal */}
+            <LanguageSelectorModal
+                isOpen={showLanguageModal}
+                onClose={() => setShowLanguageModal(false)}
             />
         </>
     );

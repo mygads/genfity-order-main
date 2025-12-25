@@ -47,7 +47,15 @@ export default function SuperAdminDashboard({
   recentMerchants,
   recentOrders,
 }: SuperAdminDashboardProps) {
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number, currency: string = 'AUD') => {
+    if (currency === 'IDR') {
+      const formatted = new Intl.NumberFormat('id-ID', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(Math.round(amount));
+      return `Rp ${formatted}`;
+    }
+    // Default: AUD
     return `A$${amount.toLocaleString('en-AU', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,

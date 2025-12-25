@@ -2,6 +2,7 @@
 
 import React from "react";
 import BarChart from "@/components/charts/bar/BarChart";
+import { formatCurrency } from "@/lib/utils/format";
 
 interface TopMenuItem {
   menuId: string;
@@ -23,22 +24,6 @@ export default function TopMenuItemsChart({
   data, 
   currency = "AUD" 
 }: TopMenuItemsChartProps) {
-  const formatCurrency = (amount: number) => {
-    if (currency === "AUD") {
-      return new Intl.NumberFormat('en-AU', {
-        style: 'currency',
-        currency: 'AUD',
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }).format(amount);
-    }
-    // Fallback for other currencies
-    return `${currency} ${amount.toLocaleString('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
-  };
-
   const chartData = data.map(item => ({
     label: item.menuName.length > 20 
       ? item.menuName.substring(0, 20) + '...' 
@@ -89,10 +74,10 @@ export default function TopMenuItemsChart({
                   </div>
                   <div className="text-right">
                     <div className="font-bold text-success-700 dark:text-success-400">
-                      {formatCurrency(item.totalRevenue)}
+                      {formatCurrency(item.totalRevenue, currency)}
                     </div>
                     <div className="text-sm text-gray-600 dark:text-gray-400">
-                      Avg: {formatCurrency(item.totalRevenue / item.totalQuantity)}
+                      Avg: {formatCurrency(item.totalRevenue / item.totalQuantity, currency)}
                     </div>
                   </div>
                 </div>

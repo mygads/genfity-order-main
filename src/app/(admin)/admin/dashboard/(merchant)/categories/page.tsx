@@ -7,6 +7,8 @@ import EmptyState from "@/components/ui/EmptyState";
 import { exportCategories } from "@/lib/utils/excelExport";
 import { useSWRStatic } from "@/hooks/useSWRWithAuth";
 import { CategoriesPageSkeleton } from "@/components/common/SkeletonLoaders";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import { useMerchant } from "@/context/MerchantContext";
 
 interface Category {
   id: string;
@@ -42,6 +44,8 @@ interface CategoriesApiResponse {
 
 export default function MerchantCategoriesPage() {
   const router = useRouter();
+  const { t } = useTranslation();
+  const { formatCurrency } = useMerchant();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -642,7 +646,7 @@ export default function MerchantCategoriesPage() {
             <div className="w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-800 dark:bg-gray-900">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-                  {editingId ? "Edit Category" : "Create New Category"}
+                  {editingId ? t("admin.categories.editCategory") : t("admin.categories.createNew")}
                 </h3>
                 <button
                   onClick={handleCancel}
@@ -657,7 +661,7 @@ export default function MerchantCategoriesPage() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Category Name <span className="text-error-500">*</span>
+                    {t("admin.categories.categoryName")} <span className="text-error-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -671,7 +675,7 @@ export default function MerchantCategoriesPage() {
 
                 <div>
                   <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Description
+                    {t("admin.categories.description")}
                   </label>
                   <textarea
                     name="description"
@@ -688,14 +692,14 @@ export default function MerchantCategoriesPage() {
                     onClick={handleCancel}
                     className="flex-1 h-11 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
                   >
-                    Cancel
+                    {t("admin.categories.cancel")}
                   </button>
                   <button
                     type="submit"
                     disabled={submitting}
                     className="flex-1 h-11 rounded-lg bg-primary-500 text-sm font-medium text-white hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {submitting ? "Saving..." : editingId ? "Update Category" : "Create Category"}
+                    {submitting ? t("admin.categories.saving") : editingId ? t("admin.categories.updateCategory") : t("admin.categories.createCategory")}
                   </button>
                 </div>
               </form>
@@ -714,7 +718,7 @@ export default function MerchantCategoriesPage() {
                   : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
                   }`}
               >
-                Category List
+                {t("admin.categories.categoryList")}
               </button>
               <button
                 onClick={() => setActiveTab("display")}
@@ -723,7 +727,7 @@ export default function MerchantCategoriesPage() {
                   : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
                   }`}
               >
-                Category Display
+                {t("admin.categories.categoryDisplay")}
               </button>
             </nav>
           </div>
@@ -733,12 +737,12 @@ export default function MerchantCategoriesPage() {
             <>
               {/* Category List Tab */}
               <div className="mb-5 flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">Categories List</h3>
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">{t("admin.categories.listTitle")}</h3>
                 <div className="flex items-center gap-3">
                   {selectedCategories.length > 0 && (
                     <>
                       <span className="text-sm text-gray-600 dark:text-gray-400">
-                        {selectedCategories.length} selected
+                        {t("admin.categories.selected", { count: selectedCategories.length })}
                       </span>
                       <button
                         onClick={() => setShowBulkDeleteConfirm(true)}
@@ -747,7 +751,7 @@ export default function MerchantCategoriesPage() {
                         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
-                        Delete {selectedCategories.length}
+                        {t("common.delete")} {selectedCategories.length}
                       </button>
                     </>
                   )}
@@ -764,12 +768,12 @@ export default function MerchantCategoriesPage() {
                     }}
                     disabled={categories.length === 0}
                     className="inline-flex h-11 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                    title="Export to Excel"
+                    title={t("admin.categories.exportExcel")}
                   >
                     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    Export
+                    {t("common.export")}
                   </button>
                   <button
                     onClick={() => setShowForm(true)}
@@ -778,7 +782,7 @@ export default function MerchantCategoriesPage() {
                     <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
-                    Add Category
+                    {t("admin.categories.addCategory")}
                   </button>
                 </div>
               </div>
@@ -788,7 +792,7 @@ export default function MerchantCategoriesPage() {
                 <div>
                   <input
                     type="text"
-                    placeholder="Search categories..."
+                    placeholder={t("admin.categories.searchPlaceholder")}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
@@ -800,9 +804,9 @@ export default function MerchantCategoriesPage() {
                     onChange={(e) => setFilterStatus(e.target.value)}
                     className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
                   >
-                    <option value="all">All Status</option>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
+                    <option value="all">{t("admin.categories.allStatus")}</option>
+                    <option value="active">{t("common.active")}</option>
+                    <option value="inactive">{t("common.inactive")}</option>
                   </select>
                 </div>
                 <div>
@@ -811,10 +815,10 @@ export default function MerchantCategoriesPage() {
                     onChange={(e) => setSortBy(e.target.value)}
                     className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
                   >
-                    <option value="manual">Manual Order</option>
-                    <option value="name-asc">Name (A-Z)</option>
-                    <option value="name-desc">Name (Z-A)</option>
-                    <option value="menu-count">Menu Count (Most)</option>
+                    <option value="manual">{t("admin.categories.sortManual")}</option>
+                    <option value="name-asc">{t("admin.categories.sortNameAsc")}</option>
+                    <option value="name-desc">{t("admin.categories.sortNameDesc")}</option>
+                    <option value="menu-count">{t("admin.categories.sortMenuCount")}</option>
                   </select>
                 </div>
               </div>
@@ -822,21 +826,21 @@ export default function MerchantCategoriesPage() {
               {filteredCategories.length === 0 ? (
                 <EmptyState
                   type={categories.length === 0 ? "no-category" : "no-results"}
-                  title={categories.length === 0 ? undefined : "No categories match your filters"}
-                  description={categories.length === 0 ? undefined : "Try adjusting your filters"}
-                  action={categories.length === 0 ? { label: "Create First Category", onClick: () => setShowForm(true) } : undefined}
+                  title={categories.length === 0 ? undefined : t("admin.categories.noMatch")}
+                  description={categories.length === 0 ? undefined : t("admin.categories.tryAdjusting")}
+                  action={categories.length === 0 ? { label: t("admin.categories.createFirst"), onClick: () => setShowForm(true) } : undefined}
                 />
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full table-auto">
                     <thead>
                       <tr className="bg-gray-50 text-left dark:bg-gray-900/50">
-                        <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Name</th>
-                        <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Description</th>
-                        <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Display</th>
-                        <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Items</th>
-                        <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Status</th>
-                        <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Actions</th>
+                        <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">{t("admin.categories.name")}</th>
+                        <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">{t("admin.categories.description")}</th>
+                        <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">{t("admin.categories.display")}</th>
+                        <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">{t("admin.categories.items")}</th>
+                        <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">{t("admin.categories.status")}</th>
+                        <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">{t("admin.categories.actions")}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -853,7 +857,7 @@ export default function MerchantCategoriesPage() {
                             </span>
                           </td>
                           <td className="px-4 py-4 text-sm text-gray-700 dark:text-gray-300">
-                            {category._count?.menuItems || 0} menus
+                            {t("admin.categories.menusCount", { count: category._count?.menuItems || 0 })}
                           </td>
                           <td className="px-4 py-4">
                             <button
@@ -862,7 +866,7 @@ export default function MerchantCategoriesPage() {
                                 ? 'bg-success-100 text-success-700 hover:bg-success-200 dark:bg-success-900/20 dark:text-success-400 dark:hover:bg-success-900/30'
                                 : 'bg-error-100 text-error-700 hover:bg-error-200 dark:bg-error-900/20 dark:text-error-400 dark:hover:bg-error-900/30'
                                 }`}>
-                              {category.isActive ? '● Active' : '○ Inactive'}
+                              {category.isActive ? t("admin.categories.statusActive") : t("admin.categories.statusInactive")}
                             </button>
                           </td>
                           <td className="px-4 py-4">
@@ -870,7 +874,7 @@ export default function MerchantCategoriesPage() {
                               <button
                                 onClick={() => handleManageMenus(category)}
                                 className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-brand-200 bg-brand-50 text-primary-600 hover:bg-brand-100 dark:border-brand-900/50 dark:bg-brand-900/20 dark:text-brand-400 dark:hover:bg-brand-900/30"
-                                title="Manage Menus"
+                                title={t("admin.categories.manageMenus")}
                               >
                                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
@@ -879,7 +883,7 @@ export default function MerchantCategoriesPage() {
                               <button
                                 onClick={() => handleEdit(category)}
                                 className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                                title="Edit"
+                                title={t("admin.categories.edit")}
                               >
                                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -888,7 +892,7 @@ export default function MerchantCategoriesPage() {
                               <button
                                 onClick={() => handleDelete(category.id, category.name)}
                                 className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-error-200 bg-error-50 text-error-600 hover:bg-error-100 dark:border-error-900/50 dark:bg-error-900/20 dark:text-error-400 dark:hover:bg-error-900/30"
-                                title="Delete"
+                                title={t("admin.categories.delete")}
                               >
                                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -905,7 +909,7 @@ export default function MerchantCategoriesPage() {
                   {totalPages > 1 && (
                     <div className="mt-5 flex items-center justify-between border-t border-gray-200 pt-5 dark:border-gray-800">
                       <div className="text-sm text-gray-600 dark:text-gray-400">
-                        Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredCategories.length)} of {filteredCategories.length} categories
+                        {t("admin.categories.showing")} {indexOfFirstItem + 1} - {Math.min(indexOfLastItem, filteredCategories.length)} {t("admin.categories.of")} {filteredCategories.length} {t("admin.categories.categories")}
                       </div>
                       <div className="flex gap-2">
                         <button
@@ -949,9 +953,9 @@ export default function MerchantCategoriesPage() {
               {/* Category Display Tab - Drag and Drop Reordering */}
               <div className="mb-5 flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">Category Display Order</h3>
+                  <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">{t("admin.categories.displayOrder")}</h3>
                   <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    Drag and drop to reorder how categories appear to customers
+                    {t("admin.categories.displayOrderDesc")}
                   </p>
                 </div>
                 {hasUnsavedOrder && (
@@ -963,7 +967,7 @@ export default function MerchantCategoriesPage() {
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                       </svg>
-                      Cancel
+                      {t("admin.categories.cancel")}
                     </button>
                     <button
                       onClick={handleSaveOrder}
@@ -972,7 +976,7 @@ export default function MerchantCategoriesPage() {
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
-                      Save Order
+                      {t("admin.categories.saveOrder")}
                     </button>
                   </div>
                 )}
@@ -981,7 +985,7 @@ export default function MerchantCategoriesPage() {
               {categories.length === 0 ? (
                 <EmptyState
                   type="no-category"
-                  action={{ label: "Create First Category", onClick: () => { setActiveTab("list"); setShowForm(true); } }}
+                  action={{ label: t("admin.categories.createFirst"), onClick: () => { setActiveTab("list"); setShowForm(true); } }}
                 />
               ) : (
                 <div className="space-y-2">
@@ -989,7 +993,7 @@ export default function MerchantCategoriesPage() {
                     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                     </svg>
-                    <span>Drag to reorder categories</span>
+                    <span>{t("admin.categories.dragDropHint")}</span>
                   </div>
                   {(pendingReorder || categories).sort((a, b) => a.sortOrder - b.sortOrder).map((category, index) => (
                     <div
@@ -1147,7 +1151,7 @@ export default function MerchantCategoriesPage() {
                                   </span>
                                 </div>
                                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                                  {formatPrice(menu.price)}
+                                  {formatCurrency(typeof menu.price === 'string' ? parseFloat(menu.price) : menu.price)}
                                 </p>
                               </div>
                               <button
@@ -1235,7 +1239,7 @@ export default function MerchantCategoriesPage() {
                                   </span>
                                 </div>
                                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                                  {formatPrice(menu.price)}
+                                  {formatCurrency(typeof menu.price === 'string' ? parseFloat(menu.price) : menu.price)}
                                 </p>
                               </div>
                               <button
@@ -1361,10 +1365,4 @@ export default function MerchantCategoriesPage() {
 
     </div>
   );
-}
-
-function formatPrice(price: number | string): string {
-  const numPrice = typeof price === 'string' ? parseFloat(price) : price;
-  if (isNaN(numPrice)) return 'A$ 0';
-  return `A$ ${numPrice.toLocaleString('en-AU', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 }

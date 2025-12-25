@@ -7,6 +7,7 @@ import Link from "next/link";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import ImagePopupModal from "@/components/common/ImagePopupModal";
 import ViewMenuAddonCategoriesModal from "@/components/menu/ViewMenuAddonCategoriesModal";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface MenuAddonCategory {
   addonCategoryId: string;
@@ -74,6 +75,7 @@ export default function MenuDetailPage() {
   const router = useRouter();
   const params = useParams();
   const menuId = params?.id as string;
+  const { t } = useTranslation();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -153,7 +155,7 @@ export default function MenuDetailPage() {
   if (loading) {
     return (
       <div>
-        <PageBreadcrumb pageTitle="Menu Detail" />
+        <PageBreadcrumb pageTitle={t("admin.menu.detail.title")} />
         <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950">
           <div className="mb-6 flex items-center justify-between gap-4">
             <div className="flex items-center gap-4">
@@ -177,7 +179,7 @@ export default function MenuDetailPage() {
   if (error || !menu) {
     return (
       <div>
-        <PageBreadcrumb pageTitle="Menu Detail" />
+        <PageBreadcrumb pageTitle={t("admin.menu.detail.title")} />
         <div className="mt-6 flex items-center gap-3 rounded-xl border border-error-200 bg-error-50 p-4 dark:border-error-800 dark:bg-error-900/20">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-error-100 text-error-600 dark:bg-error-900/30 dark:text-error-400">
             <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
@@ -185,13 +187,13 @@ export default function MenuDetailPage() {
             </svg>
           </div>
           <div className="flex-1">
-            <p className="text-sm font-medium text-error-700 dark:text-error-300">{error || "Menu not found"}</p>
+            <p className="text-sm font-medium text-error-700 dark:text-error-300">{error || t("admin.menu.detail.notFound")}</p>
           </div>
           <button
             onClick={() => router.push("/admin/dashboard/menu")}
             className="inline-flex h-10 items-center rounded-lg bg-primary-500 px-4 text-sm font-medium text-white hover:bg-primary-600"
           >
-            Back to Menu List
+            {t("admin.menu.detail.backToList")}
           </button>
         </div>
       </div>
@@ -200,7 +202,7 @@ export default function MenuDetailPage() {
 
   return (
     <div>
-      <PageBreadcrumb pageTitle="Menu Detail" />
+      <PageBreadcrumb pageTitle={t("admin.menu.detail.title")} />
 
       <div className="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-950">
         {/* Header */}
@@ -213,8 +215,8 @@ export default function MenuDetailPage() {
                 </svg>
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Menu Detail</h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400">View menu item information</p>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">{t("admin.menu.detail.title")}</h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t("admin.menu.detail.subtitle")}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -225,7 +227,7 @@ export default function MenuDetailPage() {
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
-                Back
+                {t("admin.menu.detail.back")}
               </Link>
               <Link
                 href={`/admin/dashboard/menu/edit/${menuId}`}
@@ -234,7 +236,7 @@ export default function MenuDetailPage() {
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
-                Edit Menu
+                {t("admin.menu.detail.edit")}
               </Link>
             </div>
           </div>
@@ -259,7 +261,7 @@ export default function MenuDetailPage() {
                   : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
                   }`}>
                   <span className={`h-2 w-2 rounded-full ${menu.isActive ? 'bg-success-500' : 'bg-gray-400'}`}></span>
-                  {menu.isActive ? 'Active' : 'Inactive'}
+                  {menu.isActive ? t("admin.menu.detail.active") : t("admin.menu.detail.inactive")}
                 </span>
               </div>
 
@@ -271,7 +273,7 @@ export default function MenuDetailPage() {
                       <div className="relative h-5 w-5 overflow-hidden rounded-full">
                         <Image src="/images/menu-badges/spicy.png" alt="Spicy" fill className="object-cover" />
                       </div>
-                      <span className="text-sm font-medium text-orange-700 dark:text-orange-400">Spicy</span>
+                      <span className="text-sm font-medium text-orange-700 dark:text-orange-400">{t("admin.menu.badges.spicy")}</span>
                     </div>
                   )}
                   {menu.isBestSeller && (
@@ -279,7 +281,7 @@ export default function MenuDetailPage() {
                       <div className="relative h-5 w-5 overflow-hidden rounded-full">
                         <Image src="/images/menu-badges/best-seller.png" alt="Best Seller" fill className="object-cover" />
                       </div>
-                      <span className="text-sm font-medium text-amber-700 dark:text-amber-400">Best Seller</span>
+                      <span className="text-sm font-medium text-amber-700 dark:text-amber-400">{t("admin.menu.badges.bestSeller")}</span>
                     </div>
                   )}
                   {menu.isSignature && (
@@ -287,7 +289,7 @@ export default function MenuDetailPage() {
                       <div className="relative h-5 w-5 overflow-hidden rounded-full">
                         <Image src="/images/menu-badges/signature.png" alt="Signature" fill className="object-cover" />
                       </div>
-                      <span className="text-sm font-medium text-purple-700 dark:text-purple-400">Signature</span>
+                      <span className="text-sm font-medium text-purple-700 dark:text-purple-400">{t("admin.menu.badges.signature")}</span>
                     </div>
                   )}
                   {menu.isRecommended && (
@@ -295,7 +297,7 @@ export default function MenuDetailPage() {
                       <div className="relative h-5 w-5 overflow-hidden rounded-full">
                         <Image src="/images/menu-badges/recommended.png" alt="Recommended" fill className="object-cover" />
                       </div>
-                      <span className="text-sm font-medium text-green-700 dark:text-green-400">Recommended</span>
+                      <span className="text-sm font-medium text-green-700 dark:text-green-400">{t("admin.menu.badges.recommended")}</span>
                     </div>
                   )}
                 </div>
@@ -304,7 +306,7 @@ export default function MenuDetailPage() {
               {/* Price Section */}
               <div className="flex flex-wrap items-center gap-4">
                 <div className="rounded-xl border border-gray-200 bg-gray-50 px-5 py-3 dark:border-gray-700 dark:bg-gray-800/50">
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Price</p>
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">{t("admin.menu.detail.price")}</p>
                   <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{formatPrice(menu.price)}</p>
                 </div>
               </div>
@@ -318,11 +320,11 @@ export default function MenuDetailPage() {
                     </svg>
                   </div>
                   <div>
-                    <h4 className="text-sm font-semibold text-gray-800 dark:text-white">Menu Categories</h4>
+                    <h4 className="text-sm font-semibold text-gray-800 dark:text-white">{t("admin.menu.detail.menuCategories")}</h4>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       {menu.categories && menu.categories.length > 0 
-                        ? `${menu.categories.length} categories assigned` 
-                        : 'No categories assigned'}
+                        ? t("admin.menu.detail.categoriesAssigned", { count: menu.categories.length })
+                        : t("admin.menu.detail.noCategories")}
                     </p>
                   </div>
                 </div>
@@ -350,8 +352,8 @@ export default function MenuDetailPage() {
                   </span>
                 ) : (
                   <div className="rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 py-4 text-center dark:border-gray-700 dark:bg-gray-900/50">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">No categories assigned</p>
-                    <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">Edit this menu to add categories</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{t("admin.menu.detail.noCategories")}</p>
+                    <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">{t("admin.menu.detail.editToAddCategories")}</p>
                   </div>
                 )}
               </div>
@@ -372,17 +374,17 @@ export default function MenuDetailPage() {
                       </svg>
                     </div>
                     <div>
-                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Stock Available</p>
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400">{t("admin.menu.detail.stockAvailable")}</p>
                       <div className="flex items-center gap-2">
                         <span className={`text-sm font-bold ${(menu.stockQty || 0) > 10 ? 'text-success-600 dark:text-success-400'
                           : (menu.stockQty || 0) > 0 ? 'text-warning-600 dark:text-warning-400'
                             : 'text-error-600 dark:text-error-400'
                           }`}>
-                          {menu.stockQty || 0} pcs
+                          {menu.stockQty || 0} {t("admin.menu.detail.pcs")}
                         </span>
                         {menu.autoResetStock && (
                           <span className="text-xs text-gray-500 dark:text-gray-400">
-                            • Resets: {menu.dailyStockTemplate || 0}
+                            • {t("admin.menu.detail.resets")}: {menu.dailyStockTemplate || 0}
                           </span>
                         )}
                       </div>
@@ -398,7 +400,7 @@ export default function MenuDetailPage() {
                 <svg className="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
-                Menu Image
+                {t("admin.menu.detail.menuImage")}
               </label>
 
               <div
@@ -430,7 +432,7 @@ export default function MenuDetailPage() {
                       <svg className="mx-auto h-16 w-16 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
-                      <p className="mt-2 text-sm text-gray-400">No image</p>
+                      <p className="mt-2 text-sm text-gray-400">{t("admin.menu.detail.noImage")}</p>
                     </div>
                   </div>
                 )}
@@ -451,8 +453,8 @@ export default function MenuDetailPage() {
                   </svg>
                 </div>
                 <div>
-                  <h4 className="text-sm font-semibold text-gray-800 dark:text-white">Addon Categories</h4>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{menu.addonCategories?.length || 0} linked categories</p>
+                  <h4 className="text-sm font-semibold text-gray-800 dark:text-white">{t("admin.menu.detail.addonCategories")}</h4>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{t("admin.menu.detail.linkedCategories", { count: menu.addonCategories?.length || 0 })}</p>
                 </div>
               </div>
               {menu.addonCategories && menu.addonCategories.length > 0 && (
@@ -465,7 +467,7 @@ export default function MenuDetailPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                   </svg>
-                  View Details
+                  {t("admin.menu.detail.viewDetails")}
                 </button>
               )}
             </div>
@@ -477,8 +479,8 @@ export default function MenuDetailPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                   </svg>
                 </div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">No addon categories linked</p>
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">Edit this menu to add categories</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t("admin.menu.detail.noAddonCategories")}</p>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">{t("admin.menu.detail.editToAddAddons")}</p>
               </div>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -487,7 +489,7 @@ export default function MenuDetailPage() {
                     <div className="flex items-start justify-between gap-2">
                       <h4 className="flex-1 text-sm font-semibold text-gray-900 dark:text-white">{mac.addonCategory.name}</h4>
                       {mac.isRequired && (
-                        <span className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700 dark:bg-red-900/30 dark:text-red-400">Required</span>
+                        <span className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700 dark:bg-red-900/30 dark:text-red-400">{t("admin.menu.detail.required")}</span>
                       )}
                     </div>
                     {mac.addonCategory.description && (
@@ -495,9 +497,9 @@ export default function MenuDetailPage() {
                     )}
                     <div className="mt-2.5 flex items-center justify-between rounded-md bg-white px-2.5 py-1.5 dark:bg-gray-900/50">
                       <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-                        <span className="font-medium">Min: {mac.addonCategory.minSelection}</span>
+                        <span className="font-medium">{t("admin.menu.detail.min")}: {mac.addonCategory.minSelection}</span>
                         <span className="text-gray-400">•</span>
-                        <span className="font-medium">Max: {mac.addonCategory.maxSelection || '∞'}</span>
+                        <span className="font-medium">{t("admin.menu.detail.max")}: {mac.addonCategory.maxSelection || '∞'}</span>
                       </div>
                       <span className="rounded-full bg-primary-100 px-2 py-0.5 text-xs font-bold text-primary-700 dark:bg-primary-900/30 dark:text-primary-400">
                         {mac.addonCategory.addonItems?.length || 0}

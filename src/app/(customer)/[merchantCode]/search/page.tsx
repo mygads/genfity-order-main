@@ -11,6 +11,8 @@ import { useCart } from '@/context/CartContext';
 import type { CartItem } from '@/context/CartContext';
 import { formatCurrency } from '@/lib/utils/format';
 import { extractAddonDataFromMenus, type CachedAddonCategory } from '@/lib/utils/addonExtractor';
+import { useTranslation } from '@/lib/i18n/useTranslation';
+import { TranslationKeys } from '@/lib/i18n';
 
 interface MenuItem {
   id: string;
@@ -41,21 +43,22 @@ interface MerchantInfo {
 // Sort options
 type SortOption = 'name-asc' | 'name-desc' | 'price-asc' | 'price-desc' | 'popular';
 
-const SORT_OPTIONS: { value: SortOption; label: string }[] = [
-  { value: 'name-asc', label: 'Name (A-Z)' },
-  { value: 'name-desc', label: 'Name (Z-A)' },
-  { value: 'price-asc', label: 'Price: Low to High' },
-  { value: 'price-desc', label: 'Price: High to Low' },
-  { value: 'popular', label: 'Most Popular' },
+// Sort options will be translated inside component
+const SORT_OPTION_KEYS: { value: SortOption; key: TranslationKeys }[] = [
+  { value: 'name-asc', key: 'customer.menu.sortNameAZ' },
+  { value: 'name-desc', key: 'customer.menu.sortNameZA' },
+  { value: 'price-asc', key: 'customer.menu.sortPriceLow' },
+  { value: 'price-desc', key: 'customer.menu.sortPriceHigh' },
+  { value: 'popular', key: 'customer.menu.sortPopular' },
 ];
 
-// Dietary/Tag filters
-const DIETARY_FILTERS = [
-  { key: 'isSpicy', label: '🌶️ Spicy', color: 'bg-red-100 text-red-700 border-red-300' },
-  { key: 'isBestSeller', label: '⭐ Best Seller', color: 'bg-yellow-100 text-yellow-700 border-yellow-300' },
-  { key: 'isSignature', label: '👨‍🍳 Signature', color: 'bg-purple-100 text-purple-700 border-purple-300' },
-  { key: 'isRecommended', label: '👍 Recommended', color: 'bg-green-100 text-green-700 border-green-300' },
-  { key: 'isPromo', label: '🏷️ Promo', color: 'bg-orange-100 text-orange-700 border-orange-300' },
+// Dietary/Tag filters with translation keys
+const DIETARY_FILTER_KEYS: Array<{ key: string; labelKey: TranslationKeys; emoji: string; color: string }> = [
+  { key: 'isSpicy', labelKey: 'customer.menu.spicy', emoji: '🌶️', color: 'bg-red-100 text-red-700 border-red-300' },
+  { key: 'isBestSeller', labelKey: 'customer.menu.bestSeller', emoji: '⭐', color: 'bg-yellow-100 text-yellow-700 border-yellow-300' },
+  { key: 'isSignature', labelKey: 'customer.menu.signature', emoji: '👨‍🍳', color: 'bg-purple-100 text-purple-700 border-purple-300' },
+  { key: 'isRecommended', labelKey: 'customer.menu.recommended', emoji: '👍', color: 'bg-green-100 text-green-700 border-green-300' },
+  { key: 'isPromo', labelKey: 'customer.menu.promo', emoji: '🏷️', color: 'bg-orange-100 text-orange-700 border-orange-300' },
 ];
 
 export default function SearchPage() {
@@ -63,6 +66,7 @@ export default function SearchPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
+  const { t } = useTranslation();
 
   const merchantCode = params.merchantCode as string;
   const mode = searchParams.get('mode') || 'takeaway';
@@ -297,19 +301,19 @@ export default function SearchPage() {
       {/* Search Header */}
       <header className="sticky top-0 z-50 bg-white shadow-sm">
         <div className="flex items-center gap-3 px-4 py-3">
-          <button onClick={handleBack} className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors" aria-label="Go back">
+          <button onClick={handleBack} className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors" aria-label={t('common.back')}>
             <ArrowLeft className="w-5 h-5 text-gray-700" />
           </button>
           <div className="flex-1 relative">
             <div className="absolute left-3 top-1/2 -translate-y-1/2"><Search className="w-5 h-5 text-gray-400" /></div>
-            <input ref={inputRef} type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="What are you craving today?" className="w-full h-9 pl-10 pr-10 bg-white border rounded-lg text-sm text-gray-900 border-gray-300 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500" />
-            {searchQuery && (<button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2" aria-label="Clear search"><X className="w-5 h-5 text-gray-400 hover:text-gray-600" /></button>)}
+            <input ref={inputRef} type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={t('customer.menu.searchPlaceholder')} className="w-full h-9 pl-10 pr-10 bg-white border rounded-lg text-sm text-gray-900 border-gray-300 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500" />
+            {searchQuery && (<button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2" aria-label={t('common.clear')}><X className="w-5 h-5 text-gray-400 hover:text-gray-600" /></button>)}
           </div>
           {/* Filter Toggle Button */}
           <button
             onClick={() => setShowFilters(!showFilters)}
             className={`relative w-9 h-9 flex items-center justify-center rounded-full transition-colors ${showFilters ? 'bg-orange-100 text-orange-600' : 'hover:bg-gray-100 text-gray-700'}`}
-            aria-label="Toggle filters"
+            aria-label={t('common.filter')}
           >
             <SlidersHorizontal className="w-5 h-5" />
             {hasActiveFilters && (
@@ -324,15 +328,15 @@ export default function SearchPage() {
         <div className="border-b-2 border-gray-300 px-4 py-4 space-y-4">
           {/* Sort Dropdown */}
           <div>
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">Sort By</label>
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">{t('customer.menu.sortBy')}</label>
             <div className="relative">
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as SortOption)}
                 className="w-full h-10 pl-3 pr-10 bg-white border border-gray-300 rounded-lg text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
-                {SORT_OPTIONS.map(option => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
+                {SORT_OPTION_KEYS.map(option => (
+                  <option key={option.value} value={option.value}>{t(option.key)}</option>
                 ))}
               </select>
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
@@ -342,7 +346,7 @@ export default function SearchPage() {
           {/* Price Range */}
           <div>
             <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
-              Price Range: {formatCurrency(priceRange[0], merchantInfo?.currency || 'AUD')} - {formatCurrency(priceRange[1], merchantInfo?.currency || 'AUD')}
+              {t('customer.menu.priceRange')} {formatCurrency(priceRange[0], merchantInfo?.currency || 'AUD')} - {formatCurrency(priceRange[1], merchantInfo?.currency || 'AUD')}
             </label>
             <div className="flex items-center gap-3">
               <input
@@ -367,7 +371,7 @@ export default function SearchPage() {
           {/* Category Filters */}
           {availableCategories.length > 0 && (
             <div>
-              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">Categories</label>
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">{t('customer.menu.categories')}</label>
               <div className="flex flex-wrap gap-2">
                 {availableCategories.map(cat => (
                   <button
@@ -393,9 +397,9 @@ export default function SearchPage() {
 
           {/* Dietary / Tag Filters */}
           <div>
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">Tags</label>
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">{t('customer.menu.tags')}</label>
             <div className="flex flex-wrap gap-2">
-              {DIETARY_FILTERS.map(filter => (
+              {DIETARY_FILTER_KEYS.map(filter => (
                 <button
                   key={filter.key}
                   onClick={() => {
@@ -410,7 +414,7 @@ export default function SearchPage() {
                     : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'
                     }`}
                 >
-                  {filter.label}
+                  {filter.emoji} {t(filter.labelKey)}
                 </button>
               ))}
             </div>
@@ -422,7 +426,7 @@ export default function SearchPage() {
               onClick={clearAllFilters}
               className="w-full h-10 text-sm font-medium text-orange-600 hover:text-orange-700 transition-colors"
             >
-              Clear All Filters
+              {t('customer.menu.clearFilters')}
             </button>
           )}
         </div>
@@ -457,11 +461,11 @@ export default function SearchPage() {
           <>
             <div className="px-4 py-3">
               <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
-                {searchQuery ? `Search Results (${filteredItems.length})` : 'Must Try This Week'}
+                {searchQuery ? t('customer.search.searchResults', { count: filteredItems.length }) : t('customer.menu.mustTryThisWeek')}
               </h2>
             </div>
             {filteredItems.length === 0 ? (
-              <div className="text-center py-12"><p className="text-gray-500">No menu items found</p></div>
+              <div className="text-center py-12"><p className="text-gray-500">{t('customer.search.noResults')}</p></div>
             ) : (
               <div className="bg-white px-4">
                 {filteredItems.map((item, index) => {
@@ -479,10 +483,10 @@ export default function SearchPage() {
                         {item.description && (<p onClick={() => available && handleOpenMenu(item)} className="line-clamp-2" style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', fontWeight: 400, color: available ? '#222222ff' : '#9CA3AF', lineHeight: '1.5', margin: '4px 0 0 0', cursor: available ? 'pointer' : 'default' }}>{item.description}</p>)}
                         {(item.isSpicy || item.isBestSeller || item.isSignature || item.isRecommended) && (
                           <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
-                            {item.isBestSeller && (<div style={{ width: '28px', height: '28px', position: 'relative', overflow: 'hidden' }}><Image src="/images/menu-badges/best-seller.png" alt="Best Seller" fill className="object-contain" /></div>)}
-                            {item.isSignature && (<div style={{ width: '28px', height: '28px', position: 'relative', overflow: 'hidden' }}><Image src="/images/menu-badges/signature.png" alt="Signature" fill className="object-contain" /></div>)}
-                            {item.isSpicy && (<div style={{ width: '28px', height: '28px', position: 'relative', overflow: 'hidden' }}><Image src="/images/menu-badges/spicy.png" alt="Spicy" fill className="object-contain" /></div>)}
-                            {item.isRecommended && (<div style={{ width: '28px', height: '28px', position: 'relative', overflow: 'hidden' }}><Image src="/images/menu-badges/recommended.png" alt="Recommended" fill className="object-contain" /></div>)}
+                            {item.isBestSeller && (<div style={{ width: '28px', height: '28px', position: 'relative', overflow: 'hidden' }}><Image src="/images/menu-badges/best-seller.png" alt={t('customer.menu.bestSeller')} fill className="object-contain" /></div>)}
+                            {item.isSignature && (<div style={{ width: '28px', height: '28px', position: 'relative', overflow: 'hidden' }}><Image src="/images/menu-badges/signature.png" alt={t('customer.menu.signature')} fill className="object-contain" /></div>)}
+                            {item.isSpicy && (<div style={{ width: '28px', height: '28px', position: 'relative', overflow: 'hidden' }}><Image src="/images/menu-badges/spicy.png" alt={t('customer.menu.spicy')} fill className="object-contain" /></div>)}
+                            {item.isRecommended && (<div style={{ width: '28px', height: '28px', position: 'relative', overflow: 'hidden' }}><Image src="/images/menu-badges/recommended.png" alt={t('customer.menu.recommended')} fill className="object-contain" /></div>)}
                           </div>
                         )}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '8px' }}>
@@ -497,16 +501,16 @@ export default function SearchPage() {
                           <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
                             {/* Low Stock Indicator */}
                             {available && item.trackStock && item.stockQty !== null && item.stockQty <= 10 && (
-                              <span style={{ fontSize: '12px', fontWeight: 500, color: '#f97316' }}>Only {item.stockQty} left</span>
+                              <span style={{ fontSize: '12px', fontWeight: 500, color: '#f97316' }}>{t('customer.menu.onlyLeft', { count: item.stockQty })}</span>
                             )}
-                            {!available ? (<span style={{ fontSize: '14px', fontWeight: 600, color: '#EF4444', fontFamily: 'Inter, sans-serif' }}>Sold out</span>
+                            {!available ? (<span style={{ fontSize: '14px', fontWeight: 600, color: '#EF4444', fontFamily: 'Inter, sans-serif' }}>{t('customer.menu.soldOut')}</span>
                             ) : isInCart ? (
                               <div style={{ display: 'flex', alignItems: 'center', height: '32px', border: '1px solid #F05A28', borderRadius: '8px' }}>
                                 <button onClick={(e) => { e.stopPropagation(); handleOpenMenu(item); }} style={{ width: '32px', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', border: 'none', color: '#F05A28', cursor: 'pointer', fontSize: '16px' }}>−</button>
                                 <span style={{ fontSize: '14px', fontWeight: 600, color: '#000000', minWidth: '20px', textAlign: 'center' }}>{quantityInCart}</span>
                                 <button onClick={(e) => { e.stopPropagation(); handleOpenMenu(item); }} style={{ width: '32px', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', border: 'none', color: '#F05A28', cursor: 'pointer', fontSize: '16px' }}>+</button>
                               </div>
-                            ) : (<button onClick={(e) => { e.stopPropagation(); handleOpenMenu(item); }} style={{ height: '32px', padding: '0 20px', border: '1px solid #F05A28', borderRadius: '8px', backgroundColor: 'transparent', color: '#F05A28', fontSize: '14px', fontWeight: 600, fontFamily: 'Inter, sans-serif', cursor: 'pointer' }}>Add</button>)}
+                            ) : (<button onClick={(e) => { e.stopPropagation(); handleOpenMenu(item); }} style={{ height: '32px', padding: '0 20px', border: '1px solid #F05A28', borderRadius: '8px', backgroundColor: 'transparent', color: '#F05A28', fontSize: '14px', fontWeight: 600, fontFamily: 'Inter, sans-serif', cursor: 'pointer' }}>{t('common.add')}</button>)}
                           </div>
                         </div>
                       </div>

@@ -24,6 +24,7 @@ import ModeUnavailableModal from '@/components/modals/ModeUnavailableModal';
 import { extractAddonDataFromMenus } from '@/lib/utils/addonExtractor';
 import { throttle } from '@/lib/utils/throttle';
 import { useStoreStatus } from '@/hooks/useStoreStatus';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 interface MenuItem {
   id: string; // ✅ String from API (BigInt serialized)
@@ -128,6 +129,7 @@ export default function OrderClientPage({
   initialMenus,
 }: OrderClientPageProps) {
   const router = useRouter();
+  const { t } = useTranslation();
 
   // Use real-time store status hook (fetches from API, not cached ISR data)
   const {
@@ -830,7 +832,7 @@ export default function OrderClientPage({
                       data-category-section="promo"
                     >
                       <HorizontalMenuSection
-                        title="Promo"
+                        title={t('customer.menu.promo')}
                         items={promoItems}
                         currency={merchantInfo?.currency || 'AUD'}
                         onItemClick={(item) => handleOpenMenu(item as MenuItem)}
@@ -857,7 +859,7 @@ export default function OrderClientPage({
                       data-category-section="best-seller"
                     >
                       <HorizontalMenuSection
-                        title="Best Seller"
+                        title={t('customer.menu.bestSeller')}
                         items={bestSellerItems}
                         currency={merchantInfo?.currency || 'AUD'}
                         onItemClick={(item) => handleOpenMenu(item as MenuItem)}
@@ -883,7 +885,7 @@ export default function OrderClientPage({
                       data-category-section="recommendation"
                     >
                       <HorizontalMenuSection
-                        title="Recommendation"
+                        title={t('customer.menu.recommended')}
                         items={recommendationItems}
                         currency={merchantInfo?.currency || 'AUD'}
                         onItemClick={(item) => handleOpenMenu(item as MenuItem)}
@@ -962,8 +964,8 @@ export default function OrderClientPage({
             {displayedItems.length === 0 && !isLoading && selectedCategory !== 'all' && (
               <div className="px-4 mt-6">
                 <EmptyState
-                  title="No Menu Items"
-                  description="No items available in this category"
+                  title={t('customer.menu.noItems')}
+                  description={t('customer.menu.tryDifferentSearch')}
                 />
               </div>
             )}

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import AdminFormFooter from "@/components/common/AdminFormFooter";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface Menu {
     id: string;
@@ -15,6 +16,7 @@ interface Menu {
 
 export default function CreateMenuBookPage() {
     const router = useRouter();
+    const { } = useTranslation();
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);

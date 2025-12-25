@@ -6,23 +6,29 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { EyeIcon, EyeCloseIcon } from '@/icons';
 import { saveAdminAuth } from '@/lib/utils/adminAuth';
+import { useTranslation } from '@/lib/i18n/useTranslation';
+import { TranslationKeys } from '@/lib/i18n';
 
-// Carousel data with English text
-const carouselSlides = [
+// Carousel data with translation keys
+const carouselSlides: Array<{
+  image: string;
+  titleKey: TranslationKeys;
+  descriptionKey: TranslationKeys;
+}> = [
   {
     image: '/images/carousel/il-talent-1.png',
-    title: 'Integrated F&B Ecosystem',
-    description: 'Cashier, kitchen, and customers connected effectively. All your data will also be kept confidential.',
+    titleKey: 'admin.login.carousel.title1',
+    descriptionKey: 'admin.login.carousel.desc1',
   },
   {
     image: '/images/carousel/il-talent-2.png',
-    title: 'Real-time Order Management',
-    description: 'Track and manage orders seamlessly from any device. Stay connected with your business 24/7.',
+    titleKey: 'admin.login.carousel.title2',
+    descriptionKey: 'admin.login.carousel.desc2',
   },
   {
     image: '/images/carousel/il-talent-3.png',
-    title: 'Smart Analytics Dashboard',
-    description: 'Get insights into your business performance with comprehensive reports and analytics.',
+    titleKey: 'admin.login.carousel.title3',
+    descriptionKey: 'admin.login.carousel.desc3',
   },
 ];
 
@@ -32,6 +38,7 @@ const carouselSlides = [
  */
 function AdminLoginForm() {
   const searchParams = useSearchParams();
+  const { t } = useTranslation();
 
   const [formData, setFormData] = useState({
     email: '',
@@ -46,11 +53,11 @@ function AdminLoginForm() {
   const redirectPath = searchParams.get('redirect') || '/admin/dashboard';
   const errorParam = searchParams.get('error');
 
-  // Error messages
+  // Error messages with translation
   const errorMessages: Record<string, string> = {
-    expired: 'Your session has expired. Please log in again.',
-    forbidden: 'Access denied. You do not have permission.',
-    unauthorized: 'You must log in first.',
+    expired: t('admin.login.error.sessionExpired'),
+    forbidden: t('admin.login.error.accessDenied'),
+    unauthorized: t('admin.login.error.mustLogin'),
   };
 
   // Auto-rotate carousel every 5 seconds
@@ -83,19 +90,19 @@ function AdminLoginForm() {
 
     // Input validation - use early return pattern
     if (!formData.email || !formData.password) {
-      setError('Email and password are required');
+      setError(t('admin.login.error.emailPasswordRequired'));
       setIsLoading(false);
       return;
     }
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      setError('Invalid email format');
+      setError(t('auth.error.invalidEmail'));
       setIsLoading(false);
       return;
     }
 
     if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters');
+      setError(t('admin.login.error.passwordMin8'));
       setIsLoading(false);
       return;
     }
@@ -118,7 +125,7 @@ function AdminLoginForm() {
 
       // Handle API errors without throwing
       if (!response.ok) {
-        setError(data.message || 'Invalid email or password');
+        setError(data.message || t('auth.error.invalidCredentials'));
         setIsLoading(false);
         return;
       }
@@ -126,7 +133,7 @@ function AdminLoginForm() {
       // Validate user role (must be admin/merchant)
       const allowedRoles = ['SUPER_ADMIN', 'MERCHANT_OWNER', 'MERCHANT_STAFF'];
       if (!allowedRoles.includes(data.data.user.role)) {
-        setError('Access denied. This page is for administrators only.');
+        setError(t('admin.login.error.adminOnly'));
         setIsLoading(false);
         return;
       }
@@ -157,7 +164,7 @@ function AdminLoginForm() {
       // Redirect
       window.location.href = redirectPath;
     } catch {
-      setError('Network error. Please try again.');
+      setError(t('admin.login.error.networkError'));
     } finally {
       setIsLoading(false);
     }
@@ -184,7 +191,7 @@ function AdminLoginForm() {
               >
                 <Image
                   src={slide.image}
-                  alt={slide.title}
+                  alt={t(slide.titleKey)}
                   width={400}
                   height={300}
                   className="object-contain"
@@ -206,7 +213,7 @@ function AdminLoginForm() {
                 color: '#373A49',
               }}
             >
-              {carouselSlides[currentSlide].title}
+              {t(carouselSlides[currentSlide].titleKey)}
             </h2>
             <p
               className="transition-all duration-500"
@@ -218,7 +225,7 @@ function AdminLoginForm() {
                 color: '#373A49',
               }}
             >
-              {carouselSlides[currentSlide].description}
+              {t(carouselSlides[currentSlide].descriptionKey)}
             </p>
           </div>
 
@@ -284,7 +291,7 @@ function AdminLoginForm() {
                 marginBottom: '8px',
               }}
             >
-              Welcome Back
+              {t('admin.login.welcomeBack')}
             </h1>
             <p
               style={{
@@ -294,7 +301,7 @@ function AdminLoginForm() {
                 color: '#6B7280',
               }}
             >
-              Please sign in to your account
+              {t('admin.login.signInPrompt')}
             </p>
           </div>
 
@@ -315,7 +322,7 @@ function AdminLoginForm() {
                     marginBottom: '2px',
                   }}
                 >
-                  Login Failed
+                  {t('admin.login.error.loginFailed')}
                 </p>
                 <p
                   style={{
@@ -347,13 +354,13 @@ function AdminLoginForm() {
                     marginBottom: '8px',
                   }}
                 >
-                  Email
+                  {t('auth.email')}
                 </label>
                 <input
                   id="email"
                   name="email"
                   type="email"
-                  placeholder="Enter your email"
+                  placeholder={t('admin.login.placeholder.email')}
                   value={formData.email}
                   onChange={handleChange}
                   required
@@ -395,14 +402,14 @@ function AdminLoginForm() {
                     marginBottom: '8px',
                   }}
                 >
-                  Password
+                  {t('auth.password')}
                 </label>
                 <div className="relative">
                   <input
                     id="password"
                     name="password"
                     type={showPassword ? 'text' : 'password'}
-                    placeholder="Enter your password"
+                    placeholder={t('admin.login.placeholder.password')}
                     value={formData.password}
                     onChange={handleChange}
                     required
@@ -458,7 +465,7 @@ function AdminLoginForm() {
                   onMouseEnter={(e) => (e.currentTarget.style.textDecoration = 'underline')}
                   onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
                 >
-                  Forgot Password?
+                  {t('auth.forgotPassword')}?
                 </Link>
               </div>
 
@@ -490,7 +497,7 @@ function AdminLoginForm() {
                   }
                 }}
               >
-                {isLoading ? 'Signing in...' : 'Sign In'}
+                {isLoading ? t('auth.signingIn') : t('auth.signIn')}
               </button>
             </div>
           </form>
@@ -505,7 +512,7 @@ function AdminLoginForm() {
                 color: '#6B7280',
               }}
             >
-              Don&apos;t have an account?{' '}
+              {t('auth.dontHaveAccount')}{' '}
             </span>
             <Link
               href="/admin/register"
@@ -519,7 +526,7 @@ function AdminLoginForm() {
               onMouseEnter={(e) => (e.currentTarget.style.textDecoration = 'underline')}
               onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
             >
-              Register Now
+              {t('admin.login.registerNow')}
             </Link>
           </div>
         </div>

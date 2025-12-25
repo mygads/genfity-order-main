@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface SpecialPrice {
     id: string;
@@ -23,6 +24,7 @@ const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export default function SpecialPricesPage() {
     const router = useRouter();
+    const { t } = useTranslation();
     const [loading, setLoading] = useState(true);
     const [specialPrices, setSpecialPrices] = useState<SpecialPrice[]>([]);
     const [error, setError] = useState<string | null>(null);
@@ -124,7 +126,7 @@ export default function SpecialPricesPage() {
     if (loading) {
         return (
             <div>
-                <PageBreadcrumb pageTitle="Special Prices" />
+                <PageBreadcrumb pageTitle={t("admin.specialPrices.title")} />
                 <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950">
                     {/* Skeleton Header */}
                     <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -179,15 +181,15 @@ export default function SpecialPricesPage() {
 
     return (
         <div>
-            <PageBreadcrumb pageTitle="Special Prices" />
+            <PageBreadcrumb pageTitle={t("admin.specialPrices.title")} />
 
             <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950">
                 {/* Header */}
                 <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Special Prices</h2>
+                        <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t("admin.specialPrices.title")}</h2>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Time-based promotional pricing for menu books
+                            {t("admin.specialPrices.subtitle")}
                         </p>
                     </div>
                     <Link
@@ -197,7 +199,7 @@ export default function SpecialPricesPage() {
                         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                         </svg>
-                        Create Special Price
+                        {t("admin.specialPrices.create")}
                     </Link>
                 </div>
 
@@ -205,7 +207,7 @@ export default function SpecialPricesPage() {
                 <div className="mb-6">
                     <input
                         type="text"
-                        placeholder="Search by name or menu book..."
+                        placeholder={t("admin.specialPrices.searchPlaceholder")}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="h-11 w-full max-w-md rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-primary-400 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
@@ -225,21 +227,21 @@ export default function SpecialPricesPage() {
                         <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" />
                         </svg>
-                        <h3 className="mt-4 text-lg font-semibold text-gray-900 dark:text-white">No special prices yet</h3>
-                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Create your first special price to get started</p>
+                        <h3 className="mt-4 text-lg font-semibold text-gray-900 dark:text-white">{t("admin.specialPrices.noSpecialPrices")}</h3>
+                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t("admin.specialPrices.noSpecialPricesDesc")}</p>
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="w-full">
                             <thead>
                                 <tr className="border-b border-gray-200 dark:border-gray-700">
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Name</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Menu Book</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Date Range</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Days</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Time</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Status</th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-gray-500">Actions</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">{t("admin.specialPrices.name")}</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">{t("admin.specialPrices.menuBook")}</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">{t("admin.specialPrices.dateRange")}</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">{t("admin.specialPrices.days")}</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">{t("admin.specialPrices.time")}</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">{t("admin.specialPrices.status")}</th>
+                                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-gray-500">{t("admin.specialPrices.actions")}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -266,7 +268,7 @@ export default function SpecialPricesPage() {
                                             </div>
                                         </td>
                                         <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">
-                                            {sp.isAllDay ? "All Day" : `${sp.startTime} - ${sp.endTime}`}
+                                            {sp.isAllDay ? t("admin.specialPrices.allDay") : `${sp.startTime} - ${sp.endTime}`}
                                         </td>
                                         <td className="px-4 py-4">
                                             <button
@@ -276,7 +278,7 @@ export default function SpecialPricesPage() {
                                                     : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400"
                                                     }`}
                                             >
-                                                {sp.isActive ? "Active" : "Inactive"}
+                                                {sp.isActive ? t("admin.specialPrices.active") : t("admin.specialPrices.inactive")}
                                             </button>
                                         </td>
                                         <td className="px-4 py-4 text-right">
@@ -311,23 +313,23 @@ export default function SpecialPricesPage() {
             {deleteId && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
                     <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900">
-                        <h3 className="text-lg font-bold text-gray-900 dark:text-white">Delete Special Price?</h3>
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t("admin.specialPrices.deleteConfirm")}</h3>
                         <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                            This action cannot be undone.
+                            {t("admin.specialPrices.deleteWarning")}
                         </p>
                         <div className="mt-6 flex justify-end gap-3">
                             <button
                                 onClick={() => setDeleteId(null)}
                                 className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300"
                             >
-                                Cancel
+                                {t("admin.specialPrices.cancel")}
                             </button>
                             <button
                                 onClick={() => handleDelete(deleteId)}
                                 disabled={deleting}
                                 className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
                             >
-                                {deleting ? "Deleting..." : "Delete"}
+                                {deleting ? t("admin.specialPrices.deleting") : t("admin.specialPrices.delete")}
                             </button>
                         </div>
                     </div>

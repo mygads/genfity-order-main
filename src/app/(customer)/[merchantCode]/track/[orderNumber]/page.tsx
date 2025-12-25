@@ -5,6 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, RefreshCw } from 'lucide-react';
 import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';
 import { formatCurrency } from '@/lib/utils/format';
+import { useTranslation } from '@/lib/i18n/useTranslation';
+import { TranslationKeys } from '@/lib/i18n';
 
 // Order status types
 type OrderStatus = 'PENDING' | 'ACCEPTED' | 'IN_PROGRESS' | 'READY' | 'COMPLETED' | 'CANCELLED';
@@ -33,17 +35,17 @@ interface OrderData {
 
 interface StatusStep {
     status: OrderStatus;
-    label: string;
+    labelKey: TranslationKeys;
     icon: string;
-    description: string;
+    descriptionKey: TranslationKeys;
 }
 
 const STATUS_STEPS: StatusStep[] = [
-    { status: 'PENDING', label: 'Pending', icon: '1', description: 'Waiting for acceptance' },
-    { status: 'ACCEPTED', label: 'Accepted', icon: '2', description: 'Order confirmed' },
-    { status: 'IN_PROGRESS', label: 'Preparing', icon: '3', description: 'Being prepared' },
-    { status: 'READY', label: 'Ready', icon: '4', description: 'Ready for pickup!' },
-    { status: 'COMPLETED', label: 'Completed', icon: '✓', description: 'Order completed' },
+    { status: 'PENDING', labelKey: 'customer.status.pending', icon: '1', descriptionKey: 'customer.status.pendingDesc' },
+    { status: 'ACCEPTED', labelKey: 'customer.status.accepted', icon: '2', descriptionKey: 'customer.status.acceptedDesc' },
+    { status: 'IN_PROGRESS', labelKey: 'customer.status.preparing', icon: '3', descriptionKey: 'customer.status.preparingDesc' },
+    { status: 'READY', labelKey: 'customer.status.ready', icon: '4', descriptionKey: 'customer.status.readyDesc' },
+    { status: 'COMPLETED', labelKey: 'customer.status.completed', icon: '✓', descriptionKey: 'customer.status.completedDesc' },
 ];
 
 /**
@@ -59,6 +61,7 @@ const STATUS_STEPS: StatusStep[] = [
 export default function OrderTrackPage() {
     const params = useParams();
     const router = useRouter();
+    const { t } = useTranslation();
 
     const merchantCode = params.merchantCode as string;
     const orderNumber = params.orderNumber as string;
@@ -163,15 +166,15 @@ export default function OrderTrackPage() {
     const getEstimatedWaitTime = (status: OrderStatus): string => {
         switch (status) {
             case 'PENDING':
-                return '~15-20 min';
+                return t('customer.track.estimated.pending');
             case 'ACCEPTED':
-                return '~10-15 min';
+                return t('customer.track.estimated.accepted');
             case 'IN_PROGRESS':
-                return '~5-10 min';
+                return t('customer.track.estimated.inProgress');
             case 'READY':
-                return 'Ready now!';
+                return t('customer.track.estimated.ready');
             case 'COMPLETED':
-                return 'Completed';
+                return t('customer.status.completed');
             default:
                 return '--';
         }
@@ -201,14 +204,14 @@ export default function OrderTrackPage() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                     <p className="text-base text-gray-900 dark:text-white font-semibold mb-2">
-                        Order Not Found
+                        {t('customer.track.orderNotFound')}
                     </p>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">{error}</p>
                     <button
                         onClick={() => router.back()}
                         className="px-6 py-3 bg-orange-500 text-white text-sm font-semibold rounded-lg hover:bg-orange-600 transition-all active:scale-[0.98]"
                     >
-                        Go Back
+                        {t('customer.track.goBack')}
                     </button>
                 </div>
             </div>
@@ -234,7 +237,7 @@ export default function OrderTrackPage() {
                     </button>
 
                     <h1 className="flex-1 text-center font-semibold text-gray-900 dark:text-white text-base">
-                        Track Order
+                        {t('customer.track.title')}
                     </h1>
 
                     <button
@@ -258,10 +261,10 @@ export default function OrderTrackPage() {
                         </span>
                     </div>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {order.orderType === 'DINE_IN' ? `Table #${order.tableNumber}` : 'Takeaway Order'}
+                        {order.orderType === 'DINE_IN' ? `${t('admin.orders.table')} #${order.tableNumber}` : t('customer.track.takeawayOrder')}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                        Last updated: {lastUpdated.toLocaleTimeString()}
+                        {t('customer.track.lastUpdated')} {lastUpdated.toLocaleTimeString()}
                     </p>
                 </div>
 
@@ -273,9 +276,9 @@ export default function OrderTrackPage() {
                             <svg className="w-16 h-16 mx-auto mb-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
                             </svg>
-                            <h2 className="text-xl font-bold text-red-600 mb-2">Order Cancelled</h2>
+                            <h2 className="text-xl font-bold text-red-600 mb-2">{t('customer.track.orderCancelled')}</h2>
                             <p className="text-sm text-gray-600 dark:text-gray-400">
-                                This order has been cancelled.
+                                {t('customer.status.cancelledDesc')}
                             </p>
                         </div>
                     ) : (
@@ -344,7 +347,7 @@ export default function OrderTrackPage() {
                                                         isActive ? 'text-gray-900 dark:text-white' :
                                                             'text-gray-400 dark:text-gray-500'}
                         `}>
-                                                    {step.label}
+                                                    {t(step.labelKey)}
                                                 </span>
                                             </div>
                                         );
@@ -386,9 +389,9 @@ export default function OrderTrackPage() {
                                     )}
                                 </div>
                                 <h2 className={`text-xl font-bold mb-2 ${isReady ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-white'}`}>
-                                    {isCompleted ? 'Order Completed!' :
-                                        isReady ? 'Your Order is Ready!' :
-                                            STATUS_STEPS[currentStepIndex]?.description || 'Processing...'}
+                                    {isCompleted ? t('customer.track.orderCompleted') :
+                                        isReady ? t('customer.track.orderReady') :
+                                            t(STATUS_STEPS[currentStepIndex]?.descriptionKey) || t('customer.loading.processingOrder')}
                                 </h2>
 
                                 {!isCompleted && (
@@ -397,14 +400,14 @@ export default function OrderTrackPage() {
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                         </svg>
                                         <span className="text-sm font-medium">
-                                            Estimated: {getEstimatedWaitTime(order.status)}
+                                            {t('customer.track.estimated')} {getEstimatedWaitTime(order.status)}
                                         </span>
                                     </div>
                                 )}
 
                                 {isReady && (
                                     <p className="mt-3 text-sm text-green-600 dark:text-green-400 font-medium">
-                                        Please pick up your order at the counter!
+                                        {t('customer.track.pickupMessage')}
                                     </p>
                                 )}
                             </div>
@@ -415,7 +418,7 @@ export default function OrderTrackPage() {
                 {/* Order Details */}
                 <div className="px-6 pb-6">
                     <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-4">
-                        Order Items
+                        {t('customer.track.orderItems')}
                     </h3>
                     <div className="space-y-3">
                         {order.orderItems.map((item, index) => (
@@ -442,7 +445,7 @@ export default function OrderTrackPage() {
 
                     {/* Total */}
                     <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                        <span className="text-base font-semibold text-gray-900 dark:text-white">Total</span>
+                        <span className="text-base font-semibold text-gray-900 dark:text-white">{t('customer.payment.total')}</span>
                         <span className="text-lg font-bold text-orange-500">
                             {formatCurrency(order.totalAmount, order.merchant.currency)}
                         </span>
@@ -457,7 +460,7 @@ export default function OrderTrackPage() {
                     onClick={handleNewOrder}
                     className="w-full h-12 bg-orange-500 text-white text-base font-semibold rounded-lg hover:bg-orange-600 transition-all active:scale-[0.98] shadow-sm"
                 >
-                    New Order
+                    {t('customer.orderSummary.newOrder')}
                 </button>
             </div>
         </>

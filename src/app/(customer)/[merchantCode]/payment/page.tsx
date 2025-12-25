@@ -11,6 +11,7 @@ import type { OrderMode } from '@/lib/types/customer';
 import PaymentConfirmationModal from '@/components/modals/PaymentConfirmationModal';
 import { useCart } from '@/context/CartContext';
 import { calculateCartSubtotal } from '@/lib/utils/priceCalculator';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 /**
  * Payment Page - Customer Order Payment
@@ -43,6 +44,7 @@ export default function PaymentPage() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { t } = useTranslation();
 
   const merchantCode = params.merchantCode as string;
   const mode = (searchParams.get('mode') || 'takeaway') as OrderMode;
@@ -89,6 +91,15 @@ export default function PaymentPage() {
     // Special handling for AUD to show A$ prefix
     if (merchantCurrency === 'AUD') {
       return `A$${amount.toFixed(2)}`;
+    }
+    
+    // Special handling for IDR - no decimals
+    if (merchantCurrency === 'IDR') {
+      const formatted = new Intl.NumberFormat('id-ID', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(Math.round(amount));
+      return `Rp ${formatted}`;
     }
 
     return new Intl.NumberFormat('en-AU', {
@@ -202,32 +213,32 @@ export default function PaymentPage() {
 
     // Validate required fields with inline error
     if (!name.trim()) {
-      errors.name = 'Full name is required';
+      errors.name = t('customer.payment.error.nameRequired');
       if (!firstInvalidRef) firstInvalidRef = nameInputRef;
     }
 
     // Validate phone is required
     if (!phone.trim()) {
-      errors.phone = 'Phone number is required';
+      errors.phone = t('customer.payment.error.phoneRequired');
       if (!firstInvalidRef) firstInvalidRef = phoneInputRef;
     }
 
     // Validate email is required
     if (!email.trim()) {
-      errors.email = 'Email is required';
+      errors.email = t('customer.payment.error.emailRequired');
       if (!firstInvalidRef) firstInvalidRef = emailInputRef;
     } else {
       // Validate email format
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email.trim())) {
-        errors.email = 'Please enter a valid email';
+        errors.email = t('customer.payment.error.invalidEmail');
         if (!firstInvalidRef) firstInvalidRef = emailInputRef;
       }
     }
 
     // Validate table number for dine-in
     if (mode === 'dinein' && !tableNumber.trim()) {
-      errors.tableNumber = 'Table number is required';
+      errors.tableNumber = t('customer.payment.error.tableRequired');
       if (!firstInvalidRef) firstInvalidRef = tableNumberInputRef;
     }
 
@@ -476,7 +487,7 @@ export default function PaymentPage() {
             </svg>
           </button>
           <h1 className="flex-1 text-center font-semibold text-gray-900 dark:text-white text-base pr-10">
-            Payment
+            {t('customer.payment.title')}
           </h1>
         </div>
       </header>
@@ -502,10 +513,10 @@ export default function PaymentPage() {
               backgroundColor: 'rgba(240, 90, 40, 0.1)'
             }}
           >
-            <span className="text-gray-700">Order Type</span>
+            <span className="text-gray-700">{t('order.type')}</span>
             <div className="flex items-center gap-2">
               <span className="font-medium text-gray-900">
-                {mode === 'dinein' ? 'Dine In' : 'Pick Up'}
+                {mode === 'dinein' ? t('customer.mode.dineIn') : t('customer.mode.pickUp')}
               </span>
               <svg
                 style={{ width: '18px', height: '18px', color: '#212529' }}
@@ -535,7 +546,7 @@ export default function PaymentPage() {
               className="font-semibold"
               style={{ fontSize: '16px', color: '#101828' }}
             >
-              Customer Information
+              {t('customer.payment.customerInfo')}
             </span>
           </div>
 
@@ -546,7 +557,7 @@ export default function PaymentPage() {
               className="mb-1"
               style={{ fontSize: '14px', color: '#212529' }}
             >
-              Full Name<span className="text-red-500">*</span>
+              {t('auth.fullName')}<span className="text-red-500">*</span>
             </label>
             <div className="relative mb-1">
               <div className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: fieldErrors.name ? '#EF4444' : '#9CA3AF' }}>
@@ -570,7 +581,7 @@ export default function PaymentPage() {
                   ? 'border-red-500 ring-1 ring-red-500 focus:border-red-500 focus:ring-red-500'
                   : 'border-gray-300 focus:ring-1 focus:ring-[#f05a28] focus:border-[#f05a28]'
                   } ${(auth && auth.customer.name) ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}`}
-                placeholder="Full Name"
+                placeholder={t('auth.fullName')}
               />
             </div>
             {fieldErrors.name && (
@@ -589,7 +600,7 @@ export default function PaymentPage() {
               className="mb-1"
               style={{ fontSize: '14px', color: '#212529' }}
             >
-              Phone Number<span className="text-red-500">*</span>
+              {t('auth.phoneNumber')}<span className="text-red-500">*</span>
             </label>
             <div className="relative mb-1">
               <div className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: fieldErrors.phone ? '#EF4444' : '#9CA3AF' }}>
@@ -614,7 +625,7 @@ export default function PaymentPage() {
                   ? 'border-red-500 ring-1 ring-red-500 focus:border-red-500 focus:ring-red-500'
                   : 'border-gray-300 focus:ring-1 focus:ring-[#f05a28] focus:border-[#f05a28]'
                   } ${(auth && auth.customer.phone) ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}`}
-                placeholder="Phone Number"
+                placeholder={t('auth.phoneNumber')}
               />
             </div>
             {fieldErrors.phone && (
@@ -633,7 +644,7 @@ export default function PaymentPage() {
               className="mb-1"
               style={{ fontSize: '14px', color: '#212529' }}
             >
-              Send Receipt to Email<span className="text-red-500">*</span>
+              {t('customer.payment.sendReceipt')}<span className="text-red-500">*</span>
             </label>
             <div className="relative mb-1">
               <div className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: fieldErrors.email ? '#EF4444' : '#9CA3AF' }}>
@@ -657,7 +668,7 @@ export default function PaymentPage() {
                   ? 'border-red-500 ring-1 ring-red-500 focus:border-red-500 focus:ring-red-500'
                   : 'border-gray-300 focus:ring-1 focus:ring-[#f05a28] focus:border-[#f05a28]'
                   } ${(auth && auth.customer.email) ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}`}
-                placeholder="Email"
+                placeholder={t('auth.email')}
               />
             </div>
             {fieldErrors.email && (
@@ -678,7 +689,7 @@ export default function PaymentPage() {
                   className="mb-1"
                   style={{ fontSize: '14px', color: '#212529' }}
                 >
-                  Table Number<span className="text-red-500">*</span>
+                  {t('customer.table.title')}<span className="text-red-500">*</span>
                 </label>
                 <div className="relative mb-1">
                   <div className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: fieldErrors.tableNumber ? '#EF4444' : '#9CA3AF' }}>
@@ -701,7 +712,7 @@ export default function PaymentPage() {
                       ? 'border-red-500 ring-1 ring-red-500 focus:border-red-500 focus:ring-red-500'
                       : 'border-gray-300 focus:ring-1 focus:ring-[#f05a28] focus:border-[#f05a28]'
                       }`}
-                    placeholder="Table Number"
+                    placeholder={t('customer.table.title')}
                   />
                 </div>
                 {fieldErrors.tableNumber && (
@@ -741,7 +752,7 @@ export default function PaymentPage() {
             />
           </div>
           <div>
-            <span>Click <b>&apos;Pay at Cashier&apos;</b> and show QR code to the cashier.</span>
+            <span>{t('customer.payment.showQRCode')}</span>
           </div>
         </div>
       </main>
@@ -769,7 +780,7 @@ export default function PaymentPage() {
                 className="flex mb-1"
                 style={{ fontSize: '0.9rem', color: '#AEB3BE' }}
               >
-                <div className="flex-grow">Incl. Tax</div>
+                <div className="flex-grow">{t('customer.payment.inclTax')}</div>
                 <div>{formatCurrency(taxAmount)}</div>
               </div>
             )}
@@ -779,7 +790,7 @@ export default function PaymentPage() {
                 className="flex mb-1"
                 style={{ fontSize: '0.9rem', color: '#AEB3BE' }}
               >
-                <div className="flex-grow">Service Charge</div>
+                <div className="flex-grow">{t('customer.payment.serviceCharge')}</div>
                 <div>{formatCurrency(serviceChargeAmount)}</div>
               </div>
             )}
@@ -789,7 +800,7 @@ export default function PaymentPage() {
                 className="flex mb-1"
                 style={{ fontSize: '0.9rem', color: '#AEB3BE' }}
               >
-                <div className="flex-grow">Packaging Fee</div>
+                <div className="flex-grow">{t('customer.payment.packagingFee')}</div>
                 <div>{formatCurrency(packagingFeeAmount)}</div>
               </div>
             )}
@@ -805,7 +816,7 @@ export default function PaymentPage() {
               style={{ lineHeight: 1, color: '#212529' }}
               onClick={() => setShowPaymentDetails(!showPaymentDetails)}
             >
-              Payment Total
+              {t('customer.payment.paymentTotal')}
               <svg
                 style={{
                   width: '20px',
@@ -839,7 +850,7 @@ export default function PaymentPage() {
               fontSize: '16px'
             }}
           >
-            {isLoading ? 'Processing...' : 'Pay at Cashier'}
+                        {isLoading ? t('customer.payment.processing') : t('customer.payment.payAtCashier')}
           </button>
         </div>
       </div>

@@ -4,6 +4,7 @@ import { Suspense, useState, useRef, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 /**
  * Verify Code Page
@@ -13,6 +14,7 @@ import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState
 function VerifyCodeForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
+    const { t } = useTranslation();
 
     const [code, setCode] = useState(['', '', '', '', '', '']);
     const [isLoading, setIsLoading] = useState(false);
@@ -141,7 +143,7 @@ function VerifyCodeForm() {
 
         const verificationCode = code.join('');
         if (verificationCode.length !== 6) {
-            setError('Please enter the complete 6-digit code');
+            setError(t('auth.error.invalidCode'));
             return;
         }
 
@@ -188,7 +190,7 @@ function VerifyCodeForm() {
                         </svg>
                     </button>
                     <h1 className="flex-1 text-center font-semibold text-gray-900 dark:text-white text-base pr-10">
-                        Enter Verification Code
+                        {t('auth.enterVerificationCode')}
                     </h1>
                 </div>
             </header>
@@ -222,10 +224,10 @@ function VerifyCodeForm() {
                     {/* Title */}
                     <div className="text-center mb-8">
                         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                            Check Your Email
+                            {t('auth.checkEmail')}
                         </h2>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                            We&apos;ve sent a 6-digit verification code to
+                            {t('auth.codeSentTo')}
                         </p>
                         <p className="text-sm font-medium text-gray-900 dark:text-white mt-1">
                             {email}
@@ -243,7 +245,7 @@ function VerifyCodeForm() {
                         {/* Code Input */}
                         <div>
                             <label className="block text-sm text-gray-500 dark:text-gray-400 mb-3 text-center">
-                                Enter 6-digit code
+                                {t('auth.enter6DigitCode')}
                             </label>
                             <div className="flex justify-center gap-2" onPaste={handlePaste}>
                                 {code.map((digit, index) => (
@@ -271,10 +273,10 @@ function VerifyCodeForm() {
                             {isLoading ? (
                                 <span className="flex items-center justify-center gap-2">
                                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                    Verifying...
+                                    {t('auth.verifying')}
                                 </span>
                             ) : (
-                                'Verify Code'
+                                t('auth.verifyCode')
                             )}
                         </button>
                     </form>
@@ -286,11 +288,11 @@ function VerifyCodeForm() {
                                 onClick={handleResendCode}
                                 className="text-sm text-orange-500 hover:underline"
                             >
-                                Resend verification code
+                                {t('auth.resendCode')}
                             </button>
                         ) : (
                             <p className="text-sm text-gray-500 dark:text-gray-400">
-                                Resend code in <span className="font-medium">{resendTimer}s</span>
+                                {t('auth.resendCodeIn')} <span className="font-medium">{resendTimer}s</span>
                             </p>
                         )}
                     </div>
@@ -301,7 +303,7 @@ function VerifyCodeForm() {
                             onClick={() => router.push(`/login?ref=${encodeURIComponent(ref)}`)}
                             className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
                         >
-                            ← Back to Sign In
+                            {t('auth.backToSignIn')}
                         </button>
                     </div>
                 </div>
@@ -309,7 +311,7 @@ function VerifyCodeForm() {
 
             {/* Powered By Footer */}
             <div className="py-4 text-center text-xs text-gray-400">
-                Powered By <span className="font-semibold">GENFITY</span>
+                {t('common.poweredBy')} <span className="font-semibold">GENFITY</span>
             </div>
         </div>
     );

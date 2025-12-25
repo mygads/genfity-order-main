@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
+import { useMerchant } from "@/context/MerchantContext";
 
 interface AddonItem {
   id: string;
@@ -54,6 +55,7 @@ export default function ManageMenuAddonCategoriesModal({
   onClose,
   onSuccess,
 }: ManageMenuAddonCategoriesModalProps) {
+  const { formatCurrency } = useMerchant();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -394,7 +396,7 @@ export default function ManageMenuAddonCategoriesModal({
                                 <div className="mt-3 space-y-1.5 border-t border-gray-200 pt-3 dark:border-gray-700">
                                   {category.addonItems.map((item) => {
                                     const itemPrice = typeof item.price === 'string' ? parseFloat(item.price) : item.price;
-                                    const formattedPrice = itemPrice === 0 ? 'Free' : `A$ ${itemPrice.toFixed(2)}`;
+                                    const formattedPrice = itemPrice === 0 ? 'Free' : formatCurrency(itemPrice);
 
                                     return (
                                       <div
@@ -580,7 +582,7 @@ export default function ManageMenuAddonCategoriesModal({
                                 <div className="mt-3 space-y-1.5 border-t border-gray-200 pt-3 dark:border-gray-700">
                                   {category.addonItems.map((item) => {
                                     const itemPrice = typeof item.price === 'string' ? parseFloat(item.price) : item.price;
-                                    const formattedPrice = itemPrice === 0 ? 'Free' : `A$ ${itemPrice.toFixed(2)}`;
+                                    const formattedPrice = itemPrice === 0 ? 'Free' : formatCurrency(itemPrice);
 
                                     return (
                                       <div

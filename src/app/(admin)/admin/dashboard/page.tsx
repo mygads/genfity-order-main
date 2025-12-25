@@ -8,6 +8,7 @@ import MerchantOwnerDashboard from '@/components/dashboard/MerchantOwnerDashboar
 import MerchantStaffDashboard from '@/components/dashboard/MerchantStaffDashboard';
 import { DashboardSkeleton } from '@/components/common/SkeletonLoaders';
 import { useToast } from '@/context/ToastContext';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 /**
  * GENFITY Admin Dashboard Page (CSR + SWR)
@@ -30,6 +31,7 @@ export default function AdminDashboardPage() {
   const [isMounted, setIsMounted] = useState(false);
   const [hasToken, setHasToken] = useState(true); // Assume true to prevent flash
   const { showError } = useToast();
+  const { t } = useTranslation();
 
   // Handle mount state to avoid hydration errors
   useEffect(() => {
@@ -87,10 +89,10 @@ export default function AdminDashboardPage() {
             </svg>
           </div>
           <h2 className="mb-2 text-xl font-bold text-gray-900 dark:text-white">
-            Not Connected to Any Merchant
+            {t("admin.dashboard.notConnected")}
           </h2>
           <p className="mb-6 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
-            You are currently not connected to any merchant. Please contact the merchant owner or super admin to get added to a merchant team.
+            {t("admin.sidebar.noMerchant.description")}
           </p>
           <div className="rounded-lg bg-blue-50 p-4 dark:bg-blue-900/20">
             <div className="flex items-start gap-3">
@@ -99,10 +101,10 @@ export default function AdminDashboardPage() {
               </svg>
               <div className="text-left">
                 <p className="text-xs font-medium text-blue-800 dark:text-blue-300">
-                  Need Help?
+                  {t("admin.dashboard.needHelp")}
                 </p>
                 <p className="mt-1 text-xs text-blue-700 dark:text-blue-400">
-                  Contact your administrator to request access to a merchant account.
+                  {t("admin.dashboard.contactAdmin")}
                 </p>
               </div>
             </div>

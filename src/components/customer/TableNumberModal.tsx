@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { saveTableNumber, getTableNumber } from '@/lib/utils/localStorage';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 interface TableNumberModalProps {
   merchantCode: string;
@@ -38,6 +39,7 @@ export default function TableNumberModal({
   onClose,
   onConfirm,
 }: TableNumberModalProps) {
+  const { t } = useTranslation();
   const [tableNumber, setTableNumber] = useState('');
   const [error, setError] = useState('');
   const [isClosing, setIsClosing] = useState(false);
@@ -71,13 +73,13 @@ export default function TableNumberModal({
     setError('');
 
     if (!tableNumber.trim()) {
-      setError('Please enter a table number');
+      setError(t('customer.table.enterNumber'));
       return;
     }
 
     const num = parseInt(tableNumber);
     if (isNaN(num) || num < 1 || num > 999) {
-      setError('Invalid table number (1-999)');
+      setError(t('customer.table.invalid'));
       return;
     }
 
@@ -112,12 +114,12 @@ export default function TableNumberModal({
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white" style={{ margin: 0, lineHeight: 'normal' }}>
-              Dine In
+              {t('customer.table.title')}
             </h2>
             <button
               onClick={handleClose}
               className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-              aria-label="Close"
+              aria-label={t('common.close')}
             >
               <svg width="18" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -133,7 +135,7 @@ export default function TableNumberModal({
                 htmlFor="tableNumber"
                 className="block text-sm font-semibold text-gray-900 dark:text-white mb-2"
               >
-                Table Number<span className="text-red-500">*</span>
+                {t('customer.table.title')}<span className="text-red-500">*</span>
               </label>
               <input
                 id="tableNumber"
@@ -142,7 +144,7 @@ export default function TableNumberModal({
                 value={tableNumber}
                 onChange={(e) => setTableNumber(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder="Enter your table number"
+                placeholder={t('customer.table.enterNumber')}
                 autoFocus
                 className="w-full h-12 px-4 text-left bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-orange-500 dark:focus:ring-orange-400 focus:border-orange-500 dark:focus:border-orange-400 transition-all"
               />
@@ -161,7 +163,7 @@ export default function TableNumberModal({
               disabled={!tableNumber.trim()}
               className="w-full h-12 bg-orange-500 text-white font-medium rounded-md hover:bg-orange-600 transition-colors disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:text-gray-500 dark:disabled:text-gray-500 disabled:cursor-not-allowed"
             >
-              Save
+              {t('common.save')}
             </button>
           </div>
         </div>

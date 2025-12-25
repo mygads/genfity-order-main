@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import StockStatusCard, { StockStatusCardSkeleton } from '@/components/menu/StockStatusCard';
 import BulkStockActions from '@/components/menu/BulkStockActions';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 interface StockItem {
   id: number | string;
@@ -32,6 +33,7 @@ type TabType = 'all' | 'menus' | 'addons';
 
 export default function StockOverviewPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [stockItems, setStockItems] = useState<StockItem[]>([]);
   const [filteredItems, setFilteredItems] = useState<StockItem[]>([]);
   const [stats, setStats] = useState<StockStats>({
@@ -455,8 +457,8 @@ export default function StockOverviewPage() {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-center gap-4">
               <div>
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Stock Overview</h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Monitor and manage inventory levels</p>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">{t('admin.stock.title')}</h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('admin.stock.subtitle')}</p>
               </div>
             </div>
 
@@ -470,7 +472,7 @@ export default function StockOverviewPage() {
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
-                  Quick Actions
+                  {t('admin.stock.quickActions')}
                   <svg className={`h-4 w-4 transition-transform ${showQuickActions ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>

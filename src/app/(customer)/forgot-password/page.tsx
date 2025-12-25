@@ -4,6 +4,7 @@ import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 /**
  * Forgot Password Page
@@ -13,6 +14,7 @@ import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState
 function ForgotPasswordForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
+    const { t } = useTranslation();
 
     const [email, setEmail] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -32,7 +34,7 @@ function ForgotPasswordForm() {
         try {
             // Validate email
             if (!email.trim()) {
-                setError('Email is required');
+                setError(t('auth.error.emailRequired'));
                 setIsLoading(false);
                 return;
             }
@@ -82,7 +84,7 @@ function ForgotPasswordForm() {
                         </svg>
                     </button>
                     <h1 className="flex-1 text-center font-semibold text-gray-900 dark:text-white text-base pr-10">
-                        Forgot Password
+                        {t('auth.forgotPassword')}
                     </h1>
                 </div>
             </header>
@@ -115,10 +117,10 @@ function ForgotPasswordForm() {
                     {/* Title */}
                     <div className="text-center mb-8">
                         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                            Reset Your Password
+                            {t('auth.resetPassword')}
                         </h2>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                            Enter your email address and we&apos;ll send you a verification code to reset your password.
+                            {t('auth.resetPasswordDesc')}
                         </p>
                     </div>
 
@@ -133,7 +135,7 @@ function ForgotPasswordForm() {
                         {/* Email Input */}
                         <div>
                             <label className="block text-sm text-gray-900 dark:text-gray-400 mb-2">
-                                Email Address
+                                {t('auth.emailAddress')}
                             </label>
                             <input
                                 type="email"
@@ -141,7 +143,7 @@ function ForgotPasswordForm() {
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 className="w-full h-12 px-4 border-b border-gray-300 dark:border-gray-600 text-base text-gray-900 dark:text-white placeholder-gray-400 bg-white dark:bg-gray-900 focus:outline-none focus:border-orange-500 transition-all"
-                                placeholder="your@email.com"
+                                placeholder={t('auth.placeholder.email')}
                             />
                         </div>
 
@@ -154,10 +156,10 @@ function ForgotPasswordForm() {
                             {isLoading ? (
                                 <span className="flex items-center justify-center gap-2">
                                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                    Sending...
+                                    {t('auth.sendingCode')}
                                 </span>
                             ) : (
-                                'Send Verification Code'
+                                t('auth.sendVerificationCode')
                             )}
                         </button>
                     </form>
@@ -168,7 +170,7 @@ function ForgotPasswordForm() {
                             onClick={handleBack}
                             className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
                         >
-                            ← Back to Sign In
+                            {t('auth.backToSignIn')}
                         </button>
                     </div>
                 </div>
@@ -176,7 +178,7 @@ function ForgotPasswordForm() {
 
             {/* Powered By Footer */}
             <div className="py-4 text-center text-xs text-gray-400">
-                Powered By <span className="font-semibold">GENFITY</span>
+                {t('common.poweredBy')} <span className="font-semibold">GENFITY</span>
             </div>
         </div>
     );

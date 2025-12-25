@@ -9,9 +9,11 @@ import AdminFormFooter from "@/components/common/AdminFormFooter";
 import TabsNavigation from "@/components/common/TabsNavigation";
 import { useToast } from "@/hooks/useToast";
 import ToastContainer from "@/components/ui/ToastContainer";
-import { COUNTRIES, CURRENCIES, TIMEZONES } from "@/lib/constants/location";
+import { COUNTRIES, CURRENCIES, getCurrencyForCountry, getDefaultTimezoneForCountry, getTimezonesForCountry } from "@/lib/constants/location";
 import PerDayModeSchedule from "@/components/merchants/PerDayModeSchedule";
 import SpecialHoursManager from "@/components/merchants/SpecialHoursManager";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import { TranslationKeys } from "@/lib/i18n";
 
 // Dynamically import map component
 const MapLocationPicker = dynamic(() => import("@/components/maps/MapLocationPicker"), { ssr: false });
@@ -58,13 +60,13 @@ interface OpeningHour {
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-// Tab configuration
-const TABS = [
-  { id: "basic", label: "Basic Info" },
-  { id: "sale-modes", label: "Sale Modes" },
-  { id: "fees", label: "Fees & Charges" },
-  { id: "location", label: "Location" },
-  { id: "hours", label: "Opening Hours" },
+// Tab configuration - keys for translation
+const TAB_KEYS: Array<{ id: string; key: TranslationKeys }> = [
+  { id: "basic", key: "admin.merchant.basicInfo" },
+  { id: "sale-modes", key: "admin.merchant.saleModes" },
+  { id: "fees", key: "admin.merchant.feesCharges" },
+  { id: "location", key: "admin.merchant.location" },
+  { id: "hours", key: "admin.merchant.openingHours" },
 ];
 
 /**
@@ -74,6 +76,7 @@ const TABS = [
  */
 export default function EditMerchantPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { toasts, success: showSuccess, error: showError } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
@@ -397,10 +400,10 @@ export default function EditMerchantPage() {
       {/* Logo Upload */}
       <div>
         <label className="mb-3 block text-sm font-medium text-gray-700 dark:text-gray-300">
-          Store Logo
+          {t("admin.merchantEdit.storeLogo")}
         </label>
         <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
-          Square image (1:1 ratio). Displayed on mode selection page and header.
+          {t("admin.merchantEdit.logoDesc")}
         </p>
         <div className="flex items-center gap-5">
           <div className="relative h-20 w-20 overflow-hidden rounded-lg border-2 border-gray-200 dark:border-gray-700">
@@ -431,10 +434,10 @@ export default function EditMerchantPage() {
               disabled={uploading}
               className="inline-flex h-9 items-center rounded-lg bg-gray-100 px-4 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
             >
-              {uploading ? 'Uploading...' : 'Change Logo'}
+              {uploading ? t("admin.merchantEdit.uploadingLogo") : t("admin.merchantEdit.changeLogo")}
             </button>
             <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-              All image formats supported. Max 5MB
+              {t("admin.merchantEdit.logoFormats")}
             </p>
           </div>
         </div>
@@ -443,10 +446,10 @@ export default function EditMerchantPage() {
       {/* Banner Upload */}
       <div>
         <label className="mb-3 block text-sm font-medium text-gray-700 dark:text-gray-300">
-          Store Banner
+          {t("admin.merchantEdit.storeBanner")}
         </label>
         <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
-          Wide image (2:1 ratio recommended). Displayed at the top of order page.
+          {t("admin.merchantEdit.bannerDesc")}
         </p>
         <div className="flex flex-col gap-3">
           <div className="relative h-32 w-full overflow-hidden rounded-lg border-2 border-gray-200 dark:border-gray-700">
@@ -463,7 +466,7 @@ export default function EditMerchantPage() {
                   <svg className="mx-auto h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">No banner uploaded</p>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t("admin.merchantEdit.noBanner")}</p>
                 </div>
               </div>
             )}
@@ -482,10 +485,10 @@ export default function EditMerchantPage() {
               disabled={uploadingBanner}
               className="inline-flex h-9 items-center rounded-lg bg-gray-100 px-4 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
             >
-              {uploadingBanner ? 'Uploading...' : 'Change Banner'}
+              {uploadingBanner ? t("admin.merchantEdit.uploadingBanner") : t("admin.merchantEdit.changeBanner")}
             </button>
             <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-              All image formats supported. Max 5MB. Recommended: 800x400px (2:1)
+              {t("admin.merchantEdit.bannerFormats")}
             </p>
           </div>
         </div>
@@ -494,7 +497,7 @@ export default function EditMerchantPage() {
       {/* Merchant Code (read-only) */}
       <div>
         <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-          Merchant Code
+          {t("admin.merchantEdit.merchantCode")}
         </label>
         <input
           type="text"
@@ -503,13 +506,13 @@ export default function EditMerchantPage() {
           disabled
           className="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-gray-500 dark:border-gray-800 dark:bg-gray-900/50 dark:text-gray-400"
         />
-        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Cannot be changed</p>
+        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t("admin.merchantEdit.cannotChange")}</p>
       </div>
 
       {/* Store Name */}
       <div>
         <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-          Store Name <span className="text-red-500">*</span>
+          {t("admin.merchantEdit.storeName")} <span className="text-red-500">*</span>
         </label>
         <input
           type="text"
@@ -525,7 +528,7 @@ export default function EditMerchantPage() {
       <div className="grid gap-5 md:grid-cols-2">
         <div>
           <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Email <span className="text-red-500">*</span>
+            {t("admin.merchant.email")} <span className="text-red-500">*</span>
           </label>
           <input
             type="email"
@@ -539,7 +542,7 @@ export default function EditMerchantPage() {
 
         <div>
           <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Phone Number <span className="text-red-500">*</span>
+            {t("admin.merchantEdit.phoneNumber")} <span className="text-red-500">*</span>
           </label>
           <input
             type="tel"
@@ -555,7 +558,7 @@ export default function EditMerchantPage() {
       {/* Description */}
       <div>
         <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-          Description
+          {t("admin.merchantEdit.description")}
         </label>
         <textarea
           name="description"
@@ -870,107 +873,149 @@ export default function EditMerchantPage() {
 
   /**
    * Location Tab - Address, country, currency, timezone, map
+   * 
+   * Auto-sync behavior:
+   * - When country changes, currency and timezone are auto-updated
+   * - Only Indonesia and Australia are supported
    */
-  const LocationTab = () => (
-    <div className="space-y-6">
-      {/* Address */}
-      <div>
-        <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-          Address <span className="text-red-500">*</span>
-        </label>
-        <textarea
-          name="address"
-          value={formData.address}
-          onChange={handleChange}
-          required
-          rows={2}
-          className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
-        />
-      </div>
-
-      {/* Regional Settings */}
-      <div className="grid gap-5 md:grid-cols-3">
+  const LocationTab = () => {
+    // Get available timezones for selected country
+    const availableTimezones = getTimezonesForCountry(formData.country);
+    
+    // Handle country change with auto-sync
+    const handleCountryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const newCountry = e.target.value;
+      const newCurrency = getCurrencyForCountry(newCountry);
+      const newTimezone = getDefaultTimezoneForCountry(newCountry);
+      
+      setFormData(prev => ({
+        ...prev,
+        country: newCountry,
+        currency: newCurrency,
+        timezone: newTimezone,
+      }));
+    };
+    
+    return (
+      <div className="space-y-6">
+        {/* Address */}
         <div>
           <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Country <span className="text-red-500">*</span>
+            {t("admin.merchantEdit.address")} <span className="text-red-500">*</span>
           </label>
-          <select
-            name="country"
-            value={formData.country}
+          <textarea
+            name="address"
+            value={formData.address}
             onChange={handleChange}
             required
-            className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
-          >
-            {COUNTRIES.map((country) => (
-              <option key={country.value} value={country.value}>
-                {country.flag} {country.label}
-              </option>
-            ))}
-          </select>
+            rows={2}
+            className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+          />
         </div>
 
-        <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Currency <span className="text-red-500">*</span>
-          </label>
-          <select
-            name="currency"
-            value={formData.currency}
-            onChange={handleChange}
-            required
-            className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
-          >
-            {CURRENCIES.map((currency) => (
-              <option key={currency.value} value={currency.value}>
-                {currency.symbol} {currency.label}
-              </option>
-            ))}
-          </select>
+        {/* Regional Settings Info */}
+        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
+          <div className="flex items-start gap-3">
+            <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <p className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                {t("admin.merchantEdit.regionInfo") || "Regional Settings"}
+              </p>
+              <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                {t("admin.merchantEdit.regionInfoDesc") || "Currency and timezone are automatically set based on country. Only Indonesia (IDR) and Australia (AUD) are supported."}
+              </p>
+            </div>
+          </div>
         </div>
 
+        {/* Regional Settings */}
+        <div className="grid gap-5 md:grid-cols-3">
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              {t("admin.merchantEdit.country")} <span className="text-red-500">*</span>
+            </label>
+            <select
+              name="country"
+              value={formData.country}
+              onChange={handleCountryChange}
+              required
+              className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+            >
+              {COUNTRIES.map((country) => (
+                <option key={country.value} value={country.value}>
+                  {country.flag} {country.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              {t("admin.merchantEdit.currency")} <span className="text-red-500">*</span>
+            </label>
+            <select
+              name="currency"
+              value={formData.currency}
+              disabled
+              className="h-10 w-full rounded-lg border border-gray-200 bg-gray-100 px-3 text-sm text-gray-600 dark:border-gray-800 dark:bg-gray-800 dark:text-gray-400 cursor-not-allowed"
+            >
+              {CURRENCIES.map((currency) => (
+                <option key={currency.value} value={currency.value}>
+                  {currency.flag} {currency.symbol} - {currency.label}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              {t("admin.merchantEdit.currencyAutoSet") || "Auto-set based on country"}
+            </p>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              {t("admin.merchantEdit.timezone")} <span className="text-red-500">*</span>
+            </label>
+            <select
+              name="timezone"
+              value={formData.timezone}
+              onChange={handleChange}
+              required
+              className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+            >
+              {availableTimezones.map((tz) => (
+                <option key={tz.value} value={tz.value}>
+                  {tz.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Map Location Picker */}
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Timezone <span className="text-red-500">*</span>
-          </label>
-          <select
-            name="timezone"
-            value={formData.timezone}
-            onChange={handleChange}
-            required
-            className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
-          >
-            {TIMEZONES.map((tz) => (
-              <option key={tz.value} value={tz.value}>
-                {tz.label}
-              </option>
-            ))}
-          </select>
+          <h4 className="mb-3 text-sm font-medium text-gray-900 dark:text-white">
+            {t("admin.merchantEdit.storeLocation") || "Store Location on Map"}
+          </h4>
+          <p className="mb-3 text-sm text-gray-500 dark:text-gray-400">
+            {t("admin.merchantEdit.storeLocationDesc") || "Set your store's location for customers to find and navigate to your store."}
+          </p>
+          <MapLocationPicker
+            latitude={formData.latitude}
+            longitude={formData.longitude}
+            onLocationChange={(lat, lng) => {
+              setFormData(prev => ({
+                ...prev,
+                latitude: lat,
+                longitude: lng,
+              }));
+            }}
+            height="350px"
+          />
         </div>
       </div>
-
-      {/* Map Location Picker */}
-      <div>
-        <h4 className="mb-3 text-sm font-medium text-gray-900 dark:text-white">
-          Store Location on Map
-        </h4>
-        <p className="mb-3 text-sm text-gray-500 dark:text-gray-400">
-          Set your store&apos;s location for customers to find and navigate to your store.
-        </p>
-        <MapLocationPicker
-          latitude={formData.latitude}
-          longitude={formData.longitude}
-          onLocationChange={(lat, lng) => {
-            setFormData(prev => ({
-              ...prev,
-              latitude: lat,
-              longitude: lng,
-            }));
-          }}
-          height="350px"
-        />
-      </div>
-    </div>
-  );
+    );
+  };
 
   /**
    * Opening Hours Tab - 7-day schedule
@@ -1067,17 +1112,17 @@ export default function EditMerchantPage() {
         {/* Header */}
         <div className="border-b border-gray-200 p-6 dark:border-gray-800">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-            Merchant Information
+            {t("admin.merchantEdit.pageTitle")}
           </h2>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Update your store details and settings
+            {t("admin.merchantEdit.setOpeningHours")}
           </p>
         </div>
 
         {/* Tabs Navigation */}
         <div className="px-6 pt-4">
           <TabsNavigation
-            tabs={TABS}
+            tabs={TAB_KEYS.map(tab => ({ id: tab.id, label: t(tab.key) }))}
             activeTab={activeTab}
             onTabChange={setActiveTab}
           />
@@ -1093,8 +1138,8 @@ export default function EditMerchantPage() {
           <AdminFormFooter
             onCancel={() => router.push("/admin/dashboard/merchant/view")}
             isSubmitting={submitting}
-            submitLabel="Save Changes"
-            submittingLabel="Saving..."
+            submitLabel={t("admin.merchantEdit.saveChanges")}
+            submittingLabel={t("admin.merchantEdit.saving")}
           />
         </form>
       </div>

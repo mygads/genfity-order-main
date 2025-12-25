@@ -3,6 +3,7 @@
 import { useSidebar } from "@/context/SidebarContext";
 import { MerchantProvider } from "@/context/MerchantContext";
 import { ToastProvider } from "@/context/ToastContext";
+import { AdminLanguageProvider } from "@/context/LanguageContext";
 import AppHeader from "@/layout/AppHeader";
 import AppSidebar from "@/layout/AppSidebar";
 import Backdrop from "@/layout/Backdrop";
@@ -23,6 +24,7 @@ import React from "react";
  * - Auto session sync
  * - Page transitions ready
  * - Global toast notifications
+ * - Multi-language support (EN/ID)
  * 
  * @specification
  * - Uses AppSidebar from template with expand/collapse functionality
@@ -51,29 +53,31 @@ export default function AdminDashboardLayout({
   return (
     <SWRProvider>
       <MerchantProvider>
-        <ToastProvider>
-          <div className="min-h-screen xl:flex">
-            {/* Session Guard - Auto logout on token expiry */}
-            <SessionGuard />
+        <AdminLanguageProvider>
+          <ToastProvider>
+            <div className="min-h-screen xl:flex">
+              {/* Session Guard - Auto logout on token expiry */}
+              <SessionGuard />
 
-            {/* Sidebar and Backdrop */}
-            <AppSidebar />
-            <Backdrop />
+              {/* Sidebar and Backdrop */}
+              <AppSidebar />
+              <Backdrop />
 
-            {/* Main Content Area */}
-            <div
-              className={`flex-1 transition-all duration-300 ease-in-out ${mainContentMargin}`}
-            >
-              {/* Header */}
-              <AppHeader />
+              {/* Main Content Area */}
+              <div
+                className={`flex-1 transition-all duration-300 ease-in-out ${mainContentMargin}`}
+              >
+                {/* Header */}
+                <AppHeader />
 
-              {/* Page Content */}
-              <div className="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6">
-                {children}
+                {/* Page Content */}
+                <div className="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6">
+                  {children}
+                </div>
               </div>
             </div>
-          </div>
-        </ToastProvider>
+          </ToastProvider>
+        </AdminLanguageProvider>
       </MerchantProvider>
     </SWRProvider>
   );

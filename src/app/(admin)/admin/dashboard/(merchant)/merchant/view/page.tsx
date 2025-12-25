@@ -9,6 +9,8 @@ import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { useAuth } from "@/hooks/useAuth";
 import MerchantQRCodeModal from "@/components/merchants/MerchantQRCodeModal";
 import { isStoreEffectivelyOpen } from "@/lib/utils/storeStatus";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import { formatCurrency } from "@/lib/utils/format";
 
 // Dynamically import map component
 const MapContent = dynamic(() => import("@/components/maps/MapContent"), { ssr: false });
@@ -65,6 +67,7 @@ const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", 
 export default function ViewMerchantPage() {
   const router = useRouter();
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [merchant, setMerchant] = useState<MerchantData | null>(null);
   const [loading, setLoading] = useState(true);
   const [showQRModal, setShowQRModal] = useState(false);
@@ -209,10 +212,10 @@ export default function ViewMerchantPage() {
   if (loading) {
     return (
       <div>
-        <PageBreadcrumb pageTitle="Merchant Details" />
+        <PageBreadcrumb pageTitle={t("admin.merchant.pageTitle")} />
         <div className="mt-6 py-10 text-center">
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-brand-500 border-r-transparent"></div>
-          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Loading merchant details...</p>
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">{t("admin.merchant.loading")}</p>
         </div>
       </div>
     );
@@ -221,9 +224,9 @@ export default function ViewMerchantPage() {
   if (!merchant) {
     return (
       <div>
-        <PageBreadcrumb pageTitle="Merchant Details" />
+        <PageBreadcrumb pageTitle={t("admin.merchant.pageTitle")} />
         <div className="mt-6 py-10 text-center">
-          <p className="text-sm text-gray-500 dark:text-gray-400">Merchant not found</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t("admin.merchant.notFound")}</p>
         </div>
       </div>
     );
@@ -231,7 +234,7 @@ export default function ViewMerchantPage() {
 
   return (
     <div>
-      <PageBreadcrumb pageTitle="Merchant Details" />
+      <PageBreadcrumb pageTitle={t("admin.merchant.pageTitle")} />
 
       {/* Header - Centered Layout */}
       <div className="mb-6 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-white/3">
@@ -281,14 +284,14 @@ export default function ViewMerchantPage() {
                   <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
                   </svg>
-                  Active
+                  {t("admin.merchant.statusActive")}
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-400">
                   <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
                   </svg>
-                  Inactive
+                  {t("admin.merchant.statusInactive")}
                 </span>
               )}
 
@@ -307,12 +310,12 @@ export default function ViewMerchantPage() {
                   return effectivelyOpen ? (
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-success-100 px-3 py-1.5 text-xs font-medium text-success-700 dark:bg-success-900/20 dark:text-success-400">
                       <div className="h-2 w-2 rounded-full bg-success-500 animate-pulse"></div>
-                      Store Open
+                      {t("admin.merchant.storeOpen")}
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1.5 text-xs font-medium text-red-700 dark:bg-red-900/20 dark:text-red-400">
                       <div className="h-2 w-2 rounded-full bg-red-500"></div>
-                      Store Closed
+                      {t("admin.merchant.storeClosed")}
                     </span>
                   );
                 })()
@@ -338,7 +341,7 @@ export default function ViewMerchantPage() {
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
-                  Edit Merchant
+                  {t("admin.merchant.edit")}
                 </Link>
 
                 <button
@@ -355,28 +358,28 @@ export default function ViewMerchantPage() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      Processing...
+                      {t("admin.merchant.processing")}
                     </>
                   ) : merchant.isOpen ? (
                     <>
                       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      Close Store
+                      {t("admin.merchant.closeStore")}
                     </>
                   ) : (
                     <>
                       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                       </svg>
-                      Open Store
+                      {t("admin.merchant.openStore")}
                     </>
                   )}
                 </button>
 
                 {!merchant.isActive && (
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Store must be active to open/close
+                    {t("admin.merchant.storeMustBeActive")}
                   </p>
                 )}
               </>
@@ -391,7 +394,7 @@ export default function ViewMerchantPage() {
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
               </svg>
-              Go to Store
+              {t("admin.merchant.goToStore")}
             </a>
 
             <button
@@ -401,7 +404,7 @@ export default function ViewMerchantPage() {
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
               </svg>
-              View QR Code
+              {t("admin.merchant.viewQRCode")}
             </button>
           </div>
 
@@ -413,9 +416,9 @@ export default function ViewMerchantPage() {
                   <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clipRule="evenodd" />
                 </svg>
                 <div>
-                  <h4 className="text-sm font-semibold text-warning-800 dark:text-warning-300">View-Only Access</h4>
+                  <h4 className="text-sm font-semibold text-warning-800 dark:text-warning-300">{t("admin.merchant.viewOnlyAccess")}</h4>
                   <p className="mt-1 text-sm text-warning-700 dark:text-warning-400">
-                    You have read-only access. Contact the merchant owner to make changes.
+                    {t("admin.merchant.viewOnlyDesc")}
                   </p>
                 </div>
               </div>
@@ -429,36 +432,36 @@ export default function ViewMerchantPage() {
         {/* Contact Information */}
         <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/3">
           <h2 className="mb-5 text-lg font-semibold text-gray-900 dark:text-white">
-            Contact Information
+            {t("admin.merchant.contactInfo")}
           </h2>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
             <div>
-              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Email</p>
+              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{t("admin.merchant.email")}</p>
               <p className="text-sm text-gray-900 dark:text-white">{merchant.email}</p>
             </div>
 
             <div>
-              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Phone</p>
+              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{t("admin.merchant.phone")}</p>
               <p className="text-sm text-gray-900 dark:text-white">{merchant.phone}</p>
             </div>
 
             <div>
-              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Country</p>
+              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{t("admin.merchant.country")}</p>
               <p className="text-sm text-gray-900 dark:text-white">{merchant.country}</p>
             </div>
 
             <div>
-              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Currency</p>
+              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{t("admin.merchant.currency")}</p>
               <p className="text-sm text-gray-900 dark:text-white">{merchant.currency}</p>
             </div>
 
             <div>
-              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Timezone</p>
+              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{t("admin.merchant.timezone")}</p>
               <p className="text-sm text-gray-900 dark:text-white">{merchant.timezone}</p>
             </div>
 
             <div className="md:col-span-2 lg:col-span-3">
-              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Address</p>
+              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{t("admin.merchant.address")}</p>
               <p className="text-sm text-gray-900 dark:text-white">{merchant.address}</p>
             </div>
           </div>
@@ -468,14 +471,14 @@ export default function ViewMerchantPage() {
         <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/3">
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Fees & Charges
+              {t("admin.merchant.feesCharges")}
             </h2>
             {isMerchantOwner && (
               <Link
                 href="/admin/dashboard/merchant/edit"
                 className="text-sm font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
               >
-                Edit Settings
+                {t("admin.merchant.editSettings")}
               </Link>
             )}
           </div>
@@ -483,61 +486,61 @@ export default function ViewMerchantPage() {
             {/* Tax */}
             <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Tax</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{t("admin.merchant.tax")}</p>
                 {merchant.enableTax ? (
                   <span className="inline-flex items-center rounded-full bg-success-100 px-2 py-0.5 text-xs font-medium text-success-700 dark:bg-success-900/20 dark:text-success-400">
-                    Enabled
+                    {t("admin.merchant.enabled")}
                   </span>
                 ) : (
                   <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-400">
-                    Disabled
+                    {t("admin.merchant.disabled")}
                   </span>
                 )}
               </div>
               <p className="text-xl font-bold text-gray-900 dark:text-white">
                 {merchant.enableTax ? `${merchant.taxPercentage}%` : '-'}
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Applied to all orders</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t("admin.merchant.appliedToAllOrders")}</p>
             </div>
 
             {/* Service Charge */}
             <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Service Charge</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{t("admin.merchant.serviceCharge")}</p>
                 {merchant.enableServiceCharge ? (
                   <span className="inline-flex items-center rounded-full bg-success-100 px-2 py-0.5 text-xs font-medium text-success-700 dark:bg-success-900/20 dark:text-success-400">
-                    Enabled
+                    {t("admin.merchant.enabled")}
                   </span>
                 ) : (
                   <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-400">
-                    Disabled
+                    {t("admin.merchant.disabled")}
                   </span>
                 )}
               </div>
               <p className="text-xl font-bold text-gray-900 dark:text-white">
                 {merchant.enableServiceCharge ? `${merchant.serviceChargePercent}%` : '-'}
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Applied to all orders</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t("admin.merchant.appliedToAllOrders")}</p>
             </div>
 
             {/* Packaging Fee */}
             <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Packaging Fee</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{t("admin.merchant.packagingFee")}</p>
                 {merchant.enablePackagingFee ? (
                   <span className="inline-flex items-center rounded-full bg-success-100 px-2 py-0.5 text-xs font-medium text-success-700 dark:bg-success-900/20 dark:text-success-400">
-                    Enabled
+                    {t("admin.merchant.enabled")}
                   </span>
                 ) : (
                   <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-400">
-                    Disabled
+                    {t("admin.merchant.disabled")}
                   </span>
                 )}
               </div>
               <p className="text-xl font-bold text-gray-900 dark:text-white">
-                {merchant.enablePackagingFee ? `A$${merchant.packagingFeeAmount.toFixed(2)}` : '-'}
+                {merchant.enablePackagingFee ? formatCurrency(merchant.packagingFeeAmount, merchant.currency) : '-'}
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Takeaway orders only</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t("admin.merchant.takeawayOnly")}</p>
             </div>
           </div>
         </div>
@@ -546,7 +549,7 @@ export default function ViewMerchantPage() {
         {merchant.latitude && merchant.longitude && (
           <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/3">
             <h2 className="mb-5 text-lg font-semibold text-gray-900 dark:text-white">
-              Store Location
+              {t("admin.merchant.mapLocation")}
             </h2>
             <div className="space-y-3">
               <div className="pointer-events-none">
@@ -584,7 +587,7 @@ export default function ViewMerchantPage() {
         {/* Opening Hours */}
         <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/3">
           <h2 className="mb-5 text-lg font-semibold text-gray-900 dark:text-white">
-            Opening Hours
+            {t("admin.merchant.openingHours")}
           </h2>
           {merchant.openingHours && merchant.openingHours.length > 0 ? (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -594,7 +597,7 @@ export default function ViewMerchantPage() {
                     {DAYS[hour.dayOfWeek]}
                   </p>
                   {hour.isClosed ? (
-                    <p className="text-sm text-gray-400 dark:text-gray-500">Closed</p>
+                    <p className="text-sm text-gray-400 dark:text-gray-500">{t("admin.merchant.closed")}</p>
                   ) : (
                     <p className="text-sm font-medium text-gray-900 dark:text-white">
                       {hour.openTime} - {hour.closeTime}
@@ -627,14 +630,14 @@ export default function ViewMerchantPage() {
         {/* Team Section - Owners & Staff Combined */}
         <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/3">
           <h2 className="mb-5 text-lg font-semibold text-gray-900 dark:text-white">
-            Team Members
+            {t("admin.merchant.team")}
           </h2>
           <div className="space-y-4">
             {/* Owners */}
             {merchant.owners.length > 0 && (
               <div>
                 <h3 className="mb-3 text-sm font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  Owners ({merchant.owners.length})
+                  {t("admin.merchant.owners")} ({merchant.owners.length})
                 </h3>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {merchant.owners.map((owner) => (
@@ -656,7 +659,7 @@ export default function ViewMerchantPage() {
             {merchant.staff.length > 0 && (
               <div>
                 <h3 className="mb-3 text-sm font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  Staff ({merchant.staff.length})
+                  {t("admin.merchant.staff")} ({merchant.staff.length})
                 </h3>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {merchant.staff.map((staffMember) => (
@@ -675,7 +678,7 @@ export default function ViewMerchantPage() {
             )}
 
             {merchant.owners.length === 0 && merchant.staff.length === 0 && (
-              <p className="text-sm text-gray-500 dark:text-gray-400">No team members assigned</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t("admin.merchant.noStaff")}</p>
             )}
           </div>
         </div>

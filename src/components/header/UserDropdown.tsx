@@ -2,6 +2,7 @@
 import Image from "next/image";
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 
@@ -9,6 +10,7 @@ export default function UserDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { user, logout } = useAuth();
+  const { t } = useTranslation();
 
   useEffect(() => {
     setMounted(true);
@@ -61,13 +63,13 @@ export default function UserDropdown() {
   const getRoleLabel = (role?: string) => {
     switch (role) {
       case "SUPER_ADMIN":
-        return "Super Admin";
+        return t("admin.header.role.superAdmin");
       case "MERCHANT_OWNER":
-        return "Merchant Owner";
+        return t("admin.header.role.merchantOwner");
       case "MERCHANT_STAFF":
-        return "Merchant Staff";
+        return t("admin.header.role.merchantStaff");
       default:
-        return "User";
+        return t("admin.header.role.user");
     }
   };
 
@@ -155,7 +157,7 @@ export default function UserDropdown() {
                   fill=""
                 />
               </svg>
-              My Profile
+              {t("admin.header.myProfile")}
             </DropdownItem>
           </li>
         </ul>
@@ -178,7 +180,7 @@ export default function UserDropdown() {
               fill=""
             />
           </svg>
-          Sign out
+          {t("admin.header.signOut")}
         </button>
       </Dropdown>
     </div>

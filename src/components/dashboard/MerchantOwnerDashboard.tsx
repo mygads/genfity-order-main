@@ -3,6 +3,7 @@ import StoreToggleButton from './StoreToggleButton';
 import Link from 'next/link';
 import Image from 'next/image';
 import { isStoreEffectivelyOpen, type OpeningHour } from '@/lib/utils/storeStatus';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 type Merchant = {
   id: bigint;
@@ -17,6 +18,7 @@ type Merchant = {
   isOpen?: boolean;
   openingHours?: OpeningHour[];
   timezone?: string;
+  currency?: string;
 };
 
 type Menu = {
@@ -97,7 +99,18 @@ export default function MerchantOwnerDashboard({
   orderStatusBreakdown,
   lowStockItems,
 }: MerchantOwnerDashboardProps) {
+  const { t } = useTranslation();
+  
   const formatCurrency = (amount: number) => {
+    const currency = merchant.currency || 'AUD';
+    if (currency === 'IDR') {
+      const formatted = new Intl.NumberFormat('id-ID', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(Math.round(amount));
+      return `Rp ${formatted}`;
+    }
+    // Default: AUD
     return `A$${amount.toLocaleString('en-AU', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
@@ -169,7 +182,7 @@ export default function MerchantOwnerDashboard({
                       : 'bg-red-500/20 text-red-100'
                     }`}>
                       <div className={`h-2 w-2 rounded-full ${effectivelyOpen ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}></div>
-                      {effectivelyOpen ? 'Open' : 'Closed'}
+                      {effectivelyOpen ? t('common.open') : t('common.closed')}
                     </span>
                   );
                 })()}
@@ -188,12 +201,12 @@ export default function MerchantOwnerDashboard({
         {/* Today's Revenue */}
         <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 p-5 shadow-lg shadow-emerald-500/20 transition-all hover:shadow-xl hover:shadow-emerald-500/30">
           <div className="relative z-10">
-            <p className="text-sm font-medium text-emerald-100">Today&apos;s Revenue</p>
+            <p className="text-sm font-medium text-emerald-100">{t('admin.dashboard.todaysRevenue')}</p>
             <h3 className="mt-1 text-2xl font-bold text-white lg:text-3xl">
               {formatCurrency(stats.todayRevenue)}
             </h3>
             <p className="mt-1 text-xs text-emerald-200">
-              {stats.todayOrders} orders today
+              {stats.todayOrders} {t('admin.dashboard.ordersToday')}
             </p>
           </div>
           <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-white/10 transition-transform group-hover:scale-110"></div>
@@ -205,12 +218,12 @@ export default function MerchantOwnerDashboard({
         {/* Pending Orders - Attention Required */}
         <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 p-5 shadow-lg shadow-amber-500/20 transition-all hover:shadow-xl hover:shadow-amber-500/30">
           <div className="relative z-10">
-            <p className="text-sm font-medium text-amber-100">Pending Orders</p>
+            <p className="text-sm font-medium text-amber-100">{t('admin.dashboard.pendingOrders')}</p>
             <h3 className="mt-1 text-2xl font-bold text-white lg:text-3xl">
               {stats.pendingOrders}
             </h3>
             <p className="mt-1 text-xs text-amber-200">
-              Needs attention
+              {t('admin.dashboard.needsAttention')}
             </p>
           </div>
           <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-white/10 transition-transform group-hover:scale-110"></div>
@@ -225,12 +238,12 @@ export default function MerchantOwnerDashboard({
         {/* Total Orders */}
         <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 p-5 shadow-lg shadow-blue-500/20 transition-all hover:shadow-xl hover:shadow-blue-500/30">
           <div className="relative z-10">
-            <p className="text-sm font-medium text-blue-100">Total Orders</p>
+            <p className="text-sm font-medium text-blue-100">{t('admin.dashboard.totalOrders')}</p>
             <h3 className="mt-1 text-2xl font-bold text-white lg:text-3xl">
               {stats.totalOrders.toLocaleString()}
             </h3>
             <p className="mt-1 text-xs text-blue-200">
-              All time
+              {t('admin.dashboard.allTime')}
             </p>
           </div>
           <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-white/10 transition-transform group-hover:scale-110"></div>
@@ -242,12 +255,12 @@ export default function MerchantOwnerDashboard({
         {/* Total Revenue */}
         <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-500 to-pink-600 p-5 shadow-lg shadow-purple-500/20 transition-all hover:shadow-xl hover:shadow-purple-500/30">
           <div className="relative z-10">
-            <p className="text-sm font-medium text-purple-100">Total Revenue</p>
+            <p className="text-sm font-medium text-purple-100">{t('admin.dashboard.totalRevenue')}</p>
             <h3 className="mt-1 text-xl font-bold text-white lg:text-2xl">
               {formatCurrency(stats.totalRevenue)}
             </h3>
             <p className="mt-1 text-xs text-purple-200">
-              All time earnings
+              {t('admin.dashboard.allTimeEarnings')}
             </p>
           </div>
           <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-white/10 transition-transform group-hover:scale-110"></div>
@@ -263,9 +276,9 @@ export default function MerchantOwnerDashboard({
         <div className="rounded-xl border border-gray-200 bg-white p-4 transition-all hover:shadow-md dark:border-gray-800 dark:bg-gray-900">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Menu Items</p>
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('admin.dashboard.menuItems')}</p>
               <h3 className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{stats.totalMenuItems}</h3>
-              <p className="mt-0.5 text-xs text-emerald-600 dark:text-emerald-400">{stats.activeMenuItems} active</p>
+              <p className="mt-0.5 text-xs text-emerald-600 dark:text-emerald-400">{stats.activeMenuItems} {t('admin.dashboard.activeMenus')}</p>
             </div>
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-100 dark:bg-orange-900/30">
               <svg className="h-5 w-5 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -279,9 +292,9 @@ export default function MerchantOwnerDashboard({
         <div className="rounded-xl border border-gray-200 bg-white p-4 transition-all hover:shadow-md dark:border-gray-800 dark:bg-gray-900">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Categories</p>
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('admin.dashboard.categories')}</p>
               <h3 className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{stats.totalCategories}</h3>
-              <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Menu groups</p>
+              <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{t('admin.dashboard.menuGroups')}</p>
             </div>
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900/30">
               <svg className="h-5 w-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -295,9 +308,9 @@ export default function MerchantOwnerDashboard({
         <div className="rounded-xl border border-gray-200 bg-white p-4 transition-all hover:shadow-md dark:border-gray-800 dark:bg-gray-900">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Team Members</p>
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('admin.dashboard.teamMembers')}</p>
               <h3 className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{stats.totalStaff}</h3>
-              <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Active staff</p>
+              <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{t('admin.dashboard.activeStaff')}</p>
             </div>
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
               <svg className="h-5 w-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -311,9 +324,9 @@ export default function MerchantOwnerDashboard({
         <div className="rounded-xl border border-gray-200 bg-white p-4 transition-all hover:shadow-md dark:border-gray-800 dark:bg-gray-900">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Today&apos;s Orders</p>
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('admin.dashboard.todaysOrders')}</p>
               <h3 className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{stats.todayOrders}</h3>
-              <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Orders received</p>
+              <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{t('admin.dashboard.ordersReceived')}</p>
             </div>
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-teal-100 dark:bg-teal-900/30">
               <svg className="h-5 w-5 text-teal-600 dark:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -333,13 +346,13 @@ export default function MerchantOwnerDashboard({
               <svg className="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              Opening Hours
+              {t('admin.dashboard.openingHours')}
             </h3>
             <Link
               href="/admin/dashboard/merchant/edit"
               className="text-xs text-brand-500 hover:text-brand-600 dark:text-brand-400"
             >
-              Edit
+              {t('common.edit')}
             </Link>
           </div>
           <div className="space-y-2">
@@ -354,14 +367,14 @@ export default function MerchantOwnerDashboard({
                 >
                   <span className={`text-sm ${isToday ? 'font-semibold text-brand-600 dark:text-brand-400' : 'text-gray-600 dark:text-gray-400'}`}>
                     {day}
-                    {isToday && <span className="ml-1 text-xs">(Today)</span>}
+                    {isToday && <span className="ml-1 text-xs">({t('common.time.today')})</span>}
                   </span>
                   <span className={`text-sm ${hours?.isClosed ? 'text-red-500' : 'text-gray-900 dark:text-white'}`}>
                     {hours?.isClosed
-                      ? 'Closed'
+                      ? t('common.closed')
                       : hours?.openTime && hours?.closeTime
                         ? `${hours.openTime} - ${hours.closeTime}`
-                        : 'Not Set'}
+                        : t('common.notSet')}
                   </span>
                 </div>
               );
@@ -373,13 +386,13 @@ export default function MerchantOwnerDashboard({
         <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900 lg:col-span-2">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Recent Orders
+              {t('admin.dashboard.recentOrders')}
             </h3>
             <Link
               href="/admin/dashboard/orders/history"
               className="text-sm font-medium text-orange-600 hover:text-orange-700 dark:text-orange-400"
             >
-              View all →
+              {t('common.viewAll')} →
             </Link>
           </div>
           <div className="space-y-3">
@@ -420,7 +433,7 @@ export default function MerchantOwnerDashboard({
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                   </svg>
                 </div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">No orders yet</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('admin.dashboard.noOrdersYet')}</p>
               </div>
             )}
           </div>
@@ -430,9 +443,9 @@ export default function MerchantOwnerDashboard({
         <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Top Selling Items
+              {t('admin.dashboard.topSelling')}
             </h3>
-            <span className="text-xs text-gray-500 dark:text-gray-400">Last 30 days</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">{t('admin.dashboard.last30Days')}</span>
           </div>
           <div className="space-y-3">
             {topSellingItems.map((item, index) => (
@@ -476,7 +489,7 @@ export default function MerchantOwnerDashboard({
                     {item.menuName}
                   </p>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {item.totalQuantity} sold
+                    {item.totalQuantity} {t('admin.dashboard.sold')}
                   </p>
                 </div>
 
@@ -495,7 +508,7 @@ export default function MerchantOwnerDashboard({
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                 </div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">No sales data yet</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('admin.dashboard.noSalesDataYet')}</p>
               </div>
             )}
           </div>
@@ -507,7 +520,7 @@ export default function MerchantOwnerDashboard({
         {/* Order Status Breakdown */}
         <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
           <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
-            Order Status Overview
+            {t('admin.dashboard.orderStatusOverview')}
           </h3>
           <div className="space-y-3">
             {orderStatusBreakdown.map((item) => {
@@ -548,7 +561,7 @@ export default function MerchantOwnerDashboard({
             })}
             {orderStatusBreakdown.length === 0 && (
               <div className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
-                No orders yet
+                {t('admin.dashboard.noOrdersYet')}
               </div>
             )}
           </div>
@@ -558,7 +571,7 @@ export default function MerchantOwnerDashboard({
         <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Low Stock Alert
+              {t('admin.dashboard.lowStockAlert')}
             </h3>
             {lowStockItems.length > 0 && (
               <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
@@ -604,7 +617,7 @@ export default function MerchantOwnerDashboard({
                     {item.stockQty || 0}
                   </p>
                   <p className="text-xs text-amber-500 dark:text-amber-500">
-                    left
+                    {t('admin.dashboard.left')}
                   </p>
                 </div>
               </div>
@@ -617,7 +630,7 @@ export default function MerchantOwnerDashboard({
                   </svg>
                 </div>
                 <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
-                  All items have sufficient stock
+                  {t('admin.dashboard.allItemsSufficientStock')}
                 </p>
               </div>
             )}
@@ -628,7 +641,7 @@ export default function MerchantOwnerDashboard({
       {/* Quick Actions */}
       <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
         <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
-          Quick Actions
+          {t('admin.dashboard.quickActions')}
         </h3>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Link
@@ -640,7 +653,7 @@ export default function MerchantOwnerDashboard({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
             </div>
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Order Queue</span>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('admin.dashboard.orderQueue')}</span>
           </Link>
           <Link
             href="/admin/dashboard/menu"
@@ -651,7 +664,7 @@ export default function MerchantOwnerDashboard({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
               </svg>
             </div>
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Manage Menu</span>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('admin.dashboard.manageMenu')}</span>
           </Link>
           <Link
             href="/admin/dashboard/staff"
@@ -662,7 +675,7 @@ export default function MerchantOwnerDashboard({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
               </svg>
             </div>
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Manage Staff</span>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('admin.dashboard.manageStaff')}</span>
           </Link>
           <Link
             href="/admin/dashboard/reports"
@@ -673,7 +686,7 @@ export default function MerchantOwnerDashboard({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
             </div>
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">View Reports</span>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('admin.dashboard.viewReports')}</span>
           </Link>
         </div>
       </div>

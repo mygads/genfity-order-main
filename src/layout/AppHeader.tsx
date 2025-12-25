@@ -1,5 +1,7 @@
 "use client";
 import { ThemeToggleButton } from "@/components/common/ThemeToggleButton";
+import { LanguageSelector } from "@/components/common/LanguageSelector";
+import { CurrencyBadge } from "@/components/common/CurrencyBadge";
 import NotificationDropdown from "@/components/header/NotificationDropdown";
 import UserDropdown from "@/components/header/UserDropdown";
 import SearchDropdown from "@/components/header/SearchDropdown";
@@ -116,6 +118,10 @@ const AppHeader: React.FC = () => {
             } items-center justify-between w-full gap-4 px-5 py-4 lg:flex shadow-theme-md lg:justify-end lg:px-0 lg:shadow-none`}
         >
           <div className="flex items-center gap-2 2xsm:gap-3">
+            {/* <!-- Currency Badge --> */}
+            <CurrencyBadge />
+            {/* <!-- Language Selector --> */}
+            <LanguageSelector mode="compact" dropdownPosition="right" />
             {/* <!-- Dark Mode Toggler --> */}
             <ThemeToggleButton />
             {/* <!-- Dark Mode Toggler --> */}

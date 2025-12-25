@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import MenuBuilderTabs from '@/components/menu/MenuBuilderTabs';
 import { MenuBuilderSkeleton } from '@/components/common/SkeletonLoaders';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 /**
  * Menu Builder Page
@@ -58,6 +59,7 @@ interface MenuFormData {
 export default function MenuBuilderPage() {
   const router = useRouter();
   const params = useParams();
+  const { t } = useTranslation();
   const menuId = params.id === 'new' ? null : params.id ? parseInt(params.id as string) : null;
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -131,7 +133,7 @@ export default function MenuBuilderPage() {
       }
     } catch (error) {
       console.error('Error fetching data:', error);
-      alert('Gagal memuat data');
+      alert(t('admin.menuBuilder.loadingError'));
     } finally {
       setIsLoading(false);
     }
@@ -177,21 +179,21 @@ export default function MenuBuilderPage() {
       const responseData = await response.json();
 
       if (!response.ok) {
-        throw new Error(responseData.message || 'Gagal menyimpan menu');
+        throw new Error(responseData.message || t('admin.menuBuilder.saveFailed'));
       }
       
-      alert(`Menu berhasil ${menuId ? 'diupdate' : 'dibuat'}!`);
+      alert(t('admin.menuBuilder.saveSuccess'));
       router.push('/admin/dashboard/menu');
     } catch (error) {
       console.error('Error saving menu:', error);
-      alert(error instanceof Error ? error.message : 'Gagal menyimpan menu');
+      alert(error instanceof Error ? error.message : t('admin.menuBuilder.saveFailed'));
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleCancel = () => {
-    if (confirm('Batalkan perubahan? Data yang belum disimpan akan hilang.')) {
+    if (confirm(t('admin.menuBuilder.cancelConfirm'))) {
       router.push('/admin/dashboard/menu');
     }
   };
@@ -205,10 +207,10 @@ export default function MenuBuilderPage() {
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-800 dark:text-white/90">
-          {menuId ? 'Edit Menu' : 'Create New Menu'}
+          {menuId ? t('admin.menuBuilder.editMenu') : t('admin.menuBuilder.createNew')}
         </h1>
         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-          Complete all menu information in one streamlined interface
+          {t('admin.menuBuilder.title')}
         </p>
       </div>
 

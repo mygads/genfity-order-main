@@ -1,7 +1,42 @@
 /**
  * Formatting Utility Functions
- * Indonesian locale formatters untuk currency, date, time, etc.
+ * Multi-locale formatters for currency, date, time, etc.
+ * 
+ * Supports:
+ * - English (en) - for AUD currency (Australia)
+ * - Indonesian (id) - for IDR currency (Indonesia)
+ * 
+ * @specification Multi-currency & Multi-language support
  */
+
+import type { Locale } from '@/lib/i18n';
+import { getCurrencyConfig } from '@/lib/constants/location';
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+export type Currency = 'AUD' | 'IDR' | string;
+
+// ============================================================================
+// LOCALE MAPPING
+// ============================================================================
+
+/**
+ * Map app locale to Intl locale for formatting
+ */
+const appLocaleToIntlLocale: Record<Locale, string> = {
+  en: 'en-AU',
+  id: 'id-ID',
+};
+
+/**
+ * Map currency to Intl locale (used when locale not provided)
+ */
+const currencyToIntlLocale: Record<string, string> = {
+  'IDR': 'id-ID',
+  'AUD': 'en-AU',
+};
 
 // ============================================================================
 // CURRENCY FORMATTING
@@ -9,58 +44,109 @@
 
 /**
  * Format number to currency based on merchant settings
+ * 
  * @param amount - Amount to format
  * @param currency - Currency code (default: 'IDR')
- * @example formatCurrency(10000) => "Rp10,000.00"
- * @example formatCurrency(10, 'AUD') => "$10.00"
+ * @param locale - Optional app locale (en/id), affects number formatting
+ * 
+ * @example formatCurrency(10000, 'IDR') => "Rp 10.000"
+ * @example formatCurrency(10.50, 'AUD') => "A$10.50"
+ * 
+ * @specification
+ * - IDR: No decimals, uses Rp prefix, Indonesian number format (10.000)
+ * - AUD: 2 decimals, uses A$ prefix, Australian number format (10.00)
  */
-export function formatCurrency(amount: number, currency: string = 'IDR'): string {
+export function formatCurrency(
+  amount: number,
+  currency: Currency = 'AUD',
+  locale?: Locale
+): string {
+  const config = getCurrencyConfig(currency);
+  
   // Special handling for AUD to show A$ prefix
   if (currency === 'AUD') {
     return `A$${amount.toFixed(2)}`;
   }
+  
+  // Special handling for IDR - no decimals, Rp prefix
+  if (currency === 'IDR') {
+    const formatted = new Intl.NumberFormat('id-ID', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(Math.round(amount));
+    return `Rp ${formatted}`;
+  }
 
-  // Map currency to appropriate locale
-  const localeMap: Record<string, string> = {
-    'IDR': 'id-ID',
-    'USD': 'en-US',
-    'SGD': 'en-SG',
-    'MYR': 'ms-MY',
-  };
+  // Fallback for other currencies (shouldn't happen with current setup)
+  const intlLocale = locale
+    ? appLocaleToIntlLocale[locale]
+    : (currencyToIntlLocale[currency] || 'en-US');
 
-  const locale = localeMap[currency] || 'en-US';
-
-  return new Intl.NumberFormat(locale, {
+  return new Intl.NumberFormat(intlLocale, {
     style: 'currency',
     currency: currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: config?.decimals ?? 2,
+    maximumFractionDigits: config?.decimals ?? 2,
   }).format(amount);
 }
 
 /**
- * Format currency without "Rp" prefix
- * @example formatCurrencyValue(10000) => "10.000"
+ * Format currency with symbol only (no currency code)
+ * 
+ * @param amount - Amount to format
+ * @param currency - Currency code
+ * @returns Formatted string with symbol
+ * 
+ * @example formatCurrencyWithSymbol(10000, 'IDR') => "Rp 10.000"
+ * @example formatCurrencyWithSymbol(10.50, 'AUD') => "A$10.50"
  */
-export function formatCurrencyValue(amount: number): string {
-  return new Intl.NumberFormat('id-ID', {
+export function formatCurrencyWithSymbol(amount: number, currency: Currency = 'AUD'): string {
+  return formatCurrency(amount, currency);
+}
+
+/**
+ * Get currency symbol
+ * 
+ * @param currency - Currency code
+ * @returns Currency symbol
+ */
+export function getCurrencySymbol(currency: Currency): string {
+  const config = getCurrencyConfig(currency);
+  return config?.symbol || '$';
+}
+
+/**
+ * Format currency without symbol prefix
+ * @param amount - Amount to format
+ * @param locale - Optional app locale (en/id)
+ * @example formatCurrencyValue(10000) => "10.000" (id) or "10,000" (en)
+ */
+export function formatCurrencyValue(amount: number, locale?: Locale): string {
+  const intlLocale = locale ? appLocaleToIntlLocale[locale] : 'id-ID';
+
+  return new Intl.NumberFormat(intlLocale, {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
 }
+
 
 // ============================================================================
 // DATE & TIME FORMATTING
 // ============================================================================
 
 /**
- * Format date to Indonesian locale
- * @example formatDate(new Date()) => "10 Nov 2025"
+ * Format date to locale-appropriate format
+ * @param date - Date to format
+ * @param locale - App locale (en/id)
+ * @example formatDate(new Date(), 'id') => "10 Nov 2025"
+ * @example formatDate(new Date(), 'en') => "Nov 10, 2025"
  */
-export function formatDate(date: Date | string): string {
+export function formatDate(date: Date | string, locale?: Locale): string {
   const d = typeof date === 'string' ? new Date(date) : date;
+  const intlLocale = locale ? appLocaleToIntlLocale[locale] : 'id-ID';
 
-  return new Intl.DateTimeFormat('id-ID', {
+  return new Intl.DateTimeFormat(intlLocale, {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
@@ -69,12 +155,16 @@ export function formatDate(date: Date | string): string {
 
 /**
  * Format date to long format
- * @example formatDateLong(new Date()) => "10 November 2025"
+ * @param date - Date to format
+ * @param locale - App locale (en/id)
+ * @example formatDateLong(new Date(), 'id') => "10 November 2025"
+ * @example formatDateLong(new Date(), 'en') => "November 10, 2025"
  */
-export function formatDateLong(date: Date | string): string {
+export function formatDateLong(date: Date | string, locale?: Locale): string {
   const d = typeof date === 'string' ? new Date(date) : date;
+  const intlLocale = locale ? appLocaleToIntlLocale[locale] : 'id-ID';
 
-  return new Intl.DateTimeFormat('id-ID', {
+  return new Intl.DateTimeFormat(intlLocale, {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
@@ -85,10 +175,11 @@ export function formatDateLong(date: Date | string): string {
  * Format time to HH:MM
  * @example formatTime(new Date()) => "14:30"
  */
-export function formatTime(date: Date | string): string {
+export function formatTime(date: Date | string, locale?: Locale): string {
   const d = typeof date === 'string' ? new Date(date) : date;
+  const intlLocale = locale ? appLocaleToIntlLocale[locale] : 'id-ID';
 
-  return new Intl.DateTimeFormat('id-ID', {
+  return new Intl.DateTimeFormat(intlLocale, {
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
@@ -97,16 +188,20 @@ export function formatTime(date: Date | string): string {
 
 /**
  * Format date and time together
- * @example formatDateTime(new Date()) => "10 Nov 2025, 14:30"
+ * @example formatDateTime(new Date(), 'id') => "10 Nov 2025, 14:30"
  */
-export function formatDateTime(date: Date | string): string {
-  return `${formatDate(date)}, ${formatTime(date)}`;
+export function formatDateTime(date: Date | string, locale?: Locale): string {
+  return `${formatDate(date, locale)}, ${formatTime(date, locale)}`;
 }
 
 /**
- * Get relative time (e.g., "2 menit yang lalu")
+ * Get relative time with locale support
+ * @param date - Date to compare
+ * @param locale - App locale (en/id)
+ * @example getRelativeTime(new Date(), 'id') => "Baru saja"
+ * @example getRelativeTime(new Date(), 'en') => "Just now"
  */
-export function getRelativeTime(date: Date | string): string {
+export function getRelativeTime(date: Date | string, locale?: Locale): string {
   const d = typeof date === 'string' ? new Date(date) : date;
   const now = new Date();
   const diffMs = now.getTime() - d.getTime();
@@ -115,12 +210,28 @@ export function getRelativeTime(date: Date | string): string {
   const diffHour = Math.floor(diffMin / 60);
   const diffDay = Math.floor(diffHour / 24);
 
-  if (diffSec < 60) return 'Baru saja';
-  if (diffMin < 60) return `${diffMin} menit yang lalu`;
-  if (diffHour < 24) return `${diffHour} jam yang lalu`;
-  if (diffDay < 7) return `${diffDay} hari yang lalu`;
+  const isIndonesian = locale === 'id' || locale === undefined;
 
-  return formatDate(d);
+  if (diffSec < 60) {
+    return isIndonesian ? 'Baru saja' : 'Just now';
+  }
+  if (diffMin < 60) {
+    return isIndonesian
+      ? `${diffMin} menit yang lalu`
+      : `${diffMin} minute${diffMin > 1 ? 's' : ''} ago`;
+  }
+  if (diffHour < 24) {
+    return isIndonesian
+      ? `${diffHour} jam yang lalu`
+      : `${diffHour} hour${diffHour > 1 ? 's' : ''} ago`;
+  }
+  if (diffDay < 7) {
+    return isIndonesian
+      ? `${diffDay} hari yang lalu`
+      : `${diffDay} day${diffDay > 1 ? 's' : ''} ago`;
+  }
+
+  return formatDate(d, locale);
 }
 
 // ============================================================================
@@ -132,20 +243,16 @@ export function getRelativeTime(date: Date | string): string {
  * @example formatPhoneNumber("089668176764") => "0896-6817-6764"
  */
 export function formatPhoneNumber(phone: string): string {
-  // Remove all non-numeric characters
   const cleaned = phone.replace(/\D/g, '');
 
-  // Format: 0896-6817-6764
   if (cleaned.length === 12) {
     return `${cleaned.slice(0, 4)}-${cleaned.slice(4, 8)}-${cleaned.slice(8)}`;
   }
 
-  // Format: 0812-3456-7890 (11 digits)
   if (cleaned.length === 11) {
     return `${cleaned.slice(0, 4)}-${cleaned.slice(4, 8)}-${cleaned.slice(8)}`;
   }
 
-  // Return as-is if doesn't match expected format
   return phone;
 }
 
@@ -167,7 +274,6 @@ export function unformatPhoneNumber(phone: string): string {
  * @example generateOrderNumber("BRJOBNG") => "BRJOBNGCBDJNDU1"
  */
 export function generateOrderNumber(merchantCode: string): string {
-  // Generate random 8-character alphanumeric string (uppercase)
   const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let unique = '';
 
@@ -183,8 +289,6 @@ export function generateOrderNumber(merchantCode: string): string {
  * @example parseOrderNumber("BRJOBNGCBDJNDU1") => "BRJOBNG"
  */
 export function parseMerchantCodeFromOrderNumber(orderNumber: string): string {
-  // Assuming merchant code is always 7 characters
-  // Adjust this logic based on actual merchant code length
   return orderNumber.slice(0, 7);
 }
 
@@ -209,10 +313,14 @@ export function capitalize(text: string): string {
 }
 
 /**
- * Format day name (Indonesian)
+ * Format day name with locale support
+ * @param day - Day name in English (MONDAY, TUESDAY, etc.)
+ * @param locale - App locale (en/id)
  */
-export function formatDayName(day: string): string {
-  const dayMap: Record<string, string> = {
+export function formatDayName(day: string, locale?: Locale): string {
+  const isIndonesian = locale === 'id' || locale === undefined;
+
+  const dayMapId: Record<string, string> = {
     MONDAY: 'Senin',
     TUESDAY: 'Selasa',
     WEDNESDAY: 'Rabu',
@@ -229,6 +337,24 @@ export function formatDayName(day: string): string {
     MINGGU: 'Minggu',
   };
 
+  const dayMapEn: Record<string, string> = {
+    MONDAY: 'Monday',
+    TUESDAY: 'Tuesday',
+    WEDNESDAY: 'Wednesday',
+    THURSDAY: 'Thursday',
+    FRIDAY: 'Friday',
+    SATURDAY: 'Saturday',
+    SUNDAY: 'Sunday',
+    SENIN: 'Monday',
+    SELASA: 'Tuesday',
+    RABU: 'Wednesday',
+    KAMIS: 'Thursday',
+    JUMAT: 'Friday',
+    SABTU: 'Saturday',
+    MINGGU: 'Sunday',
+  };
+
+  const dayMap = isIndonesian ? dayMapId : dayMapEn;
   return dayMap[day.toUpperCase()] || day;
 }
 
@@ -237,10 +363,14 @@ export function formatDayName(day: string): string {
 // ============================================================================
 
 /**
- * Format order status to Indonesian
+ * Format order status with locale support
+ * @param status - Order status
+ * @param locale - App locale (en/id)
  */
-export function formatOrderStatus(status: string): string {
-  const statusMap: Record<string, string> = {
+export function formatOrderStatus(status: string, locale?: Locale): string {
+  const isIndonesian = locale === 'id' || locale === undefined;
+
+  const statusMapId: Record<string, string> = {
     PENDING: 'Menunggu',
     CONFIRMED: 'Dikonfirmasi',
     PREPARING: 'Diproses',
@@ -249,6 +379,16 @@ export function formatOrderStatus(status: string): string {
     CANCELLED: 'Dibatalkan',
   };
 
+  const statusMapEn: Record<string, string> = {
+    PENDING: 'Pending',
+    CONFIRMED: 'Confirmed',
+    PREPARING: 'Preparing',
+    READY: 'Ready',
+    COMPLETED: 'Completed',
+    CANCELLED: 'Cancelled',
+  };
+
+  const statusMap = isIndonesian ? statusMapId : statusMapEn;
   return statusMap[status.toUpperCase()] || status;
 }
 
@@ -285,7 +425,6 @@ export function isValidEmail(email: string): boolean {
  */
 export function isValidPhoneNumber(phone: string): boolean {
   const cleaned = phone.replace(/\D/g, '');
-  // Must start with 0 and be 10-13 digits
   return /^0\d{9,12}$/.test(cleaned);
 }
 
@@ -293,6 +432,5 @@ export function isValidPhoneNumber(phone: string): boolean {
  * Validate merchant code format
  */
 export function isValidMerchantCode(code: string): boolean {
-  // Must be 4-10 uppercase alphanumeric characters
   return /^[A-Z0-9]{4,10}$/.test(code);
 }

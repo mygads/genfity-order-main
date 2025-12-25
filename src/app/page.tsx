@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import CustomerHeader from '@/components/customer/CustomerHeader';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 /**
  * Landing Page Component - GENFITY Online Ordering
@@ -18,6 +19,7 @@ import CustomerHeader from '@/components/customer/CustomerHeader';
  */
 export default function LandingPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [merchantCode, setMerchantCode] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -43,10 +45,10 @@ export default function LandingPage() {
           {/* Hero Text */}
           <div className="text-center space-y-3">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white leading-tight">
-              Order Your Favorite Food
+              {t('landing.title')}
             </h1>
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              Fast, simple, and seamless ordering experience
+              {t('landing.subtitle')}
             </p>
           </div>
 
@@ -57,14 +59,14 @@ export default function LandingPage() {
                 htmlFor="merchantCode"
                 className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide"
               >
-                Merchant Code
+                {t('landing.merchantCode')}
               </label>
               <input
                 id="merchantCode"
                 type="text"
                 value={merchantCode}
                 onChange={(e) => setMerchantCode(e.target.value)}
-                placeholder="Enter merchant code"
+                placeholder={t('landing.merchantCodePlaceholder')}
                 className="w-full h-12 px-4 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500 dark:focus:ring-orange-400 focus:border-transparent transition-all"
                 autoComplete="off"
               />
@@ -74,7 +76,7 @@ export default function LandingPage() {
               className="w-full h-12 bg-orange-500 text-white text-sm font-semibold rounded-lg hover:bg-orange-600 transition-colors active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-orange-500"
               disabled={!merchantCode.trim()}
             >
-              Start Ordering
+              {t('landing.startOrdering')}
             </button>
           </form>
 
@@ -86,7 +88,7 @@ export default function LandingPage() {
               </div>
               <div className="flex-1">
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Quick & easy ordering
+                  {t('landing.feature.quickOrdering')}
                 </p>
               </div>
             </div>
@@ -97,7 +99,7 @@ export default function LandingPage() {
               </div>
               <div className="flex-1">
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Pay at counter
+                  {t('landing.feature.payAtCounter')}
                 </p>
               </div>
             </div>
@@ -108,7 +110,7 @@ export default function LandingPage() {
               </div>
               <div className="flex-1">
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Mobile optimized
+                  {t('landing.feature.mobileOptimized')}
                 </p>
               </div>
             </div>
@@ -119,7 +121,7 @@ export default function LandingPage() {
       {/* Minimal Footer */}
       <footer className="py-6 px-6 border-t border-gray-200 dark:border-gray-800">
         <p className="text-xs text-center text-gray-500 dark:text-gray-500">
-          © 2025 GENFITY. All rights reserved.
+          {t('landing.footer')}
         </p>
       </footer>
     </div>

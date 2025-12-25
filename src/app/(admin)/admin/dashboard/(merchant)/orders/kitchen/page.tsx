@@ -22,6 +22,7 @@ import type { OrderWithDetails } from '@/lib/types/order';
 import { OrderStatus } from '@prisma/client';
 import { playNotificationSound } from '@/lib/utils/soundNotification';
 import { useMerchant } from '@/context/MerchantContext';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 const KITCHEN_STATUSES: OrderStatus[] = ['ACCEPTED', 'IN_PROGRESS'];
 
@@ -29,6 +30,7 @@ export default function KitchenDisplayPage() {
   const router = useRouter();
   const { merchant } = useMerchant();
   const { showError } = useToast();
+  const { t } = useTranslation();
 
   const [orders, setOrders] = useState<OrderWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
@@ -215,17 +217,17 @@ export default function KitchenDisplayPage() {
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-              Kitchen
+              {t("admin.kitchen.title")}
             </h1>
 
             {/* Status Counts - Minimal */}
             <div className="flex items-center gap-3 text-sm">
               <span className="text-gray-500 dark:text-gray-400">
-                <span className="font-semibold text-gray-900 dark:text-white">{acceptedOrders.length}</span> pending
+                <span className="font-semibold text-gray-900 dark:text-white">{acceptedOrders.length}</span> {t("admin.kitchen.pending").toLowerCase()}
               </span>
               <span className="text-gray-300 dark:text-gray-600">•</span>
               <span className="text-gray-500 dark:text-gray-400">
-                <span className="font-semibold text-gray-900 dark:text-white">{inProgressOrders.length}</span> cooking
+                <span className="font-semibold text-gray-900 dark:text-white">{inProgressOrders.length}</span> {t("admin.kitchen.cooking").toLowerCase()}
               </span>
             </div>
           </div>
@@ -238,17 +240,17 @@ export default function KitchenDisplayPage() {
                 ? 'border-gray-900 bg-gray-900 text-white dark:border-white dark:bg-white dark:text-gray-900'
                 : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
                 }`}
-              title={autoRefresh ? 'Auto-refresh on' : 'Auto-refresh off'}
+              title={autoRefresh ? t("admin.kitchen.autoRefresh") + ' on' : t("admin.kitchen.autoRefresh") + ' off'}
             >
               <FaSync className={`h-3.5 w-3.5 ${autoRefresh ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Auto</span>
+              <span className="hidden sm:inline">{t("admin.kitchen.auto")}</span>
             </button>
 
             {/* Manual Refresh */}
             <button
               onClick={fetchOrders}
               className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-              title="Refresh now"
+              title={t("admin.kitchen.refreshNow")}
             >
               <FaSync className="h-3.5 w-3.5" />
             </button>
@@ -281,9 +283,9 @@ export default function KitchenDisplayPage() {
                 : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
                 }`}
               title={
-                displayMode === 'normal' ? 'Clean mode' :
-                  displayMode === 'clean' ? 'Fullscreen' :
-                    'Exit fullscreen'
+                displayMode === 'normal' ? t("admin.kitchen.cleanMode") :
+                  displayMode === 'clean' ? t("admin.kitchen.fullscreen") :
+                    t("admin.kitchen.exitFullscreen")
               }
             >
               {displayMode === 'normal' ? <FaEye className="h-3.5 w-3.5" /> :
@@ -305,7 +307,7 @@ export default function KitchenDisplayPage() {
                 <div className="flex items-center gap-2">
                   <FaClock className="h-4 w-4 text-amber-500" />
                   <h2 className="font-semibold text-gray-900 dark:text-white">
-                    Pending
+                    {t("admin.kitchen.pending")}
                   </h2>
                 </div>
                 <span className="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full bg-amber-100 dark:bg-amber-900/30 text-xs font-semibold text-amber-700 dark:text-amber-300">
@@ -320,15 +322,20 @@ export default function KitchenDisplayPage() {
                   order={order}
                   onCardClick={handleCardClick}
                   onAction={(e) => handleMarkInProgress(String(order.id), e)}
-                  actionLabel="Start Cooking"
+                  actionLabel={t("admin.kitchen.startCooking")}
                   actionIcon={<FaPlay className="h-3 w-3" />}
                   actionColor="primary"
+                  translations={{
+                    table: t("admin.kitchen.table"),
+                    takeaway: t("admin.kitchen.takeaway"),
+                    orderNote: t("admin.kitchen.orderNote"),
+                  }}
                 />
               ))}
               {acceptedOrders.length === 0 && (
                 <div className="py-16 text-center">
                   <FaClock className="mx-auto h-8 w-8 text-gray-300 dark:text-gray-600 mb-3" />
-                  <p className="text-sm text-gray-500 dark:text-gray-400">No pending orders</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{t("admin.kitchen.noPending")}</p>
                 </div>
               )}
             </div>
@@ -341,7 +348,7 @@ export default function KitchenDisplayPage() {
                 <div className="flex items-center gap-2">
                   <FaFire className="h-4 w-4 text-orange-500" />
                   <h2 className="font-semibold text-gray-900 dark:text-white">
-                    Cooking
+                    {t("admin.kitchen.cooking")}
                   </h2>
                 </div>
                 <span className="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full bg-orange-100 dark:bg-orange-900/30 text-xs font-semibold text-orange-700 dark:text-orange-300">
@@ -356,15 +363,20 @@ export default function KitchenDisplayPage() {
                   order={order}
                   onCardClick={handleCardClick}
                   onAction={(e) => handleMarkReady(String(order.id), e)}
-                  actionLabel="Mark Ready"
+                  actionLabel={t("admin.kitchen.markReady")}
                   actionIcon={<FaCheck className="h-3 w-3" />}
                   actionColor="success"
+                  translations={{
+                    table: t("admin.kitchen.table"),
+                    takeaway: t("admin.kitchen.takeaway"),
+                    orderNote: t("admin.kitchen.orderNote"),
+                  }}
                 />
               ))}
               {inProgressOrders.length === 0 && (
                 <div className="py-16 text-center">
                   <FaFire className="mx-auto h-8 w-8 text-gray-300 dark:text-gray-600 mb-3" />
-                  <p className="text-sm text-gray-500 dark:text-gray-400">No orders cooking</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{t("admin.kitchen.noCooking")}</p>
                 </div>
               )}
             </div>
@@ -400,9 +412,14 @@ interface KitchenCardProps {
   actionLabel: string;
   actionIcon: React.ReactNode;
   actionColor: 'primary' | 'success';
+  translations: {
+    table: string;
+    takeaway: string;
+    orderNote: string;
+  };
 }
 
-function KitchenCard({ order, onCardClick, onAction, actionLabel, actionIcon, actionColor }: KitchenCardProps) {
+function KitchenCard({ order, onCardClick, onAction, actionLabel, actionIcon, actionColor, translations }: KitchenCardProps) {
   const items = 'orderItems' in order ? order.orderItems : [];
   const isUrgent = (() => {
     const elapsed = Date.now() - new Date(order.placedAt).getTime();
@@ -437,13 +454,13 @@ function KitchenCard({ order, onCardClick, onAction, actionLabel, actionIcon, ac
             </span>
             {order.tableNumber && (
               <span className="text-sm text-gray-600 dark:text-gray-400">
-                Table {order.tableNumber}
+                {translations.table} {order.tableNumber}
               </span>
             )}
             {order.orderType === 'TAKEAWAY' && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
                 <FaShoppingBag className="h-2.5 w-2.5" />
-                Takeaway
+                {translations.takeaway}
               </span>
             )}
           </div>
@@ -501,7 +518,7 @@ function KitchenCard({ order, onCardClick, onAction, actionLabel, actionIcon, ac
         {/* Order Notes - Prominent */}
         {order.notes && (
           <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Order Note</p>
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{translations.orderNote}</p>
             <p className="text-sm text-gray-800 dark:text-gray-200">
               {order.notes}
             </p>

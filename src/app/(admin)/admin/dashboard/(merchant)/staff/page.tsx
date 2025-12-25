@@ -9,6 +9,7 @@ import InviteStaffModal from "@/components/staff/InviteStaffModal";
 import AddStaffModal from "@/components/staff/AddStaffModal";
 import { useSWRStatic } from "@/hooks/useSWRWithAuth";
 import { StaffPageSkeleton } from "@/components/common/SkeletonLoaders";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface Staff {
   id: string;
@@ -30,6 +31,7 @@ interface StaffApiResponse {
 
 export default function StaffManagementPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { toasts, success: showSuccess, error: showError } = useToast();
 
   const [filteredStaff, setFilteredStaff] = useState<Staff[]>([]);
@@ -136,7 +138,7 @@ export default function StaffManagementPage() {
   return (
     <div>
       <ToastContainer toasts={toasts} />
-      <PageBreadcrumb pageTitle="Staff" />
+      <PageBreadcrumb pageTitle={t("admin.staff.title")} />
 
       <div className="mt-6 space-y-5">
         {/* Header Actions */}
@@ -148,7 +150,7 @@ export default function StaffManagementPage() {
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search staff by name or email..."
+                  placeholder={t("admin.staff.searchPlaceholder")}
                   className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 pl-10 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                 />
                 <svg
@@ -175,7 +177,7 @@ export default function StaffManagementPage() {
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                 </svg>
-                Add Staff
+                {t("admin.staff.addStaff")}
               </button>
               <button
                 onClick={() => setShowInviteModal(true)}
@@ -184,7 +186,7 @@ export default function StaffManagementPage() {
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
-                Invite via Email
+                {t("admin.staff.inviteViaEmail")}
               </button>
             </div>
           </div>
@@ -194,7 +196,7 @@ export default function StaffManagementPage() {
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-white/3">
           <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-800">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Staff Members
+              {t("admin.staff.subtitle")}
             </h3>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
               {filteredStaff.length} staff member{filteredStaff.length === 1 ? '' : 's'}
@@ -215,7 +217,7 @@ export default function StaffManagementPage() {
                   </svg>
                 </div>
                 <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-                  {search ? 'No staff found' : 'No staff members yet'}
+                  {search ? t("admin.staff.noStaff") : t("admin.staff.noStaffYet")}
                 </h3>
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                   {search ? 'Try adjusting your search' : 'Add or invite staff to get started'}
@@ -226,22 +228,22 @@ export default function StaffManagementPage() {
                 <thead>
                   <tr className="border-b border-gray-200 bg-gray-50 text-left dark:border-gray-800 dark:bg-gray-900/50">
                     <th className="px-6 py-3 text-xs font-semibold uppercase text-gray-600 dark:text-gray-400">
-                      Name
+                      {t("admin.staff.name")}
                     </th>
                     <th className="px-6 py-3 text-xs font-semibold uppercase text-gray-600 dark:text-gray-400">
-                      Email
+                      {t("admin.staff.email")}
                     </th>
                     <th className="px-6 py-3 text-xs font-semibold uppercase text-gray-600 dark:text-gray-400">
-                      Role
+                      {t("admin.staff.role")}
                     </th>
                     <th className="px-6 py-3 text-xs font-semibold uppercase text-gray-600 dark:text-gray-400">
-                      Status
+                      {t("admin.staff.status")}
                     </th>
                     <th className="px-6 py-3 text-xs font-semibold uppercase text-gray-600 dark:text-gray-400">
-                      Joined
+                      {t("admin.staff.joined")}
                     </th>
                     <th className="px-6 py-3 text-xs font-semibold uppercase text-gray-600 dark:text-gray-400">
-                      Actions
+                      {t("admin.staff.actions")}
                     </th>
                   </tr>
                 </thead>
@@ -278,7 +280,7 @@ export default function StaffManagementPage() {
                             ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
                             : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
                           }`}>
-                          {member.role === 'MERCHANT_OWNER' ? 'Owner' : 'Staff'}
+                          {member.role === 'MERCHANT_OWNER' ? t("admin.staff.owner") : t("admin.staff.staffRole")}
                         </span>
                       </td>
                       <td className="px-6 py-4">

@@ -11,9 +11,11 @@ import { useRouter } from 'next/navigation';
 import { PeriodComparison, CustomerAnalytics, OperationalMetrics } from '@/components/reports';
 import { TopMenuItemsChart, HourlyDistributionChart } from '@/components/revenue';
 import { ReportsPageSkeleton } from '@/components/common/SkeletonLoaders';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 export default function ReportsPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<{
@@ -102,7 +104,7 @@ export default function ReportsPage() {
 
   const handleExportPDF = () => {
     // TODO: Implement PDF export
-    alert('PDF export will be implemented soon');
+    alert(t("admin.reports.exportPDFSoon"));
   };
 
   if (loading) {
@@ -114,10 +116,10 @@ export default function ReportsPage() {
       {/* Page Title */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-          Reports & Analytics
+          {t("admin.reports.title")}
         </h1>
         <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-          Comprehensive business intelligence and performance metrics
+          {t("admin.reports.subtitle")}
         </p>
       </div>
 
@@ -139,17 +141,17 @@ export default function ReportsPage() {
               const d = new Date();
               d.setDate(d.getDate() - 7);
               return d.toISOString().split('T')[0];
-            })()}|${new Date().toISOString().split('T')[0]}`}>Last 7 Days</option>
+            })()}|${new Date().toISOString().split('T')[0]}`}>{t("admin.reports.last7Days")}</option>
             <option value={`${(() => {
               const d = new Date();
               d.setDate(d.getDate() - 30);
               return d.toISOString().split('T')[0];
-            })()}|${new Date().toISOString().split('T')[0]}`}>Last 30 Days</option>
+            })()}|${new Date().toISOString().split('T')[0]}`}>{t("admin.reports.last30Days")}</option>
             <option value={`${(() => {
               const d = new Date();
               d.setDate(d.getDate() - 90);
               return d.toISOString().split('T')[0];
-            })()}|${new Date().toISOString().split('T')[0]}`}>Last 90 Days</option>
+            })()}|${new Date().toISOString().split('T')[0]}`}>{t("admin.reports.last90Days")}</option>
           </select>
         </div>
 
@@ -162,7 +164,7 @@ export default function ReportsPage() {
           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
-          Export PDF
+          {t("admin.reports.exportPDF")}
         </button>
       </div>
 
@@ -233,10 +235,10 @@ export default function ReportsPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
             <h3 className="mt-4 text-lg font-semibold text-gray-800 dark:text-white/90">
-              No Reports Data
+              {t("admin.reports.noData")}
             </h3>
             <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-              There are no orders in the selected date range.
+              {t("admin.reports.noDataDesc")}
             </p>
           </div>
         </div>

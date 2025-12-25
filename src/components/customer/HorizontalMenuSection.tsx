@@ -9,6 +9,7 @@
 'use client';
 
 import Image from 'next/image';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 interface MenuItem {
     id: string;
@@ -52,6 +53,8 @@ export default function HorizontalMenuSection({
     isPromoSection = false,
     storeOpen = true,
 }: HorizontalMenuSectionProps) {
+    const { t } = useTranslation();
+
     const formatPrice = (amount: number): string => {
         return new Intl.NumberFormat('en-US', {
             style: 'currency',
@@ -82,7 +85,7 @@ export default function HorizontalMenuSection({
                         onClick={onViewAll}
                         className="flex items-center gap-1 text-sm font-medium text-gray-600 hover:text-orange-500 transition-colors"
                     >
-                        View All
+                        {t('common.viewAll')}
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M6 12l4-4-4-4" />
                         </svg>
@@ -144,7 +147,7 @@ export default function HorizontalMenuSection({
                                                 textTransform: 'uppercase',
                                             }}
                                         >
-                                            Promo
+                                            {t('customer.menu.promo')}
                                         </div>
                                     )}
                                 </div>
@@ -195,7 +198,7 @@ export default function HorizontalMenuSection({
                                     {/* Price - 14px, 600 weight */}
                                     <div style={{ marginTop: '8px' }}>
                                         {!isAvailable ? (
-                                            <p style={{ color: '#ef4444', fontSize: '15px', fontWeight: 700 }}>Sold out</p>
+                                            <p style={{ color: '#ef4444', fontSize: '15px', fontWeight: 700 }}>{t('customer.menu.soldOut')}</p>
                                         ) : item.isPromo && item.promoPrice ? (
                                             <div className="flex items-center gap-2">
                                                 <span style={{ fontSize: '14px', fontWeight: 600, color: 'rgb(0, 0, 0)' }}>
@@ -215,7 +218,7 @@ export default function HorizontalMenuSection({
                                     {/* Low Stock Indicator - Show when stock <= 10 */}
                                     {isAvailable && storeOpen && item.trackStock && item.stockQty !== null && item.stockQty <= 10 && (
                                         <p style={{ fontSize: '12px', fontWeight: 500, color: '#f97316', marginTop: '4px' }}>
-                                            Only {item.stockQty} left
+                                            {t('customer.menu.onlyLeft', { count: item.stockQty })}
                                         </p>
                                     )}
 
@@ -269,7 +272,7 @@ export default function HorizontalMenuSection({
                                                         fontFamily: 'Inter, sans-serif',
                                                     }}
                                                 >
-                                                    Add
+                                                    {t('common.add')}
                                                 </button>
                                             )
                                         )}

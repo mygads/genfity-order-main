@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { formatCurrency } from "@/lib/utils/format";
 
 interface OrderStatusItem {
   status: string;
@@ -26,14 +27,8 @@ interface OrderBreakdownCardsProps {
 export default function OrderBreakdownCards({ 
   statusBreakdown,
   typeBreakdown,
-  currency = "Rp" 
+  currency = "AUD" 
 }: OrderBreakdownCardsProps) {
-  const formatCurrency = (amount: number) => {
-    return `${currency} ${amount.toLocaleString('id-ID', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    })}`;
-  };
 
   const statusColors: Record<string, { bg: string; text: string; border: string }> = {
     PENDING: { 
@@ -198,7 +193,7 @@ export default function OrderBreakdownCards({
                               ? 'text-brand-700 dark:text-brand-400'
                               : 'text-orange-700 dark:text-orange-400'
                           }`}>
-                            {formatCurrency(item.revenue)}
+                            {formatCurrency(item.revenue, currency)}
                           </div>
                         </div>
                       </div>

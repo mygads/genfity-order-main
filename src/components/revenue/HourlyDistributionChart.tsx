@@ -2,6 +2,7 @@
 
 import React from "react";
 import BarChart from "@/components/charts/bar/BarChart";
+import { formatCurrency } from "@/lib/utils/format";
 
 interface HourlyData {
   hour: number;
@@ -20,14 +21,8 @@ interface HourlyDistributionChartProps {
  */
 export default function HourlyDistributionChart({ 
   data, 
-  currency = "Rp" 
+  currency = "AUD" 
 }: HourlyDistributionChartProps) {
-  const formatCurrency = (amount: number) => {
-    return `${currency} ${amount.toLocaleString('id-ID', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    })}`;
-  };
 
   const formatHour = (hour: number) => {
     if (hour === 0) return '12 AM';
@@ -86,7 +81,7 @@ export default function HourlyDistributionChart({
             {formatHour(peakRevenueHour.hour)}
           </div>
           <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            {formatCurrency(peakRevenueHour.revenue)}
+            {formatCurrency(peakRevenueHour.revenue, currency)}
           </div>
         </div>
       </div>

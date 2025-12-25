@@ -13,6 +13,7 @@
 'use client';
 
 import Image from 'next/image';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 interface MenuItem {
     id: string;
@@ -56,6 +57,8 @@ export default function DetailedMenuSection({
     onDecreaseQty,
     storeOpen = true,
 }: DetailedMenuSectionProps) {
+    const { t } = useTranslation();
+
     if (items.length === 0) return null;
 
     const formatPrice = (amount: number): string => {
@@ -238,7 +241,7 @@ export default function DetailedMenuSection({
                                         {/* Low Stock Indicator */}
                                         {isAvailable && storeOpen && item.trackStock && item.stockQty !== null && item.stockQty <= 10 && (
                                             <span style={{ fontSize: '12px', fontWeight: 500, color: '#f97316' }}>
-                                                Only {item.stockQty} left
+                                                {t('customer.menu.onlyLeft', { count: item.stockQty })}
                                             </span>
                                         )}
                                         {!storeOpen ? (
@@ -254,7 +257,7 @@ export default function DetailedMenuSection({
                                                     fontFamily: 'Inter, sans-serif',
                                                 }}
                                             >
-                                                Sold out
+                                                {t('customer.menu.soldOut')}
                                             </span>
                                         ) : isInCart ? (
                                             /* Quantity Controls */
@@ -330,7 +333,7 @@ export default function DetailedMenuSection({
                                                     cursor: 'pointer',
                                                 }}
                                             >
-                                                Add
+                                                {t('common.add')}
                                             </button>
                                         )}
                                     </div>

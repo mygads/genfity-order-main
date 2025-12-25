@@ -9,6 +9,7 @@ import { exportAddonCategories } from "@/lib/utils/excelExport";
 import { useSWRStatic } from "@/hooks/useSWRWithAuth";
 import { CategoriesPageSkeleton } from "@/components/common/SkeletonLoaders";
 import { useMerchant } from "@/context/MerchantContext";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface AddonCategory {
   id: string;
@@ -50,6 +51,7 @@ interface AddonCategoriesApiResponse {
 
 export default function AddonCategoriesPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -536,7 +538,7 @@ export default function AddonCategoriesPage() {
             <div className="w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-800 dark:bg-gray-900">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-                  {editingCategoryId ? 'Edit Addon Category' : 'Create New Addon Category'}
+                  {editingCategoryId ? t("admin.addonCategories.editCategory") : t("admin.addonCategories.createNew")}
                 </h3>
                 <button
                   onClick={handleCancel}
@@ -551,7 +553,7 @@ export default function AddonCategoriesPage() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Category Name <span className="text-error-500">*</span>
+                    {t("admin.addonCategories.categoryName")} <span className="text-error-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -566,7 +568,7 @@ export default function AddonCategoriesPage() {
 
                 <div>
                   <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Description
+                    {t("admin.addonCategories.description")}
                   </label>
                   <textarea
                     name="description"
@@ -581,7 +583,7 @@ export default function AddonCategoriesPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Min Selection <span className="text-error-500">*</span>
+                      {t("admin.addonCategories.minSelection")} <span className="text-error-500">*</span>
                     </label>
                     <input
                       type="number"
@@ -593,13 +595,10 @@ export default function AddonCategoriesPage() {
                       placeholder="0"
                       className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
                     />
-                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                      Minimum required selections
-                    </p>
                   </div>
                   <div>
                     <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Max Selection
+                      {t("admin.addonCategories.maxSelection")}
                     </label>
                     <input
                       type="number"
@@ -607,12 +606,9 @@ export default function AddonCategoriesPage() {
                       value={formData.maxSelection}
                       onChange={handleChange}
                       min="0"
-                      placeholder="Unlimited"
+                      placeholder={t("admin.addonCategories.leaveEmpty")}
                       className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
                     />
-                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                      Leave empty for unlimited
-                    </p>
                   </div>
                 </div>
 
@@ -622,14 +618,14 @@ export default function AddonCategoriesPage() {
                     onClick={handleCancel}
                     className="flex-1 h-11 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
                   >
-                    Cancel
+                    {t("admin.addonCategories.cancel")}
                   </button>
                   <button
                     type="submit"
                     disabled={submitting}
                     className="flex-1 h-11 rounded-lg bg-primary-500 text-sm font-medium text-white hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {submitting ? "Saving..." : (editingCategoryId ? "Update Category" : "Create Category")}
+                    {submitting ? t("admin.addonCategories.saving") : (editingCategoryId ? t("admin.addonCategories.updateCategory") : t("admin.addonCategories.createCategory"))}
                   </button>
                 </div>
               </form>
@@ -701,7 +697,7 @@ export default function AddonCategoriesPage() {
                 }}
                 disabled={categories.length === 0}
                 className="inline-flex h-11 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                title="Export to Excel"
+                title={t("admin.addonCategories.exportExcel")}
               >
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -725,7 +721,7 @@ export default function AddonCategoriesPage() {
             <div>
               <input
                 type="text"
-                placeholder="Search addon categories..."
+                placeholder={t("admin.addonCategories.searchPlaceholder")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
@@ -737,9 +733,9 @@ export default function AddonCategoriesPage() {
                 onChange={(e) => setFilterStatus(e.target.value)}
                 className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
               >
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
+                <option value="all">{t("admin.addonCategories.allStatus")}</option>
+                <option value="active">{t("common.active")}</option>
+                <option value="inactive">{t("common.inactive")}</option>
               </select>
             </div>
           </div>
@@ -747,10 +743,10 @@ export default function AddonCategoriesPage() {
           {filteredCategories.length === 0 ? (
             <EmptyState
               type={categories.length === 0 ? "no-addon" : "no-results"}
-              title={categories.length === 0 ? undefined : "No addon categories match your filters"}
-              description={categories.length === 0 ? undefined : "Try adjusting your search or filters"}
+              title={categories.length === 0 ? undefined : t("admin.addonCategories.noMatch")}
+              description={categories.length === 0 ? undefined : t("admin.addonCategories.tryAdjusting")}
               action={categories.length === 0 ? {
-                label: "Create Addon Category",
+                label: t("admin.addonCategories.createCategory"),
                 onClick: () => setShowForm(true)
               } : undefined}
             />
@@ -767,13 +763,13 @@ export default function AddonCategoriesPage() {
                         className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                       />
                     </th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Name</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Description</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Selection</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Addons</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Menus</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Status</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Actions</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">{t("admin.addonCategories.table.name")}</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">{t("admin.addonCategories.description")}</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">{t("admin.addonCategories.table.selection")}</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">{t("admin.addonCategories.table.items")}</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">{t("admin.addonCategories.table.menus")}</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">{t("admin.addonCategories.table.status")}</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">{t("admin.addonCategories.table.actions")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -794,12 +790,12 @@ export default function AddonCategoriesPage() {
                       </td>
                       <td className="px-4 py-4">
                         <span className="inline-flex rounded-full bg-brand-100 px-3 py-1 text-xs font-medium text-brand-700 dark:bg-brand-900/20 dark:text-brand-400">
-                          {category._count?.addonItems || 0} items
+                          {t("admin.addonCategories.itemsCount", { count: category._count?.addonItems || 0 })}
                         </span>
                       </td>
                       <td className="px-4 py-4">
                         <span className="inline-flex rounded-full bg-purple-100 px-3 py-1 text-xs font-medium text-purple-700 dark:bg-purple-900/20 dark:text-purple-400">
-                          {category._count?.menuAddonCategories || 0} menus
+                          {t("admin.addonCategories.menusCount", { count: category._count?.menuAddonCategories || 0 })}
                         </span>
                       </td>
                       <td className="px-4 py-4">
@@ -809,7 +805,7 @@ export default function AddonCategoriesPage() {
                             ? 'bg-success-100 text-success-700 hover:bg-success-200 dark:bg-success-900/20 dark:text-success-400 dark:hover:bg-success-900/30'
                             : 'bg-error-100 text-error-700 hover:bg-error-200 dark:bg-error-900/20 dark:text-error-400 dark:hover:bg-error-900/30'
                             }`}>
-                          {category.isActive ? '● Active' : '○ Inactive'}
+                          {category.isActive ? t("admin.addonCategories.statusActive") : t("admin.addonCategories.statusInactive")}
                         </button>
                       </td>
                       <td className="px-4 py-4">
@@ -817,7 +813,7 @@ export default function AddonCategoriesPage() {
                           <button
                             onClick={() => handleViewItems(category)}
                             className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100 dark:border-blue-900/50 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30"
-                            title="View Items"
+                            title={t("admin.addonCategories.viewItems")}
                           >
                             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -827,7 +823,7 @@ export default function AddonCategoriesPage() {
                           <button
                             onClick={() => handleViewRelationships(category)}
                             className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-purple-200 bg-purple-50 text-purple-600 hover:bg-purple-100 dark:border-purple-900/50 dark:bg-purple-900/20 dark:text-purple-400 dark:hover:bg-purple-900/30"
-                            title="View Menu Relationships"
+                            title={t("admin.addonCategories.viewMenus")}
                           >
                             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -836,7 +832,7 @@ export default function AddonCategoriesPage() {
                           <button
                             onClick={() => handleEdit(category)}
                             className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                            title="Edit Category"
+                            title={t("admin.addonCategories.edit")}
                           >
                             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -845,7 +841,7 @@ export default function AddonCategoriesPage() {
                           <button
                             onClick={() => handleDelete(category.id, category.name)}
                             className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-error-200 bg-error-50 text-error-600 hover:bg-error-100 dark:border-error-900/50 dark:bg-error-900/20 dark:text-error-400 dark:hover:bg-error-900/30"
-                            title="Delete"
+                            title={t("admin.addonCategories.delete")}
                           >
                             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -862,7 +858,7 @@ export default function AddonCategoriesPage() {
               {totalPages > 1 && (
                 <div className="mt-5 flex items-center justify-between border-t border-gray-200 pt-5 dark:border-gray-800">
                   <div className="text-sm text-gray-600 dark:text-gray-400">
-                    Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredCategories.length)} of {filteredCategories.length} categories
+                    {t("admin.categories.showing")} {indexOfFirstItem + 1} - {Math.min(indexOfLastItem, filteredCategories.length)} {t("admin.categories.of")} {filteredCategories.length} {t("admin.categories.categories")}
                   </div>
                   <div className="flex gap-2">
                     <button

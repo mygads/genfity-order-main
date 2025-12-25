@@ -129,6 +129,7 @@ export const OrderStatsCards: React.FC<OrderStatsCardsProps> = ({
   // Format currency
   const formatCurrency = (amount: number) => {
     if (amount === 0) return 'Free';
+    // Default to AUD format
     return `A$${amount.toFixed(0)}`;
   };
 

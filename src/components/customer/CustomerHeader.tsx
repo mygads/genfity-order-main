@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { isCustomerAuthenticated } from '@/lib/utils/localStorage';
+import { LanguageToggle } from '@/components/common/LanguageSelector';
 
 interface OpeningHour {
   id: string;
@@ -324,6 +325,9 @@ export default function CustomerHeader({
           RIGHT: Action Buttons
       ======================================== */}
       <div className="flex items-center gap-2 ml-2">
+        {/* Language Toggle - Always visible */}
+        <LanguageToggle />
+        
         {!isMounted ? (
           /* ✅ Loading placeholder during hydration */
           <div className="flex gap-2">

@@ -15,6 +15,8 @@ import { useSWRWithAuth, useSWRStatic } from "@/hooks/useSWRWithAuth";
 import { MenuPageSkeleton } from "@/components/common/SkeletonLoaders";
 import { useMerchant } from "@/context/MerchantContext";
 import CreateOptionModal from "@/components/common/CreateOptionModal";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import { formatCurrency as formatCurrencyUtil } from "@/lib/utils/format";
 
 interface MenuAddonCategory {
   addonCategoryId: string;
@@ -95,6 +97,7 @@ interface CategoriesApiResponse {
 
 export default function MerchantMenuPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -259,7 +262,7 @@ export default function MerchantMenuPage() {
             </svg>
           </div>
           <h2 className="mb-2 text-xl font-bold text-gray-900 dark:text-white">
-            Error Loading Menu
+            {t("admin.menu.errorLoading")}
           </h2>
           <p className="mb-6 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
             {menuError?.message || categoriesError?.message || 'Failed to load data'}
@@ -268,7 +271,7 @@ export default function MerchantMenuPage() {
             onClick={() => fetchData()}
             className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
           >
-            Retry
+            {t("common.retry")}
           </button>
         </div>
       </div>
@@ -523,12 +526,10 @@ export default function MerchantMenuPage() {
 
   const formatPrice = (price: string | number, currency?: string): string => {
     const numPrice = typeof price === 'string' ? parseFloat(price) : price;
-    if (isNaN(numPrice) || numPrice === 0) return 'Free';
+    if (isNaN(numPrice) || numPrice === 0) return t("admin.menu.free");
 
     const curr = currency || merchant?.currency || 'AUD';
-    const locale = curr === 'IDR' ? 'id-ID' : 'en-AU';
-
-    return `A$${numPrice.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return formatCurrencyUtil(numPrice, curr);
   };
 
   const getCategoryNames = (item: MenuItem): string => {
@@ -543,7 +544,7 @@ export default function MerchantMenuPage() {
     // Fallback to single category for backward compatibility
     if (item.category?.name) return item.category.name;
     const category = categories.find(c => c.id === item.categoryId);
-    return category?.name || 'Uncategorized';
+    return category?.name || t("admin.menu.uncategorized");
   };
 
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
@@ -565,12 +566,12 @@ export default function MerchantMenuPage() {
 
         <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6">
           <div className="mb-5 flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">Menu Items List</h3>
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">{t("admin.menu.listTitle")}</h3>
             <div className="flex items-center gap-3">
               {selectedItems.length > 0 && (
                 <>
                   <span className="text-sm text-gray-600 dark:text-gray-400">
-                    {selectedItems.length} selected
+                    {t("admin.menu.selected", { count: selectedItems.length })}
                   </span>
                   <button
                     onClick={handleBulkActivate}
@@ -579,7 +580,7 @@ export default function MerchantMenuPage() {
                     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    Activate
+                    {t("admin.menu.activate")}
                   </button>
                   <button
                     onClick={handleBulkDeactivate}
@@ -588,7 +589,7 @@ export default function MerchantMenuPage() {
                     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    Deactivate
+                    {t("admin.menu.deactivate")}
                   </button>
                   <button
                     onClick={() => setShowBulkDeleteConfirm(true)}
@@ -597,7 +598,7 @@ export default function MerchantMenuPage() {
                     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
-                    Delete
+                    {t("common.delete")}
                   </button>
                 </>
               )}
@@ -619,7 +620,7 @@ export default function MerchantMenuPage() {
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                Export
+                {t("common.export")}
               </button>
               <button
                 onClick={() => setShowCreateOptionModal(true)}
@@ -628,7 +629,7 @@ export default function MerchantMenuPage() {
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
-                Add Menu Item
+                {t("admin.menu.addItem")}
               </button>
             </div>
           </div>
@@ -643,7 +644,7 @@ export default function MerchantMenuPage() {
                 </svg>
                 <input
                   type="text"
-                  placeholder="Search menu items..."
+                  placeholder={t("admin.menu.searchPlaceholder")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-11 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
@@ -668,7 +669,7 @@ export default function MerchantMenuPage() {
                 onChange={(e) => setFilterCategory(e.target.value)}
                 className="h-10 rounded-lg border border-gray-200 bg-white px-3 pr-8 text-sm text-gray-700 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
               >
-                <option value="all">All Categories</option>
+                <option value="all">{t("admin.menu.allCategories")}</option>
                 {categories.map((cat) => (
                   <option key={cat.id} value={cat.id}>{cat.name}</option>
                 ))}
@@ -680,9 +681,9 @@ export default function MerchantMenuPage() {
                 onChange={(e) => setFilterStatus(e.target.value)}
                 className="h-10 rounded-lg border border-gray-200 bg-white px-3 pr-8 text-sm text-gray-700 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
               >
-                <option value="all">All Status</option>
-                <option value="active">✓ Active</option>
-                <option value="inactive">✕ Inactive</option>
+                <option value="all">{t("admin.menu.allStatus")}</option>
+                <option value="active">✓ {t("common.active")}</option>
+                <option value="inactive">✕ {t("common.inactive")}</option>
               </select>
 
               {/* Stock Filter - Multi-select via checkboxes in dropdown */}
@@ -694,14 +695,14 @@ export default function MerchantMenuPage() {
                 >
                   <span>
                     {filterStock.length === 0
-                      ? 'Stock Status'
+                      ? t("admin.menu.stockFilter")
                       : filterStock.length === 1
                         ? filterStock[0] === 'in-stock'
-                          ? 'In Stock'
+                          ? t("admin.menu.inStock")
                           : filterStock[0] === 'low-stock'
-                            ? 'Low Stock'
-                            : 'Out of Stock'
-                        : `${filterStock.length} selected`
+                            ? t("admin.menu.lowStock")
+                            : t("admin.menu.outOfStock")
+                        : t("admin.menu.selected", { count: filterStock.length })
                     }
                   </span>
                   <svg className={`h-4 w-4 transition-transform ${isStockDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -723,7 +724,7 @@ export default function MerchantMenuPage() {
                         }}
                         className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
                       />
-                      <span className="flex-1 text-sm text-gray-700 dark:text-gray-300">In Stock</span>
+                      <span className="flex-1 text-sm text-gray-700 dark:text-gray-300">{t("admin.menu.inStock")}</span>
                     </label>
                     <label className="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700">
                       <input
@@ -738,7 +739,7 @@ export default function MerchantMenuPage() {
                         }}
                         className="h-4 w-4 rounded border-gray-300 text-yellow-600 focus:ring-yellow-500"
                       />
-                      <span className="flex-1 text-sm text-gray-700 dark:text-gray-300">Low Stock</span>
+                      <span className="flex-1 text-sm text-gray-700 dark:text-gray-300">{t("admin.menu.lowStock")}</span>
                     </label>
                     <label className="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700">
                       <input
@@ -753,7 +754,7 @@ export default function MerchantMenuPage() {
                         }}
                         className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
                       />
-                      <span className="flex-1 text-sm text-gray-700 dark:text-gray-300">Out of Stock</span>
+                      <span className="flex-1 text-sm text-gray-700 dark:text-gray-300">{t("admin.menu.outOfStock")}</span>
                     </label>
                     {filterStock.length > 0 && (
                       <>
@@ -762,7 +763,7 @@ export default function MerchantMenuPage() {
                           onClick={() => setFilterStock([])}
                           className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-gray-50 dark:text-red-400 dark:hover:bg-gray-700"
                         >
-                          Clear Stock Filters
+                          {t("admin.menu.clearFilters")}
                         </button>
                       </>
                     )}
@@ -786,7 +787,7 @@ export default function MerchantMenuPage() {
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
-                  Clear All Filters
+                  {t("common.clearAll")}
                 </button>
               )}
             </div>
@@ -795,8 +796,8 @@ export default function MerchantMenuPage() {
           {filteredMenuItems.length === 0 ? (
             <EmptyState
               type={menuItems.length === 0 ? "no-menu" : "no-results"}
-              title={menuItems.length === 0 ? undefined : "No menu items match your filters"}
-              description={menuItems.length === 0 ? undefined : "Try adjusting your search or filters"}
+              title={menuItems.length === 0 ? undefined : t("admin.menu.noMatch")}
+              description={menuItems.length === 0 ? undefined : t("admin.menu.tryAdjusting")}
               action={menuItems.length === 0 ? {
                 label: "Create Menu Item",
                 onClick: () => router.push('/admin/dashboard/menu/create')
@@ -815,13 +816,13 @@ export default function MerchantMenuPage() {
                         className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                       />
                     </th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Image</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Name</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Category</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Attributes</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Price</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Status</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Actions</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">{t("admin.menu.table.image")}</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">{t("admin.menu.table.name")}</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">{t("admin.menu.table.category")}</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">{t("admin.menu.table.attributes")}</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">{t("admin.menu.table.price")}</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">{t("admin.menu.table.status")}</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">{t("admin.menu.table.actions")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -885,11 +886,11 @@ export default function MerchantMenuPage() {
                           {item.isSpicy && (
                             <div
                               className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-orange-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
-                              title="Spicy"
+                              title={t("admin.menu.badges.spicy")}
                             >
                               <Image
                                 src="/images/menu-badges/spicy.png"
-                                alt="Spicy"
+                                alt={t("admin.menu.badges.spicy")}
                                 fill
                                 className="object-cover transition-opacity duration-300 group-hover:opacity-80"
                               />
@@ -898,11 +899,11 @@ export default function MerchantMenuPage() {
                           {item.isBestSeller && (
                             <div
                               className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-amber-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
-                              title="Best Seller"
+                              title={t("admin.menu.badges.bestSeller")}
                             >
                               <Image
                                 src="/images/menu-badges/best-seller.png"
-                                alt="Best Seller"
+                                alt={t("admin.menu.badges.bestSeller")}
                                 fill
                                 className="object-cover transition-opacity duration-300 group-hover:opacity-80"
                               />
@@ -911,11 +912,11 @@ export default function MerchantMenuPage() {
                           {item.isSignature && (
                             <div
                               className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-purple-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
-                              title="Signature"
+                              title={t("admin.menu.badges.signature")}
                             >
                               <Image
                                 src="/images/menu-badges/signature.png"
-                                alt="Signature"
+                                alt={t("admin.menu.badges.signature")}
                                 fill
                                 className="object-cover transition-opacity duration-300 group-hover:opacity-80"
                               />
@@ -924,11 +925,11 @@ export default function MerchantMenuPage() {
                           {item.isRecommended && (
                             <div
                               className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-green-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
-                              title="Recommended"
+                              title={t("admin.menu.badges.recommended")}
                             >
                               <Image
                                 src="/images/menu-badges/recommended.png"
-                                alt="Recommended"
+                                alt={t("admin.menu.badges.recommended")}
                                 fill
                                 className="object-cover transition-opacity duration-300 group-hover:opacity-80"
                               />
@@ -941,7 +942,7 @@ export default function MerchantMenuPage() {
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-1">
-                          <span className={`text-sm font-semibold ${formatPrice(item.price) === 'Free'
+                          <span className={`text-sm font-semibold ${formatPrice(item.price) === t("admin.menu.free")
                             ? 'text-success-600 dark:text-success-400'
                             : 'text-gray-800 dark:text-white/90'
                             }`}>
@@ -956,7 +957,7 @@ export default function MerchantMenuPage() {
                             ? 'bg-success-100 text-success-700 hover:bg-success-200 dark:bg-success-900/20 dark:text-success-400 dark:hover:bg-success-900/30'
                             : 'bg-error-100 text-error-700 hover:bg-error-200 dark:bg-error-900/20 dark:text-error-400 dark:hover:bg-error-900/30'
                             }`}>
-                          {item.isActive ? '● Active' : '○ Inactive'}
+                          {item.isActive ? t("admin.menu.statusActive") : t("admin.menu.statusInactive")}
                         </button>
                       </td>
                       <td className="px-4 py-4">
@@ -988,7 +989,7 @@ export default function MerchantMenuPage() {
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                     </svg>
-                                    View Detail
+                                    {t("admin.menu.viewDetail")}
                                   </Link>
                                   {/* Note: Setup Promo button removed - promo is now managed via Special Prices page */}
                                   <button
@@ -1002,7 +1003,7 @@ export default function MerchantMenuPage() {
                                     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                                     </svg>
-                                    Manage Addons
+                                    {t("admin.menu.manageAddons")}
                                   </button>
                                   <button
                                     onClick={() => {
@@ -1015,7 +1016,7 @@ export default function MerchantMenuPage() {
                                     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                                     </svg>
-                                    Manage Categories
+                                    {t("admin.menu.manageCategories")}
                                   </button>
                                   <Link
                                     href={`/admin/dashboard/menu/edit/${item.id}`}
@@ -1025,7 +1026,7 @@ export default function MerchantMenuPage() {
                                     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                     </svg>
-                                    Edit Menu
+                                    {t("admin.menu.editMenu")}
                                   </Link>
                                   <DuplicateMenuButton
                                     menuId={item.id}
@@ -1054,7 +1055,7 @@ export default function MerchantMenuPage() {
                                     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                     </svg>
-                                    Delete
+                                    {t("common.delete")}
                                   </button>
                                 </div>
                               </div>
@@ -1071,7 +1072,7 @@ export default function MerchantMenuPage() {
               {totalPages > 1 && (
                 <div className="mt-5 flex items-center justify-between border-t border-gray-200 pt-5 dark:border-gray-800">
                   <div className="text-sm text-gray-600 dark:text-gray-400">
-                    Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredMenuItems.length)} of {filteredMenuItems.length} items
+                    {t("admin.menu.showing")} {indexOfFirstItem + 1} - {Math.min(indexOfLastItem, filteredMenuItems.length)} {t("admin.menu.of")} {filteredMenuItems.length} {t("admin.menu.items")}
                   </div>
                   <div className="flex gap-2">
                     <button

@@ -14,6 +14,7 @@ import { OrderDetailModal } from '@/components/orders/OrderDetailModal';
 import DateRangeFilter, { DateRange } from '@/components/orders/DateRangeFilter';
 import type { OrderStatus, OrderType } from '@prisma/client';
 import { useMerchant } from '@/context/MerchantContext';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 // ===== TYPES =====
 
@@ -36,6 +37,7 @@ interface OrderData {
 
 export default function OrderHistoryPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [orderData, setOrderData] = useState<OrderData | null>(null);
   const [_merchant, setMerchant] = useState<{ currency: string } | null>(null);
@@ -120,9 +122,9 @@ export default function OrderHistoryPage() {
     <div>
       {/* Title Section */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Order History</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t("admin.history.title")}</h1>
         <p className="text-sm text-gray-600 dark:text-gray-400">
-          View and manage all past orders
+          {t("admin.history.subtitle")}
         </p>
       </div>
 
@@ -155,10 +157,10 @@ export default function OrderHistoryPage() {
               <FaHistory className="h-8 w-8 text-gray-400 dark:text-gray-600" />
             </div>
             <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
-              No Orders Found
+              {t("admin.history.noOrders")}
             </h3>
             <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-              Try selecting a different date range.
+              {t("admin.history.tryDifferentDate")}
             </p>
           </div>
         </div>

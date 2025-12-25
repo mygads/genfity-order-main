@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { formatCurrency } from "@/lib/utils/format";
 
 interface DailyRevenueData {
   date: string;
@@ -25,22 +26,6 @@ export default function DailyRevenueTable({
   data,
   currency = "AUD"
 }: DailyRevenueTableProps) {
-  const formatCurrency = (amount: number) => {
-    if (currency === "AUD") {
-      return new Intl.NumberFormat('en-AU', {
-        style: 'currency',
-        currency: 'AUD',
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }).format(amount);
-    }
-    // Fallback for other currencies
-    return `${currency} ${amount.toLocaleString('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
-  };
-
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     return date.toLocaleDateString('en-AU', {
@@ -131,23 +116,23 @@ export default function DailyRevenueTable({
                     </span>
                   </td>
                   <td className="px-6 py-4 font-medium">
-                    {formatCurrency(item.totalRevenue)}
+                    {formatCurrency(item.totalRevenue, currency)}
                   </td>
                   <td className="px-6 py-4 font-medium text-warning-700 dark:text-warning-400">
-                    {formatCurrency(item.totalTax)}
+                    {formatCurrency(item.totalTax, currency)}
                   </td>
                   {hasServiceCharge && (
                     <td className="px-6 py-4 font-medium text-blue-700 dark:text-blue-400">
-                      {formatCurrency(item.totalServiceCharge || 0)}
+                      {formatCurrency(item.totalServiceCharge || 0, currency)}
                     </td>
                   )}
                   {hasPackagingFee && (
                     <td className="px-6 py-4 font-medium text-purple-700 dark:text-purple-400">
-                      {formatCurrency(item.totalPackagingFee || 0)}
+                      {formatCurrency(item.totalPackagingFee || 0, currency)}
                     </td>
                   )}
                   <td className="px-6 py-4 font-bold text-success-700 dark:text-success-400">
-                    {formatCurrency(item.grandTotal)}
+                    {formatCurrency(item.grandTotal, currency)}
                   </td>
                 </tr>
               ))
@@ -163,23 +148,23 @@ export default function DailyRevenueTable({
                   </span>
                 </td>
                 <td className="px-6 py-4">
-                  {formatCurrency(totals.totalRevenue)}
+                  {formatCurrency(totals.totalRevenue, currency)}
                 </td>
                 <td className="px-6 py-4 text-warning-700 dark:text-warning-400">
-                  {formatCurrency(totals.totalTax)}
+                  {formatCurrency(totals.totalTax, currency)}
                 </td>
                 {hasServiceCharge && (
                   <td className="px-6 py-4 text-blue-700 dark:text-blue-400">
-                    {formatCurrency(totals.totalServiceCharge)}
+                    {formatCurrency(totals.totalServiceCharge, currency)}
                   </td>
                 )}
                 {hasPackagingFee && (
                   <td className="px-6 py-4 text-purple-700 dark:text-purple-400">
-                    {formatCurrency(totals.totalPackagingFee)}
+                    {formatCurrency(totals.totalPackagingFee, currency)}
                   </td>
                 )}
                 <td className="px-6 py-4 text-success-700 dark:text-success-400">
-                  {formatCurrency(totals.grandTotal)}
+                  {formatCurrency(totals.grandTotal, currency)}
                 </td>
               </tr>
             </tfoot>

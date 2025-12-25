@@ -45,6 +45,7 @@ export const OrderTabListCard: React.FC<OrderTabListCardProps> = ({
     if (numAmount === 0) {
       return 'Free';
     }
+    // Default to AUD format
     return `A$${numAmount.toFixed(2)}`;
   };
 

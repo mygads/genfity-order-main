@@ -4,6 +4,10 @@ import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams, useParams } from 'next/navigation';
 import { getCustomerAuth } from '@/lib/utils/localStorage';
 import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';
+import { useTranslation } from '@/lib/i18n/useTranslation';
+import { TranslationKeys } from '@/lib/i18n';
+import { useCart } from '@/context/CartContext';
+import { useToast } from '@/context/ToastContext';
 
 interface OrderHistoryItem {
   id: bigint;
@@ -15,6 +19,27 @@ interface OrderHistoryItem {
   totalAmount: number;
   placedAt: string;
   itemsCount: number;
+}
+
+interface ReorderItem {
+  menuId: string;
+  menuName: string;
+  originalPrice: number;
+  currentPrice: number | null;
+  quantity: number;
+  notes: string | null;
+  imageUrl: string | null;
+  isAvailable: boolean;
+  reason: string | null;
+  addons: Array<{
+    id: string;
+    name: string;
+    originalPrice: number;
+    currentPrice: number | null;
+    isAvailable: boolean;
+    reason: string | null;
+  }>;
+  allAddonsAvailable: boolean;
 }
 
 /**
@@ -43,6 +68,9 @@ export default function OrderHistoryPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const params = useParams();
+  const { t } = useTranslation();
+  const { addItem, initializeCart, cart } = useCart();
+  const { showSuccess, showError, showWarning } = useToast();
 
   const merchantCode = params.merchantCode as string | undefined;
   const mode = searchParams.get('mode') as 'dinein' | 'takeaway' | null;
@@ -52,7 +80,8 @@ export default function OrderHistoryPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [auth, setAuth] = useState<ReturnType<typeof getCustomerAuth> | null>(null);
   const [filter, setFilter] = useState<'all' | 'pending' | 'completed' | 'cancelled'>('all');
-  const [merchantCurrency, setMerchantCurrency] = useState('AUD'); // ✅ NEW: Dynamic currency
+  const [merchantCurrency, setMerchantCurrency] = useState('AUD');
+  const [reorderingOrderId, setReorderingOrderId] = useState<string | null>(null);
 
   // ✅ FIX: Add hydration guard to prevent SSR/CSR mismatch
   const [isMounted, setIsMounted] = useState(false);
@@ -148,6 +177,102 @@ export default function OrderHistoryPage() {
     }
   };
 
+  /**
+   * Handle re-order functionality
+   * 
+   * @description
+   * Fetches order items from API, validates availability,
+   * and adds available items to cart.
+   * 
+   * @param order - Order to re-order
+   */
+  const handleReorder = async (order: OrderHistoryItem) => {
+    if (!auth) return;
+    
+    setReorderingOrderId(order.id.toString());
+    
+    try {
+      const response = await fetch(`/api/customer/orders/${order.id}/reorder`, {
+        headers: {
+          'Authorization': `Bearer ${auth.accessToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        showError(error.message || t('common.error'));
+        return;
+      }
+
+      const data = await response.json();
+      const reorderData = data.data;
+
+      // Check if merchant is open
+      if (!reorderData.summary.merchantOpen) {
+        showError(t('customer.store.closed'));
+        return;
+      }
+
+      // Check if any items can be reordered
+      if (!reorderData.summary.canReorder) {
+        showError(t('customer.reorder.noAvailableItems'));
+        return;
+      }
+
+      // Initialize cart for this merchant if needed
+      const orderMode = order.mode;
+      if (!cart || cart.merchantCode !== order.merchantCode || cart.mode !== orderMode) {
+        initializeCart(order.merchantCode, orderMode);
+      }
+
+      // Add available items to cart
+      let addedCount = 0;
+      let skippedCount = 0;
+
+      for (const item of reorderData.items as ReorderItem[]) {
+        if (item.isAvailable && item.allAddonsAvailable && item.currentPrice !== null) {
+          // Prepare addons (only available ones with current prices)
+          const validAddons = item.addons
+            .filter(addon => addon.isAvailable && addon.currentPrice !== null)
+            .map(addon => ({
+              id: addon.id,
+              name: addon.name,
+              price: addon.currentPrice as number,
+            }));
+
+          // Add item to cart
+          addItem({
+            menuId: item.menuId,
+            menuName: item.menuName,
+            price: item.currentPrice,
+            quantity: item.quantity,
+            addons: validAddons.length > 0 ? validAddons : undefined,
+            notes: item.notes || undefined,
+          });
+          addedCount++;
+        } else {
+          skippedCount++;
+        }
+      }
+
+      // Show success message
+      if (addedCount > 0 && skippedCount === 0) {
+        showSuccess(t('customer.reorder.success', { count: addedCount }));
+      } else if (addedCount > 0 && skippedCount > 0) {
+        showWarning(t('customer.reorder.partialSuccess', { added: addedCount, skipped: skippedCount }));
+      }
+
+      // Navigate to cart
+      router.push(`/${order.merchantCode}/cart?mode=${orderMode}`);
+
+    } catch (error) {
+      console.error('Re-order error:', error);
+      showError(t('common.error'));
+    } finally {
+      setReorderingOrderId(null);
+    }
+  };
+
   const handleBack = () => {
     if (ref) {
       router.push(decodeURIComponent(ref));
@@ -169,20 +294,20 @@ export default function OrderHistoryPage() {
   };
 
   const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { border: string; text: string; label: string }> = {
-      pending: { border: 'border-yellow-500', text: 'text-yellow-600', label: 'Pending' },
-      confirmed: { border: 'border-blue-500', text: 'text-blue-600', label: 'Confirmed' },
-      in_progress: { border: 'border-orange-500', text: 'text-orange-600', label: 'In Progress' },
-      ready: { border: 'border-purple-500', text: 'text-purple-600', label: 'Ready' },
-      completed: { border: 'border-green-500', text: 'text-green-600', label: 'Completed' },
-      cancelled: { border: 'border-red-500', text: 'text-red-600', label: 'Cancelled' },
+    const statusConfig: Record<string, { border: string; text: string; labelKey: TranslationKeys }> = {
+      pending: { border: 'border-yellow-500', text: 'text-yellow-600', labelKey: 'customer.status.pending' },
+      confirmed: { border: 'border-blue-500', text: 'text-blue-600', labelKey: 'customer.status.confirmed' },
+      in_progress: { border: 'border-orange-500', text: 'text-orange-600', labelKey: 'customer.status.inProgress' },
+      ready: { border: 'border-purple-500', text: 'text-purple-600', labelKey: 'customer.status.ready' },
+      completed: { border: 'border-green-500', text: 'text-green-600', labelKey: 'customer.status.completed' },
+      cancelled: { border: 'border-red-500', text: 'text-red-600', labelKey: 'customer.status.cancelled' },
     };
 
     const config = statusConfig[status.toLowerCase()] || statusConfig.pending;
 
     return (
       <span className={`px-3 py-1 rounded-full text-xs font-semibold bg-white dark:bg-gray-800 border ${config.border} ${config.text}`}>
-        {config.label}
+        {t(config.labelKey)}
       </span>
     );
   };
@@ -194,6 +319,20 @@ export default function OrderHistoryPage() {
    * @returns Formatted currency string
    */
   const formatCurrency = (amount: number): string => {
+    // Special handling for AUD to show A$ prefix
+    if (merchantCurrency === 'AUD') {
+      return `A$${amount.toFixed(2)}`;
+    }
+    
+    // Special handling for IDR - no decimals
+    if (merchantCurrency === 'IDR') {
+      const formatted = new Intl.NumberFormat('id-ID', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(Math.round(amount));
+      return `Rp ${formatted}`;
+    }
+    
     return new Intl.NumberFormat('en-AU', {
       style: 'currency',
       currency: merchantCurrency,
@@ -253,7 +392,7 @@ export default function OrderHistoryPage() {
           </button>
           {/* Title */}
           <h1 className="flex-1 text-center font-semibold text-gray-900 dark:text-white text-base pr-10">
-            Order History
+            {t('customer.history.title')}
           </h1>
         </div>
 
@@ -266,7 +405,7 @@ export default function OrderHistoryPage() {
               : 'text-gray-500 dark:text-gray-400 border-b-2 border-transparent'
               }`}
           >
-            All
+            {t('customer.history.allOrders')}
           </button>
           <button
             onClick={() => setFilter('pending')}
@@ -275,7 +414,7 @@ export default function OrderHistoryPage() {
               : 'text-gray-500 dark:text-gray-400 border-b-2 border-transparent'
               }`}
           >
-            Active
+            {t('customer.history.activeOrders')}
           </button>
           <button
             onClick={() => setFilter('completed')}
@@ -284,7 +423,7 @@ export default function OrderHistoryPage() {
               : 'text-gray-500 dark:text-gray-400 border-b-2 border-transparent'
               }`}
           >
-            Completed
+            {t('customer.history.completedOrders')}
           </button>
         </div>
       </header>
@@ -329,19 +468,19 @@ export default function OrderHistoryPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
             <p className="text-base font-semibold text-gray-900 dark:text-white mb-2">
-              {filter === 'all' ? 'No Orders Yet' : 'No Orders Found'}
+              {filter === 'all' ? t('customer.history.noOrders') : t('common.noResults')}
             </p>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
               {filter === 'all'
-                ? 'Your order history will appear here'
-                : `No ${filter === 'pending' ? 'active' : filter} orders found`}
+                ? t('customer.history.noOrdersDesc')
+                : t('customer.history.noOrdersFiltered', { filter: filter === 'pending' ? t('customer.history.activeOrders').toLowerCase() : t('customer.history.completedOrders').toLowerCase() })}
             </p>
             {filter === 'all' && (
               <button
                 onClick={() => router.push('/')}
                 className="px-6 py-3 bg-orange-500 text-white text-sm font-semibold rounded-xl hover:bg-orange-600 transition-all active:scale-[0.98]"
               >
-                Start Ordering
+                {t('customer.history.startOrdering')}
               </button>
             )}
           </div>
@@ -370,7 +509,7 @@ export default function OrderHistoryPage() {
 
                   {/* Order Number */}
                   <div className="mb-3 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                    <p className="text-xs text-gray-600 dark:text-gray-400">Order Number</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">{t('customer.track.orderNumber')}</p>
                     <p className="text-sm font-bold text-gray-900 dark:text-white font-mono">
                       #{order.orderNumber}
                     </p>
@@ -389,7 +528,7 @@ export default function OrderHistoryPage() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                         </svg>
                       )}
-                      <span>{order.mode === 'dinein' ? 'Dine-in' : 'Pick Up'}</span>
+                      <span>{order.mode === 'dinein' ? t('customer.mode.dineIn') : t('customer.mode.pickUp')}</span>
                       <span>•</span>
                       <span>{order.itemsCount || 0} items</span>
                     </div>
@@ -408,7 +547,7 @@ export default function OrderHistoryPage() {
                       }}
                       className="flex-1 py-2 text-sm font-semibold text-orange-500 border border-orange-500 rounded-lg hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-all"
                     >
-                      View Order
+                      {t('customer.history.viewOrder')}
                     </button>
 
                     {/* Track Order Button - Only for active orders */}
@@ -420,7 +559,36 @@ export default function OrderHistoryPage() {
                         }}
                         className="flex-1 py-2 text-sm font-semibold text-white bg-orange-500 rounded-lg hover:bg-orange-600 transition-all"
                       >
-                        Track Order
+                        {t('customer.history.trackOrder')}
+                      </button>
+                    )}
+
+                    {/* Re-order Button - Only for completed orders */}
+                    {!isOrderActive && order.status.toLowerCase() === 'completed' && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleReorder(order);
+                        }}
+                        disabled={reorderingOrderId === order.id.toString()}
+                        className="flex-1 py-2 text-sm font-semibold text-white bg-green-500 rounded-lg hover:bg-green-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        {reorderingOrderId === order.id.toString() ? (
+                          <>
+                            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                            <span>{t('common.loading')}</span>
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            <span>{t('customer.history.reorder')}</span>
+                          </>
+                        )}
                       </button>
                     )}
                   </div>

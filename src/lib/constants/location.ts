@@ -1,93 +1,166 @@
 /**
  * Country, Currency, and Timezone Constants
+ * 
+ * SUPPORTED REGIONS:
+ * - Indonesia (IDR, Asia/Jakarta timezone)
+ * - Australia (AUD, Australia/* timezones)
+ * 
+ * @specification Multi-currency & Multi-language support
  */
 
+// ============================================================================
+// COUNTRIES - Only Indonesia & Australia supported
+// ============================================================================
+
 export const COUNTRIES = [
-  { value: 'Australia', label: 'Australia', flag: '🇦🇺' },
-  { value: 'United States', label: 'United States', flag: '🇺🇸' },
-  { value: 'United Kingdom', label: 'United Kingdom', flag: '🇬🇧' },
-  { value: 'Canada', label: 'Canada', flag: '🇨🇦' },
-  { value: 'Singapore', label: 'Singapore', flag: '🇸🇬' },
-  { value: 'Malaysia', label: 'Malaysia', flag: '🇲🇾' },
-  { value: 'Indonesia', label: 'Indonesia', flag: '🇮🇩' },
-  { value: 'Thailand', label: 'Thailand', flag: '🇹🇭' },
-  { value: 'Philippines', label: 'Philippines', flag: '🇵🇭' },
-  { value: 'Vietnam', label: 'Vietnam', flag: '🇻🇳' },
-  { value: 'Japan', label: 'Japan', flag: '🇯🇵' },
-  { value: 'South Korea', label: 'South Korea', flag: '🇰🇷' },
-  { value: 'China', label: 'China', flag: '🇨🇳' },
-  { value: 'India', label: 'India', flag: '🇮🇳' },
-  { value: 'New Zealand', label: 'New Zealand', flag: '🇳🇿' },
-];
+  { value: 'Indonesia', label: 'Indonesia', flag: '🇮🇩', currency: 'IDR', defaultTimezone: 'Asia/Jakarta' },
+  { value: 'Australia', label: 'Australia', flag: '🇦🇺', currency: 'AUD', defaultTimezone: 'Australia/Sydney' },
+] as const;
+
+export type SupportedCountry = typeof COUNTRIES[number]['value'];
+
+// ============================================================================
+// CURRENCIES - Only IDR & AUD supported
+// ============================================================================
 
 export const CURRENCIES = [
-  { value: 'AUD', label: 'Australian Dollar (AUD)', symbol: 'A$' },
-  { value: 'USD', label: 'US Dollar (USD)', symbol: '$' },
-  { value: 'GBP', label: 'British Pound (GBP)', symbol: '£' },
-  { value: 'EUR', label: 'Euro (EUR)', symbol: '€' },
-  { value: 'CAD', label: 'Canadian Dollar (CAD)', symbol: 'C$' },
-  { value: 'SGD', label: 'Singapore Dollar (SGD)', symbol: 'S$' },
-  { value: 'MYR', label: 'Malaysian Ringgit (MYR)', symbol: 'RM' },
-  { value: 'IDR', label: 'Indonesian Rupiah (IDR)', symbol: 'Rp' },
-  { value: 'THB', label: 'Thai Baht (THB)', symbol: '฿' },
-  { value: 'PHP', label: 'Philippine Peso (PHP)', symbol: '₱' },
-  { value: 'VND', label: 'Vietnamese Dong (VND)', symbol: '₫' },
-  { value: 'JPY', label: 'Japanese Yen (JPY)', symbol: '¥' },
-  { value: 'KRW', label: 'South Korean Won (KRW)', symbol: '₩' },
-  { value: 'CNY', label: 'Chinese Yuan (CNY)', symbol: '¥' },
-  { value: 'INR', label: 'Indian Rupee (INR)', symbol: '₹' },
-  { value: 'NZD', label: 'New Zealand Dollar (NZD)', symbol: 'NZ$' },
-];
+  { 
+    value: 'IDR', 
+    label: 'Indonesian Rupiah (IDR)', 
+    symbol: 'Rp', 
+    flag: '🇮🇩',
+    locale: 'id-ID',
+    decimals: 0,
+    country: 'Indonesia'
+  },
+  { 
+    value: 'AUD', 
+    label: 'Australian Dollar (AUD)', 
+    symbol: 'A$', 
+    flag: '🇦🇺',
+    locale: 'en-AU',
+    decimals: 2,
+    country: 'Australia'
+  },
+] as const;
+
+export type SupportedCurrency = typeof CURRENCIES[number]['value'];
+
+// ============================================================================
+// TIMEZONES - Only Indonesia & Australia timezones
+// ============================================================================
 
 export const TIMEZONES = [
+  // Indonesia
+  { value: 'Asia/Jakarta', label: 'Jakarta (WIB, GMT+7)', region: 'Indonesia', country: 'Indonesia' },
+  { value: 'Asia/Makassar', label: 'Makassar (WITA, GMT+8)', region: 'Indonesia', country: 'Indonesia' },
+  { value: 'Asia/Jayapura', label: 'Jayapura (WIT, GMT+9)', region: 'Indonesia', country: 'Indonesia' },
+  
   // Australia
-  { value: 'Australia/Sydney', label: 'Sydney (GMT+11)', region: 'Australia' },
-  { value: 'Australia/Melbourne', label: 'Melbourne (GMT+11)', region: 'Australia' },
-  { value: 'Australia/Brisbane', label: 'Brisbane (GMT+10)', region: 'Australia' },
-  { value: 'Australia/Perth', label: 'Perth (GMT+8)', region: 'Australia' },
-  { value: 'Australia/Adelaide', label: 'Adelaide (GMT+10:30)', region: 'Australia' },
-  { value: 'Australia/Darwin', label: 'Darwin (GMT+9:30)', region: 'Australia' },
-  { value: 'Australia/Hobart', label: 'Hobart (GMT+11)', region: 'Australia' },
-  
-  // Americas
-  { value: 'America/New_York', label: 'New York (GMT-5)', region: 'Americas' },
-  { value: 'America/Chicago', label: 'Chicago (GMT-6)', region: 'Americas' },
-  { value: 'America/Denver', label: 'Denver (GMT-7)', region: 'Americas' },
-  { value: 'America/Los_Angeles', label: 'Los Angeles (GMT-8)', region: 'Americas' },
-  { value: 'America/Toronto', label: 'Toronto (GMT-5)', region: 'Americas' },
-  { value: 'America/Vancouver', label: 'Vancouver (GMT-8)', region: 'Americas' },
-  
-  // Europe
-  { value: 'Europe/London', label: 'London (GMT+0)', region: 'Europe' },
-  { value: 'Europe/Paris', label: 'Paris (GMT+1)', region: 'Europe' },
-  { value: 'Europe/Berlin', label: 'Berlin (GMT+1)', region: 'Europe' },
-  { value: 'Europe/Rome', label: 'Rome (GMT+1)', region: 'Europe' },
-  { value: 'Europe/Madrid', label: 'Madrid (GMT+1)', region: 'Europe' },
-  
-  // Asia
-  { value: 'Asia/Singapore', label: 'Singapore (GMT+8)', region: 'Asia' },
-  { value: 'Asia/Kuala_Lumpur', label: 'Kuala Lumpur (GMT+8)', region: 'Asia' },
-  { value: 'Asia/Jakarta', label: 'Jakarta (GMT+7)', region: 'Asia' },
-  { value: 'Asia/Bangkok', label: 'Bangkok (GMT+7)', region: 'Asia' },
-  { value: 'Asia/Manila', label: 'Manila (GMT+8)', region: 'Asia' },
-  { value: 'Asia/Ho_Chi_Minh', label: 'Ho Chi Minh (GMT+7)', region: 'Asia' },
-  { value: 'Asia/Tokyo', label: 'Tokyo (GMT+9)', region: 'Asia' },
-  { value: 'Asia/Seoul', label: 'Seoul (GMT+9)', region: 'Asia' },
-  { value: 'Asia/Shanghai', label: 'Shanghai (GMT+8)', region: 'Asia' },
-  { value: 'Asia/Hong_Kong', label: 'Hong Kong (GMT+8)', region: 'Asia' },
-  { value: 'Asia/Kolkata', label: 'Kolkata (GMT+5:30)', region: 'Asia' },
-  { value: 'Asia/Dubai', label: 'Dubai (GMT+4)', region: 'Asia' },
-  
-  // Pacific
-  { value: 'Pacific/Auckland', label: 'Auckland (GMT+13)', region: 'Pacific' },
-  { value: 'Pacific/Fiji', label: 'Fiji (GMT+12)', region: 'Pacific' },
-];
+  { value: 'Australia/Sydney', label: 'Sydney (AEDT, GMT+11)', region: 'Australia', country: 'Australia' },
+  { value: 'Australia/Melbourne', label: 'Melbourne (AEDT, GMT+11)', region: 'Australia', country: 'Australia' },
+  { value: 'Australia/Brisbane', label: 'Brisbane (AEST, GMT+10)', region: 'Australia', country: 'Australia' },
+  { value: 'Australia/Perth', label: 'Perth (AWST, GMT+8)', region: 'Australia', country: 'Australia' },
+  { value: 'Australia/Adelaide', label: 'Adelaide (ACDT, GMT+10:30)', region: 'Australia', country: 'Australia' },
+  { value: 'Australia/Darwin', label: 'Darwin (ACST, GMT+9:30)', region: 'Australia', country: 'Australia' },
+  { value: 'Australia/Hobart', label: 'Hobart (AEDT, GMT+11)', region: 'Australia', country: 'Australia' },
+] as const;
 
-// Group timezones by region for better UX
+export type SupportedTimezone = typeof TIMEZONES[number]['value'];
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Get currency for a country
+ */
+export function getCurrencyForCountry(country: string): SupportedCurrency {
+  const found = COUNTRIES.find(c => c.value === country);
+  return (found?.currency as SupportedCurrency) || 'AUD';
+}
+
+/**
+ * Get default timezone for a country
+ */
+export function getDefaultTimezoneForCountry(country: string): string {
+  const found = COUNTRIES.find(c => c.value === country);
+  return found?.defaultTimezone || 'Australia/Sydney';
+}
+
+/**
+ * Get timezones for a country
+ */
+export function getTimezonesForCountry(country: string): readonly { value: string; label: string; region: string; country: string }[] {
+  return TIMEZONES.filter(tz => tz.country === country);
+}
+
+/**
+ * Get country for a currency
+ */
+export function getCountryForCurrency(currency: string): string {
+  const found = CURRENCIES.find(c => c.value === currency);
+  return found?.country || 'Australia';
+}
+
+/**
+ * Get currency config by code
+ */
+export function getCurrencyConfig(currency: string) {
+  return CURRENCIES.find(c => c.value === currency) || CURRENCIES[1];
+}
+
+/**
+ * Get country config by name
+ */
+export function getCountryConfig(country: string) {
+  return COUNTRIES.find(c => c.value === country) || COUNTRIES[1];
+}
+
+/**
+ * Check if country is supported
+ */
+export function isSupportedCountry(country: string): country is SupportedCountry {
+  return COUNTRIES.some(c => c.value === country);
+}
+
+/**
+ * Check if currency is supported
+ */
+export function isSupportedCurrency(currency: string): currency is SupportedCurrency {
+  return CURRENCIES.some(c => c.value === currency);
+}
+
+// ============================================================================
+// GROUPED TIMEZONES (for dropdown UI)
+// ============================================================================
+
 export const TIMEZONE_GROUPS = TIMEZONES.reduce((acc, tz) => {
   if (!acc[tz.region]) {
     acc[tz.region] = [];
   }
   acc[tz.region].push(tz);
   return acc;
-}, {} as Record<string, typeof TIMEZONES>);
+}, {} as Record<string, typeof TIMEZONES[number][]>);
+
+// ============================================================================
+// LANGUAGE MAPPING
+// ============================================================================
+
+/**
+ * Map currency to default language
+ * IDR → Indonesian (id)
+ * AUD → English (en)
+ */
+export const CURRENCY_TO_LANGUAGE: Record<SupportedCurrency, 'en' | 'id'> = {
+  'IDR': 'id',
+  'AUD': 'en',
+};
+
+/**
+ * Map country to default language
+ */
+export const COUNTRY_TO_LANGUAGE: Record<SupportedCountry, 'en' | 'id'> = {
+  'Indonesia': 'id',
+  'Australia': 'en',
+};

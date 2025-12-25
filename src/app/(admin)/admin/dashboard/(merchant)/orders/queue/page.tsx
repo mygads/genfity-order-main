@@ -13,9 +13,11 @@ import { useRouter } from 'next/navigation';
 import { FaSync, FaExpand, FaCompress, FaEye, FaBell, FaCheck } from 'react-icons/fa';
 import type { OrderWithDetails } from '@/lib/types/order';
 import { playNotificationSound } from '@/lib/utils/soundNotification';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 export default function QueueDisplayPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   
   const [orders, setOrders] = useState<OrderWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
@@ -155,9 +157,9 @@ export default function QueueDisplayPage() {
     const diffMs = now.getTime() - ready.getTime();
     const diffMins = Math.floor(diffMs / 60000);
     
-    if (diffMins < 1) return 'Just now';
-    if (diffMins === 1) return '1 min';
-    if (diffMins < 60) return `${diffMins} mins`;
+    if (diffMins < 1) return t("admin.queue.justNow");
+    if (diffMins === 1) return t("admin.queue.1min");
+    if (diffMins < 60) return `${diffMins} ${t("admin.queue.mins")}`;
     
     const hours = Math.floor(diffMins / 60);
     const mins = diffMins % 60;
@@ -169,7 +171,7 @@ export default function QueueDisplayPage() {
       <div className="flex items-center justify-center py-20">
         <div className="flex items-center gap-3 text-gray-500 dark:text-gray-400">
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary-500 border-t-transparent"></div>
-          <span className="text-sm font-medium">Loading queue...</span>
+          <span className="text-sm font-medium">{t("admin.queue.loadingQueue")}</span>
         </div>
       </div>
     );
@@ -184,11 +186,11 @@ export default function QueueDisplayPage() {
             <h1 className={`font-bold ${displayMode !== 'normal' ? 'text-4xl text-white' : 'text-2xl text-gray-800 dark:text-white/90'}`}>
               <span className="flex items-center gap-3">
                 <FaBell className="text-success-500" />
-                Order Ready Queue
+                {t("admin.queue.title")}
               </span>
             </h1>
             <p className={`mt-1 ${displayMode !== 'normal' ? 'text-lg text-gray-400' : 'text-sm text-gray-500 dark:text-gray-400'}`}>
-              {orders.length} order{orders.length !== 1 ? 's' : ''} ready for pickup
+              {t("admin.queue.ordersReadyForPickup", { count: orders.length })}
             </p>
           </div>
 
@@ -203,7 +205,7 @@ export default function QueueDisplayPage() {
               }`}
             >
               <FaSync className={autoRefresh ? 'animate-spin' : ''} />
-              <span className="hidden sm:inline">Auto Refresh</span>
+              <span className="hidden sm:inline">{t("admin.queue.autoRefresh")}</span>
             </button>
 
             {/* Manual Refresh */}
@@ -212,7 +214,7 @@ export default function QueueDisplayPage() {
               className="flex h-10 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
             >
               <FaSync />
-              <span className="hidden sm:inline">Refresh</span>
+              <span className="hidden sm:inline">{t("admin.queue.refresh")}</span>
             </button>
 
             {/* Progressive Display Mode: Normal → Clean → Fullscreen */}
@@ -244,18 +246,18 @@ export default function QueueDisplayPage() {
                   : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800'
               }`}
               title={
-                displayMode === 'normal' ? 'Enter Clean Mode' :
-                displayMode === 'clean' ? 'Enter Full Screen' :
-                'Exit Full Screen'
+                displayMode === 'normal' ? t("admin.queue.enterCleanMode") :
+                displayMode === 'clean' ? t("admin.queue.enterFullScreen") :
+                t("admin.queue.exitFullScreen")
               }
             >
               {displayMode === 'normal' ? <FaEye /> :
                displayMode === 'clean' ? <FaExpand /> :
                <FaCompress />}
               <span className="hidden sm:inline">
-                {displayMode === 'normal' ? 'Clean Mode' :
-                 displayMode === 'clean' ? 'Full Screen' :
-                 'Exit'}
+                {displayMode === 'normal' ? t("admin.queue.cleanMode") :
+                 displayMode === 'clean' ? t("admin.queue.fullScreen") :
+                 t("admin.queue.exit")}
               </span>
             </button>
           </div>
@@ -291,7 +293,7 @@ export default function QueueDisplayPage() {
                 {index === 0 && (
                   <div className="absolute top-3 left-3">
                     <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-bold uppercase tracking-wide">
-                      Latest
+                      {t("admin.queue.latest")}
                     </span>
                   </div>
                 )}
@@ -321,13 +323,13 @@ export default function QueueDisplayPage() {
                         ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
                         : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
                   }`}>
-                    {order.orderType === 'DINE_IN' ? '🍽️ Dine In' : '🥡 Takeaway'}
-                    {order.orderType === 'DINE_IN' && (order as unknown as { tableNumber?: string }).tableNumber && ` - Table ${(order as unknown as { tableNumber?: string }).tableNumber}`}
+                  {order.orderType === 'DINE_IN' ? `🍽️ ${t("admin.queue.dineIn")}` : `🥡 ${t("admin.queue.takeaway")}`}
+                    {order.orderType === 'DINE_IN' && (order as unknown as { tableNumber?: string }).tableNumber && ` - ${t("admin.queue.table")} ${(order as unknown as { tableNumber?: string }).tableNumber}`}
                   </div>
 
                   {/* Time since ready */}
                   <div className={`mt-3 text-sm ${index === 0 ? 'text-white/70' : 'text-gray-500 dark:text-gray-400'}`}>
-                    Ready {getTimeSinceReady(order.actualReadyAt)}
+                    {t("admin.queue.ready")} {getTimeSinceReady(order.actualReadyAt)}
                   </div>
 
                   {/* Mark as Completed button (for staff) */}
@@ -340,7 +342,7 @@ export default function QueueDisplayPage() {
                     }`}
                   >
                     <FaCheck />
-                    Picked Up
+                    {t("admin.queue.pickedUp")}
                   </button>
                 </div>
               </div>
@@ -355,10 +357,10 @@ export default function QueueDisplayPage() {
               <FaBell className={`text-gray-400 ${displayMode !== 'normal' ? 'h-16 w-16' : 'h-12 w-12'}`} />
             </div>
             <h3 className={`mt-4 font-semibold text-gray-600 dark:text-gray-400 ${displayMode !== 'normal' ? 'text-2xl' : 'text-lg'}`}>
-              No orders ready
+              {t("admin.queue.noOrdersReady")}
             </h3>
             <p className={`mt-2 text-gray-500 dark:text-gray-500 ${displayMode !== 'normal' ? 'text-lg' : 'text-sm'}`}>
-              Orders will appear here when they are ready for pickup
+              {t("admin.queue.ordersAppearHere")}
             </p>
           </div>
         )}

@@ -5,6 +5,8 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "../context/SidebarContext";
 import { useAuth } from "../hooks/useAuth";
+import { useTranslation } from "../lib/i18n/useTranslation";
+import type { TranslationKeys } from "../lib/i18n/translations/en";
 import {
   GridIcon,
   HorizontaLDots,
@@ -20,53 +22,53 @@ import { FaHistory, FaUtensils, FaChevronDown } from "react-icons/fa";
 import MerchantBanner from "../components/merchants/MerchantBanner";
 
 type NavItem = {
-  name: string;
+  nameKey: TranslationKeys; // Translation key for name
   icon: React.ReactNode;
   path: string;
   roles?: string[];
 };
 
 type NavGroup = {
-  title: string;
+  titleKey: TranslationKeys; // Translation key for title
   items: NavItem[];
 };
 
 // Super Admin Menu Groups
 const superAdminNavGroups: NavGroup[] = [
   {
-    title: "Main",
+    titleKey: "admin.nav.main",
     items: [
       {
         icon: <GridIcon />,
-        name: "Dashboard",
+        nameKey: "admin.nav.dashboard",
         path: "/admin/dashboard",
         roles: ["SUPER_ADMIN"],
       },
     ],
   },
   {
-    title: "Management",
+    titleKey: "admin.nav.management",
     items: [
       {
         icon: <UserCircleIcon />,
-        name: "Merchants",
+        nameKey: "admin.nav.merchants",
         path: "/admin/dashboard/merchants",
         roles: ["SUPER_ADMIN"],
       },
       {
         icon: <UserCircleIcon />,
-        name: "Users",
+        nameKey: "admin.nav.users",
         path: "/admin/dashboard/users",
         roles: ["SUPER_ADMIN"],
       },
     ],
   },
   {
-    title: "Analytics",
+    titleKey: "admin.nav.analytics",
     items: [
       {
         icon: <PieChartIcon />,
-        name: "Analytics",
+        nameKey: "admin.nav.analytics",
         path: "/admin/dashboard/analytics",
         roles: ["SUPER_ADMIN"],
       },
@@ -77,87 +79,87 @@ const superAdminNavGroups: NavGroup[] = [
 // Merchant Menu Groups
 const merchantNavGroups: NavGroup[] = [
   {
-    title: "Main",
+    titleKey: "admin.nav.main",
     items: [
       {
         icon: <GridIcon />,
-        name: "Dashboard",
+        nameKey: "admin.nav.dashboard",
         path: "/admin/dashboard",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
       },
     ],
   },
   {
-    title: "Order Management",
+    titleKey: "admin.nav.orderManagement",
     items: [
       {
         icon: <ListIcon />,
-        name: "Orders (Kanban)",
+        nameKey: "admin.nav.ordersKanban",
         path: "/admin/dashboard/orders",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
       },
       {
         icon: <FaUtensils />,
-        name: "Kitchen Display",
+        nameKey: "admin.nav.kitchenDisplay",
         path: "/admin/dashboard/orders/kitchen",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
       },
       {
         icon: <FaHistory />,
-        name: "Order History",
+        nameKey: "admin.nav.orderHistory",
         path: "/admin/dashboard/orders/history",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
       },
     ],
   },
   {
-    title: "Menu Management",
+    titleKey: "admin.nav.menuManagement",
     items: [
       {
         icon: <BoxIconLine />,
-        name: "Stock Management",
+        nameKey: "admin.nav.stockManagement",
         path: "/admin/dashboard/menu/stock-overview",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
       },
       {
         icon: <FileIcon />,
-        name: "Menu Builder",
+        nameKey: "admin.nav.menuBuilder",
         path: "/admin/dashboard/menu/builder/new",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
       },
       {
         icon: <TableIcon />,
-        name: "Menu Items",
+        nameKey: "admin.nav.menuItems",
         path: "/admin/dashboard/menu",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
       },
       {
         icon: <FolderIcon />,
-        name: "Categories",
+        nameKey: "admin.nav.categories",
         path: "/admin/dashboard/categories",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
       },
       {
         icon: <FolderIcon />,
-        name: "Addon Categories",
+        nameKey: "admin.nav.addonCategories",
         path: "/admin/dashboard/addon-categories",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
       },
       {
         icon: <TableIcon />,
-        name: "Addon Items",
+        nameKey: "admin.nav.addonItems",
         path: "/admin/dashboard/addon-items",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
       },
       {
         icon: <FolderIcon />,
-        name: "Menu Books",
+        nameKey: "admin.nav.menuBooks",
         path: "/admin/dashboard/menu-books",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
       },
       {
         icon: <ListIcon />,
-        name: "Special Prices",
+        nameKey: "admin.nav.specialPrices",
         path: "/admin/dashboard/special-prices",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
       },
@@ -165,45 +167,45 @@ const merchantNavGroups: NavGroup[] = [
   },
 
   {
-    title: "Reports",
+    titleKey: "admin.nav.reportsAnalytics",
     items: [
       {
         icon: <PieChartIcon />,
-        name: "Reports",
+        nameKey: "admin.nav.reports",
         path: "/admin/dashboard/reports",
         roles: ["MERCHANT_OWNER"],
       },
       {
         icon: <PieChartIcon />,
-        name: "Revenue",
+        nameKey: "admin.nav.revenue",
         path: "/admin/dashboard/revenue",
         roles: ["MERCHANT_OWNER"],
       },
     ],
   },
   {
-    title: "Settings",
+    titleKey: "admin.nav.settings",
     items: [
       {
         icon: <BoxIconLine />,
-        name: "Merchant Settings",
+        nameKey: "admin.nav.merchantSettings",
         path: "/admin/dashboard/merchant/edit",
         roles: ["MERCHANT_OWNER"],
       },
       {
         icon: <TableIcon />,
-        name: "Table QR Codes",
+        nameKey: "admin.nav.tableQRCodes",
         path: "/admin/dashboard/qr-tables",
         roles: ["MERCHANT_OWNER"],
       },
     ],
   },
   {
-    title: "Team",
+    titleKey: "admin.nav.team",
     items: [
       {
         icon: <UserCircleIcon />,
-        name: "Staff",
+        nameKey: "admin.nav.staff",
         path: "/admin/dashboard/staff",
         roles: ["MERCHANT_OWNER"],
       },
@@ -215,6 +217,7 @@ const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const pathname = usePathname();
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [hasMerchant, setHasMerchant] = React.useState<boolean | null>(null);
   const [showScrollIndicator, setShowScrollIndicator] = useState(false);
 
@@ -406,10 +409,10 @@ const AppSidebar: React.FC = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                   </svg>
                   <h3 className="mb-2 text-sm font-semibold text-gray-900 dark:text-white">
-                    No Merchant Connected
+                    {t("admin.sidebar.noMerchant.title")}
                   </h3>
                   <p className="text-xs leading-relaxed text-gray-600 dark:text-gray-400">
-                    You are not connected to any merchant. Please contact the merchant owner or super admin for assistance.
+                    {t("admin.sidebar.noMerchant.description")}
                   </p>
                 </div>
               </div>
@@ -424,14 +427,14 @@ const AppSidebar: React.FC = () => {
                       }`}
                   >
                     {isExpanded || isHovered || isMobileOpen ? (
-                      group.title
+                      t(group.titleKey)
                     ) : (
                       <HorizontaLDots />
                     )}
                   </h2>
                   <ul className="flex flex-col gap-2">
                     {group.items.map((nav) => (
-                      <li key={nav.name}>
+                      <li key={nav.nameKey}>
                         <Link
                           href={nav.path}
                           prefetch={true}
@@ -447,7 +450,7 @@ const AppSidebar: React.FC = () => {
                             {nav.icon}
                           </span>
                           {(isExpanded || isHovered || isMobileOpen) && (
-                            <span className="menu-item-text">{nav.name}</span>
+                            <span className="menu-item-text">{t(nav.nameKey)}</span>
                           )}
                         </Link>
                       </li>
@@ -485,7 +488,7 @@ const AppSidebar: React.FC = () => {
           {isExpanded || isHovered || isMobileOpen ? (
             <div className="text-center">
               <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                Dashboard Version 1.0.0
+                {t("admin.sidebar.dashboardVersion")} 1.0.0
               </p>
             </div>
           ) : (

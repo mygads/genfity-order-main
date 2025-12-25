@@ -4,6 +4,7 @@ import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 /**
  * Reset Password Page
@@ -13,6 +14,7 @@ import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState
 function ResetPasswordForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
+    const { t } = useTranslation();
 
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -32,12 +34,12 @@ function ResetPasswordForm() {
 
         // Validation
         if (password.length < 6) {
-            setError('Password must be at least 6 characters');
+            setError(t('auth.error.passwordTooShort'));
             return;
         }
 
         if (password !== confirmPassword) {
-            setError('Passwords do not match');
+            setError(t('auth.passwordsDontMatch'));
             return;
         }
 
@@ -92,7 +94,7 @@ function ResetPasswordForm() {
                         </svg>
                     </button>
                     <h1 className="flex-1 text-center font-semibold text-gray-900 dark:text-white text-base pr-10">
-                        Create New Password
+                        {t('auth.createNewPassword')}
                     </h1>
                 </div>
             </header>
@@ -132,16 +134,16 @@ function ResetPasswordForm() {
                                 </svg>
                             </div>
                             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                                Password Reset Successfully!
+                                {t('auth.resetSuccess')}
                             </h2>
                             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                                Your password has been updated. You will be redirected to sign in.
+                                {t('auth.resetSuccessDesc')}
                             </p>
                             <button
                                 onClick={handleBackToLogin}
                                 className="w-full h-12 bg-orange-500 text-white text-base font-semibold rounded-lg hover:bg-orange-600 transition-all"
                             >
-                                Sign In Now
+                                {t('auth.signInNow')}
                             </button>
                         </div>
                     ) : (
@@ -149,10 +151,10 @@ function ResetPasswordForm() {
                             {/* Title */}
                             <div className="text-center mb-8">
                                 <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                                    Create New Password
+                                    {t('auth.createNewPassword')}
                                 </h2>
                                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                                    Enter a new password for your account
+                                    {t('auth.createNewPasswordDesc')}
                                 </p>
                                 <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
                                     {email}
@@ -170,7 +172,7 @@ function ResetPasswordForm() {
                                 {/* New Password Input */}
                                 <div>
                                     <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">
-                                        New Password
+                                        {t('auth.newPassword')}
                                     </label>
                                     <div className="relative">
                                         <input
@@ -180,7 +182,7 @@ function ResetPasswordForm() {
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
                                             className="w-full h-12 px-4 pr-12 border-b border-gray-300 dark:border-gray-600 text-base text-gray-900 dark:text-white placeholder-gray-400 bg-white dark:bg-gray-900 focus:outline-none focus:border-orange-500 transition-all"
-                                            placeholder="Minimum 6 characters"
+                                            placeholder={t('auth.passwordMinChars')}
                                         />
                                         <button
                                             type="button"
@@ -205,7 +207,7 @@ function ResetPasswordForm() {
                                 {/* Confirm Password Input */}
                                 <div>
                                     <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">
-                                        Confirm New Password
+                                        {t('auth.confirmPassword')}
                                     </label>
                                     <div className="relative">
                                         <input
@@ -215,7 +217,7 @@ function ResetPasswordForm() {
                                             value={confirmPassword}
                                             onChange={(e) => setConfirmPassword(e.target.value)}
                                             className="w-full h-12 px-4 pr-12 border-b border-gray-300 dark:border-gray-600 text-base text-gray-900 dark:text-white placeholder-gray-400 bg-white dark:bg-gray-900 focus:outline-none focus:border-orange-500 transition-all"
-                                            placeholder="Re-enter your password"
+                                            placeholder={t('auth.placeholder.confirmPassword')}
                                         />
                                         <button
                                             type="button"
@@ -240,7 +242,7 @@ function ResetPasswordForm() {
                                 {/* Password Match Indicator */}
                                 {confirmPassword && (
                                     <div className={`text-xs ${password === confirmPassword ? 'text-green-500' : 'text-red-500'}`}>
-                                        {password === confirmPassword ? '✓ Passwords match' : '✗ Passwords do not match'}
+                                        {password === confirmPassword ? t('auth.passwordsMatch') : t('auth.passwordsDontMatch')}
                                     </div>
                                 )}
 
@@ -253,10 +255,10 @@ function ResetPasswordForm() {
                                     {isLoading ? (
                                         <span className="flex items-center justify-center gap-2">
                                             <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                            Resetting...
+                                            {t('auth.resetting')}
                                         </span>
                                     ) : (
-                                        'Reset Password'
+                                        t('auth.resetPassword')
                                     )}
                                 </button>
                             </form>
@@ -267,7 +269,7 @@ function ResetPasswordForm() {
 
             {/* Powered By Footer */}
             <div className="py-4 text-center text-xs text-gray-400">
-                Powered By <span className="font-semibold">GENFITY</span>
+                {t('common.poweredBy')} <span className="font-semibold">GENFITY</span>
             </div>
         </div>
     );

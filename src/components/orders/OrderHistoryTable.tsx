@@ -102,13 +102,10 @@ export const OrderHistoryTable: React.FC<OrderHistoryTableProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(20);
 
-  // Format currency
+  // Format currency - default to AUD
   const formatCurrency = (amount: number) => {
     if (amount === 0) return 'Free';
-    return `A$${amount.toLocaleString('en-AU', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
+    return `A$${amount.toFixed(2)}`;
   };
 
   // Filter and sort orders

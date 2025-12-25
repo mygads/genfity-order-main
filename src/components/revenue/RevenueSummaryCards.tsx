@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { formatCurrency } from "@/lib/utils/format";
 
 interface RevenueSummary {
   totalOrders: number;
@@ -25,22 +26,6 @@ export default function RevenueSummaryCards({
   summary,
   currency = "AUD"
 }: RevenueSummaryCardsProps) {
-  const formatCurrency = (amount: number) => {
-    if (currency === "AUD") {
-      return new Intl.NumberFormat('en-AU', {
-        style: 'currency',
-        currency: 'AUD',
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }).format(amount);
-    }
-    // Fallback for other currencies
-    return `${currency} ${amount.toLocaleString('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
-  };
-
   const cards = [
     {
       title: "Total Orders",
@@ -49,32 +34,32 @@ export default function RevenueSummaryCards({
     },
     {
       title: "Total Revenue",
-      value: formatCurrency(summary.totalRevenue),
+      value: formatCurrency(summary.totalRevenue, currency),
       subtitle: "Before fees & tax",
     },
     {
       title: "Total Tax",
-      value: formatCurrency(summary.totalTax),
+      value: formatCurrency(summary.totalTax, currency),
       subtitle: "Tax collected",
     },
     ...(summary.totalServiceCharge && summary.totalServiceCharge > 0 ? [{
       title: "Service Charge",
-      value: formatCurrency(summary.totalServiceCharge),
+      value: formatCurrency(summary.totalServiceCharge, currency),
       subtitle: "Service fees",
     }] : []),
     ...(summary.totalPackagingFee && summary.totalPackagingFee > 0 ? [{
       title: "Packaging Fee",
-      value: formatCurrency(summary.totalPackagingFee),
+      value: formatCurrency(summary.totalPackagingFee, currency),
       subtitle: "Takeaway packaging",
     }] : []),
     {
       title: "Grand Total",
-      value: formatCurrency(summary.grandTotal),
+      value: formatCurrency(summary.grandTotal, currency),
       subtitle: "All income",
     },
     {
       title: "Avg Order Value",
-      value: formatCurrency(summary.averageOrderValue),
+      value: formatCurrency(summary.averageOrderValue, currency),
       subtitle: "Per order",
     },
   ];

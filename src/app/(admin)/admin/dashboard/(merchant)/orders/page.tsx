@@ -35,6 +35,7 @@ import { KitchenDisplaySkeleton } from '@/components/common/SkeletonLoaders';
 import type { OrderListItem } from '@/lib/types/order';
 import { useMerchant } from '@/context/MerchantContext';
 import { OrderStatus } from '@prisma/client';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 type ViewMode = 'kanban-card' | 'kanban-list' | 'tab-list';
 
@@ -47,6 +48,7 @@ const DEFAULT_FILTERS: OrderFilters = {
 
 export default function MerchantOrdersPage() {
   const _router = useRouter();
+  const { t } = useTranslation();
 
   // State management
   const [viewMode, setViewMode] = useState<ViewMode>('kanban-card');
@@ -246,10 +248,10 @@ export default function MerchantOrdersPage() {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-800 dark:text-white/90">
-              Order Management
+              {t("admin.orders.title")}
             </h1>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Manage and track orders in real-time with drag & drop
+              {t("admin.orders.subtitle")}
             </p>
           </div>
 
@@ -262,7 +264,7 @@ export default function MerchantOrdersPage() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search order #, customer name, phone, or table..."
+              placeholder={t("admin.orders.searchPlaceholder")}
               className="w-full h-11 pl-11 pr-10 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 placeholder-gray-400 shadow-sm focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:placeholder-gray-500 dark:focus:border-primary-500"
             />
             {searchQuery && (
@@ -287,7 +289,7 @@ export default function MerchantOrdersPage() {
                 title="Kanban + Card View"
               >
                 <FaTh className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Card</span>
+                <span className="hidden sm:inline">{t("admin.orders.viewCard")}</span>
               </button>
               <button
                 onClick={() => setViewMode('kanban-list')}
@@ -298,7 +300,7 @@ export default function MerchantOrdersPage() {
                 title="Kanban + List View"
               >
                 <FaList className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">List</span>
+                <span className="hidden sm:inline">{t("admin.orders.viewList")}</span>
               </button>
               <button
                 onClick={() => setViewMode('tab-list')}
@@ -309,7 +311,7 @@ export default function MerchantOrdersPage() {
                 title="Tab + List View"
               >
                 <FaTags className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Tabs</span>
+                <span className="hidden sm:inline">{t("admin.orders.viewTabs")}</span>
               </button>
             </div>
 
@@ -322,7 +324,7 @@ export default function MerchantOrdersPage() {
                 }`}
             >
               <FaFilter />
-              <span className="hidden sm:inline">Filters</span>
+              <span className="hidden sm:inline">{t("admin.orders.filters")}</span>
             </button>
 
             {/* Bulk Mode Toggle */}
@@ -334,7 +336,7 @@ export default function MerchantOrdersPage() {
                 }`}
             >
               {bulkMode ? <FaCheckSquare /> : <FaSquare />}
-              <span className="hidden sm:inline">Bulk Select</span>
+              <span className="hidden sm:inline">{t("admin.orders.bulkSelect")}</span>
             </button>
 
             {/* Progressive Display Mode: Normal → Clean → Fullscreen */}
@@ -368,18 +370,18 @@ export default function MerchantOrdersPage() {
                 : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800'
                 }`}
               title={
-                displayMode === 'normal' ? 'Enter Clean Mode' :
-                  displayMode === 'clean' ? 'Enter Full Screen' :
-                    'Exit Full Screen'
+                displayMode === 'normal' ? t("admin.orders.enterCleanMode") :
+                  displayMode === 'clean' ? t("admin.orders.enterFullScreen") :
+                    t("admin.orders.exitFullScreen")
               }
             >
               {displayMode === 'normal' ? <FaEye /> :
                 displayMode === 'clean' ? <FaExpand /> :
                   <FaCompress />}
               <span className="hidden sm:inline">
-                {displayMode === 'normal' ? 'Clean Mode' :
-                  displayMode === 'clean' ? 'Full Screen' :
-                    'Exit'}
+                {displayMode === 'normal' ? t("admin.orders.cleanMode") :
+                  displayMode === 'clean' ? t("admin.orders.fullScreen") :
+                    t("admin.orders.exit")}
               </span>
             </button>
           </div>
@@ -403,14 +405,14 @@ export default function MerchantOrdersPage() {
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <span className="text-sm font-semibold text-primary-700 dark:text-primary-400">
-                  {selectedOrders.size} order{selectedOrders.size !== 1 ? 's' : ''} selected
+                  {t("admin.orders.ordersSelected", { count: selectedOrders.size })}
                 </span>
                 <button
                   onClick={() => setSelectedOrders(new Set())}
                   className="flex h-8 items-center gap-1.5 rounded-lg border border-primary-300 bg-white px-3 text-xs font-medium text-primary-700 hover:bg-primary-50 dark:border-primary-700 dark:bg-primary-900 dark:text-primary-400 dark:hover:bg-primary-800"
                 >
                   <FaTimes className="h-3 w-3" />
-                  Clear
+                  {t("common.clear")}
                 </button>
               </div>
 
@@ -420,13 +422,13 @@ export default function MerchantOrdersPage() {
                   onChange={(e) => setBulkStatusUpdate(e.target.value as OrderStatus)}
                   className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
                 >
-                  <option value="">Select status...</option>
-                  <option value="PENDING">Pending</option>
-                  <option value="ACCEPTED">Accepted</option>
-                  <option value="IN_PROGRESS">In Progress</option>
-                  <option value="READY">Ready</option>
-                  <option value="COMPLETED">Completed</option>
-                  <option value="CANCELLED">Cancelled</option>
+                  <option value="">{t("admin.orders.selectStatus")}</option>
+                  <option value="PENDING">{t("admin.status.pending")}</option>
+                  <option value="ACCEPTED">{t("admin.status.accepted")}</option>
+                  <option value="IN_PROGRESS">{t("admin.status.inProgress")}</option>
+                  <option value="READY">{t("admin.status.ready")}</option>
+                  <option value="COMPLETED">{t("admin.status.completed")}</option>
+                  <option value="CANCELLED">{t("admin.status.cancelled")}</option>
                 </select>
 
                 <button
@@ -434,7 +436,7 @@ export default function MerchantOrdersPage() {
                   disabled={!bulkStatusUpdate}
                   className="h-9 rounded-lg bg-primary-500 px-4 text-sm font-semibold text-white hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-primary-600 dark:hover:bg-primary-700"
                 >
-                  Update Status
+                  {t("admin.orders.updateStatus")}
                 </button>
               </div>
             </div>

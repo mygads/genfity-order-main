@@ -16,6 +16,7 @@
 'use client';
 
 import { ChevronRight } from 'lucide-react';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 interface OpeningHour {
   dayOfWeek: number;
@@ -32,10 +33,12 @@ interface RestaurantInfoCardProps {
 }
 
 export default function RestaurantInfoCard({ name, openingHours, onClick, isClosed = false }: RestaurantInfoCardProps) {
+  const { t } = useTranslation();
+
   // Calculate merchant status
   const getMerchantStatus = (): string => {
     if (!openingHours || openingHours.length === 0) {
-      return 'Unknown hours';
+      return t('customer.hours.unknown');
     }
 
     const now = new Date();
@@ -44,7 +47,7 @@ export default function RestaurantInfoCard({ name, openingHours, onClick, isClos
     const todayHours = openingHours.find(h => h.dayOfWeek === currentDay);
 
     if (!todayHours || todayHours.isClosed) {
-      return 'Closed today';
+      return t('customer.hours.closedToday');
     }
 
     const { openTime, closeTime } = todayHours;
@@ -58,7 +61,7 @@ export default function RestaurantInfoCard({ name, openingHours, onClick, isClos
       return `${displayHour}:${minutes} ${period}`;
     };
 
-    return `Open today, ${formatTime(openTime)}-${formatTime(closeTime)}`;
+    return t('customer.hours.openToday', { hours: `${formatTime(openTime)}-${formatTime(closeTime)}` });
   };
 
   return (
@@ -94,7 +97,7 @@ export default function RestaurantInfoCard({ name, openingHours, onClick, isClos
               letterSpacing: '0.5px',
             }}
           >
-            Closed
+            {t('common.closed')}
           </span>
         )}
         <div>

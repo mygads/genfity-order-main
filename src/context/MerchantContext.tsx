@@ -1,6 +1,7 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { formatCurrency as formatCurrencyUtil } from '@/lib/utils/format';
 
 /**
  * Merchant Context
@@ -12,13 +13,14 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
  * - Single source of truth for merchant data
  * - Reduces API calls from 10+ to 1 per session
  * - Auto-refresh on merchant updates
+ * - Centralized formatCurrency helper
  */
 
 interface Merchant {
   id: string;
   name: string;
   code: string;
-  currency: string;
+  currency: 'AUD' | 'IDR';
   isOpen: boolean;
   logoUrl?: string;
   address?: string;
@@ -27,6 +29,10 @@ interface Merchant {
 
 interface MerchantContextType {
   merchant: Merchant | null;
+  /** Current merchant currency, defaults to 'AUD' */
+  currency: 'AUD' | 'IDR';
+  /** Format amount using merchant's currency */
+  formatCurrency: (amount: number) => string;
   isLoading: boolean;
   error: string | null;
   refreshMerchant: () => Promise<void>;
@@ -38,6 +44,14 @@ export function MerchantProvider({ children }: { children: ReactNode }) {
   const [merchant, setMerchant] = useState<Merchant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Derived currency with default
+  const currency: 'AUD' | 'IDR' = (merchant?.currency as 'AUD' | 'IDR') || 'AUD';
+
+  // Memoized formatCurrency function using merchant's currency
+  const formatCurrency = useCallback((amount: number): string => {
+    return formatCurrencyUtil(amount, currency);
+  }, [currency]);
 
   const fetchMerchant = async () => {
     try {
@@ -80,7 +94,7 @@ export function MerchantProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <MerchantContext.Provider value={{ merchant, isLoading, error, refreshMerchant }}>
+    <MerchantContext.Provider value={{ merchant, currency, formatCurrency, isLoading, error, refreshMerchant }}>
       {children}
     </MerchantContext.Provider>
   );
@@ -91,7 +105,14 @@ export function MerchantProvider({ children }: { children: ReactNode }) {
  * 
  * Usage:
  * ```tsx
- * const { merchant, isLoading } = useMerchant();
+ * const { merchant, currency, formatCurrency, isLoading } = useMerchant();
+ * 
+ * // Use formatCurrency helper (automatically uses merchant's currency)
+ * <span>{formatCurrency(10000)}</span>
+ * // IDR merchant: "Rp 10.000"
+ * // AUD merchant: "A$10000.00"
+ * 
+ * // Or access currency directly
  * const currency = merchant?.currency || 'AUD';
  * ```
  */
