@@ -900,10 +900,14 @@ const id = {
   "admin.permissions.menuBooksDesc": "Atur menu ke dalam buku",
   "admin.permissions.specialPrices": "Harga Spesial",
   "admin.permissions.specialPricesDesc": "Atur harga promosi",
+  "admin.permissions.reports": "Laporan",
   "admin.permissions.reportsDesc": "Lihat laporan penjualan",
+  "admin.permissions.revenue": "Pendapatan",
   "admin.permissions.revenueDesc": "Akses analitik pendapatan",
+  "admin.permissions.settings": "Pengaturan",
   "admin.permissions.merchantSettings": "Pengaturan Toko",
   "admin.permissions.merchantSettingsDesc": "Edit konfigurasi toko",
+  "admin.permissions.qrTables": "QR & Meja",
   "admin.permissions.qrTablesDesc": "Kelola kode QR dan meja",
 
   // Permission Templates

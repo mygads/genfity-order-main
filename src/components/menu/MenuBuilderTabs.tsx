@@ -7,6 +7,8 @@ import { z } from 'zod';
 import Image from 'next/image';
 import Link from 'next/link';
 import { FileIcon, FolderIcon, PlusIcon, EyeIcon } from '@/icons';
+import { useMerchant } from '@/context/MerchantContext';
+import { getCurrencySymbol } from '@/lib/utils/format';
 
 /**
  * Menu Builder Tabs Component
@@ -82,6 +84,8 @@ export default function MenuBuilderTabs({
   onCancel,
   isLoading = false,
 }: MenuBuilderTabsProps) {
+  const { currency } = useMerchant();
+  const currencySymbol = getCurrencySymbol(currency);
   const [activeTab, setActiveTab] = useState<TabKey>('basic');
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -434,7 +438,7 @@ export default function MenuBuilderTabs({
                     Price <span className="text-error-600">*</span>
                   </label>
                   <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-gray-500">A$</span>
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-gray-500">{currencySymbol}</span>
                     <input
                       type="number"
                       {...register('price', { valueAsNumber: true })}

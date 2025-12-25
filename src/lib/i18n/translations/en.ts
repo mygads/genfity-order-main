@@ -906,10 +906,14 @@ const en = {
   "admin.permissions.menuBooksDesc": "Organize menus into books",
   "admin.permissions.specialPrices": "Special Prices",
   "admin.permissions.specialPricesDesc": "Set promotional pricing",
+  "admin.permissions.reports": "Reports",
   "admin.permissions.reportsDesc": "View sales reports",
+  "admin.permissions.revenue": "Revenue",
   "admin.permissions.revenueDesc": "Access revenue analytics",
+  "admin.permissions.settings": "Settings",
   "admin.permissions.merchantSettings": "Store Settings",
   "admin.permissions.merchantSettingsDesc": "Edit store configuration",
+  "admin.permissions.qrTables": "QR & Tables",
   "admin.permissions.qrTablesDesc": "Manage QR codes and tables",
 
   // Permission Templates
