@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import dynamic from "next/dynamic";
@@ -87,6 +87,16 @@ export default function EditMerchantPage() {
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
   const [authToken, setAuthToken] = useState<string>("");
+  
+  // Unsaved changes tracking
+  const [originalFormData, setOriginalFormData] = useState<MerchantFormData | null>(null);
+  const [originalOpeningHours, setOriginalOpeningHours] = useState<OpeningHour[]>([]);
+  const [showUnsavedModal, setShowUnsavedModal] = useState(false);
+  const [pendingTab, setPendingTab] = useState<string | null>(null);
+  
+  // Collapsible sections
+  const [showCustomLabels, setShowCustomLabels] = useState(false);
+  const [showModeSchedules, setShowModeSchedules] = useState(false);
 
   const [formData, setFormData] = useState<MerchantFormData>({
     name: "",
@@ -213,12 +223,78 @@ export default function EditMerchantPage() {
         });
 
         setOpeningHours(initialHours);
+        setOriginalOpeningHours(JSON.parse(JSON.stringify(initialHours)));
       }
+      
+      // Save original form data for change detection
+      const originalData = {
+        name: merchant.name || "",
+        code: merchant.code || "",
+        description: merchant.description || "",
+        address: merchant.address || "",
+        email: merchant.email || "",
+        phoneNumber: merchant.phoneNumber || "",
+        logoUrl: merchant.logoUrl || "",
+        bannerUrl: merchant.bannerUrl || "",
+        country: merchant.country || "Australia",
+        currency: merchant.currency || "AUD",
+        timezone: merchant.timezone || "Australia/Sydney",
+        latitude: merchant.latitude ? parseFloat(merchant.latitude) : null,
+        longitude: merchant.longitude ? parseFloat(merchant.longitude) : null,
+        isDineInEnabled: merchant.isDineInEnabled ?? true,
+        isTakeawayEnabled: merchant.isTakeawayEnabled ?? true,
+        dineInLabel: merchant.dineInLabel || "",
+        takeawayLabel: merchant.takeawayLabel || "",
+        dineInScheduleStart: merchant.dineInScheduleStart || "",
+        dineInScheduleEnd: merchant.dineInScheduleEnd || "",
+        takeawayScheduleStart: merchant.takeawayScheduleStart || "",
+        takeawayScheduleEnd: merchant.takeawayScheduleEnd || "",
+        totalTables: merchant.totalTables ?? null,
+        enableTax: merchant.enableTax || false,
+        taxPercentage: merchant.taxPercentage ? parseFloat(merchant.taxPercentage) : 0,
+        enableServiceCharge: merchant.enableServiceCharge || false,
+        serviceChargePercent: merchant.serviceChargePercent ? parseFloat(merchant.serviceChargePercent) : 0,
+        enablePackagingFee: merchant.enablePackagingFee || false,
+        packagingFeeAmount: merchant.packagingFeeAmount ? parseFloat(merchant.packagingFeeAmount) : 0,
+      };
+      setOriginalFormData(originalData);
     } catch (err) {
       showError("Error", err instanceof Error ? err.message : "Failed to load merchant data");
     } finally {
       setLoading(false);
     }
+  };
+
+  // Check if there are unsaved changes
+  const hasUnsavedChanges = useCallback((): boolean => {
+    if (!originalFormData) return false;
+    
+    // Check form data changes
+    const formChanged = JSON.stringify(formData) !== JSON.stringify(originalFormData);
+    
+    // Check opening hours changes
+    const hoursChanged = JSON.stringify(openingHours) !== JSON.stringify(originalOpeningHours);
+    
+    return formChanged || hoursChanged;
+  }, [formData, originalFormData, openingHours, originalOpeningHours]);
+
+  // Handle tab change with unsaved changes check
+  const handleTabChange = (newTab: string) => {
+    if (hasUnsavedChanges()) {
+      setPendingTab(newTab);
+      setShowUnsavedModal(true);
+    } else {
+      setActiveTab(newTab);
+    }
+  };
+
+  // Confirm tab change without saving
+  const confirmTabChange = () => {
+    if (pendingTab) {
+      setActiveTab(pendingTab);
+      setPendingTab(null);
+    }
+    setShowUnsavedModal(false);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -378,11 +454,11 @@ export default function EditMerchantPage() {
         throw new Error(hoursData.message || "Failed to update opening hours");
       }
 
-      showSuccess("Success", "Merchant information updated successfully!");
+      // Update original data to reflect saved state
+      setOriginalFormData({ ...formData });
+      setOriginalOpeningHours(JSON.parse(JSON.stringify(openingHours)));
 
-      setTimeout(() => {
-        router.push("/admin/dashboard/merchant/view");
-      }, 1000);
+      showSuccess("Success", "Merchant information updated successfully!");
     } catch (err) {
       showError("Error", err instanceof Error ? err.message : "Failed to update merchant");
     } finally {
@@ -633,95 +709,145 @@ export default function EditMerchantPage() {
         </div>
       </div>
 
-      {/* Custom Labels */}
-      <div>
-        <h4 className="mb-3 text-sm font-medium text-gray-900 dark:text-white">Custom Button Labels</h4>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Dine In Button Label
+      {/* Custom Labels - Collapsible */}
+      <div className="rounded-lg border border-gray-200 dark:border-gray-800">
+        <button
+          type="button"
+          onClick={() => setShowCustomLabels(!showCustomLabels)}
+          className="flex w-full items-center justify-between p-4 text-left"
+        >
+          <div className="flex items-center gap-3">
+            <label className="relative inline-flex cursor-pointer items-center">
+              <input
+                type="checkbox"
+                checked={showCustomLabels}
+                onChange={(e) => setShowCustomLabels(e.target.checked)}
+                className="peer sr-only"
+              />
+              <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
             </label>
-            <input
-              type="text"
-              value={formData.dineInLabel}
-              onChange={(e) => setFormData(prev => ({ ...prev, dineInLabel: e.target.value }))}
-              placeholder="Dine In"
-              className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
-            />
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Leave empty to use default</p>
+            <div>
+              <h4 className="text-sm font-medium text-gray-900 dark:text-white">Custom Button Labels</h4>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Customize the labels for ordering mode buttons</p>
+            </div>
           </div>
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Takeaway Button Label
-            </label>
-            <input
-              type="text"
-              value={formData.takeawayLabel}
-              onChange={(e) => setFormData(prev => ({ ...prev, takeawayLabel: e.target.value }))}
-              placeholder="Takeaway"
-              className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
-            />
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Leave empty to use default</p>
+          <svg className={`h-5 w-5 text-gray-500 transition-transform ${showCustomLabels ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        {showCustomLabels && (
+          <div className="border-t border-gray-200 p-4 dark:border-gray-800">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Dine In Button Label
+                </label>
+                <input
+                  type="text"
+                  value={formData.dineInLabel}
+                  onChange={(e) => setFormData(prev => ({ ...prev, dineInLabel: e.target.value }))}
+                  placeholder="Dine In"
+                  className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                />
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Leave empty to use default</p>
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Takeaway Button Label
+                </label>
+                <input
+                  type="text"
+                  value={formData.takeawayLabel}
+                  onChange={(e) => setFormData(prev => ({ ...prev, takeawayLabel: e.target.value }))}
+                  placeholder="Takeaway"
+                  className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                />
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Leave empty to use default</p>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* Mode Schedules */}
-      <div className="space-y-4">
-        <div>
-          <h4 className="text-sm font-medium text-gray-900 dark:text-white">Mode Schedules</h4>
-          <p className="text-xs text-gray-500 dark:text-gray-400">Set time ranges when each mode is available. Leave empty for 24/7 availability.</p>
-        </div>
-        
-        {/* Dine In Schedule */}
-        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
-          <p className="mb-3 text-sm font-medium text-gray-700 dark:text-gray-300">Dine In Available Hours</p>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="mb-1 block text-xs text-gray-500 dark:text-gray-400">From</label>
+      {/* Mode Schedules - Collapsible */}
+      <div className="rounded-lg border border-gray-200 dark:border-gray-800">
+        <button
+          type="button"
+          onClick={() => setShowModeSchedules(!showModeSchedules)}
+          className="flex w-full items-center justify-between p-4 text-left"
+        >
+          <div className="flex items-center gap-3">
+            <label className="relative inline-flex cursor-pointer items-center">
               <input
-                type="time"
-                value={formData.dineInScheduleStart}
-                onChange={(e) => setFormData(prev => ({ ...prev, dineInScheduleStart: e.target.value }))}
-                className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                type="checkbox"
+                checked={showModeSchedules}
+                onChange={(e) => setShowModeSchedules(e.target.checked)}
+                className="peer sr-only"
               />
-            </div>
+              <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
+            </label>
             <div>
-              <label className="mb-1 block text-xs text-gray-500 dark:text-gray-400">To</label>
-              <input
-                type="time"
-                value={formData.dineInScheduleEnd}
-                onChange={(e) => setFormData(prev => ({ ...prev, dineInScheduleEnd: e.target.value }))}
-                className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
-              />
+              <h4 className="text-sm font-medium text-gray-900 dark:text-white">Mode Schedules</h4>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Set time ranges when each mode is available</p>
             </div>
           </div>
-        </div>
+          <svg className={`h-5 w-5 text-gray-500 transition-transform ${showModeSchedules ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        {showModeSchedules && (
+          <div className="space-y-4 border-t border-gray-200 p-4 dark:border-gray-800">
+            {/* Dine In Schedule */}
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
+              <p className="mb-3 text-sm font-medium text-gray-700 dark:text-gray-300">Dine In Available Hours</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1 block text-xs text-gray-500 dark:text-gray-400">From</label>
+                  <input
+                    type="time"
+                    value={formData.dineInScheduleStart}
+                    onChange={(e) => setFormData(prev => ({ ...prev, dineInScheduleStart: e.target.value }))}
+                    className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-gray-500 dark:text-gray-400">To</label>
+                  <input
+                    type="time"
+                    value={formData.dineInScheduleEnd}
+                    onChange={(e) => setFormData(prev => ({ ...prev, dineInScheduleEnd: e.target.value }))}
+                    className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                  />
+                </div>
+              </div>
+            </div>
 
-        {/* Takeaway Schedule */}
-        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
-          <p className="mb-3 text-sm font-medium text-gray-700 dark:text-gray-300">Takeaway Available Hours</p>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="mb-1 block text-xs text-gray-500 dark:text-gray-400">From</label>
-              <input
-                type="time"
-                value={formData.takeawayScheduleStart}
-                onChange={(e) => setFormData(prev => ({ ...prev, takeawayScheduleStart: e.target.value }))}
-                className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-gray-500 dark:text-gray-400">To</label>
-              <input
-                type="time"
-                value={formData.takeawayScheduleEnd}
-                onChange={(e) => setFormData(prev => ({ ...prev, takeawayScheduleEnd: e.target.value }))}
-                className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
-              />
+            {/* Takeaway Schedule */}
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
+              <p className="mb-3 text-sm font-medium text-gray-700 dark:text-gray-300">Takeaway Available Hours</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1 block text-xs text-gray-500 dark:text-gray-400">From</label>
+                  <input
+                    type="time"
+                    value={formData.takeawayScheduleStart}
+                    onChange={(e) => setFormData(prev => ({ ...prev, takeawayScheduleStart: e.target.value }))}
+                    className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-gray-500 dark:text-gray-400">To</label>
+                  <input
+                    type="time"
+                    value={formData.takeawayScheduleEnd}
+                    onChange={(e) => setFormData(prev => ({ ...prev, takeawayScheduleEnd: e.target.value }))}
+                    className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                  />
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Per-Day Mode Schedules */}
@@ -1124,7 +1250,7 @@ export default function EditMerchantPage() {
           <TabsNavigation
             tabs={TAB_KEYS.map(tab => ({ id: tab.id, label: t(tab.key) }))}
             activeTab={activeTab}
-            onTabChange={setActiveTab}
+            onTabChange={handleTabChange}
           />
         </div>
 
@@ -1143,6 +1269,39 @@ export default function EditMerchantPage() {
           />
         </form>
       </div>
+
+      {/* Unsaved Changes Modal */}
+      {showUnsavedModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-warning-100 dark:bg-warning-900/30">
+              <svg className="h-6 w-6 text-warning-600 dark:text-warning-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h3 className="mb-2 text-lg font-semibold text-gray-900 dark:text-white">Unsaved Changes</h3>
+            <p className="mb-6 text-sm text-gray-600 dark:text-gray-400">
+              You have unsaved changes. Please save your changes before switching tabs, or discard them to continue.
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowUnsavedModal(false)}
+                className="h-11 flex-1 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmTabChange}
+                className="h-11 flex-1 rounded-lg bg-warning-500 text-sm font-medium text-white hover:bg-warning-600"
+              >
+                Discard & Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import AdminFormFooter from "@/components/common/AdminFormFooter";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { useMerchant } from "@/context/MerchantContext";
 
 interface Menu {
     id: string;
@@ -19,6 +20,7 @@ export default function EditMenuBookPage() {
     const params = useParams();
     const bookId = params.id as string;
     const { } = useTranslation();
+    const { formatCurrency } = useMerchant();
 
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
@@ -247,7 +249,7 @@ export default function EditMenuBookPage() {
                                                 />
                                                 <div className="flex-1">
                                                     <p className="text-sm font-medium text-gray-900 dark:text-white">{menu.name}</p>
-                                                    <p className="text-xs text-gray-500">$A {menu.price.toLocaleString()}</p>
+                                                    <p className="text-xs text-gray-500">{formatCurrency(menu.price)}</p>
                                                 </div>
                                             </label>
                                         );

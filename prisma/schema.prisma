@@ -194,6 +194,7 @@ model Merchant {
   createdAt              DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt              DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
   isOpen                 Boolean               @default(true) @map("is_open")
+  isManualOverride       Boolean               @default(false) @map("is_manual_override") // When true, isOpen overrides schedule
   isDineInEnabled        Boolean               @default(true) @map("is_dine_in_enabled")
   isTakeawayEnabled      Boolean               @default(true) @map("is_takeaway_enabled")
   dineInLabel            String?               @map("dine_in_label")

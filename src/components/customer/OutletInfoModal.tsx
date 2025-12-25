@@ -18,6 +18,10 @@ interface MerchantInfo {
     phone?: string;
     logoUrl?: string;
     openingHours: OpeningHour[];
+    currency?: string;
+    country?: string;
+    latitude?: number | null;
+    longitude?: number | null;
 }
 
 interface OutletInfoModalProps {
@@ -131,7 +135,7 @@ export default function OutletInfoModal({ isOpen, onClose, merchant, merchantCod
 
                             {merchant.address && (
                                 <div className="flex gap-2 mt-2">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="text-gray-900 shrink-0 mt-0.5">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="text-gray-900 dark:text-gray-300 shrink-0 mt-0.5">
                                         <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
                                     </svg>
                                     <div className="flex-1 text-xs font-light text-gray-900 dark:text-gray-400 leading-relaxed">
@@ -153,14 +157,36 @@ export default function OutletInfoModal({ isOpen, onClose, merchant, merchantCod
                                 </div>
                             )}
 
+                            {/* Country & Currency Info */}
+                            {(merchant.country || merchant.currency) && (
+                                <div className="flex items-center gap-3 mt-3 text-xs text-gray-600 dark:text-gray-400">
+                                    {merchant.country && (
+                                        <span className="flex items-center gap-1">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-gray-500">
+                                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" />
+                                            </svg>
+                                            {merchant.country}
+                                        </span>
+                                    )}
+                                    {merchant.currency && (
+                                        <span className="flex items-center gap-1">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-gray-500">
+                                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.64 0 .84.65 1.39 2.67 1.91s4.18 1.39 4.18 3.91c-.01 1.83-1.38 2.83-3.12 3.16z" />
+                                            </svg>
+                                            {merchant.currency}
+                                        </span>
+                                    )}
+                                </div>
+                            )}
+
                         </div>
 
                         {/* Contact Actions */}
-                        <div className="flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
+                        <div className="flex items-center gap-2 px-4 pb-2 border-b border-gray-200 dark:border-gray-700">
                             {merchant.phone && (
                                 <a
                                     href={`tel:${merchant.phone}`}
-                                    className="flex-1 flex items-center justify-center ml-4 gap-2 px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-400 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-md"
+                                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-400 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-md"
                                 >
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                                         <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z" />
@@ -169,12 +195,15 @@ export default function OutletInfoModal({ isOpen, onClose, merchant, merchantCod
                                 </a>
                             )}
 
-                            {merchant.address && (
+                            {(merchant.address || (merchant.latitude && merchant.longitude)) && (
                                 <a
-                                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(merchant.address)}`}
+                                    href={merchant.latitude && merchant.longitude 
+                                        ? `https://www.google.com/maps/search/?api=1&query=${merchant.latitude},${merchant.longitude}`
+                                        : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(merchant.address || '')}`
+                                    }
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="flex-1 flex items-center justify-center gap-2 mr-4 px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-400 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-md"
+                                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-400 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-md"
                                 >
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                                         <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />

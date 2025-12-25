@@ -8,6 +8,8 @@ import { FormPageSkeleton } from '@/components/common/SkeletonLoaders';
 import Image from "next/image";
 import ManageMenuAddonCategoriesModal from "@/components/menu/ManageMenuAddonCategoriesModal";
 import ViewMenuAddonCategoriesModal from "@/components/menu/ViewMenuAddonCategoriesModal";
+import { useMerchant } from "@/context/MerchantContext";
+import { getCurrencySymbol } from "@/lib/utils/format";
 
 interface MenuAddonCategory {
   addonCategoryId: string;
@@ -67,6 +69,8 @@ export default function EditMenuPage() {
   const router = useRouter();
   const params = useParams();
   const menuId = params.id as string;
+  const { currency } = useMerchant();
+  const currencySymbol = getCurrencySymbol(currency);
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -492,7 +496,7 @@ export default function EditMenuPage() {
                 </label>
                 <div className="relative max-w-xs">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-gray-500">
-                    $A
+                    {currencySymbol}
                   </span>
                   <input
                     type="number"

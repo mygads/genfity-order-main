@@ -30,6 +30,7 @@ interface AddonItemFormModalProps {
   originalFormData?: AddonItemFormData | null;
   categories: AddonCategory[];
   submitting: boolean;
+  currencySymbol?: string;
   onSubmit: (e: React.FormEvent) => void;
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
   onCancel: () => void;
@@ -42,6 +43,7 @@ export default function AddonItemFormModal({
   originalFormData,
   categories,
   submitting,
+  currencySymbol = "$",
   onSubmit,
   onChange,
   onCancel,
@@ -143,17 +145,22 @@ export default function AddonItemFormModal({
                 <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Price <span className="text-error-500">*</span>
                 </label>
-                <input
-                  type="number"
-                  name="price"
-                  value={formData.price}
-                  onChange={onChange}
-                  required
-                  min="0"
-                  step="0.01"
-                  placeholder="0"
-                  className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                />
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-gray-500">
+                    {currencySymbol}
+                  </span>
+                  <input
+                    type="number"
+                    name="price"
+                    value={formData.price}
+                    onChange={onChange}
+                    required
+                    min="0"
+                    step="0.01"
+                    placeholder="0"
+                    className="h-11 w-full rounded-lg border border-gray-200 bg-white pl-12 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                  />
+                </div>
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                   Enter 0 for free addon items
                 </p>

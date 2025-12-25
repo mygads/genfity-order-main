@@ -85,7 +85,23 @@ async function handleGet(req: NextRequest, context: AuthContext) {
     if (role === 'MERCHANT_OWNER' || role === 'MERCHANT_STAFF') {
       const merchantUser = await prisma.merchantUser.findFirst({
         where: { userId: BigInt(userId) },
-        include: { merchant: true },
+        include: { 
+          merchant: {
+            include: {
+              openingHours: {
+                select: {
+                  dayOfWeek: true,
+                  openTime: true,
+                  closeTime: true,
+                  isClosed: true,
+                },
+                orderBy: {
+                  dayOfWeek: 'asc',
+                },
+              },
+            },
+          },
+        },
       });
 
       if (!merchantUser) {

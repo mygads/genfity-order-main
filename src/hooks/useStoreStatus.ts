@@ -13,6 +13,7 @@ import useSWR from 'swr';
 import { useMemo } from 'react';
 import { 
   isStoreEffectivelyOpen, 
+  isStoreOpenBySchedule,
   isWithinSchedule, 
   getMinutesUntilClose,
   isStoreOpenWithSpecialHours,
@@ -40,6 +41,7 @@ interface ModeSchedule {
 
 interface StoreStatusResponse {
   isOpen: boolean;
+  isManualOverride: boolean;
   timezone: string;
   isDineInEnabled: boolean;
   isTakeawayEnabled: boolean;
@@ -63,6 +65,8 @@ interface UseStoreStatusResult {
   // Store status
   storeOpen: boolean;
   storeStatusReason?: string;
+  isManualOverride: boolean;
+  scheduledStatus: boolean; // What status would be based on schedule
   
   // Mode availability
   isDineInEnabled: boolean;
@@ -143,6 +147,8 @@ export function useStoreStatus(
     if (!data) {
       return {
         storeOpen: true, // Default to open while loading
+        isManualOverride: false,
+        scheduledStatus: true,
         isDineInEnabled: true,
         isTakeawayEnabled: true,
         isDineInAvailable: true,
@@ -182,21 +188,35 @@ export function useStoreStatus(
     let storeOpen: boolean;
     let storeStatusReason: string | undefined;
     let specialHourName: string | undefined;
+    let isManualOverrideActive = data.isManualOverride ?? false;
 
     if (data.todaySpecialHour || (data.modeSchedules && data.modeSchedules.length > 0)) {
       // Use extended function for special hours / per-day schedules
-      const storeStatus = isStoreOpenWithSpecialHours(extendedMerchant);
+      const storeStatus = isStoreOpenWithSpecialHours({
+        ...extendedMerchant,
+        isManualOverride: data.isManualOverride,
+      });
       storeOpen = storeStatus.isOpen;
       storeStatusReason = storeStatus.reason;
       specialHourName = storeStatus.specialHourName;
+      if (storeStatus.isManualOverride !== undefined) {
+        isManualOverrideActive = storeStatus.isManualOverride;
+      }
     } else {
       // Use original function for backwards compatibility
       storeOpen = isStoreEffectivelyOpen({
         isOpen: data.isOpen,
+        isManualOverride: data.isManualOverride,
         openingHours: extendedMerchant.openingHours,
         timezone: data.timezone,
       });
     }
+    
+    // Calculate what the scheduled status would be (ignoring manual override)
+    const scheduledStatus = isStoreOpenBySchedule({
+      openingHours: extendedMerchant.openingHours,
+      timezone: data.timezone,
+    });
 
     // Check mode availability (with per-day schedules and special hours)
     let isDineInAvailable: boolean;
@@ -232,6 +252,8 @@ export function useStoreStatus(
     return {
       storeOpen,
       storeStatusReason,
+      isManualOverride: isManualOverrideActive,
+      scheduledStatus,
       isDineInEnabled: data.isDineInEnabled,
       isTakeawayEnabled: data.isTakeawayEnabled,
       isDineInAvailable,

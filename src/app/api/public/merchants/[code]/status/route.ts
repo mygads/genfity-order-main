@@ -30,6 +30,7 @@ export async function GET(
         code: true,
         isActive: true,
         isOpen: true,
+        isManualOverride: true,
         timezone: true,
         isDineInEnabled: true,
         isTakeawayEnabled: true,
@@ -132,6 +133,7 @@ export async function GET(
     // Return only status-related data
     const statusData = {
       isOpen: merchant.isOpen,
+      isManualOverride: merchant.isManualOverride ?? false,
       timezone: merchant.timezone,
       isDineInEnabled: merchant.isDineInEnabled ?? true,
       isTakeawayEnabled: merchant.isTakeawayEnabled ?? true,

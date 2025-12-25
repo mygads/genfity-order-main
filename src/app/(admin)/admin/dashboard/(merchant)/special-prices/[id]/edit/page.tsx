@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import AdminFormFooter from "@/components/common/AdminFormFooter";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { useMerchant } from "@/context/MerchantContext";
 
 interface MenuBook {
     id: string;
@@ -38,6 +39,7 @@ export default function EditSpecialPricePage() {
     const params = useParams();
     const priceId = params.id as string;
     const { } = useTranslation();
+    const { formatCurrency } = useMerchant();
 
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
@@ -385,7 +387,7 @@ export default function EditSpecialPricePage() {
                                             return (
                                                 <tr key={item.menuId}>
                                                     <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">{item.menuName}</td>
-                                                    <td className="px-4 py-3 text-sm text-gray-500">$A {item.originalPrice.toLocaleString()}</td>
+                                                    <td className="px-4 py-3 text-sm text-gray-500">{formatCurrency(item.originalPrice)}</td>
                                                     <td className="px-4 py-3">
                                                         <input
                                                             type="number"

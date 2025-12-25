@@ -105,7 +105,7 @@ export function LanguageSelector({
       >
         <span className="text-base leading-none">{localeFlag}</span>
         {mode === 'compact' && (
-          <span className="uppercase text-xs">{locale}</span>
+          <span className="uppercase text-xs">{locale.toUpperCase()}</span>
         )}
         {mode === 'full' && (
           <span>{localeName}</span>

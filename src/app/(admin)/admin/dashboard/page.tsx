@@ -44,7 +44,7 @@ export default function AdminDashboardPage() {
   }, [router]);
 
   // Use SWR for automatic caching, revalidation, and polling
-  const { data, error, isLoading } = useSWR(
+  const { data, error, isLoading, mutate } = useSWR(
     isMounted && hasToken ? '/api/admin/dashboard' : null, // Only fetch when mounted and has token
     {
       refreshInterval: 5000, // Poll every 5 seconds for live updates
@@ -54,6 +54,16 @@ export default function AdminDashboardPage() {
       errorRetryInterval: 5000,
     }
   );
+
+  // Listen for merchant status updates and refresh dashboard
+  useEffect(() => {
+    const handleMerchantStatusUpdate = () => {
+      mutate(); // Revalidate SWR data immediately
+    };
+
+    window.addEventListener('merchantStatusUpdated', handleMerchantStatusUpdate);
+    return () => window.removeEventListener('merchantStatusUpdated', handleMerchantStatusUpdate);
+  }, [mutate]);
 
   // Show error toast when fetch fails
   useEffect(() => {

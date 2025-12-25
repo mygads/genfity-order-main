@@ -8,6 +8,8 @@ import AdminFormFooter from "@/components/common/AdminFormFooter";
 import Image from "next/image";
 import { FaCopy } from "react-icons/fa";
 import DuplicateMenuModal from "@/components/modals/DuplicateMenuModal";
+import { useMerchant } from "@/context/MerchantContext";
+import { getCurrencySymbol } from "@/lib/utils/format";
 
 interface Merchant {
   id: string;
@@ -49,6 +51,8 @@ interface MenuFormData {
 
 export default function CreateMenuPage() {
   const router = useRouter();
+  const { currency } = useMerchant();
+  const currencySymbol = getCurrencySymbol(currency);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -460,7 +464,7 @@ export default function CreateMenuPage() {
                 </label>
                 <div className="relative max-w-xs">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-gray-500">
-                    $A
+                    {currencySymbol}
                   </span>
                   <input
                     type="number"

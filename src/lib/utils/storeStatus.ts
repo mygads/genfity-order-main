@@ -3,9 +3,13 @@
  * 
  * @description
  * Unified utility functions for determining store open/close status.
- * Combines both manual toggle (isOpen) AND schedule-based hours (openingHours).
+ * Supports both manual override mode and schedule-based hours.
  * 
- * Priority:
+ * Mode Logic:
+ * 1. If isManualOverride === true: Use isOpen value directly (force open/close)
+ * 2. If isManualOverride === false: Follow opening hours schedule
+ * 
+ * Legacy Logic (when isManualOverride is undefined):
  * 1. If isOpen === false (manual close), store is CLOSED
  * 2. Otherwise, check opening hours schedule
  * 3. If no schedule defined, use isOpen value (default true)
@@ -20,9 +24,10 @@ export interface OpeningHour {
 }
 
 export interface MerchantStatus {
-  isOpen?: boolean;          // Manual toggle from database
+  isOpen?: boolean;              // Store open status
+  isManualOverride?: boolean;    // When true, isOpen overrides schedule
   openingHours?: OpeningHour[];
-  timezone?: string;         // Merchant timezone for accurate time comparison
+  timezone?: string;             // Merchant timezone for accurate time comparison
 }
 
 export interface ModeSchedule {
@@ -56,6 +61,7 @@ export interface SpecialHour {
 
 // Extended merchant status with new features
 export interface ExtendedMerchantStatus extends MerchantStatus {
+  isManualOverride?: boolean;    // When true, isOpen overrides schedule
   modeSchedules?: PerDayModeSchedule[];
   todaySpecialHour?: SpecialHour | null;
   // Global mode settings
@@ -103,26 +109,27 @@ export function getCurrentTimeInTimezone(timezone?: string): { dayOfWeek: number
 
 /**
  * Check if store is effectively open
- * Combines manual toggle (isOpen) AND schedule-based hours
+ * Supports manual override mode and schedule-based hours
  * 
- * @param merchant - Object with isOpen, openingHours, and optional timezone
+ * @param merchant - Object with isOpen, isManualOverride, openingHours, and optional timezone
  * @returns boolean - true if store is open, false if closed
  * 
  * Logic:
- * 1. If isOpen === false (manual close), return false
- * 2. If no openingHours defined, use isOpen value (default true)
- * 3. Otherwise check current time against schedule
+ * 1. If isManualOverride === true: Use isOpen value directly (force open/close)
+ * 2. If isManualOverride === false or undefined: Check schedule
+ *    - If no openingHours defined, use isOpen value (default true)
+ *    - Otherwise check current time against schedule
  */
 export function isStoreEffectivelyOpen(merchant: MerchantStatus): boolean {
-  // Priority 1: Manual override - if explicitly closed
-  if (merchant.isOpen === false) {
-    return false;
+  // Manual override mode - use isOpen value directly
+  if (merchant.isManualOverride === true) {
+    return merchant.isOpen ?? true;
   }
   
-  // Priority 2: Check opening hours schedule
+  // Auto mode - check opening hours schedule
   const openingHours = merchant.openingHours;
   if (!openingHours || openingHours.length === 0) {
-    // No schedule defined, use manual toggle (default true)
+    // No schedule defined, use isOpen value (default true)
     return merchant.isOpen ?? true;
   }
   
@@ -151,6 +158,39 @@ export function isStoreEffectivelyOpen(merchant: MerchantStatus): boolean {
   }
   
   // If no time range specified, assume open
+  return true;
+}
+
+/**
+ * Check if store should be open based on schedule only (ignoring manual override)
+ * Used to determine if manual override is active
+ */
+export function isStoreOpenBySchedule(merchant: MerchantStatus): boolean {
+  const openingHours = merchant.openingHours;
+  if (!openingHours || openingHours.length === 0) {
+    return true; // No schedule means always open
+  }
+  
+  const { dayOfWeek, currentTime } = getCurrentTimeInTimezone(merchant.timezone);
+  
+  const todayHours = openingHours.find(h => h.dayOfWeek === dayOfWeek);
+  
+  if (!todayHours) {
+    return false;
+  }
+  
+  if (todayHours.isClosed) {
+    return false;
+  }
+  
+  if (todayHours.is24Hours) {
+    return true;
+  }
+  
+  if (todayHours.openTime && todayHours.closeTime) {
+    return currentTime >= todayHours.openTime && currentTime <= todayHours.closeTime;
+  }
+  
   return true;
 }
 
@@ -208,15 +248,22 @@ export function isWithinSchedule(
  * Get store status text for display
  * 
  * @param merchant - Merchant status object
- * @returns Object with status text and whether store is open
+ * @returns Object with status text, whether store is open, and if manual override is active
  */
-export function getStoreStatusText(merchant: MerchantStatus): { text: string; isOpen: boolean } {
+export function getStoreStatusText(merchant: MerchantStatus): { 
+  text: string; 
+  isOpen: boolean; 
+  isManualOverride: boolean;
+  scheduledStatus: boolean; // What the status would be based on schedule
+} {
   const isOpen = isStoreEffectivelyOpen(merchant);
+  const scheduledStatus = isStoreOpenBySchedule(merchant);
+  const isManualOverride = merchant.isManualOverride === true;
   
   if (!isOpen) {
-    // Check if manually closed
-    if (merchant.isOpen === false) {
-      return { text: 'Temporarily Closed', isOpen: false };
+    // Check if manually closed while schedule says open
+    if (isManualOverride && scheduledStatus) {
+      return { text: 'Manually Closed', isOpen: false, isManualOverride: true, scheduledStatus };
     }
     
     // Check if closed due to schedule
@@ -226,16 +273,21 @@ export function getStoreStatusText(merchant: MerchantStatus): { text: string; is
       const todayHours = openingHours.find(h => h.dayOfWeek === dayOfWeek);
       
       if (todayHours?.isClosed) {
-        return { text: 'Closed Today', isOpen: false };
+        return { text: 'Closed Today', isOpen: false, isManualOverride, scheduledStatus };
       }
       
-      return { text: 'Currently Closed', isOpen: false };
+      return { text: 'Currently Closed', isOpen: false, isManualOverride, scheduledStatus };
     }
     
-    return { text: 'Closed', isOpen: false };
+    return { text: 'Closed', isOpen: false, isManualOverride, scheduledStatus };
   }
   
-  return { text: 'Open Now', isOpen: true };
+  // Store is open
+  if (isManualOverride && !scheduledStatus) {
+    return { text: 'Manually Open', isOpen: true, isManualOverride: true, scheduledStatus };
+  }
+  
+  return { text: 'Open Now', isOpen: true, isManualOverride, scheduledStatus };
 }
 
 /**
@@ -338,14 +390,23 @@ export function getNextOpeningTime(
 
 /**
  * Check if store is open considering special hours
- * Priority: Special Hours > Regular Opening Hours > Manual Toggle
+ * Priority: Manual Override > Special Hours > Regular Opening Hours
  */
 export function isStoreOpenWithSpecialHours(
   merchant: ExtendedMerchantStatus
-): { isOpen: boolean; reason?: string; specialHourName?: string } {
-  // Priority 1: Manual override - if explicitly closed
-  if (merchant.isOpen === false) {
-    return { isOpen: false, reason: 'Temporarily Closed' };
+): { isOpen: boolean; reason?: string; specialHourName?: string; isManualOverride?: boolean } {
+  // Priority 1: Manual override - use isOpen value directly
+  if (merchant.isManualOverride === true) {
+    const isOpen = merchant.isOpen ?? true;
+    const scheduledStatus = isStoreOpenBySchedule(merchant);
+    
+    if (isOpen && !scheduledStatus) {
+      return { isOpen: true, reason: 'Manually Open', isManualOverride: true };
+    }
+    if (!isOpen && scheduledStatus) {
+      return { isOpen: false, reason: 'Manually Closed', isManualOverride: true };
+    }
+    return { isOpen, isManualOverride: true };
   }
 
   const { dayOfWeek, currentTime } = getCurrentTimeInTimezone(merchant.timezone);
@@ -397,8 +458,8 @@ export function isStoreOpenWithSpecialHours(
     }
   }
 
-  // Default: use manual toggle
-  return { isOpen: merchant.isOpen ?? true };
+  // Default: open
+  return { isOpen: true };
 }
 
 /**

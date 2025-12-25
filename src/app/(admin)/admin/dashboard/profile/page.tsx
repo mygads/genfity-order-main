@@ -325,10 +325,12 @@ export default function ProfilePage() {
                 <input
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
+                  disabled
+                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-gray-500 dark:border-gray-800 dark:bg-gray-900/50 dark:text-gray-400 cursor-not-allowed"
                 />
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Email cannot be changed as it is your primary identifier
+                </p>
               </div>
 
               {/* Phone */}

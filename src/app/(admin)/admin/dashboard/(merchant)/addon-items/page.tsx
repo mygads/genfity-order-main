@@ -12,6 +12,7 @@ import { useToast } from "@/context/ToastContext";
 import CreateOptionModal from "@/components/common/CreateOptionModal";
 import DuplicateAddonItemModal from "@/components/modals/DuplicateAddonItemModal";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { getCurrencySymbol } from "@/lib/utils/format";
 
 interface AddonCategory {
   id: string;
@@ -503,6 +504,7 @@ export default function AddonItemsPage() {
         originalFormData={originalFormData}
         categories={categories}
         submitting={submitting}
+        currencySymbol={getCurrencySymbol(merchant.currency)}
         onSubmit={handleSubmit}
         onChange={handleChange}
         onCancel={() => {
