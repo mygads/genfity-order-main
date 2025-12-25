@@ -2,7 +2,7 @@
 import StoreToggleButton from './StoreToggleButton';
 import Link from 'next/link';
 import Image from 'next/image';
-import { isStoreEffectivelyOpen, isStoreOpenBySchedule, type OpeningHour } from '@/lib/utils/storeStatus';
+import { isStoreEffectivelyOpen, type OpeningHour } from '@/lib/utils/storeStatus';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 
 type Merchant = {
@@ -151,38 +151,9 @@ export default function MerchantOwnerDashboard({
     openingHours: merchant.openingHours,
     timezone: merchant.timezone,
   });
-  
-  const scheduledOpen = isStoreOpenBySchedule({
-    openingHours: merchant.openingHours,
-    timezone: merchant.timezone,
-  });
 
   return (
     <div className="space-y-6">
-      {/* Manual Override Notification Banner */}
-      {merchant.isManualOverride && (
-        <div className="rounded-xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 p-4 dark:border-amber-800 dark:from-amber-900/20 dark:to-orange-900/20">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/50">
-              <svg className="h-5 w-5 text-amber-600 dark:text-amber-400" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="flex-1">
-              <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-300">
-                Manual Mode Active
-              </h4>
-              <p className="text-sm text-amber-700 dark:text-amber-400">
-                {merchant.isOpen 
-                  ? 'Store is manually opened. Opening hours schedule is being ignored.'
-                  : 'Store is manually closed. Opening hours schedule is being ignored.'
-                }
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Merchant Header with Quick Actions */}
       <div className="rounded-2xl bg-gradient-to-r from-orange-500 via-orange-600 to-amber-500 p-6 shadow-xl shadow-orange-500/20">
         <div className="flex items-center justify-between">

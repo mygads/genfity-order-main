@@ -12,6 +12,7 @@ interface MerchantData {
   logoUrl: string | null;
   isActive: boolean;
   isOpen: boolean;
+  isManualOverride: boolean;
   openingHours: OpeningHour[];
   timezone?: string;
 }
@@ -63,6 +64,7 @@ const MerchantBanner: React.FC<MerchantBannerProps> = ({ isExpanded }) => {
         // Calculate effective open status using unified utility
         const effectivelyOpen = isStoreEffectivelyOpen({
           isOpen: merchantData.isOpen,
+          isManualOverride: merchantData.isManualOverride,
           openingHours,
           timezone: merchantData.timezone,
         });
@@ -74,6 +76,7 @@ const MerchantBanner: React.FC<MerchantBannerProps> = ({ isExpanded }) => {
           logoUrl: merchantData.logoUrl,
           isActive: merchantData.isActive,
           isOpen: effectivelyOpen,
+          isManualOverride: merchantData.isManualOverride ?? false,
           openingHours,
           timezone: merchantData.timezone,
         });
@@ -144,7 +147,7 @@ const MerchantBanner: React.FC<MerchantBannerProps> = ({ isExpanded }) => {
         borderColor: "border-success-200 dark:border-success-800",
         dotColor: "bg-success-500",
         ringColor: "ring-success-500/20",
-        text: "Open Now",
+        text: merchant.isManualOverride ? "Open (Manual)" : "Open Now",
       };
     }
     
@@ -154,7 +157,7 @@ const MerchantBanner: React.FC<MerchantBannerProps> = ({ isExpanded }) => {
       borderColor: "border-red-200 dark:border-red-800",
       dotColor: "bg-red-500",
       ringColor: "ring-red-500/20",
-      text: "Closed",
+      text: merchant.isManualOverride ? "Closed (Manual)" : "Closed",
     };
   };
 

@@ -30,7 +30,7 @@ export default function StoreToggleButton({
   merchantId: _merchantId, 
   onStatusChange 
 }: StoreToggleButtonProps) {
-  const [isOpen, setIsOpen] = useState(initialIsOpen);
+  const [_isOpen, setIsOpen] = useState(initialIsOpen);
   const [isManualOverride, setIsManualOverride] = useState(initialIsManualOverride);
   const [storeEffectivelyOpen, setStoreEffectivelyOpen] = useState(effectivelyOpen);
   const [isToggling, setIsToggling] = useState(false);

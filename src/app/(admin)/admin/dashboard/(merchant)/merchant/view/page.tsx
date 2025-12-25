@@ -23,6 +23,7 @@ interface MerchantData {
   bannerUrl: string | null;
   isActive: boolean;
   isOpen: boolean;
+  isManualOverride: boolean;
   address: string;
   email: string;
   phone: string;
@@ -141,6 +142,7 @@ export default function ViewMerchantPage() {
           bannerUrl: merchantData.bannerUrl,
           isActive: merchantData.isActive,
           isOpen: merchantData.isOpen ?? true,
+          isManualOverride: merchantData.isManualOverride ?? false,
           address: merchantData.address,
           email: merchantData.email,
           phone: merchantData.phone,
@@ -177,23 +179,54 @@ export default function ViewMerchantPage() {
       const token = localStorage.getItem("accessToken");
       if (!token) return;
 
-      const response = await fetch("/api/merchant/toggle-open", {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          isOpen: !merchant.isOpen,
-        }),
+      // Calculate effective status to determine action
+      const effectivelyOpen = isStoreEffectivelyOpen({
+        isOpen: merchant.isOpen,
+        isManualOverride: merchant.isManualOverride,
+        openingHours: merchant.openingHours.map(h => ({
+          dayOfWeek: h.dayOfWeek,
+          openTime: h.openTime,
+          closeTime: h.closeTime,
+          isClosed: h.isClosed,
+        })),
+        timezone: merchant.timezone,
       });
 
-      if (response.ok) {
-        // Refresh merchant details
-        await fetchMerchantDetails();
+      // If currently in manual mode, switch to auto
+      if (merchant.isManualOverride) {
+        const response = await fetch("/api/merchant/toggle-open", {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            isManualOverride: false,
+          }),
+        });
 
-        // Notify other components (e.g., MerchantBanner) to refresh
-        window.dispatchEvent(new Event('merchantStatusUpdated'));
+        if (response.ok) {
+          await fetchMerchantDetails();
+          window.dispatchEvent(new Event('merchantStatusUpdated'));
+        }
+      } else {
+        // Auto mode - toggle to manual with opposite of effective status
+        const response = await fetch("/api/merchant/toggle-open", {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            isOpen: !effectivelyOpen,
+            isManualOverride: true,
+          }),
+        });
+
+        if (response.ok) {
+          await fetchMerchantDetails();
+          window.dispatchEvent(new Event('merchantStatusUpdated'));
+        }
       }
     } catch (error) {
       console.error("Failed to toggle store open status:", error);
@@ -299,6 +332,7 @@ export default function ViewMerchantPage() {
                 (() => {
                   const effectivelyOpen = isStoreEffectivelyOpen({
                     isOpen: merchant.isOpen,
+                    isManualOverride: merchant.isManualOverride,
                     openingHours: merchant.openingHours.map(h => ({
                       dayOfWeek: h.dayOfWeek,
                       openTime: h.openTime,
@@ -311,11 +345,13 @@ export default function ViewMerchantPage() {
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-success-100 px-3 py-1.5 text-xs font-medium text-success-700 dark:bg-success-900/20 dark:text-success-400">
                       <div className="h-2 w-2 rounded-full bg-success-500 animate-pulse"></div>
                       {t("admin.merchant.storeOpen")}
+                      {merchant.isManualOverride && <span className="ml-1 opacity-70">(Manual)</span>}
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1.5 text-xs font-medium text-red-700 dark:bg-red-900/20 dark:text-red-400">
                       <div className="h-2 w-2 rounded-full bg-red-500"></div>
                       {t("admin.merchant.storeClosed")}
+                      {merchant.isManualOverride && <span className="ml-1 opacity-70">(Manual)</span>}
                     </span>
                   );
                 })()
@@ -347,9 +383,22 @@ export default function ViewMerchantPage() {
                 <button
                   onClick={toggleStoreOpen}
                   disabled={isTogglingOpen || !merchant.isActive}
-                  className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-white transition-colors ${merchant.isOpen
-                    ? 'bg-orange-500 hover:bg-orange-600'
-                    : 'bg-green-500 hover:bg-green-600'
+                  className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-white transition-colors ${
+                    merchant.isManualOverride
+                      ? 'bg-blue-500 hover:bg-blue-600'
+                      : isStoreEffectivelyOpen({
+                          isOpen: merchant.isOpen,
+                          isManualOverride: merchant.isManualOverride,
+                          openingHours: merchant.openingHours.map(h => ({
+                            dayOfWeek: h.dayOfWeek,
+                            openTime: h.openTime,
+                            closeTime: h.closeTime,
+                            isClosed: h.isClosed,
+                          })),
+                          timezone: merchant.timezone,
+                        })
+                        ? 'bg-orange-500 hover:bg-orange-600'
+                        : 'bg-green-500 hover:bg-green-600'
                     } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                   {isTogglingOpen ? (
@@ -360,7 +409,24 @@ export default function ViewMerchantPage() {
                       </svg>
                       {t("admin.merchant.processing")}
                     </>
-                  ) : merchant.isOpen ? (
+                  ) : merchant.isManualOverride ? (
+                    <>
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Switch to Auto
+                    </>
+                  ) : isStoreEffectivelyOpen({
+                      isOpen: merchant.isOpen,
+                      isManualOverride: merchant.isManualOverride,
+                      openingHours: merchant.openingHours.map(h => ({
+                        dayOfWeek: h.dayOfWeek,
+                        openTime: h.openTime,
+                        closeTime: h.closeTime,
+                        isClosed: h.isClosed,
+                      })),
+                      timezone: merchant.timezone,
+                    }) ? (
                     <>
                       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
