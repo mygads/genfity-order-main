@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { useToast } from "@/context/ToastContext";
-import { FaDownload, FaTrash, FaEdit, FaCheck, FaTimes, FaArrowLeft, FaSave, FaFileExcel } from "react-icons/fa";
+import { FaDownload, FaTrash, FaEdit, FaCheck, FaTimes, FaArrowLeft, FaSave, FaFileExcel, FaChevronDown, FaChevronUp, FaExclamationCircle } from "react-icons/fa";
 import * as XLSX from "xlsx";
 
 interface MenuUploadItem {
@@ -13,6 +13,7 @@ interface MenuUploadItem {
   description: string;
   price: number;
   categoryNames: string; // Comma-separated category names
+  selectedCategoryIds: string[]; // For multi-select
   isActive: boolean;
   isSpicy: boolean;
   isBestSeller: boolean;
@@ -24,6 +25,7 @@ interface MenuUploadItem {
   autoResetStock: boolean;
   errors: string[];
   isEditing: boolean;
+  isExpanded: boolean; // For card expansion
 }
 
 interface Category {
@@ -34,12 +36,12 @@ interface Category {
 /**
  * Menu Bulk Upload Page
  * 
- * Features:
- * 1. Download Excel template with correct columns
- * 2. Upload filled Excel file
- * 3. Preview data with validation
- * 4. Edit items inline before saving
- * 5. Bulk save to database
+ * Redesigned for better UX:
+ * - Clean, professional card-based design
+ * - Category select dropdown instead of text input
+ * - Responsive table with horizontal scroll
+ * - Better validation handling
+ * - Expandable rows for editing
  */
 export default function MenuBulkUploadPage() {
   const router = useRouter();
@@ -77,7 +79,7 @@ export default function MenuBulkUploadPage() {
   }, []);
 
   // Fetch categories on mount
-  React.useEffect(() => {
+  useEffect(() => {
     fetchCategories();
   }, [fetchCategories]);
 
@@ -165,36 +167,46 @@ export default function MenuBulkUploadPage() {
   };
 
   /**
-   * Validate a single menu item
+   * Validate a single menu item - Only name and price are required
    */
   const validateItem = (item: MenuUploadItem): string[] => {
     const errors: string[] = [];
 
+    // Required: Name
     if (!item.name || item.name.trim() === "") {
       errors.push("Name is required");
     }
 
+    // Required: Price (must be valid number >= 0)
     if (item.price === null || item.price === undefined || isNaN(item.price) || item.price < 0) {
       errors.push("Valid price is required (must be >= 0)");
     }
 
-    if (item.trackStock && (item.stockQty === null || item.stockQty < 0)) {
-      errors.push("Stock quantity is required when tracking stock");
+    // Optional: Stock validation only when trackStock is enabled
+    if (item.trackStock && item.stockQty !== null && item.stockQty < 0) {
+      errors.push("Stock quantity cannot be negative");
     }
 
-    // Validate category names exist
-    if (item.categoryNames) {
-      const categoryNameList = item.categoryNames.split(",").map(c => c.trim()).filter(c => c);
-      const validCategoryNames = categories.map(c => c.name.toLowerCase());
-      
-      for (const catName of categoryNameList) {
-        if (!validCategoryNames.includes(catName.toLowerCase())) {
-          errors.push(`Category "${catName}" not found`);
-        }
-      }
-    }
+    // Optional: Category validation - warn if category name doesn't exist (not an error)
+    // We no longer block on category not found - will just skip that category
 
     return errors;
+  };
+
+  /**
+   * Map category names to IDs (helper function)
+   */
+  const mapCategoryNamesToIds = (categoryNames: string): string[] => {
+    if (!categoryNames) return [];
+    const nameList = categoryNames.split(",").map(c => c.trim().toLowerCase()).filter(c => c);
+    const ids: string[] = [];
+    for (const name of nameList) {
+      const cat = categories.find(c => c.name.toLowerCase() === name);
+      if (cat) {
+        ids.push(cat.id);
+      }
+    }
+    return ids;
   };
 
   /**
@@ -234,12 +246,14 @@ export default function MenuBulkUploadPage() {
       // Parse and validate data
       const parsedItems: MenuUploadItem[] = jsonData.map((row: unknown, index: number) => {
         const r = row as Record<string, unknown>;
+        const categoryNames = String(r["Categories (comma-separated)"] || r["Categories"] || "").trim();
         const item: MenuUploadItem = {
           rowIndex: index + 2, // Excel rows start from 1, plus header row
           name: String(r["Name *"] || r["Name"] || "").trim(),
           description: String(r["Description"] || "").trim(),
           price: parseNumber(r["Price *"] || r["Price"]) || 0,
-          categoryNames: String(r["Categories (comma-separated)"] || r["Categories"] || "").trim(),
+          categoryNames,
+          selectedCategoryIds: [], // Will be populated after validation
           isActive: parseBoolean(r["Is Active"]),
           isSpicy: parseBoolean(r["Is Spicy"]),
           isBestSeller: parseBoolean(r["Is Best Seller"]),
@@ -251,8 +265,12 @@ export default function MenuBulkUploadPage() {
           autoResetStock: parseBoolean(r["Auto Reset Stock"]),
           errors: [],
           isEditing: false,
+          isExpanded: false,
         };
 
+        // Map category names to IDs
+        item.selectedCategoryIds = mapCategoryNamesToIds(item.categoryNames);
+        
         // Validate item
         item.errors = validateItem(item);
         return item;
@@ -309,7 +327,16 @@ export default function MenuBulkUploadPage() {
    */
   const toggleEdit = (index: number) => {
     setItems(prev => prev.map((item, i) => 
-      i === index ? { ...item, isEditing: !item.isEditing } : item
+      i === index ? { ...item, isEditing: !item.isEditing, isExpanded: !item.isEditing ? true : item.isExpanded } : item
+    ));
+  };
+
+  /**
+   * Toggle expanded view for an item
+   */
+  const toggleExpanded = (index: number) => {
+    setItems(prev => prev.map((item, i) => 
+      i === index ? { ...item, isExpanded: !item.isExpanded } : item
     ));
   };
 
@@ -321,6 +348,39 @@ export default function MenuBulkUploadPage() {
       if (i !== index) return item;
       
       const updated = { ...item, [field]: value };
+      
+      // If updating selectedCategoryIds, also update categoryNames for display
+      if (field === "selectedCategoryIds" && Array.isArray(value)) {
+        const names = (value as string[])
+          .map(id => categories.find(c => c.id === id)?.name)
+          .filter(Boolean)
+          .join(", ");
+        updated.categoryNames = names;
+      }
+      
+      updated.errors = validateItem(updated);
+      return updated;
+    }));
+  };
+
+  /**
+   * Toggle category selection for an item
+   */
+  const toggleCategory = (index: number, categoryId: string) => {
+    setItems(prev => prev.map((item, i) => {
+      if (i !== index) return item;
+      
+      const currentIds = item.selectedCategoryIds || [];
+      const newIds = currentIds.includes(categoryId)
+        ? currentIds.filter(id => id !== categoryId)
+        : [...currentIds, categoryId];
+      
+      const names = newIds
+        .map(id => categories.find(c => c.id === id)?.name)
+        .filter(Boolean)
+        .join(", ");
+      
+      const updated = { ...item, selectedCategoryIds: newIds, categoryNames: names };
       updated.errors = validateItem(updated);
       return updated;
     }));
@@ -358,22 +418,16 @@ export default function MenuBulkUploadPage() {
         return;
       }
 
-      // Map category names to IDs
+      // Map category names to IDs (use selectedCategoryIds if available, fallback to categoryNames)
       const itemsWithCategoryIds = items.map(item => {
-        const categoryIds: string[] = [];
-        if (item.categoryNames) {
-          const categoryNameList = item.categoryNames.split(",").map(c => c.trim().toLowerCase()).filter(c => c);
-          for (const catName of categoryNameList) {
-            const category = categories.find(c => c.name.toLowerCase() === catName);
-            if (category) {
-              categoryIds.push(category.id);
-            }
-          }
-        }
+        // Use selectedCategoryIds directly if available, otherwise map from names
+        const categoryIds = item.selectedCategoryIds.length > 0 
+          ? item.selectedCategoryIds 
+          : mapCategoryNamesToIds(item.categoryNames);
 
         return {
           name: item.name,
-          description: item.description,
+          description: item.description || undefined,
           price: item.price,
           categoryIds,
           isActive: item.isActive,
@@ -382,9 +436,9 @@ export default function MenuBulkUploadPage() {
           isSignature: item.isSignature,
           isRecommended: item.isRecommended,
           trackStock: item.trackStock,
-          stockQty: item.stockQty,
-          dailyStockTemplate: item.dailyStockTemplate,
-          autoResetStock: item.autoResetStock,
+          stockQty: item.trackStock ? item.stockQty : null,
+          dailyStockTemplate: item.trackStock ? item.dailyStockTemplate : null,
+          autoResetStock: item.trackStock ? item.autoResetStock : false,
         };
       });
 
@@ -612,124 +666,294 @@ export default function MenuBulkUploadPage() {
             </div>
 
             {/* Items Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200 dark:border-gray-700">
-                    <th className="pb-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Row</th>
-                    <th className="pb-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Name</th>
-                    <th className="pb-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Price</th>
-                    <th className="pb-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Categories</th>
-                    <th className="pb-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Flags</th>
-                    <th className="pb-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Stock</th>
-                    <th className="pb-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Status</th>
-                    <th className="pb-3 text-right text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                  {items.map((item, index) => (
-                    <tr key={index} className={item.errors.length > 0 ? "bg-red-50 dark:bg-red-900/10" : ""}>
-                      <td className="py-3 text-sm text-gray-600 dark:text-gray-400">
-                        {item.rowIndex}
-                      </td>
-                      <td className="py-3">
+            <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700">
+              {/* Table Header */}
+              <div className="hidden lg:grid lg:grid-cols-12 gap-4 bg-gray-50 dark:bg-gray-800/50 px-4 py-3 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                <div className="col-span-1">Row</div>
+                <div className="col-span-3">Name</div>
+                <div className="col-span-2">Price</div>
+                <div className="col-span-3">Categories</div>
+                <div className="col-span-2">Status</div>
+                <div className="col-span-1 text-right">Actions</div>
+              </div>
+              
+              {/* Table Body */}
+              <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                {items.map((item, index) => (
+                  <div key={index} className={`${item.errors.length > 0 ? "bg-red-50/50 dark:bg-red-900/5" : ""}`}>
+                    {/* Main Row */}
+                    <div className="grid grid-cols-12 gap-4 px-4 py-4 items-center">
+                      {/* Row Number */}
+                      <div className="col-span-2 lg:col-span-1 text-sm text-gray-500 dark:text-gray-400">
+                        #{item.rowIndex}
+                      </div>
+                      
+                      {/* Name */}
+                      <div className="col-span-10 lg:col-span-3">
                         {item.isEditing ? (
                           <input
                             type="text"
                             value={item.name}
                             onChange={(e) => updateItem(index, "name", e.target.value)}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                            className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                            placeholder="Menu name"
                           />
                         ) : (
                           <span className="text-sm font-medium text-gray-900 dark:text-white">{item.name || "-"}</span>
                         )}
-                      </td>
-                      <td className="py-3">
+                      </div>
+                      
+                      {/* Price */}
+                      <div className="col-span-4 lg:col-span-2">
                         {item.isEditing ? (
                           <input
                             type="number"
                             value={item.price}
                             onChange={(e) => updateItem(index, "price", Number(e.target.value))}
-                            className="w-24 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                            className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                            min="0"
+                            step="0.01"
                           />
                         ) : (
                           <span className="text-sm text-gray-600 dark:text-gray-400">{item.price?.toLocaleString() || "0"}</span>
                         )}
-                      </td>
-                      <td className="py-3">
-                        {item.isEditing ? (
-                          <input
-                            type="text"
-                            value={item.categoryNames}
-                            onChange={(e) => updateItem(index, "categoryNames", e.target.value)}
-                            placeholder="Category1, Category2"
-                            className="w-40 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                          />
-                        ) : (
-                          <span className="text-sm text-gray-600 dark:text-gray-400">{item.categoryNames || "-"}</span>
-                        )}
-                      </td>
-                      <td className="py-3">
+                      </div>
+                      
+                      {/* Categories */}
+                      <div className="col-span-4 lg:col-span-3">
                         <div className="flex flex-wrap gap-1">
-                          {item.isSpicy && <span className="rounded bg-red-100 px-1.5 py-0.5 text-xs text-red-700 dark:bg-red-900/30 dark:text-red-400">🌶️</span>}
-                          {item.isBestSeller && <span className="rounded bg-yellow-100 px-1.5 py-0.5 text-xs text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">⭐</span>}
-                          {item.isSignature && <span className="rounded bg-purple-100 px-1.5 py-0.5 text-xs text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">✨</span>}
-                          {item.isRecommended && <span className="rounded bg-blue-100 px-1.5 py-0.5 text-xs text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">👍</span>}
-                        </div>
-                      </td>
-                      <td className="py-3">
-                        <span className="text-sm text-gray-600 dark:text-gray-400">
-                          {item.trackStock ? `${item.stockQty ?? 0}` : "-"}
-                        </span>
-                      </td>
-                      <td className="py-3">
-                        {item.errors.length > 0 ? (
-                          <div className="group relative">
-                            <span className="flex items-center gap-1 text-xs text-red-600">
-                              <FaTimes className="h-3 w-3" />
-                              {item.errors.length} error{item.errors.length > 1 ? "s" : ""}
+                          {item.selectedCategoryIds.length > 0 ? (
+                            item.selectedCategoryIds.slice(0, 2).map(catId => {
+                              const cat = categories.find(c => c.id === catId);
+                              return cat ? (
+                                <span key={catId} className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+                                  {cat.name}
+                                </span>
+                              ) : null;
+                            })
+                          ) : item.categoryNames ? (
+                            <span className="text-sm text-gray-500 dark:text-gray-400">{item.categoryNames}</span>
+                          ) : (
+                            <span className="text-sm text-gray-400 dark:text-gray-500">No category</span>
+                          )}
+                          {item.selectedCategoryIds.length > 2 && (
+                            <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500 dark:bg-gray-700 dark:text-gray-400">
+                              +{item.selectedCategoryIds.length - 2}
                             </span>
-                            <div className="absolute left-0 top-full z-10 mt-1 hidden w-64 rounded-lg bg-red-600 p-2 text-xs text-white shadow-lg group-hover:block">
-                              <ul className="list-disc pl-4 space-y-1">
-                                {item.errors.map((err, i) => (
-                                  <li key={i}>{err}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Status */}
+                      <div className="col-span-2 lg:col-span-2">
+                        {item.errors.length > 0 ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-red-600 dark:text-red-400">
+                            <FaExclamationCircle className="h-3 w-3" />
+                            {item.errors.length} error{item.errors.length > 1 ? "s" : ""}
+                          </span>
                         ) : (
-                          <span className="flex items-center gap-1 text-xs text-green-600">
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600 dark:text-green-400">
                             <FaCheck className="h-3 w-3" />
                             Valid
                           </span>
                         )}
-                      </td>
-                      <td className="py-3 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => toggleEdit(index)}
-                            className={`rounded-lg p-2 text-sm ${
-                              item.isEditing
-                                ? "bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400"
-                                : "text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-300"
-                            }`}
-                            title={item.isEditing ? "Done editing" : "Edit"}
-                          >
-                            {item.isEditing ? <FaCheck className="h-4 w-4" /> : <FaEdit className="h-4 w-4" />}
-                          </button>
-                          <button
-                            onClick={() => removeItem(index)}
-                            className="rounded-lg p-2 text-sm text-gray-500 hover:bg-red-50 hover:text-red-600 dark:text-gray-400 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-                            title="Remove"
-                          >
-                            <FaTrash className="h-4 w-4" />
-                          </button>
+                      </div>
+                      
+                      {/* Actions */}
+                      <div className="col-span-2 lg:col-span-1 flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => toggleExpanded(index)}
+                          className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+                          title={item.isExpanded ? "Collapse" : "Expand"}
+                        >
+                          {item.isExpanded ? <FaChevronUp className="h-3 w-3" /> : <FaChevronDown className="h-3 w-3" />}
+                        </button>
+                        <button
+                          onClick={() => toggleEdit(index)}
+                          className={`rounded-lg p-2 ${
+                            item.isEditing
+                              ? "bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400"
+                              : "text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+                          }`}
+                          title={item.isEditing ? "Done" : "Edit"}
+                        >
+                          {item.isEditing ? <FaCheck className="h-3 w-3" /> : <FaEdit className="h-3 w-3" />}
+                        </button>
+                        <button
+                          onClick={() => removeItem(index)}
+                          className="rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+                          title="Remove"
+                        >
+                          <FaTrash className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {/* Expanded Details */}
+                    {(item.isExpanded || item.isEditing) && (
+                      <div className="border-t border-gray-100 bg-gray-50/50 px-4 py-4 dark:border-gray-800 dark:bg-gray-800/30">
+                        {/* Error Messages */}
+                        {item.errors.length > 0 && (
+                          <div className="mb-4 rounded-lg bg-red-50 p-3 dark:bg-red-900/20">
+                            <p className="text-sm font-medium text-red-700 dark:text-red-400">Please fix the following errors:</p>
+                            <ul className="mt-1 list-inside list-disc text-sm text-red-600 dark:text-red-300">
+                              {item.errors.map((err, i) => (
+                                <li key={i}>{err}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                          {/* Description */}
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Description</label>
+                            {item.isEditing ? (
+                              <textarea
+                                value={item.description}
+                                onChange={(e) => updateItem(index, "description", e.target.value)}
+                                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                                rows={2}
+                                placeholder="Optional description"
+                              />
+                            ) : (
+                              <p className="text-sm text-gray-600 dark:text-gray-400">{item.description || "-"}</p>
+                            )}
+                          </div>
+                          
+                          {/* Categories Selection */}
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Categories</label>
+                            {item.isEditing ? (
+                              <div className="rounded-lg border border-gray-200 bg-white p-2 dark:border-gray-600 dark:bg-gray-800">
+                                <div className="max-h-32 overflow-y-auto space-y-1">
+                                  {categories.length === 0 ? (
+                                    <p className="text-sm text-gray-400 py-1">No categories available</p>
+                                  ) : (
+                                    categories.map(cat => (
+                                      <label key={cat.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 rounded px-2 py-1">
+                                        <input
+                                          type="checkbox"
+                                          checked={item.selectedCategoryIds.includes(cat.id)}
+                                          onChange={() => toggleCategory(index, cat.id)}
+                                          className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700"
+                                        />
+                                        <span className="text-sm text-gray-700 dark:text-gray-300">{cat.name}</span>
+                                      </label>
+                                    ))
+                                  )}
+                                </div>
+                              </div>
+                            ) : (
+                              <p className="text-sm text-gray-600 dark:text-gray-400">
+                                {item.selectedCategoryIds.length > 0 
+                                  ? item.selectedCategoryIds.map(id => categories.find(c => c.id === id)?.name).filter(Boolean).join(", ")
+                                  : item.categoryNames || "-"
+                                }
+                              </p>
+                            )}
+                          </div>
+                          
+                          {/* Flags */}
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Flags</label>
+                            {item.isEditing ? (
+                              <div className="space-y-2">
+                                {[
+                                  { key: "isActive", label: "Active" },
+                                  { key: "isSpicy", label: "Spicy" },
+                                  { key: "isBestSeller", label: "Best Seller" },
+                                  { key: "isSignature", label: "Signature" },
+                                  { key: "isRecommended", label: "Recommended" },
+                                ].map(flag => (
+                                  <label key={flag.key} className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={item[flag.key as keyof MenuUploadItem] as boolean}
+                                      onChange={(e) => updateItem(index, flag.key as keyof MenuUploadItem, e.target.checked)}
+                                      className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700"
+                                    />
+                                    <span className="text-sm text-gray-700 dark:text-gray-300">{flag.label}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="flex flex-wrap gap-2">
+                                {item.isActive && <span className="text-xs text-gray-600 dark:text-gray-400">Active</span>}
+                                {item.isSpicy && <span className="text-xs text-gray-600 dark:text-gray-400">• Spicy</span>}
+                                {item.isBestSeller && <span className="text-xs text-gray-600 dark:text-gray-400">• Best Seller</span>}
+                                {item.isSignature && <span className="text-xs text-gray-600 dark:text-gray-400">• Signature</span>}
+                                {item.isRecommended && <span className="text-xs text-gray-600 dark:text-gray-400">• Recommended</span>}
+                                {!item.isActive && !item.isSpicy && !item.isBestSeller && !item.isSignature && !item.isRecommended && (
+                                  <span className="text-xs text-gray-400">None</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Stock Settings */}
+                          <div className="lg:col-span-3">
+                            <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Stock Settings</label>
+                            {item.isEditing ? (
+                              <div className="flex flex-wrap items-center gap-4">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={item.trackStock}
+                                    onChange={(e) => updateItem(index, "trackStock", e.target.checked)}
+                                    className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700"
+                                  />
+                                  <span className="text-sm text-gray-700 dark:text-gray-300">Track Stock</span>
+                                </label>
+                                {item.trackStock && (
+                                  <>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-sm text-gray-500">Qty:</span>
+                                      <input
+                                        type="number"
+                                        value={item.stockQty ?? ""}
+                                        onChange={(e) => updateItem(index, "stockQty", e.target.value ? Number(e.target.value) : null)}
+                                        className="w-20 rounded-lg border border-gray-200 bg-white px-2 py-1 text-sm focus:border-primary-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                                        min="0"
+                                      />
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-sm text-gray-500">Daily Template:</span>
+                                      <input
+                                        type="number"
+                                        value={item.dailyStockTemplate ?? ""}
+                                        onChange={(e) => updateItem(index, "dailyStockTemplate", e.target.value ? Number(e.target.value) : null)}
+                                        className="w-20 rounded-lg border border-gray-200 bg-white px-2 py-1 text-sm focus:border-primary-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                                        min="0"
+                                      />
+                                    </div>
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                      <input
+                                        type="checkbox"
+                                        checked={item.autoResetStock}
+                                        onChange={(e) => updateItem(index, "autoResetStock", e.target.checked)}
+                                        className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700"
+                                      />
+                                      <span className="text-sm text-gray-700 dark:text-gray-300">Auto Reset</span>
+                                    </label>
+                                  </>
+                                )}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-gray-600 dark:text-gray-400">
+                                {item.trackStock 
+                                  ? `Stock: ${item.stockQty ?? 0} | Daily: ${item.dailyStockTemplate ?? "-"} | Auto Reset: ${item.autoResetStock ? "Yes" : "No"}`
+                                  : "Not tracking stock"
+                                }
+                              </p>
+                            )}
+                          </div>
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}

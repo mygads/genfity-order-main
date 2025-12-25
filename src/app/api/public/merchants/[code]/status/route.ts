@@ -51,6 +51,41 @@ export async function GET(
             dayOfWeek: 'asc',
           },
         },
+        // Per-day mode schedules
+        modeSchedules: {
+          where: { isActive: true },
+          select: {
+            id: true,
+            mode: true,
+            dayOfWeek: true,
+            startTime: true,
+            endTime: true,
+          },
+          orderBy: [
+            { mode: 'asc' },
+            { dayOfWeek: 'asc' },
+          ],
+        },
+        // Special hours for today
+        specialHours: {
+          select: {
+            id: true,
+            date: true,
+            name: true,
+            isClosed: true,
+            openTime: true,
+            closeTime: true,
+            isDineInEnabled: true,
+            isTakeawayEnabled: true,
+            dineInStartTime: true,
+            dineInEndTime: true,
+            takeawayStartTime: true,
+            takeawayEndTime: true,
+          },
+          orderBy: {
+            date: 'asc',
+          },
+        },
       },
     });
 
@@ -76,6 +111,24 @@ export async function GET(
       );
     }
 
+    // Get today's date in merchant timezone for special hours check
+    const tz = merchant.timezone || 'Australia/Sydney';
+    const now = new Date();
+    const todayFormatter = new Intl.DateTimeFormat('en-CA', {
+      timeZone: tz,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+    const todayStr = todayFormatter.format(now); // YYYY-MM-DD format
+
+    // Find special hours for today
+    const todaySpecialHour = merchant.specialHours.find((sh) => {
+      const shDate = new Date(sh.date);
+      const shDateStr = todayFormatter.format(shDate);
+      return shDateStr === todayStr;
+    });
+
     // Return only status-related data
     const statusData = {
       isOpen: merchant.isOpen,
@@ -89,6 +142,10 @@ export async function GET(
       takeawayScheduleStart: merchant.takeawayScheduleStart,
       takeawayScheduleEnd: merchant.takeawayScheduleEnd,
       openingHours: merchant.openingHours,
+      // Per-day mode schedules
+      modeSchedules: merchant.modeSchedules,
+      // Today's special hours (if any)
+      todaySpecialHour: todaySpecialHour || null,
       // Server timestamp for accurate time comparison
       serverTime: new Date().toISOString(),
     };

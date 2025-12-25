@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { FaCopy } from "react-icons/fa";
 import AddonItemFormModal from "@/components/addon-items/AddonItemFormModal";
 import AddonItemsTable from "@/components/addon-items/AddonItemsTable";
 import AddonItemsFilters from "@/components/addon-items/AddonItemsFilters";
@@ -9,6 +10,7 @@ import { AddonItemsPageSkeleton } from "@/components/common/SkeletonLoaders";
 import { useMerchant } from "@/context/MerchantContext";
 import { useToast } from "@/context/ToastContext";
 import CreateOptionModal from "@/components/common/CreateOptionModal";
+import DuplicateAddonItemModal from "@/components/modals/DuplicateAddonItemModal";
 
 interface AddonCategory {
   id: string;
@@ -55,6 +57,8 @@ export default function AddonItemsPage() {
 
   // Create option modal state
   const [showCreateOptionModal, setShowCreateOptionModal] = useState(false);
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [authToken, setAuthToken] = useState<string>("");
 
   const [items, setItems] = useState<AddonItem[]>([]);
   const [filteredItems, setFilteredItems] = useState<AddonItem[]>([]);
@@ -94,6 +98,7 @@ export default function AddonItemsPage() {
         router.push("/admin/login");
         return;
       }
+      setAuthToken(token);
 
       const [itemsResponse, categoriesResponse] = await Promise.all([
         fetch("/api/merchant/addon-items", {
@@ -381,15 +386,24 @@ export default function AddonItemsPage() {
                 Manage addon items with SELECT (single choice) or QTY (quantity input) types
               </p>
             </div>
-            <button
-              onClick={() => setShowCreateOptionModal(true)}
-              className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary-500 px-6 text-sm font-medium text-white hover:bg-primary-600 focus:outline-none focus:ring-3 focus:ring-primary-500/20"
-            >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Add Item
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDuplicateModal(true)}
+                className="inline-flex h-11 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                <FaCopy className="h-4 w-4" />
+                Duplicate
+              </button>
+              <button
+                onClick={() => setShowCreateOptionModal(true)}
+                className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary-500 px-6 text-sm font-medium text-white hover:bg-primary-600 focus:outline-none focus:ring-3 focus:ring-primary-500/20"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Add Item
+              </button>
+            </div>
           </div>
 
           {/* Filters Component */}
@@ -548,6 +562,31 @@ export default function AddonItemsPage() {
         bulkUploadLabel="Bulk Upload from Excel"
         onSingleCreate={() => setShowForm(true)}
         onBulkUpload={() => router.push('/admin/dashboard/addon-items/bulk-upload')}
+      />
+
+      {/* Duplicate Addon Item Modal */}
+      <DuplicateAddonItemModal
+        isOpen={showDuplicateModal}
+        onClose={() => setShowDuplicateModal(false)}
+        onSelect={(item) => {
+          // Auto-fill form with selected item's data
+          setFormData({
+            addonCategoryId: item.addonCategoryId,
+            name: item.name + " (Copy)",
+            description: item.description || "",
+            price: typeof item.price === "number" ? item.price.toString() : item.price,
+            inputType: item.inputType,
+            trackStock: item.trackStock,
+            stockQty: item.stockQty?.toString() || "",
+            dailyStockTemplate: item.dailyStockTemplate?.toString() || "",
+            autoResetStock: item.autoResetStock,
+          });
+          setEditingId(null);
+          setShowDuplicateModal(false);
+          setShowForm(true);
+        }}
+        token={authToken}
+        categories={categories}
       />
     </div>
   );

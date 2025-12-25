@@ -59,6 +59,8 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
         minutesUntilClose,
         openingHours: liveOpeningHours,
         isLoading: isStatusLoading,
+        todaySpecialHour,
+        specialHourName,
     } = useStoreStatus(merchantCode, {
         refreshInterval: 30000, // Refresh every 30 seconds
         revalidateOnFocus: true,
@@ -108,6 +110,23 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
 
     return (
         <>
+            {/* Special Hours Banner - Show when today has special hours */}
+            {todaySpecialHour && !todaySpecialHour.isClosed && specialHourName && (
+                <div className="bg-blue-500 text-white px-4 py-2 text-center text-sm font-medium">
+                    📅 Today: {specialHourName}
+                    {todaySpecialHour.openTime && todaySpecialHour.closeTime && (
+                        <span className="ml-1">({todaySpecialHour.openTime} - {todaySpecialHour.closeTime})</span>
+                    )}
+                </div>
+            )}
+
+            {/* Special Holiday Closed Banner */}
+            {todaySpecialHour?.isClosed && (
+                <div className="bg-red-500 text-white px-4 py-2 text-center text-sm font-medium">
+                    🚫 Closed Today{specialHourName ? `: ${specialHourName}` : ''}
+                </div>
+            )}
+
             {/* Store Closing Soon Warning Banner */}
             {storeOpen && minutesUntilClose !== null && minutesUntilClose <= 30 && minutesUntilClose > 0 && (
                 <div className="bg-amber-500 text-white px-4 py-2 text-center text-sm font-medium">

@@ -87,6 +87,15 @@ interface MerchantWithConfig {
   name: string;
   isActive: boolean;
   isOpen: boolean;
+  timezone?: string;
+  // Mode availability
+  isDineInEnabled?: boolean;
+  isTakeawayEnabled?: boolean;
+  dineInScheduleStart?: string | null;
+  dineInScheduleEnd?: string | null;
+  takeawayScheduleStart?: string | null;
+  takeawayScheduleEnd?: string | null;
+  // Fee config
   serviceChargeRate?: number | null;
   packagingFeeAmount?: number | null;
   taxRate?: number | null;
@@ -101,6 +110,71 @@ interface MerchantWithConfig {
 
 interface PrismaError {
   code?: string;
+}
+
+// ===== MODE AVAILABILITY HELPER =====
+
+/**
+ * Check if an order mode is currently available
+ * Validates against merchant settings and time schedules
+ * 
+ * @param orderType - 'DINE_IN' or 'TAKEAWAY'
+ * @param merchant - Merchant configuration
+ * @returns { available: boolean, reason?: string }
+ */
+function checkModeAvailability(
+  orderType: 'DINE_IN' | 'TAKEAWAY',
+  merchant: MerchantWithConfig
+): { available: boolean; reason?: string } {
+  // Check if store is open
+  if (!merchant.isOpen) {
+    return { available: false, reason: 'Store is currently closed' };
+  }
+
+  // Get current time in merchant's timezone
+  const tz = merchant.timezone || 'Australia/Sydney';
+  const now = new Date();
+  const timeFormatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+  const currentTime = timeFormatter.format(now);
+
+  if (orderType === 'DINE_IN') {
+    // Check if Dine In is enabled
+    if (merchant.isDineInEnabled === false) {
+      return { available: false, reason: 'Dine In is currently not available' };
+    }
+
+    // Check schedule
+    if (merchant.dineInScheduleStart && merchant.dineInScheduleEnd) {
+      if (currentTime < merchant.dineInScheduleStart || currentTime > merchant.dineInScheduleEnd) {
+        return {
+          available: false,
+          reason: `Dine In is only available between ${merchant.dineInScheduleStart} - ${merchant.dineInScheduleEnd}`,
+        };
+      }
+    }
+  } else if (orderType === 'TAKEAWAY') {
+    // Check if Takeaway is enabled
+    if (merchant.isTakeawayEnabled === false) {
+      return { available: false, reason: 'Takeaway is currently not available' };
+    }
+
+    // Check schedule
+    if (merchant.takeawayScheduleStart && merchant.takeawayScheduleEnd) {
+      if (currentTime < merchant.takeawayScheduleStart || currentTime > merchant.takeawayScheduleEnd) {
+        return {
+          available: false,
+          reason: `Takeaway is only available between ${merchant.takeawayScheduleStart} - ${merchant.takeawayScheduleEnd}`,
+        };
+      }
+    }
+  }
+
+  return { available: true };
 }
 
 /**
@@ -167,6 +241,26 @@ export async function POST(req: NextRequest) {
           success: false,
           error: 'VALIDATION_ERROR',
           message: 'Valid order type is required (DINE_IN or TAKEAWAY)',
+          statusCode: 400,
+        },
+        { status: 400 }
+      );
+    }
+
+    // ========================================
+    // VALIDATE MODE AVAILABILITY (Real-time check)
+    // ========================================
+    const isModeAvailable = checkModeAvailability(
+      body.orderType,
+      merchant,
+    );
+
+    if (!isModeAvailable.available) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'MODE_UNAVAILABLE',
+          message: isModeAvailable.reason || 'This order mode is currently unavailable',
           statusCode: 400,
         },
         { status: 400 }

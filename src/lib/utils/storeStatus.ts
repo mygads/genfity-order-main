@@ -31,6 +31,42 @@ export interface ModeSchedule {
   scheduleEnd?: string | null;    // e.g., "22:00"
 }
 
+// Per-day mode schedule from database
+export interface PerDayModeSchedule {
+  mode: 'DINE_IN' | 'TAKEAWAY';
+  dayOfWeek: number;  // 0=Sunday, 6=Saturday
+  startTime: string;  // HH:MM format
+  endTime: string;    // HH:MM format
+}
+
+// Special hours for a specific date
+export interface SpecialHour {
+  date: string | Date;
+  name?: string | null;
+  isClosed: boolean;
+  openTime?: string | null;
+  closeTime?: string | null;
+  isDineInEnabled?: boolean | null;
+  isTakeawayEnabled?: boolean | null;
+  dineInStartTime?: string | null;
+  dineInEndTime?: string | null;
+  takeawayStartTime?: string | null;
+  takeawayEndTime?: string | null;
+}
+
+// Extended merchant status with new features
+export interface ExtendedMerchantStatus extends MerchantStatus {
+  modeSchedules?: PerDayModeSchedule[];
+  todaySpecialHour?: SpecialHour | null;
+  // Global mode settings
+  isDineInEnabled?: boolean;
+  isTakeawayEnabled?: boolean;
+  dineInScheduleStart?: string | null;
+  dineInScheduleEnd?: string | null;
+  takeawayScheduleStart?: string | null;
+  takeawayScheduleEnd?: string | null;
+}
+
 /**
  * Get current time in merchant's timezone
  * 
@@ -294,5 +330,213 @@ export function getNextOpeningTime(
   }
 
   return null;
+}
+
+// ============================================
+// EXTENDED FUNCTIONS FOR PER-DAY SCHEDULES & SPECIAL HOURS
+// ============================================
+
+/**
+ * Check if store is open considering special hours
+ * Priority: Special Hours > Regular Opening Hours > Manual Toggle
+ */
+export function isStoreOpenWithSpecialHours(
+  merchant: ExtendedMerchantStatus
+): { isOpen: boolean; reason?: string; specialHourName?: string } {
+  // Priority 1: Manual override - if explicitly closed
+  if (merchant.isOpen === false) {
+    return { isOpen: false, reason: 'Temporarily Closed' };
+  }
+
+  const { dayOfWeek, currentTime } = getCurrentTimeInTimezone(merchant.timezone);
+
+  // Priority 2: Check special hours for today
+  if (merchant.todaySpecialHour) {
+    const special = merchant.todaySpecialHour;
+    
+    // Completely closed for the day
+    if (special.isClosed) {
+      return { 
+        isOpen: false, 
+        reason: special.name ? `Closed for ${special.name}` : 'Closed Today',
+        specialHourName: special.name || undefined
+      };
+    }
+
+    // Check special opening hours
+    if (special.openTime && special.closeTime) {
+      const isWithin = currentTime >= special.openTime && currentTime <= special.closeTime;
+      return { 
+        isOpen: isWithin, 
+        reason: isWithin ? `Open (${special.name || 'Special Hours'})` : 'Currently Closed',
+        specialHourName: special.name || undefined
+      };
+    }
+  }
+
+  // Priority 3: Regular opening hours
+  const openingHours = merchant.openingHours;
+  if (openingHours && openingHours.length > 0) {
+    const todayHours = openingHours.find(h => h.dayOfWeek === dayOfWeek);
+
+    if (!todayHours) {
+      return { isOpen: false, reason: 'Closed Today' };
+    }
+
+    if (todayHours.isClosed) {
+      return { isOpen: false, reason: 'Closed Today' };
+    }
+
+    if (todayHours.is24Hours) {
+      return { isOpen: true };
+    }
+
+    if (todayHours.openTime && todayHours.closeTime) {
+      const isWithin = currentTime >= todayHours.openTime && currentTime <= todayHours.closeTime;
+      return { isOpen: isWithin, reason: isWithin ? undefined : 'Currently Closed' };
+    }
+  }
+
+  // Default: use manual toggle
+  return { isOpen: merchant.isOpen ?? true };
+}
+
+/**
+ * Check if a mode is available considering per-day schedules and special hours
+ * Priority: Special Hours > Per-Day Schedule > Global Schedule > Mode Enabled
+ */
+export function isModeAvailableWithSchedules(
+  modeType: 'DINE_IN' | 'TAKEAWAY',
+  merchant: ExtendedMerchantStatus
+): { available: boolean; reason?: string; schedule?: { start: string; end: string } } {
+  const { dayOfWeek, currentTime } = getCurrentTimeInTimezone(merchant.timezone);
+
+  // Check global mode enabled
+  const isEnabled = modeType === 'DINE_IN' 
+    ? merchant.isDineInEnabled !== false 
+    : merchant.isTakeawayEnabled !== false;
+
+  if (!isEnabled) {
+    return { 
+      available: false, 
+      reason: `${modeType === 'DINE_IN' ? 'Dine In' : 'Takeaway'} is not available` 
+    };
+  }
+
+  // Priority 1: Check special hours mode override
+  if (merchant.todaySpecialHour) {
+    const special = merchant.todaySpecialHour;
+    
+    // Check if mode is disabled for this special day
+    const modeEnabled = modeType === 'DINE_IN' 
+      ? special.isDineInEnabled 
+      : special.isTakeawayEnabled;
+    
+    if (modeEnabled === false) {
+      return { 
+        available: false, 
+        reason: `${modeType === 'DINE_IN' ? 'Dine In' : 'Takeaway'} not available today` 
+      };
+    }
+
+    // Check special mode schedule
+    const startTime = modeType === 'DINE_IN' ? special.dineInStartTime : special.takeawayStartTime;
+    const endTime = modeType === 'DINE_IN' ? special.dineInEndTime : special.takeawayEndTime;
+
+    if (startTime && endTime) {
+      const isWithin = currentTime >= startTime && currentTime <= endTime;
+      return { 
+        available: isWithin, 
+        reason: isWithin ? undefined : `Available ${startTime} - ${endTime}`,
+        schedule: { start: startTime, end: endTime }
+      };
+    }
+  }
+
+  // Priority 2: Check per-day mode schedule
+  if (merchant.modeSchedules && merchant.modeSchedules.length > 0) {
+    const daySchedule = merchant.modeSchedules.find(
+      s => s.mode === modeType && s.dayOfWeek === dayOfWeek
+    );
+
+    if (daySchedule) {
+      const isWithin = currentTime >= daySchedule.startTime && currentTime <= daySchedule.endTime;
+      return { 
+        available: isWithin, 
+        reason: isWithin ? undefined : `Available ${daySchedule.startTime} - ${daySchedule.endTime}`,
+        schedule: { start: daySchedule.startTime, end: daySchedule.endTime }
+      };
+    }
+  }
+
+  // Priority 3: Check global mode schedule
+  const globalStart = modeType === 'DINE_IN' 
+    ? merchant.dineInScheduleStart 
+    : merchant.takeawayScheduleStart;
+  const globalEnd = modeType === 'DINE_IN' 
+    ? merchant.dineInScheduleEnd 
+    : merchant.takeawayScheduleEnd;
+
+  if (globalStart && globalEnd) {
+    const isWithin = currentTime >= globalStart && currentTime <= globalEnd;
+    return { 
+      available: isWithin, 
+      reason: isWithin ? undefined : `Available ${globalStart} - ${globalEnd}`,
+      schedule: { start: globalStart, end: globalEnd }
+    };
+  }
+
+  // No schedule restrictions - mode is available
+  return { available: true };
+}
+
+/**
+ * Get minutes until mode closes (considering all schedule types)
+ */
+export function getMinutesUntilModeCloses(
+  modeType: 'DINE_IN' | 'TAKEAWAY',
+  merchant: ExtendedMerchantStatus
+): number | null {
+  const { dayOfWeek, currentTime } = getCurrentTimeInTimezone(merchant.timezone);
+  let endTime: string | null = null;
+
+  // Priority 1: Special hours
+  if (merchant.todaySpecialHour) {
+    const special = merchant.todaySpecialHour;
+    const specialEndTime = modeType === 'DINE_IN' ? special.dineInEndTime : special.takeawayEndTime;
+    endTime = specialEndTime ?? null;
+    if (!endTime) {
+      endTime = special.closeTime ?? null;
+    }
+  }
+
+  // Priority 2: Per-day schedule
+  if (!endTime && merchant.modeSchedules && merchant.modeSchedules.length > 0) {
+    const daySchedule = merchant.modeSchedules.find(
+      s => s.mode === modeType && s.dayOfWeek === dayOfWeek
+    );
+    if (daySchedule) {
+      endTime = daySchedule.endTime;
+    }
+  }
+
+  // Priority 3: Global schedule
+  if (!endTime) {
+    endTime = modeType === 'DINE_IN' 
+      ? merchant.dineInScheduleEnd || null 
+      : merchant.takeawayScheduleEnd || null;
+  }
+
+  if (!endTime) return null;
+
+  // Calculate minutes
+  const [currentHour, currentMinute] = currentTime.split(':').map(Number);
+  const [endHour, endMinute] = endTime.split(':').map(Number);
+
+  const currentTotalMinutes = currentHour * 60 + currentMinute;
+  const endTotalMinutes = endHour * 60 + endMinute;
+
+  const minutesRemaining = endTotalMinutes - currentTotalMinutes;
+  return minutesRemaining > 0 ? minutesRemaining : 0;
 }
 

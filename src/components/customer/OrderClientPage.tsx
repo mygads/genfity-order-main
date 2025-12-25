@@ -20,6 +20,7 @@ import OutletInfoModal from '@/components/customer/OutletInfoModal';
 import { CustomerOrderSkeleton } from '@/components/common/SkeletonLoaders';
 import { getTableNumber, saveTableNumber } from '@/lib/utils/localStorage';
 import TableNumberModal from '@/components/customer/TableNumberModal';
+import ModeUnavailableModal from '@/components/modals/ModeUnavailableModal';
 import { extractAddonDataFromMenus } from '@/lib/utils/addonExtractor';
 import { throttle } from '@/lib/utils/throttle';
 import { useStoreStatus } from '@/hooks/useStoreStatus';
@@ -91,6 +92,8 @@ interface MerchantInfo {
   taxPercentage: number;
   isDineInEnabled?: boolean;
   isTakeawayEnabled?: boolean;
+  dineInLabel?: string | null; // Custom label for Dine In button
+  takeawayLabel?: string | null; // Custom label for Takeaway button
   dineInScheduleStart?: string | null;
   dineInScheduleEnd?: string | null;
   takeawayScheduleStart?: string | null;
@@ -134,6 +137,8 @@ export default function OrderClientPage({
     minutesUntilClose,
     openingHours: liveOpeningHours,
     isLoading: isStatusLoading,
+    todaySpecialHour,
+    specialHourName,
   } = useStoreStatus(merchantCode, {
     refreshInterval: 30000, // Refresh every 30 seconds
     revalidateOnFocus: true,
@@ -163,6 +168,7 @@ export default function OrderClientPage({
   const [error, setError] = useState<string | null>(null);
   const [showTableModal, setShowTableModal] = useState(false); // Table number modal state
   const [showOutletInfo, setShowOutletInfo] = useState(false); // Outlet info modal state
+  const [showModeUnavailableModal, setShowModeUnavailableModal] = useState(false); // Mode unavailable modal
   const [isSticky, setIsSticky] = useState(false); // Track if header should be sticky
   const [isCategoryTabsSticky, setIsCategoryTabsSticky] = useState(false); // Track if category tabs should be sticky
   const [showTableBadge, setShowTableBadge] = useState(false); // Track if table badge should be shown in header
@@ -227,35 +233,49 @@ export default function OrderClientPage({
   };
 
   // ========================================
-  // Validate Mode Availability (no redirect when store closed)
+  // Validate Mode Availability (show modal instead of silent redirect)
   // ========================================
   useEffect(() => {
     if (!merchantInfo) return;
     if (isStatusLoading) return; // Wait for status to load
     
-    // Don't redirect when store is closed - just show modified UI
+    // Don't check when store is closed - just show modified UI
 
-    // Only redirect if mode is completely disabled (not due to store closed)
+    // Only show modal if mode becomes unavailable while store is open
     if (storeOpen) {
       if (mode === 'dinein' && !isDineInAvailable) {
-        if (isTakeawayAvailable) {
-          router.replace(`/${merchantCode}/order?mode=takeaway`);
-        } else {
-          router.replace(`/${merchantCode}`);
-        }
+        // Show modal to let user choose
+        setShowModeUnavailableModal(true);
         return;
       }
 
       if (mode === 'takeaway' && !isTakeawayAvailable) {
-        if (isDineInAvailable) {
-          router.replace(`/${merchantCode}/order?mode=dinein`);
-        } else {
-          router.replace(`/${merchantCode}`);
-        }
+        // Show modal to let user choose
+        setShowModeUnavailableModal(true);
         return;
       }
     }
-  }, [merchantInfo, mode, merchantCode, router, storeOpen, isStatusLoading, isDineInAvailable, isTakeawayAvailable]);
+    
+    // Close modal if mode becomes available again
+    setShowModeUnavailableModal(false);
+  }, [merchantInfo, mode, storeOpen, isStatusLoading, isDineInAvailable, isTakeawayAvailable]);
+
+  // ========================================
+  // Mode Unavailable Modal Handlers
+  // ========================================
+  const handleSwitchMode = () => {
+    setShowModeUnavailableModal(false);
+    if (mode === 'dinein' && isTakeawayAvailable) {
+      router.replace(`/${merchantCode}/order?mode=takeaway`);
+    } else if (mode === 'takeaway' && isDineInAvailable) {
+      router.replace(`/${merchantCode}/order?mode=dinein`);
+    }
+  };
+
+  const handleModeModalGoBack = () => {
+    setShowModeUnavailableModal(false);
+    router.replace(`/${merchantCode}`);
+  };
 
   // ========================================
   // Handle Auto Table Number from URL (tableno param)
@@ -617,9 +637,26 @@ export default function OrderClientPage({
   // ========================================
   return (
     <>
+      {/* Special Hours Banner - Show when today has special hours */}
+      {todaySpecialHour && !todaySpecialHour.isClosed && specialHourName && (
+        <div className="bg-blue-500 text-white px-4 py-2 text-center text-sm font-medium sticky top-0 z-50">
+          📅 Today: {specialHourName}
+          {todaySpecialHour.openTime && todaySpecialHour.closeTime && (
+            <span className="ml-1">({todaySpecialHour.openTime} - {todaySpecialHour.closeTime})</span>
+          )}
+        </div>
+      )}
+
+      {/* Special Holiday Closed Banner */}
+      {todaySpecialHour?.isClosed && (
+        <div className="bg-red-500 text-white px-4 py-2 text-center text-sm font-medium sticky top-0 z-50">
+          🚫 Closed Today{specialHourName ? `: ${specialHourName}` : ''}
+        </div>
+      )}
+
       {/* Store Closing Soon Warning Banner */}
       {storeOpen && minutesUntilClose !== null && minutesUntilClose <= 30 && minutesUntilClose > 0 && (
-        <div className="bg-amber-500 text-white px-4 py-2 text-center text-sm font-medium sticky top-0 z-50">
+        <div className={`bg-amber-500 text-white px-4 py-2 text-center text-sm font-medium sticky ${todaySpecialHour ? '' : 'top-0'} z-50`}>
           ⚠️ Store closes in {minutesUntilClose} minute{minutesUntilClose !== 1 ? 's' : ''}
         </div>
       )}
@@ -1025,6 +1062,23 @@ export default function OrderClientPage({
           }}
         />
       )}
+
+      {/* ========================================
+          MODE UNAVAILABLE MODAL
+      ======================================== */}
+      <ModeUnavailableModal
+        isOpen={showModeUnavailableModal}
+        currentMode={mode as 'dinein' | 'takeaway'}
+        alternativeMode={
+          mode === 'dinein' && isTakeawayAvailable ? 'takeaway' :
+          mode === 'takeaway' && isDineInAvailable ? 'dinein' :
+          null
+        }
+        dineInLabel={merchantInfo?.dineInLabel || 'Dine In'}
+        takeawayLabel={merchantInfo?.takeawayLabel || 'Takeaway'}
+        onSwitchMode={handleSwitchMode}
+        onGoBack={handleModeModalGoBack}
+      />
     </>
   );
 }

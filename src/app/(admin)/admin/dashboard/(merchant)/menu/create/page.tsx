@@ -6,6 +6,8 @@ import { FormPageSkeleton } from '@/components/common/SkeletonLoaders';
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import AdminFormFooter from "@/components/common/AdminFormFooter";
 import Image from "next/image";
+import { FaCopy } from "react-icons/fa";
+import DuplicateMenuModal from "@/components/modals/DuplicateMenuModal";
 
 interface Merchant {
   id: string;
@@ -55,6 +57,8 @@ export default function CreateMenuPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
   const [formSubmitted, setFormSubmitted] = useState(false);
+  const [authToken, setAuthToken] = useState<string>("");
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
 
   const [formData, setFormData] = useState<MenuFormData>({
     name: "",
@@ -107,6 +111,7 @@ export default function CreateMenuPage() {
           router.push("/admin/login");
           return;
         }
+        setAuthToken(token);
 
         // Fetch merchant, categories, and addon categories in parallel
         const [merchantRes, categoriesRes, addonCategoriesRes] = await Promise.all([
@@ -367,16 +372,26 @@ export default function CreateMenuPage() {
       <div className="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-950">
         {/* Header */}
         <div className="border-b border-gray-200 bg-gray-50/50 px-6 py-5 dark:border-gray-800 dark:bg-gray-900/50">
-          <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400">
-              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400">
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Create New Menu Item</h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Add a new item to your menu</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Create New Menu Item</h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Add a new item to your menu</p>
-            </div>
+            <button
+              type="button"
+              onClick={() => setShowDuplicateModal(true)}
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+            >
+              <FaCopy className="h-4 w-4" />
+              Duplicate from Existing
+            </button>
           </div>
         </div>
 
@@ -938,7 +953,46 @@ export default function CreateMenuPage() {
           />
         </form>
       </div>
+
+      {/* Duplicate Menu Modal */}
+      <DuplicateMenuModal
+        isOpen={showDuplicateModal}
+        onClose={() => setShowDuplicateModal(false)}
+        onSelect={(menu) => {
+          // Auto-fill form data from selected menu
+          setFormData({
+            name: menu.name + " (Copy)",
+            description: menu.description || "",
+            price: typeof menu.price === "number" ? menu.price.toString() : menu.price,
+            imageUrl: menu.imageUrl || "",
+            isActive: menu.isActive,
+            isSpicy: menu.isSpicy,
+            isBestSeller: menu.isBestSeller,
+            isSignature: menu.isSignature,
+            isRecommended: menu.isRecommended,
+            trackStock: menu.trackStock,
+            stockQty: menu.stockQty?.toString() || "",
+            dailyStockTemplate: menu.dailyStockTemplate?.toString() || "",
+            autoResetStock: menu.autoResetStock,
+          });
+          // Set uploaded image URL for cleanup tracking
+          if (menu.imageUrl) {
+            setUploadedImageUrl(null); // Don't cleanup the duplicated image
+          }
+          // Set categories if available
+          if (menu.categories && menu.categories.length > 0) {
+            setSelectedCategoryIds(menu.categories.map(c => c.id));
+          }
+          // Set addon categories if available
+          if (menu.addonCategories && menu.addonCategories.length > 0) {
+            setSelectedAddonCategoryIds(menu.addonCategories.map(ac => ({
+              id: ac.id,
+              isRequired: ac.isRequired || false,
+            })));
+          }
+        }}
+        token={authToken}
+      />
     </div>
   );
 }
-

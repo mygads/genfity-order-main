@@ -186,6 +186,8 @@ model Merchant {
   menuCategories         MenuCategory[]
   menus                  Menu[]
   openingHours           MerchantOpeningHour[]
+  modeSchedules          MerchantModeSchedule[]
+  specialHours           MerchantSpecialHour[]
   merchantUsers          MerchantUser[]
   orders                 Order[]
   menuBooks              MenuBook[]
@@ -209,6 +211,59 @@ model MerchantOpeningHour {
 
   @@unique([merchantId, dayOfWeek])
   @@map("merchant_opening_hours")
+}
+
+// ============================================
+// PER-DAY MODE SCHEDULES
+// Different mode availability for each day of week
+// ============================================
+
+model MerchantModeSchedule {
+  id         BigInt    @id @default(autoincrement())
+  merchantId BigInt    @map("merchant_id")
+  mode       OrderType @default(DINE_IN)
+  dayOfWeek  Int       @map("day_of_week") // 0=Sunday, 6=Saturday
+  startTime  String    @map("start_time") // HH:MM format
+  endTime    String    @map("end_time") // HH:MM format
+  isActive   Boolean   @default(true) @map("is_active")
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  merchant   Merchant  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@unique([merchantId, mode, dayOfWeek])
+  @@index([merchantId])
+  @@index([dayOfWeek])
+  @@map("merchant_mode_schedules")
+}
+
+// ============================================
+// HOLIDAY / SPECIAL HOURS
+// Override regular hours for specific dates
+// ============================================
+
+model MerchantSpecialHour {
+  id                 BigInt    @id @default(autoincrement())
+  merchantId         BigInt    @map("merchant_id")
+  date               DateTime  @map("date") @db.Date
+  name               String?   // "Christmas Day", "New Year's Eve"
+  isClosed           Boolean   @default(false) @map("is_closed")
+  openTime           String?   @map("open_time")
+  closeTime          String?   @map("close_time")
+  // Mode overrides for this day
+  isDineInEnabled    Boolean?  @map("is_dine_in_enabled")
+  isTakeawayEnabled  Boolean?  @map("is_takeaway_enabled")
+  dineInStartTime    String?   @map("dine_in_start_time")
+  dineInEndTime      String?   @map("dine_in_end_time")
+  takeawayStartTime  String?   @map("takeaway_start_time")
+  takeawayEndTime    String?   @map("takeaway_end_time")
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  merchant           Merchant  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@unique([merchantId, date])
+  @@index([merchantId])
+  @@index([date])
+  @@map("merchant_special_hours")
 }
 
 model MenuCategory {

@@ -11,7 +11,15 @@
 
 import useSWR from 'swr';
 import { useMemo } from 'react';
-import { isStoreEffectivelyOpen, isWithinSchedule, getMinutesUntilClose } from '@/lib/utils/storeStatus';
+import { 
+  isStoreEffectivelyOpen, 
+  isWithinSchedule, 
+  getMinutesUntilClose,
+  isStoreOpenWithSpecialHours,
+  isModeAvailableWithSchedules,
+  type PerDayModeSchedule,
+  type SpecialHour,
+} from '@/lib/utils/storeStatus';
 
 interface OpeningHour {
   id: string;
@@ -20,6 +28,14 @@ interface OpeningHour {
   is24Hours?: boolean;
   openTime?: string;
   closeTime?: string;
+}
+
+interface ModeSchedule {
+  id: string;
+  mode: 'DINE_IN' | 'TAKEAWAY';
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
 }
 
 interface StoreStatusResponse {
@@ -34,6 +50,8 @@ interface StoreStatusResponse {
   takeawayScheduleStart: string | null;
   takeawayScheduleEnd: string | null;
   openingHours: OpeningHour[];
+  modeSchedules?: ModeSchedule[];
+  todaySpecialHour?: SpecialHour | null;
   serverTime: string;
 }
 
@@ -44,6 +62,7 @@ interface UseStoreStatusResult {
   
   // Store status
   storeOpen: boolean;
+  storeStatusReason?: string;
   
   // Mode availability
   isDineInEnabled: boolean;
@@ -59,6 +78,13 @@ interface UseStoreStatusResult {
   minutesUntilClose: number | null;
   timezone: string;
   openingHours: OpeningHour[];
+  
+  // Special hours info
+  todaySpecialHour?: SpecialHour | null;
+  specialHourName?: string;
+  
+  // Mode schedules
+  modeSchedules?: ModeSchedule[];
   
   // Refetch function
   refresh: () => void;
@@ -126,12 +152,21 @@ export function useStoreStatus(
         minutesUntilClose: null,
         timezone: 'UTC',
         openingHours: [],
+        todaySpecialHour: null,
+        modeSchedules: [],
       };
     }
-    
-    // Check if store is effectively open
-    const storeOpen = isStoreEffectivelyOpen({
+
+    // Build extended merchant status for new utility functions
+    const extendedMerchant = {
       isOpen: data.isOpen,
+      timezone: data.timezone,
+      isDineInEnabled: data.isDineInEnabled,
+      isTakeawayEnabled: data.isTakeawayEnabled,
+      dineInScheduleStart: data.dineInScheduleStart,
+      dineInScheduleEnd: data.dineInScheduleEnd,
+      takeawayScheduleStart: data.takeawayScheduleStart,
+      takeawayScheduleEnd: data.takeawayScheduleEnd,
       openingHours: data.openingHours.map(h => ({
         dayOfWeek: h.dayOfWeek,
         openTime: h.openTime,
@@ -139,24 +174,55 @@ export function useStoreStatus(
         isClosed: h.isClosed,
         is24Hours: h.is24Hours,
       })),
-      timezone: data.timezone,
-    });
-    
-    // Check mode schedules
-    const isDineInWithinSchedule = isWithinSchedule(
-      data.dineInScheduleStart,
-      data.dineInScheduleEnd,
-      data.timezone
-    );
-    const isTakeawayWithinSchedule = isWithinSchedule(
-      data.takeawayScheduleStart,
-      data.takeawayScheduleEnd,
-      data.timezone
-    );
-    
-    // Mode is available if enabled AND within schedule
-    const isDineInAvailable = data.isDineInEnabled && isDineInWithinSchedule;
-    const isTakeawayAvailable = data.isTakeawayEnabled && isTakeawayWithinSchedule;
+      modeSchedules: data.modeSchedules as PerDayModeSchedule[] | undefined,
+      todaySpecialHour: data.todaySpecialHour,
+    };
+
+    // Check if store is open (with special hours support)
+    let storeOpen: boolean;
+    let storeStatusReason: string | undefined;
+    let specialHourName: string | undefined;
+
+    if (data.todaySpecialHour || (data.modeSchedules && data.modeSchedules.length > 0)) {
+      // Use extended function for special hours / per-day schedules
+      const storeStatus = isStoreOpenWithSpecialHours(extendedMerchant);
+      storeOpen = storeStatus.isOpen;
+      storeStatusReason = storeStatus.reason;
+      specialHourName = storeStatus.specialHourName;
+    } else {
+      // Use original function for backwards compatibility
+      storeOpen = isStoreEffectivelyOpen({
+        isOpen: data.isOpen,
+        openingHours: extendedMerchant.openingHours,
+        timezone: data.timezone,
+      });
+    }
+
+    // Check mode availability (with per-day schedules and special hours)
+    let isDineInAvailable: boolean;
+    let isTakeawayAvailable: boolean;
+
+    if (data.todaySpecialHour || (data.modeSchedules && data.modeSchedules.length > 0)) {
+      // Use extended function
+      const dineInStatus = isModeAvailableWithSchedules('DINE_IN', extendedMerchant);
+      const takeawayStatus = isModeAvailableWithSchedules('TAKEAWAY', extendedMerchant);
+      isDineInAvailable = dineInStatus.available;
+      isTakeawayAvailable = takeawayStatus.available;
+    } else {
+      // Use original logic for backwards compatibility
+      const isDineInWithinSchedule = isWithinSchedule(
+        data.dineInScheduleStart,
+        data.dineInScheduleEnd,
+        data.timezone
+      );
+      const isTakeawayWithinSchedule = isWithinSchedule(
+        data.takeawayScheduleStart,
+        data.takeawayScheduleEnd,
+        data.timezone
+      );
+      isDineInAvailable = data.isDineInEnabled && isDineInWithinSchedule;
+      isTakeawayAvailable = data.isTakeawayEnabled && isTakeawayWithinSchedule;
+    }
     
     // Calculate minutes until close
     const minutesUntilClose = storeOpen
@@ -165,6 +231,7 @@ export function useStoreStatus(
     
     return {
       storeOpen,
+      storeStatusReason,
       isDineInEnabled: data.isDineInEnabled,
       isTakeawayEnabled: data.isTakeawayEnabled,
       isDineInAvailable,
@@ -174,6 +241,9 @@ export function useStoreStatus(
       minutesUntilClose,
       timezone: data.timezone,
       openingHours: data.openingHours,
+      todaySpecialHour: data.todaySpecialHour,
+      specialHourName,
+      modeSchedules: data.modeSchedules,
     };
   }, [data]);
   

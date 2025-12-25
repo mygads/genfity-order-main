@@ -10,6 +10,8 @@ import TabsNavigation from "@/components/common/TabsNavigation";
 import { useToast } from "@/hooks/useToast";
 import ToastContainer from "@/components/ui/ToastContainer";
 import { COUNTRIES, CURRENCIES, TIMEZONES } from "@/lib/constants/location";
+import PerDayModeSchedule from "@/components/merchants/PerDayModeSchedule";
+import SpecialHoursManager from "@/components/merchants/SpecialHoursManager";
 
 // Dynamically import map component
 const MapLocationPicker = dynamic(() => import("@/components/maps/MapLocationPicker"), { ssr: false });
@@ -81,6 +83,7 @@ export default function EditMerchantPage() {
   const [uploading, setUploading] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
+  const [authToken, setAuthToken] = useState<string>("");
 
   const [formData, setFormData] = useState<MerchantFormData>({
     name: "",
@@ -137,6 +140,7 @@ export default function EditMerchantPage() {
         router.push("/admin/login");
         return;
       }
+      setAuthToken(token);
 
       const response = await fetch("/api/merchant/profile", {
         headers: {
@@ -716,6 +720,16 @@ export default function EditMerchantPage() {
           </div>
         </div>
       </div>
+
+      {/* Per-Day Mode Schedules */}
+      {authToken && (
+        <PerDayModeSchedule token={authToken} />
+      )}
+
+      {/* Special Hours / Holidays */}
+      {authToken && (
+        <SpecialHoursManager token={authToken} />
+      )}
 
       {/* Total Tables */}
       <div>
