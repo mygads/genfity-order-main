@@ -14,6 +14,7 @@
 
 import Image from 'next/image';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import FavoriteButton from './FavoriteButton';
 
 interface MenuItem {
     id: string;
@@ -40,6 +41,7 @@ interface DetailedMenuSectionProps {
     title: string;
     items: MenuItem[];
     currency?: string;
+    merchantCode?: string;
     onAddItem?: (item: MenuItem) => void;
     getItemQuantityInCart?: (menuId: string) => number;
     onIncreaseQty?: (menuId: string) => void;
@@ -51,6 +53,7 @@ export default function DetailedMenuSection({
     title,
     items,
     currency = 'AUD',
+    merchantCode = '',
     onAddItem,
     getItemQuantityInCart,
     onIncreaseQty,
@@ -142,6 +145,16 @@ export default function DetailedMenuSection({
                                     className="object-cover"
                                     sizes="70px"
                                 />
+                                {/* Favorite Button */}
+                                {merchantCode && (
+                                    <div style={{ position: 'absolute', top: '4px', right: '4px' }}>
+                                        <FavoriteButton
+                                            merchantCode={merchantCode}
+                                            menuId={item.id}
+                                            size="sm"
+                                        />
+                                    </div>
+                                )}
                             </div>
 
                             {/* Content */}

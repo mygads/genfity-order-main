@@ -10,6 +10,7 @@
 
 import Image from 'next/image';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import FavoriteButton from './FavoriteButton';
 
 interface MenuItem {
     id: string;
@@ -32,6 +33,7 @@ interface HorizontalMenuSectionProps {
     title: string;
     items: MenuItem[];
     currency?: string;
+    merchantCode?: string;
     onViewAll?: () => void;
     onItemClick?: (item: MenuItem) => void;
     getItemQuantityInCart?: (menuId: string) => number;
@@ -45,6 +47,7 @@ export default function HorizontalMenuSection({
     title,
     items,
     currency = 'AUD',
+    merchantCode = '',
     onViewAll,
     onItemClick,
     getItemQuantityInCart,
@@ -157,6 +160,17 @@ export default function HorizontalMenuSection({
                                             }}
                                         >
                                             {t('customer.menu.promo')}
+                                        </div>
+                                    )}
+
+                                    {/* Favorite Button */}
+                                    {merchantCode && (
+                                        <div className="absolute top-2 right-2">
+                                            <FavoriteButton
+                                                merchantCode={merchantCode}
+                                                menuId={item.id}
+                                                size="sm"
+                                            />
                                         </div>
                                     )}
                                 </div>

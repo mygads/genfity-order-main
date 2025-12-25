@@ -13,6 +13,7 @@ const STORAGE_KEYS = {
   CART_PREFIX: 'genfity_cart_',
   TABLE_PREFIX: 'genfity_table_',
   AUTH: 'genfity_customer_auth',
+  FAVORITES_PREFIX: 'genfity_favorites_',
 } as const;
 
 /**
@@ -280,4 +281,101 @@ export function isCustomerAuthenticated(): boolean {
 export function getCustomerToken(): string | null {
   const auth = getCustomerAuth();
   return auth?.accessToken ?? null;
+}
+
+// ============================================================================
+// FAVORITES MANAGEMENT
+// ============================================================================
+
+/**
+ * Get favorites key for specific merchant
+ */
+function getFavoritesKey(merchantCode: string): string {
+  return `${STORAGE_KEYS.FAVORITES_PREFIX}${merchantCode}`;
+}
+
+/**
+ * Get all favorite menu IDs for a merchant
+ */
+export function getFavorites(merchantCode: string): string[] {
+  if (typeof window === 'undefined') return [];
+
+  try {
+    const key = getFavoritesKey(merchantCode);
+    const data = localStorage.getItem(key);
+    if (!data) return [];
+    return JSON.parse(data) as string[];
+  } catch (error) {
+    console.error('Error getting favorites:', error);
+    return [];
+  }
+}
+
+/**
+ * Add a menu item to favorites
+ */
+export function addFavorite(merchantCode: string, menuId: string): void {
+  if (typeof window === 'undefined') return;
+
+  try {
+    const favorites = getFavorites(merchantCode);
+    if (!favorites.includes(menuId)) {
+      favorites.push(menuId);
+      const key = getFavoritesKey(merchantCode);
+      localStorage.setItem(key, JSON.stringify(favorites));
+
+      // Dispatch custom event for cross-component sync
+      window.dispatchEvent(new CustomEvent('favoritesUpdated', {
+        detail: { merchantCode, menuId, action: 'add' }
+      }));
+    }
+  } catch (error) {
+    console.error('Error adding favorite:', error);
+  }
+}
+
+/**
+ * Remove a menu item from favorites
+ */
+export function removeFavorite(merchantCode: string, menuId: string): void {
+  if (typeof window === 'undefined') return;
+
+  try {
+    const favorites = getFavorites(merchantCode);
+    const index = favorites.indexOf(menuId);
+    if (index > -1) {
+      favorites.splice(index, 1);
+      const key = getFavoritesKey(merchantCode);
+      localStorage.setItem(key, JSON.stringify(favorites));
+
+      // Dispatch custom event for cross-component sync
+      window.dispatchEvent(new CustomEvent('favoritesUpdated', {
+        detail: { merchantCode, menuId, action: 'remove' }
+      }));
+    }
+  } catch (error) {
+    console.error('Error removing favorite:', error);
+  }
+}
+
+/**
+ * Check if a menu item is favorited
+ */
+export function isFavorite(merchantCode: string, menuId: string): boolean {
+  const favorites = getFavorites(merchantCode);
+  return favorites.includes(menuId);
+}
+
+/**
+ * Toggle favorite status for a menu item
+ * Returns true if item is now favorited, false if unfavorited
+ */
+export function toggleFavorite(merchantCode: string, menuId: string): boolean {
+  if (isFavorite(merchantCode, menuId)) {
+    removeFavorite(merchantCode, menuId);
+    return false;
+  } else {
+    addFavorite(merchantCode, menuId);
+    return true;
+  }
 }

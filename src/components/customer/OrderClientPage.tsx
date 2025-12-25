@@ -10,6 +10,7 @@ import TableNumberCard from '@/components/customer/TableNumberCard';
 import HorizontalMenuSection from '@/components/customer/HorizontalMenuSection';
 import DetailedMenuSection from '@/components/customer/DetailedMenuSection';
 import RecentOrdersSection from '@/components/customer/RecentOrdersSection';
+import FavoritesSection from '@/components/customer/FavoritesSection';
 import FloatingCartButton from '@/components/cart/FloatingCartButton';
 import MenuDetailModal from '@/components/menu/MenuDetailModal';
 import MenuInCartModal from '@/components/menu/MenuInCartModal';
@@ -240,7 +241,7 @@ export default function OrderClientPage({
   useEffect(() => {
     if (!merchantInfo) return;
     if (isStatusLoading) return; // Wait for status to load
-    
+
     // Don't check when store is closed - just show modified UI
 
     // Only show modal if mode becomes unavailable while store is open
@@ -257,7 +258,7 @@ export default function OrderClientPage({
         return;
       }
     }
-    
+
     // Close modal if mode becomes available again
     setShowModeUnavailableModal(false);
   }, [merchantInfo, mode, storeOpen, isStatusLoading, isDineInAvailable, isTakeawayAvailable]);
@@ -292,12 +293,12 @@ export default function OrderClientPage({
       // Auto-save table number from URL
       saveTableNumber(merchantCode, tablenoFromUrl);
       setTableNumber(tablenoFromUrl);
-      
+
       // Remove tableno from URL without reload
       params.delete('tableno');
       const newUrl = `/${merchantCode}/order?${params.toString()}`;
       router.replace(newUrl);
-      
+
       // Don't show modal since table is auto-filled
       setShowTableModal(false);
       return;
@@ -706,7 +707,7 @@ export default function OrderClientPage({
         {!storeOpen && (
           <div className="absolute inset-0 bg-gray-100/50 dark:bg-gray-900/50 pointer-events-none z-0" />
         )}
-        
+
         {/* Error Alert */}
         {error && (
           <div className="px-4 pt-4 relative z-10">
@@ -823,6 +824,17 @@ export default function OrderClientPage({
                   />
                 </div>
 
+                {/* Favorites Section */}
+                <div className="mt-4">
+                  <FavoritesSection
+                    merchantCode={merchantCode}
+                    currency={merchantInfo?.currency || 'AUD'}
+                    allMenuItems={allMenuItems}
+                    onItemClick={(item) => handleOpenMenu(item as MenuItem)}
+                    storeOpen={storeOpen}
+                  />
+                </div>
+
                 {/* Promo Section */}
                 {promoItems.length > 0 && (
                   <>
@@ -835,6 +847,7 @@ export default function OrderClientPage({
                         title={t('customer.menu.promo')}
                         items={promoItems}
                         currency={merchantInfo?.currency || 'AUD'}
+                        merchantCode={merchantCode}
                         onItemClick={(item) => handleOpenMenu(item as MenuItem)}
                         getItemQuantityInCart={getMenuQuantityInCart}
                         onIncreaseQty={handleIncreaseQtyFromCard}
@@ -862,6 +875,7 @@ export default function OrderClientPage({
                         title={t('customer.menu.bestSeller')}
                         items={bestSellerItems}
                         currency={merchantInfo?.currency || 'AUD'}
+                        merchantCode={merchantCode}
                         onItemClick={(item) => handleOpenMenu(item as MenuItem)}
                         getItemQuantityInCart={getMenuQuantityInCart}
                         onIncreaseQty={handleIncreaseQtyFromCard}
@@ -888,6 +902,7 @@ export default function OrderClientPage({
                         title={t('customer.menu.recommended')}
                         items={recommendationItems}
                         currency={merchantInfo?.currency || 'AUD'}
+                        merchantCode={merchantCode}
                         onItemClick={(item) => handleOpenMenu(item as MenuItem)}
                         getItemQuantityInCart={getMenuQuantityInCart}
                         onIncreaseQty={handleIncreaseQtyFromCard}
@@ -923,6 +938,7 @@ export default function OrderClientPage({
                           title={category.name.toUpperCase()}
                           items={categoryItems}
                           currency={merchantInfo?.currency || 'AUD'}
+                          merchantCode={merchantCode}
                           onAddItem={(item) => handleOpenMenu(item as MenuItem)}
                           getItemQuantityInCart={getMenuQuantityInCart}
                           onIncreaseQty={handleIncreaseQtyFromCard}
@@ -951,6 +967,7 @@ export default function OrderClientPage({
                     title={categories.find(c => c.id === selectedCategory)?.name.toUpperCase() || ''}
                     items={displayedItems}
                     currency={merchantInfo?.currency || 'AUD'}
+                    merchantCode={merchantCode}
                     onAddItem={(item) => handleOpenMenu(item as MenuItem)}
                     getItemQuantityInCart={getMenuQuantityInCart}
                     onIncreaseQty={handleIncreaseQtyFromCard}
@@ -1073,8 +1090,8 @@ export default function OrderClientPage({
         currentMode={mode as 'dinein' | 'takeaway'}
         alternativeMode={
           mode === 'dinein' && isTakeawayAvailable ? 'takeaway' :
-          mode === 'takeaway' && isDineInAvailable ? 'dinein' :
-          null
+            mode === 'takeaway' && isDineInAvailable ? 'dinein' :
+              null
         }
         dineInLabel={merchantInfo?.dineInLabel || 'Dine In'}
         takeawayLabel={merchantInfo?.takeawayLabel || 'Takeaway'}

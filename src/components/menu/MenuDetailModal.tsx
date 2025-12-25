@@ -96,8 +96,46 @@ export default function MenuDetailModal({
   const [missingCategoryId, setMissingCategoryId] = useState<string | null>(null);
   const [isImageZoomed, setIsImageZoomed] = useState(false);
   const [isClosing, setIsClosing] = useState(false); // ✅ Smooth close animation
+  const [showCopied, setShowCopied] = useState(false); // Share link copy feedback
   const addonCategoryRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const isAddingRef = useRef(false);
+
+  // Generate shareable menu item URL
+  const getShareUrl = () => {
+    if (typeof window === 'undefined') return '';
+    return `${window.location.origin}/${merchantCode}/order?mode=${mode}&menu=${menu.id}`;
+  };
+
+  // Handle share menu item
+  const handleShare = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const shareUrl = getShareUrl();
+    const shareData = {
+      title: menu.name,
+      text: `Check out ${menu.name}!`,
+      url: shareUrl,
+    };
+
+    try {
+      if (navigator.share && navigator.canShare(shareData)) {
+        await navigator.share(shareData);
+      } else {
+        // Fallback: copy to clipboard
+        await navigator.clipboard.writeText(shareUrl);
+        setShowCopied(true);
+        setTimeout(() => setShowCopied(false), 2000);
+      }
+    } catch (err) {
+      // User cancelled or error - try clipboard fallback
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        setShowCopied(true);
+        setTimeout(() => setShowCopied(false), 2000);
+      } catch {
+        console.error('Failed to share:', err);
+      }
+    }
+  };
 
   // ✅ Handle smooth close
   const handleClose = () => {
@@ -571,6 +609,29 @@ export default function MenuDetailModal({
               </button>
             )}
 
+            {/* Share Button */}
+            <button
+              onClick={handleShare}
+              className={`absolute top-3 ${menu.imageUrl ? 'left-14' : 'left-3'} w-8 h-8 bg-white/90 dark:bg-gray-800/90 rounded-full flex items-center justify-center shadow-md hover:bg-white dark:hover:bg-gray-800 transition-colors`}
+              style={{ zIndex: 2 }}
+              aria-label="Share menu item"
+              title={showCopied ? 'Link copied!' : 'Share'}
+            >
+              {showCopied ? (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="18" cy="5" r="3" />
+                  <circle cx="6" cy="12" r="3" />
+                  <circle cx="18" cy="19" r="3" />
+                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+                  <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+                </svg>
+              )}
+            </button>
+
             {/* Unavailable Badge */}
             {!isAvailable && (
               <div className="absolute top-3 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-red-500 text-white text-sm font-semibold rounded-full shadow-lg">
@@ -899,58 +960,58 @@ export default function MenuDetailModal({
         {/* Fixed Bottom Bar - Burjo ESB Style */}
         {/* Hide entire bottom bar when store is closed */}
         {storeOpen && (
-        <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[500px] bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 rounded-t-2xl z-310" style={{ boxShadow: '0 -4px 6px -1px rgba(0, 0, 0, 0.1), 0 -2px 4px -1px rgba(0, 0, 0, 0.06)' }}>
-          {/* Total Order Row */}
-          <div className="flex items-center justify-between px-4 py-4">
-            <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Total Order
+          <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[500px] bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 rounded-t-2xl z-310" style={{ boxShadow: '0 -4px 6px -1px rgba(0, 0, 0, 0.1), 0 -2px 4px -1px rgba(0, 0, 0, 0.06)' }}>
+            {/* Total Order Row */}
+            <div className="flex items-center justify-between px-4 py-4">
+              <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Total Order
+              </div>
+
+              {/* Quantity Counter */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  disabled={quantity === 1}
+                  className="w-6 h-6 rounded-full border border-black dark:border-gray-600 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-gray-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                  aria-label="Decrease order quantity"
+                >
+                  <svg className="w-4 h-4 text-black dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
+                  </svg>
+                </button>
+
+                <span className="text-base font-semibold text-gray-900 dark:text-white min-w-6 text-center">
+                  {quantity}
+                </span>
+
+                <button
+                  onClick={() => setQuantity(quantity + 1)}
+                  className="w-6 h-6 rounded-full border border-black dark:border-gray-600 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-gray-400 transition-all"
+                  aria-label="Increase order quantity"
+                >
+                  <svg className="w-4 h-4 text-black dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                  </svg>
+                </button>
+              </div>
             </div>
 
-            {/* Quantity Counter */}
-            <div className="flex items-center gap-2">
+            {/* Add Order Button */}
+            <div className="px-4 pb-4">
               <button
-                onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                disabled={quantity === 1}
-                className="w-6 h-6 rounded-full border border-black dark:border-gray-600 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-gray-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                aria-label="Decrease order quantity"
+                onClick={handleAddToCart}
+                disabled={!isAvailable}
+                className="w-full h-11 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-lg disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:text-gray-500 dark:disabled:text-gray-400 disabled:cursor-not-allowed transition-all active:scale-[0.98] flex items-center justify-center px-5"
               >
-                <svg className="w-4 h-4 text-black dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
-                </svg>
-              </button>
+                <span className="text-md">{editMode ? 'Update Order ' : 'Add Orders '}</span>
 
-              <span className="text-base font-semibold text-gray-900 dark:text-white min-w-6 text-center">
-                {quantity}
-              </span>
-
-              <button
-                onClick={() => setQuantity(quantity + 1)}
-                className="w-6 h-6 rounded-full border border-black dark:border-gray-600 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-gray-400 transition-all"
-                aria-label="Increase order quantity"
-              >
-                <svg className="w-4 h-4 text-black dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                </svg>
+                <span className="flex items-center gap-2 text-md gap-2 mx-2">-</span>
+                <span className="flex items-center gap-2 text-md gap-2">
+                  <strong>{formatCurrency(calculateTotal(), currency)}</strong>
+                </span>
               </button>
             </div>
           </div>
-
-          {/* Add Order Button */}
-          <div className="px-4 pb-4">
-            <button
-              onClick={handleAddToCart}
-              disabled={!isAvailable}
-              className="w-full h-11 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-lg disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:text-gray-500 dark:disabled:text-gray-400 disabled:cursor-not-allowed transition-all active:scale-[0.98] flex items-center justify-center px-5"
-            >
-              <span className="text-md">{editMode ? 'Update Order ' : 'Add Orders '}</span>
-
-              <span className="flex items-center gap-2 text-md gap-2 mx-2">-</span>
-              <span className="flex items-center gap-2 text-md gap-2">
-                <strong>{formatCurrency(calculateTotal(), currency)}</strong>
-              </span>
-            </button>
-          </div>
-        </div>
         )}
 
         {/* Animation CSS */}
