@@ -92,6 +92,9 @@ interface MerchantInfo {
   currency: string;
   enableTax: boolean;
   taxPercentage: number;
+  // Subscription status (for showing "store suspended" to customers)
+  subscriptionStatus?: string;
+  subscriptionSuspendReason?: string | null;
   isDineInEnabled?: boolean;
   isTakeawayEnabled?: boolean;
   dineInLabel?: string | null; // Custom label for Dine In button

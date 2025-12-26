@@ -49,7 +49,7 @@ interface Category {
 export default function MenuBulkUploadPage() {
   const router = useRouter();
   const { showSuccess, showError } = useToast();
-  const { currency } = useMerchant();
+  const { currency: _currency } = useMerchant();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [uploading, setUploading] = useState(false);
@@ -58,7 +58,7 @@ export default function MenuBulkUploadPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [fileName, setFileName] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
-  const [existingMenus, setExistingMenus] = useState<Array<{ id: string; name: string }>>([]);
+  const [_existingMenus, setExistingMenus] = useState<Array<{ id: string; name: string }>>([]);
   const [exporting, setExporting] = useState(false);
 
   /**

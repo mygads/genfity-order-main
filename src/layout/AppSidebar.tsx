@@ -19,7 +19,7 @@ import {
   BoxIconLine,
   FolderIcon,
 } from "../icons/index";
-import { FaHistory, FaUtensils, FaChevronDown } from "react-icons/fa";
+import { FaHistory, FaUtensils, FaChevronDown, FaCreditCard, FaCog } from "react-icons/fa";
 import MerchantBanner from "../components/merchants/MerchantBanner";
 
 type NavItem = {
@@ -61,6 +61,18 @@ const superAdminNavGroups: NavGroup[] = [
         icon: <UserCircleIcon />,
         nameKey: "admin.nav.users",
         path: "/admin/dashboard/users",
+        roles: ["SUPER_ADMIN"],
+      },
+      {
+        icon: <FaCreditCard />,
+        nameKey: "admin.nav.paymentVerification",
+        path: "/admin/dashboard/payment-verification",
+        roles: ["SUPER_ADMIN"],
+      },
+      {
+        icon: <FaCog />,
+        nameKey: "admin.nav.subscriptionSettings",
+        path: "/admin/dashboard/subscription-settings",
         roles: ["SUPER_ADMIN"],
       },
     ],
@@ -216,6 +228,12 @@ const merchantNavGroups: NavGroup[] = [
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
         permission: STAFF_PERMISSIONS.QR_TABLES,
       },
+      {
+        icon: <FaCreditCard />,
+        nameKey: "admin.nav.subscription",
+        path: "/admin/dashboard/subscription",
+        roles: ["MERCHANT_OWNER"],
+      },
     ],
   },
   {
@@ -305,10 +323,10 @@ const AppSidebar: React.FC = () => {
           items: group.items.filter(item => {
             // First check role
             if (!item.roles?.includes(user.role)) return false;
-            
+
             // If no permission required, allow
             if (!item.permission) return true;
-            
+
             // Check permission (owners always pass)
             return isOwner || hasPermission(item.permission);
           })

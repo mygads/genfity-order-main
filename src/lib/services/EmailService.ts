@@ -65,7 +65,7 @@ class EmailService {
   /**
    * Send email
    */
-  private async sendEmail(options: {
+  public async sendEmail(options: {
     to: string;
     subject: string;
     html: string;

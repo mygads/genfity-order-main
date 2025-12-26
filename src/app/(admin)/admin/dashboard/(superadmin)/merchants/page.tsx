@@ -8,6 +8,7 @@ import ToastContainer from "@/components/ui/ToastContainer";
 import ConfirmDialog from "@/components/modals/ConfirmDialog";
 import AddOwnerModal from "@/components/merchants/AddOwnerModal";
 import ViewUsersModal from "@/components/merchants/ViewUsersModal";
+import SubscriptionStatusBadge from "@/components/subscription/SubscriptionStatusBadge";
 import Image from "next/image";
 import { useSWRWithAuth } from "@/hooks/useSWRWithAuth";
 import { MerchantsPageSkeleton } from "@/components/common/SkeletonLoaders";
@@ -48,6 +49,10 @@ interface Merchant {
       role: string;
     };
   }>;
+  subscriptionStatus?: {
+    type: 'TRIAL' | 'DEPOSIT' | 'MONTHLY';
+    status: 'ACTIVE' | 'SUSPENDED' | 'CANCELLED';
+  } | null;
 }
 
 interface MerchantsApiResponse {
@@ -327,6 +332,9 @@ export default function MerchantsPage() {
                       Currency
                     </th>
                     <th className="px-5 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
+                      Subscription
+                    </th>
+                    <th className="px-5 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
                       Store Status
                     </th>
                     <th className="px-5 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
@@ -340,7 +348,7 @@ export default function MerchantsPage() {
                 <tbody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
                   {merchants.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className="py-10 text-center">
+                      <td colSpan={11} className="py-10 text-center">
                         <p className="text-sm text-gray-500 dark:text-gray-400">No merchants found</p>
                         <button
                           onClick={() => router.push("/admin/dashboard/merchants/create")}
@@ -394,6 +402,16 @@ export default function MerchantsPage() {
                             <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
                               {merchant.currency || 'AUD'}
                             </span>
+                          </td>
+                          <td className="px-5 py-4">
+                            {merchant.subscriptionStatus ? (
+                              <SubscriptionStatusBadge
+                                type={merchant.subscriptionStatus.type}
+                                status={merchant.subscriptionStatus.status}
+                              />
+                            ) : (
+                              <span className="text-xs text-gray-400">No subscription</span>
+                            )}
                           </td>
                           <td className="px-5 py-4">
                             {/* Store Open/Closed Status */}

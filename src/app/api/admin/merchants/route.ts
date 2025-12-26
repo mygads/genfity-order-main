@@ -60,10 +60,27 @@ async function getMerchantsHandler(request: NextRequest) {
   // Get all merchants with owner info
   const merchantsData = await merchantService.getAllMerchants(activeOnly);
 
-  // Transform to include owner information
-  const merchants = merchantsData.map((merchant: Record<string, unknown>) => {
+  // Import subscription repository for fetching subscription status
+  const { default: subscriptionRepository } = await import('@/lib/repositories/SubscriptionRepository');
+
+  // Transform to include owner and subscription information
+  const merchants = await Promise.all(merchantsData.map(async (merchant: Record<string, unknown>) => {
     const merchantUsers = merchant.merchantUsers as Array<{ role: string; user: Record<string, unknown> }> | undefined;
     const owner = merchantUsers?.find((mu) => mu.role === 'OWNER')?.user;
+
+    // Get subscription status
+    let subscriptionStatus = null;
+    try {
+      const subscription = await subscriptionRepository.getMerchantSubscription(merchant.id as bigint);
+      if (subscription) {
+        subscriptionStatus = {
+          type: subscription.type,
+          status: subscription.status,
+        };
+      }
+    } catch {
+      // Ignore subscription fetch errors
+    }
 
     return {
       id: merchant.id,
@@ -91,8 +108,9 @@ async function getMerchantsHandler(request: NextRequest) {
       ownerId: owner?.id || null,
       ownerName: owner?.name || null,
       ownerEmail: owner?.email || null,
+      subscriptionStatus,
     };
-  });
+  }));
 
   return successResponse(
     { merchants },

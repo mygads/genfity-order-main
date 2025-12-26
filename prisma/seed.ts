@@ -783,6 +783,80 @@ async function main() {
     }
   }
   console.log('✅ Linked addon categories to hot coffee menus\n');
+
+  // ============================================
+  // 8. SEED SUBSCRIPTION PLAN
+  // ============================================
+  const existingPlan = await prisma.subscriptionPlan.findUnique({
+    where: { planKey: 'default' },
+  });
+
+  if (!existingPlan) {
+    await prisma.subscriptionPlan.create({
+      data: {
+        planKey: 'default',
+        displayName: 'Default Plan',
+        description: 'Default subscription plan with trial, deposit, and monthly options',
+        trialDays: 30,
+        // IDR Pricing
+        depositMinimumIdr: 100000,
+        orderFeeIdr: 250,
+        monthlyPriceIdr: 100000,
+        // AUD Pricing
+        depositMinimumAud: 15,
+        orderFeeAud: 0.04,
+        monthlyPriceAud: 15,
+        // Bank Account Info (placeholder - to be configured by admin)
+        bankNameIdr: 'BCA',
+        bankAccountIdr: '1234567890',
+        bankAccountNameIdr: 'PT Genfity Indonesia',
+        bankNameAud: 'Commonwealth Bank',
+        bankAccountAud: '12-3456-7890123',
+        bankAccountNameAud: 'Genfity Pty Ltd',
+        isActive: true,
+      },
+    });
+    console.log('✅ Subscription plan created: Default Plan');
+  } else {
+    console.log('✅ Subscription plan already exists');
+  }
+
+  // ============================================
+  // 9. CREATE SUBSCRIPTIONS FOR EXISTING MERCHANTS
+  // ============================================
+  for (const merchant of merchants) {
+    const existingSubscription = await prisma.merchantSubscription.findUnique({
+      where: { merchantId: merchant.id },
+    });
+
+    if (!existingSubscription) {
+      const now = new Date();
+      const trialEndsAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
+
+      await prisma.merchantSubscription.create({
+        data: {
+          merchantId: merchant.id,
+          type: 'TRIAL',
+          status: 'ACTIVE',
+          trialStartedAt: now,
+          trialEndsAt,
+        },
+      });
+
+      // Also create balance record
+      await prisma.merchantBalance.create({
+        data: {
+          merchantId: merchant.id,
+          balance: 0,
+        },
+      });
+
+      console.log(`✅ Subscription created for ${merchant.name} (30-day trial)`);
+    } else {
+      console.log(`✅ Subscription already exists for ${merchant.name}`);
+    }
+  }
+
   console.log('');
   console.log('═══════════════════════════════════════════════');
   console.log('🎉 DATABASE SEEDED SUCCESSFULLY!');
@@ -796,6 +870,8 @@ async function main() {
   console.log('   • Menu Items: 20+ (Kopi Kenangan)');
   console.log('   • Addon Categories: 6 (Kopi Kenangan)');
   console.log('   • Addon Items: 25+ (Kopi Kenangan)');
+  console.log('   • Subscription Plan: 1 (Default)');
+  console.log('   • Merchant Subscriptions: 3 (30-day trials)');
   console.log('');
   console.log('🔐 Login Credentials:');
   console.log('');

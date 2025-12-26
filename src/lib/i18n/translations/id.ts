@@ -471,6 +471,9 @@ const id = {
   "admin.nav.reportsAnalytics": "Laporan & Analitik",
   "admin.nav.revenue": "Pendapatan",
   "admin.nav.reports": "Laporan",
+  "admin.nav.subscription": "Langganan",
+  "admin.nav.paymentVerification": "Verifikasi Pembayaran",
+  "admin.nav.subscriptionSettings": "Pengaturan Langganan",
 
   // Sidebar messages
   "admin.sidebar.noMerchant.title": "Tidak Terhubung ke Merchant",

@@ -477,6 +477,9 @@ const en = {
   "admin.nav.reportsAnalytics": "Reports & Analytics",
   "admin.nav.revenue": "Revenue",
   "admin.nav.reports": "Reports",
+  "admin.nav.subscription": "Subscription",
+  "admin.nav.paymentVerification": "Payment Verification",
+  "admin.nav.subscriptionSettings": "Subscription Settings",
 
   // Sidebar messages
   "admin.sidebar.noMerchant.title": "No Merchant Connected",

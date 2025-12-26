@@ -44,9 +44,27 @@ export async function GET(
       );
     }
 
-    // Return merchant info (exclude sensitive data)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const merchantData = merchant as unknown as Record<string, any>;
+
+    // Check subscription status
+    let subscriptionStatus = 'ACTIVE';
+    let subscriptionSuspendReason: string | null = null;
+
+    try {
+      const { default: subscriptionRepository } = await import('@/lib/repositories/SubscriptionRepository');
+      const subscription = await subscriptionRepository.getMerchantSubscription(BigInt(merchantData.id));
+
+      if (subscription) {
+        subscriptionStatus = subscription.status;
+        subscriptionSuspendReason = subscription.suspendReason;
+      }
+    } catch (subError) {
+      console.warn('Failed to get subscription status:', subError);
+      // Default to ACTIVE if subscription check fails
+    }
+
+    // Return merchant info (exclude sensitive data)
     const publicMerchantInfo = {
       id: merchantData.id.toString(),
       code: merchantData.code,
@@ -64,6 +82,9 @@ export async function GET(
       description: merchantData.description,
       isActive: merchantData.isActive,
       isOpen: merchantData.isOpen,
+      // Subscription status (for showing "store suspended" message)
+      subscriptionStatus,
+      subscriptionSuspendReason,
       // Sale mode settings
       isDineInEnabled: merchantData.isDineInEnabled ?? true,
       isTakeawayEnabled: merchantData.isTakeawayEnabled ?? true,

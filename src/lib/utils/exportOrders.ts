@@ -204,8 +204,9 @@ export function downloadExcel(data: OrderExportData[], filename: string) {
 
 /**
  * Format currency for export with locale-aware formatting
+ * @internal Reserved for future use
  */
-function formatCurrencyForExport(amount: number, options?: ExportOptions): string {
+function _formatCurrencyForExport(amount: number, options?: ExportOptions): string {
   const currency = options?.currency || 'AUD';
   const locale = currency === 'IDR' ? 'id-ID' : 'en-AU';
 

@@ -8,6 +8,7 @@ import AppHeader from "@/layout/AppHeader";
 import AppSidebar from "@/layout/AppSidebar";
 import Backdrop from "@/layout/Backdrop";
 import SessionGuard from "@/components/auth/SessionGuard";
+import SubscriptionAlerts from "@/components/subscription/SubscriptionAlerts";
 import { useSessionSync } from "@/hooks/useSessionSync";
 import SWRProvider from "@/lib/providers/SWRProvider";
 import React from "react";
@@ -25,6 +26,7 @@ import React from "react";
  * - Page transitions ready
  * - Global toast notifications
  * - Multi-language support (EN/ID)
+ * - Subscription alerts (trial/suspended banners)
  * 
  * @specification
  * - Uses AppSidebar from template with expand/collapse functionality
@@ -70,6 +72,9 @@ export default function AdminDashboardLayout({
                 {/* Header */}
                 <AppHeader />
 
+                {/* Subscription Alerts (Trial/Suspended banners for merchants) */}
+                <SubscriptionAlerts />
+
                 {/* Page Content */}
                 <div className="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6">
                   {children}
@@ -82,4 +87,3 @@ export default function AdminDashboardLayout({
     </SWRProvider>
   );
 }
-

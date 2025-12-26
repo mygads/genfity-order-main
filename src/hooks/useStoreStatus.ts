@@ -11,10 +11,10 @@
 
 import useSWR from 'swr';
 import { useMemo } from 'react';
-import { 
-  isStoreEffectivelyOpen, 
+import {
+  isStoreEffectivelyOpen,
   isStoreOpenBySchedule,
-  isWithinSchedule, 
+  isWithinSchedule,
   getMinutesUntilClose,
   isStoreOpenWithSpecialHours,
   isModeAvailableWithSchedules,
@@ -54,6 +54,7 @@ interface StoreStatusResponse {
   openingHours: OpeningHour[];
   modeSchedules?: ModeSchedule[];
   todaySpecialHour?: SpecialHour | null;
+  subscriptionStatus?: string; // ACTIVE, SUSPENDED, CANCELLED
   serverTime: string;
 }
 
@@ -61,35 +62,38 @@ interface UseStoreStatusResult {
   // Loading & Error states
   isLoading: boolean;
   error: Error | null;
-  
+
   // Store status
   storeOpen: boolean;
   storeStatusReason?: string;
   isManualOverride: boolean;
   scheduledStatus: boolean; // What status would be based on schedule
-  
+
   // Mode availability
   isDineInEnabled: boolean;
   isTakeawayEnabled: boolean;
   isDineInAvailable: boolean;
   isTakeawayAvailable: boolean;
-  
+
   // Labels
   dineInLabel: string;
   takeawayLabel: string;
-  
+
   // Time info
   minutesUntilClose: number | null;
   timezone: string;
   openingHours: OpeningHour[];
-  
+
   // Special hours info
   todaySpecialHour?: SpecialHour | null;
   specialHourName?: string;
-  
+
   // Mode schedules
   modeSchedules?: ModeSchedule[];
-  
+
+  // Subscription status
+  isSubscriptionSuspended: boolean;
+
   // Refetch function
   refresh: () => void;
 }
@@ -101,17 +105,17 @@ const fetcher = async (url: string) => {
       'Cache-Control': 'no-cache',
     },
   });
-  
+
   if (!res.ok) {
     throw new Error('Failed to fetch store status');
   }
-  
+
   const data = await res.json();
-  
+
   if (!data.success) {
     throw new Error(data.message || 'Failed to fetch store status');
   }
-  
+
   return data.data as StoreStatusResponse;
 };
 
@@ -130,7 +134,7 @@ export function useStoreStatus(
   }
 ): UseStoreStatusResult {
   const { refreshInterval = 30000, revalidateOnFocus = true } = options || {};
-  
+
   const { data, error, isLoading, mutate } = useSWR<StoreStatusResponse>(
     merchantCode ? `/api/public/merchants/${merchantCode}/status` : null,
     fetcher,
@@ -141,7 +145,7 @@ export function useStoreStatus(
       dedupingInterval: 5000, // Dedupe requests within 5 seconds
     }
   );
-  
+
   // Calculate derived values
   const result = useMemo((): Omit<UseStoreStatusResult, 'isLoading' | 'error' | 'refresh'> => {
     if (!data) {
@@ -160,6 +164,7 @@ export function useStoreStatus(
         openingHours: [],
         todaySpecialHour: null,
         modeSchedules: [],
+        isSubscriptionSuspended: false,
       };
     }
 
@@ -211,7 +216,7 @@ export function useStoreStatus(
         timezone: data.timezone,
       });
     }
-    
+
     // Calculate what the scheduled status would be (ignoring manual override)
     const scheduledStatus = isStoreOpenBySchedule({
       openingHours: extendedMerchant.openingHours,
@@ -243,21 +248,27 @@ export function useStoreStatus(
       isDineInAvailable = data.isDineInEnabled && isDineInWithinSchedule;
       isTakeawayAvailable = data.isTakeawayEnabled && isTakeawayWithinSchedule;
     }
-    
+
     // Calculate minutes until close
     const minutesUntilClose = storeOpen
       ? getMinutesUntilClose(data.openingHours, data.timezone)
       : null;
-    
+
+    // Subscription suspension check - treat suspended as closed
+    const isSubscriptionSuspended = data.subscriptionStatus === 'SUSPENDED';
+
+    // Final storeOpen should consider subscription suspension
+    const finalStoreOpen = storeOpen && !isSubscriptionSuspended;
+
     return {
-      storeOpen,
-      storeStatusReason,
+      storeOpen: finalStoreOpen,
+      storeStatusReason: isSubscriptionSuspended ? 'Subscription suspended' : storeStatusReason,
       isManualOverride: isManualOverrideActive,
       scheduledStatus,
       isDineInEnabled: data.isDineInEnabled,
       isTakeawayEnabled: data.isTakeawayEnabled,
-      isDineInAvailable,
-      isTakeawayAvailable,
+      isDineInAvailable: isSubscriptionSuspended ? false : isDineInAvailable,
+      isTakeawayAvailable: isSubscriptionSuspended ? false : isTakeawayAvailable,
       dineInLabel: data.dineInLabel || 'Dine In',
       takeawayLabel: data.takeawayLabel || 'Pick Up',
       minutesUntilClose,
@@ -266,9 +277,10 @@ export function useStoreStatus(
       todaySpecialHour: data.todaySpecialHour,
       specialHourName,
       modeSchedules: data.modeSchedules,
+      isSubscriptionSuspended,
     };
   }, [data]);
-  
+
   return {
     isLoading,
     error: error || null,

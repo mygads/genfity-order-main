@@ -21,7 +21,7 @@ export async function GET(
   context: { params: Promise<Record<string, string>> }
 ) {
   const params = await context.params;
-  
+
   try {
     const merchant = await prisma.merchant.findUnique({
       where: { code: params.code },
@@ -130,6 +130,18 @@ export async function GET(
       return shDateStr === todayStr;
     });
 
+    // Check subscription status
+    let subscriptionStatus = 'ACTIVE';
+    try {
+      const { default: subscriptionRepository } = await import('@/lib/repositories/SubscriptionRepository');
+      const subscription = await subscriptionRepository.getMerchantSubscription(merchant.id);
+      if (subscription) {
+        subscriptionStatus = subscription.status;
+      }
+    } catch (subError) {
+      console.warn('Failed to get subscription status:', subError);
+    }
+
     // Return only status-related data
     const statusData = {
       isOpen: merchant.isOpen,
@@ -148,6 +160,8 @@ export async function GET(
       modeSchedules: merchant.modeSchedules,
       // Today's special hours (if any)
       todaySpecialHour: todaySpecialHour || null,
+      // Subscription status (store suspension)
+      subscriptionStatus,
       // Server timestamp for accurate time comparison
       serverTime: new Date().toISOString(),
     };

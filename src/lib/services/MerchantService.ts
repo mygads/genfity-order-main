@@ -208,6 +208,28 @@ class MerchantService {
       'OWNER'
     );
 
+    // Auto-create trial subscription (30 days)
+    try {
+      const { default: subscriptionRepository } = await import('@/lib/repositories/SubscriptionRepository');
+      const { default: balanceRepository } = await import('@/lib/repositories/BalanceRepository');
+      const { default: subscriptionService } = await import('@/lib/services/SubscriptionService');
+
+      // Get trial days from plan pricing
+      const pricing = await subscriptionService.getPlanPricing(input.currency || 'AUD');
+      const trialDays = pricing.trialDays || 30;
+
+      // Create trial subscription with merchantId and trialDays
+      await subscriptionRepository.createMerchantSubscription(merchant.id, trialDays);
+
+      // Create initial balance (0) with merchantId only
+      await balanceRepository.getOrCreateBalance(merchant.id);
+
+      console.log(`✅ Created ${trialDays}-day trial subscription for merchant ${merchant.code}`);
+    } catch (subscriptionError) {
+      // Log but don't fail merchant creation if subscription creation fails
+      console.warn('Failed to create trial subscription:', subscriptionError);
+    }
+
     return {
       merchant,
       owner,
