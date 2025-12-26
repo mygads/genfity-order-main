@@ -213,39 +213,114 @@ function ProfileContent() {
         {t('common.poweredBy')} <span className="font-semibold">GENFITY</span>
       </div>
 
-      {/* Logout Confirmation Modal */}
+      {/* Logout Confirmation Modal - ESB Bottom Sheet Style */}
       {showLogoutConfirm && (
         <>
+          <style jsx>{`
+            @keyframes fadeIn {
+              from { opacity: 0; }
+              to { opacity: 1; }
+            }
+            @keyframes slideUp {
+              from { transform: translateY(100%); }
+              to { transform: translateY(0); }
+            }
+            .animate-fade-in { animation: fadeIn 0.3s ease-out; }
+            .animate-slide-up { animation: slideUp 0.3s ease-out; }
+          `}</style>
+
+          {/* Overlay */}
           <div
-            className="fixed inset-0 bg-black/50 z-[300]"
+            className="fixed inset-0 bg-black/50 z-[300] animate-fade-in"
             onClick={() => setShowLogoutConfirm(false)}
           />
-          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-32px)] max-w-[320px] bg-white dark:bg-gray-800 rounded-xl z-[300] p-6 shadow-2xl">
-            <div className="text-center mb-6">
-              <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center text-2xl">
-                ⚠️
-              </div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
-                {t('customer.profile.signOutConfirm')}
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {t('customer.profile.signOutMessage')}
-              </p>
-            </div>
 
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowLogoutConfirm(false)}
-                className="flex-1 h-11 border-2 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white text-sm font-semibold rounded-xl hover:border-gray-400 dark:hover:border-gray-600 transition-all active:scale-[0.98]"
+          {/* Bottom Sheet Modal */}
+          <div
+            className="fixed bottom-0 left-0 right-0 z-[301] animate-slide-up"
+            style={{
+              maxWidth: '500px',
+              margin: '0 auto',
+            }}
+          >
+            <div
+              style={{
+                backgroundColor: 'white',
+                borderTopLeftRadius: '24px',
+                borderTopRightRadius: '24px',
+                padding: '24px 16px',
+                boxShadow: '0 -4px 20px rgba(0,0,0,0.15)'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Title */}
+              <h3
+                className="text-center mb-2"
+                style={{
+                  fontSize: '16px',
+                  fontWeight: 600,
+                  color: '#1A1A1A',
+                  lineHeight: '24px'
+                }}
               >
-                {t('common.cancel')}
-              </button>
-              <button
-                onClick={handleLogout}
-                className="flex-1 h-11 bg-red-500 text-white text-sm font-semibold rounded-xl hover:bg-red-600 transition-all active:scale-[0.98]"
+                Log out from your account?
+              </h3>
+
+              {/* Subtitle */}
+              <p
+                className="text-center mb-6"
+                style={{
+                  fontSize: '14px',
+                  color: '#666',
+                  lineHeight: '20px'
+                }}
               >
-                {t('auth.signOut')}
-              </button>
+                Vouchers/promos you&apos;ve applied will be automatically removed.
+              </p>
+
+              {/* Buttons Row - ESB Style */}
+              <div
+                className="flex justify-between gap-3"
+                style={{ padding: '0 8px' }}
+              >
+                {/* Yes Button - Outline Orange */}
+                <button
+                  onClick={handleLogout}
+                  style={{
+                    flex: 1,
+                    height: '48px',
+                    backgroundColor: 'white',
+                    border: '1px solid #F05A28',
+                    borderRadius: '8px',
+                    color: '#F05A28',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  {t('common.yes')}
+                </button>
+
+                {/* No Button - Primary Orange */}
+                <button
+                  onClick={() => setShowLogoutConfirm(false)}
+                  style={{
+                    flex: 1,
+                    height: '48px',
+                    backgroundColor: '#F05A28',
+                    border: 'none',
+                    borderRadius: '8px',
+                    color: 'white',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  {t('common.no')}
+                </button>
+              </div>
             </div>
           </div>
         </>
