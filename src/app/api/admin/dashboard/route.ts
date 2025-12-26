@@ -22,21 +22,19 @@ async function handleGet(req: NextRequest, context: AuthContext) {
 
     // Super Admin Dashboard Data
     if (role === 'SUPER_ADMIN') {
-      // Get customer count from Customer table (separate from User)
-      const _totalCustomers = await prisma.customer.count();
-
       const [
         totalMerchants,
         activeMerchants,
         totalUsers,
         totalOrders,
+        totalCustomers,
         recentMerchants,
-        recentOrders,
       ] = await Promise.all([
         prisma.merchant.count(),
         prisma.merchant.count({ where: { isActive: true } }),
         prisma.user.count(), // All users are admin/merchant/staff (no CUSTOMER in User table)
         prisma.order.count(),
+        prisma.customer.count(), // Count from Customer table
         prisma.merchant.findMany({
           take: 5,
           orderBy: { createdAt: 'desc' },
@@ -50,18 +48,7 @@ async function handleGet(req: NextRequest, context: AuthContext) {
             createdAt: true,
           },
         }),
-        prisma.order.findMany({
-          take: 10,
-          orderBy: { createdAt: 'desc' },
-          include: {
-            merchant: { select: { name: true } },
-          },
-        }),
       ]);
-
-      const revenue = await prisma.order.aggregate({
-        _sum: { totalAmount: true },
-      });
 
       return NextResponse.json({
         success: true,
@@ -72,10 +59,9 @@ async function handleGet(req: NextRequest, context: AuthContext) {
             activeMerchants,
             totalUsers,
             totalOrders,
-            totalRevenue: revenue._sum.totalAmount?.toNumber() || 0,
+            totalCustomers,
           },
           recentMerchants: serializeBigInt(recentMerchants),
-          recentOrders: serializeBigInt(recentOrders),
         },
         statusCode: 200,
       });

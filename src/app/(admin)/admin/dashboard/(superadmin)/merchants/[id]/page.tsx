@@ -6,6 +6,7 @@ import Image from "next/image";
 import dynamic from "next/dynamic";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import ComponentCard from "@/components/common/ComponentCard";
+import BalanceSubscriptionModal from "@/components/merchants/BalanceSubscriptionModal";
 
 // Dynamically import map component
 const MapContent = dynamic(() => import("@/components/maps/MapContent"), { ssr: false });
@@ -55,6 +56,7 @@ export default function MerchantDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isTogglingOpen, setIsTogglingOpen] = useState(false);
+  const [isBalanceModalOpen, setIsBalanceModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchMerchant = async () => {
@@ -329,12 +331,18 @@ export default function MerchantDetailsPage() {
             )}
           </div>
 
-          <div className="mt-6 flex gap-3 border-t border-gray-200 pt-6 dark:border-gray-800">
+          <div className="mt-6 flex flex-wrap gap-3 border-t border-gray-200 pt-6 dark:border-gray-800">
             <button
               onClick={() => router.push(`/admin/dashboard/merchants/${merchant.id}/edit`)}
               className="h-11 rounded-lg bg-brand-500 px-6 text-sm font-medium text-white hover:bg-brand-600 focus:outline-none focus:ring-3 focus:ring-brand-500/20"
             >
               Edit Merchant
+            </button>
+            <button
+              onClick={() => setIsBalanceModalOpen(true)}
+              className="h-11 rounded-lg bg-purple-500 px-6 text-sm font-medium text-white hover:bg-purple-600 focus:outline-none focus:ring-3 focus:ring-purple-500/20"
+            >
+              Manage Balance & Subscription
             </button>
             <button
               onClick={toggleStoreOpen}
@@ -502,6 +510,15 @@ export default function MerchantDetailsPage() {
           </div>
         </div>
       </ComponentCard>
+
+      {/* Balance & Subscription Modal */}
+      <BalanceSubscriptionModal
+        isOpen={isBalanceModalOpen}
+        onClose={() => setIsBalanceModalOpen(false)}
+        merchantId={merchant.id}
+        merchantName={merchant.name}
+        currency={merchant.currency}
+      />
     </div>
   );
 }

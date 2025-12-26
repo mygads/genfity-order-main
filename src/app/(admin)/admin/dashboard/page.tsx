@@ -130,7 +130,6 @@ export default function AdminDashboardPage() {
       <SuperAdminDashboard
         stats={dashboardData.stats}
         recentMerchants={dashboardData.recentMerchants}
-        recentOrders={dashboardData.recentOrders}
       />
     );
   }

@@ -5,6 +5,7 @@ import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { useToast } from "@/hooks/useToast";
 import { useSWRStatic } from "@/hooks/useSWRWithAuth";
 import { useSWRConfig } from "swr";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface PaymentRequest {
     id: string;
@@ -33,6 +34,7 @@ interface ApiResponse<T> {
  * Lists confirmed payments awaiting admin verification
  */
 export default function PaymentVerificationPage() {
+    const { t } = useTranslation();
     const { success: showSuccess, error: showError } = useToast();
     const { mutate } = useSWRConfig();
     const [processingId, setProcessingId] = useState<string | null>(null);
@@ -65,7 +67,9 @@ export default function PaymentVerificationPage() {
     };
 
     const getTypeLabel = (type: string) => {
-        return type === 'DEPOSIT_TOPUP' ? 'Top Up Deposit' : 'Langganan Bulanan';
+        return type === 'DEPOSIT_TOPUP'
+            ? t("admin.paymentVerification.type.deposit")
+            : t("admin.paymentVerification.type.monthly");
     };
 
     const handleVerify = async (id: string) => {
@@ -83,10 +87,10 @@ export default function PaymentVerificationPage() {
                 throw new Error(data.error || 'Failed to verify');
             }
 
-            showSuccess('Berhasil', 'Pembayaran berhasil diverifikasi!');
+            showSuccess(t("common.success"), t("admin.paymentVerification.verifySuccess"));
             mutate('/api/admin/payment-requests');
         } catch (err: unknown) {
-            showError('Gagal', err instanceof Error ? err.message : 'Gagal memverifikasi');
+            showError(t("common.error"), err instanceof Error ? err.message : 'Failed to verify');
         } finally {
             setProcessingId(null);
         }
@@ -94,7 +98,7 @@ export default function PaymentVerificationPage() {
 
     const handleReject = async (id: string) => {
         if (!rejectReason.trim()) {
-            showError('Error', 'Alasan penolakan wajib diisi');
+            showError(t("common.error"), t("admin.paymentVerification.reasonRequired"));
             return;
         }
 
@@ -112,12 +116,12 @@ export default function PaymentVerificationPage() {
                 throw new Error(data.error || 'Failed to reject');
             }
 
-            showSuccess('Berhasil', 'Pembayaran ditolak');
+            showSuccess(t("common.success"), t("admin.paymentVerification.rejectSuccess"));
             setShowRejectModal(null);
             setRejectReason('');
             mutate('/api/admin/payment-requests');
         } catch (err: unknown) {
-            showError('Gagal', err instanceof Error ? err.message : 'Gagal menolak');
+            showError(t("common.error"), err instanceof Error ? err.message : 'Failed to reject');
         } finally {
             setProcessingId(null);
         }
@@ -138,7 +142,7 @@ export default function PaymentVerificationPage() {
 
     return (
         <div>
-            <PageBreadcrumb pageTitle="Verifikasi Pembayaran" />
+            <PageBreadcrumb pageTitle={t("admin.paymentVerification.title")} />
 
             {/* Summary */}
             <div className="mb-6 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50">
@@ -152,10 +156,10 @@ export default function PaymentVerificationPage() {
                     </div>
                     <div>
                         <p className="font-semibold text-amber-800 dark:text-amber-200">
-                            {requests.length} pembayaran menunggu verifikasi
+                            {t("admin.paymentVerification.pending").replace('{count}', requests.length.toString())}
                         </p>
                         <p className="text-sm text-amber-700 dark:text-amber-300">
-                            Verifikasi pembayaran untuk mengaktifkan langganan merchant
+                            {t("admin.paymentVerification.subtitle")}
                         </p>
                     </div>
                 </div>
@@ -170,10 +174,10 @@ export default function PaymentVerificationPage() {
                         </svg>
                     </div>
                     <p className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                        Tidak Ada Pembayaran Tertunda
+                        {t("admin.paymentVerification.noPending")}
                     </p>
                     <p className="text-gray-500 dark:text-gray-400">
-                        Semua pembayaran sudah diverifikasi
+                        {t("admin.paymentVerification.allVerified")}
                     </p>
                 </div>
             ) : (
@@ -197,20 +201,20 @@ export default function PaymentVerificationPage() {
 
                                     <div className="grid gap-2 sm:grid-cols-3 text-sm">
                                         <div>
-                                            <span className="text-gray-500 dark:text-gray-400">Jenis:</span>
+                                            <span className="text-gray-500 dark:text-gray-400">{t("admin.paymentVerification.type")}:</span>
                                             <span className="ml-2 font-medium text-gray-900 dark:text-white">
                                                 {getTypeLabel(req.type)}
-                                                {req.monthsRequested && ` (${req.monthsRequested} bulan)`}
+                                                {req.monthsRequested && ` (${req.monthsRequested} ${req.monthsRequested === 1 ? 'month' : 'months'})`}
                                             </span>
                                         </div>
                                         <div>
-                                            <span className="text-gray-500 dark:text-gray-400">Jumlah:</span>
+                                            <span className="text-gray-500 dark:text-gray-400">{t("admin.paymentVerification.amount")}:</span>
                                             <span className="ml-2 font-bold text-orange-600">
                                                 {formatCurrency(req.amount, req.currency)}
                                             </span>
                                         </div>
                                         <div>
-                                            <span className="text-gray-500 dark:text-gray-400">Dikonfirmasi:</span>
+                                            <span className="text-gray-500 dark:text-gray-400">{t("admin.paymentVerification.confirmedAt")}:</span>
                                             <span className="ml-2 text-gray-900 dark:text-white">
                                                 {req.confirmedAt ? formatDateTime(req.confirmedAt) : '-'}
                                             </span>
@@ -219,7 +223,7 @@ export default function PaymentVerificationPage() {
 
                                     {req.transferNotes && (
                                         <div className="mt-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
-                                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Catatan dari merchant:</p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{t("admin.paymentVerification.merchantNotes")}:</p>
                                             <p className="text-sm text-gray-700 dark:text-gray-300">{req.transferNotes}</p>
                                         </div>
                                     )}
@@ -237,7 +241,7 @@ export default function PaymentVerificationPage() {
                                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                         </svg>
-                                        {processingId === req.id ? 'Memproses...' : 'Verifikasi'}
+                                        {processingId === req.id ? t("admin.paymentVerification.processing") : t("admin.paymentVerification.verify")}
                                     </button>
                                     <button
                                         onClick={() => setShowRejectModal(req.id)}
@@ -250,7 +254,7 @@ export default function PaymentVerificationPage() {
                                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                         </svg>
-                                        Tolak
+                                        {t("admin.paymentVerification.reject")}
                                     </button>
                                 </div>
                             </div>
@@ -264,15 +268,15 @@ export default function PaymentVerificationPage() {
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
                     <div className="w-full max-w-md rounded-xl bg-white dark:bg-gray-800 p-6">
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                            Tolak Pembayaran
+                            {t("admin.paymentVerification.rejectTitle")}
                         </h3>
                         <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                            Berikan alasan penolakan yang akan dilihat oleh merchant.
+                            {t("admin.paymentVerification.rejectHint")}
                         </p>
                         <textarea
                             value={rejectReason}
                             onChange={(e) => setRejectReason(e.target.value)}
-                            placeholder="Contoh: Bukti transfer tidak valid, jumlah tidak sesuai, dll."
+                            placeholder={t("admin.paymentVerification.rejectPlaceholder")}
                             rows={3}
                             className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 
                 bg-white dark:bg-gray-700 text-gray-900 dark:text-white mb-4
@@ -288,7 +292,7 @@ export default function PaymentVerificationPage() {
                   text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700
                   hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                             >
-                                Batal
+                                {t("admin.paymentVerification.cancel")}
                             </button>
                             <button
                                 onClick={() => handleReject(showRejectModal)}
@@ -296,7 +300,7 @@ export default function PaymentVerificationPage() {
                                 className="flex-1 py-2 px-4 rounded-lg font-medium text-white
                   bg-red-600 hover:bg-red-700 disabled:bg-gray-400 transition-colors"
                             >
-                                {processingId === showRejectModal ? 'Memproses...' : 'Tolak Pembayaran'}
+                                {processingId === showRejectModal ? t("admin.paymentVerification.processing") : t("admin.paymentVerification.confirmReject")}
                             </button>
                         </div>
                     </div>

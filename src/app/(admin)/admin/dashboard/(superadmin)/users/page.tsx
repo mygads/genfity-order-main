@@ -252,10 +252,10 @@ export default function UsersPage() {
       <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
         <div className="mb-5">
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-            All Users
+            Admin Users
           </h3>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Manage all users, roles, and permissions across the system
+            Manage Super Admins, Merchant Owners, and Staff accounts
           </p>
         </div>
 
@@ -274,12 +274,10 @@ export default function UsersPage() {
               onChange={(e) => setRoleFilter(e.target.value)}
               className="h-10 rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
             >
-              <option value="admin">Admin Roles Only (Default)</option>
-              <option value="">All Roles</option>
+              <option value="admin">All Admin Roles</option>
               <option value="SUPER_ADMIN">Super Admin</option>
               <option value="MERCHANT_OWNER">Merchant Owner</option>
               <option value="MERCHANT_STAFF">Merchant Staff</option>
-              <option value="CUSTOMER">Customer</option>
             </select>
             <select 
               value={statusFilter}

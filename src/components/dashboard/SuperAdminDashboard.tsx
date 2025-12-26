@@ -1,12 +1,9 @@
+'use client';
+
 import Link from 'next/link';
-// Custom types based on Prisma schema
-type Order = {
-  id: bigint;
-  orderNumber: string;
-  status: string;
-  totalAmount: number | { toString(): string }; // Decimal
-  createdAt: Date;
-};
+import { useTranslation } from '@/lib/i18n/useTranslation';
+import { useState, useEffect, useCallback } from 'react';
+import { RevenueChart, CustomerGrowthChart, ActivityHeatmap, NotificationBell } from './superadmin';
 
 interface SuperAdminDashboardProps {
   stats: {
@@ -14,7 +11,7 @@ interface SuperAdminDashboardProps {
     activeMerchants: number;
     totalUsers: number;
     totalOrders: number;
-    totalRevenue: number;
+    totalCustomers: number;
   };
   recentMerchants: Array<{
     id: bigint;
@@ -25,11 +22,23 @@ interface SuperAdminDashboardProps {
     isActive: boolean;
     createdAt: Date;
   }>;
-  recentOrders: Array<
-    Order & {
-      merchant: { name: string };
-    }
-  >;
+}
+
+interface ChartData {
+  revenueData: Array<{ date: string; revenue: number; orderCount: number }>;
+  customerGrowth: Array<{ date: string; newCustomers: number; totalCustomers: number }>;
+  activityHeatmap: Array<{ dayOfWeek: number; hour: number; orderCount: number }>;
+  summary: {
+    totalRevenue: number;
+    totalOrders: number;
+    avgOrderValue: number;
+    totalNewCustomers: number;
+    currentTotalCustomers: number;
+  };
+  revenueByCurrency?: {
+    IDR: { totalRevenue: number; totalOrders: number; avgOrderValue: number };
+    AUD: { totalRevenue: number; totalOrders: number; avgOrderValue: number };
+  };
 }
 
 /**
@@ -45,22 +54,40 @@ interface SuperAdminDashboardProps {
 export default function SuperAdminDashboard({
   stats,
   recentMerchants,
-  recentOrders,
 }: SuperAdminDashboardProps) {
-  const formatCurrency = (amount: number, currency: string = 'AUD') => {
-    if (currency === 'IDR') {
-      const formatted = new Intl.NumberFormat('id-ID', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(Math.round(amount));
-      return `Rp ${formatted}`;
+  const { t } = useTranslation();
+  const [chartPeriod, setChartPeriod] = useState<'7d' | '30d' | '90d' | '1y'>('30d');
+  const [chartData, setChartData] = useState<ChartData | null>(null);
+  const [chartLoading, setChartLoading] = useState(true);
+
+  const fetchChartData = useCallback(async () => {
+    try {
+      setChartLoading(true);
+      const token = localStorage.getItem('accessToken');
+      if (!token) return;
+
+      const response = await fetch(`/api/admin/analytics/charts?period=${chartPeriod}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          setChartData(result.data);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching chart data:', error);
+    } finally {
+      setChartLoading(false);
     }
-    // Default: AUD
-    return `A$${amount.toLocaleString('en-AU', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
-  };
+  }, [chartPeriod]);
+
+  useEffect(() => {
+    fetchChartData();
+  }, [fetchChartData]);
 
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('en-AU', {
@@ -74,6 +101,14 @@ export default function SuperAdminDashboard({
 
   return (
     <div className="space-y-6">
+      {/* Header with Notification Bell */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          {t('admin.superadmin.dashboard.title') || 'Super Admin Dashboard'}
+        </h1>
+        <NotificationBell />
+      </div>
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         {/* Total Merchants */}
@@ -81,13 +116,13 @@ export default function SuperAdminDashboard({
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                Total Merchants
+                {t('admin.superadmin.dashboard.totalMerchants')}
               </p>
               <h3 className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">
                 {stats.totalMerchants}
               </h3>
               <p className="mt-1 text-sm text-green-600">
-                {stats.activeMerchants} active
+                {stats.activeMerchants} {t('common.active').toLowerCase()}
               </p>
             </div>
             <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-brand-50 dark:bg-brand-900/20">
@@ -113,7 +148,7 @@ export default function SuperAdminDashboard({
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                Total Users
+                {t('admin.superadmin.allUsers')}
               </p>
               <h3 className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">
                 {stats.totalUsers}
@@ -145,13 +180,13 @@ export default function SuperAdminDashboard({
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                Total Orders
+                {t('admin.superadmin.dashboard.totalOrders')}
               </p>
               <h3 className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">
                 {stats.totalOrders}
               </h3>
               <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                All time
+                {t('admin.dashboard.allTime')}
               </p>
             </div>
             <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-purple-50 dark:bg-purple-900/20">
@@ -172,18 +207,18 @@ export default function SuperAdminDashboard({
           </div>
         </div>
 
-        {/* Total Revenue */}
+        {/* Total Customers */}
         <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                Total Revenue
+                {t('admin.superadmin.dashboard.totalCustomers')}
               </p>
               <h3 className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">
-                {formatCurrency(stats.totalRevenue)}
+                {stats.totalCustomers}
               </h3>
               <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                All time
+                {t('admin.roles.customer')}
               </p>
             </div>
             <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-green-50 dark:bg-green-900/20">
@@ -197,7 +232,7 @@ export default function SuperAdminDashboard({
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
                 />
               </svg>
             </div>
@@ -205,80 +240,173 @@ export default function SuperAdminDashboard({
         </div>
       </div>
 
-      {/* Recent Merchants & Orders */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Recent Merchants */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Recent Merchants
-            </h3>
-            <Link
-              href="/admin/dashboard/merchants"
-              className="text-sm font-medium text-brand-500 hover:text-brand-600"
-            >
-              View All
-            </Link>
-          </div>
-          <div className="space-y-3">
-            {recentMerchants.map((merchant) => (
-              <div
-                key={merchant.id.toString()}
-                className="flex items-center justify-between rounded-lg border border-gray-100 p-3 dark:border-gray-800"
+      {/* Charts Section */}
+      <div className="space-y-6">
+        {/* Period Selector */}
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            {t('admin.superadmin.dashboard.analyticsOverview') || 'Analytics Overview'}
+          </h2>
+          <div className="flex gap-2">
+            {(['7d', '30d', '90d', '1y'] as const).map((period) => (
+              <button
+                key={period}
+                onClick={() => setChartPeriod(period)}
+                className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${chartPeriod === period
+                  ? 'bg-brand-500 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                  }`}
               >
-                <div className="flex-1">
-                  <p className="font-medium text-gray-900 dark:text-white">
-                    {merchant.name}
-                  </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {merchant.code} • {merchant.city || 'No city'}
-                  </p>
-                </div>
-                <span
-                  className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${merchant.isActive
-                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                    : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400'
-                    }`}
-                >
-                  {merchant.isActive ? 'Active' : 'Inactive'}
-                </span>
-              </div>
+                {period === '7d' ? '7 Days' : period === '30d' ? '30 Days' : period === '90d' ? '90 Days' : '1 Year'}
+              </button>
             ))}
           </div>
         </div>
 
-        {/* Recent Orders */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Recent Orders
-            </h3>
-          </div>
-          <div className="space-y-3">
-            {recentOrders.map((order) => (
-              <div
-                key={order.id.toString()}
-                className="flex items-center justify-between rounded-lg border border-gray-100 p-3 dark:border-gray-800"
-              >
-                <div className="flex-1">
-                  <p className="font-medium text-gray-900 dark:text-white">
-                    {order.merchant.name}
-                  </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {formatDate(order.createdAt)}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="font-medium text-gray-900 dark:text-white">
-                    {formatCurrency(typeof order.totalAmount === 'number' ? order.totalAmount : Number(order.totalAmount))}
-                  </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {order.status}
-                  </p>
-                </div>
+        {/* Charts Grid */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* Revenue Chart */}
+          <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {t('admin.superadmin.dashboard.revenueOverTime') || 'Revenue Over Time'}
+                </h3>
+                {chartData?.revenueByCurrency && (
+                  <div className="flex flex-wrap gap-4 mt-2">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 text-xs rounded bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 font-medium">
+                        IDR
+                      </span>
+                      <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        Rp {chartData.revenueByCurrency.IDR.totalRevenue.toLocaleString('id-ID')}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        ({chartData.revenueByCurrency.IDR.totalOrders} orders)
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 text-xs rounded bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 font-medium">
+                        AUD
+                      </span>
+                      <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        A${chartData.revenueByCurrency.AUD.totalRevenue.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        ({chartData.revenueByCurrency.AUD.totalOrders} orders)
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
-            ))}
+            </div>
+            {chartLoading ? (
+              <div className="flex items-center justify-center h-[350px]">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-500"></div>
+              </div>
+            ) : chartData?.revenueData ? (
+              <RevenueChart data={chartData.revenueData} currency="ALL" />
+            ) : (
+              <div className="flex items-center justify-center h-[350px] text-gray-500 dark:text-gray-400">
+                No revenue data available
+              </div>
+            )}
           </div>
+
+          {/* Customer Growth Chart */}
+          <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {t('admin.superadmin.dashboard.customerGrowth') || 'Customer Growth'}
+                </h3>
+                {chartData?.summary && (
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    +{chartData.summary.totalNewCustomers} new customers in this period
+                  </p>
+                )}
+              </div>
+            </div>
+            {chartLoading ? (
+              <div className="flex items-center justify-center h-[350px]">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-500"></div>
+              </div>
+            ) : chartData?.customerGrowth ? (
+              <CustomerGrowthChart data={chartData.customerGrowth} />
+            ) : (
+              <div className="flex items-center justify-center h-[350px] text-gray-500 dark:text-gray-400">
+                No customer data available
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Activity Heatmap - Full Width */}
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              {t('admin.superadmin.dashboard.activityHeatmap') || 'Order Activity Heatmap'}
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Order activity by day and hour (last 30 days)
+            </p>
+          </div>
+          {chartLoading ? (
+            <div className="flex items-center justify-center h-[350px]">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-500"></div>
+            </div>
+          ) : chartData?.activityHeatmap ? (
+            <ActivityHeatmap data={chartData.activityHeatmap} />
+          ) : (
+            <div className="flex items-center justify-center h-[350px] text-gray-500 dark:text-gray-400">
+              No activity data available
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Recent Merchants */}
+      <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            {t('admin.superadmin.dashboard.recentMerchants')}
+          </h3>
+          <Link
+            href="/admin/dashboard/merchants"
+            className="text-sm font-medium text-brand-500 hover:text-brand-600"
+          >
+            {t('common.viewAll')}
+          </Link>
+        </div>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+          {recentMerchants.map((merchant) => (
+            <div
+              key={merchant.id.toString()}
+              className="flex items-center justify-between rounded-lg border border-gray-100 p-3 dark:border-gray-800"
+            >
+              <div className="flex-1">
+                <p className="font-medium text-gray-900 dark:text-white">
+                  {merchant.name}
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {merchant.code} • {merchant.city || 'No city'}
+                </p>
+              </div>
+              <span
+                className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${merchant.isActive
+                  ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                  : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400'
+                  }`}
+              >
+                {merchant.isActive ? t('common.active') : t('common.inactive')}
+              </span>
+            </div>
+          ))}
+          {recentMerchants.length === 0 && (
+            <div className="col-span-full text-center py-4 text-gray-500 dark:text-gray-400">
+              {t('admin.superadmin.dashboard.noMerchantsYet')}
+            </div>
+          )}
         </div>
       </div>
     </div>

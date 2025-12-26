@@ -5,6 +5,7 @@ import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { useToast } from "@/hooks/useToast";
 import { useSWRStatic } from "@/hooks/useSWRWithAuth";
 import { useSWRConfig } from "swr";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface SubscriptionPlan {
     id: string;
@@ -41,6 +42,7 @@ interface ApiResponse<T> {
  * Configure pricing and bank account details
  */
 export default function SubscriptionSettingsPage() {
+    const { t } = useTranslation();
     const { success: showSuccess, error: showError } = useToast();
     const { mutate } = useSWRConfig();
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -121,10 +123,10 @@ export default function SubscriptionSettingsPage() {
                 throw new Error(data.error || 'Failed to update');
             }
 
-            showSuccess('Berhasil', 'Pengaturan berhasil disimpan!');
+            showSuccess(t("common.success"), t("admin.subscriptionSettings.success"));
             mutate('/api/admin/subscription-plans');
         } catch (err: unknown) {
-            showError('Gagal', err instanceof Error ? err.message : 'Gagal menyimpan');
+            showError(t("common.error"), err instanceof Error ? err.message : t("admin.subscriptionSettings.error"));
         } finally {
             setIsSubmitting(false);
         }
@@ -141,7 +143,7 @@ export default function SubscriptionSettingsPage() {
 
     return (
         <div>
-            <PageBreadcrumb pageTitle="Pengaturan Langganan" />
+            <PageBreadcrumb pageTitle={t("admin.subscriptionSettings.title")} />
 
             <div className="max-w-3xl">
                 {/* Tabs */}
@@ -154,7 +156,7 @@ export default function SubscriptionSettingsPage() {
                                 : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200'
                             }`}
                     >
-                        Harga Langganan
+                        {t("admin.subscriptionSettings.tabs.pricing")}
                     </button>
                     <button
                         onClick={() => setActiveTab('bank')}
@@ -164,7 +166,7 @@ export default function SubscriptionSettingsPage() {
                                 : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200'
                             }`}
                     >
-                        Rekening Bank
+                        {t("admin.subscriptionSettings.tabs.bank")}
                     </button>
                 </div>
 
@@ -172,13 +174,13 @@ export default function SubscriptionSettingsPage() {
                 {activeTab === 'pricing' && (
                     <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
                         <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
-                            Harga Langganan
+                            {t("admin.subscriptionSettings.tabs.pricing")}
                         </h2>
 
                         {/* Trial Days */}
                         <div className="mb-6">
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Durasi Trial (hari)
+                                {t("admin.subscriptionSettings.trialDays")}
                             </label>
                             <input
                                 type="number"
@@ -198,12 +200,12 @@ export default function SubscriptionSettingsPage() {
                                 <span className="px-2 py-1 text-xs rounded bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200">
                                     IDR
                                 </span>
-                                Harga dalam Rupiah
+                                {t("admin.subscriptionSettings.idr.subtitle")}
                             </h3>
                             <div className="grid gap-4 sm:grid-cols-3">
                                 <div>
                                     <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
-                                        Minimum Deposit
+                                        {t("admin.subscriptionSettings.minimumDeposit")}
                                     </label>
                                     <div className="relative">
                                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">Rp</span>
@@ -218,7 +220,7 @@ export default function SubscriptionSettingsPage() {
                                 </div>
                                 <div>
                                     <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
-                                        Biaya per Pesanan
+                                        {t("admin.subscriptionSettings.orderFee")}
                                     </label>
                                     <div className="relative">
                                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">Rp</span>
@@ -233,7 +235,7 @@ export default function SubscriptionSettingsPage() {
                                 </div>
                                 <div>
                                     <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
-                                        Harga Bulanan
+                                        {t("admin.subscriptionSettings.monthlyPrice")}
                                     </label>
                                     <div className="relative">
                                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">Rp</span>
@@ -255,12 +257,12 @@ export default function SubscriptionSettingsPage() {
                                 <span className="px-2 py-1 text-xs rounded bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200">
                                     AUD
                                 </span>
-                                Harga dalam Australian Dollar
+                                {t("admin.subscriptionSettings.aud.subtitle")}
                             </h3>
                             <div className="grid gap-4 sm:grid-cols-3">
                                 <div>
                                     <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
-                                        Minimum Deposit
+                                        {t("admin.subscriptionSettings.minimumDeposit")}
                                     </label>
                                     <div className="relative">
                                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">A$</span>
@@ -276,7 +278,7 @@ export default function SubscriptionSettingsPage() {
                                 </div>
                                 <div>
                                     <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
-                                        Biaya per Pesanan
+                                        {t("admin.subscriptionSettings.orderFee")}
                                     </label>
                                     <div className="relative">
                                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">A$</span>
@@ -292,7 +294,7 @@ export default function SubscriptionSettingsPage() {
                                 </div>
                                 <div>
                                     <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
-                                        Harga Bulanan
+                                        {t("admin.subscriptionSettings.monthlyPrice")}
                                     </label>
                                     <div className="relative">
                                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">A$</span>
@@ -315,7 +317,7 @@ export default function SubscriptionSettingsPage() {
                             className="px-6 py-2 rounded-lg font-medium text-white
                 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 transition-colors"
                         >
-                            {isSubmitting ? 'Menyimpan...' : 'Simpan Perubahan'}
+                            {isSubmitting ? t("admin.subscriptionSettings.saving") : t("admin.subscriptionSettings.saveChanges")}
                         </button>
                     </div>
                 )}
@@ -324,7 +326,7 @@ export default function SubscriptionSettingsPage() {
                 {activeTab === 'bank' && (
                     <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
                         <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
-                            Rekening Bank untuk Pembayaran
+                            {t("admin.subscriptionSettings.tabs.bank")}
                         </h2>
 
                         {/* IDR Bank */}
@@ -333,12 +335,12 @@ export default function SubscriptionSettingsPage() {
                                 <span className="px-2 py-1 text-xs rounded bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200">
                                     IDR
                                 </span>
-                                Rekening Rupiah (Indonesia)
+                                {t("admin.subscriptionSettings.bank.idr.subtitle")}
                             </h3>
                             <div className="grid gap-4 sm:grid-cols-3">
                                 <div>
                                     <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
-                                        Nama Bank
+                                        {t("admin.subscriptionSettings.bank.name")}
                                     </label>
                                     <input
                                         type="text"
@@ -351,7 +353,7 @@ export default function SubscriptionSettingsPage() {
                                 </div>
                                 <div>
                                     <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
-                                        Nomor Rekening
+                                        {t("admin.subscriptionSettings.bank.accountNumber")}
                                     </label>
                                     <input
                                         type="text"
@@ -364,7 +366,7 @@ export default function SubscriptionSettingsPage() {
                                 </div>
                                 <div>
                                     <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
-                                        Atas Nama
+                                        {t("admin.subscriptionSettings.bank.accountName")}
                                     </label>
                                     <input
                                         type="text"
@@ -384,25 +386,25 @@ export default function SubscriptionSettingsPage() {
                                 <span className="px-2 py-1 text-xs rounded bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200">
                                     AUD
                                 </span>
-                                Rekening AUD (Australia)
+                                {t("admin.subscriptionSettings.bank.aud.subtitle")}
                             </h3>
                             <div className="grid gap-4 sm:grid-cols-3">
                                 <div>
                                     <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
-                                        Nama Bank
+                                        {t("admin.subscriptionSettings.bank.name")}
                                     </label>
                                     <input
                                         type="text"
                                         value={formData.bankNameAud}
                                         onChange={(e) => handleChange('bankNameAud', e.target.value)}
-                                        placeholder="Commonwealth, ANZ, NAB, dll"
+                                        placeholder="Commonwealth, ANZ, NAB, etc."
                                         className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 
                       bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                     />
                                 </div>
                                 <div>
                                     <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
-                                        BSB & Account Number
+                                        {t("admin.subscriptionSettings.bank.bsb")}
                                     </label>
                                     <input
                                         type="text"
@@ -415,7 +417,7 @@ export default function SubscriptionSettingsPage() {
                                 </div>
                                 <div>
                                     <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
-                                        Account Name
+                                        {t("admin.subscriptionSettings.bank.accountName")}
                                     </label>
                                     <input
                                         type="text"
@@ -435,7 +437,7 @@ export default function SubscriptionSettingsPage() {
                             className="px-6 py-2 rounded-lg font-medium text-white
                 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 transition-colors"
                         >
-                            {isSubmitting ? 'Menyimpan...' : 'Simpan Perubahan'}
+                            {isSubmitting ? t("admin.subscriptionSettings.saving") : t("admin.subscriptionSettings.saveChanges")}
                         </button>
                     </div>
                 )}

@@ -228,6 +228,8 @@ model Merchant {
   merchantBalance        MerchantBalance?
   paymentRequests        PaymentRequest[]
   notificationLogs       NotificationLog[]
+  // Referral tracking
+  referralCodeUsed       String?               @map("referral_code_used")
 
   @@index([code])
   @@index([isActive])
@@ -906,4 +908,59 @@ model NotificationLog {
   @@index([type])
   @@index([sentAt])
   @@map("notification_logs")
+}
+
+// ============================================
+// REFERRAL CODE SYSTEM
+// ============================================
+
+enum ReferralDiscountType {
+  NONE              // No discount, just tracking
+  PERCENTAGE        // % off deposit/subscription
+  FIXED_AMOUNT      // Fixed amount off
+  BONUS_DAYS        // Extra trial/subscription days
+}
+
+enum ReferralUsageType {
+  REGISTRATION      // Used during merchant registration
+  DEPOSIT_TOPUP     // Used during deposit top-up
+  MONTHLY_SUBSCRIBE // Used for monthly subscription
+}
+
+model ReferralCode {
+  id                  BigInt              @id @default(autoincrement())
+  code                String              @unique
+  description         String?
+  discountType        ReferralDiscountType @default(NONE) @map("discount_type")
+  discountValue       Decimal?            @map("discount_value") @db.Decimal(12, 2)
+  maxUsage            Int?                @map("max_usage") // null = unlimited
+  currentUsage        Int                 @default(0) @map("current_usage")
+  isActive            Boolean             @default(true) @map("is_active")
+  validFrom           DateTime?           @map("valid_from") @db.Timestamptz(6)
+  validUntil          DateTime?           @map("valid_until") @db.Timestamptz(6)
+  createdByUserId     BigInt              @map("created_by_user_id")
+  createdAt           DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  usages              ReferralUsage[]
+
+  @@index([code])
+  @@index([isActive])
+  @@map("referral_codes")
+}
+
+model ReferralUsage {
+  id                  BigInt              @id @default(autoincrement())
+  referralCodeId      BigInt              @map("referral_code_id")
+  merchantId          BigInt              @map("merchant_id")
+  usageType           ReferralUsageType   @map("usage_type")
+  paymentRequestId    BigInt?             @map("payment_request_id")
+  discountApplied     Decimal?            @map("discount_applied") @db.Decimal(12, 2)
+  createdAt           DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  referralCode        ReferralCode        @relation(fields: [referralCodeId], references: [id], onDelete: Cascade)
+
+  @@index([referralCodeId])
+  @@index([merchantId])
+  @@map("referral_usages")
 }

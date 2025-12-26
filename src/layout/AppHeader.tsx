@@ -6,12 +6,14 @@ import NotificationDropdown from "@/components/header/NotificationDropdown";
 import UserDropdown from "@/components/header/UserDropdown";
 import SearchDropdown from "@/components/header/SearchDropdown";
 import { useSidebar } from "@/context/SidebarContext";
+import { useAuth } from "@/hooks/useAuth";
 import Image from "next/image";
 import Link from "next/link";
 import React, { useState } from "react";
 
 const AppHeader: React.FC = () => {
   const [isApplicationMenuOpen, setApplicationMenuOpen] = useState(false);
+  const { user } = useAuth();
 
   const { isMobileOpen, toggleSidebar, toggleMobileSidebar } = useSidebar();
 
@@ -118,8 +120,8 @@ const AppHeader: React.FC = () => {
             } items-center justify-between w-full gap-4 px-5 py-4 lg:flex shadow-theme-md lg:justify-end lg:px-0 lg:shadow-none`}
         >
           <div className="flex items-center gap-2 2xsm:gap-3">
-            {/* <!-- Currency Badge --> */}
-            <CurrencyBadge />
+            {/* <!-- Currency Badge - Only show for Merchant users --> */}
+            {user?.role !== "SUPER_ADMIN" && <CurrencyBadge />}
             {/* <!-- Language Selector --> */}
             <LanguageSelector mode="compact" dropdownPosition="right" />
             {/* <!-- Dark Mode Toggler --> */}

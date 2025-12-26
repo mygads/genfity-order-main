@@ -67,6 +67,9 @@ export default function MerchantsPage() {
   const { toasts, success: showSuccess, error: showError } = useToast();
 
   const [activeOnly, setActiveOnly] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [subscriptionFilter, setSubscriptionFilter] = useState<'all' | 'TRIAL' | 'DEPOSIT' | 'MONTHLY'>('all');
 
   // Delete confirmation state
   const [deleteDialog, setDeleteDialog] = useState({
@@ -111,13 +114,34 @@ export default function MerchantsPage() {
   });
 
   // Extract merchants from SWR response
-  const merchants = (() => {
+  const allMerchants = (() => {
     if (!merchantsResponse?.success) return [];
     const data = merchantsResponse.data;
     if (Array.isArray(data)) return data;
     if (data && 'merchants' in data && Array.isArray(data.merchants)) return data.merchants;
     return [];
   })();
+
+  // Filter merchants based on search and filters
+  const merchants = allMerchants.filter(merchant => {
+    // Search filter
+    const matchesSearch = !searchQuery || 
+      merchant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      merchant.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      merchant.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      merchant.city?.toLowerCase().includes(searchQuery.toLowerCase());
+
+    // Status filter
+    const matchesStatus = statusFilter === 'all' ||
+      (statusFilter === 'active' && merchant.isActive) ||
+      (statusFilter === 'inactive' && !merchant.isActive);
+
+    // Subscription filter
+    const matchesSubscription = subscriptionFilter === 'all' ||
+      merchant.subscriptionStatus?.type === subscriptionFilter;
+
+    return matchesSearch && matchesStatus && matchesSubscription;
+  });
 
   const loading = isLoading;
 
@@ -269,30 +293,84 @@ export default function MerchantsPage() {
           </p>
         </div>
         {/* Actions Bar */}
-        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+        <div className="mb-6 space-y-4 rounded-xl border border-gray-100 bg-gray-50/50 p-4 dark:border-gray-800 dark:bg-gray-900/30">
+          {/* Search and Create Button Row */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            {/* Search Input */}
+            <div className="relative flex-1 max-w-lg">
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
               <input
-                type="checkbox"
-                checked={activeOnly}
-                onChange={(e) => setActiveOnly(e.target.checked)}
-                className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 dark:border-gray-700"
+                type="text"
+                placeholder="Search by name, code, email, city..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-500"
               />
-              <span>View All</span>
-            </label>
+            </div>
+            <button
+              onClick={() => router.push("/admin/dashboard/merchants/create")}
+              className="h-11 rounded-lg bg-brand-500 px-6 text-sm font-medium text-white hover:bg-brand-600 focus:outline-none focus:ring-3 focus:ring-brand-500/20 whitespace-nowrap"
+            >
+              + Create Merchant
+            </button>
+          </div>
+
+          {/* Filters Row */}
+          <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-gray-200 dark:border-gray-700">
+            <span className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Filters:</span>
+            {/* Status Filter */}
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive')}
+              className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+            >
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+
+            {/* Subscription Filter */}
+            <select
+              value={subscriptionFilter}
+              onChange={(e) => setSubscriptionFilter(e.target.value as 'all' | 'TRIAL' | 'DEPOSIT' | 'MONTHLY')}
+              className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+            >
+              <option value="all">All Subscriptions</option>
+              <option value="TRIAL">Trial</option>
+              <option value="DEPOSIT">Deposit</option>
+              <option value="MONTHLY">Monthly</option>
+            </select>
+
             <button
               onClick={fetchMerchants}
-              className="h-9 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-white/[0.03] dark:text-gray-300 dark:hover:bg-white/[0.05]"
+              className="h-9 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
             >
               Refresh
             </button>
+
+            {/* Clear Filters */}
+            {(searchQuery || statusFilter !== 'all' || subscriptionFilter !== 'all') && (
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setStatusFilter('all');
+                  setSubscriptionFilter('all');
+                }}
+                className="h-9 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-gray-800 dark:bg-white/[0.03] dark:text-red-400 dark:hover:bg-red-900/20"
+              >
+                Clear Filters
+              </button>
+            )}
+
+            {/* Results Count */}
+            <span className="text-sm text-gray-500 dark:text-gray-400">
+              {merchants.length} of {allMerchants.length} merchants
+            </span>
           </div>
-          <button
-            onClick={() => router.push("/admin/dashboard/merchants/create")}
-            className="h-11 rounded-lg bg-brand-500 px-6 text-sm font-medium text-white hover:bg-brand-600 focus:outline-none focus:ring-3 focus:ring-brand-500/20"
-          >
-            + Create Merchant
-          </button>
         </div>
 
         {/* Loading State */}
@@ -306,8 +384,8 @@ export default function MerchantsPage() {
         {/* Merchants Table */}
         {!loading && !merchantsError && (
           <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-white/[0.05]">
-            <div className="max-w-full overflow-x-auto">
-              <table className="w-full">
+            <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
+              <table className="w-full" style={{ minWidth: '1400px' }}>
                 <thead>
                   <tr className="border-b border-gray-100 bg-gray-50 text-left dark:border-white/[0.05] dark:bg-white/[0.02]">
                     <th className="px-5 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
