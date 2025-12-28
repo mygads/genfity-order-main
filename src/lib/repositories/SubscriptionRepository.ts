@@ -255,6 +255,47 @@ class SubscriptionRepository {
             },
         });
     }
+
+    /**
+     * Get merchants with negative balance (deposit mode only)
+     * These should be auto-suspended
+     */
+    async getNegativeBalanceMerchants() {
+        // Get deposit mode merchants that are still active
+        const subscriptions = await prisma.merchantSubscription.findMany({
+            where: {
+                type: 'DEPOSIT',
+                status: 'ACTIVE',
+            },
+            include: {
+                merchant: {
+                    include: {
+                        merchantBalance: true,
+                    },
+                },
+            },
+        });
+
+        // Filter to only those with negative balance
+        const result = [];
+        for (const sub of subscriptions) {
+            if (!sub.merchant.merchantBalance) continue;
+            
+            const balance = Number(sub.merchant.merchantBalance.balance);
+            if (balance < 0) {
+                result.push({
+                    merchantId: sub.merchantId,
+                    code: sub.merchant.code,
+                    name: sub.merchant.name,
+                    email: sub.merchant.email,
+                    currency: sub.merchant.currency,
+                    balance,
+                });
+            }
+        }
+
+        return result;
+    }
 }
 
 const subscriptionRepository = new SubscriptionRepository();

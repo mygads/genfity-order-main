@@ -7,6 +7,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withSuperAdmin } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/middleware/auth';
 import paymentRequestService from '@/lib/services/PaymentRequestService';
+import userNotificationService from '@/lib/services/UserNotificationService';
+import prisma from '@/lib/db/client';
 import { z } from 'zod';
 
 const rejectSchema = z.object({
@@ -32,11 +34,25 @@ async function handlePost(
             );
         }
 
+        // Get payment request info before rejection
+        const paymentRequest = await prisma.paymentRequest.findUnique({
+            where: { id: requestId },
+            select: { merchantId: true },
+        });
+
         await paymentRequestService.rejectPayment(
             requestId,
             context.userId,
             validation.data.reason
         );
+
+        // Send notification to merchant owner
+        if (paymentRequest?.merchantId) {
+            await userNotificationService.notifyPaymentRejected(
+                paymentRequest.merchantId,
+                validation.data.reason
+            );
+        }
 
         return NextResponse.json({
             success: true,

@@ -66,7 +66,8 @@ export default function MerchantsPage() {
   const router = useRouter();
   const { toasts, success: showSuccess, error: showError } = useToast();
 
-  const [activeOnly, setActiveOnly] = useState(false);
+  // Note: setActiveOnly reserved for future API filter toggle
+  const [activeOnly, _setActiveOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [subscriptionFilter, setSubscriptionFilter] = useState<'all' | 'TRIAL' | 'DEPOSIT' | 'MONTHLY'>('all');
@@ -384,8 +385,8 @@ export default function MerchantsPage() {
         {/* Merchants Table */}
         {!loading && !merchantsError && (
           <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-white/[0.05]">
-            <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
-              <table className="w-full" style={{ minWidth: '1400px' }}>
+            <div className="max-w-full overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
+              <table className="w-full min-w-[1400px]">
                 <thead>
                   <tr className="border-b border-gray-100 bg-gray-50 text-left dark:border-white/[0.05] dark:bg-white/[0.02]">
                     <th className="px-5 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">

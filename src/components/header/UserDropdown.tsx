@@ -48,7 +48,7 @@ export default function UserDropdown() {
 
       // Listen for storage changes (when profile is updated in another component)
       window.addEventListener('storage', updateProfilePicture);
-      
+
       // Listen for custom event (when profile is updated in same tab)
       window.addEventListener('profilePictureUpdated', updateProfilePicture);
 
@@ -58,7 +58,7 @@ export default function UserDropdown() {
       };
     }
   }, [mounted]);
-  
+
   // Get role label
   const getRoleLabel = (role?: string) => {
     switch (role) {
@@ -76,7 +76,7 @@ export default function UserDropdown() {
   return (
     <div className="relative">
       <button
-        onClick={toggleDropdown} 
+        onClick={toggleDropdown}
         className="flex items-center text-gray-700 dark:text-gray-400 dropdown-toggle"
       >
         <span className="mr-3 overflow-hidden rounded-full h-11 w-11 bg-gray-100 dark:bg-gray-800 flex items-center justify-center relative">
@@ -98,9 +98,8 @@ export default function UserDropdown() {
         <span className="block mr-1 font-medium text-theme-sm">{userName.split(' ')[0]}</span>
 
         <svg
-          className={`stroke-gray-500 dark:stroke-gray-400 transition-transform duration-200 ${
-            isOpen ? "rotate-180" : ""
-          }`}
+          className={`stroke-gray-500 dark:stroke-gray-400 transition-transform duration-200 ${isOpen ? "rotate-180" : ""
+            }`}
           width="18"
           height="20"
           viewBox="0 0 18 20"
@@ -158,6 +157,31 @@ export default function UserDropdown() {
                 />
               </svg>
               {t("admin.header.myProfile")}
+            </DropdownItem>
+          </li>
+          <li>
+            <DropdownItem
+              onItemClick={closeDropdown}
+              tag="a"
+              href="/admin/notifications"
+              className="flex items-center gap-3 px-3 py-2 font-medium text-gray-700 rounded-lg group text-theme-sm hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
+            >
+              <svg
+                className="fill-gray-500 group-hover:fill-gray-700 dark:fill-gray-400 dark:group-hover:fill-gray-300"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  fillRule="evenodd"
+                  clipRule="evenodd"
+                  d="M12 3C8.68629 3 6 5.68629 6 9V14H5C4.44772 14 4 14.4477 4 15C4 15.5523 4.44772 16 5 16H6H18H19C19.5523 16 20 15.5523 20 15C20 14.4477 19.5523 14 19 14H18V9C18 5.68629 15.3137 3 12 3ZM16 14V9C16 6.79086 14.2091 5 12 5C9.79086 5 8 6.79086 8 9V14H16ZM10 18C10 19.1046 10.8954 20 12 20C13.1046 20 14 19.1046 14 18H10Z"
+                  fill=""
+                />
+              </svg>
+              {t("notifications.title") || "Notifications"}
             </DropdownItem>
           </li>
         </ul>

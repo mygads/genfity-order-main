@@ -442,6 +442,114 @@ class EmailService {
       html,
     });
   }
+
+  /**
+   * Send payment verification email to merchant owner
+   */
+  async sendPaymentVerifiedEmail(params: {
+    to: string;
+    merchantName: string;
+    amount: number;
+    currency: string;
+    paymentType: 'DEPOSIT' | 'MONTHLY_SUBSCRIPTION';
+    newBalance?: number;
+    newPeriodEnd?: Date;
+  }): Promise<boolean> {
+    const formattedAmount = params.currency === 'AUD'
+      ? `A$${params.amount.toFixed(2)}`
+      : `Rp ${params.amount.toLocaleString('id-ID')}`;
+
+    const formattedBalance = params.newBalance !== undefined
+      ? (params.currency === 'AUD'
+        ? `A$${params.newBalance.toFixed(2)}`
+        : `Rp ${params.newBalance.toLocaleString('id-ID')}`)
+      : null;
+
+    const formattedPeriodEnd = params.newPeriodEnd
+      ? params.newPeriodEnd.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      })
+      : null;
+
+    const paymentTypeLabel = params.paymentType === 'DEPOSIT'
+      ? 'Top Up Deposit'
+      : 'Langganan Bulanan';
+
+    const dashboardUrl = `${process.env.NEXT_PUBLIC_APP_URL}/admin/dashboard/subscription`;
+
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f9fafb; margin: 0; padding: 20px;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <div style="background: linear-gradient(135deg, #22c55e, #16a34a); padding: 30px; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 24px;">✅ Pembayaran Terverifikasi!</h1>
+        </div>
+        <div style="padding: 30px;">
+            <p style="color: #374151; font-size: 16px; line-height: 1.6;">
+                Halo <strong>${params.merchantName}</strong>,
+            </p>
+            <p style="color: #374151; font-size: 16px; line-height: 1.6;">
+                Pembayaran Anda telah berhasil diverifikasi oleh tim kami.
+            </p>
+            
+            <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="color: #166534; padding: 8px 0; font-size: 14px;">Tipe Pembayaran:</td>
+                        <td style="color: #166534; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">${paymentTypeLabel}</td>
+                    </tr>
+                    <tr>
+                        <td style="color: #166534; padding: 8px 0; font-size: 14px;">Jumlah:</td>
+                        <td style="color: #166534; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">${formattedAmount}</td>
+                    </tr>
+                    ${formattedBalance ? `
+                    <tr>
+                        <td style="color: #166534; padding: 8px 0; font-size: 14px;">Saldo Baru:</td>
+                        <td style="color: #166534; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">${formattedBalance}</td>
+                    </tr>
+                    ` : ''}
+                    ${formattedPeriodEnd ? `
+                    <tr>
+                        <td style="color: #166534; padding: 8px 0; font-size: 14px;">Berlaku Hingga:</td>
+                        <td style="color: #166534; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">${formattedPeriodEnd}</td>
+                    </tr>
+                    ` : ''}
+                </table>
+            </div>
+
+            <p style="color: #374151; font-size: 16px; line-height: 1.6;">
+                Layanan Anda sekarang aktif kembali. Terima kasih telah menggunakan Genfity!
+            </p>
+
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="${dashboardUrl}" 
+                   style="display: inline-block; background-color: #f97316; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                    Lihat Dashboard
+                </a>
+            </div>
+        </div>
+        <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+            <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+                © ${new Date().getFullYear()} Genfity. All rights reserved.
+            </p>
+        </div>
+    </div>
+</body>
+</html>`;
+
+    return this.sendEmail({
+      to: params.to,
+      subject: `Pembayaran Terverifikasi - ${paymentTypeLabel} - Genfity`,
+      html,
+    });
+  }
 }
 
 // Singleton pattern with global caching for Next.js dev mode hot reload

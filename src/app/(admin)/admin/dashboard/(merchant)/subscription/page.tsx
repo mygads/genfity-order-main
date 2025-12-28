@@ -7,6 +7,7 @@ import { useSWRStatic } from "@/hooks/useSWRWithAuth";
 import SubscriptionStatusBadge from "@/components/subscription/SubscriptionStatusBadge";
 import BalanceCard from "@/components/subscription/BalanceCard";
 import SuspendedAlert from "@/components/subscription/SuspendedAlert";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface SubscriptionData {
     subscription: {
@@ -58,8 +59,11 @@ interface ApiResponse<T> {
  * Merchant Subscription Page
  * 
  * Shows subscription status, balance, and transaction history
+ * Supports dual language (EN/ID)
  */
 export default function SubscriptionPage() {
+    const { t, locale } = useTranslation();
+
     // Fetch subscription data
     const {
         data: subscriptionResponse,
@@ -91,7 +95,8 @@ export default function SubscriptionPage() {
     };
 
     const formatDate = (dateStr: string) => {
-        return new Date(dateStr).toLocaleDateString('id-ID', {
+        const dateLocale = locale === 'id' ? 'id-ID' : 'en-AU';
+        return new Date(dateStr).toLocaleDateString(dateLocale, {
             day: 'numeric',
             month: 'long',
             year: 'numeric',
@@ -99,7 +104,8 @@ export default function SubscriptionPage() {
     };
 
     const formatDateTime = (dateStr: string) => {
-        return new Date(dateStr).toLocaleString('id-ID', {
+        const dateLocale = locale === 'id' ? 'id-ID' : 'en-AU';
+        return new Date(dateStr).toLocaleString(dateLocale, {
             day: 'numeric',
             month: 'short',
             year: 'numeric',
@@ -110,11 +116,20 @@ export default function SubscriptionPage() {
 
     const getTransactionTypeLabel = (type: string) => {
         switch (type) {
-            case 'DEPOSIT': return 'Top Up';
-            case 'ORDER_FEE': return 'Biaya Pesanan';
-            case 'SUBSCRIPTION': return 'Langganan';
-            case 'REFUND': return 'Refund';
-            case 'ADJUSTMENT': return 'Penyesuaian';
+            case 'DEPOSIT': return t('subscription.transactions.type.deposit');
+            case 'ORDER_FEE': return t('subscription.transactions.type.orderFee');
+            case 'SUBSCRIPTION': return t('subscription.transactions.type.subscription');
+            case 'REFUND': return t('subscription.transactions.type.refund');
+            case 'ADJUSTMENT': return t('subscription.transactions.type.adjustment');
+            default: return type;
+        }
+    };
+
+    const getSubscriptionTypeLabel = (type: string) => {
+        switch (type) {
+            case 'TRIAL': return t('subscription.status.trial');
+            case 'DEPOSIT': return t('subscription.status.deposit');
+            case 'MONTHLY': return t('subscription.status.monthly');
             default: return type;
         }
     };
@@ -136,16 +151,16 @@ export default function SubscriptionPage() {
 
     if (subscriptionError || !subscription) {
         return (
-            <div className="flex min-h-[400px] items-center justify-center">
+            <div className="flex min-h-100 items-center justify-center">
                 <div className="text-center">
                     <p className="text-gray-500 dark:text-gray-400 mb-4">
-                        Gagal memuat data langganan
+                        {t('subscription.failedToLoad')}
                     </p>
                     <button
                         onClick={() => window.location.reload()}
                         className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
                     >
-                        Coba Lagi
+                        {t('subscription.tryAgain')}
                     </button>
                 </div>
             </div>
@@ -156,7 +171,7 @@ export default function SubscriptionPage() {
 
     return (
         <div>
-            <PageBreadcrumb pageTitle="Langganan" />
+            <PageBreadcrumb pageTitle={t('subscription.pageTitle')} />
 
             {/* Suspended Alert */}
             {subscription.status === 'SUSPENDED' && (
@@ -170,7 +185,7 @@ export default function SubscriptionPage() {
                     <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
                         <div className="flex items-center justify-between mb-6">
                             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                Status Langganan
+                                {t('subscription.status.title')}
                             </h2>
                             <SubscriptionStatusBadge
                                 type={subscription.type}
@@ -185,11 +200,11 @@ export default function SubscriptionPage() {
                         <div className="grid gap-4 sm:grid-cols-2">
                             {/* Type info */}
                             <div className="p-4 rounded-lg bg-gray-50 dark:bg-gray-700/50">
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Jenis Langganan</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                    {t('subscription.status.type')}
+                                </p>
                                 <p className="mt-1 font-semibold text-gray-900 dark:text-white">
-                                    {subscription.type === 'TRIAL' && 'Masa Trial'}
-                                    {subscription.type === 'DEPOSIT' && 'Mode Deposit'}
-                                    {subscription.type === 'MONTHLY' && 'Langganan Bulanan'}
+                                    {getSubscriptionTypeLabel(subscription.type)}
                                 </p>
                             </div>
 
@@ -197,7 +212,9 @@ export default function SubscriptionPage() {
                             <div className="p-4 rounded-lg bg-gray-50 dark:bg-gray-700/50">
                                 {subscription.type === 'TRIAL' && subscription.trialEndsAt && (
                                     <>
-                                        <p className="text-sm text-gray-500 dark:text-gray-400">Trial Berakhir</p>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                                            {t('subscription.status.trialEnds')}
+                                        </p>
                                         <p className="mt-1 font-semibold text-gray-900 dark:text-white">
                                             {formatDate(subscription.trialEndsAt)}
                                         </p>
@@ -205,7 +222,9 @@ export default function SubscriptionPage() {
                                 )}
                                 {subscription.type === 'MONTHLY' && subscription.currentPeriodEnd && (
                                     <>
-                                        <p className="text-sm text-gray-500 dark:text-gray-400">Berlaku Sampai</p>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                                            {t('subscription.status.validUntil')}
+                                        </p>
                                         <p className="mt-1 font-semibold text-gray-900 dark:text-white">
                                             {formatDate(subscription.currentPeriodEnd)}
                                         </p>
@@ -213,7 +232,9 @@ export default function SubscriptionPage() {
                                 )}
                                 {subscription.type === 'DEPOSIT' && balanceInfo && (
                                     <>
-                                        <p className="text-sm text-gray-500 dark:text-gray-400">Saldo Saat Ini</p>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                                            {t('subscription.status.currentBalance')}
+                                        </p>
                                         <p className="mt-1 font-semibold text-gray-900 dark:text-white">
                                             {formatCurrency(balanceInfo.balance, currency)}
                                         </p>
@@ -226,25 +247,31 @@ export default function SubscriptionPage() {
                         {pricing && (
                             <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
                                 <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
-                                    Harga Langganan
+                                    {t('subscription.pricing.title')}
                                 </h3>
                                 <div className="grid gap-3 sm:grid-cols-3">
                                     <div className="text-sm">
-                                        <span className="text-gray-500 dark:text-gray-400">Minimum Deposit:</span>
+                                        <span className="text-gray-500 dark:text-gray-400">
+                                            {t('subscription.pricing.minimumDeposit')}
+                                        </span>
                                         <span className="ml-2 font-medium text-gray-900 dark:text-white">
                                             {formatCurrency(pricing.depositMinimum, currency)}
                                         </span>
                                     </div>
                                     <div className="text-sm">
-                                        <span className="text-gray-500 dark:text-gray-400">Biaya/Pesanan:</span>
+                                        <span className="text-gray-500 dark:text-gray-400">
+                                            {t('subscription.pricing.orderFee')}
+                                        </span>
                                         <span className="ml-2 font-medium text-gray-900 dark:text-white">
                                             {formatCurrency(pricing.orderFee, currency)}
                                         </span>
                                     </div>
                                     <div className="text-sm">
-                                        <span className="text-gray-500 dark:text-gray-400">Bulanan:</span>
+                                        <span className="text-gray-500 dark:text-gray-400">
+                                            {t('subscription.pricing.monthly')}
+                                        </span>
                                         <span className="ml-2 font-medium text-gray-900 dark:text-white">
-                                            {formatCurrency(pricing.monthlyPrice, currency)}/bulan
+                                            {formatCurrency(pricing.monthlyPrice, currency)}{t('subscription.pricing.perMonth')}
                                         </span>
                                     </div>
                                 </div>
@@ -256,23 +283,113 @@ export default function SubscriptionPage() {
                             <Link
                                 href="/admin/dashboard/subscription/topup"
                                 className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium
-                  bg-orange-500 hover:bg-orange-600 text-white transition-colors"
+                                    bg-orange-500 hover:bg-orange-600 text-white transition-colors"
                             >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                                         d="M12 6v6m0 0v6m0-6h6m-6 0H6"
                                     />
                                 </svg>
-                                {subscription.type === 'TRIAL' ? 'Upgrade Langganan' : 'Top Up / Perpanjang'}
+                                {subscription.type === 'TRIAL'
+                                    ? t('subscription.actions.upgrade')
+                                    : t('subscription.actions.topupExtend')}
                             </Link>
                         </div>
+
+                        {/* Switch Subscription Type Section */}
+                        {subscription.type !== 'TRIAL' && (
+                            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                                <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
+                                    {t('subscription.switch.title') || 'Switch Subscription Type'}
+                                </h3>
+                                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                                    {subscription.type === 'MONTHLY'
+                                        ? (t('subscription.switch.toDeposit') || 'Switch to Deposit mode for pay-per-order billing.')
+                                        : (t('subscription.switch.toMonthly') || 'Switch to Monthly subscription for fixed monthly fee.')}
+                                </p>
+                                <div className="flex flex-wrap gap-3">
+                                    {subscription.type === 'MONTHLY' ? (
+                                        <button
+                                            onClick={async () => {
+                                                if (!confirm(t('subscription.switch.confirmDeposit') || 'Switch to Deposit mode? You can top up balance after switching.')) return;
+                                                try {
+                                                    const token = localStorage.getItem('accessToken');
+                                                    const res = await fetch('/api/merchant/subscription/switch-type', {
+                                                        method: 'POST',
+                                                        headers: {
+                                                            'Content-Type': 'application/json',
+                                                            'Authorization': `Bearer ${token}`,
+                                                        },
+                                                        body: JSON.stringify({ newType: 'DEPOSIT' }),
+                                                    });
+                                                    const data = await res.json();
+                                                    if (data.success) {
+                                                        window.location.reload();
+                                                    } else {
+                                                        alert(data.message);
+                                                    }
+                                                } catch (_err) {
+                                                    alert('Failed to switch subscription type');
+                                                }
+                                            }}
+                                            className="px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 
+                                                text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 
+                                                dark:hover:bg-gray-700 transition-colors"
+                                        >
+                                            {t('subscription.switch.switchToDeposit') || 'Switch to Deposit Mode'}
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={async () => {
+                                                if (!confirm(t('subscription.switch.confirmMonthly') || 'Switch to Monthly subscription? Your balance will be preserved.')) return;
+                                                try {
+                                                    const token = localStorage.getItem('accessToken');
+                                                    const res = await fetch('/api/merchant/subscription/switch-type', {
+                                                        method: 'POST',
+                                                        headers: {
+                                                            'Content-Type': 'application/json',
+                                                            'Authorization': `Bearer ${token}`,
+                                                        },
+                                                        body: JSON.stringify({ newType: 'MONTHLY' }),
+                                                    });
+                                                    const data = await res.json();
+                                                    if (data.success) {
+                                                        window.location.reload();
+                                                    } else {
+                                                        alert(data.message);
+                                                    }
+                                                } catch (_err) {
+                                                    alert('Failed to switch subscription type');
+                                                }
+                                            }}
+                                            className="px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 
+                                                text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 
+                                                dark:hover:bg-gray-700 transition-colors"
+                                        >
+                                            {t('subscription.switch.switchToMonthly') || 'Switch to Monthly'}
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Transaction History */}
                     <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-                        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                            Riwayat Transaksi
-                        </h2>
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                                {t('subscription.transactions.title')}
+                            </h2>
+                            {transactions.length > 0 && (
+                                <Link
+                                    href="/admin/dashboard/subscription/transactions"
+                                    className="text-sm text-orange-600 hover:text-orange-700 dark:text-orange-400 
+                                        dark:hover:text-orange-300 font-medium"
+                                >
+                                    {t('subscription.transactions.viewAll')} →
+                                </Link>
+                            )}
+                        </div>
 
                         {transactionsLoading ? (
                             <div className="animate-pulse space-y-3">
@@ -289,7 +406,9 @@ export default function SubscriptionPage() {
                                         />
                                     </svg>
                                 </div>
-                                <p className="text-gray-500 dark:text-gray-400">Belum ada transaksi</p>
+                                <p className="text-gray-500 dark:text-gray-400">
+                                    {t('subscription.transactions.empty')}
+                                </p>
                             </div>
                         ) : (
                             <div className="space-y-3">
@@ -300,7 +419,7 @@ export default function SubscriptionPage() {
                                     >
                                         <div className="flex items-center gap-3">
                                             <div className={`w-10 h-10 rounded-lg flex items-center justify-center
-                        ${tx.amount >= 0
+                                                ${tx.amount >= 0
                                                     ? 'bg-green-100 dark:bg-green-900/30'
                                                     : 'bg-red-100 dark:bg-red-900/30'
                                                 }`}
@@ -332,7 +451,7 @@ export default function SubscriptionPage() {
                                                 {tx.amount >= 0 ? '+' : ''}{formatCurrency(tx.amount, currency)}
                                             </p>
                                             <p className="text-xs text-gray-500 dark:text-gray-400">
-                                                Saldo: {formatCurrency(tx.balanceAfter, currency)}
+                                                {t('subscription.transactions.balance')} {formatCurrency(tx.balanceAfter, currency)}
                                             </p>
                                         </div>
                                     </div>
@@ -359,13 +478,13 @@ export default function SubscriptionPage() {
                     {/* Quick Actions */}
                     <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
                         <h3 className="font-semibold text-gray-900 dark:text-white mb-4">
-                            Aksi Cepat
+                            {t('subscription.quickActions.title')}
                         </h3>
                         <div className="space-y-3">
                             <Link
                                 href="/admin/dashboard/subscription/topup"
                                 className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 
-                  hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                                    hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                             >
                                 <div className="w-10 h-10 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
                                     <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -375,15 +494,19 @@ export default function SubscriptionPage() {
                                     </svg>
                                 </div>
                                 <div>
-                                    <p className="font-medium text-gray-900 dark:text-white">Top Up Saldo</p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">Tambah saldo deposit</p>
+                                    <p className="font-medium text-gray-900 dark:text-white">
+                                        {t('subscription.quickActions.topup')}
+                                    </p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                        {t('subscription.quickActions.topupDesc')}
+                                    </p>
                                 </div>
                             </Link>
 
                             <Link
                                 href="/admin/dashboard/subscription/topup?plan=monthly"
                                 className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 
-                  hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                                    hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                             >
                                 <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
                                     <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -393,8 +516,12 @@ export default function SubscriptionPage() {
                                     </svg>
                                 </div>
                                 <div>
-                                    <p className="font-medium text-gray-900 dark:text-white">Langganan Bulanan</p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">Bayar tetap per bulan</p>
+                                    <p className="font-medium text-gray-900 dark:text-white">
+                                        {t('subscription.quickActions.monthly')}
+                                    </p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                        {t('subscription.quickActions.monthlyDesc')}
+                                    </p>
                                 </div>
                             </Link>
                         </div>

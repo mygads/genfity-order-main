@@ -54,7 +54,8 @@ export async function POST(req: NextRequest) {
 
         for (const merchant of merchants) {
             // Reset menu items with autoResetStock enabled
-            const menuResetResult = await prisma.menu.updateMany({
+            // Note: This Prisma updateMany is a no-op placeholder, actual reset done via raw SQL below
+            const _menuResetResult = await prisma.menu.updateMany({
                 where: {
                     merchantId: merchant.id,
                     autoResetStock: true,

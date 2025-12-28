@@ -16,7 +16,8 @@ const eslintConfig = [
       "@typescript-eslint/no-explicit-any": "warn", // Changed from error to warning
       "@typescript-eslint/no-unused-vars": ["warn", {
         "argsIgnorePattern": "^_",
-        "varsIgnorePattern": "^_"
+        "varsIgnorePattern": "^_",
+        "caughtErrorsIgnorePattern": "^_"
       }],
       "import/no-anonymous-default-export": "warn"
     }

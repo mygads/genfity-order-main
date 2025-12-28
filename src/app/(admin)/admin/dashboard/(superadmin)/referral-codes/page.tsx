@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useSWRWithAuth } from "@/hooks/useSWRWithAuth";
-import { formatDate } from "@/lib/utils/format";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface ReferralCode {
@@ -56,10 +55,13 @@ export default function ReferralCodesPage() {
 
         setIsCreating(true);
         try {
+            const token = localStorage.getItem('accessToken');
             const response = await fetch("/api/admin/referral-codes", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`,
+                },
                 body: JSON.stringify({
                     code: newCode.code,
                     description: newCode.description || undefined,

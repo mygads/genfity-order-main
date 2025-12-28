@@ -32,6 +32,7 @@ import { ValidationError } from '@/lib/constants/errors';
 import prisma from '@/lib/db/client';
 import { serializeBigInt, decimalToNumber } from '@/lib/utils/serializer';
 import emailService from '@/lib/services/EmailService';
+import userNotificationService from '@/lib/services/UserNotificationService';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { Decimal } from '@prisma/client/runtime/library';
@@ -720,13 +721,21 @@ export async function POST(req: NextRequest) {
         });
 
         if (menu && menu.trackStock && menu.stockQty !== null) {
+          const newQty = menu.stockQty - item.quantity;
           await prisma.menu.update({
             where: { id: menu.id },
             data: {
-              stockQty: menu.stockQty - item.quantity,
-              isActive: (menu.stockQty - item.quantity) > 0,
+              stockQty: newQty,
+              isActive: newQty > 0,
             },
           });
+
+          // Send stock out notification if item is now out of stock
+          if (newQty <= 0) {
+            userNotificationService.notifyStockOut(merchant.id, menu.name, menu.id).catch(err => {
+              console.error('⚠️ Stock notification failed:', err);
+            });
+          }
         }
       } catch (stockError) {
         console.error('⚠️ Stock decrement failed (non-critical):', stockError);
@@ -734,6 +743,18 @@ export async function POST(req: NextRequest) {
     }
 
     console.log('[ORDER] Order created successfully:', orderNumber);
+
+    // Send new order notification to merchant users (async, non-blocking)
+    if (order) {
+      userNotificationService.notifyNewOrder(
+        merchant.id,
+        order.id,
+        orderNumber,
+        totalAmount
+      ).catch(err => {
+        console.error('⚠️ Order notification failed:', err);
+      });
+    }
 
     // ========================================
     // STEP 7: Return serialized response

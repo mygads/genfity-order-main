@@ -102,10 +102,13 @@ export default function ReferralCodeDetailPage() {
     const handleSave = async () => {
         setIsSaving(true);
         try {
+            const token = localStorage.getItem('accessToken');
             const response = await fetch(`/api/admin/referral-codes/${id}`, {
                 method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`,
+                },
                 body: JSON.stringify({
                     description: editData.description || undefined,
                     discountType: editData.discountType,
@@ -126,9 +129,12 @@ export default function ReferralCodeDetailPage() {
 
     const handleDeactivate = async () => {
         try {
+            const token = localStorage.getItem('accessToken');
             const response = await fetch(`/api/admin/referral-codes/${id}`, {
                 method: "DELETE",
-                credentials: "include",
+                headers: {
+                    "Authorization": `Bearer ${token}`,
+                },
             });
 
             if (response.ok) {
@@ -149,7 +155,8 @@ export default function ReferralCodeDetailPage() {
         }
     };
 
-    const getUsageTypeBadge = (type: string) => {
+    // Note: _getUsageTypeBadge is kept for future use when we add usage type column
+    const _getUsageTypeBadge = (type: string) => {
         switch (type) {
             case "REGISTRATION":
                 return <span className="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-600">{t("referral.usageType.registration")}</span>;

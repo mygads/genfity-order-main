@@ -21,8 +21,13 @@ const registerSchema = z.object({
         .regex(/^[a-zA-Z0-9-]+$/, 'Kode hanya boleh huruf, angka, dan strip'),
     address: z.string().min(5, 'Alamat minimal 5 karakter').optional(),
     phone: z.string().optional(),
-    currency: z.enum(['IDR', 'AUD']).default('IDR'),
+    currency: z.enum(['IDR', 'AUD', 'USD', 'SGD', 'MYR']).default('IDR'),
     country: z.string().default('Indonesia'),
+    
+    // Location fields (optional - from GPS detection)
+    timezone: z.string().default('Asia/Jakarta'),
+    latitude: z.number().nullable().optional(),
+    longitude: z.number().nullable().optional(),
 
     // Owner info
     ownerName: z.string().min(2, 'Nama pemilik minimal 2 karakter'),
@@ -83,6 +88,9 @@ export async function POST(req: NextRequest) {
             address: data.address,
             currency: data.currency,
             country: data.country,
+            timezone: data.timezone,
+            latitude: data.latitude ?? undefined,
+            longitude: data.longitude ?? undefined,
             ownerName: data.ownerName,
             ownerEmail: data.ownerEmail,
             ownerPhone: data.ownerPhone,
@@ -172,7 +180,6 @@ function getWelcomeEmailHtml(
     email: string
 ): string {
     const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL}/admin/login`;
-    const dashboardUrl = `${process.env.NEXT_PUBLIC_APP_URL}/admin/dashboard`;
     const orderUrl = `${process.env.NEXT_PUBLIC_APP_URL}/order/${merchantCode}`;
 
     return `

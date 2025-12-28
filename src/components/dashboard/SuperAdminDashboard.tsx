@@ -89,16 +89,6 @@ export default function SuperAdminDashboard({
     fetchChartData();
   }, [fetchChartData]);
 
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('en-AU', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(new Date(date));
-  };
-
   return (
     <div className="space-y-6">
       {/* Header with Notification Bell */}

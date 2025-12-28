@@ -31,12 +31,14 @@ export interface UpdateReferralCodeInput {
     isActive?: boolean;
 }
 
-interface UsageRecord {
+// Note: _UsageRecord is reserved for future detailed usage tracking
+interface _UsageRecord {
     merchantId: bigint;
     createdAt: Date;
 }
 
-interface MerchantWithSubscription {
+// Note: _MerchantWithSubscription is reserved for future merchant listing with subscriptions
+interface _MerchantWithSubscription {
     id: bigint;
     code: string;
     name: string;

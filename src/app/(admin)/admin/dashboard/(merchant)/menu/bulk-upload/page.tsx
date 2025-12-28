@@ -58,8 +58,11 @@ export default function MenuBulkUploadPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [fileName, setFileName] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
-  const [_existingMenus, setExistingMenus] = useState<Array<{ id: string; name: string }>>([]);
+  const [existingMenus, setExistingMenus] = useState<Array<{ id: string; name: string }>>([]);
   const [exporting, setExporting] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [duplicateCount, setDuplicateCount] = useState(0);
+  const [newCount, setNewCount] = useState(0);
 
   /**
    * Fetch categories for validation
@@ -141,9 +144,10 @@ export default function MenuBulkUploadPage() {
         return;
       }
 
-      // Format for Excel export
+      // Format for Excel export - include ID for re-import/update
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const exportData = menus.map((menu: any) => ({
+        "ID (do not edit)": menu.id,
         "Name *": menu.name,
         "Description": menu.description || "",
         "Price *": Number(menu.price),
@@ -161,6 +165,7 @@ export default function MenuBulkUploadPage() {
 
       const ws = XLSX.utils.json_to_sheet(exportData);
       ws['!cols'] = [
+        { wch: 12 }, // ID
         { wch: 25 }, { wch: 50 }, { wch: 12 }, { wch: 30 },
         { wch: 10 }, { wch: 10 }, { wch: 15 }, { wch: 12 },
         { wch: 15 }, { wch: 12 }, { wch: 10 }, { wch: 18 }, { wch: 15 },
@@ -347,10 +352,17 @@ export default function MenuBulkUploadPage() {
         return;
       }
 
+      // Build lookup map for existing menus by name
+      const existingMenuNameMap = new Map(existingMenus.map(m => [m.name.toLowerCase().trim(), m.id]));
+
       // Parse and validate data
       const parsedItems: MenuUploadItem[] = jsonData.map((row: unknown, index: number) => {
         const r = row as Record<string, unknown>;
         const categoryNames = String(r["Categories (comma-separated)"] || r["Categories"] || "").trim();
+
+        // Extract ID if present (from exported file)
+        const menuId = r["ID (do not edit)"] ? String(r["ID (do not edit)"]).trim() : undefined;
+
         const item: MenuUploadItem = {
           rowIndex: index + 2, // Excel rows start from 1, plus header row
           name: String(r["Name *"] || r["Name"] || "").trim(),
@@ -371,7 +383,19 @@ export default function MenuBulkUploadPage() {
           warnings: [],
           isEditing: false,
           isExpanded: false,
+          existingMenuId: menuId, // Will be updated below if match found
         };
+
+        // Check for existing menu by ID or name
+        if (menuId) {
+          item.existingMenuId = menuId;
+        } else {
+          // Try to match by name
+          const matchedId = existingMenuNameMap.get(item.name.toLowerCase().trim());
+          if (matchedId) {
+            item.existingMenuId = matchedId;
+          }
+        }
 
         // Map category names to IDs
         item.selectedCategoryIds = mapCategoryNamesToIds(item.categoryNames);
@@ -380,11 +404,28 @@ export default function MenuBulkUploadPage() {
         const validation = validateItem(item);
         item.errors = validation.errors;
         item.warnings = validation.warnings;
+
+        // Add warning if this will update existing menu
+        if (item.existingMenuId && !item.warnings.includes("Will update existing menu")) {
+          item.warnings.push("Will update existing menu");
+        }
+
         return item;
       });
 
+      // Calculate duplicate and new counts
+      const dupes = parsedItems.filter(i => i.existingMenuId).length;
+      const news = parsedItems.length - dupes;
+      setDuplicateCount(dupes);
+      setNewCount(news);
+
       setItems(parsedItems);
-      showSuccess(`Loaded ${parsedItems.length} items from file`);
+
+      if (dupes > 0) {
+        showSuccess(`Loaded ${parsedItems.length} items (${dupes} will update existing, ${news} are new)`);
+      } else {
+        showSuccess(`Loaded ${parsedItems.length} items from file`);
+      }
     } catch (error) {
       console.error("Failed to parse file:", error);
       showError("Failed to parse the uploaded file. Please check the format.");
@@ -392,7 +433,7 @@ export default function MenuBulkUploadPage() {
       setUploading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categories, showError, showSuccess]);
+  }, [categories, existingMenus, showError, showSuccess]);
 
   /**
    * Handle drag events
@@ -520,7 +561,14 @@ export default function MenuBulkUploadPage() {
       return;
     }
 
+    // If there are duplicates and confirmation not shown yet, show dialog
+    if (duplicateCount > 0 && !showConfirmDialog) {
+      setShowConfirmDialog(true);
+      return;
+    }
+
     setSaving(true);
+    setShowConfirmDialog(false);
 
     try {
       const token = localStorage.getItem("accessToken");
@@ -537,6 +585,7 @@ export default function MenuBulkUploadPage() {
           : mapCategoryNamesToIds(item.categoryNames);
 
         return {
+          id: item.existingMenuId || undefined, // Include ID for updates
           name: item.name,
           description: item.description || undefined,
           price: item.price,
@@ -559,7 +608,7 @@ export default function MenuBulkUploadPage() {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ items: itemsWithCategoryIds }),
+        body: JSON.stringify({ items: itemsWithCategoryIds, upsertByName: true }),
       });
 
       const data = await response.json();
@@ -568,7 +617,16 @@ export default function MenuBulkUploadPage() {
         throw new Error(data.message || "Failed to save menu items");
       }
 
-      showSuccess(`Successfully created ${data.createdCount} menu items!`);
+      // Show appropriate success message
+      const created = data.createdCount || 0;
+      const updated = data.updatedCount || 0;
+      if (updated > 0 && created > 0) {
+        showSuccess(`Successfully created ${created} and updated ${updated} menu items!`);
+      } else if (updated > 0) {
+        showSuccess(`Successfully updated ${updated} menu items!`);
+      } else {
+        showSuccess(`Successfully created ${created} menu items!`);
+      }
       router.push("/admin/dashboard/menu");
     } catch (error) {
       console.error("Failed to save:", error);
@@ -1096,6 +1154,51 @@ export default function MenuBulkUploadPage() {
           </div>
         )}
       </div>
+
+      {/* Confirmation Dialog for Duplicates */}
+      {showConfirmDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
+                <FaExclamationTriangle className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Confirm Menu Updates
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Some items will overwrite existing menus
+                </p>
+              </div>
+            </div>
+
+            <div className="mb-6 rounded-lg bg-amber-50 p-4 dark:bg-amber-900/20">
+              <p className="text-sm text-gray-700 dark:text-gray-300">
+                <span className="font-semibold text-amber-600 dark:text-amber-400">{duplicateCount}</span> menu item(s) will be <strong>updated</strong> (overwritten)
+                <br />
+                <span className="font-semibold text-green-600 dark:text-green-400">{newCount}</span> menu item(s) will be <strong>created</strong> (new)
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowConfirmDialog(false)}
+                className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50"
+              >
+                {saving ? "Saving..." : "Proceed with Updates"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

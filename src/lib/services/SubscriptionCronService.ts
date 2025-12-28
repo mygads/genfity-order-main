@@ -9,6 +9,7 @@
 import subscriptionRepository from '@/lib/repositories/SubscriptionRepository';
 import notificationRepository from '@/lib/repositories/NotificationRepository';
 import emailService from '@/lib/services/EmailService';
+import userNotificationService from '@/lib/services/UserNotificationService';
 import type { NotificationType } from '@prisma/client';
 
 interface CronResult {
@@ -41,10 +42,13 @@ class SubscriptionCronService {
         // Task 2: Suspend expired monthly subscriptions
         results.push(await this.suspendExpiredMonthly());
 
-        // Task 3: Send trial ending warnings (7, 3, 1 days)
+        // Task 3: Suspend negative balance merchants (deposit mode)
+        results.push(await this.suspendNegativeBalance());
+
+        // Task 4: Send trial ending warnings (7, 3, 1 days)
         results.push(await this.sendTrialEndingWarnings());
 
-        // Task 4: Send low balance warnings
+        // Task 5: Send low balance warnings
         results.push(await this.sendLowBalanceWarnings());
 
         const completedAt = new Date();
@@ -163,6 +167,57 @@ class SubscriptionCronService {
     }
 
     /**
+     * Suspend merchants with negative balance (deposit mode only)
+     */
+    async suspendNegativeBalance(): Promise<CronResult> {
+        const details: string[] = [];
+        const errors: string[] = [];
+
+        try {
+            const negativeBalanceMerchants = await subscriptionRepository.getNegativeBalanceMerchants();
+
+            for (const item of negativeBalanceMerchants) {
+                try {
+                    await subscriptionRepository.suspendSubscription(
+                        item.merchantId,
+                        `Negative balance: ${item.currency === 'AUD' ? 'A$' : 'Rp'} ${Math.abs(item.balance).toLocaleString()}`
+                    );
+
+                    // Send suspension notification
+                    if (item.email) {
+                        await this.sendSuspensionNotification(
+                            item.merchantId,
+                            item.email,
+                            item.name,
+                            'NEGATIVE_BALANCE',
+                            'Your balance is negative. Please top up to continue service.'
+                        );
+                    }
+
+                    details.push(`Suspended: ${item.code} (Balance: ${item.balance})`);
+                } catch (err) {
+                    errors.push(`Failed to suspend ${item.code}: ${err}`);
+                }
+            }
+
+            return {
+                task: 'Suspend Negative Balance',
+                success: errors.length === 0,
+                count: negativeBalanceMerchants.length,
+                details,
+                errors: errors.length > 0 ? errors : undefined,
+            };
+        } catch (err) {
+            return {
+                task: 'Suspend Negative Balance',
+                success: false,
+                count: 0,
+                errors: [`Task failed: ${err}`],
+            };
+        }
+    }
+
+    /**
      * Send trial ending warning notifications
      */
     async sendTrialEndingWarnings(): Promise<CronResult> {
@@ -195,6 +250,9 @@ class SubscriptionCronService {
                             undefined,
                             { daysRemaining: days }
                         );
+
+                        // Also send in-app notification
+                        await userNotificationService.notifyTrialEnding(item.merchantId, days);
 
                         if (success) {
                             details.push(`${days}d warning sent to: ${item.merchant.code}`);
@@ -253,6 +311,13 @@ class SubscriptionCronService {
                         success,
                         undefined,
                         { balance: item.balance, estimatedOrders: item.estimatedOrders }
+                    );
+
+                    // Also send in-app notification
+                    await userNotificationService.notifyLowBalance(
+                        item.merchantId,
+                        item.balance,
+                        item.estimatedOrders
                     );
 
                     if (success) {

@@ -75,9 +75,13 @@ export default function PaymentVerificationPage() {
     const handleVerify = async (id: string) => {
         setProcessingId(id);
         try {
+            const token = localStorage.getItem('accessToken');
             const res = await fetch(`/api/admin/payment-requests/${id}/verify`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
                 body: JSON.stringify({ notes: 'Verified by admin' }),
             });
 
@@ -104,9 +108,13 @@ export default function PaymentVerificationPage() {
 
         setProcessingId(id);
         try {
+            const token = localStorage.getItem('accessToken');
             const res = await fetch(`/api/admin/payment-requests/${id}/reject`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
                 body: JSON.stringify({ reason: rejectReason }),
             });
 

@@ -10,6 +10,7 @@ import { calculateCartSubtotal } from '@/lib/utils/priceCalculator';
 import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';
 import OtherNotesModal from '@/components/modals/OtherNotesModal';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import { useModeAvailability } from '@/hooks/useModeAvailability';
 
 interface MenuItem {
   id: string;
@@ -64,6 +65,9 @@ export default function ViewOrderPage() {
   const [removeItemName, setRemoveItemName] = useState<string>('');
   const [_relatedMenus, _setRelatedMenus] = useState<RelatedMenuItem[]>([]);
   const [showNotesModal, setShowNotesModal] = useState(false);
+
+  // Check if mode will be available at estimated pickup time (default 15 min)
+  const modeAvailability = useModeAvailability(merchantCode, mode, 15);
 
   // Initialize cart on mount
   useEffect(() => {
@@ -241,6 +245,27 @@ export default function ViewOrderPage() {
           </h1>
         </div>
       </header>
+
+      {/* ===== MODE UNAVAILABLE WARNING ===== */}
+      {!modeAvailability.canOrderForPickup && modeAvailability.warningMessage && (
+        <div className="mx-3 mt-3 p-3 rounded-lg bg-red-50 border border-red-200 dark:bg-red-900/20 dark:border-red-800">
+          <div className="flex items-start gap-2">
+            <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div>
+              <p className="text-sm font-medium text-red-700 dark:text-red-400">Cannot Complete Order</p>
+              <p className="text-xs text-red-600 dark:text-red-300 mt-0.5">{modeAvailability.warningMessage}</p>
+              <button
+                onClick={() => router.push(`/${merchantCode}`)}
+                className="mt-2 text-xs font-medium text-red-700 underline dark:text-red-400"
+              >
+                Switch ordering mode →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ===== CONTENT ===== */}
       <main className="pb-36">
@@ -753,13 +778,19 @@ export default function ViewOrderPage() {
           <div className="p-4">
             <button
               onClick={handleProceedToPayment}
-              className="mt-2 px-6 py-4 text-white font-medium rounded-lg transition-all active:scale-[0.98]"
+              disabled={!modeAvailability.canOrderForPickup}
+              className={`mt-2 px-6 py-4 text-white font-medium rounded-lg transition-all ${modeAvailability.canOrderForPickup
+                  ? 'active:scale-[0.98]'
+                  : 'opacity-50 cursor-not-allowed'
+                }`}
               style={{
-                backgroundColor: '#f05a28',
+                backgroundColor: modeAvailability.canOrderForPickup ? '#f05a28' : '#9ca3af',
                 fontSize: '14px'
               }}
             >
-              {t('customer.cart.continueToPayment')}
+              {modeAvailability.canOrderForPickup
+                ? t('customer.cart.continueToPayment')
+                : 'Mode Unavailable'}
             </button>
           </div>
         </div>

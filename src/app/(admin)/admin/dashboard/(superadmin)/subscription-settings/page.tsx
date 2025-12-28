@@ -108,9 +108,13 @@ export default function SubscriptionSettingsPage() {
 
         setIsSubmitting(true);
         try {
+            const token = localStorage.getItem('accessToken');
             const res = await fetch('/api/admin/subscription-plans', {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
                 body: JSON.stringify({
                     id: plan.id,
                     ...formData,

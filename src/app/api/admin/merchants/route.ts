@@ -60,16 +60,18 @@ async function getMerchantsHandler(request: NextRequest) {
   // Get all merchants with owner info
   const merchantsData = await merchantService.getAllMerchants(activeOnly);
 
-  // Import subscription repository for fetching subscription status
+  // Import repositories for fetching subscription status and balance
   const { default: subscriptionRepository } = await import('@/lib/repositories/SubscriptionRepository');
+  const { default: prisma } = await import('@/lib/db/client');
 
-  // Transform to include owner and subscription information
+  // Transform to include owner, subscription, and balance information
   const merchants = await Promise.all(merchantsData.map(async (merchant: Record<string, unknown>) => {
     const merchantUsers = merchant.merchantUsers as Array<{ role: string; user: Record<string, unknown> }> | undefined;
     const owner = merchantUsers?.find((mu) => mu.role === 'OWNER')?.user;
 
-    // Get subscription status
+    // Get subscription status and end date
     let subscriptionStatus = null;
+    let subscriptionEndsAt = null;
     try {
       const subscription = await subscriptionRepository.getMerchantSubscription(merchant.id as bigint);
       if (subscription) {
@@ -77,9 +79,31 @@ async function getMerchantsHandler(request: NextRequest) {
           type: subscription.type,
           status: subscription.status,
         };
+        // Determine subscription end date based on type
+        if (subscription.type === 'TRIAL' && subscription.trialEndsAt) {
+          subscriptionEndsAt = subscription.trialEndsAt;
+        } else if ((subscription.type === 'DEPOSIT' || subscription.type === 'MONTHLY') && subscription.currentPeriodEnd) {
+          subscriptionEndsAt = subscription.currentPeriodEnd;
+        }
       }
     } catch {
       // Ignore subscription fetch errors
+    }
+
+    // Get balance info
+    let balance = 0;
+    let lastTopupAt = null;
+    try {
+      const merchantBalance = await prisma.merchantBalance.findUnique({
+        where: { merchantId: merchant.id as bigint },
+        select: { balance: true, lastTopupAt: true },
+      });
+      if (merchantBalance) {
+        balance = Number(merchantBalance.balance);
+        lastTopupAt = merchantBalance.lastTopupAt;
+      }
+    } catch {
+      // Ignore balance fetch errors
     }
 
     return {
@@ -109,6 +133,9 @@ async function getMerchantsHandler(request: NextRequest) {
       ownerName: owner?.name || null,
       ownerEmail: owner?.email || null,
       subscriptionStatus,
+      subscriptionEndsAt,
+      balance,
+      lastTopupAt,
     };
   }));
 

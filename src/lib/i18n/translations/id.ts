@@ -472,6 +472,7 @@ const id = {
   "admin.nav.revenue": "Pendapatan",
   "admin.nav.reports": "Laporan",
   "admin.nav.subscription": "Langganan",
+  "admin.nav.subscriptionTransactions": "Riwayat Transaksi",
   "admin.nav.paymentVerification": "Verifikasi Pembayaran",
   "admin.nav.transactions": "Transaksi",
   "admin.nav.merchantBalance": "Saldo Merchant",
@@ -974,6 +975,19 @@ const id = {
   "admin.permissions.templates.kitchenStaffDesc": "Tampilan dapur dan manajemen stok",
   "admin.permissions.templates.manager": "Manajer",
   "admin.permissions.templates.managerDesc": "Akses penuh kecuali manajemen staff",
+
+  // Notification Permissions
+  "admin.permissions.notifications": "Pengaturan Notifikasi",
+  "admin.permissions.notifNewOrder": "Notifikasi Pesanan Baru",
+  "admin.permissions.notifNewOrderDesc": "Terima notifikasi saat ada pesanan baru",
+  "admin.permissions.notifStockOut": "Notifikasi Stok Habis",
+  "admin.permissions.notifStockOutDesc": "Terima notifikasi saat item kehabisan stok",
+  "admin.permissions.notifLowStock": "Peringatan Stok Rendah",
+  "admin.permissions.notifLowStockDesc": "Terima notifikasi saat stok hampir habis",
+  "admin.permissions.notifPayment": "Notifikasi Pembayaran",
+  "admin.permissions.notifPaymentDesc": "Terima notis verifikasi dan penolakan pembayaran",
+  "admin.permissions.notifSubscription": "Notifikasi Langganan",
+  "admin.permissions.notifSubscriptionDesc": "Terima notifikasi trial dan langganan",
 
   // QR Tables
   "admin.qrTables.title": "Meja QR",
@@ -1577,6 +1591,17 @@ const id = {
   "register.addressPlaceholder": "Alamat lengkap merchant",
   "register.phone": "Nomor Telepon",
   "register.currency": "Mata Uang",
+  "register.country": "Negara",
+  "register.timezone": "Zona Waktu",
+  "register.location": "Lokasi",
+  "register.detectLocation": "Deteksi Lokasi Saya",
+  "register.detectingLocation": "Mendeteksi lokasi...",
+  "register.locationDetected": "Lokasi terdeteksi!",
+  "register.locationNotDetected": "Tidak dapat mendeteksi lokasi",
+  "register.locationPermissionDenied": "Izin lokasi ditolak",
+  "register.locationManualHint": "Anda dapat menyesuaikan pengaturan ini secara manual di bawah",
+  "register.autoDetectedBadge": "Terdeteksi otomatis",
+  "register.locationMismatchWarning": "Lokasi GPS Anda menunjukkan Anda berada di {detectedCountry}, tapi Anda memilih {selectedCountry} dengan mata uang {selectedCurrency}. Mohon periksa pengaturan Anda.",
   "register.ownerName": "Nama Lengkap",
   "register.ownerNamePlaceholder": "Nama lengkap Anda",
   "register.email": "Email",
@@ -1664,6 +1689,158 @@ const id = {
   "referral.stats.totalMerchants": "Total Merchant",
   "referral.stats.subscribed": "Berlangganan",
   "referral.stats.topupTotal": "Total Top-up",
+
+  // ============================================================================
+  // SUBSCRIPTION - Merchant subscription page
+  // ============================================================================
+  "subscription.pageTitle": "Langganan",
+  "subscription.failedToLoad": "Gagal memuat data langganan",
+  "subscription.tryAgain": "Coba Lagi",
+
+  // Subscription Status
+  "subscription.status.title": "Status Langganan",
+  "subscription.status.type": "Jenis Langganan",
+  "subscription.status.trial": "Masa Trial",
+  "subscription.status.deposit": "Mode Deposit",
+  "subscription.status.monthly": "Langganan Bulanan",
+  "subscription.status.trialEnds": "Trial Berakhir",
+  "subscription.status.validUntil": "Berlaku Sampai",
+  "subscription.status.currentBalance": "Saldo Saat Ini",
+  "subscription.status.daysRemaining": "{days} hari tersisa",
+
+  // Buttons and Actions
+  "subscription.actions.upgrade": "Upgrade Langganan",
+  "subscription.actions.topupExtend": "Top Up / Perpanjang",
+
+  // Switch Subscription Type
+  "subscription.switch.title": "Ganti Tipe Langganan",
+  "subscription.switch.toDeposit": "Beralih ke mode Deposit untuk pembayaran per pesanan.",
+  "subscription.switch.toMonthly": "Beralih ke langganan Bulanan untuk biaya bulanan tetap.",
+  "subscription.switch.switchToDeposit": "Beralih ke Mode Deposit",
+  "subscription.switch.switchToMonthly": "Beralih ke Bulanan",
+  "subscription.switch.confirmDeposit": "Beralih ke mode Deposit? Anda dapat top up saldo setelah beralih.",
+  "subscription.switch.confirmMonthly": "Beralih ke langganan Bulanan? Saldo Anda akan tetap tersimpan.",
+
+  // Transaction History
+  "subscription.transactions.title": "Riwayat Transaksi",
+  "subscription.transactions.empty": "Belum ada transaksi",
+  "subscription.transactions.balance": "Saldo:",
+  "subscription.transactions.viewAll": "Lihat Semua Transaksi",
+  "subscription.transactions.type.deposit": "Top Up",
+  "subscription.transactions.type.orderFee": "Biaya Pesanan",
+  "subscription.transactions.type.subscription": "Langganan",
+  "subscription.transactions.type.refund": "Refund",
+  "subscription.transactions.type.adjustment": "Penyesuaian",
+
+  // Quick Actions
+  "subscription.quickActions.title": "Aksi Cepat",
+  "subscription.quickActions.topup": "Top Up Saldo",
+  "subscription.quickActions.topupDesc": "Tambah saldo deposit",
+  "subscription.quickActions.monthly": "Langganan Bulanan",
+  "subscription.quickActions.monthlyDesc": "Bayar tetap per bulan",
+
+  // Balance Card
+  "subscription.balance.title": "Saldo Anda",
+  "subscription.balance.estimatedOrders": "Estimasi {count} pesanan",
+  "subscription.balance.lowWarning": "Saldo hampir habis!",
+  "subscription.balance.lastTopup": "Top up terakhir: {date}",
+
+  // Top Up Page
+  "subscription.topup.pageTitle": "Top Up / Upgrade",
+  "subscription.topup.paymentConfirmed": "Pembayaran Dikonfirmasi",
+  "subscription.topup.selectPaymentType": "Pilih Jenis Pembayaran",
+
+  // Deposit Mode
+  "subscription.topup.depositMode": "Mode Deposit",
+  "subscription.topup.payPerOrder": "Bayar per Pesanan",
+  "subscription.topup.depositDescription": "Minimum deposit {min}, biaya {fee} per pesanan",
+  "subscription.topup.depositAmount": "Jumlah Deposit",
+  "subscription.topup.minimumDeposit": "Minimum deposit {amount}",
+
+  // Monthly Mode
+  "subscription.topup.monthlyMode": "Langganan Bulanan",
+  "subscription.topup.noOrderFee": "Bayar tetap per bulan, tanpa biaya per pesanan",
+  "subscription.topup.duration": "Durasi Langganan",
+  "subscription.topup.month": "bulan",
+  "subscription.topup.months": "bulan",
+
+  // Payment
+  "subscription.topup.totalPayment": "Total Pembayaran",
+  "subscription.topup.continuePayment": "Lanjutkan Pembayaran",
+  "subscription.topup.processing": "Memproses...",
+
+  // Transfer Details
+  "subscription.transfer.title": "Transfer ke Rekening Berikut",
+  "subscription.transfer.subtitle": "Silakan transfer sesuai jumlah di bawah ini",
+  "subscription.transfer.bank": "Bank",
+  "subscription.transfer.accountNumber": "No. Rekening",
+  "subscription.transfer.accountName": "Atas Nama",
+  "subscription.transfer.amount": "Jumlah Transfer",
+  "subscription.transfer.notes": "Catatan Transfer (opsional)",
+  "subscription.transfer.notesPlaceholder": "Contoh: Transfer dari BCA 0812xxx pada jam 10:00",
+  "subscription.transfer.confirmPaid": "Saya Sudah Bayar",
+  "subscription.transfer.back": "Kembali",
+  "subscription.transfer.copied": "Disalin ke clipboard",
+
+  // Confirmation
+  "subscription.confirm.title": "Pembayaran Dikonfirmasi!",
+  "subscription.confirm.description": "Pembayaran Anda sedang menunggu verifikasi admin. Anda akan mendapat notifikasi setelah pembayaran diverifikasi.",
+  "subscription.confirm.status": "Menunggu Verifikasi",
+  "subscription.confirm.backToSubscription": "Kembali ke Halaman Langganan",
+  "subscription.confirm.toDashboard": "Ke Dashboard",
+
+  // Toast Messages
+  "subscription.toast.paymentConfirmed": "Pembayaran dikonfirmasi! Menunggu verifikasi admin.",
+  "subscription.toast.failed": "Gagal",
+  "subscription.toast.createFailed": "Gagal membuat permintaan pembayaran",
+  "subscription.toast.confirmFailed": "Gagal mengkonfirmasi pembayaran",
+  "subscription.toast.success": "Berhasil",
+
+  // Transaction Page
+  "subscription.history.pageTitle": "Riwayat Transaksi",
+  "subscription.history.subtitle": "Lihat semua transaksi langganan Anda",
+  "subscription.history.filter.all": "Semua",
+  "subscription.history.filter.deposit": "Top Up",
+  "subscription.history.filter.orderFee": "Biaya Pesanan",
+  "subscription.history.filter.subscription": "Langganan",
+  "subscription.history.noTransactions": "Tidak ada transaksi",
+  "subscription.history.noTransactionsDesc": "Riwayat transaksi Anda akan muncul di sini",
+  "subscription.history.noMatchingTransactions": "Tidak ada transaksi yang cocok",
+  "subscription.history.tryDifferentFilters": "Coba sesuaikan pencarian atau filter Anda",
+  "subscription.history.date": "Tanggal",
+  "subscription.history.type": "Jenis",
+  "subscription.history.amount": "Jumlah",
+  "subscription.history.balanceAfter": "Saldo Setelah",
+  "subscription.history.description": "Keterangan",
+  "subscription.history.export": "Ekspor",
+  "subscription.history.exportError": "Gagal mengekspor transaksi",
+  "subscription.history.searchPlaceholder": "Cari transaksi...",
+  "subscription.history.clearFilters": "Hapus",
+  "subscription.history.showing": "Menampilkan",
+  "subscription.history.of": "dari",
+  "subscription.history.transactions": "transaksi",
+  "subscription.history.page": "Halaman",
+  "subscription.history.previous": "Sebelumnya",
+  "subscription.history.next": "Berikutnya",
+
+  // ============================================================================
+  // NOTIFICATIONS
+  // ============================================================================
+  "notifications.title": "Notifikasi",
+  "notifications.empty": "Belum ada notifikasi",
+  "notifications.viewAll": "Lihat Semua Notifikasi",
+  "notifications.markAllRead": "Tandai semua sudah dibaca",
+  "notifications.markAsRead": "Tandai sudah dibaca",
+  "notifications.viewDetails": "Lihat detail",
+  "notifications.unreadOnly": "Belum dibaca saja",
+  "notifications.category.all": "Semua",
+  "notifications.category.system": "Sistem",
+  "notifications.category.subscription": "Langganan",
+  "notifications.category.order": "Pesanan",
+  "notifications.category.stock": "Stok",
+  "notifications.category.staff": "Staf",
+  "notifications.category.payment": "Pembayaran",
 };
 
 export default id;
+

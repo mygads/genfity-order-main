@@ -35,6 +35,13 @@ export const STAFF_PERMISSIONS = {
   MERCHANT_SETTINGS: 'merchant_settings', // Merchant profile settings
   QR_TABLES: 'qr_tables',              // QR codes and table management
 
+  // Notification Settings (which notifications staff can receive)
+  NOTIF_NEW_ORDER: 'notif_new_order',        // New order notifications
+  NOTIF_STOCK_OUT: 'notif_stock_out',        // Stock out of stock alerts
+  NOTIF_LOW_STOCK: 'notif_low_stock',        // Low stock warnings
+  NOTIF_PAYMENT: 'notif_payment',            // Payment verification notices
+  NOTIF_SUBSCRIPTION: 'notif_subscription',  // Subscription/trial notifications
+
   // Staff management is ALWAYS owner-only
   // STAFF: 'staff', // Intentionally excluded - owner only
 } as const;
@@ -60,6 +67,10 @@ export const DEFAULT_STAFF_PERMISSIONS: StaffPermission[] = [
   STAFF_PERMISSIONS.ADDON_ITEMS,
   STAFF_PERMISSIONS.MENU_BOOKS,
   STAFF_PERMISSIONS.SPECIAL_PRICES,
+  // Notification permissions - all staff can receive these by default
+  STAFF_PERMISSIONS.NOTIF_NEW_ORDER,
+  STAFF_PERMISSIONS.NOTIF_STOCK_OUT,
+  STAFF_PERMISSIONS.NOTIF_LOW_STOCK,
 ];
 
 /**
@@ -153,6 +164,16 @@ export const PERMISSION_GROUPS = {
     permissions: [
       { key: STAFF_PERMISSIONS.MERCHANT_SETTINGS, nameKey: 'admin.permissions.merchantSettings', descKey: 'admin.permissions.merchantSettingsDesc' },
       { key: STAFF_PERMISSIONS.QR_TABLES, nameKey: 'admin.permissions.qrTables', descKey: 'admin.permissions.qrTablesDesc' },
+    ],
+  },
+  notifications: {
+    titleKey: 'admin.permissions.notifications',
+    permissions: [
+      { key: STAFF_PERMISSIONS.NOTIF_NEW_ORDER, nameKey: 'admin.permissions.notifNewOrder', descKey: 'admin.permissions.notifNewOrderDesc' },
+      { key: STAFF_PERMISSIONS.NOTIF_STOCK_OUT, nameKey: 'admin.permissions.notifStockOut', descKey: 'admin.permissions.notifStockOutDesc' },
+      { key: STAFF_PERMISSIONS.NOTIF_LOW_STOCK, nameKey: 'admin.permissions.notifLowStock', descKey: 'admin.permissions.notifLowStockDesc' },
+      { key: STAFF_PERMISSIONS.NOTIF_PAYMENT, nameKey: 'admin.permissions.notifPayment', descKey: 'admin.permissions.notifPaymentDesc' },
+      { key: STAFF_PERMISSIONS.NOTIF_SUBSCRIPTION, nameKey: 'admin.permissions.notifSubscription', descKey: 'admin.permissions.notifSubscriptionDesc' },
     ],
   },
 } as const;

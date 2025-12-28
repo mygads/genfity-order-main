@@ -1,13 +1,21 @@
 /**
  * Merchant Balance Transactions API
- * GET /api/merchant/balance/transactions - Get transaction history
+ * GET /api/merchant/balance/transactions - Get transaction history with filters
+ * 
+ * Query Parameters:
+ * - limit: number (default 20)
+ * - offset: number (default 0)
+ * - type: BalanceTransactionType (optional filter)
+ * - startDate: ISO date string (optional)
+ * - endDate: ISO date string (optional)
+ * - search: string (optional, search in description)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
 import { withMerchantOwner } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/middleware/auth';
-import balanceService from '@/lib/services/BalanceService';
+import type { BalanceTransactionType, Prisma } from '@prisma/client';
 
 /**
  * GET /api/merchant/balance/transactions
@@ -31,11 +39,64 @@ async function handleGet(req: NextRequest, context: AuthContext) {
         const { searchParams } = new URL(req.url);
         const limit = parseInt(searchParams.get('limit') || '20', 10);
         const offset = parseInt(searchParams.get('offset') || '0', 10);
+        const type = searchParams.get('type') as BalanceTransactionType | null;
+        const startDate = searchParams.get('startDate');
+        const endDate = searchParams.get('endDate');
+        const search = searchParams.get('search');
 
-        const { transactions, total } = await balanceService.getTransactions(
-            merchantUser.merchantId,
-            { limit, offset }
-        );
+        // Get balance record
+        const balance = await prisma.merchantBalance.findUnique({
+            where: { merchantId: merchantUser.merchantId },
+        });
+
+        if (!balance) {
+            return NextResponse.json({
+                success: true,
+                data: {
+                    transactions: [],
+                    pagination: { total: 0, limit, offset, hasMore: false },
+                },
+            });
+        }
+
+        // Build where clause
+        const where: Prisma.BalanceTransactionWhereInput = {
+            balanceId: balance.id,
+        };
+
+        if (type) {
+            where.type = type;
+        }
+
+        if (startDate || endDate) {
+            where.createdAt = {};
+            if (startDate) {
+                where.createdAt.gte = new Date(startDate);
+            }
+            if (endDate) {
+                // Include the entire end date
+                const endDateTime = new Date(endDate);
+                endDateTime.setHours(23, 59, 59, 999);
+                where.createdAt.lte = endDateTime;
+            }
+        }
+
+        if (search) {
+            where.description = {
+                contains: search,
+                mode: 'insensitive',
+            };
+        }
+
+        const [transactions, total] = await Promise.all([
+            prisma.balanceTransaction.findMany({
+                where,
+                orderBy: { createdAt: 'desc' },
+                take: limit,
+                skip: offset,
+            }),
+            prisma.balanceTransaction.count({ where }),
+        ]);
 
         return NextResponse.json({
             success: true,

@@ -38,6 +38,7 @@ model User {
   paymentsRecorded    Payment[]       @relation("PaymentRecordedBy")
   preferences         UserPreference?
   sessions            UserSession[]
+  notifications       UserNotification[]
 
   @@index([email])
   @@index([role])
@@ -228,6 +229,7 @@ model Merchant {
   merchantBalance        MerchantBalance?
   paymentRequests        PaymentRequest[]
   notificationLogs       NotificationLog[]
+  userNotifications      UserNotification[]
   // Referral tracking
   referralCodeUsed       String?               @map("referral_code_used")
 
@@ -885,6 +887,7 @@ enum NotificationType {
   TRIAL_EXPIRED           // Trial has expired
   LOW_BALANCE             // Balance below threshold
   BALANCE_ZERO            // Balance is zero
+  NEGATIVE_BALANCE        // Balance is negative (auto-suspended)
   SUBSCRIPTION_SUSPENDED  // Subscription suspended
   PAYMENT_VERIFIED        // Payment verified
   MONTHLY_EXPIRING_7_DAYS // Monthly subscription expiring in 7 days
@@ -964,3 +967,40 @@ model ReferralUsage {
   @@index([merchantId])
   @@map("referral_usages")
 }
+
+// ============================================
+// IN-APP NOTIFICATION SYSTEM
+// ============================================
+
+enum UserNotificationCategory {
+  SYSTEM           // System-wide announcements
+  SUBSCRIPTION     // Trial ending, balance low, expired
+  ORDER            // New orders, status changes
+  STOCK            // Low stock, out of stock
+  STAFF            // Staff logins, new staff added
+  PAYMENT          // Payment verified, rejected
+}
+
+model UserNotification {
+  id          BigInt                    @id @default(autoincrement())
+  userId      BigInt?                   @map("user_id")
+  merchantId  BigInt?                   @map("merchant_id")
+  targetRole  UserRole?                 @map("target_role") // null = all roles in merchant
+  category    UserNotificationCategory
+  title       String
+  message     String
+  metadata    Json?                     // Extra data (orderId, menuId, etc.)
+  isRead      Boolean                   @default(false) @map("is_read")
+  readAt      DateTime?                 @map("read_at") @db.Timestamptz(6)
+  actionUrl   String?                   @map("action_url") // Link to relevant page
+  createdAt   DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user        User?                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  merchant    Merchant?                 @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([merchantId, targetRole])
+  @@index([createdAt])
+  @@map("user_notifications")
+}
+

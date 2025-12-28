@@ -147,22 +147,22 @@ class AuthService {
     if (user.merchantUsers && user.merchantUsers.length > 0) {
       // Build merchants list from merchantUsers
       const { STAFF_PERMISSIONS } = await import('@/lib/constants/permissions');
-      
+
       merchants = user.merchantUsers
         .filter((mu: { isActive: boolean; merchant: { isActive: boolean } }) => mu.isActive && mu.merchant.isActive)
-        .map((mu: { 
-          merchantId: bigint; 
-          role: string; 
+        .map((mu: {
+          merchantId: bigint;
+          role: string;
           permissions: string[];
           isActive: boolean;
-          merchant: { 
-            code: string; 
-            name: string; 
+          merchant: {
+            code: string;
+            name: string;
             logoUrl: string | null;
             address: string | null;
             city: string | null;
             isOpen: boolean;
-          } 
+          }
         }) => ({
           merchantId: mu.merchantId.toString(),
           merchantCode: mu.merchant.code,
@@ -222,6 +222,17 @@ class AuthService {
     await sessionRepository.update(session.id, {
       token: accessToken,
     });
+
+    // Send notification to merchant owner when staff logs in
+    if (user.role === 'MERCHANT_STAFF' && merchantId) {
+      import('@/lib/services/UserNotificationService').then(({ default: userNotificationService }) => {
+        userNotificationService.notifyStaffLogin(merchantId, user.name, user.email).catch(err => {
+          console.error('⚠️ Staff login notification failed:', err);
+        });
+      }).catch(err => {
+        console.error('⚠️ Failed to import notification service:', err);
+      });
+    }
 
     // Calculate expiresIn using dynamic session duration
     const expiresIn = this.getSessionDuration(user.role, credentials.rememberMe);

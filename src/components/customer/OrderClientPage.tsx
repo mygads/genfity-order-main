@@ -22,6 +22,7 @@ import { CustomerOrderSkeleton } from '@/components/common/SkeletonLoaders';
 import { getTableNumber, saveTableNumber } from '@/lib/utils/localStorage';
 import TableNumberModal from '@/components/customer/TableNumberModal';
 import ModeUnavailableModal from '@/components/modals/ModeUnavailableModal';
+import ModeClosingBanner from '@/components/customer/ModeClosingBanner';
 import { extractAddonDataFromMenus } from '@/lib/utils/addonExtractor';
 import { throttle } from '@/lib/utils/throttle';
 import { useStoreStatus } from '@/hooks/useStoreStatus';
@@ -665,6 +666,16 @@ export default function OrderClientPage({
         <div className={`bg-amber-500 text-white px-4 py-2 text-center text-sm font-medium sticky ${todaySpecialHour ? '' : 'top-0'} z-50`}>
           ⚠️ Store closes in {minutesUntilClose} minute{minutesUntilClose !== 1 ? 's' : ''}
         </div>
+      )}
+
+      {/* Mode-Specific Closing Warning Banner */}
+      {storeOpen && merchantInfo && (
+        <ModeClosingBanner
+          mode={mode}
+          modeLabel={mode === 'dinein' ? merchantInfo.dineInLabel || undefined : merchantInfo.takeawayLabel || undefined}
+          scheduleEnd={mode === 'dinein' ? merchantInfo.dineInScheduleEnd || null : merchantInfo.takeawayScheduleEnd || null}
+          showThresholdMinutes={30}
+        />
       )}
 
       {/* ======================================== 

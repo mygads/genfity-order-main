@@ -478,6 +478,7 @@ const en = {
   "admin.nav.revenue": "Revenue",
   "admin.nav.reports": "Reports",
   "admin.nav.subscription": "Subscription",
+  "admin.nav.subscriptionTransactions": "Transaction History",
   "admin.nav.paymentVerification": "Payment Verification",
   "admin.nav.transactions": "Transactions",
   "admin.nav.merchantBalance": "Merchant Balance",
@@ -980,6 +981,19 @@ const en = {
   "admin.permissions.templates.kitchenStaffDesc": "Kitchen display and stock management",
   "admin.permissions.templates.manager": "Manager",
   "admin.permissions.templates.managerDesc": "Full access except staff management",
+
+  // Notification Permissions
+  "admin.permissions.notifications": "Notification Settings",
+  "admin.permissions.notifNewOrder": "New Order Alerts",
+  "admin.permissions.notifNewOrderDesc": "Receive notifications when new orders are placed",
+  "admin.permissions.notifStockOut": "Stock Out Alerts",
+  "admin.permissions.notifStockOutDesc": "Receive notifications when items are out of stock",
+  "admin.permissions.notifLowStock": "Low Stock Warnings",
+  "admin.permissions.notifLowStockDesc": "Receive notifications when stock is running low",
+  "admin.permissions.notifPayment": "Payment Notifications",
+  "admin.permissions.notifPaymentDesc": "Receive payment verification and rejection notices",
+  "admin.permissions.notifSubscription": "Subscription Alerts",
+  "admin.permissions.notifSubscriptionDesc": "Receive trial ending and subscription notices",
 
   // QR Tables
   "admin.qrTables.title": "QR Tables",
@@ -1583,6 +1597,17 @@ const en = {
   "register.addressPlaceholder": "Full merchant address",
   "register.phone": "Phone Number",
   "register.currency": "Currency",
+  "register.country": "Country",
+  "register.timezone": "Timezone",
+  "register.location": "Location",
+  "register.detectLocation": "Detect My Location",
+  "register.detectingLocation": "Detecting location...",
+  "register.locationDetected": "Location detected!",
+  "register.locationNotDetected": "Could not detect location",
+  "register.locationPermissionDenied": "Location permission denied",
+  "register.locationManualHint": "You can adjust these settings manually below",
+  "register.autoDetectedBadge": "Auto-detected",
+  "register.locationMismatchWarning": "Your GPS location suggests you are in {detectedCountry}, but you selected {selectedCountry} with {selectedCurrency} currency. Please verify your settings.",
   "register.ownerName": "Full Name",
   "register.ownerNamePlaceholder": "Your full name",
   "register.email": "Email",
@@ -1670,7 +1695,159 @@ const en = {
   "referral.stats.totalMerchants": "Total Merchants",
   "referral.stats.subscribed": "Subscribed",
   "referral.stats.topupTotal": "Top-up Total",
+
+  // ============================================================================
+  // SUBSCRIPTION - Merchant subscription page
+  // ============================================================================
+  "subscription.pageTitle": "Subscription",
+  "subscription.failedToLoad": "Failed to load subscription data",
+  "subscription.tryAgain": "Try Again",
+
+  // Subscription Status
+  "subscription.status.title": "Subscription Status",
+  "subscription.status.type": "Subscription Type",
+  "subscription.status.trial": "Trial Period",
+  "subscription.status.deposit": "Deposit Mode",
+  "subscription.status.monthly": "Monthly Subscription",
+  "subscription.status.trialEnds": "Trial Ends",
+  "subscription.status.validUntil": "Valid Until",
+  "subscription.status.currentBalance": "Current Balance",
+  "subscription.status.daysRemaining": "{days} days remaining",
+
+  // Buttons and Actions
+  "subscription.actions.upgrade": "Upgrade Subscription",
+  "subscription.actions.topupExtend": "Top Up / Extend",
+
+  // Switch Subscription Type
+  "subscription.switch.title": "Switch Subscription Type",
+  "subscription.switch.toDeposit": "Switch to Deposit mode for pay-per-order billing.",
+  "subscription.switch.toMonthly": "Switch to Monthly subscription for fixed monthly fee.",
+  "subscription.switch.switchToDeposit": "Switch to Deposit Mode",
+  "subscription.switch.switchToMonthly": "Switch to Monthly",
+  "subscription.switch.confirmDeposit": "Switch to Deposit mode? You can top up balance after switching.",
+  "subscription.switch.confirmMonthly": "Switch to Monthly subscription? Your balance will be preserved.",
+
+  // Transaction History
+  "subscription.transactions.title": "Transaction History",
+  "subscription.transactions.empty": "No transactions yet",
+  "subscription.transactions.balance": "Balance:",
+  "subscription.transactions.viewAll": "View All Transactions",
+  "subscription.transactions.type.deposit": "Top Up",
+  "subscription.transactions.type.orderFee": "Order Fee",
+  "subscription.transactions.type.subscription": "Subscription",
+  "subscription.transactions.type.refund": "Refund",
+  "subscription.transactions.type.adjustment": "Adjustment",
+
+  // Quick Actions
+  "subscription.quickActions.title": "Quick Actions",
+  "subscription.quickActions.topup": "Top Up Balance",
+  "subscription.quickActions.topupDesc": "Add deposit balance",
+  "subscription.quickActions.monthly": "Monthly Subscription",
+  "subscription.quickActions.monthlyDesc": "Pay fixed per month",
+
+  // Balance Card
+  "subscription.balance.title": "Your Balance",
+  "subscription.balance.estimatedOrders": "Estimated {count} orders",
+  "subscription.balance.lowWarning": "Balance is running low!",
+  "subscription.balance.lastTopup": "Last top up: {date}",
+
+  // Top Up Page
+  "subscription.topup.pageTitle": "Top Up / Upgrade",
+  "subscription.topup.paymentConfirmed": "Payment Confirmed",
+  "subscription.topup.selectPaymentType": "Select Payment Type",
+
+  // Deposit Mode
+  "subscription.topup.depositMode": "Deposit Mode",
+  "subscription.topup.payPerOrder": "Pay per Order",
+  "subscription.topup.depositDescription": "Minimum deposit {min}, fee {fee} per order",
+  "subscription.topup.depositAmount": "Deposit Amount",
+  "subscription.topup.minimumDeposit": "Minimum deposit {amount}",
+
+  // Monthly Mode
+  "subscription.topup.monthlyMode": "Monthly Subscription",
+  "subscription.topup.noOrderFee": "Pay fixed per month, no order fee",
+  "subscription.topup.duration": "Subscription Duration",
+  "subscription.topup.month": "month",
+  "subscription.topup.months": "months",
+
+  // Payment
+  "subscription.topup.totalPayment": "Total Payment",
+  "subscription.topup.continuePayment": "Continue to Payment",
+  "subscription.topup.processing": "Processing...",
+
+  // Transfer Details
+  "subscription.transfer.title": "Transfer to This Account",
+  "subscription.transfer.subtitle": "Please transfer the amount shown below",
+  "subscription.transfer.bank": "Bank",
+  "subscription.transfer.accountNumber": "Account Number",
+  "subscription.transfer.accountName": "Account Name",
+  "subscription.transfer.amount": "Transfer Amount",
+  "subscription.transfer.notes": "Transfer Notes (optional)",
+  "subscription.transfer.notesPlaceholder": "e.g., Transferred from BCA 0812xxx at 10:00",
+  "subscription.transfer.confirmPaid": "I Have Paid",
+  "subscription.transfer.back": "Back",
+  "subscription.transfer.copied": "Copied to clipboard",
+
+  // Confirmation
+  "subscription.confirm.title": "Payment Confirmed!",
+  "subscription.confirm.description": "Your payment is awaiting admin verification. You will be notified once verified.",
+  "subscription.confirm.status": "Awaiting Verification",
+  "subscription.confirm.backToSubscription": "Back to Subscription Page",
+  "subscription.confirm.toDashboard": "To Dashboard",
+
+  // Toast Messages
+  "subscription.toast.paymentConfirmed": "Payment confirmed! Awaiting admin verification.",
+  "subscription.toast.failed": "Failed",
+  "subscription.toast.createFailed": "Failed to create payment request",
+  "subscription.toast.confirmFailed": "Failed to confirm payment",
+  "subscription.toast.success": "Success",
+
+  // Transaction Page
+  "subscription.history.pageTitle": "Transaction History",
+  "subscription.history.subtitle": "View all your subscription transactions",
+  "subscription.history.filter.all": "All",
+  "subscription.history.filter.deposit": "Top Up",
+  "subscription.history.filter.orderFee": "Order Fee",
+  "subscription.history.filter.subscription": "Subscription",
+  "subscription.history.noTransactions": "No transactions found",
+  "subscription.history.noTransactionsDesc": "Your transaction history will appear here",
+  "subscription.history.noMatchingTransactions": "No matching transactions",
+  "subscription.history.tryDifferentFilters": "Try adjusting your search or filters",
+  "subscription.history.date": "Date",
+  "subscription.history.type": "Type",
+  "subscription.history.amount": "Amount",
+  "subscription.history.balanceAfter": "Balance After",
+  "subscription.history.description": "Description",
+  "subscription.history.export": "Export",
+  "subscription.history.exportError": "Failed to export transactions",
+  "subscription.history.searchPlaceholder": "Search transactions...",
+  "subscription.history.clearFilters": "Clear",
+  "subscription.history.showing": "Showing",
+  "subscription.history.of": "of",
+  "subscription.history.transactions": "transactions",
+  "subscription.history.page": "Page",
+  "subscription.history.previous": "Previous",
+  "subscription.history.next": "Next",
+
+  // ============================================================================
+  // NOTIFICATIONS
+  // ============================================================================
+  "notifications.title": "Notifications",
+  "notifications.empty": "No notifications yet",
+  "notifications.viewAll": "View All Notifications",
+  "notifications.markAllRead": "Mark all as read",
+  "notifications.markAsRead": "Mark as read",
+  "notifications.viewDetails": "View details",
+  "notifications.unreadOnly": "Unread only",
+  "notifications.category.all": "All",
+  "notifications.category.system": "System",
+  "notifications.category.subscription": "Subscription",
+  "notifications.category.order": "Order",
+  "notifications.category.stock": "Stock",
+  "notifications.category.staff": "Staff",
+  "notifications.category.payment": "Payment",
 };
 
 export default en;
 export type TranslationKeys = keyof typeof en;
+

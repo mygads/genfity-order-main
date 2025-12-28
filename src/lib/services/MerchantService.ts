@@ -213,6 +213,7 @@ class MerchantService {
       const { default: subscriptionRepository } = await import('@/lib/repositories/SubscriptionRepository');
       const { default: balanceRepository } = await import('@/lib/repositories/BalanceRepository');
       const { default: subscriptionService } = await import('@/lib/services/SubscriptionService');
+      const { default: userNotificationService } = await import('@/lib/services/UserNotificationService');
 
       // Get trial days from plan pricing
       const pricing = await subscriptionService.getPlanPricing(input.currency || 'AUD');
@@ -225,6 +226,15 @@ class MerchantService {
       await balanceRepository.getOrCreateBalance(merchant.id);
 
       console.log(`✅ Created ${trialDays}-day trial subscription for merchant ${merchant.code}`);
+
+      // Notify super admins about new merchant registration
+      userNotificationService.notifyNewMerchantRegistration(
+        merchant.name,
+        merchant.code,
+        merchant.id
+      ).catch(err => {
+        console.error('⚠️ New merchant notification failed:', err);
+      });
     } catch (subscriptionError) {
       // Log but don't fail merchant creation if subscription creation fails
       console.warn('Failed to create trial subscription:', subscriptionError);
