@@ -265,6 +265,10 @@ export async function POST(request: NextRequest) {
 
       console.log('✅ [AUTH] Customer logged in via password:', customerId.toString());
 
+      // Calculate expiresAt from expiresIn
+      const expiresAtDate = new Date();
+      expiresAtDate.setSeconds(expiresAtDate.getSeconds() + loginResult.expiresIn);
+
       return NextResponse.json(
         {
           success: true,
@@ -272,6 +276,7 @@ export async function POST(request: NextRequest) {
             accessToken: loginResult.accessToken,
             refreshToken: loginResult.refreshToken,
             expiresIn: loginResult.expiresIn,
+            expiresAt: expiresAtDate.toISOString(),
             customer: {
               id: customerId.toString(),
               email: customerEmail,
@@ -346,6 +351,7 @@ export async function POST(request: NextRequest) {
           accessToken: finalAccessToken,
           refreshToken,
           expiresIn: sessionDuration,
+          expiresAt: expiresAt.toISOString(),
           customer: {
             id: customerId.toString(),
             email: customerEmail,
