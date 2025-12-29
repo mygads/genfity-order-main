@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import MenuDetailModal from '@/components/menu/MenuDetailModal';
 import { useCart } from '@/context/CartContext';
+import { useGroupOrder } from '@/context/GroupOrderContext';
 import type { CartItem } from '@/context/CartContext';
 import { formatCurrency } from '@/lib/utils/format';
 import { calculateCartSubtotal } from '@/lib/utils/priceCalculator';
@@ -49,8 +50,10 @@ export default function ViewOrderPage() {
 
   const merchantCode = params.merchantCode as string;
   const mode = (searchParams.get('mode') || 'takeaway') as 'dinein' | 'takeaway';
+  const isGroupOrderCheckout = searchParams.get('groupOrder') === 'true';
 
   const { cart, updateItem, removeItem, initializeCart, addItem } = useCart();
+  const { isInGroupOrder, isHost, session } = useGroupOrder();
 
   const [isLoading, setIsLoading] = useState(true);
   const [showOtherFees, setShowOtherFees] = useState(false);
@@ -118,12 +121,20 @@ export default function ViewOrderPage() {
     }
   }, [merchantCode, mode, cart?.items]);
 
-  // Redirect if cart is empty
+  // Redirect if cart is empty (not for group order checkout)
   useEffect(() => {
-    if (!isLoading && (!cart || cart.items.length === 0)) {
-      router.push(`/${merchantCode}/order?mode=${mode}`);
+    if (isGroupOrderCheckout) {
+      // For group order, check if we have session items
+      if (!isLoading && (!session || !isHost)) {
+        router.push(`/${merchantCode}/order?mode=${mode}`);
+      }
+    } else {
+      // Normal checkout - check cart
+      if (!isLoading && (!cart || cart.items.length === 0)) {
+        router.push(`/${merchantCode}/order?mode=${mode}`);
+      }
     }
-  }, [cart, isLoading, merchantCode, mode, router]);
+  }, [cart, isLoading, merchantCode, mode, router, isGroupOrderCheckout, session, isHost]);
 
   const updateQuantity = (cartItemId: string, newQuantity: number, itemName?: string) => {
     if (!cart) return;
@@ -167,8 +178,31 @@ export default function ViewOrderPage() {
     }
   };
 
+  // Build group order items for display
+  const groupOrderItems = useMemo(() => {
+    if (!isGroupOrderCheckout || !session?.participants) return [];
+
+    const items: { participantName: string; cartItems: CartItem[] }[] = [];
+    session.participants.forEach(participant => {
+      const cartItems = participant.cartItems as CartItem[];
+      if (Array.isArray(cartItems) && cartItems.length > 0) {
+        items.push({
+          participantName: participant.name,
+          cartItems: cartItems
+        });
+      }
+    });
+    return items;
+  }, [isGroupOrderCheckout, session?.participants]);
+
+  // Calculate group order subtotal
+  const groupOrderSubtotal = useMemo(() => {
+    if (!session?.participants) return 0;
+    return session.participants.reduce((sum, p) => sum + (p.subtotal || 0), 0);
+  }, [session?.participants]);
+
   // Calculate totals
-  const subtotal = cart ? calculateCartSubtotal(cart.items) : 0;
+  const subtotal = isGroupOrderCheckout ? groupOrderSubtotal : (cart ? calculateCartSubtotal(cart.items) : 0);
   const taxAmount = subtotal * (merchantTaxPercentage / 100);
   const serviceChargeAmount = subtotal * (merchantServiceChargePercent / 100);
   const packagingFeeAmount = merchantPackagingFee;
@@ -179,7 +213,12 @@ export default function ViewOrderPage() {
     if (cart && generalNotes.trim()) {
       console.log('General notes:', generalNotes.trim());
     }
-    router.push(`/${merchantCode}/payment?mode=${mode}`);
+    if (isGroupOrderCheckout) {
+      // For group order, go to payment with groupOrder flag
+      router.push(`/${merchantCode}/payment?mode=${mode}&groupOrder=true`);
+    } else {
+      router.push(`/${merchantCode}/payment?mode=${mode}`);
+    }
   };
 
   const handleAddItem = () => {
@@ -222,9 +261,23 @@ export default function ViewOrderPage() {
     setEditingCartItem(null);
   };
 
-  if (isLoading || !cart) {
+  // For group order, we don't need cart - we use session data
+  const hasItems = isGroupOrderCheckout
+    ? (session?.participants?.some(p => Array.isArray(p.cartItems) && (p.cartItems as unknown[]).length > 0))
+    : (cart && cart.items.length > 0);
+
+  if (isLoading || (!isGroupOrderCheckout && !cart)) {
     return <LoadingState type="page" message={LOADING_MESSAGES.LOADING_CART} />;
   }
+
+  if (!hasItems) {
+    return <LoadingState type="page" message={LOADING_MESSAGES.LOADING_CART} />;
+  }
+
+  // Count total items for display
+  const displayItemCount = isGroupOrderCheckout
+    ? groupOrderItems.reduce((sum, p) => sum + p.cartItems.length, 0)
+    : cart?.items.length || 0;
 
   return (
     <div className="min-h-screen bg-white-50 dark:bg-gray-900">
@@ -361,7 +414,7 @@ export default function ViewOrderPage() {
                 lineHeight: '24px'
               }}
             >
-              {t('order.orderedItems')} ({cart.items.length})
+              {isGroupOrderCheckout ? 'Group Order Items' : t('order.orderedItems')} ({displayItemCount})
             </h2>
             <button
               onClick={handleAddItem}
@@ -386,169 +439,206 @@ export default function ViewOrderPage() {
 
           {/* Items List */}
           <div className="mt-3">
-            {cart.items.map((item, index) => {
-              const itemSubtotal = item.price * item.quantity;
-              const addonsSubtotal = (item.addons || []).reduce((sum, addon) => sum + addon.price, 0) * item.quantity;
-              const totalItemPrice = itemSubtotal + addonsSubtotal;
-
-              return (
-                <div key={item.cartItemId} className="px-3">
-                  {/* Item Name + Edit Button */}
-                  <div className="flex items-center justify-between w-full">
-                    <h3
-                      className="m-0 flex-grow pr-2"
-                      style={{
-                        fontFamily: 'var(--font-inter), Inter, sans-serif',
-                        fontSize: '14px',
-                        fontWeight: 600,
-                        color: '#101828',
-                        lineHeight: '17px'
-                      }}
-                    >
-                      {item.menuName}
-                    </h3>
-                    <button
-                      onClick={() => handleEditItem(item)}
-                      className="flex items-center px-2.5 py-1 rounded transition-colors flex-shrink-0"
-                      style={{
-                        fontFamily: 'var(--font-inter), Inter, sans-serif',
-                        fontSize: '13px',
-                        fontWeight: 600,
-                        color: '#212529',
-                        border: '1px solid #dee2e6',
-                        backgroundColor: 'transparent'
-                      }}
-                    >
-                      <svg
-                        style={{
-                          width: '16px',
-                          height: '16px',
-                          marginRight: '6px',
-                          color: '#6C6C6C'
-                        }}
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                      <span>{t('common.edit')}</span>
-                    </button>
+            {isGroupOrderCheckout ? (
+              /* Group Order Items - Grouped by Participant */
+              groupOrderItems.map((participant, pIndex) => (
+                <div key={pIndex} className="mb-4">
+                  <div className="px-3 py-2 bg-gray-50 dark:bg-gray-800">
+                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                      {participant.participantName}&apos;s Items
+                    </span>
                   </div>
+                  {participant.cartItems.map((item, index) => {
+                    const itemSubtotal = item.price * item.quantity;
+                    const addonsSubtotal = (item.addons || []).reduce((sum, addon) => sum + addon.price, 0) * item.quantity;
+                    const totalItemPrice = itemSubtotal + addonsSubtotal;
 
-                  {/* Addons/Extras */}
-                  <div className="mt-1">
-                    {item.addons && item.addons.length > 0 && (
-                      <div className="flex flex-col">
-                        {item.addons.map((addon, idx) => (
-                          <span
-                            key={idx}
-                            style={{
-                              fontSize: '0.875rem',
-                              fontWeight: 400,
-                              color: '#6c757d'
-                            }}
-                          >
-                            1x {addon.name}
+                    return (
+                      <div key={item.cartItemId || index} className="px-3 py-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-gray-900 dark:text-white">
+                            {item.quantity}x {item.menuName}
                           </span>
-                        ))}
+                          <span className="text-sm font-medium text-gray-600">
+                            {formatCurrency(totalItemPrice, merchantCurrency)}
+                          </span>
+                        </div>
+                        {item.addons && item.addons.length > 0 && (
+                          <div className="text-xs text-gray-500 mt-1">
+                            {item.addons.map(a => a.name).join(', ')}
+                          </div>
+                        )}
+                        {item.notes && (
+                          <p className="text-xs text-gray-400 italic mt-1">&quot;{item.notes}&quot;</p>
+                        )}
                       </div>
-                    )}
+                    );
+                  })}
+                </div>
+              ))
+            ) : (
+              /* Normal Cart Items */
+              (cart?.items || []).map((item, index) => {
+                const itemSubtotal = item.price * item.quantity;
+                const addonsSubtotal = (item.addons || []).reduce((sum, addon) => sum + addon.price, 0) * item.quantity;
+                const totalItemPrice = itemSubtotal + addonsSubtotal;
 
-                    {/* Notes */}
-                    <div className="flex items-center my-2">
-                      <div className="mr-2" style={{ minWidth: '18px', minHeight: '18px' }}>
+                return (
+                  <div key={item.cartItemId} className="px-3">
+                    {/* Item Name + Edit Button */}
+                    <div className="flex items-center justify-between w-full">
+                      <h3
+                        className="m-0 flex-grow pr-2"
+                        style={{
+                          fontFamily: 'var(--font-inter), Inter, sans-serif',
+                          fontSize: '14px',
+                          fontWeight: 600,
+                          color: '#101828',
+                          lineHeight: '17px'
+                        }}
+                      >
+                        {item.menuName}
+                      </h3>
+                      <button
+                        onClick={() => handleEditItem(item)}
+                        className="flex items-center px-2.5 py-1 rounded transition-colors flex-shrink-0"
+                        style={{
+                          fontFamily: 'var(--font-inter), Inter, sans-serif',
+                          fontSize: '13px',
+                          fontWeight: 600,
+                          color: '#212529',
+                          border: '1px solid #dee2e6',
+                          backgroundColor: 'transparent'
+                        }}
+                      >
                         <svg
-                          style={{ width: '18px', height: '18px', color: '#6c757d' }}
+                          style={{
+                            width: '16px',
+                            height: '16px',
+                            marginRight: '6px',
+                            color: '#6C6C6C'
+                          }}
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
                         >
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                         </svg>
-                      </div>
-                      <p
-                        className="m-0"
-                        style={{
-                          fontSize: '0.875rem',
-                          fontWeight: 400,
-                          fontStyle: 'italic',
-                          color: '#6c757d'
-                        }}
-                      >
-                        {item.notes || t('customer.cart.noNotes')}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Price and Quantity */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex flex-col flex-grow">
-                      <span
-                        style={{
-                          fontFamily: 'var(--font-inter), Inter, sans-serif',
-                          fontSize: '14px',
-                          fontWeight: 700,
-                          color: '#667085',
-                          lineHeight: '22px'
-                        }}
-                      >
-                        {formatCurrency(totalItemPrice, merchantCurrency)}
-                      </span>
-                    </div>
-
-                    {/* Quantity Counter (ESB Style) */}
-                    <div className="flex items-center">
-                      {/* Minus Button */}
-                      <button
-                        onClick={() => {
-                          if (item.quantity === 1) {
-                            setRemoveItemId(item.cartItemId);
-                            setRemoveItemName(item.menuName);
-                          } else {
-                            updateQuantity(item.cartItemId, item.quantity - 1, item.menuName);
-                          }
-                        }}
-                        className="w-7 h-7 flex items-center justify-center"
-                        title={item.quantity === 1 ? 'Remove from cart' : 'Decrease quantity'}
-                      >
-                        <svg style={{ width: '24px', height: '24px', color: '#212529' }} viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-5-9h10v2H7z" />
-                        </svg>
-                      </button>
-
-                      {/* Quantity Display */}
-                      <div
-                        className="min-w-[28px] text-center"
-                        style={{
-                          fontSize: '0.9rem',
-                          fontWeight: 400,
-                          color: '#212529'
-                        }}
-                      >
-                        {item.quantity}
-                      </div>
-
-                      {/* Plus Button */}
-                      <button
-                        onClick={() => updateQuantity(item.cartItemId, item.quantity + 1)}
-                        className="w-7 h-7 flex items-center justify-center"
-                        title="Increase quantity"
-                      >
-                        <svg style={{ width: '24px', height: '24px', color: '#212529' }} viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm5-9h-4V7h-2v4H7v2h4v4h2v-4h4z" />
-                        </svg>
+                        <span>{t('common.edit')}</span>
                       </button>
                     </div>
-                  </div>
 
-                  {/* Separator (between items - solid line like ESB) */}
-                  {index < cart.items.length - 1 && (
-                    <hr style={{ borderColor: '#dee2e6', marginTop: '16px', marginBottom: '16px' }} />
-                  )}
-                </div>
-              );
-            })}
+                    {/* Addons/Extras */}
+                    <div className="mt-1">
+                      {item.addons && item.addons.length > 0 && (
+                        <div className="flex flex-col">
+                          {item.addons.map((addon, idx) => (
+                            <span
+                              key={idx}
+                              style={{
+                                fontSize: '0.875rem',
+                                fontWeight: 400,
+                                color: '#6c757d'
+                              }}
+                            >
+                              1x {addon.name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Notes */}
+                      <div className="flex items-center my-2">
+                        <div className="mr-2" style={{ minWidth: '18px', minHeight: '18px' }}>
+                          <svg
+                            style={{ width: '18px', height: '18px', color: '#6c757d' }}
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </div>
+                        <p
+                          className="m-0"
+                          style={{
+                            fontSize: '0.875rem',
+                            fontWeight: 400,
+                            fontStyle: 'italic',
+                            color: '#6c757d'
+                          }}
+                        >
+                          {item.notes || t('customer.cart.noNotes')}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Price and Quantity */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-col flex-grow">
+                        <span
+                          style={{
+                            fontFamily: 'var(--font-inter), Inter, sans-serif',
+                            fontSize: '14px',
+                            fontWeight: 700,
+                            color: '#667085',
+                            lineHeight: '22px'
+                          }}
+                        >
+                          {formatCurrency(totalItemPrice, merchantCurrency)}
+                        </span>
+                      </div>
+
+                      {/* Quantity Counter */}
+                      <div className="flex items-center">
+                        <button
+                          onClick={() => {
+                            if (item.quantity === 1) {
+                              setRemoveItemId(item.cartItemId);
+                              setRemoveItemName(item.menuName);
+                            } else {
+                              updateQuantity(item.cartItemId, item.quantity - 1, item.menuName);
+                            }
+                          }}
+                          className="w-7 h-7 flex items-center justify-center"
+                          title={item.quantity === 1 ? 'Remove from cart' : 'Decrease quantity'}
+                        >
+                          <svg style={{ width: '24px', height: '24px', color: '#212529' }} viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-5-9h10v2H7z" />
+                          </svg>
+                        </button>
+
+                        <div
+                          className="min-w-[28px] text-center"
+                          style={{
+                            fontSize: '0.9rem',
+                            fontWeight: 400,
+                            color: '#212529'
+                          }}
+                        >
+                          {item.quantity}
+                        </div>
+
+                        <button
+                          onClick={() => updateQuantity(item.cartItemId, item.quantity + 1)}
+                          className="w-7 h-7 flex items-center justify-center"
+                          title="Increase quantity"
+                        >
+                          <svg style={{ width: '24px', height: '24px', color: '#212529' }} viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm5-9h-4V7h-2v4H7v2h4v4h2v-4h4z" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Separator */}
+                    {index < (cart?.items.length || 0) - 1 && (
+                      <hr style={{ borderColor: '#dee2e6', marginTop: '16px', marginBottom: '16px' }} />
+                    )}
+                  </div>
+                );
+              })
+            )}
           </div>
 
           {/* Dashed Separator before Add Notes (ESB Style) */}
@@ -780,8 +870,8 @@ export default function ViewOrderPage() {
               onClick={handleProceedToPayment}
               disabled={!modeAvailability.canOrderForPickup}
               className={`mt-2 px-6 py-4 text-white font-medium rounded-lg transition-all ${modeAvailability.canOrderForPickup
-                  ? 'active:scale-[0.98]'
-                  : 'opacity-50 cursor-not-allowed'
+                ? 'active:scale-[0.98]'
+                : 'opacity-50 cursor-not-allowed'
                 }`}
               style={{
                 backgroundColor: modeAvailability.canOrderForPickup ? '#f05a28' : '#9ca3af',

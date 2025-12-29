@@ -80,7 +80,7 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
 
         // Always redirect to order page (it will handle closed/unavailable state)
         router.replace(`/${merchantCode}/order?mode=${selectedMode}`);
-        
+
         // Show toast if mode is unavailable
         if (selectedMode === 'dinein' && !isDineInAvailable) {
             showToast({
@@ -103,7 +103,7 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
     useEffect(() => {
         if (isStatusLoading) return; // Wait for status to load
         if (!storeOpen) return;
-        
+
         if (isDineInAvailable && !isTakeawayAvailable) {
             // Only dine-in available, auto-redirect
             router.replace(`/${merchantCode}/order?mode=dinein`);
@@ -115,25 +115,6 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
 
     return (
         <>
-            {/* Language Selector Button - Top Right */}
-            <div className="absolute top-3 right-3 z-10">
-                <button
-                    onClick={() => setShowLanguageModal(true)}
-                    className="flex items-center gap-1.5 px-3 py-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-full shadow-md hover:bg-white dark:hover:bg-gray-800 transition-colors"
-                    aria-label={t('common.selectLanguage') || 'Select Language'}
-                >
-                    <span className="text-lg">{localeFlag}</span>
-                    <svg
-                        className="w-4 h-4 text-gray-600 dark:text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                    >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                </button>
-            </div>
-
             {/* Special Hours Banner - Show when today has special hours */}
             {todaySpecialHour && !todaySpecialHour.isClosed && specialHourName && (
                 <div className="bg-blue-500 text-white px-4 py-2 text-center text-sm font-medium">
@@ -251,11 +232,10 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                                 <button
                                     id="mode-dinein"
                                     onClick={() => handleModeSelect('dinein')}
-                                    className={`w-full h-12 border rounded-lg text-base font-medium shadow-sm transition-colors duration-200 shadow-lg flex items-center justify-center gap-2 ${
-                                        storeOpen && isDineInAvailable
+                                    className={`w-full h-12 border rounded-lg text-base font-medium shadow-sm transition-colors duration-200 shadow-lg flex items-center justify-center gap-2 ${storeOpen && isDineInAvailable
                                             ? 'border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800'
                                             : 'border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800'
-                                    }`}
+                                        }`}
                                 >
                                     <span>{dineInLabel}</span>
                                     {(!storeOpen || !isDineInAvailable) && (
@@ -271,11 +251,10 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                                 <button
                                     id="mode-takeaway"
                                     onClick={() => handleModeSelect('takeaway')}
-                                    className={`w-full h-12 border rounded-lg text-base font-medium shadow-sm transition-colors duration-200 shadow-lg flex items-center justify-center gap-2 ${
-                                        storeOpen && isTakeawayAvailable
+                                    className={`w-full h-12 border rounded-lg text-base font-medium shadow-sm transition-colors duration-200 shadow-lg flex items-center justify-center gap-2 ${storeOpen && isTakeawayAvailable
                                             ? 'border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800'
                                             : 'border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800'
-                                    }`}
+                                        }`}
                                 >
                                     <span>{takeawayLabel}</span>
                                     {(!storeOpen || !isTakeawayAvailable) && (

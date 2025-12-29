@@ -109,6 +109,7 @@ model Customer {
   orders              Order[]
   sessions            CustomerSession[]
   favorites           CustomerFavorite[]
+  groupOrderParticipations GroupOrderParticipant[]
 
   @@index([email])
   @@index([phone])
@@ -232,6 +233,8 @@ model Merchant {
   userNotifications      UserNotification[]
   // Referral tracking
   referralCodeUsed       String?               @map("referral_code_used")
+  // Group Order relation
+  groupOrderSessions     GroupOrderSession[]
 
   @@index([code])
   @@index([isActive])
@@ -500,6 +503,7 @@ model Order {
   customer             Customer?   @relation(fields: [customerId], references: [id])
   merchant             Merchant    @relation(fields: [merchantId], references: [id], onDelete: Cascade)
   payment              Payment?
+  groupOrderSession    GroupOrderSession?
 
   @@unique([merchantId, orderNumber])
   @@index([merchantId])
@@ -1004,3 +1008,71 @@ model UserNotification {
   @@map("user_notifications")
 }
 
+// ============================================
+// GROUP ORDER / SPLIT BILL SYSTEM
+// ============================================
+
+enum GroupOrderStatus {
+  OPEN        // Accepting participants & items
+  LOCKED      // Host clicked submit, processing
+  SUBMITTED   // Order created from session
+  CANCELLED   // Cancelled by host
+  EXPIRED     // Auto-expired after 2 hours
+}
+
+model GroupOrderSession {
+  id              BigInt            @id @default(autoincrement())
+  sessionCode     String            @unique @map("session_code") // 4-char alphanumeric
+  merchantId      BigInt            @map("merchant_id")
+  orderType       OrderType         @map("order_type") // DINE_IN or TAKEAWAY
+  tableNumber     String?           @map("table_number") // Optional (required for dine-in)
+  status          GroupOrderStatus  @default(OPEN)
+  orderId         BigInt?           @unique @map("order_id") // Final order after submission
+  maxParticipants Int               @default(15) @map("max_participants")
+  expiresAt       DateTime          @map("expires_at") @db.Timestamptz(6)
+  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  
+  merchant        Merchant          @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  order           Order?            @relation(fields: [orderId], references: [id])
+  participants    GroupOrderParticipant[]
+  
+  @@index([sessionCode])
+  @@index([merchantId])
+  @@index([status])
+  @@index([expiresAt])
+  @@map("group_order_sessions")
+}
+
+model GroupOrderParticipant {
+  id              BigInt            @id @default(autoincrement())
+  sessionId       BigInt            @map("session_id")
+  customerId      BigInt?           @map("customer_id") // Optional (for logged-in users)
+  name            String
+  deviceId        String            @map("device_id") // For reconnection after refresh
+  isHost          Boolean           @default(false) @map("is_host")
+  cartItems       Json              @default("[]") @map("cart_items") // Same structure as CartContext
+  subtotal        Decimal           @default(0) @db.Decimal(10, 2)
+  joinedAt        DateTime          @default(now()) @map("joined_at") @db.Timestamptz(6)
+  updatedAt       DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  
+  session         GroupOrderSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  customer        Customer?         @relation(fields: [customerId], references: [id])
+  
+  @@index([sessionId])
+  @@index([deviceId])
+  @@index([customerId])
+  @@map("group_order_participants")
+}
+
+// Rate limiting for join attempts (prevent brute force)
+model GroupJoinAttempt {
+  id          BigInt    @id @default(autoincrement())
+  deviceId    String    @map("device_id")
+  attemptCode String    @map("attempt_code")
+  success     Boolean   @default(false)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  
+  @@index([deviceId, createdAt])
+  @@map("group_join_attempts")
+}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import OrderPageHeader from '@/components/customer/OrderPageHeader';
 import CategoryTabs from '@/components/customer/CategoryTabs';
 import RestaurantBanner from '@/components/customer/RestaurantBanner';
@@ -27,6 +27,13 @@ import { extractAddonDataFromMenus } from '@/lib/utils/addonExtractor';
 import { throttle } from '@/lib/utils/throttle';
 import { useStoreStatus } from '@/hooks/useStoreStatus';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import GroupSessionBanner from '@/components/customer/GroupSessionBanner';
+import GroupDashboard from '@/components/customer/GroupDashboard';
+import CreateGroupModal from '@/components/customer/CreateGroupModal';
+import JoinGroupModal from '@/components/customer/JoinGroupModal';
+import GroupOrderSubmitModal from '@/components/customer/GroupOrderSubmitModal';
+import GroupOrderChoiceModal from '@/components/customer/GroupOrderChoiceModal';
+import { useGroupOrder } from '@/context/GroupOrderContext';
 
 interface MenuItem {
   id: string; // ✅ String from API (BigInt serialized)
@@ -183,6 +190,19 @@ export default function OrderClientPage({
   const { initializeCart, cart, updateItem, removeItem } = useCart();
   const autoRefreshIntervalRef = useRef<NodeJS.Timeout | null>(null); // Auto-refresh interval
 
+  // Group Order State
+  const { isInGroupOrder, updateMyCart } = useGroupOrder();
+  const [showGroupDashboard, setShowGroupDashboard] = useState(false);
+  const [showGroupChoiceModal, setShowGroupChoiceModal] = useState(false);
+  const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
+  const [showJoinGroupModal, setShowJoinGroupModal] = useState(false);
+  const [showGroupSubmitModal, setShowGroupSubmitModal] = useState(false);
+  const [prefilledGroupCode, setPrefilledGroupCode] = useState<string | undefined>(undefined);
+
+  // URL params for auto-join
+  const searchParams = useSearchParams();
+  const groupCodeFromUrl = searchParams.get('group');
+
   // Use live opening hours or fallback to cached ones during loading
   const displayOpeningHours = liveOpeningHours.length > 0 ? liveOpeningHours : (merchantInfo?.openingHours || []);
 
@@ -325,6 +345,24 @@ export default function OrderClientPage({
     const showInfo = params.get('outlet-info') === 'true';
     setShowOutletInfo(showInfo);
   }, []);
+
+  // ========================================
+  // Handle Auto-Join Group Order from URL (?group=CODE)
+  // ========================================
+  useEffect(() => {
+    if (groupCodeFromUrl && groupCodeFromUrl.length === 4 && !isInGroupOrder) {
+      // Pre-fill the code and open join modal
+      setPrefilledGroupCode(groupCodeFromUrl.toUpperCase());
+      setShowJoinGroupModal(true);
+
+      // Clean up URL
+      const params = new URLSearchParams(window.location.search);
+      params.delete('group');
+      const newSearch = params.toString();
+      const newUrl = `/${merchantCode}/order${newSearch ? `?${newSearch}` : `?mode=${mode}`}`;
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, [groupCodeFromUrl, merchantCode, mode, isInGroupOrder]);
 
   // ========================================
   // Fetch Merchant Info (Always Fresh - No Blocking Cache)
@@ -492,6 +530,23 @@ export default function OrderClientPage({
   useEffect(() => {
     initializeCart(merchantCode, mode as 'dinein' | 'takeaway');
   }, [merchantCode, mode, initializeCart]);
+
+  // ========================================
+  // Group Order Cart Sync - Update group cart when local cart changes
+  // ========================================
+  useEffect(() => {
+    if (!isInGroupOrder || !cart) return;
+
+    // Calculate subtotal
+    const subtotal = cart.items.reduce((sum, item) => {
+      const itemPrice = item.price * item.quantity;
+      const addonsPrice = (item.addons || []).reduce((a, addon) => a + addon.price, 0) * item.quantity;
+      return sum + itemPrice + addonsPrice;
+    }, 0);
+
+    // Sync cart to group order
+    updateMyCart(cart.items, subtotal);
+  }, [isInGroupOrder, cart, updateMyCart]);
 
   // ========================================
   // Sticky Header & Tabs Logic (Matches Reference Exactly)
@@ -696,6 +751,16 @@ export default function OrderClientPage({
         onSearchClick={() => {
           router.push(`/${merchantCode}/search?mode=${mode}&ref=${encodeURIComponent(`/${merchantCode}/order?mode=${mode}`)}`);
         }}
+        onGroupOrderClick={() => {
+          if (isInGroupOrder) {
+            // Already in group - go directly to dashboard
+            setShowGroupDashboard(true);
+          } else {
+            // Not in group - show choice modal
+            setShowGroupChoiceModal(true);
+          }
+        }}
+        isInGroupOrder={isInGroupOrder}
       />
 
       {/* Hero Section (Restaurant Banner) - Header overlays on top - Gray when closed */}
@@ -1112,6 +1177,83 @@ export default function OrderClientPage({
         onSwitchMode={handleSwitchMode}
         onGoBack={handleModeModalGoBack}
       />
+
+      {/* ========================================
+          GROUP ORDER COMPONENTS
+      ======================================== */}
+
+      {/* Group Order Choice Modal - Bottom Sheet */}
+      <GroupOrderChoiceModal
+        isOpen={showGroupChoiceModal}
+        onClose={() => setShowGroupChoiceModal(false)}
+        onCreateGroup={() => setShowCreateGroupModal(true)}
+        onJoinGroup={() => setShowJoinGroupModal(true)}
+        onViewGroup={() => setShowGroupDashboard(true)}
+      />
+
+      {/* Group Session Banner - Shows when in an active group order */}
+      <GroupSessionBanner onViewGroup={() => setShowGroupDashboard(true)} />
+
+      {/* Group Dashboard - Full screen participant management */}
+      <GroupDashboard
+        isOpen={showGroupDashboard}
+        onClose={() => setShowGroupDashboard(false)}
+        onSubmitOrder={() => {
+          setShowGroupDashboard(false);
+          // Navigate to checkout page with group order items
+          router.push(`/${merchantCode}/view-order?mode=${mode}&groupOrder=true`);
+        }}
+        merchantCode={merchantCode}
+        currency={merchantInfo?.currency || 'AUD'}
+        onModeChange={(newMode) => {
+          // Update URL with new mode since mode is a prop from URL
+          router.replace(`/${merchantCode}/order?mode=${newMode}`);
+        }}
+      />
+
+      {/* Group Order Submit Modal */}
+      <GroupOrderSubmitModal
+        isOpen={showGroupSubmitModal}
+        onClose={() => setShowGroupSubmitModal(false)}
+        onSuccess={(orderNumber) => {
+          setShowGroupSubmitModal(false);
+          router.push(`/${merchantCode}/group-order-summary?orderNumber=${orderNumber}`);
+        }}
+        merchantCode={merchantCode}
+      />
+
+      {/* Create Group Modal */}
+      <CreateGroupModal
+        isOpen={showCreateGroupModal}
+        onClose={() => setShowCreateGroupModal(false)}
+        onSuccess={(_sessionCode) => {
+          setShowCreateGroupModal(false);
+          // Session is now active, header icon will update
+        }}
+        onNeedTableNumber={() => {
+          // Close create modal and show table number modal
+          setShowCreateGroupModal(false);
+          setShowTableModal(true);
+        }}
+        merchantCode={merchantCode}
+        orderType={mode === 'dinein' ? 'DINE_IN' : 'TAKEAWAY'}
+        tableNumber={tableNumber || undefined}
+      />
+
+      {/* Join Group Modal */}
+      <JoinGroupModal
+        isOpen={showJoinGroupModal}
+        onClose={() => {
+          setShowJoinGroupModal(false);
+          setPrefilledGroupCode(undefined);
+        }}
+        onSuccess={() => {
+          setShowJoinGroupModal(false);
+          setPrefilledGroupCode(undefined);
+        }}
+        prefilledCode={prefilledGroupCode}
+      />
     </>
   );
 }
+

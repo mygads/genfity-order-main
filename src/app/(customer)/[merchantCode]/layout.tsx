@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { useLanguage } from '@/context/LanguageContext';
 import { getLocaleFromCurrency } from '@/lib/i18n';
 import { LanguageToggle } from '@/components/common/LanguageSelector';
+import { GroupOrderProvider } from '@/context/GroupOrderContext';
 
 interface MerchantLayoutProps {
   children: ReactNode;
@@ -58,15 +59,16 @@ export default function MerchantLayout({ children }: MerchantLayoutProps) {
   }, [merchantCode, setLocale]);
 
   return (
-    <>
+    <GroupOrderProvider>
       {children}
-      
+
       {/* Floating Language Toggle for Customer Pages */}
       {showLanguageToggle && (
         <div className="fixed bottom-4 right-4 z-50">
           <LanguageToggle className="shadow-lg border border-gray-200 dark:border-gray-700" />
         </div>
       )}
-    </>
+    </GroupOrderProvider>
   );
 }
+

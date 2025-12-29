@@ -1,6 +1,7 @@
 'use client';
 
 import { ArrowLeft, Search, Menu, User } from 'lucide-react';
+import { HiUserGroup } from 'react-icons/hi2';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { getCustomerAuth } from '@/lib/utils/localStorage';
 import { useState, useEffect } from 'react';
@@ -14,6 +15,8 @@ interface OrderPageHeaderProps {
   mode?: 'dinein' | 'takeaway';
   showTableBadge?: boolean;
   onSearchClick?: () => void;
+  onGroupOrderClick?: () => void;
+  isInGroupOrder?: boolean;
 }
 
 /**
@@ -38,6 +41,8 @@ export default function OrderPageHeader({
   mode,
   showTableBadge = false,
   onSearchClick,
+  onGroupOrderClick,
+  isInGroupOrder = false,
 }: OrderPageHeaderProps) {
   const router = useRouter();
   const params = useParams();
@@ -68,7 +73,7 @@ export default function OrderPageHeader({
 
   // Icon button base styles - 36x36px, circular, white bg
   const iconButtonClass = `
-    w-9 h-9 flex items-center justify-center rounded-full 
+    relative w-9 h-9 flex items-center justify-center rounded-full 
     bg-white shadow-sm
     hover:bg-gray-50 active:scale-95
     transition-all duration-200
@@ -133,8 +138,25 @@ export default function OrderPageHeader({
             )}
           </div>
 
-          {/* Right Section - Search + Menu/Account Icons */}
+          {/* Right Section - Group Order + Search + Menu/Account Icons */}
           <div className="flex items-center gap-2">
+            {/* Group Order Button */}
+            {onGroupOrderClick && (
+              <button
+                onClick={onGroupOrderClick}
+                className={`relative w-9 h-9 flex items-center justify-center rounded-full shadow-sm hover:opacity-90 active:scale-95 transition-all duration-200 ${isInGroupOrder ? 'bg-orange-500' : 'bg-white hover:bg-gray-50'}`}
+                aria-label="Group Order"
+                style={{
+                  boxShadow: isSticky ? 'none' : '0 2px 8px rgba(0,0,0,0.15)',
+                }}
+              >
+                <HiUserGroup className={`w-5 h-5 ${isInGroupOrder ? 'text-white' : 'text-[#212529]'}`} />
+                {isInGroupOrder && (
+                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
+                )}
+              </button>
+            )}
+
             {/* Search Button */}
             <button
               onClick={handleSearchClick}
