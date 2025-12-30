@@ -53,7 +53,7 @@ export default function ViewOrderPage() {
   const isGroupOrderCheckout = searchParams.get('groupOrder') === 'true';
 
   const { cart, updateItem, removeItem, initializeCart, addItem } = useCart();
-  const { isInGroupOrder, isHost, session } = useGroupOrder();
+  const { isInGroupOrder: _isInGroupOrder, isHost, session } = useGroupOrder();
 
   const [isLoading, setIsLoading] = useState(true);
   const [showOtherFees, setShowOtherFees] = useState(false);

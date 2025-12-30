@@ -59,7 +59,8 @@ export default function JoinGroupModal({
             // Focus first input after modal opens
             setTimeout(() => inputRefs[0].current?.focus(), 300);
         }
-    }, [isOpen]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen, prefilledCode]);
 
     const handleClose = () => {
         setIsClosing(true);

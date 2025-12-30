@@ -48,7 +48,7 @@ interface MerchantClientPageProps {
 export default function MerchantClientPage({ merchant, merchantCode }: MerchantClientPageProps) {
     const router = useRouter();
     const { showToast } = useToast();
-    const { t, localeFlag } = useTranslation();
+    const { t } = useTranslation();
     const [showOutletInfo, setShowOutletInfo] = useState(false);
     const [showLanguageModal, setShowLanguageModal] = useState(false);
 
@@ -233,8 +233,8 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                                     id="mode-dinein"
                                     onClick={() => handleModeSelect('dinein')}
                                     className={`w-full h-12 border rounded-lg text-base font-medium shadow-sm transition-colors duration-200 shadow-lg flex items-center justify-center gap-2 ${storeOpen && isDineInAvailable
-                                            ? 'border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800'
-                                            : 'border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800'
+                                        ? 'border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800'
+                                        : 'border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800'
                                         }`}
                                 >
                                     <span>{dineInLabel}</span>
@@ -252,8 +252,8 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                                     id="mode-takeaway"
                                     onClick={() => handleModeSelect('takeaway')}
                                     className={`w-full h-12 border rounded-lg text-base font-medium shadow-sm transition-colors duration-200 shadow-lg flex items-center justify-center gap-2 ${storeOpen && isTakeawayAvailable
-                                            ? 'border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800'
-                                            : 'border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800'
+                                        ? 'border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800'
+                                        : 'border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800'
                                         }`}
                                 >
                                     <span>{takeawayLabel}</span>
