@@ -8,18 +8,36 @@ import { useAuth } from "../hooks/useAuth";
 import { useTranslation } from "../lib/i18n/useTranslation";
 import type { TranslationKeys } from "../lib/i18n/translations/en";
 import { STAFF_PERMISSIONS, type StaffPermission } from "../lib/constants/permissions";
+import { HorizontaLDots } from "../icons/index";
 import {
-  GridIcon,
-  HorizontaLDots,
-  ListIcon,
-  PieChartIcon,
-  TableIcon,
-  UserCircleIcon,
-  FileIcon,
-  BoxIconLine,
-  FolderIcon,
-} from "../icons/index";
-import { FaHistory, FaUtensils, FaChevronDown, FaCreditCard, FaCog } from "react-icons/fa";
+  FaHistory,
+  FaUtensils,
+  FaChevronDown,
+  FaCreditCard,
+  FaCog,
+  FaTachometerAlt,
+  FaStore,
+  FaUsers,
+  FaUserFriends,
+  FaExchangeAlt,
+  FaWallet,
+  FaTicketAlt,
+  FaChartPie,
+  FaClipboardList,
+  FaBoxes,
+  FaPencilAlt,
+  FaListAlt,
+  FaFolderOpen,
+  FaTags,
+  FaPuzzlePiece,
+  FaBook,
+  FaPercent,
+  FaFileAlt,
+  FaMoneyBillWave,
+  FaCogs,
+  FaQrcode,
+  FaUserTie
+} from "react-icons/fa";
 import MerchantBanner from "../components/merchants/MerchantBanner";
 
 type NavItem = {
@@ -41,7 +59,7 @@ const superAdminNavGroups: NavGroup[] = [
     titleKey: "admin.nav.main",
     items: [
       {
-        icon: <GridIcon />,
+        icon: <FaTachometerAlt />,
         nameKey: "admin.nav.dashboard",
         path: "/admin/dashboard",
         roles: ["SUPER_ADMIN"],
@@ -52,19 +70,19 @@ const superAdminNavGroups: NavGroup[] = [
     titleKey: "admin.nav.management",
     items: [
       {
-        icon: <UserCircleIcon />,
+        icon: <FaStore />,
         nameKey: "admin.nav.merchants",
         path: "/admin/dashboard/merchants",
         roles: ["SUPER_ADMIN"],
       },
       {
-        icon: <UserCircleIcon />,
+        icon: <FaUsers />,
         nameKey: "admin.nav.users",
         path: "/admin/dashboard/users",
         roles: ["SUPER_ADMIN"],
       },
       {
-        icon: <UserCircleIcon />,
+        icon: <FaUserFriends />,
         nameKey: "admin.nav.customers",
         path: "/admin/dashboard/customers",
         roles: ["SUPER_ADMIN"],
@@ -76,13 +94,13 @@ const superAdminNavGroups: NavGroup[] = [
         roles: ["SUPER_ADMIN"],
       },
       {
-        icon: <ListIcon />,
+        icon: <FaExchangeAlt />,
         nameKey: "admin.nav.transactions",
         path: "/admin/dashboard/transactions",
         roles: ["SUPER_ADMIN"],
       },
       {
-        icon: <UserCircleIcon />,
+        icon: <FaWallet />,
         nameKey: "admin.nav.merchantBalance",
         path: "/admin/dashboard/merchant-balance",
         roles: ["SUPER_ADMIN"],
@@ -94,7 +112,7 @@ const superAdminNavGroups: NavGroup[] = [
         roles: ["SUPER_ADMIN"],
       },
       {
-        icon: <ListIcon />,
+        icon: <FaTicketAlt />,
         nameKey: "admin.nav.referralCodes",
         path: "/admin/dashboard/referral-codes",
         roles: ["SUPER_ADMIN"],
@@ -105,7 +123,7 @@ const superAdminNavGroups: NavGroup[] = [
     titleKey: "admin.nav.analytics",
     items: [
       {
-        icon: <PieChartIcon />,
+        icon: <FaChartPie />,
         nameKey: "admin.nav.analytics",
         path: "/admin/dashboard/analytics",
         roles: ["SUPER_ADMIN"],
@@ -120,7 +138,7 @@ const merchantNavGroups: NavGroup[] = [
     titleKey: "admin.nav.main",
     items: [
       {
-        icon: <GridIcon />,
+        icon: <FaTachometerAlt />,
         nameKey: "admin.nav.dashboard",
         path: "/admin/dashboard",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
@@ -132,7 +150,7 @@ const merchantNavGroups: NavGroup[] = [
     titleKey: "admin.nav.orderManagement",
     items: [
       {
-        icon: <ListIcon />,
+        icon: <FaClipboardList />,
         nameKey: "admin.nav.ordersKanban",
         path: "/admin/dashboard/orders",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
@@ -158,56 +176,56 @@ const merchantNavGroups: NavGroup[] = [
     titleKey: "admin.nav.menuManagement",
     items: [
       {
-        icon: <BoxIconLine />,
+        icon: <FaBoxes />,
         nameKey: "admin.nav.stockManagement",
         path: "/admin/dashboard/menu/stock-overview",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
         permission: STAFF_PERMISSIONS.MENU_STOCK,
       },
       {
-        icon: <FileIcon />,
+        icon: <FaPencilAlt />,
         nameKey: "admin.nav.menuBuilder",
         path: "/admin/dashboard/menu/builder/new",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
         permission: STAFF_PERMISSIONS.MENU_BUILDER,
       },
       {
-        icon: <TableIcon />,
+        icon: <FaListAlt />,
         nameKey: "admin.nav.menuItems",
         path: "/admin/dashboard/menu",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
         permission: STAFF_PERMISSIONS.MENU,
       },
       {
-        icon: <FolderIcon />,
+        icon: <FaFolderOpen />,
         nameKey: "admin.nav.categories",
         path: "/admin/dashboard/categories",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
         permission: STAFF_PERMISSIONS.CATEGORIES,
       },
       {
-        icon: <FolderIcon />,
+        icon: <FaTags />,
         nameKey: "admin.nav.addonCategories",
         path: "/admin/dashboard/addon-categories",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
         permission: STAFF_PERMISSIONS.ADDON_CATEGORIES,
       },
       {
-        icon: <TableIcon />,
+        icon: <FaPuzzlePiece />,
         nameKey: "admin.nav.addonItems",
         path: "/admin/dashboard/addon-items",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
         permission: STAFF_PERMISSIONS.ADDON_ITEMS,
       },
       {
-        icon: <FolderIcon />,
+        icon: <FaBook />,
         nameKey: "admin.nav.menuBooks",
         path: "/admin/dashboard/menu-books",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
         permission: STAFF_PERMISSIONS.MENU_BOOKS,
       },
       {
-        icon: <ListIcon />,
+        icon: <FaPercent />,
         nameKey: "admin.nav.specialPrices",
         path: "/admin/dashboard/special-prices",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
@@ -220,14 +238,14 @@ const merchantNavGroups: NavGroup[] = [
     titleKey: "admin.nav.reportsAnalytics",
     items: [
       {
-        icon: <PieChartIcon />,
+        icon: <FaFileAlt />,
         nameKey: "admin.nav.reports",
         path: "/admin/dashboard/reports",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
         permission: STAFF_PERMISSIONS.REPORTS,
       },
       {
-        icon: <PieChartIcon />,
+        icon: <FaMoneyBillWave />,
         nameKey: "admin.nav.revenue",
         path: "/admin/dashboard/revenue",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
@@ -239,14 +257,14 @@ const merchantNavGroups: NavGroup[] = [
     titleKey: "admin.nav.settings",
     items: [
       {
-        icon: <BoxIconLine />,
+        icon: <FaCogs />,
         nameKey: "admin.nav.merchantSettings",
         path: "/admin/dashboard/merchant/edit",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
         permission: STAFF_PERMISSIONS.MERCHANT_SETTINGS,
       },
       {
-        icon: <TableIcon />,
+        icon: <FaQrcode />,
         nameKey: "admin.nav.tableQRCodes",
         path: "/admin/dashboard/qr-tables",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
@@ -264,7 +282,7 @@ const merchantNavGroups: NavGroup[] = [
     titleKey: "admin.nav.team",
     items: [
       {
-        icon: <UserCircleIcon />,
+        icon: <FaUserTie />,
         nameKey: "admin.nav.staff",
         path: "/admin/dashboard/staff",
         roles: ["MERCHANT_OWNER"], // Staff management is OWNER-ONLY

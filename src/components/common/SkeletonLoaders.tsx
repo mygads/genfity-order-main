@@ -250,7 +250,7 @@ export function CustomerOrderSkeleton() {
     <div style={{ backgroundColor: '#F5F5F5' }}>
       {/* Restaurant Info Card Skeleton */}
       <div style={{ padding: '0 16px', marginTop: '-24px', position: 'relative', zIndex: 10 }}>
-        <div 
+        <div
           style={{
             backgroundColor: '#FFFFFF',
             borderRadius: '8px',
@@ -269,7 +269,7 @@ export function CustomerOrderSkeleton() {
       <div style={{ height: '12px' }} />
 
       {/* Category Tabs Skeleton */}
-      <div 
+      <div
         style={{
           height: '48px',
           borderBottom: '1px solid #E6E6E6',
@@ -292,8 +292,8 @@ export function CustomerOrderSkeleton() {
         <div style={{ padding: '0 16px', overflow: 'hidden' }}>
           <div className="flex gap-3">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div 
-                key={i} 
+              <div
+                key={i}
                 style={{
                   width: '140px',
                   flexShrink: 0,
@@ -317,7 +317,7 @@ export function CustomerOrderSkeleton() {
       {/* Detailed Menu Section Skeleton */}
       <div style={{ marginTop: '16px', padding: '0 16px' }}>
         <Skeleton width="w-28" height="h-5" className="mb-3" />
-        <div 
+        <div
           style={{
             backgroundColor: '#FFFFFF',
             borderRadius: '8px',
@@ -325,8 +325,8 @@ export function CustomerOrderSkeleton() {
           }}
         >
           {Array.from({ length: 4 }).map((_, i) => (
-            <div 
-              key={i} 
+            <div
+              key={i}
               style={{
                 display: 'flex',
                 gap: '12px',
@@ -352,7 +352,7 @@ export function CustomerOrderSkeleton() {
       {/* Another Section */}
       <div style={{ marginTop: '16px', padding: '0 16px' }}>
         <Skeleton width="w-28" height="h-5" className="mb-3" />
-        <div 
+        <div
           style={{
             backgroundColor: '#FFFFFF',
             borderRadius: '8px',
@@ -360,8 +360,8 @@ export function CustomerOrderSkeleton() {
           }}
         >
           {Array.from({ length: 3 }).map((_, i) => (
-            <div 
-              key={i} 
+            <div
+              key={i}
               style={{
                 display: 'flex',
                 gap: '12px',
@@ -1243,5 +1243,203 @@ export function EditAddonCategorySkeleton() {
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Order Summary Cash Page Skeleton
+ * Matches the exact layout of the order-summary-cash page with ESB styling
+ */
+export function OrderSummaryCashSkeleton() {
+  return (
+    <>
+      {/* Header Skeleton - ESB Style */}
+      <header className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700 shadow-md">
+        <div className="flex items-center justify-center px-5 py-4">
+          <Skeleton width="w-32" height="h-6" />
+        </div>
+      </header>
+
+      {/* Order Type Card Skeleton */}
+      <section className="px-4 pt-4">
+        <div
+          className="flex items-center justify-between animate-pulse"
+          style={{
+            height: '36px',
+            padding: '8px 16px',
+            border: '1px solid #e5e7eb',
+            borderRadius: '8px',
+            backgroundColor: 'rgba(229, 231, 235, 0.3)'
+          }}
+        >
+          <Skeleton width="w-20" height="h-4" />
+          <div className="flex items-center gap-2">
+            <Skeleton width="w-16" height="h-4" />
+            <Skeleton width="w-5" height="h-5" className="rounded-full" />
+          </div>
+        </div>
+      </section>
+
+      {/* QR Code Section Skeleton */}
+      <div
+        className="flex flex-col flex-grow items-center"
+        style={{ margin: '24px 16px 12px', borderRadius: '10px' }}
+      >
+        {/* Order Number Title */}
+        <div className="text-center mb-4">
+          <Skeleton width="w-24" height="h-4" className="mx-auto mb-2" />
+
+          {/* Order Number Box */}
+          <div
+            className="flex mt-2 justify-center"
+            style={{
+              border: '1px solid #E6E6E6',
+              borderRadius: '8px',
+              height: '42px',
+              overflow: 'hidden'
+            }}
+          >
+            <div
+              style={{
+                padding: '10px',
+                backgroundColor: '#ECECEC',
+                minWidth: '125px',
+                borderRadius: '7px 0 0 7px'
+              }}
+            >
+              <Skeleton width="w-full" height="h-5" />
+            </div>
+            <div
+              style={{
+                padding: '10px',
+                backgroundColor: 'white',
+                minWidth: '125px',
+                borderRadius: '0 7px 7px 0'
+              }}
+            >
+              <Skeleton width="w-full" height="h-5" />
+            </div>
+          </div>
+        </div>
+
+        {/* QR Code Skeleton */}
+        <div className="flex justify-center mb-4">
+          <div
+            className="flex items-center justify-center rounded-xl animate-pulse"
+            style={{
+              width: '240px',
+              height: '240px',
+              backgroundColor: '#f3f4f6',
+            }}
+          >
+            {/* QR Code pattern skeleton */}
+            <div className="grid grid-cols-5 gap-1">
+              {Array.from({ length: 25 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="rounded-sm animate-pulse"
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    backgroundColor: i % 3 === 0 ? '#d1d5db' : '#e5e7eb'
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Notification Message Skeleton */}
+        <div
+          className="flex items-center animate-pulse"
+          style={{
+            padding: '12px 16px',
+            width: '64%',
+            minWidth: '343px',
+            margin: '0 auto 12px auto',
+            backgroundColor: 'rgba(254, 240, 199, 0.5)',
+            borderRadius: '8px',
+          }}
+        >
+          <Skeleton width="w-5" height="h-5" className="shrink-0 mr-2" />
+          <div className="flex-1 space-y-1">
+            <Skeleton width="w-full" height="h-3" />
+            <Skeleton width="w-3/4" height="h-3" />
+          </div>
+        </div>
+      </div>
+
+      {/* Ordered Items Section Skeleton */}
+      <main className="pb-4">
+        {/* Divider */}
+        <div style={{ height: '4px', backgroundColor: '#f3f4f6' }} />
+
+        {/* Ordered Items Header */}
+        <div
+          className="flex justify-between items-center"
+          style={{ paddingTop: '16px', paddingLeft: '12px', paddingRight: '12px', height: '35px' }}
+        >
+          <Skeleton width="w-28" height="h-5" />
+        </div>
+
+        {/* Order Items List Skeleton */}
+        <div style={{ borderBottom: '1px solid #e5e7eb' }}>
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="flex flex-col" style={{ padding: '16px' }}>
+              <div className="flex flex-row">
+                {/* Quantity */}
+                <Skeleton width="w-6" height="h-4" className="shrink-0 mr-2" />
+
+                {/* Menu Name & Addons */}
+                <div className="flex-grow flex flex-col space-y-1">
+                  <Skeleton width="w-40" height="h-4" />
+                  <Skeleton width="w-24" height="h-3" />
+                </div>
+
+                {/* Price */}
+                <Skeleton width="w-16" height="h-4" className="shrink-0" />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Payment Details Section Skeleton */}
+        <div className="flex flex-col" style={{ padding: '16px' }}>
+          {/* Inclusive Fees */}
+          <div
+            className="flex justify-between items-center"
+            style={{
+              paddingTop: '8px',
+              paddingBottom: '8px',
+              borderBottom: '1px dashed #e4e7ec'
+            }}
+          >
+            <div className="flex items-center gap-1">
+              <Skeleton width="w-20" height="h-4" />
+              <Skeleton width="w-4" height="h-4" />
+            </div>
+            <Skeleton width="w-16" height="h-4" />
+          </div>
+
+          {/* Total Section */}
+          <div
+            className="flex justify-between items-center"
+            style={{ paddingTop: '12px' }}
+          >
+            <Skeleton width="w-12" height="h-5" />
+            <Skeleton width="w-20" height="h-5" />
+          </div>
+        </div>
+
+        {/* New Order Button Skeleton */}
+        <div style={{ padding: '0 16px' }}>
+          <Skeleton
+            width="w-full"
+            height="h-12"
+            className="rounded-lg"
+          />
+        </div>
+      </main>
+    </>
   );
 }

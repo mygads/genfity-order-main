@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { FaArrowLeft, FaSync, FaClock, FaCheckCircle, FaBolt, FaBell, FaCheck, FaTimes, FaUsers, FaCalculator, FaStickyNote } from 'react-icons/fa';
+import { FaArrowLeft, FaSync, FaClock, FaCheckCircle, FaBolt, FaBell, FaCheck, FaStickyNote } from 'react-icons/fa';
 import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';
 import { formatCurrency } from '@/lib/utils/format';
 import { useTranslation } from '@/lib/i18n/useTranslation';

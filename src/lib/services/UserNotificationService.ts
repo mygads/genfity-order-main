@@ -314,7 +314,7 @@ class UserNotificationService {
             'New Order Received! 🎉',
             `Order #${orderNumber} has been placed.`,
             {
-                actionUrl: `/admin/dashboard/orders/${orderId}`,
+                actionUrl: `/admin/dashboard/orders?orderId=${orderId}`,
                 metadata: { orderId: orderId.toString(), orderNumber, totalAmount },
             }
         );
@@ -330,7 +330,7 @@ class UserNotificationService {
             'Item Out of Stock',
             `"${menuName}" is now out of stock.`,
             {
-                actionUrl: `/admin/dashboard/menu/${menuId}`,
+                actionUrl: `/admin/dashboard/menu/edit/${menuId}`,
                 metadata: { menuId: menuId.toString(), menuName },
             }
         );
@@ -347,6 +347,7 @@ class UserNotificationService {
             `${staffName} (${staffEmail}) has logged in.`,
             {
                 targetRole: 'MERCHANT_OWNER',
+                actionUrl: '/admin/dashboard/staff',
                 metadata: { staffName, staffEmail },
             }
         );

@@ -394,7 +394,7 @@ export class OrderService {
    * - XXXX = Sequential number (0001, 0002, etc.)
    * 
    * Retry logic handles collisions (max 5 attempts).
-   * Fallback to timestamp if all retries fail.
+   * Fallback to timestamp-based code if all retries fail.
    * 
    * @security
    * - Uses repository pattern (no direct DB access)
@@ -404,29 +404,18 @@ export class OrderService {
   private async generateOrderNumber(
     merchantId: bigint
   ): Promise<string> {
-    const maxRetries = 5;
+    const maxRetries = 10;
     let attempt = 0;
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 
     while (attempt < maxRetries) {
-      // Generate order number
-      const today = new Date();
-      const dateStr = today.toISOString().split('T')[0].replace(/-/g, ''); // YYYYMMDD
+      // Generate 4-character alphanumeric order number (A-Z, 0-9)
+      let orderNumber = '';
+      for (let i = 0; i < 4; i++) {
+        orderNumber += characters.charAt(Math.floor(Math.random() * characters.length));
+      }
 
-      // Get count of orders today for this merchant
-      const todayStart = new Date(today.setHours(0, 0, 0, 0));
-      const todayEnd = new Date(today.setHours(23, 59, 59, 999));
-
-      // ✅ FIXED: Use repository method instead of direct Prisma access
-      const orderCount = await orderRepository.countOrdersByMerchantAndDate(
-        merchantId,
-        todayStart,
-        todayEnd
-      );
-
-      const sequenceNumber = String(orderCount + 1 + attempt).padStart(4, '0');
-      const orderNumber = `ORD-${dateStr}-${sequenceNumber}`;
-
-      // ✅ FIXED: Check existence via repository
+      // ✅ Check existence via repository
       const exists = await orderRepository.orderNumberExists(
         merchantId,
         orderNumber
@@ -441,8 +430,9 @@ export class OrderService {
       console.warn(`[ORDER] Order number ${orderNumber} collision, retrying... (attempt ${attempt})`);
     }
 
-    // Fallback: use timestamp if all retries fail
-    const fallbackNumber = `ORD-${Date.now()}`;
+    // Fallback: use timestamp-based 4-char code if all retries fail
+    const timestamp = Date.now().toString(36).toUpperCase().slice(-4);
+    const fallbackNumber = timestamp.padStart(4, '0').slice(0, 4);
     console.error(`[ORDER] Failed to generate unique order number after ${maxRetries} attempts, using fallback: ${fallbackNumber}`);
     return fallbackNumber;
   }

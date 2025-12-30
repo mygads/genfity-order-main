@@ -11,8 +11,8 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   FaCheckSquare,
   FaSquare,
@@ -46,8 +46,23 @@ const DEFAULT_FILTERS: OrderFilters = {
   dateTo: '',
 };
 
+/**
+ * Main page component wrapped with Suspense for useSearchParams
+ */
 export default function MerchantOrdersPage() {
+  return (
+    <Suspense fallback={<KitchenDisplaySkeleton />}>
+      <MerchantOrdersPageContent />
+    </Suspense>
+  );
+}
+
+/**
+ * Inner content component that uses useSearchParams
+ */
+function MerchantOrdersPageContent() {
   const _router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useTranslation();
 
   // State management
@@ -59,6 +74,9 @@ export default function MerchantOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [displayMode, setDisplayMode] = useState<'normal' | 'clean' | 'fullscreen'>('normal');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Track order ID from URL for auto-opening modal
+  const [urlOrderId, setUrlOrderId] = useState<string | null>(null);
 
   // Ref to trigger manual refresh from OrderKanbanBoard
   const kanbanRefreshRef = React.useRef<(() => void) | null>(null);
@@ -74,6 +92,14 @@ export default function MerchantOrdersPage() {
 
   // Use MerchantContext
   const { merchant: merchantData, isLoading: merchantLoading } = useMerchant();
+
+  // Check for orderId in URL params (from notification click)
+  useEffect(() => {
+    const orderId = searchParams.get('orderId');
+    if (orderId) {
+      setUrlOrderId(orderId);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (!merchantLoading && merchantData) {
@@ -506,12 +532,17 @@ export default function MerchantOrdersPage() {
           </>
         )}
 
-        {/* Order Detail Modal */}
-        {selectedOrder && (
+        {/* Order Detail Modal - handles both clicked orders and URL-triggered orders */}
+        {(selectedOrder || urlOrderId) && (
           <OrderDetailModal
-            orderId={String(selectedOrder.id)}
-            isOpen={isModalOpen}
-            onClose={handleCloseModal}
+            orderId={selectedOrder ? String(selectedOrder.id) : urlOrderId!}
+            isOpen={isModalOpen || !!urlOrderId}
+            onClose={() => {
+              handleCloseModal();
+              setUrlOrderId(null);
+              // Clear the URL param without page reload
+              window.history.replaceState({}, '', '/admin/dashboard/orders');
+            }}
             onUpdate={handleOrderUpdate}
             initialOrder={selectedOrder as unknown as import('@/lib/types/order').OrderWithDetails}
             currency={merchantCurrency}

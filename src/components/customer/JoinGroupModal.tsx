@@ -169,8 +169,13 @@ export default function JoinGroupModal({
                                 </button>
                             )}
                             <h2 className="text-lg font-semibold text-gray-900 dark:text-white" style={{ margin: 0, lineHeight: 'normal' }}>
-                                {t('groupOrder.joinSession') || 'Join Group'}
+                                {t('groupOrder.joinSession') || 'Join Existing Group'}
                             </h2>
+                            {step === 'name' && (
+                                <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs font-mono rounded">
+                                    {code.join('')}
+                                </span>
+                            )}
                         </div>
                         <button
                             onClick={handleClose}
@@ -218,14 +223,6 @@ export default function JoinGroupModal({
                             </>
                         ) : (
                             <>
-                                {/* Show code badge */}
-                                <div className="mb-4">
-                                    <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-full text-sm font-medium">
-                                        <span>Code:</span>
-                                        <span className="font-mono font-bold">{code.join('')}</span>
-                                    </div>
-                                </div>
-
                                 {/* Name Input */}
                                 <div className="mb-4">
                                     <label

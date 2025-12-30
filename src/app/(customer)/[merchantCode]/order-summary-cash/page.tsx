@@ -4,9 +4,9 @@ export const dynamic = 'force-dynamic';
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { clearCart } from '@/lib/utils/localStorage';
+import { clearCart, getCustomerAuth } from '@/lib/utils/localStorage';
 import type { OrderMode } from '@/lib/types/customer';
-import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';
+import { OrderSummaryCashSkeleton } from '@/components/common/SkeletonLoaders';
 import NewOrderConfirmationModal from '@/components/modals/NewOrderConfirmationModal';
 import { QRCodeSVG } from 'qrcode.react';
 import { useTranslation } from '@/lib/i18n/useTranslation';
@@ -85,6 +85,13 @@ export default function OrderSummaryCashPage() {
   const [error, setError] = useState('');
   const [showFeeDetails, setShowFeeDetails] = useState(false);
   const [showNewOrderModal, setShowNewOrderModal] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // ✅ Check if user is logged in on mount
+  useEffect(() => {
+    const auth = getCustomerAuth();
+    setIsLoggedIn(!!auth?.accessToken);
+  }, []);
 
   /**
    * ✅ Fetch merchant info and order details
@@ -235,7 +242,7 @@ export default function OrderSummaryCashPage() {
     if (merchantInfo.currency === 'AUD') {
       return `A$${amount.toFixed(2)}`;
     }
-    
+
     // Special handling for IDR - no decimals
     if (merchantInfo.currency === 'IDR') {
       const formatted = new Intl.NumberFormat('id-ID', {
@@ -281,7 +288,7 @@ export default function OrderSummaryCashPage() {
   // LOADING STATE
   // ========================================
   if (isLoading) {
-    return <LoadingState type="page" message={LOADING_MESSAGES.ORDER_DETAILS} />;
+    return <OrderSummaryCashSkeleton />;
   }
 
   // ========================================
@@ -316,9 +323,12 @@ export default function OrderSummaryCashPage() {
           HEADER - ESB Style (Centered with Shadow)
       ======================================== */}
       <header className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700 shadow-md">
-        <div className="flex items-center justify-center px-5 py-4">
+        <div className="flex items-center justify-between px-5 py-4 relative">
+          {/* Empty left spacer for centering */}
+          <div className="w-8" />
+
           <h1
-            className="text-gray-900 dark:text-white"
+            className="text-gray-900 dark:text-white absolute left-1/2 transform -translate-x-1/2"
             style={{
               fontSize: '16px',
               fontWeight: 500,
@@ -327,6 +337,32 @@ export default function OrderSummaryCashPage() {
           >
             {t('customer.orderSummary.title')}
           </h1>
+
+          {/* Close button - only visible for logged in users */}
+          {isLoggedIn ? (
+            <button
+              onClick={() => router.push(`/${merchantCode}/order?mode=${mode}`)}
+              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              aria-label="Close"
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-gray-600 dark:text-gray-300"
+              >
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          ) : (
+            <div className="w-8" />
+          )}
         </div>
       </header>
 

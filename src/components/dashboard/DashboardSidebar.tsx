@@ -2,6 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import {
+  FaTachometerAlt,
+  FaStore,
+  FaListAlt,
+  FaShoppingCart,
+  FaChartLine,
+  FaCog
+} from 'react-icons/fa';
 
 interface DashboardSidebarProps {
   role: 'SUPER_ADMIN' | 'MERCHANT_OWNER' | 'MERCHANT_STAFF';
@@ -10,7 +18,7 @@ interface DashboardSidebarProps {
 interface NavItem {
   label: string;
   href: string;
-  icon: string;
+  icon: React.ReactNode;
   roles: string[];
 }
 
@@ -29,37 +37,37 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
     {
       label: 'Dashboard',
       href: '/dashboard',
-      icon: '📊',
+      icon: <FaTachometerAlt className="w-5 h-5" />,
       roles: ['SUPER_ADMIN', 'MERCHANT_OWNER', 'MERCHANT_STAFF'],
     },
     {
       label: 'Merchants',
       href: '/dashboard/merchants',
-      icon: '🏪',
+      icon: <FaStore className="w-5 h-5" />,
       roles: ['SUPER_ADMIN'],
     },
     {
       label: 'Menu',
       href: '/dashboard/menu',
-      icon: '📋',
+      icon: <FaListAlt className="w-5 h-5" />,
       roles: ['SUPER_ADMIN', 'MERCHANT_OWNER', 'MERCHANT_STAFF'],
     },
     {
       label: 'Orders',
       href: '/dashboard/orders',
-      icon: '🛒',
+      icon: <FaShoppingCart className="w-5 h-5" />,
       roles: ['SUPER_ADMIN', 'MERCHANT_OWNER', 'MERCHANT_STAFF'],
     },
     {
       label: 'Reports',
       href: '/dashboard/reports',
-      icon: '📈',
+      icon: <FaChartLine className="w-5 h-5" />,
       roles: ['SUPER_ADMIN', 'MERCHANT_OWNER'],
     },
     {
       label: 'Settings',
       href: '/dashboard/settings',
-      icon: '⚙️',
+      icon: <FaCog className="w-5 h-5" />,
       roles: ['SUPER_ADMIN', 'MERCHANT_OWNER'],
     },
   ];
@@ -80,20 +88,19 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
       <nav className="flex-1 overflow-y-auto p-4">
         <ul className="space-y-2">
           {filteredNavItems.map((item) => {
-            const isActive = pathname === item.href || 
-                           (item.href !== '/dashboard' && pathname.startsWith(item.href));
-            
+            const isActive = pathname === item.href ||
+              (item.href !== '/dashboard' && pathname.startsWith(item.href));
+
             return (
               <li key={item.href}>
                 <Link
                   href={item.href}
-                  className={`flex items-center gap-3 rounded-lg px-4 py-3 transition ${
-                    isActive
-                      ? 'bg-orange-500 text-white'
-                      : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-                  }`}
+                  className={`flex items-center gap-3 rounded-lg px-4 py-3 transition ${isActive
+                    ? 'bg-orange-500 text-white'
+                    : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                    }`}
                 >
-                  <span className="text-xl">{item.icon}</span>
+                  {item.icon}
                   <span className="font-medium">{item.label}</span>
                 </Link>
               </li>

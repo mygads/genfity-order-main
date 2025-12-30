@@ -44,18 +44,20 @@ export default function GroupSessionBanner({ onViewGroup }: GroupSessionBannerPr
     const participantCount = session.participants.length;
     const myParticipant = session.participants.find(p => p.id === myParticipantId);
 
-    // Floating pill - ALWAYS visible when in group order (positioned above checkout button)
+    // Floating pill - ALWAYS visible when in group order (positioned above checkout button, within frame)
     const floatingPill = (
-        <button
-            onClick={onViewGroup}
-            className="fixed bottom-24 right-4 z-40 flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-full shadow-lg hover:bg-orange-600 transition-all"
-        >
-            <span className="text-lg">👥</span>
-            <span className="font-medium font-mono">{session.sessionCode}</span>
-            <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs">
-                {participantCount}
-            </span>
-        </button>
+        <div className="fixed bottom-24 z-40 pointer-events-none" style={{ left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: '500px' }}>
+            <button
+                onClick={onViewGroup}
+                className="pointer-events-auto absolute bottom-0 right-4 flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-full shadow-lg hover:bg-orange-600 transition-all"
+            >
+                <span className="text-lg">👥</span>
+                <span className="font-medium font-mono">{session.sessionCode}</span>
+                <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs">
+                    {participantCount}
+                </span>
+            </button>
+        </div>
     );
 
     // If expanded banner is hidden (scrolled), show only floating pill

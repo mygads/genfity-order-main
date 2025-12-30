@@ -6,6 +6,7 @@ import OutletInfoModal from '@/components/customer/OutletInfoModal';
 import RestaurantBanner from '@/components/customer/RestaurantBanner';
 import RestaurantInfoCard from '@/components/customer/RestaurantInfoCard';
 import LanguageSelectorModal from '@/components/customer/LanguageSelectorModal';
+import { LanguageToggle } from '@/components/common/LanguageSelector';
 import { useStoreStatus } from '@/hooks/useStoreStatus';
 import { useToast } from '@/hooks/useToast';
 import { useTranslation } from '@/lib/i18n/useTranslation';
@@ -311,6 +312,13 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                 isOpen={showLanguageModal}
                 onClose={() => setShowLanguageModal(false)}
             />
+
+            {/* Floating Language Toggle - Only on main merchant page */}
+            <div className="fixed bottom-4 z-50 pointer-events-none" style={{ left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: '500px' }}>
+                <div className="pointer-events-auto absolute bottom-0 right-4">
+                    <LanguageToggle className="shadow-lg border border-gray-200 dark:border-gray-700" />
+                </div>
+            </div>
         </>
     );
 }
