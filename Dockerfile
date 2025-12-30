@@ -13,9 +13,13 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 
 # Copy package files
 COPY package.json pnpm-lock.yaml ./
+COPY prisma ./prisma
 
 # Install dependencies (including sharp)
 RUN pnpm install --frozen-lockfile
+
+# Generate Prisma Client in deps stage
+RUN npx prisma generate
 
 # Stage 2: Builder
 FROM node:20-alpine AS builder
@@ -25,12 +29,9 @@ WORKDIR /app
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
-# Copy dependencies from deps stage
+# Copy dependencies from deps stage (includes generated Prisma client)
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-
-# Generate Prisma client
-RUN npx prisma generate
 
 # Build the application (with dummy env vars for build time only)
 # These are ONLY used during build, runtime values come from docker-compose
@@ -49,19 +50,19 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Install pnpm for production
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copy necessary files
+# Copy necessary files from builder
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
+
+# Copy Prisma generated client from node_modules
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
 # Set correct permissions
 RUN chown -R nextjs:nodejs /app
