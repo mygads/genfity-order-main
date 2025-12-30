@@ -32,10 +32,14 @@ COPY . .
 # Generate Prisma client
 RUN npx prisma generate
 
-# Build the application (with dummy DATABASE_URL for build time only)
+# Build the application (with dummy env vars for build time only)
+# These are ONLY used during build, runtime values come from docker-compose
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy?schema=public"
+ENV JWT_SECRET="build-time-dummy-jwt-secret-not-used-in-production"
+ENV JWT_REFRESH_SECRET="build-time-dummy-refresh-secret-not-used-in-production"
+ENV NEXT_PUBLIC_APP_URL="http://localhost:3000"
 RUN pnpm build
 
 # Stage 3: Runner
