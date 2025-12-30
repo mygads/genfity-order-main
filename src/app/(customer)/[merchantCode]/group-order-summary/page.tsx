@@ -62,7 +62,7 @@ export default function GroupOrderSummaryPage({
 
     const handleTrackOrder = () => {
         if (orderNumber) {
-            router.push(`/${merchantCode}/track?order=${orderNumber}`);
+            router.push(`/${merchantCode}/track/${orderNumber}`);
         }
     };
 

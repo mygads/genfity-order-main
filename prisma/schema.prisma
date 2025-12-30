@@ -516,19 +516,20 @@ model Order {
 }
 
 model OrderItem {
-  id        BigInt           @id @default(autoincrement())
-  orderId   BigInt           @map("order_id")
-  menuId    BigInt           @map("menu_id")
-  menuName  String           @map("menu_name")
-  menuPrice Decimal          @map("menu_price") @db.Decimal(10, 2)
-  quantity  Int
-  subtotal  Decimal          @db.Decimal(10, 2)
-  notes     String?
-  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
-  addons    OrderItemAddon[]
-  menu      Menu             @relation(fields: [menuId], references: [id])
-  order     Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  id                BigInt               @id @default(autoincrement())
+  orderId           BigInt               @map("order_id")
+  menuId            BigInt               @map("menu_id")
+  menuName          String               @map("menu_name")
+  menuPrice         Decimal              @map("menu_price") @db.Decimal(10, 2)
+  quantity          Int
+  subtotal          Decimal              @db.Decimal(10, 2)
+  notes             String?
+  createdAt         DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
+  addons            OrderItemAddon[]
+  menu              Menu                 @relation(fields: [menuId], references: [id])
+  order             Order                @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  groupOrderDetails GroupOrderDetail[]   // Link to group order participant details
 
   @@index([orderId])
   @@index([menuId])
@@ -1033,9 +1034,10 @@ model GroupOrderSession {
   createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
   
-  merchant        Merchant          @relation(fields: [merchantId], references: [id], onDelete: Cascade)
-  order           Order?            @relation(fields: [orderId], references: [id])
-  participants    GroupOrderParticipant[]
+  merchant          Merchant          @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  order             Order?            @relation(fields: [orderId], references: [id])
+  participants      GroupOrderParticipant[]
+  groupOrderDetails GroupOrderDetail[] // All item details for this session
   
   @@index([sessionCode])
   @@index([merchantId])
@@ -1058,11 +1060,33 @@ model GroupOrderParticipant {
   
   session         GroupOrderSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   customer        Customer?         @relation(fields: [customerId], references: [id])
+  groupOrderDetails GroupOrderDetail[] // Details of items in final order
   
   @@index([sessionId])
   @@index([deviceId])
   @@index([customerId])
   @@map("group_order_participants")
+}
+
+// Tracks which participant ordered which items (for bill splitting & history)
+// This is a separate table to avoid modifying OrderItem structure
+model GroupOrderDetail {
+  id              BigInt                @id @default(autoincrement())
+  sessionId       BigInt                @map("session_id")      // Group order session
+  participantId   BigInt                @map("participant_id")  // Which participant ordered
+  orderItemId     BigInt                @map("order_item_id")   // Which order item
+  participantName String                @map("participant_name") // Denormalized for display
+  itemSubtotal    Decimal               @map("item_subtotal") @db.Decimal(10, 2) // Participant's subtotal for this item
+  createdAt       DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  
+  session         GroupOrderSession     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  participant     GroupOrderParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  orderItem       OrderItem             @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  
+  @@index([sessionId])
+  @@index([participantId])
+  @@index([orderItemId])
+  @@map("group_order_details")
 }
 
 // Rate limiting for join attempts (prevent brute force)

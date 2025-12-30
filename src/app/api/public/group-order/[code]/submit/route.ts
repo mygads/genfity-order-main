@@ -57,7 +57,8 @@ interface OrderItemData {
     subtotal: number;
     notes?: string;
     addons: AddonData[];
-    participantName: string; // Track which participant added this
+    participantId: bigint;       // Track participant ID for GroupOrderDetail
+    participantName: string;     // Track which participant added this
 }
 
 export async function POST(req: NextRequest, context: RouteParams) {
@@ -252,6 +253,7 @@ export async function POST(req: NextRequest, context: RouteParams) {
                     subtotal: itemTotal,
                     notes: item.notes || undefined,
                     addons: addonData,
+                    participantId: participant.id, // Store participant ID
                     participantName: participant.name,
                 });
             }
@@ -352,7 +354,7 @@ export async function POST(req: NextRequest, context: RouteParams) {
                 },
             });
 
-            // Create order items
+            // Create order items and GroupOrderDetail records
             for (const itemData of orderItemsData) {
                 const orderItem = await tx.orderItem.create({
                     data: {
@@ -362,7 +364,18 @@ export async function POST(req: NextRequest, context: RouteParams) {
                         menuPrice: itemData.menuPrice,
                         quantity: itemData.quantity,
                         subtotal: itemData.subtotal,
-                        notes: itemData.notes ? `[${itemData.participantName}] ${itemData.notes}` : `[${itemData.participantName}]`,
+                        notes: itemData.notes || null,
+                    },
+                });
+
+                // Create GroupOrderDetail record for participant tracking
+                await tx.groupOrderDetail.create({
+                    data: {
+                        sessionId: session.id,
+                        participantId: itemData.participantId,
+                        orderItemId: orderItem.id,
+                        participantName: itemData.participantName,
+                        itemSubtotal: itemData.subtotal,
                     },
                 });
 
@@ -379,6 +392,15 @@ export async function POST(req: NextRequest, context: RouteParams) {
                     });
                 }
             }
+
+            // Clear all participant carts after successful order creation
+            await tx.groupOrderParticipant.updateMany({
+                where: { sessionId: session.id },
+                data: {
+                    cartItems: [],
+                    subtotal: 0,
+                },
+            });
 
             // Update session with order ID and status
             await tx.groupOrderSession.update({
@@ -442,9 +464,17 @@ export async function POST(req: NextRequest, context: RouteParams) {
 
         console.log(`[GROUP ORDER] Order submitted: ${orderNumber} from session ${sessionCode}`);
 
-        // Calculate split bill data
+        // Calculate split bill data from orderItemsData (before cart was cleared)
+        // Group items by participant to calculate subtotals
+        const participantSubtotals = new Map<string, number>();
+        for (const itemData of orderItemsData) {
+            const participantId = itemData.participantId.toString();
+            const currentSubtotal = participantSubtotals.get(participantId) || 0;
+            participantSubtotals.set(participantId, round2(currentSubtotal + itemData.subtotal));
+        }
+
         const splitBill = session.participants.map(p => {
-            const participantSubtotal = decimalToNumber(p.subtotal);
+            const participantSubtotal = participantSubtotals.get(p.id.toString()) || 0;
             const shareRatio = subtotal > 0 ? participantSubtotal / subtotal : 0;
             return {
                 participantId: p.id.toString(),

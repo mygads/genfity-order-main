@@ -275,6 +275,8 @@ export function GroupOrderProvider({ children }: { children: React.ReactNode }) 
                     // Check if session was submitted
                     if (data.data.status === "SUBMITTED" && data.data.order) {
                         stopPolling();
+                        // Clear local cart for all participants when order is submitted
+                        clearCart();
                     }
 
                     // Check if session expired or cancelled
@@ -295,7 +297,7 @@ export function GroupOrderProvider({ children }: { children: React.ReactNode }) 
             }
         }, 5000);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [clearCart]);
 
     const stopPolling = useCallback(() => {
         if (pollingRef.current) {
@@ -657,6 +659,9 @@ export function GroupOrderProvider({ children }: { children: React.ReactNode }) 
                         prev ? { ...prev, status: "SUBMITTED", order: data.data.order } : null
                     );
 
+                    // Clear local cart since order is now submitted
+                    clearCart();
+
                     return {
                         success: true,
                         orderNumber: data.data.order.orderNumber,
@@ -673,7 +678,7 @@ export function GroupOrderProvider({ children }: { children: React.ReactNode }) 
                 setIsLoading(false);
             }
         },
-        [session, deviceId, stopPolling]
+        [session, deviceId, stopPolling, clearCart]
     );
 
     const cancelSession = useCallback(async () => {

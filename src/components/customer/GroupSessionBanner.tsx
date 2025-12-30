@@ -17,9 +17,9 @@ interface GroupSessionBannerProps {
 export default function GroupSessionBanner({ onViewGroup }: GroupSessionBannerProps) {
     const { t } = useTranslation();
     const { session, isHost, myParticipantId } = useGroupOrder();
-    const [isCollapsed, setIsCollapsed] = useState(false);
+    const [showExpandedBanner, setShowExpandedBanner] = useState(true);
 
-    // Handle scroll for collapse behavior
+    // Handle scroll - hide expanded banner when scrolling down, but floating pill always visible
     useEffect(() => {
         let lastScrollY = 0;
 
@@ -27,9 +27,9 @@ export default function GroupSessionBanner({ onViewGroup }: GroupSessionBannerPr
             const currentScrollY = window.scrollY;
 
             if (currentScrollY > 100 && currentScrollY > lastScrollY) {
-                setIsCollapsed(true);
+                setShowExpandedBanner(false);
             } else if (currentScrollY < 50) {
-                setIsCollapsed(false);
+                setShowExpandedBanner(true);
             }
 
             lastScrollY = currentScrollY;
@@ -44,24 +44,30 @@ export default function GroupSessionBanner({ onViewGroup }: GroupSessionBannerPr
     const participantCount = session.participants.length;
     const myParticipant = session.participants.find(p => p.id === myParticipantId);
 
-    // Collapsed pill view - Orange theme
-    if (isCollapsed) {
-        return (
-            <button
-                onClick={onViewGroup}
-                className="fixed bottom-24 right-4 z-40 flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-full shadow-lg hover:bg-orange-600 transition-all"
-            >
-                <span className="text-lg">👥</span>
-                <span className="font-medium font-mono">{session.sessionCode}</span>
-                <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs">
-                    {participantCount}
-                </span>
-            </button>
-        );
+    // Floating pill - ALWAYS visible when in group order (positioned above checkout button)
+    const floatingPill = (
+        <button
+            onClick={onViewGroup}
+            className="fixed bottom-24 right-4 z-40 flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-full shadow-lg hover:bg-orange-600 transition-all"
+        >
+            <span className="text-lg">👥</span>
+            <span className="font-medium font-mono">{session.sessionCode}</span>
+            <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs">
+                {participantCount}
+            </span>
+        </button>
+    );
+
+    // If expanded banner is hidden (scrolled), show only floating pill
+    if (!showExpandedBanner) {
+        return floatingPill;
     }
 
-    // Expanded banner view - Orange theme
+    // Expanded banner view + floating pill - Orange theme
     return (
+        <>
+        {/* Always show floating pill for quick access */}
+        {floatingPill}
         <div className="sticky top-0 z-30 bg-orange-500 shadow-lg">
             <div className="max-w-[500px] mx-auto px-4 py-3">
                 <div className="flex items-center justify-between">
@@ -112,5 +118,6 @@ export default function GroupSessionBanner({ onViewGroup }: GroupSessionBannerPr
                 )}
             </div>
         </div>
+        </>
     );
 }

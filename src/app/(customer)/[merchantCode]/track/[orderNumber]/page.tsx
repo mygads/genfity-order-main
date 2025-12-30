@@ -33,6 +33,46 @@ interface OrderData {
     };
 }
 
+// Group Order Data
+interface GroupOrderData {
+    isGroupOrder: boolean;
+    session?: {
+        id: string;
+        sessionCode: string;
+        participantCount: number;
+    };
+    participants?: Array<{
+        id: string;
+        name: string;
+        isHost: boolean;
+        items: Array<{
+            id: string;
+            menuName: string;
+            menuPrice: number;
+            quantity: number;
+            subtotal: number;
+            notes: string | null;
+            addons: Array<{
+                name: string;
+                price: number;
+                quantity: number;
+            }>;
+        }>;
+        subtotal: number;
+    }>;
+    splitBill?: Array<{
+        participantId: string;
+        participantName: string;
+        isHost: boolean;
+        itemCount: number;
+        subtotal: number;
+        taxShare: number;
+        serviceChargeShare: number;
+        packagingFeeShare: number;
+        total: number;
+    }>;
+}
+
 interface StatusStep {
     status: OrderStatus;
     labelKey: TranslationKeys;
@@ -67,10 +107,12 @@ export default function OrderTrackPage() {
     const orderNumber = params.orderNumber as string;
 
     const [order, setOrder] = useState<OrderData | null>(null);
+    const [groupOrderData, setGroupOrderData] = useState<GroupOrderData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
     const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [showSplitBill, setShowSplitBill] = useState(false);
 
     // Fetch order data
     const fetchOrder = useCallback(async (showLoadingSpinner = false) => {
@@ -127,6 +169,19 @@ export default function OrderTrackPage() {
                     currency: data.data.merchant?.currency || 'AUD',
                 },
             });
+
+            // Fetch group order details (if any)
+            try {
+                const groupResponse = await fetch(`/api/public/orders/${orderNumber}/group-details`);
+                const groupData = await groupResponse.json();
+                if (groupResponse.ok && groupData.success) {
+                    setGroupOrderData(groupData.data);
+                }
+            } catch {
+                // Not a group order or error fetching - ignore
+                setGroupOrderData(null);
+            }
+
             setLastUpdated(new Date());
             setError('');
         } catch (err) {
@@ -415,33 +470,185 @@ export default function OrderTrackPage() {
                     )}
                 </div>
 
-                {/* Order Details */}
+                {/* Group Order Badge (if applicable) */}
+                {groupOrderData?.isGroupOrder && groupOrderData.session && (
+                    <div className="px-6 pb-4">
+                        <div className="flex items-center justify-between p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center">
+                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p className="text-sm font-semibold text-purple-700 dark:text-purple-300">
+                                        Group Order
+                                    </p>
+                                    <p className="text-xs text-purple-600 dark:text-purple-400">
+                                        {groupOrderData.session.participantCount} participants • Code: {groupOrderData.session.sessionCode}
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setShowSplitBill(!showSplitBill)}
+                                className="px-3 py-1.5 text-xs font-medium text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-800 rounded-lg hover:bg-purple-200 dark:hover:bg-purple-700 transition-colors"
+                            >
+                                {showSplitBill ? 'Hide Split' : 'Split Bill'}
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Split Bill View (Group Orders) */}
+                {groupOrderData?.isGroupOrder && showSplitBill && groupOrderData.splitBill && (
+                    <div className="px-6 pb-4">
+                        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+                            <div className="p-4 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+                                <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                    </svg>
+                                    Bill Split by Participant
+                                </h3>
+                            </div>
+                            <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                                {groupOrderData.splitBill.map((participant) => (
+                                    <div key={participant.participantId} className="p-4">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-sm font-medium text-gray-900 dark:text-white">
+                                                    {participant.participantName}
+                                                </span>
+                                                {participant.isHost && (
+                                                    <span className="px-1.5 py-0.5 text-[10px] font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded">
+                                                        HOST
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <span className="text-sm font-bold text-orange-500">
+                                                {formatCurrency(participant.total, order.merchant.currency)}
+                                            </span>
+                                        </div>
+                                        <div className="text-xs text-gray-500 dark:text-gray-400 space-y-0.5">
+                                            <div className="flex justify-between">
+                                                <span>Items ({participant.itemCount})</span>
+                                                <span>{formatCurrency(participant.subtotal, order.merchant.currency)}</span>
+                                            </div>
+                                            {participant.taxShare > 0 && (
+                                                <div className="flex justify-between">
+                                                    <span>Tax share</span>
+                                                    <span>{formatCurrency(participant.taxShare, order.merchant.currency)}</span>
+                                                </div>
+                                            )}
+                                            {participant.serviceChargeShare > 0 && (
+                                                <div className="flex justify-between">
+                                                    <span>Service share</span>
+                                                    <span>{formatCurrency(participant.serviceChargeShare, order.merchant.currency)}</span>
+                                                </div>
+                                            )}
+                                            {participant.packagingFeeShare > 0 && (
+                                                <div className="flex justify-between">
+                                                    <span>Packaging share</span>
+                                                    <span>{formatCurrency(participant.packagingFeeShare, order.merchant.currency)}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Order Details - Show by participant for group orders */}
                 <div className="px-6 pb-6">
                     <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-4">
                         {t('customer.track.orderItems')}
                     </h3>
-                    <div className="space-y-3">
-                        {order.orderItems.map((item, index) => (
-                            <div
-                                key={index}
-                                className="flex justify-between items-start p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
-                            >
-                                <div>
-                                    <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                        {item.quantity}x {item.menuName}
-                                    </p>
-                                    {item.notes && (
-                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                            📝 {item.notes}
-                                        </p>
-                                    )}
+
+                    {/* Group Order: Show items by participant */}
+                    {groupOrderData?.isGroupOrder && groupOrderData.participants ? (
+                        <div className="space-y-4">
+                            {groupOrderData.participants.map((participant) => (
+                                <div key={participant.id} className="bg-gray-50 dark:bg-gray-800 rounded-xl overflow-hidden">
+                                    {/* Participant Header */}
+                                    <div className="flex items-center justify-between px-4 py-3 bg-gray-100 dark:bg-gray-700">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-7 h-7 bg-orange-500 rounded-full flex items-center justify-center text-white text-xs font-medium">
+                                                {participant.name.charAt(0).toUpperCase()}
+                                            </div>
+                                            <span className="text-sm font-medium text-gray-900 dark:text-white">
+                                                {participant.name}
+                                            </span>
+                                            {participant.isHost && (
+                                                <span className="px-1.5 py-0.5 text-[10px] font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded">
+                                                    HOST
+                                                </span>
+                                            )}
+                                        </div>
+                                        <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                            {formatCurrency(participant.subtotal, order.merchant.currency)}
+                                        </span>
+                                    </div>
+                                    {/* Participant Items */}
+                                    <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                                        {participant.items.length > 0 ? (
+                                            participant.items.map((item) => (
+                                                <div key={item.id} className="flex justify-between items-start px-4 py-3">
+                                                    <div>
+                                                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                                            {item.quantity}x {item.menuName}
+                                                        </p>
+                                                        {item.addons.length > 0 && (
+                                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                                                + {item.addons.map(a => a.name).join(', ')}
+                                                            </p>
+                                                        )}
+                                                        {item.notes && (
+                                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                                                📝 {item.notes}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                        {formatCurrency(item.subtotal, order.merchant.currency)}
+                                                    </span>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 italic">
+                                                No items ordered
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
-                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    {formatCurrency(item.menuPrice * item.quantity, order.merchant.currency)}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    ) : (
+                        /* Regular Order: Show items normally */
+                        <div className="space-y-3">
+                            {order.orderItems.map((item, index) => (
+                                <div
+                                    key={index}
+                                    className="flex justify-between items-start p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                                >
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                            {item.quantity}x {item.menuName}
+                                        </p>
+                                        {item.notes && (
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                📝 {item.notes}
+                                            </p>
+                                        )}
+                                    </div>
+                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                        {formatCurrency(item.menuPrice * item.quantity, order.merchant.currency)}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
 
                     {/* Total */}
                     <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">

@@ -10,6 +10,7 @@ import { getCustomerAuth, getTableNumber } from '@/lib/utils/localStorage';
 import type { OrderMode } from '@/lib/types/customer';
 import PaymentConfirmationModal from '@/components/modals/PaymentConfirmationModal';
 import { useCart } from '@/context/CartContext';
+import { useGroupOrder } from '@/context/GroupOrderContext';
 import { calculateCartSubtotal } from '@/lib/utils/priceCalculator';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 
@@ -48,8 +49,15 @@ export default function PaymentPage() {
 
   const merchantCode = params.merchantCode as string;
   const mode = (searchParams.get('mode') || 'takeaway') as OrderMode;
+  const _isGroupOrderCheckout = searchParams.get('groupOrder') === 'true';
 
   const { cart, initializeCart, clearCart: clearCartContext } = useCart();
+  const {
+    submitOrder: _submitGroupOrder,
+    clearGroupOrderState: _clearGroupOrderState,
+    session: _groupSession,
+    splitBill: _splitBill
+  } = useGroupOrder();
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -92,7 +100,7 @@ export default function PaymentPage() {
     if (merchantCurrency === 'AUD') {
       return `A$${amount.toFixed(2)}`;
     }
-    
+
     // Special handling for IDR - no decimals
     if (merchantCurrency === 'IDR') {
       const formatted = new Intl.NumberFormat('id-ID', {
@@ -850,7 +858,7 @@ export default function PaymentPage() {
               fontSize: '16px'
             }}
           >
-                        {isLoading ? t('customer.payment.processing') : t('customer.payment.payAtCashier')}
+            {isLoading ? t('customer.payment.processing') : t('customer.payment.payAtCashier')}
           </button>
         </div>
       </div>
