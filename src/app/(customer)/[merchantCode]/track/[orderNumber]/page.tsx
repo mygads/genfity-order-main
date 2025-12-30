@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, RefreshCw } from 'lucide-react';
+import { FaArrowLeft, FaSync, FaClock, FaCheckCircle, FaBolt, FaBell, FaCheck, FaTimes, FaUsers, FaCalculator, FaStickyNote } from 'react-icons/fa';
 import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';
 import { formatCurrency } from '@/lib/utils/format';
 import { useTranslation } from '@/lib/i18n/useTranslation';
@@ -26,6 +26,11 @@ interface OrderData {
         quantity: number;
         menuPrice: number;
         notes: string | null;
+        addons: Array<{
+            name: string;
+            price: number;
+            quantity: number;
+        }>;
     }>;
     merchant: {
         name: string;
@@ -158,11 +163,17 @@ export default function OrderTrackPage() {
                     quantity: number;
                     menuPrice: unknown;
                     notes?: string;
+                    addons?: Array<{ addonName?: string; name?: string; price?: unknown; quantity?: number }>;
                 }) => ({
                     menuName: item.menuName,
                     quantity: item.quantity,
                     menuPrice: convertDecimal(item.menuPrice),
                     notes: item.notes,
+                    addons: (item.addons || []).map((addon) => ({
+                        name: addon.addonName || addon.name || '',
+                        price: convertDecimal(addon.price),
+                        quantity: addon.quantity || 1,
+                    })),
                 })) || [],
                 merchant: {
                     name: data.data.merchant?.name || '',
@@ -235,6 +246,12 @@ export default function OrderTrackPage() {
         }
     };
 
+    // Format price - show "Free" for zero prices
+    const formatPrice = (amount: number, currency: string) => {
+        if (amount === 0) return 'Free';
+        return formatCurrency(amount, currency);
+    };
+
     // Handle back navigation
     const handleBack = () => {
         router.back();
@@ -288,7 +305,7 @@ export default function OrderTrackPage() {
                         className="w-10 h-10 flex items-center justify-center -ml-2"
                         aria-label="Go back"
                     >
-                        <ArrowLeft className="w-5 h-5 text-gray-700 dark:text-white" />
+                        <FaArrowLeft className="w-5 h-5 text-gray-700 dark:text-white" />
                     </button>
 
                     <h1 className="flex-1 text-center font-semibold text-gray-900 dark:text-white text-base">
@@ -301,7 +318,7 @@ export default function OrderTrackPage() {
                         className="w-10 h-10 flex items-center justify-center -mr-2"
                         aria-label="Refresh"
                     >
-                        <RefreshCw className={`w-5 h-5 text-gray-700 dark:text-white ${isRefreshing ? 'animate-spin' : ''}`} />
+                        <FaSync className={`w-5 h-5 text-gray-700 dark:text-white ${isRefreshing ? 'animate-spin' : ''}`} />
                     </button>
                 </div>
             </header>
@@ -367,32 +384,12 @@ export default function OrderTrackPage() {
                                                                 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}
                           `}
                                                 >
-                                                    {/* SVG Icons for each step */}
-                                                    {step.status === 'PENDING' && (
-                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                        </svg>
-                                                    )}
-                                                    {step.status === 'ACCEPTED' && (
-                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                        </svg>
-                                                    )}
-                                                    {step.status === 'IN_PROGRESS' && (
-                                                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                                                        </svg>
-                                                    )}
-                                                    {step.status === 'READY' && (
-                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                                                        </svg>
-                                                    )}
-                                                    {step.status === 'COMPLETED' && (
-                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                                        </svg>
-                                                    )}
+                                                    {/* FA Icons for each step */}
+                                                    {step.status === 'PENDING' && <FaClock className="w-4 h-4" />}
+                                                    {step.status === 'ACCEPTED' && <FaCheckCircle className="w-4 h-4" />}
+                                                    {step.status === 'IN_PROGRESS' && <FaBolt className="w-4 h-4" />}
+                                                    {step.status === 'READY' && <FaBell className="w-4 h-4" />}
+                                                    {step.status === 'COMPLETED' && <FaCheck className="w-4 h-4" />}
                                                 </div>
 
                                                 {/* Label */}
@@ -415,33 +412,13 @@ export default function OrderTrackPage() {
                 p-6 rounded-xl text-center mb-6 bg-white dark:bg-gray-800
                 ${isReady ? 'border-2 border-green-500' : 'border border-gray-200 dark:border-gray-700'}
               `}>
-                                {/* Status Icon - SVG */}
+                                {/* Status Icon - FA Icons */}
                                 <div className={`w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center ${isReady ? 'bg-green-100 dark:bg-green-900/30 text-green-600' : 'bg-orange-100 dark:bg-orange-900/30 text-orange-600'}`}>
-                                    {currentStepIndex === 0 && (
-                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                    )}
-                                    {currentStepIndex === 1 && (
-                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                    )}
-                                    {currentStepIndex === 2 && (
-                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                        </svg>
-                                    )}
-                                    {currentStepIndex === 3 && (
-                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                                        </svg>
-                                    )}
-                                    {currentStepIndex === 4 && (
-                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                        </svg>
-                                    )}
+                                    {currentStepIndex === 0 && <FaClock className="w-6 h-6" />}
+                                    {currentStepIndex === 1 && <FaCheckCircle className="w-6 h-6" />}
+                                    {currentStepIndex === 2 && <FaBolt className="w-6 h-6" />}
+                                    {currentStepIndex === 3 && <FaBell className="w-6 h-6" />}
+                                    {currentStepIndex === 4 && <FaCheck className="w-6 h-6" />}
                                 </div>
                                 <h2 className={`text-xl font-bold mb-2 ${isReady ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-white'}`}>
                                     {isCompleted ? t('customer.track.orderCompleted') :
@@ -451,9 +428,7 @@ export default function OrderTrackPage() {
 
                                 {!isCompleted && (
                                     <div className="flex items-center justify-center gap-2 text-gray-600 dark:text-gray-400">
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
+                                        <FaClock className="w-5 h-5" />
                                         <span className="text-sm font-medium">
                                             {t('customer.track.estimated')} {getEstimatedWaitTime(order.status)}
                                         </span>
@@ -636,14 +611,22 @@ export default function OrderTrackPage() {
                                         <p className="text-sm font-medium text-gray-900 dark:text-white">
                                             {item.quantity}x {item.menuName}
                                         </p>
+                                        {item.addons && item.addons.length > 0 && (
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                                + {item.addons.map(a => {
+                                                    const addonPrice = a.price * (a.quantity || 1);
+                                                    return addonPrice > 0 ? `${a.name} (${formatPrice(addonPrice, order.merchant.currency)})` : `${a.name} (Free)`;
+                                                }).join(', ')}
+                                            </p>
+                                        )}
                                         {item.notes && (
                                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                📝 {item.notes}
+                                                <FaStickyNote className="inline w-3 h-3 mr-1" />{item.notes}
                                             </p>
                                         )}
                                     </div>
                                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        {formatCurrency(item.menuPrice * item.quantity, order.merchant.currency)}
+                                        {formatPrice(item.menuPrice * item.quantity, order.merchant.currency)}
                                     </span>
                                 </div>
                             ))}

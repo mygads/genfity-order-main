@@ -4,6 +4,8 @@ import { useEffect, useState, useRef } from 'react';
 import { useCart } from '@/context/CartContext';
 import type { CartItem } from '@/context/CartContext';
 import { formatCurrency } from '@/lib/utils/format';
+import { isFavorite, toggleFavorite } from '@/lib/utils/localStorage';
+import { FaHeart, FaRegHeart, FaTimes } from 'react-icons/fa';
 import Image from 'next/image';
 
 interface Addon {
@@ -97,8 +99,21 @@ export default function MenuDetailModal({
   const [isImageZoomed, setIsImageZoomed] = useState(false);
   const [isClosing, setIsClosing] = useState(false); // ✅ Smooth close animation
   const [showCopied, setShowCopied] = useState(false); // Share link copy feedback
+  const [isFav, setIsFav] = useState(false); // Favorite state
   const addonCategoryRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const isAddingRef = useRef(false);
+
+  // Initialize favorite state
+  useEffect(() => {
+    setIsFav(isFavorite(merchantCode, menu.id));
+  }, [merchantCode, menu.id]);
+
+  // Handle favorite toggle
+  const handleToggleFavorite = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newState = toggleFavorite(merchantCode, menu.id);
+    setIsFav(newState);
+  };
 
   // Generate shareable menu item URL
   const getShareUrl = () => {
@@ -577,19 +592,16 @@ export default function MenuDetailModal({
               }}
             />
 
-            {/* Fixed Close Button - stays on top when scrolling */}
+            {/* Close Button - absolute within modal container */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 handleClose();
               }}
-              className="fixed top-3 right-3 w-8 h-8 bg-white/90 dark:bg-gray-800/90 rounded-full flex items-center justify-center shadow-md hover:bg-white dark:hover:bg-gray-800 transition-colors z-320"
-              style={{ right: 'calc(50% - 250px + 12px)' }}
+              className="absolute top-3 right-3 w-8 h-8 bg-white/90 dark:bg-gray-800/90 rounded-full flex items-center justify-center shadow-md hover:bg-white dark:hover:bg-gray-800 transition-colors z-20"
               aria-label="Close"
             >
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <path d="M15 5L5 15M5 5L15 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
+              <FaTimes className="w-4 h-4 text-gray-700 dark:text-white" />
             </button>
 
             {/* Expand Button - Only show if has image */}
@@ -708,10 +720,24 @@ export default function MenuDetailModal({
               </div>
             )}
 
-            {/* Menu Name */}
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
-              {menu.name}
-            </h1>
+            {/* Menu Name Row with Favorite Button */}
+            <div className="flex items-start justify-between gap-2 mb-1">
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white flex-1">
+                {menu.name}
+              </h1>
+              {/* Favorite Button */}
+              <button
+                onClick={handleToggleFavorite}
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                aria-label={isFav ? 'Remove from favorites' : 'Add to favorites'}
+              >
+                {isFav ? (
+                  <FaHeart className="w-5 h-5 text-red-500" />
+                ) : (
+                  <FaRegHeart className="w-5 h-5 text-gray-400 hover:text-red-400" />
+                )}
+              </button>
+            </div>
 
             {/* Price Display - Show promo price with strikethrough if available */}
             {menu.isPromo && menu.promoPrice ? (
