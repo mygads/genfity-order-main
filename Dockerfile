@@ -15,11 +15,11 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 COPY package.json pnpm-lock.yaml ./
 COPY prisma ./prisma
 
-# Install dependencies
+# Install dependencies (allow build scripts for prisma)
 RUN pnpm install --frozen-lockfile
 
-# Generate Prisma Client
-RUN npx prisma generate
+# Generate Prisma Client (force regenerate)
+RUN pnpm exec prisma generate
 
 # Copy source code
 COPY . .
@@ -53,9 +53,8 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 
-# Copy Prisma client from builder
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+# Copy entire node_modules from builder (includes pnpm structure with prisma)
+COPY --from=builder /app/node_modules ./node_modules
 
 # Set correct permissions
 RUN chown -R nextjs:nodejs /app
