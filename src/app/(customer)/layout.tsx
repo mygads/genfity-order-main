@@ -31,7 +31,7 @@ export default function CustomerLayout({ children }: CustomerLayoutProps) {
                 <ToastProvider>
                     <div className="min-h-screen bg-white">
                         {/* Centered container - mobile-first layout like Burjo reference */}
-                        <div className="customer-page-container flex flex-col min-h-screen max-w-[500px] mx-auto bg-white scrollbar-hide">
+                        <div className="customer-page-container relative flex flex-col min-h-screen max-w-[500px] mx-auto bg-white scrollbar-hide">
                             {children}
                         </div>
                     </div>

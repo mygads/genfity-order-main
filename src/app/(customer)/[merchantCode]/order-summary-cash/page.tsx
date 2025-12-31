@@ -235,7 +235,7 @@ export default function OrderSummaryCashPage() {
     if (merchantInfo.currency === 'AUD') {
       return `A$${amount.toFixed(2)}`;
     }
-    
+
     // Special handling for IDR - no decimals
     if (merchantInfo.currency === 'IDR') {
       const formatted = new Intl.NumberFormat('id-ID', {
@@ -316,9 +316,13 @@ export default function OrderSummaryCashPage() {
           HEADER - ESB Style (Centered with Shadow)
       ======================================== */}
       <header className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700 shadow-md">
-        <div className="flex items-center justify-center px-5 py-4">
+        <div className="flex items-center justify-between px-4 py-4">
+          {/* Spacer for centering */}
+          <div className="w-10" />
+
+          {/* Title - Centered */}
           <h1
-            className="text-gray-900 dark:text-white"
+            className="text-gray-900 dark:text-white flex-1 text-center"
             style={{
               fontSize: '16px',
               fontWeight: 500,
@@ -327,6 +331,26 @@ export default function OrderSummaryCashPage() {
           >
             {t('customer.orderSummary.title')}
           </h1>
+
+          {/* X Button - Right side */}
+          <button
+            onClick={() => router.push(`/${merchantCode}/order?mode=${mode}`)}
+            className="w-10 h-10 flex items-center justify-center text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
+            aria-label="Close"
+          >
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
         </div>
       </header>
 

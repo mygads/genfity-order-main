@@ -62,9 +62,9 @@ export default function MerchantLayout({ children }: MerchantLayoutProps) {
     <GroupOrderProvider>
       {children}
 
-      {/* Floating Language Toggle for Customer Pages */}
+      {/* Floating Language Toggle for Customer Pages - sticky within container */}
       {showLanguageToggle && (
-        <div className="fixed bottom-4 right-4 z-50">
+        <div className="sticky bottom-4 ml-auto mr-4 w-fit z-50">
           <LanguageToggle className="shadow-lg border border-gray-200 dark:border-gray-700" />
         </div>
       )}
