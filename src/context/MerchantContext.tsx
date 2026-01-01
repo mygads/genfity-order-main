@@ -61,11 +61,26 @@ export function MerchantProvider({ children }: { children: ReactNode }) {
         return;
       }
 
+      // Check if user is Super Admin (stored in localStorage during login)
+      const userRole = localStorage.getItem('userRole');
+      if (userRole === 'SUPER_ADMIN') {
+        // Super Admin doesn't have a merchant profile - this is expected
+        setIsLoading(false);
+        return;
+      }
+
       const response = await fetch('/api/merchant/profile', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
+
+      // Handle 403/404 gracefully - user might not have merchant access
+      if (response.status === 403 || response.status === 404) {
+        // Not a merchant user - this is OK, not an error
+        setIsLoading(false);
+        return;
+      }
 
       if (!response.ok) {
         throw new Error('Failed to fetch merchant profile');
