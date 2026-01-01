@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import useSWR from "swr";
-import { FaBell, FaTimes, FaCreditCard, FaShoppingCart, FaBox, FaUser, FaMoneyBillWave, FaCog, FaCheckDouble } from "react-icons/fa";
+import { FaBell, FaTimes, FaCreditCard, FaShoppingCart, FaBox, FaUser, FaMoneyBillWave, FaCog, FaCheckDouble, FaStore, FaUserPlus } from "react-icons/fa";
 
 interface Notification {
   id: string;
@@ -38,6 +38,8 @@ const categoryIcons: Record<string, { icon: React.ReactNode; color: string }> = 
   STOCK: { icon: <FaBox className="w-4 h-4" />, color: "bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400" },
   STAFF: { icon: <FaUser className="w-4 h-4" />, color: "bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400" },
   PAYMENT: { icon: <FaMoneyBillWave className="w-4 h-4" />, color: "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400" },
+  MERCHANT: { icon: <FaStore className="w-4 h-4" />, color: "bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400" },
+  USER: { icon: <FaUserPlus className="w-4 h-4" />, color: "bg-pink-100 text-pink-600 dark:bg-pink-900/30 dark:text-pink-400" },
 };
 
 function getRelativeTime(dateStr: string): string {
@@ -59,11 +61,33 @@ function getRelativeTime(dateStr: string): string {
 
 export default function NotificationDropdown() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const { t } = useTranslation();
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Auth fetcher for notifications
+  const authFetcher = async (url: string) => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) return null;
+    
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!res.ok) return null;
+    return res.json();
+  };
 
   // Fetch unread count with polling
   const { data: unreadData, mutate: mutateUnreadCount } = useSWR<UnreadCountResponse>(
-    "/api/notifications/unread-count",
+    isMounted ? "/api/notifications/unread-count" : null,
+    authFetcher,
     {
       refreshInterval: 30000, // Poll every 30 seconds
       revalidateOnFocus: true,
@@ -72,7 +96,8 @@ export default function NotificationDropdown() {
 
   // Fetch recent notifications when dropdown is open
   const { data: notificationsData, mutate } = useSWR<NotificationsResponse>(
-    isOpen ? "/api/notifications?limit=5" : null
+    isOpen && isMounted ? "/api/notifications?limit=5" : null,
+    authFetcher
   );
 
   const unreadCount = unreadData?.data?.count || 0;
@@ -87,6 +112,9 @@ export default function NotificationDropdown() {
   }
 
   const handleMarkAsRead = async (id: string) => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) return;
+
     // Optimistic update - update UI immediately
     const optimisticNotifications = notificationsData ? {
       ...notificationsData,
@@ -108,7 +136,10 @@ export default function NotificationDropdown() {
     mutateUnreadCount(optimisticUnread, false);
 
     // Fire API request in background (don't await)
-    fetch(`/api/notifications/${id}/read`, { method: "POST" })
+    fetch(`/api/notifications/${id}/read`, { 
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` }
+    })
       .catch(error => {
         console.error("Failed to mark as read:", error);
         // Revalidate on error to restore correct state
@@ -118,6 +149,9 @@ export default function NotificationDropdown() {
   };
 
   const handleMarkAllAsRead = async () => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) return;
+
     // Optimistic update - update UI immediately
     const optimisticNotifications = notificationsData ? {
       ...notificationsData,
@@ -137,7 +171,10 @@ export default function NotificationDropdown() {
     mutateUnreadCount(optimisticUnread, false);
 
     // Fire API request in background (don't await)
-    fetch("/api/notifications/mark-all-read", { method: "POST" })
+    fetch("/api/notifications/mark-all-read", { 
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` }
+    })
       .catch(error => {
         console.error("Failed to mark all as read:", error);
         // Revalidate on error to restore correct state

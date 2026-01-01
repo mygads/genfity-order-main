@@ -385,41 +385,41 @@ export default function MerchantsPage() {
         {/* Merchants Table */}
         {!loading && !merchantsError && (
           <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-white/[0.05]">
-            <div className="max-w-full overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
-              <table className="w-full min-w-[1400px]">
+            <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
+              <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-100 bg-gray-50 text-left dark:border-white/[0.05] dark:bg-white/[0.02]">
-                    <th className="px-5 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
+                    <th className="w-[60px] min-w-[60px] px-4 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
                       Logo
                     </th>
-                    <th className="px-5 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
+                    <th className="w-[100px] min-w-[100px] px-4 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
                       Code
                     </th>
-                    <th className="px-5 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
+                    <th className="w-[160px] min-w-[160px] px-4 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
                       Merchant Name
                     </th>
-                    <th className="px-5 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
+                    <th className="w-[200px] min-w-[200px] px-4 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
                       Email
                     </th>
-                    <th className="px-5 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
+                    <th className="w-[130px] min-w-[130px] px-4 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
                       Phone
                     </th>
-                    <th className="px-5 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
+                    <th className="w-[100px] min-w-[100px] px-4 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
                       Country
                     </th>
-                    <th className="px-5 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
+                    <th className="w-[80px] min-w-[80px] px-4 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
                       Currency
                     </th>
-                    <th className="px-5 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
+                    <th className="w-[100px] min-w-[100px] px-4 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
                       Subscription
                     </th>
-                    <th className="px-5 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
+                    <th className="w-[100px] min-w-[100px] px-4 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
                       Store Status
                     </th>
-                    <th className="px-5 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
+                    <th className="w-[100px] min-w-[100px] px-4 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
                       Active Status
                     </th>
-                    <th className="px-5 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
+                    <th className="w-[120px] min-w-[120px] px-4 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
                       Actions
                     </th>
                   </tr>
@@ -443,7 +443,7 @@ export default function MerchantsPage() {
 
                       return (
                         <tr key={merchant.id}>
-                          <td className="px-5 py-4">
+                          <td className="w-[60px] min-w-[60px] px-4 py-4">
                             {/* Merchant Logo */}
                             <div className="relative h-10 w-10 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
                               {merchant.logoUrl ? (
@@ -460,29 +460,31 @@ export default function MerchantsPage() {
                               )}
                             </div>
                           </td>
-                          <td className="px-5 py-4">
+                          <td className="w-[100px] min-w-[100px] px-4 py-4">
                             <span className="font-mono text-sm text-gray-600 dark:text-gray-400">
                               {merchant.code}
                             </span>
                           </td>
-                          <td className="px-5 py-4">
-                            <p className="text-sm font-medium text-gray-800 dark:text-white/90">
+                          <td className="w-[160px] min-w-[160px] px-4 py-4">
+                            <p className="text-sm font-medium text-gray-800 dark:text-white/90 truncate" title={merchant.name}>
                               {merchant.name}
                             </p>
                           </td>
-                          <td className="px-5 py-4 text-sm text-gray-600 dark:text-gray-400">{merchant.email}</td>
-                          <td className="px-5 py-4 text-sm text-gray-600 dark:text-gray-400">{merchant.phone}</td>
-                          <td className="px-5 py-4">
+                          <td className="w-[200px] min-w-[200px] px-4 py-4 text-sm text-gray-600 dark:text-gray-400">
+                            <span className="truncate block" title={merchant.email}>{merchant.email}</span>
+                          </td>
+                          <td className="w-[130px] min-w-[130px] px-4 py-4 text-sm text-gray-600 dark:text-gray-400">{merchant.phone}</td>
+                          <td className="w-[100px] min-w-[100px] px-4 py-4">
                             <span className="text-sm text-gray-600 dark:text-gray-400">
                               {merchant.country || 'Australia'}
                             </span>
                           </td>
-                          <td className="px-5 py-4">
-                            <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                          <td className="w-[80px] min-w-[80px] px-4 py-4">
+                            <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
                               {merchant.currency || 'AUD'}
                             </span>
                           </td>
-                          <td className="px-5 py-4">
+                          <td className="w-[100px] min-w-[100px] px-4 py-4">
                             {merchant.subscriptionStatus ? (
                               <SubscriptionStatusBadge
                                 type={merchant.subscriptionStatus.type}
@@ -492,9 +494,9 @@ export default function MerchantsPage() {
                               <span className="text-xs text-gray-400">No subscription</span>
                             )}
                           </td>
-                          <td className="px-5 py-4">
+                          <td className="w-[100px] min-w-[100px] px-4 py-4">
                             {/* Store Open/Closed Status */}
-                            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${storeStatus.isOpen
+                            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${storeStatus.isOpen
                               ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
                               : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
                               }`}>
@@ -502,11 +504,11 @@ export default function MerchantsPage() {
                               {storeStatus.text}
                             </span>
                           </td>
-                          <td className="px-5 py-4">
+                          <td className="w-[100px] min-w-[100px] px-4 py-4">
                             {/* Active/Inactive Toggle */}
                             <button
                               onClick={() => handleToggleStatus(merchant.id, merchant.isActive)}
-                              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${merchant.isActive
+                              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium transition-colors ${merchant.isActive
                                 ? "bg-success-100 text-success-700 hover:bg-success-200 dark:bg-success-900/30 dark:text-success-400 dark:hover:bg-success-900/50"
                                 : "bg-error-100 text-error-700 hover:bg-error-200 dark:bg-error-900/30 dark:text-error-400 dark:hover:bg-error-900/50"
                                 }`}
@@ -516,15 +518,15 @@ export default function MerchantsPage() {
                               {merchant.isActive ? "Active" : "Inactive"}
                             </button>
                           </td>
-                          <td className="px-5 py-4">
-                            <div className="flex items-center gap-2">
+                          <td className="w-[120px] min-w-[120px] px-4 py-4">
+                            <div className="flex items-center gap-1.5">
                               <button
                                 onClick={() => router.push(`/admin/dashboard/merchants/${merchant.id}`)}
                                 className="text-brand-500 hover:text-brand-600 dark:text-brand-400"
                                 title="View Details"
                               >
                                 <svg
-                                  className="h-5 w-5"
+                                  className="h-4 w-4"
                                   fill="none"
                                   stroke="currentColor"
                                   viewBox="0 0 24 24"
@@ -549,7 +551,7 @@ export default function MerchantsPage() {
                                 title="Edit Merchant"
                               >
                                 <svg
-                                  className="h-5 w-5"
+                                  className="h-4 w-4"
                                   fill="none"
                                   stroke="currentColor"
                                   viewBox="0 0 24 24"
@@ -568,7 +570,7 @@ export default function MerchantsPage() {
                                 title="Delete"
                               >
                                 <svg
-                                  className="h-5 w-5"
+                                  className="h-4 w-4"
                                   fill="none"
                                   stroke="currentColor"
                                   viewBox="0 0 24 24"
@@ -599,7 +601,7 @@ export default function MerchantsPage() {
                                 title="Add Owner"
                               >
                                 <svg
-                                  className="h-5 w-5"
+                                  className="h-4 w-4"
                                   fill="none"
                                   stroke="currentColor"
                                   viewBox="0 0 24 24"
@@ -622,7 +624,7 @@ export default function MerchantsPage() {
                                 title="View Users"
                               >
                                 <svg
-                                  className="h-5 w-5"
+                                  className="h-4 w-4"
                                   fill="none"
                                   stroke="currentColor"
                                   viewBox="0 0 24 24"

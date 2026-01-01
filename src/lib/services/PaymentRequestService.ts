@@ -7,6 +7,8 @@ import paymentRequestRepository from '@/lib/repositories/PaymentRequestRepositor
 import balanceRepository from '@/lib/repositories/BalanceRepository';
 import subscriptionRepository from '@/lib/repositories/SubscriptionRepository';
 import subscriptionService from '@/lib/services/SubscriptionService';
+import userNotificationService from '@/lib/services/UserNotificationService';
+import prisma from '@/lib/db/client';
 import { NotFoundError, ValidationError, ConflictError, ERROR_CODES } from '@/lib/constants/errors';
 
 export interface CreatePaymentRequestInput {
@@ -95,10 +97,48 @@ class PaymentRequestService {
             throw new ValidationError('This payment request has expired. Please create a new one.', ERROR_CODES.VALIDATION_FAILED);
         }
 
-        return paymentRequestRepository.confirmPayment(requestId, {
+        const result = await paymentRequestRepository.confirmPayment(requestId, {
             transferNotes,
             transferProofUrl,
         });
+
+        // Get merchant info for notification
+        try {
+            const merchant = await prisma.merchant.findUnique({
+                where: { id: merchantId },
+                select: { name: true, code: true, currency: true },
+            });
+
+            if (merchant) {
+                const amountFormatted = request.currency === 'IDR'
+                    ? `Rp ${Number(request.amount).toLocaleString()}`
+                    : `${merchant.currency || 'AUD'} ${Number(request.amount).toLocaleString()}`;
+
+                // Notify Super Admins about payment confirmation
+                await userNotificationService.createForSuperAdmins(
+                    'PAYMENT',
+                    'Payment Confirmation Pending Verification',
+                    `${merchant.name} (${merchant.code}) has confirmed a ${request.type === 'DEPOSIT_TOPUP' ? 'deposit top-up' : 'monthly subscription'} payment of ${amountFormatted}. Please verify.`,
+                    {
+                        metadata: {
+                            requestId: requestId.toString(),
+                            merchantId: merchantId.toString(),
+                            merchantName: merchant.name,
+                            merchantCode: merchant.code,
+                            type: request.type,
+                            amount: Number(request.amount),
+                            currency: request.currency,
+                        },
+                        actionUrl: '/admin/dashboard/payment-verification',
+                    }
+                );
+            }
+        } catch (notifError) {
+            console.error('Failed to notify super admins about payment confirmation:', notifError);
+            // Don't fail the confirmation if notification fails
+        }
+
+        return result;
     }
 
     /**

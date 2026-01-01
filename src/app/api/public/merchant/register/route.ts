@@ -10,6 +10,7 @@ import { z } from 'zod';
 import merchantService from '@/lib/services/MerchantService';
 import emailService from '@/lib/services/EmailService';
 import referralService from '@/lib/services/ReferralService';
+import userNotificationService from '@/lib/services/UserNotificationService';
 import prisma from '@/lib/db/client';
 
 const registerSchema = z.object({
@@ -133,6 +134,30 @@ export async function POST(req: NextRequest) {
         } catch (emailError) {
             console.error('Failed to send welcome email:', emailError);
             // Don't fail registration if email fails
+        }
+
+        // Notify Super Admins about new merchant registration
+        try {
+            await userNotificationService.createForSuperAdmins(
+                'SYSTEM',
+                'New Merchant Registration',
+                `${data.merchantName} (${data.merchantCode.toLowerCase()}) has registered. Owner: ${data.ownerName} (${data.ownerEmail})`,
+                {
+                    metadata: {
+                        merchantId: result.merchant.id.toString(),
+                        merchantName: data.merchantName,
+                        merchantCode: data.merchantCode.toLowerCase(),
+                        ownerName: data.ownerName,
+                        ownerEmail: data.ownerEmail,
+                        country: data.country,
+                        referralCode: validatedReferralCode?.code || null,
+                    },
+                    actionUrl: `/admin/dashboard/merchants/${result.merchant.id}`,
+                }
+            );
+        } catch (notifError) {
+            console.error('Failed to notify super admins:', notifError);
+            // Don't fail registration if notification fails
         }
 
         return NextResponse.json({
