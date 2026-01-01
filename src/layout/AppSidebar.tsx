@@ -292,7 +292,7 @@ const merchantNavGroups: NavGroup[] = [
 ];
 
 const AppSidebar: React.FC = () => {
-  const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
+  const { isExpanded, isMobileOpen, isHovered, setIsHovered, closeMobileSidebar } = useSidebar();
   const pathname = usePathname();
   const { user, hasPermission, isOwner } = useAuth();
   const { t } = useTranslation();
@@ -419,11 +419,11 @@ const AppSidebar: React.FC = () => {
   return (
     <aside
       data-sidebar
-      className={`fixed mt-10 flex flex-col lg:mt-0 top-0 px-5 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-50 border-r border-gray-200 
+      className={`fixed top-0 left-0 flex flex-col bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-50 border-r border-gray-200 
         ${isExpanded || isMobileOpen
-          ? "w-[290px]"
+          ? "w-[280px]"
           : isHovered
-            ? "w-[290px]"
+            ? "w-[280px]"
             : "w-[90px]"
         }
         ${isMobileOpen ? "translate-x-0" : "-translate-x-full"}
@@ -432,10 +432,10 @@ const AppSidebar: React.FC = () => {
       onMouseLeave={() => setIsHovered(false)}
     >
       <div
-        className={`pt-4 pb-2 flex  ${!isExpanded && !isHovered ? "lg:justify-center" : "justify-center"
+        className={`px-4 pt-4 pb-2 flex ${!isExpanded && !isHovered ? "lg:justify-center" : "justify-center"
           }`}
       >
-        <Link href="/admin/dashboard">
+        <Link href="/admin/dashboard" onClick={() => window.innerWidth < 1024 && closeMobileSidebar()}>
           {isExpanded || isHovered || isMobileOpen ? (
             <>
               <Image
@@ -480,12 +480,14 @@ const AppSidebar: React.FC = () => {
 
       {/* Merchant Banner - Only for MERCHANT_OWNER and MERCHANT_STAFF who have merchant */}
       {user && (user.role === "MERCHANT_OWNER" || user.role === "MERCHANT_STAFF") && hasMerchant && (
-        <MerchantBanner
-          isExpanded={isExpanded || isHovered || isMobileOpen}
-        />
+        <div className="px-4">
+          <MerchantBanner
+            isExpanded={isExpanded || isHovered || isMobileOpen}
+          />
+        </div>
       )}
 
-      <div className="mb-12 flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar" data-sidebar-scroll>
+      <div className="px-4 mb-12 flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar" data-sidebar-scroll>
         <nav className="mb-6">
           <div className="flex flex-col gap-6">
             {/* No merchant message for merchant owner/staff */}
@@ -525,6 +527,12 @@ const AppSidebar: React.FC = () => {
                         <Link
                           href={nav.path}
                           prefetch={true}
+                          onClick={() => {
+                            // Auto-close sidebar on mobile when menu item is clicked
+                            if (window.innerWidth < 1024) {
+                              closeMobileSidebar();
+                            }
+                          }}
                           className={`menu-item group ${isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
                             }`}
                         >

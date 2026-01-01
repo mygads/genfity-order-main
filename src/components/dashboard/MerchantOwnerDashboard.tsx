@@ -4,6 +4,25 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { isStoreEffectivelyOpen, type OpeningHour } from '@/lib/utils/storeStatus';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import {
+  FaDollarSign,
+  FaClock,
+  FaShoppingBag,
+  FaChartLine,
+  FaUtensils,
+  FaTags,
+  FaUsers,
+  FaClipboardList,
+  FaExclamationTriangle,
+  FaCheckCircle,
+  FaChartBar,
+  FaUserTie,
+  FaFileAlt,
+  FaTrophy,
+  FaMedal,
+  FaAward,
+  FaBoxOpen
+} from 'react-icons/fa';
 
 type Merchant = {
   id: bigint;
@@ -154,42 +173,41 @@ export default function MerchantOwnerDashboard({
 
   return (
     <div className="space-y-6">
-      {/* Merchant Header with Quick Actions */}
-      <div className="rounded-2xl bg-gradient-to-r from-orange-500 via-orange-600 to-amber-500 p-6 shadow-xl shadow-orange-500/20">
-        <div className="flex items-center justify-between">
+      {/* Merchant Header - Clean Design */}
+      <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-4">
             {merchant.logoUrl ? (
               <Image
                 src={merchant.logoUrl}
                 alt={merchant.name}
-                width={56}
-                height={56}
-                className="h-14 w-14 rounded-xl object-cover ring-2 ring-white/30"
+                width={48}
+                height={48}
+                className="h-12 w-12 rounded-lg object-cover"
               />
             ) : (
-              <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-white/20 text-2xl font-bold text-white">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800 text-xl font-bold text-gray-600 dark:text-gray-400">
                 {merchant.name.charAt(0)}
               </div>
             )}
             <div>
-              <h2 className="text-2xl font-bold text-white">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
                 {merchant.name}
               </h2>
-              <div className="mt-1 flex items-center gap-3">
-                <span className="text-sm text-white/80">
-                  {merchant.code} • {merchant.city || 'No city'}
+              <div className="flex flex-wrap items-center gap-2 mt-1">
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  {merchant.code}
                 </span>
-                <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${effectivelyOpen
-                  ? 'bg-white/20 text-white'
-                  : 'bg-red-500/20 text-red-100'
+                <span className="text-gray-300 dark:text-gray-600">•</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  {merchant.city || 'No city'}
+                </span>
+                <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${effectivelyOpen
+                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400'
+                  : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400'
                 }`}>
-                  <div className={`h-2 w-2 rounded-full ${effectivelyOpen ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}></div>
+                  <div className={`h-1.5 w-1.5 rounded-full ${effectivelyOpen ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
                   {effectivelyOpen ? t('common.open') : t('common.closed')}
-                  {merchant.isManualOverride && (
-                    <span className="ml-1 text-[10px] opacity-80">
-                      (Manual)
-                    </span>
-                  )}
                 </span>
               </div>
             </div>
@@ -203,166 +221,126 @@ export default function MerchantOwnerDashboard({
         </div>
       </div>
 
-      {/* Key Metrics - Primary Stats */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      {/* Key Metrics - Clean Cards */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {/* Today's Revenue */}
-        <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 p-5 shadow-lg shadow-emerald-500/20 transition-all hover:shadow-xl hover:shadow-emerald-500/30">
-          <div className="relative z-10">
-            <p className="text-sm font-medium text-emerald-100">{t('admin.dashboard.todaysRevenue')}</p>
-            <h3 className="mt-1 text-2xl font-bold text-white lg:text-3xl">
-              {formatCurrency(stats.todayRevenue)}
-            </h3>
-            <p className="mt-1 text-xs text-emerald-200">
-              {stats.todayOrders} {t('admin.dashboard.ordersToday')}
-            </p>
+        <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4">
+          <div className="flex items-center justify-between">
+            <FaDollarSign className="w-5 h-5 text-emerald-500" />
+            <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+              {stats.todayOrders} orders
+            </span>
           </div>
-          <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-white/10 transition-transform group-hover:scale-110"></div>
-          <svg className="absolute bottom-3 right-3 h-8 w-8 text-white/20" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.64 0 .84.65 1.39 2.67 1.91s4.18 1.39 4.18 3.91c-.01 1.83-1.38 2.83-3.12 3.16z" />
-          </svg>
+          <p className="mt-3 text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+            {formatCurrency(stats.todayRevenue)}
+          </p>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('admin.dashboard.todaysRevenue')}</p>
         </div>
 
-        {/* Pending Orders - Attention Required */}
-        <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 p-5 shadow-lg shadow-amber-500/20 transition-all hover:shadow-xl hover:shadow-amber-500/30">
-          <div className="relative z-10">
-            <p className="text-sm font-medium text-amber-100">{t('admin.dashboard.pendingOrders')}</p>
-            <h3 className="mt-1 text-2xl font-bold text-white lg:text-3xl">
-              {stats.pendingOrders}
-            </h3>
-            <p className="mt-1 text-xs text-amber-200">
-              {t('admin.dashboard.needsAttention')}
-            </p>
+        {/* Pending Orders */}
+        <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4">
+          <div className="flex items-center justify-between">
+            <FaClock className="w-5 h-5 text-amber-500" />
+            {stats.pendingOrders > 0 && (
+              <span className="flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-amber-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+              </span>
+            )}
           </div>
-          <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-white/10 transition-transform group-hover:scale-110"></div>
-          {stats.pendingOrders > 0 && (
-            <div className="absolute right-3 top-3 h-3 w-3 rounded-full bg-white animate-ping"></div>
-          )}
-          <svg className="absolute bottom-3 right-3 h-8 w-8 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
+          <p className="mt-3 text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+            {stats.pendingOrders}
+          </p>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('admin.dashboard.pendingOrders')}</p>
         </div>
 
         {/* Total Orders */}
-        <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 p-5 shadow-lg shadow-blue-500/20 transition-all hover:shadow-xl hover:shadow-blue-500/30">
-          <div className="relative z-10">
-            <p className="text-sm font-medium text-blue-100">{t('admin.dashboard.totalOrders')}</p>
-            <h3 className="mt-1 text-2xl font-bold text-white lg:text-3xl">
-              {stats.totalOrders.toLocaleString()}
-            </h3>
-            <p className="mt-1 text-xs text-blue-200">
-              {t('admin.dashboard.allTime')}
-            </p>
+        <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4">
+          <div className="flex items-center justify-between">
+            <FaShoppingBag className="w-5 h-5 text-blue-500" />
           </div>
-          <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-white/10 transition-transform group-hover:scale-110"></div>
-          <svg className="absolute bottom-3 right-3 h-8 w-8 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-          </svg>
+          <p className="mt-3 text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+            {stats.totalOrders.toLocaleString()}
+          </p>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('admin.dashboard.totalOrders')}</p>
         </div>
 
         {/* Total Revenue */}
-        <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-500 to-pink-600 p-5 shadow-lg shadow-purple-500/20 transition-all hover:shadow-xl hover:shadow-purple-500/30">
-          <div className="relative z-10">
-            <p className="text-sm font-medium text-purple-100">{t('admin.dashboard.totalRevenue')}</p>
-            <h3 className="mt-1 text-xl font-bold text-white lg:text-2xl">
-              {formatCurrency(stats.totalRevenue)}
-            </h3>
-            <p className="mt-1 text-xs text-purple-200">
-              {t('admin.dashboard.allTimeEarnings')}
-            </p>
+        <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4">
+          <div className="flex items-center justify-between">
+            <FaChartLine className="w-5 h-5 text-purple-500" />
           </div>
-          <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-white/10 transition-transform group-hover:scale-110"></div>
-          <svg className="absolute bottom-3 right-3 h-8 w-8 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-          </svg>
+          <p className="mt-3 text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+            {formatCurrency(stats.totalRevenue)}
+          </p>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('admin.dashboard.totalRevenue')}</p>
         </div>
       </div>
 
       {/* Secondary Stats Row */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {/* Menu Items */}
-        <div className="rounded-xl border border-gray-200 bg-white p-4 transition-all hover:shadow-md dark:border-gray-800 dark:bg-gray-900">
-          <div className="flex items-center justify-between">
+        <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4">
+          <div className="flex items-center gap-3">
+            <FaUtensils className="w-4 h-4 text-gray-400" />
             <div>
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('admin.dashboard.menuItems')}</p>
-              <h3 className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{stats.totalMenuItems}</h3>
-              <p className="mt-0.5 text-xs text-emerald-600 dark:text-emerald-400">{stats.activeMenuItems} {t('admin.dashboard.activeMenus')}</p>
-            </div>
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-100 dark:bg-orange-900/30">
-              <svg className="h-5 w-5 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-              </svg>
+              <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.totalMenuItems}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{t('admin.dashboard.menuItems')}</p>
             </div>
           </div>
         </div>
 
         {/* Categories */}
-        <div className="rounded-xl border border-gray-200 bg-white p-4 transition-all hover:shadow-md dark:border-gray-800 dark:bg-gray-900">
-          <div className="flex items-center justify-between">
+        <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4">
+          <div className="flex items-center gap-3">
+            <FaTags className="w-4 h-4 text-gray-400" />
             <div>
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('admin.dashboard.categories')}</p>
-              <h3 className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{stats.totalCategories}</h3>
-              <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{t('admin.dashboard.menuGroups')}</p>
-            </div>
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900/30">
-              <svg className="h-5 w-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-              </svg>
+              <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.totalCategories}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{t('admin.dashboard.categories')}</p>
             </div>
           </div>
         </div>
 
         {/* Staff */}
-        <div className="rounded-xl border border-gray-200 bg-white p-4 transition-all hover:shadow-md dark:border-gray-800 dark:bg-gray-900">
-          <div className="flex items-center justify-between">
+        <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4">
+          <div className="flex items-center gap-3">
+            <FaUsers className="w-4 h-4 text-gray-400" />
             <div>
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('admin.dashboard.teamMembers')}</p>
-              <h3 className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{stats.totalStaff}</h3>
-              <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{t('admin.dashboard.activeStaff')}</p>
-            </div>
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
-              <svg className="h-5 w-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
+              <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.totalStaff}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{t('admin.dashboard.teamMembers')}</p>
             </div>
           </div>
         </div>
 
         {/* Today's Orders */}
-        <div className="rounded-xl border border-gray-200 bg-white p-4 transition-all hover:shadow-md dark:border-gray-800 dark:bg-gray-900">
-          <div className="flex items-center justify-between">
+        <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4">
+          <div className="flex items-center gap-3">
+            <FaClipboardList className="w-4 h-4 text-gray-400" />
             <div>
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('admin.dashboard.todaysOrders')}</p>
-              <h3 className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{stats.todayOrders}</h3>
-              <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{t('admin.dashboard.ordersReceived')}</p>
-            </div>
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-teal-100 dark:bg-teal-900/30">
-              <svg className="h-5 w-5 text-teal-600 dark:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-              </svg>
+              <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.todayOrders}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{t('admin.dashboard.todaysOrders')}</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Recent Orders & Top Selling */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-3">
         {/* Opening Hours Preview */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
+        <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 sm:p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-              <svg className="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+            <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <FaClock className="w-4 h-4 text-gray-400" />
               {t('admin.dashboard.openingHours')}
             </h3>
             <Link
               href="/admin/dashboard/merchant/edit"
-              className="text-xs text-brand-500 hover:text-brand-600 dark:text-brand-400"
+              className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
             >
               {t('common.edit')}
             </Link>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1">
             {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day, idx) => {
               const hours = merchant.openingHours?.find(h => h.dayOfWeek === idx);
               const today = new Date().getDay();
@@ -370,18 +348,18 @@ export default function MerchantOwnerDashboard({
               return (
                 <div
                   key={day}
-                  className={`flex items-center justify-between py-1.5 px-2 rounded ${isToday ? 'bg-brand-50 dark:bg-brand-900/20' : ''}`}
+                  className={`flex items-center justify-between py-1.5 px-2 rounded text-sm ${isToday ? 'bg-gray-50 dark:bg-gray-800' : ''}`}
                 >
-                  <span className={`text-sm ${isToday ? 'font-semibold text-brand-600 dark:text-brand-400' : 'text-gray-600 dark:text-gray-400'}`}>
-                    {day}
-                    {isToday && <span className="ml-1 text-xs">({t('common.time.today')})</span>}
+                  <span className={`${isToday ? 'font-medium text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400'}`}>
+                    {day.slice(0, 3)}
+                    {isToday && <span className="ml-1 text-xs text-gray-400">•</span>}
                   </span>
-                  <span className={`text-sm ${hours?.isClosed ? 'text-red-500' : 'text-gray-900 dark:text-white'}`}>
+                  <span className={`${hours?.isClosed ? 'text-red-500' : 'text-gray-700 dark:text-gray-300'}`}>
                     {hours?.isClosed
                       ? t('common.closed')
                       : hours?.openTime && hours?.closeTime
                         ? `${hours.openTime} - ${hours.closeTime}`
-                        : t('common.notSet')}
+                        : '-'}
                   </span>
                 </div>
               );
@@ -389,91 +367,81 @@ export default function MerchantOwnerDashboard({
           </div>
         </div>
 
-        {/* Recent Orders - No Images */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900 lg:col-span-2">
+        {/* Recent Orders */}
+        <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 sm:p-6 lg:col-span-2">
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            <h3 className="text-base font-semibold text-gray-900 dark:text-white">
               {t('admin.dashboard.recentOrders')}
             </h3>
             <Link
               href="/admin/dashboard/orders/history"
-              className="text-sm font-medium text-orange-600 hover:text-orange-700 dark:text-orange-400"
+              className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
             >
               {t('common.viewAll')} →
             </Link>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-2">
             {recentOrders.slice(0, 5).map((order) => (
               <div
                 key={order.id.toString()}
-                className="group rounded-xl border border-gray-100 p-4 transition-all hover:border-orange-200 hover:bg-orange-50/50 dark:border-gray-800 dark:hover:border-orange-800 dark:hover:bg-orange-900/10"
+                className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               >
-                <div className="flex items-center justify-between">
-                  {/* Order Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-semibold text-gray-900 dark:text-white">
-                        #{order.orderNumber}
-                      </p>
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${getStatusColor(order.status)}`}>
-                        {order.status.replace(/_/g, ' ')}
-                      </span>
-                    </div>
-                    <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400 truncate">
-                      {formatDate(order.createdAt)} • {order.orderItems.length} item{order.orderItems.length > 1 ? 's' : ''}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium text-gray-900 dark:text-white text-sm">
+                      #{order.orderNumber}
                     </p>
+                    <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${getStatusColor(order.status)}`}>
+                      {order.status.replace(/_/g, ' ')}
+                    </span>
                   </div>
-
-                  {/* Amount */}
-                  <div className="text-right">
-                    <p className="font-bold text-gray-900 dark:text-white">
-                      {formatCurrency(typeof order.totalAmount === 'number' ? order.totalAmount : Number(order.totalAmount))}
-                    </p>
-                  </div>
+                  <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                    {formatDate(order.createdAt)} • {order.orderItems.length} item{order.orderItems.length > 1 ? 's' : ''}
+                  </p>
                 </div>
+                <p className="font-semibold text-gray-900 dark:text-white text-sm">
+                  {formatCurrency(typeof order.totalAmount === 'number' ? order.totalAmount : Number(order.totalAmount))}
+                </p>
               </div>
             ))}
             {recentOrders.length === 0 && (
               <div className="py-8 text-center">
-                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
-                  <svg className="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                  </svg>
-                </div>
+                <FaClipboardList className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
                 <p className="text-sm text-gray-500 dark:text-gray-400">{t('admin.dashboard.noOrdersYet')}</p>
               </div>
             )}
           </div>
         </div>
 
-        {/* Top Selling Items - With Images */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
+        {/* Top Selling Items */}
+        <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 sm:p-6">
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            <h3 className="text-base font-semibold text-gray-900 dark:text-white">
               {t('admin.dashboard.topSelling')}
             </h3>
-            <span className="text-xs text-gray-500 dark:text-gray-400">{t('admin.dashboard.last30Days')}</span>
+            <span className="text-xs text-gray-400">{t('admin.dashboard.last30Days')}</span>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-2">
             {topSellingItems.map((item, index) => (
               <div
                 key={item.menuId.toString()}
-                className="flex items-center gap-3 rounded-xl border border-gray-100 p-3 transition-all hover:border-purple-200 hover:bg-purple-50/50 dark:border-gray-800 dark:hover:border-purple-800 dark:hover:bg-purple-900/10"
+                className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
               >
-                {/* Rank Badge */}
-                <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-sm font-bold ${index === 0
-                  ? 'bg-gradient-to-br from-amber-400 to-yellow-500 text-white'
-                  : index === 1
-                    ? 'bg-gradient-to-br from-gray-300 to-gray-400 text-white'
-                    : index === 2
-                      ? 'bg-gradient-to-br from-orange-300 to-orange-400 text-white'
-                      : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-                  }`}>
-                  {index + 1}
+                {/* Rank */}
+                <div className="shrink-0">
+                  {index === 0 ? (
+                    <FaTrophy className="w-5 h-5 text-amber-500" />
+                  ) : index === 1 ? (
+                    <FaMedal className="w-5 h-5 text-gray-400" />
+                  ) : index === 2 ? (
+                    <FaAward className="w-5 h-5 text-orange-400" />
+                  ) : (
+                    <span className="w-5 h-5 flex items-center justify-center text-xs font-medium text-gray-400">{index + 1}</span>
+                  )}
                 </div>
 
                 {/* Menu Image */}
-                <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg">
+                <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800">
                   {item.menuImageUrl ? (
                     <Image
                       src={item.menuImageUrl}
@@ -482,39 +450,31 @@ export default function MerchantOwnerDashboard({
                       className="object-cover"
                     />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-gray-100 dark:bg-gray-800">
-                      <svg className="h-6 w-6 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
+                    <div className="flex h-full w-full items-center justify-center">
+                      <FaUtensils className="w-4 h-4 text-gray-300 dark:text-gray-600" />
                     </div>
                   )}
                 </div>
 
                 {/* Item Info */}
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900 dark:text-white truncate">
+                  <p className="font-medium text-gray-900 dark:text-white text-sm truncate">
                     {item.menuName}
                   </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
                     {item.totalQuantity} {t('admin.dashboard.sold')}
                   </p>
                 </div>
 
                 {/* Revenue */}
-                <div className="text-right">
-                  <p className="font-semibold text-gray-900 dark:text-white">
-                    {formatCurrency(item.totalRevenue)}
-                  </p>
-                </div>
+                <p className="font-medium text-gray-900 dark:text-white text-sm">
+                  {formatCurrency(item.totalRevenue)}
+                </p>
               </div>
             ))}
             {topSellingItems.length === 0 && (
               <div className="py-8 text-center">
-                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
-                  <svg className="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                </div>
+                <FaChartBar className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
                 <p className="text-sm text-gray-500 dark:text-gray-400">{t('admin.dashboard.noSalesDataYet')}</p>
               </div>
             )}
@@ -523,10 +483,10 @@ export default function MerchantOwnerDashboard({
       </div>
 
       {/* Order Status & Low Stock */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
         {/* Order Status Breakdown */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-          <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
+        <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 sm:p-6">
+          <h3 className="mb-4 text-base font-semibold text-gray-900 dark:text-white">
             {t('admin.dashboard.orderStatusOverview')}
           </h3>
           <div className="space-y-3">
@@ -536,22 +496,22 @@ export default function MerchantOwnerDashboard({
                 <div key={item.status}>
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
-                      <div className={`h-3 w-3 rounded-full ${item.status === 'COMPLETED' ? 'bg-emerald-500' :
+                      <div className={`h-2 w-2 rounded-full ${item.status === 'COMPLETED' ? 'bg-emerald-500' :
                         item.status === 'PENDING' ? 'bg-amber-500' :
                           item.status === 'CANCELLED' ? 'bg-red-500' :
                             item.status === 'IN_PROGRESS' ? 'bg-blue-500' :
                               item.status === 'READY' ? 'bg-purple-500' :
                                 'bg-gray-400'
                         }`} />
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
                         {item.status.replace(/_/g, ' ')}
                       </span>
                     </div>
-                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">
                       {item.count}
                     </span>
                   </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
                     <div
                       className={`h-full rounded-full transition-all duration-500 ${item.status === 'COMPLETED' ? 'bg-emerald-500' :
                         item.status === 'PENDING' ? 'bg-amber-500' :
@@ -575,46 +535,30 @@ export default function MerchantOwnerDashboard({
         </div>
 
         {/* Low Stock Alert */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
+        <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 sm:p-6">
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            <h3 className="text-base font-semibold text-gray-900 dark:text-white">
               {t('admin.dashboard.lowStockAlert')}
             </h3>
             {lowStockItems.length > 0 && (
-              <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+              <span className="rounded px-2 py-0.5 text-xs font-medium bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400">
                 {lowStockItems.length} items
               </span>
             )}
           </div>
-          <div className="space-y-3">
+          <div className="space-y-2">
             {lowStockItems.map((item) => (
               <div
                 key={item.id.toString()}
-                className="flex items-center justify-between rounded-xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 p-3 dark:border-amber-800 dark:from-amber-900/20 dark:to-orange-900/20"
+                className="flex items-center justify-between p-3 rounded-lg bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20"
               >
                 <div className="flex items-center gap-3">
-                  {/* Menu Image */}
-                  <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg">
-                    {item.imageUrl ? (
-                      <Image
-                        src={item.imageUrl}
-                        alt={item.name}
-                        fill
-                        className="object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center bg-amber-100 dark:bg-amber-900/30">
-                        <svg className="h-6 w-6 text-amber-400 dark:text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                      </div>
-                    )}
-                  </div>
+                  <FaExclamationTriangle className="w-4 h-4 text-amber-500 shrink-0" />
                   <div>
-                    <p className="font-medium text-gray-900 dark:text-white">
+                    <p className="font-medium text-gray-900 dark:text-white text-sm">
                       {item.name}
                     </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
                       {formatCurrency(typeof item.price === 'number' ? item.price : Number(item.price))}
                     </p>
                   </div>
@@ -623,20 +567,16 @@ export default function MerchantOwnerDashboard({
                   <p className="text-lg font-bold text-amber-600 dark:text-amber-400">
                     {item.stockQty || 0}
                   </p>
-                  <p className="text-xs text-amber-500 dark:text-amber-500">
+                  <p className="text-xs text-amber-500">
                     {t('admin.dashboard.left')}
                   </p>
                 </div>
               </div>
             ))}
             {lowStockItems.length === 0 && (
-              <div className="rounded-xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50 p-4 text-center dark:border-emerald-800 dark:from-emerald-900/20 dark:to-teal-900/20">
-                <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/50">
-                  <svg className="h-5 w-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
+              <div className="rounded-lg bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-900/20 p-4 text-center">
+                <FaCheckCircle className="w-6 h-6 text-emerald-500 mx-auto mb-2" />
+                <p className="text-sm text-emerald-700 dark:text-emerald-400">
                   {t('admin.dashboard.allItemsSufficientStock')}
                 </p>
               </div>
@@ -646,54 +586,38 @@ export default function MerchantOwnerDashboard({
       </div>
 
       {/* Quick Actions */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-        <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
+      <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 sm:p-6">
+        <h3 className="mb-4 text-base font-semibold text-gray-900 dark:text-white">
           {t('admin.dashboard.quickActions')}
         </h3>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-4">
           <Link
             href="/admin/dashboard/orders/queue"
-            className="flex flex-col items-center gap-2 rounded-xl border border-gray-200 p-4 text-center transition-all hover:border-orange-300 hover:bg-orange-50 dark:border-gray-800 dark:hover:border-orange-700 dark:hover:bg-orange-900/20"
+            className="flex flex-col items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 p-3 sm:p-4 text-center transition-all hover:bg-gray-50 dark:hover:bg-gray-800"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-100 dark:bg-orange-900/30">
-              <svg className="h-5 w-5 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-            </div>
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('admin.dashboard.orderQueue')}</span>
+            <FaClipboardList className="w-5 h-5 text-gray-500" />
+            <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">{t('admin.dashboard.orderQueue')}</span>
           </Link>
           <Link
             href="/admin/dashboard/menu"
-            className="flex flex-col items-center gap-2 rounded-xl border border-gray-200 p-4 text-center transition-all hover:border-purple-300 hover:bg-purple-50 dark:border-gray-800 dark:hover:border-purple-700 dark:hover:bg-purple-900/20"
+            className="flex flex-col items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 p-3 sm:p-4 text-center transition-all hover:bg-gray-50 dark:hover:bg-gray-800"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900/30">
-              <svg className="h-5 w-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-              </svg>
-            </div>
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('admin.dashboard.manageMenu')}</span>
+            <FaUtensils className="w-5 h-5 text-gray-500" />
+            <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">{t('admin.dashboard.manageMenu')}</span>
           </Link>
           <Link
             href="/admin/dashboard/staff"
-            className="flex flex-col items-center gap-2 rounded-xl border border-gray-200 p-4 text-center transition-all hover:border-blue-300 hover:bg-blue-50 dark:border-gray-800 dark:hover:border-blue-700 dark:hover:bg-blue-900/20"
+            className="flex flex-col items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 p-3 sm:p-4 text-center transition-all hover:bg-gray-50 dark:hover:bg-gray-800"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
-              <svg className="h-5 w-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
-            </div>
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('admin.dashboard.manageStaff')}</span>
+            <FaUserTie className="w-5 h-5 text-gray-500" />
+            <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">{t('admin.dashboard.manageStaff')}</span>
           </Link>
           <Link
             href="/admin/dashboard/reports"
-            className="flex flex-col items-center gap-2 rounded-xl border border-gray-200 p-4 text-center transition-all hover:border-emerald-300 hover:bg-emerald-50 dark:border-gray-800 dark:hover:border-emerald-700 dark:hover:bg-emerald-900/20"
+            className="flex flex-col items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 p-3 sm:p-4 text-center transition-all hover:bg-gray-50 dark:hover:bg-gray-800"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
-              <svg className="h-5 w-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-            </div>
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('admin.dashboard.viewReports')}</span>
+            <FaFileAlt className="w-5 h-5 text-gray-500" />
+            <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">{t('admin.dashboard.viewReports')}</span>
           </Link>
         </div>
       </div>
