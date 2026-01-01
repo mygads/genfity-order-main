@@ -6,11 +6,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/middleware/auth';
 import userNotificationService from '@/lib/services/UserNotificationService';
-import type { UserNotificationCategory } from '@prisma/client';
+import type { UserNotificationCategory, UserRole } from '@prisma/client';
+
+// Categories allowed for Super Admin
+const SUPER_ADMIN_CATEGORIES: UserNotificationCategory[] = ['SYSTEM', 'PAYMENT', 'SUBSCRIPTION'];
 
 async function handleGet(req: NextRequest) {
     try {
         const userId = (req as unknown as { userId: bigint }).userId;
+        const userRole = (req as unknown as { userRole: UserRole }).userRole;
         const { searchParams } = new URL(req.url);
 
         const page = parseInt(searchParams.get('page') || '1');
@@ -19,6 +23,10 @@ async function handleGet(req: NextRequest) {
         const isReadParam = searchParams.get('isRead');
         const isRead = isReadParam === 'true' ? true : isReadParam === 'false' ? false : undefined;
 
+        // For Super Admin, filter to only relevant categories
+        const isSuperAdmin = userRole === 'SUPER_ADMIN';
+        const allowedCategories = isSuperAdmin ? SUPER_ADMIN_CATEGORIES : undefined;
+
         const result = await userNotificationService.getNotifications(userId, {
             page,
             limit,
@@ -26,6 +34,7 @@ async function handleGet(req: NextRequest) {
                 ...(category ? { category } : {}),
                 ...(typeof isRead === 'boolean' ? { isRead } : {}),
             },
+            allowedCategories,
         });
 
         // Serialize BigInt

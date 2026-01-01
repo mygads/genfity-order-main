@@ -153,15 +153,18 @@ class UserNotificationService {
             page?: number;
             limit?: number;
             filters?: NotificationFilters;
+            allowedCategories?: UserNotificationCategory[];
         } = {}
     ) {
-        const { page = 1, limit = 20, filters = {} } = options;
+        const { page = 1, limit = 20, filters = {}, allowedCategories } = options;
         const skip = (page - 1) * limit;
 
         const where = {
             userId,
             ...(filters.category ? { category: filters.category } : {}),
             ...(typeof filters.isRead === 'boolean' ? { isRead: filters.isRead } : {}),
+            // Filter by allowed categories if specified
+            ...(allowedCategories ? { category: { in: allowedCategories } } : {}),
         };
 
         const [notifications, total] = await Promise.all([
@@ -185,12 +188,14 @@ class UserNotificationService {
 
     /**
      * Get unread count for a user
+     * @param allowedCategories - Optional filter for specific notification categories
      */
-    async getUnreadCount(userId: bigint): Promise<number> {
+    async getUnreadCount(userId: bigint, allowedCategories?: UserNotificationCategory[]): Promise<number> {
         return prisma.userNotification.count({
             where: {
                 userId,
                 isRead: false,
+                ...(allowedCategories ? { category: { in: allowedCategories } } : {}),
             },
         });
     }
