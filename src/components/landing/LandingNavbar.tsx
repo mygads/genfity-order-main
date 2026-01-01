@@ -1,0 +1,180 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { useTranslation } from '@/lib/i18n/useTranslation';
+import { useRouter } from 'next/navigation';
+
+export default function LandingNavbar() {
+    const { t, locale: language, setLocale: setLanguage } = useTranslation();
+    const router = useRouter();
+    const [isScrolled, setIsScrolled] = useState(false);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [merchantCode, setMerchantCode] = useState('');
+
+    useEffect(() => {
+        const handleScroll = () => {
+            setIsScrolled(window.scrollY > 20);
+        };
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    const scrollToSection = (id: string) => {
+        setIsMobileMenuOpen(false);
+        const element = document.getElementById(id);
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth' });
+        }
+    };
+
+    const handleMerchantCodeSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (merchantCode.trim()) {
+            router.push(`/${merchantCode.toUpperCase()}`);
+        }
+    };
+
+    return (
+        <nav
+            className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b ${isScrolled
+                ? 'bg-white/80 dark:bg-gray-900/80 backdrop-blur-md shadow-sm border-gray-200 dark:border-gray-800'
+                : 'bg-transparent border-transparent py-4'
+                }`}
+        >
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="flex justify-between items-center h-16 sm:h-20">
+
+                    <Link href="/" className="flex-shrink-0 flex items-center cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+                        <div className="relative h-10 w-32 md:w-36">
+                            {/* Light Mode Logo */}
+                            <Image
+                                src="/images/logo/logo.png"
+                                alt="Genfity"
+                                fill
+                                className="object-contain block dark:hidden"
+                                priority
+                            />
+                            {/* Dark Mode Logo */}
+                            <Image
+                                src="/images/logo/logo-dark-mode.png"
+                                alt="Genfity"
+                                fill
+                                className="object-contain hidden dark:block"
+                                priority
+                            />
+                        </div>
+                    </Link>
+
+                    {/* Desktop Navigation */}
+                    <div className="hidden lg:flex items-center space-x-8">
+                        <button onClick={() => scrollToSection('features')} className="text-sm font-medium text-gray-600 hover:text-orange-500 dark:text-gray-300 dark:hover:text-orange-400 transition-colors">
+                            {t('landing.nav.features')}
+                        </button>
+                        <button onClick={() => scrollToSection('pricing')} className="text-sm font-medium text-gray-600 hover:text-orange-500 dark:text-gray-300 dark:hover:text-orange-400 transition-colors">
+                            {t('landing.nav.pricing')}
+                        </button>
+                        <button onClick={() => scrollToSection('howItWorks')} className="text-sm font-medium text-gray-600 hover:text-orange-500 dark:text-gray-300 dark:hover:text-orange-400 transition-colors">
+                            {t('landing.nav.howItWorks')}
+                        </button>
+                    </div>
+
+                    {/* Right Actions */}
+                    <div className="hidden lg:flex items-center space-x-4">
+                        {/* Language Toggle */}
+                        <div className="bg-gray-100 dark:bg-gray-800 rounded-full p-1 flex items-center">
+                            <button
+                                onClick={() => setLanguage('id')}
+                                className={`px-3 py-1 text-xs font-bold rounded-full transition-all ${language === 'id' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500 hover:text-gray-900'
+                                    }`}
+                            >
+                                ID
+                            </button>
+                            <button
+                                onClick={() => setLanguage('en')}
+                                className={`px-3 py-1 text-xs font-bold rounded-full transition-all ${language === 'en' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500 hover:text-gray-900'
+                                    }`}
+                            >
+                                EN
+                            </button>
+                        </div>
+
+                        <div className="h-6 w-px bg-gray-200 dark:bg-gray-700 mx-2"></div>
+
+                        <Link href="/admin/login" className="text-sm font-semibold text-gray-700 hover:text-orange-600 dark:text-white dark:hover:text-orange-400">
+                            {t('landing.nav.login')}
+                        </Link>
+
+                        <Link
+                            href="/merchant/register"
+                            className="px-5 py-2.5 bg-gray-900 text-white text-sm font-bold rounded-full hover:bg-orange-600 transition-colors shadow-lg shadow-orange-500/10"
+                        >
+                            {t('landing.nav.register')}
+                        </Link>
+                    </div>
+
+                    {/* Mobile Menu Button */}
+                    <div className="flex lg:hidden items-center gap-4">
+                        {/* Mobile Language Toggle (Simplified) */}
+                        <button
+                            onClick={() => setLanguage(language === 'en' ? 'id' : 'en')}
+                            className="text-sm font-bold text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 px-2 py-1 rounded-md"
+                        >
+                            {language.toUpperCase()}
+                        </button>
+
+                        <button
+                            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                            className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white focus:outline-none"
+                        >
+                            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                {isMobileMenuOpen ? (
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                ) : (
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                                )}
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Mobile Menu Drawer */}
+            <div
+                className={`lg:hidden fixed inset-0 z-40 transform transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
+                    }`}
+            >
+                <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity" onClick={() => setIsMobileMenuOpen(false)}></div>
+                <div className="absolute right-0 top-0 h-full w-[80%] max-w-sm bg-white dark:bg-gray-900 shadow-2xl p-6 flex flex-col gap-6 overflow-y-auto">
+                    <div className="flex justify-end">
+                        <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 text-gray-500">
+                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                    </div>
+
+                    <div className="space-y-4">
+                        <button onClick={() => scrollToSection('features')} className="block text-lg font-medium text-gray-900 dark:text-white">{t('landing.nav.features')}</button>
+                        <button onClick={() => scrollToSection('pricing')} className="block text-lg font-medium text-gray-900 dark:text-white">{t('landing.nav.pricing')}</button>
+                        <button onClick={() => scrollToSection('howItWorks')} className="block text-lg font-medium text-gray-900 dark:text-white">{t('landing.nav.howItWorks')}</button>
+                    </div>
+
+                    <hr className="border-gray-100 dark:border-gray-800" />
+
+                    <div className="space-y-4">
+                        <Link href="/admin/login" className="block w-full py-3 text-center rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-bold">
+                            {t('landing.nav.login')}
+                        </Link>
+                        <Link href="/admin/login?register=true" className="block w-full py-3 text-center rounded-xl bg-orange-500 text-white font-bold shadow-lg shadow-orange-500/20">
+                            {t('landing.nav.register')}
+                        </Link>
+                    </div>
+
+                    <div className="mt-auto">
+                        <p className="text-xs text-center text-gray-400">© 2025 Genfity</p>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    );
+}

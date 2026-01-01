@@ -102,8 +102,8 @@ function MerchantSelectionModal({
                     </h3>
                     {/* Status Badge */}
                     <span className={`flex-shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${merchant.isOpen
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-gray-100 text-gray-600'
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-gray-100 text-gray-600'
                       }`}>
                       <span className={`h-1.5 w-1.5 rounded-full ${merchant.isOpen ? 'bg-green-500' : 'bg-gray-400'
                         }`}></span>
@@ -121,8 +121,8 @@ function MerchantSelectionModal({
                   {/* Role Badge */}
                   <div className="mt-2">
                     <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${merchant.role === 'OWNER'
-                        ? 'bg-purple-100 text-purple-700'
-                        : 'bg-blue-100 text-blue-700'
+                      ? 'bg-purple-100 text-purple-700'
+                      : 'bg-blue-100 text-blue-700'
                       }`}>
                       {merchant.role === 'OWNER' ? t('admin.staff.owner') : t('admin.staff.staffRole')}
                     </span>
@@ -750,7 +750,7 @@ function AdminLoginForm() {
                 {t('auth.dontHaveAccount')}{' '}
               </span>
               <Link
-                href="/admin/register"
+                href="/merchant/register"
                 style={{
                   fontFamily: 'Inter, sans-serif',
                   fontWeight: 600,

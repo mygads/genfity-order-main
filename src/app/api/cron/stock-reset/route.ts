@@ -81,15 +81,18 @@ export async function POST(req: NextRequest) {
             `;
 
             // Reset addon items with autoResetStock enabled
+            // addon_items doesn't have merchant_id directly, it's linked via addon_category_id
             const addonResetCount = await prisma.$executeRaw`
-                UPDATE addon_items 
-                SET stock_qty = daily_stock_template,
+                UPDATE addon_items ai
+                SET stock_qty = ai.daily_stock_template,
                     last_stock_reset_at = NOW(),
-                    is_active = CASE WHEN daily_stock_template > 0 THEN true ELSE is_active END
-                WHERE merchant_id = ${merchant.id}
-                AND auto_reset_stock = true
-                AND daily_stock_template IS NOT NULL
-                AND deleted_at IS NULL
+                    is_active = CASE WHEN ai.daily_stock_template > 0 THEN true ELSE ai.is_active END
+                FROM addon_categories ac
+                WHERE ai.addon_category_id = ac.id
+                AND ac.merchant_id = ${merchant.id}
+                AND ai.auto_reset_stock = true
+                AND ai.daily_stock_template IS NOT NULL
+                AND ai.deleted_at IS NULL
             `;
 
             if (menuResetCount > 0 || addonResetCount > 0) {
