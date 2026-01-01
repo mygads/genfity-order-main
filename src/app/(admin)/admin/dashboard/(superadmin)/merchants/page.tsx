@@ -270,7 +270,7 @@ export default function MerchantsPage() {
   };
 
   return (
-    <div className="w-full max-w-full overflow-hidden">
+    <div className="w-full min-w-0">
       <ToastContainer toasts={toasts} />
       <ConfirmDialog
         isOpen={deleteDialog.isOpen}
@@ -284,7 +284,7 @@ export default function MerchantsPage() {
       />
       <PageBreadcrumb pageTitle="Merchants Management" />
 
-      <div className="w-full max-w-full overflow-hidden rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
+      <div className="min-w-0 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
         <div className="mb-5">
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
             All Merchants
@@ -384,9 +384,9 @@ export default function MerchantsPage() {
 
         {/* Merchants Table */}
         {!loading && !merchantsError && (
-          <div className="relative w-full rounded-xl border border-gray-200 dark:border-white/[0.05]">
-            <div className="w-full overflow-x-auto" style={{ maxWidth: '100%' }}>
-              <table className="w-full" style={{ minWidth: '1200px' }}>
+          <div className="relative rounded-xl border border-gray-200 dark:border-white/[0.05]" style={{ contain: 'inline-size' }}>
+            <div className="overflow-x-auto">
+              <table className="w-full whitespace-nowrap" style={{ minWidth: '1200px' }}>
                 <thead>
                   <tr className="border-b border-gray-100 bg-gray-50 text-left dark:border-white/[0.05] dark:bg-white/[0.02]">
                     <th className="w-[60px] min-w-[60px] px-4 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">

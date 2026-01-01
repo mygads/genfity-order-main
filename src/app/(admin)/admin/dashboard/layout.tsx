@@ -76,7 +76,7 @@ export default function AdminDashboardLayout({
                 <SubscriptionAlerts />
 
                 {/* Page Content */}
-                <div className="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6">
+                <div className="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6 overflow-x-hidden">
                   {children}
                 </div>
               </div>
