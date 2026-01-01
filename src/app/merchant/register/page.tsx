@@ -338,176 +338,178 @@ export default function MerchantRegisterPage() {
     }
 
     return (
-        <div
-            className="min-h-screen flex items-center justify-center p-4 md:p-10 lg:p-20"
-            style={{
-                background: "linear-gradient(109.78deg, #FFFFFF 2.1%, #E7EEF5 100%)",
-            }}
-        >
-            <div className="w-full max-w-[1200px] flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-16">
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
+            {/* Background Pattern */}
+            <div className="fixed inset-0 pointer-events-none overflow-hidden">
+                <div className="absolute -top-40 -right-40 w-96 h-96 bg-[#173C82]/5 rounded-full blur-3xl" />
+                <div className="absolute top-1/2 -left-40 w-80 h-80 bg-orange-500/5 rounded-full blur-3xl" />
+            </div>
 
-                {/* Left Side - Carousel (Hidden on mobile) */}
-                <div className="hidden lg:flex flex-col items-center justify-center flex-1 max-w-[500px]">
-                    {/* Carousel Image */}
-                    <div className="relative w-full h-[300px] mb-6">
-                        {carouselSlides.map((slide, index) => (
-                            <div
-                                key={index}
-                                className={`absolute inset-0 transition-opacity duration-500 flex items-center justify-center ${currentSlide === index ? "opacity-100" : "opacity-0"
-                                    }`}
-                            >
+            <div className="relative z-10 min-h-screen flex items-center justify-center p-4 md:p-8 lg:p-12">
+                <div className="w-full max-w-6xl flex flex-col lg:flex-row items-stretch gap-8 lg:gap-0">
+
+                    {/* Left Side - Info Panel (Hidden on mobile) */}
+                    <div className="hidden lg:flex flex-col justify-between flex-1 bg-gradient-to-br from-[#173C82] to-[#0f2a5c] rounded-l-2xl p-10 text-white relative overflow-hidden">
+                        {/* Decorative elements */}
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+                        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+                        
+                        {/* Logo */}
+                        <div className="relative z-10">
+                            <Link href="/" className="inline-block">
                                 <Image
-                                    src={slide.image}
-                                    alt={t(slide.titleKey)}
-                                    width={400}
-                                    height={300}
-                                    className="object-contain"
-                                    priority={index === 0}
+                                    src="/images/logo/logo-dark-mode.png"
+                                    alt="GENFITY"
+                                    width={160}
+                                    height={45}
+                                    priority
                                 />
+                            </Link>
+                        </div>
+
+                        {/* Carousel Content */}
+                        <div className="relative z-10 flex-1 flex flex-col justify-center py-8">
+                            {/* Carousel Image */}
+                            <div className="relative w-full h-[220px] mb-8">
+                                {carouselSlides.map((slide, index) => (
+                                    <div
+                                        key={index}
+                                        className={`absolute inset-0 transition-all duration-700 flex items-center justify-center ${
+                                            currentSlide === index ? "opacity-100 scale-100" : "opacity-0 scale-95"
+                                        }`}
+                                    >
+                                        <Image
+                                            src={slide.image}
+                                            alt={t(slide.titleKey)}
+                                            width={320}
+                                            height={220}
+                                            className="object-contain drop-shadow-2xl"
+                                            priority={index === 0}
+                                        />
+                                    </div>
+                                ))}
                             </div>
-                        ))}
-                    </div>
 
-                    {/* Carousel Text */}
-                    <div className="text-center mb-4">
-                        <h2
-                            className="mb-2 transition-all duration-500"
-                            style={{
-                                fontFamily: "Inter, sans-serif",
-                                fontWeight: 700,
-                                fontSize: "18px",
-                                lineHeight: "36px",
-                                color: "#373A49",
-                            }}
-                        >
-                            {t(carouselSlides[currentSlide].titleKey)}
-                        </h2>
-                        <p
-                            className="transition-all duration-500"
-                            style={{
-                                fontFamily: "Inter, sans-serif",
-                                fontWeight: 400,
-                                fontSize: "16px",
-                                lineHeight: "22.4px",
-                                color: "#373A49",
-                            }}
-                        >
-                            {t(carouselSlides[currentSlide].descriptionKey)}
-                        </p>
-                    </div>
+                            {/* Carousel Text */}
+                            <div className="text-center space-y-3">
+                                <h2 className="text-xl font-bold transition-all duration-500">
+                                    {t(carouselSlides[currentSlide].titleKey)}
+                                </h2>
+                                <p className="text-blue-100 text-sm leading-relaxed max-w-sm mx-auto transition-all duration-500">
+                                    {t(carouselSlides[currentSlide].descriptionKey)}
+                                </p>
+                            </div>
 
-                    {/* Carousel Dots */}
-                    <div className="flex items-center gap-2">
-                        {carouselSlides.map((_, index) => (
-                            <button
-                                key={index}
-                                onClick={() => setCurrentSlide(index)}
-                                className="transition-all duration-300"
-                                style={{
-                                    width: currentSlide === index ? "16px" : "8px",
-                                    height: "8px",
-                                    borderRadius: "8px",
-                                    backgroundColor: currentSlide === index ? "#F07600" : "#D9D9D9",
-                                }}
-                                aria-label={`Go to slide ${index + 1}`}
-                            />
-                        ))}
-                    </div>
-                </div>
-
-                {/* Right Side - Registration Card */}
-                <div
-                    className="w-full max-w-[450px]"
-                    style={{
-                        backgroundColor: "#FFFFFF",
-                        borderRadius: "12px",
-                        boxShadow: "4px 4px 9px 0px rgba(135, 159, 190, 0.15)",
-                        padding: "40px 30px",
-                    }}
-                >
-                    {/* Logo */}
-                    <div className="flex justify-center mb-6">
-                        <Link href="/">
-                            <Image
-                                src="/images/logo/logo.png"
-                                alt="Genfity"
-                                width={180}
-                                height={50}
-                                className="dark:hidden"
-                                priority
-                            />
-                            <Image
-                                src="/images/logo/logo-dark-mode.png"
-                                alt="Genfity"
-                                width={180}
-                                height={50}
-                                className="hidden dark:block"
-                                priority
-                            />
-                        </Link>
-                    </div>
-
-                    {/* Header */}
-                    <div className="text-center mb-6">
-                        <h1
-                            style={{
-                                fontFamily: "Inter, sans-serif",
-                                fontWeight: 700,
-                                fontSize: "24px",
-                                color: "#373A49",
-                                marginBottom: "8px",
-                            }}
-                        >
-                            {t("register.title")}
-                        </h1>
-                        <p
-                            style={{
-                                fontFamily: "Inter, sans-serif",
-                                fontWeight: 400,
-                                fontSize: "14px",
-                                color: "#6B7280",
-                            }}
-                        >
-                            {t("register.subtitle")}
-                        </p>
-                    </div>
-
-                    {/* Progress Steps */}
-                    <div className="flex items-center justify-center mb-6">
-                        <div className={`flex items-center justify-center w-8 h-8 rounded-full font-medium text-sm ${step >= 1 ? "bg-orange-500 text-white" : "bg-gray-200 text-gray-600"}`}>
-                            1
+                            {/* Carousel Dots */}
+                            <div className="flex items-center justify-center gap-2 mt-6">
+                                {carouselSlides.map((_, index) => (
+                                    <button
+                                        key={index}
+                                        onClick={() => setCurrentSlide(index)}
+                                        className={`transition-all duration-300 rounded-full ${
+                                            currentSlide === index 
+                                                ? "w-6 h-2 bg-orange-400" 
+                                                : "w-2 h-2 bg-white/30 hover:bg-white/50"
+                                        }`}
+                                        aria-label={`Go to slide ${index + 1}`}
+                                    />
+                                ))}
+                            </div>
                         </div>
-                        <div className={`w-16 h-1 mx-2 ${step >= 2 ? "bg-orange-500" : "bg-gray-200"}`} />
-                        <div className={`flex items-center justify-center w-8 h-8 rounded-full font-medium text-sm ${step >= 2 ? "bg-orange-500 text-white" : "bg-gray-200 text-gray-600"}`}>
-                            2
+
+                        {/* Trust Badges */}
+                        <div className="relative z-10 flex items-center justify-center gap-6 pt-4 border-t border-white/10">
+                            <div className="flex items-center gap-2 text-sm text-blue-100">
+                                <svg className="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                </svg>
+                                <span>Free 30-day trial</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-blue-100">
+                                <svg className="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                </svg>
+                                <span>No credit card</span>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Error Alert */}
-                    {error && (
-                        <div
-                            className="mb-4 p-3 rounded-lg flex items-start gap-3"
-                            style={{ backgroundColor: "#FEF2F2" }}
-                        >
-                            <span className="text-red-500 text-lg">⚠</span>
-                            <p
-                                style={{
-                                    fontFamily: "Inter, sans-serif",
-                                    fontWeight: 400,
-                                    fontSize: "13px",
-                                    color: "#DC2626",
-                                }}
-                            >
-                                {error}
-                            </p>
-                        </div>
-                    )}
+                    {/* Right Side - Registration Form */}
+                    <div className="w-full lg:w-[480px] bg-white dark:bg-gray-800 lg:rounded-r-2xl lg:rounded-l-none rounded-2xl shadow-2xl shadow-gray-200/50 dark:shadow-none">
+                        <div className="p-6 sm:p-8 lg:p-10">
+                            {/* Mobile Logo */}
+                            <div className="flex justify-center mb-6 lg:hidden">
+                                <Link href="/">
+                                    <Image
+                                        src="/images/logo/logo.png"
+                                        alt="GENFITY"
+                                        width={150}
+                                        height={42}
+                                        className="dark:hidden"
+                                        priority
+                                    />
+                                    <Image
+                                        src="/images/logo/logo-dark-mode.png"
+                                        alt="GENFITY"
+                                        width={150}
+                                        height={42}
+                                        className="hidden dark:block"
+                                        priority
+                                    />
+                                </Link>
+                            </div>
 
-                    {/* Form */}
-                    <form onSubmit={handleSubmit}>
-                        {step === 1 && (
-                            <div className="space-y-4">
-                                <p className="text-sm font-medium text-gray-700 mb-2">{t("register.step1")}</p>
+                            {/* Header */}
+                            <div className="text-center mb-8">
+                                <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                                    {t("register.title")}
+                                </h1>
+                                <p className="text-gray-500 dark:text-gray-400 text-sm">
+                                    {t("register.subtitle")}
+                                </p>
+                            </div>
+
+                            {/* Progress Steps */}
+                            <div className="flex items-center justify-center gap-3 mb-8">
+                                <div className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                                    step === 1 
+                                        ? "bg-[#173C82] text-white" 
+                                        : "bg-[#173C82]/10 text-[#173C82]"
+                                }`}>
+                                    <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${
+                                        step === 1 ? "bg-white/20" : "bg-[#173C82] text-white"
+                                    }`}>
+                                        {step > 1 ? "✓" : "1"}
+                                    </span>
+                                    {t("register.step1Label")}
+                                </div>
+                                <div className={`w-8 h-0.5 ${step >= 2 ? "bg-[#173C82]" : "bg-gray-200 dark:bg-gray-700"}`} />
+                                <div className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                                    step === 2 
+                                        ? "bg-[#173C82] text-white" 
+                                        : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
+                                }`}>
+                                    <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${
+                                        step === 2 ? "bg-white/20" : "bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400"
+                                    }`}>2</span>
+                                    {t("register.step2Label")}
+                                </div>
+                            </div>
+
+                            {/* Error Alert */}
+                            {error && (
+                                <div className="mb-6 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 flex items-start gap-3">
+                                    <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                    </svg>
+                                    <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
+                                </div>
+                            )}
+
+                            {/* Form */}
+                            <form onSubmit={handleSubmit}>
+                                {step === 1 && (
+                                    <div className="space-y-5">
 
                                 {/* Merchant Name */}
                                 <div>
@@ -548,108 +550,82 @@ export default function MerchantRegisterPage() {
                                 </div>
 
                                 {/* Location Detection Section */}
-                                <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                                    <div className="flex items-center justify-between mb-3">
-                                        <label className="block text-sm font-medium text-gray-700">
-                                            {t("register.location")}
+                                <div className="space-y-4">
+                                    {/* Country with Detect Button */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            {t("register.country")} <span className="text-red-500">*</span>
                                         </label>
-                                        {locationDetected && (
-                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                                ✓ {t("register.autoDetectedBadge")}
-                                            </span>
-                                        )}
-                                    </div>
-                                    
-                                    {/* Detect Location Button */}
-                                    <button
-                                        type="button"
-                                        onClick={handleDetectLocation}
-                                        disabled={geolocation.isDetecting}
-                                        className="w-full mb-3 px-4 py-2.5 rounded-lg border border-orange-300 bg-orange-50 hover:bg-orange-100 text-orange-700 font-medium text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        {geolocation.isDetecting ? (
-                                            <>
-                                                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                                                </svg>
-                                                {t("register.detectingLocation")}
-                                            </>
-                                        ) : (
-                                            <>
-                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                </svg>
-                                                {t("register.detectLocation")}
-                                            </>
-                                        )}
-                                    </button>
-                                    
-                                    {/* Location error message */}
-                                    {geolocation.error && (
-                                        <p className="text-amber-600 text-xs mb-3 flex items-center gap-1">
-                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                            </svg>
-                                            {geolocation.error}
-                                        </p>
-                                    )}
-                                    
-                                    {/* Location detected success */}
-                                    {locationDetected && !geolocation.error && !locationMismatch && (
-                                        <p className="text-green-600 text-xs mb-3 flex items-center gap-1">
-                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                            </svg>
-                                            {t("register.locationDetected")} - {t("register.locationManualHint")}
-                                        </p>
-                                    )}
-                                    
-                                    {/* Location mismatch warning */}
-                                    {locationMismatch && detectedCountryFromGPS && (
-                                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3">
-                                            <div className="flex items-start gap-2">
-                                                <svg className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <div className="flex gap-2">
+                                            <select
+                                                name="country"
+                                                value={formData.country}
+                                                onChange={handleCountryChange}
+                                                className="flex-1 px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-[#173C82] focus:border-transparent text-sm bg-white dark:bg-gray-700 dark:text-white"
+                                            >
+                                                {COUNTRY_OPTIONS.map(country => (
+                                                    <option key={country.code} value={country.name}>
+                                                        {country.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <button
+                                                type="button"
+                                                onClick={handleDetectLocation}
+                                                disabled={geolocation.isDetecting}
+                                                className="px-3 py-2.5 rounded-lg bg-[#173C82] hover:bg-[#122c60] text-white text-sm font-medium transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                                            >
+                                                {geolocation.isDetecting ? (
+                                                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                                    </svg>
+                                                ) : (
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    </svg>
+                                                )}
+                                                <span className="hidden sm:inline">{geolocation.isDetecting ? t("register.detectingLocation") : t("register.detectLocation")}</span>
+                                            </button>
+                                        </div>
+                                        
+                                        {/* Status messages */}
+                                        {geolocation.error && (
+                                            <p className="text-amber-600 dark:text-amber-400 text-xs mt-1.5 flex items-center gap-1">
+                                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                                                 </svg>
-                                                <p className="text-amber-700 text-xs leading-relaxed">
-                                                    {t("register.locationMismatchWarning")
-                                                        .replace("{detectedCountry}", detectedCountryFromGPS)
-                                                        .replace("{selectedCountry}", formData.country)
-                                                        .replace("{selectedCurrency}", formData.currency)}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    )}
-                                    
-                                    {/* Country Dropdown */}
-                                    <div className="mb-3">
-                                        <label className="block text-xs font-medium text-gray-600 mb-1">{t("register.country")}</label>
-                                        <select
-                                            name="country"
-                                            value={formData.country}
-                                            onChange={handleCountryChange}
-                                            className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm bg-white"
-                                        >
-                                            {COUNTRY_OPTIONS.map(country => (
-                                                <option key={country.code} value={country.name}>
-                                                    {country.name}
-                                                </option>
-                                            ))}
-                                        </select>
+                                                {geolocation.error}
+                                            </p>
+                                        )}
+                                        {locationDetected && !geolocation.error && !locationMismatch && (
+                                            <p className="text-emerald-600 dark:text-emerald-400 text-xs mt-1.5 flex items-center gap-1">
+                                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                </svg>
+                                                {t("register.locationDetected")}
+                                            </p>
+                                        )}
+                                        {locationMismatch && detectedCountryFromGPS && (
+                                            <p className="text-amber-600 dark:text-amber-400 text-xs mt-1.5 flex items-center gap-1">
+                                                <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                                </svg>
+                                                <span>{t("register.locationMismatchWarning").replace("{detectedCountry}", detectedCountryFromGPS).replace("{selectedCountry}", formData.country).replace("{selectedCurrency}", formData.currency)}</span>
+                                            </p>
+                                        )}
                                     </div>
                                     
                                     {/* Currency & Timezone in 2 columns */}
                                     <div className="grid grid-cols-2 gap-3">
-                                        {/* Currency */}
                                         <div>
-                                            <label className="block text-xs font-medium text-gray-600 mb-1">{t("register.currency")}</label>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t("register.currency")}</label>
                                             <select
                                                 name="currency"
                                                 value={formData.currency}
                                                 onChange={handleChange}
-                                                className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm bg-white"
+                                                className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-[#173C82] focus:border-transparent text-sm bg-white dark:bg-gray-700 dark:text-white"
                                             >
                                                 <option value="IDR">IDR (Rupiah)</option>
                                                 <option value="AUD">AUD (Dollar)</option>
@@ -658,15 +634,13 @@ export default function MerchantRegisterPage() {
                                                 <option value="MYR">MYR (Ringgit)</option>
                                             </select>
                                         </div>
-                                        
-                                        {/* Timezone */}
                                         <div>
-                                            <label className="block text-xs font-medium text-gray-600 mb-1">{t("register.timezone")}</label>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t("register.timezone")}</label>
                                             <select
                                                 name="timezone"
                                                 value={formData.timezone}
                                                 onChange={handleChange}
-                                                className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm bg-white"
+                                                className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-[#173C82] focus:border-transparent text-sm bg-white dark:bg-gray-700 dark:text-white"
                                             >
                                                 {TIMEZONE_OPTIONS.map(tz => (
                                                     <option key={tz.value} value={tz.value}>
@@ -865,27 +839,29 @@ export default function MerchantRegisterPage() {
                     </form>
 
                     {/* Trial Badge */}
-                    <div className="mt-6 p-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-lg">
-                        <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
-                                <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="mt-8 p-4 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border border-emerald-100 dark:border-emerald-800 rounded-xl">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-emerald-200 dark:shadow-none">
+                                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
                                 </svg>
                             </div>
                             <div>
-                                <p className="font-semibold text-amber-800 text-sm">{t("register.trialBadge")}</p>
-                                <p className="text-xs text-amber-700">{t("register.fullAccess")}</p>
+                                <p className="font-bold text-emerald-800 dark:text-emerald-300">{t("register.trialBadge")}</p>
+                                <p className="text-sm text-emerald-600 dark:text-emerald-400">{t("register.fullAccess")}</p>
                             </div>
                         </div>
                     </div>
 
                     {/* Footer */}
-                    <p className="text-center text-gray-600 mt-4 text-sm">
+                    <p className="text-center text-gray-500 dark:text-gray-400 mt-6 text-sm">
                         {t("register.alreadyHaveAccount")}{" "}
-                        <Link href="/admin/login" className="text-orange-500 hover:text-orange-600 font-medium">
+                        <Link href="/admin/login" className="text-[#173C82] hover:text-[#122c60] dark:text-blue-400 font-semibold">
                             {t("register.loginHere")}
                         </Link>
                     </p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

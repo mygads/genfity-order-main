@@ -409,360 +409,248 @@ function AdminLoginForm() {
         />
       )}
 
-      <div className="min-h-screen flex items-center justify-center p-4 md:p-10 lg:p-20" style={{
-        background: 'linear-gradient(109.78deg, #FFFFFF 2.1%, #E7EEF5 100%)',
-      }}>
-        <div className="w-full max-w-[1200px] flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-16">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
+        {/* Background Pattern */}
+        <div className="fixed inset-0 pointer-events-none overflow-hidden">
+          <div className="absolute -top-40 -right-40 w-96 h-96 bg-[#173C82]/5 rounded-full blur-3xl" />
+          <div className="absolute top-1/2 -left-40 w-80 h-80 bg-orange-500/5 rounded-full blur-3xl" />
+        </div>
 
-          {/* Left Side - Carousel (Hidden on mobile) */}
-          <div className="hidden lg:flex flex-col items-center justify-center flex-1 max-w-[500px]">
-            {/* Carousel Image */}
-            <div className="relative w-full h-[300px] mb-6">
-              {carouselSlides.map((slide, index) => (
-                <div
-                  key={index}
-                  className={`absolute inset-0 transition-opacity duration-500 flex items-center justify-center ${currentSlide === index ? 'opacity-100' : 'opacity-0'
-                    }`}
-                >
+        <div className="relative z-10 min-h-screen flex items-center justify-center p-4 md:p-8 lg:p-12">
+          <div className="w-full max-w-6xl flex flex-col lg:flex-row items-stretch gap-8 lg:gap-0">
+
+            {/* Left Side - Info Panel (Hidden on mobile) */}
+            <div className="hidden lg:flex flex-col justify-between flex-1 bg-gradient-to-br from-[#173C82] to-[#0f2a5c] rounded-l-2xl p-10 text-white relative overflow-hidden">
+              {/* Decorative elements */}
+              <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+              <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+              
+              {/* Logo */}
+              <div className="relative z-10">
+                <Link href="/" className="inline-block">
                   <Image
-                    src={slide.image}
-                    alt={t(slide.titleKey)}
-                    width={400}
-                    height={300}
-                    className="object-contain"
-                    priority={index === 0}
+                    src="/images/logo/logo-dark-mode.png"
+                    alt="GENFITY"
+                    width={160}
+                    height={45}
+                    priority
                   />
+                </Link>
+              </div>
+
+              {/* Carousel Content */}
+              <div className="relative z-10 flex-1 flex flex-col justify-center py-8">
+                {/* Carousel Image */}
+                <div className="relative w-full h-[220px] mb-8">
+                  {carouselSlides.map((slide, index) => (
+                    <div
+                      key={index}
+                      className={`absolute inset-0 transition-all duration-700 flex items-center justify-center ${
+                        currentSlide === index ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+                      }`}
+                    >
+                      <Image
+                        src={slide.image}
+                        alt={t(slide.titleKey)}
+                        width={320}
+                        height={220}
+                        className="object-contain drop-shadow-2xl"
+                        priority={index === 0}
+                      />
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
 
-            {/* Carousel Text */}
-            <div className="text-center mb-4">
-              <h2
-                className="mb-2 transition-all duration-500"
-                style={{
-                  fontFamily: 'Inter, sans-serif',
-                  fontWeight: 700,
-                  fontSize: '18px',
-                  lineHeight: '36px',
-                  color: '#373A49',
-                }}
-              >
-                {t(carouselSlides[currentSlide].titleKey)}
-              </h2>
-              <p
-                className="transition-all duration-500"
-                style={{
-                  fontFamily: 'Inter, sans-serif',
-                  fontWeight: 400,
-                  fontSize: '16px',
-                  lineHeight: '22.4px',
-                  color: '#373A49',
-                }}
-              >
-                {t(carouselSlides[currentSlide].descriptionKey)}
-              </p>
-            </div>
-
-            {/* Carousel Dots */}
-            <div className="flex items-center gap-2">
-              {carouselSlides.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentSlide(index)}
-                  className="transition-all duration-300"
-                  style={{
-                    width: currentSlide === index ? '16px' : '8px',
-                    height: '8px',
-                    borderRadius: '8px',
-                    backgroundColor: currentSlide === index ? '#0E65A9' : '#D9D9D9',
-                  }}
-                  aria-label={`Go to slide ${index + 1}`}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Right Side - Login Card */}
-          <div
-            className="w-full max-w-[450px]"
-            style={{
-              backgroundColor: '#FFFFFF',
-              borderRadius: '12px',
-              boxShadow: '4px 4px 9px 0px rgba(135, 159, 190, 0.15)',
-              padding: '40px 30px',
-            }}
-          >
-            {/* Logo */}
-            <div className="flex justify-center mb-8">
-              <Link href="/">
-                <Image
-                  src="/images/logo/logo.png"
-                  alt="Genfity"
-                  width={180}
-                  height={50}
-                  className="dark:hidden"
-                  priority
-                />
-                <Image
-                  src="/images/logo/logo-dark-mode.png"
-                  alt="Genfity"
-                  width={180}
-                  height={50}
-                  className="hidden dark:block"
-                  priority
-                />
-              </Link>
-            </div>
-
-            {/* Welcome Text */}
-            <div className="text-center mb-6">
-              <h1
-                style={{
-                  fontFamily: 'Inter, sans-serif',
-                  fontWeight: 700,
-                  fontSize: '24px',
-                  color: '#373A49',
-                  marginBottom: '8px',
-                }}
-              >
-                {t('admin.login.welcomeBack')}
-              </h1>
-              <p
-                style={{
-                  fontFamily: 'Inter, sans-serif',
-                  fontWeight: 400,
-                  fontSize: '14px',
-                  color: '#6B7280',
-                }}
-              >
-                {t('admin.login.signInPrompt')}
-              </p>
-            </div>
-
-            {/* Error Alert */}
-            {(error || errorParam) && (
-              <div
-                className="mb-6 p-4 rounded-lg flex items-start gap-3"
-                style={{ backgroundColor: '#FEF2F2' }}
-              >
-                <span className="text-red-500 text-lg">⚠</span>
-                <div>
-                  <p
-                    style={{
-                      fontFamily: 'Inter, sans-serif',
-                      fontWeight: 600,
-                      fontSize: '14px',
-                      color: '#DC2626',
-                      marginBottom: '2px',
-                    }}
-                  >
-                    {t('admin.login.error.loginFailed')}
+                {/* Carousel Text */}
+                <div className="text-center space-y-3">
+                  <h2 className="text-xl font-bold transition-all duration-500">
+                    {t(carouselSlides[currentSlide].titleKey)}
+                  </h2>
+                  <p className="text-blue-100 text-sm leading-relaxed max-w-sm mx-auto transition-all duration-500">
+                    {t(carouselSlides[currentSlide].descriptionKey)}
                   </p>
-                  <p
-                    style={{
-                      fontFamily: 'Inter, sans-serif',
-                      fontWeight: 400,
-                      fontSize: '13px',
-                      color: '#DC2626',
-                    }}
-                  >
-                    {error || (errorParam ? errorMessages[errorParam] || 'An error occurred. Please try again.' : '')}
-                  </p>
+                </div>
+
+                {/* Carousel Dots */}
+                <div className="flex items-center justify-center gap-2 mt-6">
+                  {carouselSlides.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setCurrentSlide(index)}
+                      className={`transition-all duration-300 rounded-full ${
+                        currentSlide === index 
+                          ? 'w-6 h-2 bg-orange-400' 
+                          : 'w-2 h-2 bg-white/30 hover:bg-white/50'
+                      }`}
+                      aria-label={`Go to slide ${index + 1}`}
+                    />
+                  ))}
                 </div>
               </div>
-            )}
 
-            {/* Login Form */}
-            <form onSubmit={handleSubmit}>
-              <div className="space-y-5">
-                {/* Email Input */}
-                <div>
-                  <label
-                    htmlFor="email"
-                    style={{
-                      display: 'block',
-                      fontFamily: 'Inter, sans-serif',
-                      fontWeight: 500,
-                      fontSize: '14px',
-                      color: 'rgba(0, 0, 0, 0.85)',
-                      marginBottom: '8px',
-                    }}
-                  >
-                    {t('auth.email')}
-                  </label>
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    placeholder={t('admin.login.placeholder.email')}
-                    value={formData.email}
-                    onChange={handleChange}
-                    required
-                    autoComplete="email"
-                    disabled={isLoading}
-                    style={{
-                      width: '100%',
-                      height: '40px',
-                      border: '0.6px solid #D9D9D9',
-                      borderRadius: '5px',
-                      padding: '4px 11px',
-                      fontFamily: 'Inter, sans-serif',
-                      fontSize: '14px',
-                      backgroundColor: '#FFFFFF',
-                      outline: 'none',
-                      transition: 'border-color 0.2s, box-shadow 0.2s',
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = '#1286E1';
-                      e.target.style.boxShadow = '0 0 0 2px rgba(18, 134, 225, 0.1)';
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = '#D9D9D9';
-                      e.target.style.boxShadow = 'none';
-                    }}
-                  />
+              {/* Trust Badges */}
+              <div className="relative z-10 flex items-center justify-center gap-6 pt-4 border-t border-white/10">
+                <div className="flex items-center gap-2 text-sm text-blue-100">
+                  <svg className="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <span>{t('admin.login.secureLogin')}</span>
                 </div>
+                <div className="flex items-center gap-2 text-sm text-blue-100">
+                  <svg className="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <span>24/7 Support</span>
+                </div>
+              </div>
+            </div>
 
-                {/* Password Input */}
-                <div>
-                  <label
-                    htmlFor="password"
-                    style={{
-                      display: 'block',
-                      fontFamily: 'Inter, sans-serif',
-                      fontWeight: 500,
-                      fontSize: '14px',
-                      color: 'rgba(0, 0, 0, 0.85)',
-                      marginBottom: '8px',
-                    }}
-                  >
-                    {t('auth.password')}
-                  </label>
-                  <div className="relative">
-                    <input
-                      id="password"
-                      name="password"
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder={t('admin.login.placeholder.password')}
-                      value={formData.password}
-                      onChange={handleChange}
-                      required
-                      autoComplete="current-password"
-                      disabled={isLoading}
-                      style={{
-                        width: '100%',
-                        height: '40px',
-                        border: '0.6px solid #D9D9D9',
-                        borderRadius: '5px',
-                        padding: '4px 40px 4px 11px',
-                        fontFamily: 'Inter, sans-serif',
-                        fontSize: '14px',
-                        backgroundColor: '#FFFFFF',
-                        outline: 'none',
-                        transition: 'border-color 0.2s, box-shadow 0.2s',
-                      }}
-                      onFocus={(e) => {
-                        e.target.style.borderColor = '#1286E1';
-                        e.target.style.boxShadow = '0 0 0 2px rgba(18, 134, 225, 0.1)';
-                      }}
-                      onBlur={(e) => {
-                        e.target.style.borderColor = '#D9D9D9';
-                        e.target.style.boxShadow = 'none';
-                      }}
+            {/* Right Side - Login Form */}
+            <div className="w-full lg:w-[480px] bg-white dark:bg-gray-800 lg:rounded-r-2xl lg:rounded-l-none rounded-2xl shadow-2xl shadow-gray-200/50 dark:shadow-none">
+              <div className="p-6 sm:p-8 lg:p-10">
+                {/* Mobile Logo */}
+                <div className="flex justify-center mb-6 lg:hidden">
+                  <Link href="/">
+                    <Image
+                      src="/images/logo/logo.png"
+                      alt="GENFITY"
+                      width={150}
+                      height={42}
+                      className="dark:hidden"
+                      priority
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2"
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
-                    >
-                      {showPassword ? (
-                        <EyeIcon className="w-5 h-5 fill-gray-400" />
-                      ) : (
-                        <EyeCloseIcon className="w-5 h-5 fill-gray-400" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Forgot Password Link */}
-                <div className="flex justify-end">
-                  <Link
-                    href="/admin/forgot-password"
-                    style={{
-                      fontFamily: 'Inter, sans-serif',
-                      fontWeight: 500,
-                      fontSize: '14px',
-                      color: '#1286E1',
-                      textDecoration: 'none',
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.textDecoration = 'underline')}
-                    onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
-                  >
-                    {t('auth.forgotPassword')}?
+                    <Image
+                      src="/images/logo/logo-dark-mode.png"
+                      alt="GENFITY"
+                      width={150}
+                      height={42}
+                      className="hidden dark:block"
+                      priority
+                    />
                   </Link>
                 </div>
 
-                {/* Submit Button */}
-                <button
-                  type="submit"
-                  disabled={isLoading || !isFormValid}
-                  style={{
-                    width: '100%',
-                    height: '40px',
-                    borderRadius: '5px',
-                    fontFamily: 'Inter, sans-serif',
-                    fontWeight: 700,
-                    fontSize: '14px',
-                    border: 'none',
-                    cursor: isLoading || !isFormValid ? 'not-allowed' : 'pointer',
-                    backgroundColor: isLoading || !isFormValid ? '#E3E6E8' : '#F07600',
-                    color: isLoading || !isFormValid ? '#74838E' : '#FFFFFF',
-                    transition: 'background-color 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isLoading && isFormValid) {
-                      e.currentTarget.style.backgroundColor = '#D96A00';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isLoading && isFormValid) {
-                      e.currentTarget.style.backgroundColor = '#F07600';
-                    }
-                  }}
-                >
-                  {isLoading ? t('auth.signingIn') : t('auth.signIn')}
-                </button>
-              </div>
-            </form>
+                {/* Header */}
+                <div className="text-center mb-8">
+                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                    {t('admin.login.welcomeBack')}
+                  </h1>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">
+                    {t('admin.login.signInPrompt')}
+                  </p>
+                </div>
 
-            {/* Register Link */}
-            <div className="text-center mt-6">
-              <span
-                style={{
-                  fontFamily: 'Inter, sans-serif',
-                  fontWeight: 400,
-                  fontSize: '13px',
-                  color: '#6B7280',
-                }}
-              >
-                {t('auth.dontHaveAccount')}{' '}
-              </span>
-              <Link
-                href="/merchant/register"
-                style={{
-                  fontFamily: 'Inter, sans-serif',
-                  fontWeight: 600,
-                  fontSize: '13px',
-                  color: '#F07600',
-                  textDecoration: 'none',
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.textDecoration = 'underline')}
-                onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
-              >
-                {t('admin.login.registerNow')}
-              </Link>
+                {/* Error Alert */}
+                {(error || errorParam) && (
+                  <div className="mb-6 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 flex items-start gap-3">
+                    <svg className="w-5 h-5 text-red-500 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                    <div>
+                      <p className="text-sm font-semibold text-red-700 dark:text-red-400">{t('admin.login.error.loginFailed')}</p>
+                      <p className="text-sm text-red-600 dark:text-red-400 mt-0.5">
+                        {error || (errorParam ? errorMessages[errorParam] || 'An error occurred. Please try again.' : '')}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Login Form */}
+                <form onSubmit={handleSubmit} className="space-y-5">
+                  {/* Email Input */}
+                  <div>
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {t('auth.email')}
+                    </label>
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      placeholder={t('admin.login.placeholder.email')}
+                      value={formData.email}
+                      onChange={handleChange}
+                      required
+                      autoComplete="email"
+                      disabled={isLoading}
+                      className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-[#173C82] focus:border-transparent text-sm bg-white dark:bg-gray-700 dark:text-white disabled:opacity-50"
+                    />
+                  </div>
+
+                  {/* Password Input */}
+                  <div>
+                    <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {t('auth.password')}
+                    </label>
+                    <div className="relative">
+                      <input
+                        id="password"
+                        name="password"
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder={t('admin.login.placeholder.password')}
+                        value={formData.password}
+                        onChange={handleChange}
+                        required
+                        autoComplete="current-password"
+                        disabled={isLoading}
+                        className="w-full px-4 py-2.5 pr-10 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-[#173C82] focus:border-transparent text-sm bg-white dark:bg-gray-700 dark:text-white disabled:opacity-50"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2"
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      >
+                        {showPassword ? (
+                          <EyeIcon className="w-5 h-5 fill-gray-400" />
+                        ) : (
+                          <EyeCloseIcon className="w-5 h-5 fill-gray-400" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Forgot Password Link */}
+                  <div className="flex justify-end">
+                    <Link
+                      href="/admin/forgot-password"
+                      className="text-sm font-medium text-[#173C82] hover:text-[#122c60] dark:text-blue-400"
+                    >
+                      {t('auth.forgotPassword')}?
+                    </Link>
+                  </div>
+
+                  {/* Submit Button */}
+                  <button
+                    type="submit"
+                    disabled={isLoading || !isFormValid}
+                    className={`w-full py-3 px-4 rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
+                      isLoading || !isFormValid
+                        ? 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                        : 'bg-[#F07600] hover:bg-[#D96A00] text-white shadow-lg shadow-orange-200 dark:shadow-none'
+                    }`}
+                  >
+                    {isLoading ? (
+                      <>
+                        <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        {t('auth.signingIn')}
+                      </>
+                    ) : (
+                      t('auth.signIn')
+                    )}
+                  </button>
+                </form>
+
+                {/* Register Link */}
+                <p className="text-center text-gray-500 dark:text-gray-400 mt-8 text-sm">
+                  {t('auth.dontHaveAccount')}{' '}
+                  <Link href="/merchant/register" className="text-[#173C82] hover:text-[#122c60] dark:text-blue-400 font-semibold">
+                    {t('admin.login.registerNow')}
+                  </Link>
+                </p>
+              </div>
             </div>
           </div>
         </div>

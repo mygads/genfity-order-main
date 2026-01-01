@@ -3,8 +3,9 @@
 import { Suspense, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeftIcon, EyeIcon, EyeCloseIcon } from '@/icons';
-import Label from '@/components/form/Label';
+import Image from 'next/image';
+import { EyeIcon, EyeCloseIcon } from '@/icons';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 /**
  * Reset Password Form Component
@@ -12,6 +13,7 @@ import Label from '@/components/form/Label';
 function ResetPasswordForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { t } = useTranslation();
   const token = searchParams.get('token');
 
   const [formData, setFormData] = useState({
@@ -39,19 +41,19 @@ function ResetPasswordForm() {
     try {
       // Validation
       if (!formData.password || !formData.confirmPassword) {
-        throw new Error('All fields are required');
+        throw new Error(t('admin.resetPassword.error.allFieldsRequired'));
       }
 
       if (formData.password.length < 8) {
-        throw new Error('Password must be at least 8 characters');
+        throw new Error(t('admin.resetPassword.error.passwordMin8'));
       }
 
       if (formData.password !== formData.confirmPassword) {
-        throw new Error('Passwords do not match');
+        throw new Error(t('admin.resetPassword.error.passwordMismatch'));
       }
 
       if (!token) {
-        throw new Error('Invalid or missing reset token');
+        throw new Error(t('admin.resetPassword.error.invalidToken'));
       }
 
       // Call reset password API
@@ -69,7 +71,7 @@ function ResetPasswordForm() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to reset password');
+        throw new Error(data.message || t('admin.resetPassword.error.resetFailed'));
       }
 
       // Show success and redirect after 3 seconds
@@ -85,20 +87,28 @@ function ResetPasswordForm() {
     }
   };
 
+  // Invalid token state
   if (!token) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-white dark:bg-gray-950 px-4">
-        <div className="text-center">
-          <div className="mb-6 rounded-lg bg-red-50 p-6 dark:bg-red-900/20">
-            <p className="text-red-600 dark:text-red-400 font-semibold">
-              Invalid or missing reset token
-            </p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl shadow-gray-200/50 dark:shadow-none p-8 max-w-md w-full text-center">
+          {/* Error Icon */}
+          <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </div>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+            {t('admin.resetPassword.invalidTokenTitle')}
+          </h2>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">
+            {t('admin.resetPassword.invalidTokenMessage')}
+          </p>
           <Link
             href="/admin/forgot-password"
-            className="inline-flex items-center justify-center font-medium gap-2 rounded-lg transition px-4 py-3 text-sm bg-brand-500 text-white shadow-theme-xs hover:bg-brand-600"
+            className="inline-flex items-center justify-center px-6 py-3 bg-[#173C82] hover:bg-[#122c60] text-white font-semibold rounded-lg transition-all"
           >
-            Request new reset link
+            {t('admin.resetPassword.requestNewLink')}
           </Link>
         </div>
       </div>
@@ -106,207 +116,269 @@ function ResetPasswordForm() {
   }
 
   return (
-    <div className="flex min-h-screen bg-white dark:bg-gray-950">
-      {/* Left Side - Form */}
-      <div className="flex flex-col flex-1 lg:w-1/2 w-full">
-        <div className="w-full max-w-md sm:pt-10 mx-auto mb-5 px-4">
-          <Link
-            href="/admin/login"
-            className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-          >
-            <ChevronLeftIcon />
-            Back to login
-          </Link>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
+      {/* Background Pattern */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-[#173C82]/5 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 -left-40 w-80 h-80 bg-orange-500/5 rounded-full blur-3xl" />
+      </div>
 
-        <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto px-4">
-          {!success ? (
-            <div>
-              {/* Header */}
-              <div className="mb-5 sm:mb-8">
-                <h1 className="mb-2 font-semibold text-gray-800 text-title-sm dark:text-white/90 sm:text-title-md">
-                  Reset Password
-                </h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Enter your new password below
+      <div className="relative z-10 min-h-screen flex items-center justify-center p-4 md:p-8 lg:p-12">
+        <div className="w-full max-w-6xl flex flex-col lg:flex-row items-stretch gap-8 lg:gap-0">
+
+          {/* Left Side - Info Panel (Hidden on mobile) */}
+          <div className="hidden lg:flex flex-col justify-between flex-1 bg-gradient-to-br from-[#173C82] to-[#0f2a5c] rounded-l-2xl p-10 text-white relative overflow-hidden">
+            {/* Decorative elements */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+            
+            {/* Logo */}
+            <div className="relative z-10">
+              <Link href="/" className="inline-block">
+                <Image
+                  src="/images/logo/logo-dark-mode.png"
+                  alt="GENFITY"
+                  width={160}
+                  height={45}
+                  priority
+                />
+              </Link>
+            </div>
+
+            {/* Content */}
+            <div className="relative z-10 flex-1 flex flex-col justify-center py-8">
+              {/* Icon */}
+              <div className="flex justify-center mb-8">
+                <div className="w-24 h-24 bg-white/10 rounded-2xl flex items-center justify-center">
+                  <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </div>
+              </div>
+
+              {/* Text */}
+              <div className="text-center space-y-3">
+                <h2 className="text-xl font-bold">
+                  {t('admin.resetPassword.createNewPassword')}
+                </h2>
+                <p className="text-blue-100 text-sm leading-relaxed max-w-sm mx-auto">
+                  {t('admin.resetPassword.securePasswordHint')}
                 </p>
               </div>
 
-              {/* Error Alert */}
-              {error && (
-                <div className="mb-6 rounded-lg bg-red-50 p-4 dark:bg-red-900/20">
-                  <div className="flex items-start gap-2">
-                    <span className="text-red-500 font-bold">⚠</span>
-                    <div>
-                      <p className="text-sm font-semibold text-red-600 dark:text-red-400">
-                        Error
-                      </p>
-                      <p className="text-sm text-red-600 dark:text-red-400 mt-1">
-                        {error}
-                      </p>
-                    </div>
+              {/* Tips */}
+              <div className="mt-8 space-y-4 max-w-xs mx-auto">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-emerald-500/20 rounded-full flex items-center justify-center shrink-0">
+                    <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
                   </div>
+                  <p className="text-sm text-blue-100">{t('admin.resetPassword.tip1')}</p>
                 </div>
-              )}
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-emerald-500/20 rounded-full flex items-center justify-center shrink-0">
+                    <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <p className="text-sm text-blue-100">{t('admin.resetPassword.tip2')}</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-emerald-500/20 rounded-full flex items-center justify-center shrink-0">
+                    <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <p className="text-sm text-blue-100">{t('admin.resetPassword.tip3')}</p>
+                </div>
+              </div>
+            </div>
 
-              {/* Form */}
-              <form onSubmit={handleSubmit}>
-                <div className="space-y-6">
-                  {/* Password Input */}
-                  <div>
-                    <Label htmlFor="password">
-                      New Password <span className="text-error-500">*</span>
-                    </Label>
-                    <div className="relative">
-                      <input
-                        id="password"
-                        name="password"
-                        type={showPassword ? 'text' : 'password'}
-                        placeholder="Enter new password"
-                        value={formData.password}
-                        onChange={handleChange}
-                        required
-                        disabled={isLoading}
-                        className="h-11 w-full rounded-lg border appearance-none px-4 py-2.5 text-sm shadow-theme-xs placeholder:text-gray-400 focus:outline-hidden focus:ring-3 bg-transparent text-gray-800 border-gray-300 focus:border-brand-300 focus:ring-brand-500/10 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:border-gray-700 dark:focus:border-brand-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                      />
-                      <span
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute z-30 -translate-y-1/2 cursor-pointer right-4 top-1/2"
-                        role="button"
-                        aria-label={showPassword ? 'Hide password' : 'Show password'}
-                      >
-                        {showPassword ? (
-                          <EyeIcon className="fill-gray-500 dark:fill-gray-400" />
-                        ) : (
-                          <EyeCloseIcon className="fill-gray-500 dark:fill-gray-400" />
-                        )}
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      Must be at least 8 characters
+            {/* Trust Badge */}
+            <div className="relative z-10 flex items-center justify-center gap-6 pt-4 border-t border-white/10">
+              <div className="flex items-center gap-2 text-sm text-blue-100">
+                <svg className="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                <span>{t('admin.login.secureLogin')}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Side - Form */}
+          <div className="w-full lg:w-[480px] bg-white dark:bg-gray-800 lg:rounded-r-2xl lg:rounded-l-none rounded-2xl shadow-2xl shadow-gray-200/50 dark:shadow-none">
+            <div className="p-6 sm:p-8 lg:p-10">
+              {/* Mobile Logo */}
+              <div className="flex justify-center mb-6 lg:hidden">
+                <Link href="/">
+                  <Image
+                    src="/images/logo/logo.png"
+                    alt="GENFITY"
+                    width={150}
+                    height={42}
+                    className="dark:hidden"
+                    priority
+                  />
+                  <Image
+                    src="/images/logo/logo-dark-mode.png"
+                    alt="GENFITY"
+                    width={150}
+                    height={42}
+                    className="hidden dark:block"
+                    priority
+                  />
+                </Link>
+              </div>
+
+              {!success ? (
+                <>
+                  {/* Header */}
+                  <div className="text-center mb-8">
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                      {t('admin.resetPassword.title')}
+                    </h1>
+                    <p className="text-gray-500 dark:text-gray-400 text-sm">
+                      {t('admin.resetPassword.subtitle')}
                     </p>
                   </div>
 
-                  {/* Confirm Password Input */}
-                  <div>
-                    <Label htmlFor="confirmPassword">
-                      Confirm New Password <span className="text-error-500">*</span>
-                    </Label>
-                    <div className="relative">
-                      <input
-                        id="confirmPassword"
-                        name="confirmPassword"
-                        type={showConfirmPassword ? 'text' : 'password'}
-                        placeholder="Confirm new password"
-                        value={formData.confirmPassword}
-                        onChange={handleChange}
-                        required
-                        disabled={isLoading}
-                        className="h-11 w-full rounded-lg border appearance-none px-4 py-2.5 text-sm shadow-theme-xs placeholder:text-gray-400 focus:outline-hidden focus:ring-3 bg-transparent text-gray-800 border-gray-300 focus:border-brand-300 focus:ring-brand-500/10 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:border-gray-700 dark:focus:border-brand-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                      />
-                      <span
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="absolute z-30 -translate-y-1/2 cursor-pointer right-4 top-1/2"
-                        role="button"
-                        aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
-                      >
-                        {showConfirmPassword ? (
-                          <EyeIcon className="fill-gray-500 dark:fill-gray-400" />
-                        ) : (
-                          <EyeCloseIcon className="fill-gray-500 dark:fill-gray-400" />
-                        )}
-                      </span>
+                  {/* Error Alert */}
+                  {error && (
+                    <div className="mb-6 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 flex items-start gap-3">
+                      <svg className="w-5 h-5 text-red-500 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                      </svg>
+                      <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
                     </div>
-                  </div>
+                  )}
 
-                  {/* Submit Button */}
-                  <div>
+                  {/* Form */}
+                  <form onSubmit={handleSubmit} className="space-y-5">
+                    {/* Password Input */}
+                    <div>
+                      <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        {t('admin.resetPassword.newPassword')} <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          id="password"
+                          name="password"
+                          type={showPassword ? 'text' : 'password'}
+                          placeholder={t('admin.resetPassword.newPasswordPlaceholder')}
+                          value={formData.password}
+                          onChange={handleChange}
+                          required
+                          disabled={isLoading}
+                          className="w-full px-4 py-2.5 pr-10 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-[#173C82] focus:border-transparent text-sm bg-white dark:bg-gray-700 dark:text-white disabled:opacity-50"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2"
+                          aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        >
+                          {showPassword ? (
+                            <EyeIcon className="w-5 h-5 fill-gray-400" />
+                          ) : (
+                            <EyeCloseIcon className="w-5 h-5 fill-gray-400" />
+                          )}
+                        </button>
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        {t('admin.resetPassword.passwordHint')}
+                      </p>
+                    </div>
+
+                    {/* Confirm Password Input */}
+                    <div>
+                      <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        {t('admin.resetPassword.confirmPassword')} <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          id="confirmPassword"
+                          name="confirmPassword"
+                          type={showConfirmPassword ? 'text' : 'password'}
+                          placeholder={t('admin.resetPassword.confirmPasswordPlaceholder')}
+                          value={formData.confirmPassword}
+                          onChange={handleChange}
+                          required
+                          disabled={isLoading}
+                          className="w-full px-4 py-2.5 pr-10 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-[#173C82] focus:border-transparent text-sm bg-white dark:bg-gray-700 dark:text-white disabled:opacity-50"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2"
+                          aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                        >
+                          {showConfirmPassword ? (
+                            <EyeIcon className="w-5 h-5 fill-gray-400" />
+                          ) : (
+                            <EyeCloseIcon className="w-5 h-5 fill-gray-400" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Submit Button */}
                     <button
                       type="submit"
                       disabled={isLoading}
-                      className="w-full inline-flex items-center justify-center font-medium gap-2 rounded-lg transition px-4 py-3 text-sm bg-brand-500 text-white shadow-theme-xs hover:bg-brand-600 disabled:bg-brand-300 disabled:cursor-not-allowed disabled:opacity-50"
+                      className={`w-full py-3 px-4 rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
+                        isLoading
+                          ? 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                          : 'bg-[#F07600] hover:bg-[#D96A00] text-white shadow-lg shadow-orange-200 dark:shadow-none'
+                      }`}
                     >
-                      {isLoading ? 'Resetting...' : 'Reset password'}
+                      {isLoading ? (
+                        <>
+                          <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                          {t('admin.resetPassword.resetting')}
+                        </>
+                      ) : (
+                        t('admin.resetPassword.resetButton')
+                      )}
                     </button>
-                  </div>
-                </div>
-              </form>
-            </div>
-          ) : (
-            // Success Message
-            <div>
-              <div className="mb-6 rounded-lg bg-green-50 p-4 dark:bg-green-900/20">
-                <div className="flex items-start gap-2">
-                  <span className="text-green-500 font-bold text-xl">✓</span>
-                  <div>
-                    <p className="text-sm font-semibold text-green-600 dark:text-green-400">
-                      Password Reset Successful
-                    </p>
-                    <p className="text-sm text-green-600 dark:text-green-400 mt-1">
-                      Your password has been reset successfully. 
-                      You will be redirected to the login page shortly...
-                    </p>
-                  </div>
-                </div>
-              </div>
+                  </form>
 
-              <div className="text-center">
-                <Link
-                  href="/admin/login"
-                  className="inline-flex items-center justify-center font-medium gap-2 rounded-lg transition px-4 py-3 text-sm bg-brand-500 text-white shadow-theme-xs hover:bg-brand-600"
-                >
-                  Go to login
-                </Link>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+                  {/* Back to Login Link */}
+                  <p className="text-center text-gray-500 dark:text-gray-400 mt-8 text-sm">
+                    {t('admin.resetPassword.rememberedPassword')}{' '}
+                    <Link href="/admin/login" className="text-[#173C82] hover:text-[#122c60] dark:text-blue-400 font-semibold">
+                      {t('admin.resetPassword.backToLogin')}
+                    </Link>
+                  </p>
+                </>
+              ) : (
+                /* Success State */
+                <div className="text-center">
+                  {/* Success Icon */}
+                  <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <svg className="w-8 h-8 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
 
-      {/* Right Side - Branding (Hidden on mobile) */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-brand-500 to-brand-600 dark:from-brand-600 dark:to-brand-700 items-center justify-center p-12">
-        <div className="max-w-md text-white">
-          <div className="mb-8">
-            <h2 className="text-3xl font-bold mb-4">
-              Create New Password
-            </h2>
-            <p className="text-white/80 text-lg">
-              Choose a strong password to keep your account secure
-            </p>
-          </div>
-          <div className="space-y-4">
-            <div className="flex items-start gap-3">
-              <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                <span className="text-sm">✓</span>
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">At Least 8 Characters</h3>
-                <p className="text-sm text-white/70">
-                  Longer passwords are more secure
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                <span className="text-sm">✓</span>
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">Mix of Characters</h3>
-                <p className="text-sm text-white/70">
-                  Use letters, numbers, and symbols
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                <span className="text-sm">✓</span>
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">Unique Password</h3>
-                <p className="text-sm text-white/70">
-                  Do not reuse passwords from other accounts
-                </p>
-              </div>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                    {t('admin.resetPassword.successTitle')}
+                  </h2>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm mb-8">
+                    {t('admin.resetPassword.successMessage')}
+                  </p>
+
+                  <Link
+                    href="/admin/login"
+                    className="inline-flex items-center justify-center px-6 py-3 bg-[#173C82] hover:bg-[#122c60] text-white font-semibold rounded-lg transition-all"
+                  >
+                    {t('admin.resetPassword.goToLogin')}
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -322,10 +394,10 @@ export default function ResetPasswordPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center">
           <div className="text-center">
-            <div className="mb-4 text-5xl">⏳</div>
-            <p className="text-gray-600">Loading...</p>
+            <div className="w-12 h-12 border-4 border-[#173C82] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-600 dark:text-gray-400">Loading...</p>
           </div>
         </div>
       }

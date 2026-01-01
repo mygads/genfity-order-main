@@ -72,46 +72,52 @@ export default function LandingNavbar() {
 
                     {/* Desktop Navigation */}
                     <div className="hidden lg:flex items-center space-x-8">
-                        <button onClick={() => scrollToSection('features')} className="text-sm font-medium text-gray-600 hover:text-orange-500 dark:text-gray-300 dark:hover:text-orange-400 transition-colors">
+                        <button onClick={() => scrollToSection('features')} className="text-sm font-medium text-gray-600 hover:text-[#173C82] dark:text-gray-300 dark:hover:text-blue-400 transition-colors">
                             {t('landing.nav.features')}
                         </button>
-                        <button onClick={() => scrollToSection('pricing')} className="text-sm font-medium text-gray-600 hover:text-orange-500 dark:text-gray-300 dark:hover:text-orange-400 transition-colors">
+                        <button onClick={() => scrollToSection('pricing')} className="text-sm font-medium text-gray-600 hover:text-[#173C82] dark:text-gray-300 dark:hover:text-blue-400 transition-colors">
                             {t('landing.nav.pricing')}
                         </button>
-                        <button onClick={() => scrollToSection('howItWorks')} className="text-sm font-medium text-gray-600 hover:text-orange-500 dark:text-gray-300 dark:hover:text-orange-400 transition-colors">
+                        <button onClick={() => scrollToSection('howItWorks')} className="text-sm font-medium text-gray-600 hover:text-[#173C82] dark:text-gray-300 dark:hover:text-blue-400 transition-colors">
                             {t('landing.nav.howItWorks')}
                         </button>
+                        <a href="https://genfity.com" target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-gray-600 hover:text-[#173C82] dark:text-gray-300 dark:hover:text-blue-400 transition-colors">
+                            {t('landing.nav.about')}
+                        </a>
+                        <a href="https://wa.me/6285174314023?text=Halo%2C%20saya%20tertarik%20dengan%20program%20referral%20GENFITY" target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-orange-500 hover:text-orange-600 dark:text-orange-400 dark:hover:text-orange-300 transition-colors">
+                            {t('landing.nav.referral')}
+                        </a>
                     </div>
 
                     {/* Right Actions */}
                     <div className="hidden lg:flex items-center space-x-4">
                         {/* Language Toggle */}
-                        <div className="bg-gray-100 dark:bg-gray-800 rounded-full p-1 flex items-center">
+                        <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5 flex items-center">
                             <button
                                 onClick={() => setLanguage('id')}
-                                className={`px-3 py-1 text-xs font-bold rounded-full transition-all ${language === 'id' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500 hover:text-gray-900'
+                                className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${language === 'id' ? 'bg-white dark:bg-gray-700 text-[#173C82] dark:text-blue-400 shadow-sm' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
                                     }`}
                             >
                                 ID
                             </button>
                             <button
                                 onClick={() => setLanguage('en')}
-                                className={`px-3 py-1 text-xs font-bold rounded-full transition-all ${language === 'en' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500 hover:text-gray-900'
+                                className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${language === 'en' ? 'bg-white dark:bg-gray-700 text-[#173C82] dark:text-blue-400 shadow-sm' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
                                     }`}
                             >
                                 EN
                             </button>
                         </div>
 
-                        <div className="h-6 w-px bg-gray-200 dark:bg-gray-700 mx-2"></div>
+                        <div className="h-5 w-px bg-gray-200 dark:bg-gray-700"></div>
 
-                        <Link href="/admin/login" className="text-sm font-semibold text-gray-700 hover:text-orange-600 dark:text-white dark:hover:text-orange-400">
+                        <Link href="/admin/login" className="text-sm font-medium text-gray-700 hover:text-[#173C82] dark:text-white dark:hover:text-blue-400 transition-colors">
                             {t('landing.nav.login')}
                         </Link>
 
                         <Link
                             href="/merchant/register"
-                            className="px-5 py-2.5 bg-gray-900 text-white text-sm font-bold rounded-full hover:bg-orange-600 transition-colors shadow-lg shadow-orange-500/10"
+                            className="px-5 py-2 bg-[#173C82] text-white text-sm font-semibold rounded-lg hover:bg-[#122c60] transition-all shadow-md"
                         >
                             {t('landing.nav.register')}
                         </Link>
@@ -160,21 +166,23 @@ export default function LandingNavbar() {
                         <button onClick={() => scrollToSection('features')} className="block text-lg font-medium text-gray-900 dark:text-white">{t('landing.nav.features')}</button>
                         <button onClick={() => scrollToSection('pricing')} className="block text-lg font-medium text-gray-900 dark:text-white">{t('landing.nav.pricing')}</button>
                         <button onClick={() => scrollToSection('howItWorks')} className="block text-lg font-medium text-gray-900 dark:text-white">{t('landing.nav.howItWorks')}</button>
+                        <a href="https://genfity.com" target="_blank" rel="noopener noreferrer" className="block text-lg font-medium text-gray-900 dark:text-white">{t('landing.nav.about')}</a>
+                        <a href="https://wa.me/6285174314023?text=Halo%2C%20saya%20tertarik%20dengan%20program%20referral%20GENFITY" target="_blank" rel="noopener noreferrer" className="block text-lg font-medium text-orange-500">{t('landing.nav.referral')}</a>
                     </div>
 
                     <hr className="border-gray-100 dark:border-gray-800" />
 
                     <div className="space-y-4">
-                        <Link href="/admin/login" className="block w-full py-3 text-center rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-bold">
+                        <Link href="/admin/login" className="block w-full py-2.5 text-center rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-semibold text-sm">
                             {t('landing.nav.login')}
                         </Link>
-                        <Link href="/admin/login?register=true" className="block w-full py-3 text-center rounded-xl bg-orange-500 text-white font-bold shadow-lg shadow-orange-500/20">
+                        <Link href="/merchant/register" className="block w-full py-2.5 text-center rounded-lg bg-[#173C82] text-white font-semibold text-sm shadow-md">
                             {t('landing.nav.register')}
                         </Link>
                     </div>
 
                     <div className="mt-auto">
-                        <p className="text-xs text-center text-gray-400">© 2025 Genfity</p>
+                        <p className="text-xs text-center text-gray-400">© 2026 <a href="https://genfity.com" target="_blank" rel="noopener noreferrer" className="hover:text-[#173C82]">GENFITY DIGITAL SOLUTION</a></p>
                     </div>
                 </div>
             </div>

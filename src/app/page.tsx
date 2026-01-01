@@ -1,7 +1,7 @@
 import LandingNavbar from '@/components/landing/LandingNavbar';
 import HeroSection from '@/components/landing/HeroSection';
 import StatsSection from '@/components/landing/StatsSection';
-import BusinessTypeSection from '@/components/landing/BusinessTypeSection';
+import OnlineOrderingSection from '@/components/landing/OnlineOrderingSection';
 import FeaturesSection from '@/components/landing/FeaturesSection';
 import HowItWorksSection from '@/components/landing/HowItWorksSection';
 import TestimonialsSection from '@/components/landing/TestimonialsSection';
@@ -18,7 +18,7 @@ export default function LandingPage() {
       <main>
         <HeroSection />
         <StatsSection />
-        <BusinessTypeSection />
+        <OnlineOrderingSection />
         <FeaturesSection />
         <HowItWorksSection />
         <ReferralSection />

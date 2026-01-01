@@ -2,7 +2,7 @@
 # Genfity Cron Jobs Script
 # This script calls the cron API endpoints
 
-CRON_SECRET="9NgZz3qabTWx0j8mOrdkXVBiFJEKSReQ"
+CRON_SECRET="lIx6mo3LkWHynUXhtRC2ETF8qM4vA9wi"
 BASE_URL="http://localhost"  # Via nginx on port 80
 
 log() {
