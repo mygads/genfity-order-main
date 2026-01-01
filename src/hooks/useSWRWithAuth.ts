@@ -22,8 +22,31 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import useSWR, { SWRConfiguration, KeyedMutator } from 'swr';
 
-// Custom fetcher with auth header
-const authFetcher = async (url: string) => {
+// Custom error class with additional info
+interface FetchError extends Error {
+  status?: number;
+  info?: unknown;
+  isAuthError?: boolean;
+}
+
+/**
+ * Clear all auth data from localStorage and redirect to login
+ */
+const clearSessionAndRedirect = (loginPath: string) => {
+  // Clear all auth-related data
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('refreshToken');
+  localStorage.removeItem('user');
+  localStorage.removeItem('merchantId');
+  
+  // Use window.location for hard redirect to ensure clean state
+  window.location.href = loginPath;
+};
+
+/**
+ * Create auth fetcher with redirect callback for 401 errors
+ */
+const createAuthFetcher = (loginRedirect: string) => async (url: string) => {
   const token = localStorage.getItem('accessToken');
 
   const res = await fetch(url, {
@@ -34,11 +57,34 @@ const authFetcher = async (url: string) => {
   });
 
   if (!res.ok) {
-    const error: Error & { status?: number; info?: unknown } = new Error(
-      'An error occurred while fetching the data.'
+    const errorInfo = await res.json().catch(() => ({}));
+    
+    // 401 Unauthorized - Token invalid/expired, clear session and redirect
+    if (res.status === 401) {
+      clearSessionAndRedirect(loginRedirect);
+      // Return a promise that never resolves to prevent further execution
+      return new Promise(() => {});
+    }
+    
+    // 403 Forbidden - User authenticated but doesn't have permission
+    // DON'T redirect - just throw error with helpful message
+    if (res.status === 403) {
+      const error: FetchError = new Error(
+        errorInfo?.message || 'You do not have permission to access this resource.'
+      );
+      error.info = errorInfo;
+      error.status = res.status;
+      error.isAuthError = false; // Not an auth error, just permission denied
+      throw error;
+    }
+    
+    // Other errors (400, 404, 500, etc.)
+    const error: FetchError = new Error(
+      errorInfo?.message || 'An error occurred while fetching the data.'
     );
-    error.info = await res.json().catch(() => ({}));
+    error.info = errorInfo;
     error.status = res.status;
+    error.isAuthError = false;
     throw error;
   }
 
@@ -114,10 +160,16 @@ export function useSWRWithAuth<T = unknown>(
     return key;
   })();
 
+  // Create fetcher with login redirect path
+  const fetcher = useCallback(
+    (url: string) => createAuthFetcher(loginRedirect)(url),
+    [loginRedirect]
+  );
+
   // Use SWR with auth fetcher
   const { data, error, isLoading, isValidating, mutate } = useSWR<T>(
     actualKey,
-    authFetcher,
+    fetcher,
     {
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
