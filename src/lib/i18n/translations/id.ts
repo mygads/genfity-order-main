@@ -1407,6 +1407,28 @@ const id = {
   "landing.features.kitchen.title": "Sistem Layar Dapur",
   "landing.features.kitchen.desc": "Pesanan langsung masuk ke layar dapur. Tingkatkan akurasi dan kecepatan layanan.",
 
+
+  // Stats
+  "landing.stats.title": "#SelaluAda Bersama Pelaku Usaha",
+  "landing.stats.subtitle": "Bergabunglah dengan ribuan pengusaha sukses yang telah mempercayakan bisnisnya pada sistem kami.",
+  "landing.stats.merchants": "Pemilik Usaha",
+  "landing.stats.merchants_desc": "Telah membantu UMKM di seluruh Indonesia",
+  "landing.stats.cities": "Kota",
+  "landing.stats.cities_desc": "Tersebar di seluruh pelosok negeri",
+  "landing.stats.years": "Tahun",
+  "landing.stats.years_desc": "Pengalaman melayani bisnis F&B",
+
+  // Business Types
+  "landing.business_type.title": "Solusi untuk Segala Jenis Usaha",
+  "landing.business_type.subtitle": "Satu aplikasi kasir dengan fitur lengkap untuk mendukung pertumbuhan bisnis Anda.",
+  "landing.business_type.fnb.title": "Food & Beverage",
+  "landing.business_type.fnb.desc": "Cocok untuk kuliner cafe, restoran, kedai kopi, hingga food court. Kelola meja, pesanan dapur, dan inventori bahan baku dengan mudah.",
+  "landing.business_type.retail.title": "Ritel & Toko",
+  "landing.business_type.retail.desc": "Ideal untuk butik, toserba, toko kelontong, dan vape store. Kelola ribuan SKU, barcode scanner, dan stok opname akurat.",
+  "landing.business_type.service.title": "Jasa & Layanan",
+  "landing.business_type.service.desc": "Solusi tepat untuk barbershop, salon, petshop, dan laundry. Atur jadwal janji temu, komisi staff, dan database pelanggan.",
+  "landing.common.learn_more": "Pelajari Selengkapnya",
+
   // Pricing
   "landing.pricing.title": "Harga Simpel & Transparan",
   "landing.pricing.subtitle": "Pilih paket terbaik sesuai tahapan bisnis Anda",

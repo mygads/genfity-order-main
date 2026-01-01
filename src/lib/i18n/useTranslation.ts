@@ -29,7 +29,7 @@ interface UseTranslationReturn {
    * t("common.loading") // "Loading..." or "Memuat..."
    * t("common.time.minutesAgo", { count: 5 }) // "5 minutes ago" or "5 menit yang lalu"
    */
-  t: (key: TranslationKeys, params?: InterpolationParams) => string;
+  t: (key: TranslationKeys | string, params?: InterpolationParams) => string;
   
   /**
    * Current locale
@@ -100,10 +100,10 @@ export function useTranslation(): UseTranslationReturn {
   /**
    * Translate a key with optional interpolation
    */
-  const t = useCallback((key: TranslationKeys, params?: InterpolationParams): string => {
+  const t = useCallback((key: TranslationKeys | string, params?: InterpolationParams): string => {
     // Get translation from current locale, fallback to English, then to key
-    const translation = translations[locale]?.[key] 
-      ?? translations[defaultLocale]?.[key] 
+    const translation = translations[locale]?.[key as TranslationKeys] 
+      ?? translations[defaultLocale]?.[key as TranslationKeys] 
       ?? key;
     
     // No params, return as-is

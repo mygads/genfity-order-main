@@ -39,7 +39,7 @@ export default function FAQSection() {
                                 className="w-full flex items-center justify-between p-5 text-left focus:outline-none"
                             >
                                 <span className={`text-base font-semibold ${openIndex === index ? 'text-orange-600 dark:text-orange-400' : 'text-gray-900 dark:text-white'}`}>
-                                    {t(`landing.faq.q${item}` as any)}
+                                    {t(`landing.faq.q${item}`)}
                                 </span>
                                 <svg
                                     className={`w-5 h-5 transform transition-transform duration-300 ${openIndex === index ? 'rotate-180 text-orange-500' : 'text-gray-400'}`}
@@ -55,7 +55,7 @@ export default function FAQSection() {
                                 className={`overflow-hidden transition-all duration-300 ease-in-out ${openIndex === index ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0'}`}
                             >
                                 <div className="p-5 pt-0 text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-                                    {t(`landing.faq.a${item}` as any)}
+                                    {t(`landing.faq.a${item}`)}
                                 </div>
                             </div>
                         </div>

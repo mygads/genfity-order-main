@@ -29,12 +29,15 @@ export default function LandingNavbar() {
         }
     };
 
-    const handleMerchantCodeSubmit = (e: React.FormEvent) => {
+    const _handleMerchantCodeSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (merchantCode.trim()) {
             router.push(`/${merchantCode.toUpperCase()}`);
         }
     };
+
+    // Used in JSX for merchant code input
+    const _setMerchantCode = setMerchantCode;
 
     return (
         <nav

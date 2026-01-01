@@ -27,8 +27,8 @@ export default function BentoGridSection() {
                             <div className="text-orange-600 mb-3">
                                 <FaWallet className="w-8 h-8" />
                             </div>
-                            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1.5">{t('landing.bento.payments.title' as any)}</h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-400 max-w-sm leading-relaxed">{t('landing.bento.payments.desc' as any)}</p>
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1.5">{t('landing.bento.payments.title')}</h3>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 max-w-sm leading-relaxed">{t('landing.bento.payments.desc')}</p>
                         </div>
                         <div className="mt-4 flex gap-2">
                             {['QRIS', 'E-Wallet', 'Cards'].map(tag => (
@@ -42,8 +42,8 @@ export default function BentoGridSection() {
                         <div className="text-blue-600 mb-3">
                             <FaBolt className="w-8 h-8" />
                         </div>
-                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1.5">{t('landing.bento.speed.title' as any)}</h3>
-                        <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">{t('landing.bento.speed.desc' as any)}</p>
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1.5">{t('landing.bento.speed.title')}</h3>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">{t('landing.bento.speed.desc')}</p>
                     </div>
 
                     {/* Item 3: Small Left Bottom */}
@@ -51,8 +51,8 @@ export default function BentoGridSection() {
                         <div className="text-green-600 mb-3">
                             <FaShieldAlt className="w-8 h-8" />
                         </div>
-                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1.5">{t('landing.bento.reliable.title' as any)}</h3>
-                        <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">{t('landing.bento.reliable.desc' as any)}</p>
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1.5">{t('landing.bento.reliable.title')}</h3>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">{t('landing.bento.reliable.desc')}</p>
                     </div>
 
                     {/* Item 4: Large Right Bottom */}
@@ -62,8 +62,8 @@ export default function BentoGridSection() {
                             <div className="text-purple-600 mb-3">
                                 <FaBoxOpen className="w-8 h-8" />
                             </div>
-                            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1.5">{t('landing.bento.inventory.title' as any)}</h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-400 max-w-sm leading-relaxed">{t('landing.bento.inventory.desc' as any)}</p>
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1.5">{t('landing.bento.inventory.title')}</h3>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 max-w-sm leading-relaxed">{t('landing.bento.inventory.desc')}</p>
                         </div>
                     </div>
 

@@ -61,15 +61,15 @@ export default function TestimonialsSection() {
                                         </div>
 
                                         <blockquote className="text-base text-gray-700 dark:text-gray-200 italic leading-relaxed">
-                                            "{t(`landing.testimonials.${item}.quote` as any)}"
+                                            &ldquo;{t(`landing.testimonials.${item}.quote`)}&rdquo;
                                         </blockquote>
 
                                         <div>
                                             <div className="font-bold text-gray-900 dark:text-white text-sm">
-                                                {t(`landing.testimonials.${item}.author` as any)}
+                                                {t(`landing.testimonials.${item}.author`)}
                                             </div>
                                             <div className="text-xs text-orange-600 dark:text-orange-400 font-medium">
-                                                {t(`landing.testimonials.${item}.role` as any)}
+                                                {t(`landing.testimonials.${item}.role`)}
                                             </div>
                                         </div>
                                     </div>

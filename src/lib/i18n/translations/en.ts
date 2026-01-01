@@ -1413,6 +1413,28 @@ const en = {
   "landing.features.kitchen.title": "Kitchen Display System",
   "landing.features.kitchen.desc": "Orders go straight to the kitchen screen. Improve accuracy and speed up service.",
 
+
+  // Stats
+  "landing.stats.title": "#AlwaysThere for Business Owners",
+  "landing.stats.subtitle": "Join thousands of successful entrepreneurs who trust their business to our system.",
+  "landing.stats.merchants": "Merchants",
+  "landing.stats.merchants_desc": "Helping SMEs across Indonesia",
+  "landing.stats.cities": "Cities",
+  "landing.stats.cities_desc": "Present throughout the country",
+  "landing.stats.years": "Years",
+  "landing.stats.years_desc": "Experience serving F&B businesses",
+
+  // Business Types
+  "landing.business_type.title": "Solutions for Every Business Type",
+  "landing.business_type.subtitle": "One POS application with complete features to support your business growth.",
+  "landing.business_type.fnb.title": "Food & Beverage",
+  "landing.business_type.fnb.desc": "Perfect for cafes, restaurants, coffee shops, and food courts. Manage tables, kitchen orders, and ingredient inventory easily.",
+  "landing.business_type.retail.title": "Retail & Shops",
+  "landing.business_type.retail.desc": "Ideal for boutiques, convenience stores, and vape stores. Manage thousands of SKUs, barcode scanning, and accurate stock taking.",
+  "landing.business_type.service.title": "Services",
+  "landing.business_type.service.desc": "The right solution for barbershops, salons, pet shops, and laundry. Manage appointments, staff commissions, and customer databases.",
+  "landing.common.learn_more": "Learn More",
+
   // Pricing
   "landing.pricing.title": "Simple & Transparent Pricing",
   "landing.pricing.subtitle": "Choose the best plan for your business stage",

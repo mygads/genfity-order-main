@@ -8,7 +8,7 @@ export default function PricingSection() {
     const { t } = useTranslation();
     const [currency, setCurrency] = useState<'idr' | 'aud'>('idr');
 
-    const toggleCurrency = () => {
+    const _toggleCurrency = () => {
         setCurrency(currency === 'idr' ? 'aud' : 'idr');
     };
 

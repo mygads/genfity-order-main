@@ -48,7 +48,7 @@ export default function FeatureHighlightSection() {
                             <div className="relative w-full aspect-[4/3] transform transition-transform duration-700 hover:scale-[1.01] hover:rotate-1 max-w-lg mx-auto">
                                 <Image
                                     src={feature.image}
-                                    alt={t(`landing.highlights.${feature.key}.title` as any)}
+                                    alt={t(`landing.highlights.${feature.key}.title`)}
                                     fill
                                     className="object-contain drop-shadow-xl"
                                     sizes="(max-width: 1024px) 100vw, 50vw"
@@ -71,11 +71,11 @@ export default function FeatureHighlightSection() {
                             </div>
 
                             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white leading-tight">
-                                {t(`landing.highlights.${feature.key}.title` as any)}
+                                {t(`landing.highlights.${feature.key}.title`)}
                             </h2>
 
                             <p className="text-base text-gray-600 dark:text-gray-300 leading-relaxed">
-                                {t(`landing.highlights.${feature.key}.desc` as any)}
+                                {t(`landing.highlights.${feature.key}.desc`)}
                             </p>
 
                             <ul className="space-y-3 pt-2">
@@ -83,7 +83,7 @@ export default function FeatureHighlightSection() {
                                     <li key={item} className="flex items-start gap-2.5">
                                         <svg className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                            {t(`landing.highlights.${feature.key}.point${item}` as any)}
+                                            {t(`landing.highlights.${feature.key}.point${item}`)}
                                         </span>
                                     </li>
                                 ))}
