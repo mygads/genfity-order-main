@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface TrialBannerProps {
     daysRemaining: number;
@@ -15,6 +16,7 @@ interface TrialBannerProps {
  * Dismissible per session using sessionStorage
  */
 export default function TrialBanner({ daysRemaining, onDismiss }: TrialBannerProps) {
+    const { t } = useTranslation();
     const [isDismissed, setIsDismissed] = useState(false);
     const [isVisible, setIsVisible] = useState(false);
 
@@ -87,15 +89,13 @@ export default function TrialBanner({ daysRemaining, onDismiss }: TrialBannerPro
 
                     <div className="flex-1 min-w-0">
                         <p className={`font-semibold ${textClass}`}>
-                            Masa Trial
+                            {t("subscription.trial.title")}
                         </p>
                         <p className={`text-sm ${textClass} opacity-90`}>
                             {daysRemaining > 0 ? (
-                                <>
-                                    Sisa <span className="font-bold">{daysRemaining} hari</span> lagi
-                                </>
+                                t("subscription.trial.daysRemaining").replace("{days}", String(daysRemaining))
                             ) : (
-                                <span className="font-bold">Berakhir hari ini!</span>
+                                <span className="font-bold">{t("subscription.trial.endsToday")}</span>
                             )}
                         </p>
                     </div>
@@ -107,7 +107,7 @@ export default function TrialBanner({ daysRemaining, onDismiss }: TrialBannerPro
                     className={`mt-3 block w-full py-2 px-4 rounded-lg text-center font-medium
             bg-white text-gray-800 hover:bg-gray-100 transition-colors shadow-sm`}
                 >
-                    Upgrade Sekarang
+                    {t("subscription.trial.upgradeNow")}
                 </Link>
             </div>
         </div>

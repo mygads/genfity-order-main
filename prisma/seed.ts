@@ -4,6 +4,7 @@
  */
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
+import { seedWellardKebabHouse } from './seeds/wellard-kebab-house';
 const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Seeding database...\n');
@@ -873,6 +874,13 @@ async function main() {
   console.log('   • Subscription Plan: 1 (Default)');
   console.log('   • Merchant Subscriptions: 3 (30-day trials)');
   console.log('');
+
+  // ============================================
+  // SEED WELLARD KEBAB HOUSE
+  // ============================================
+  await seedWellardKebabHouse();
+
+  console.log('');
   console.log('🔐 Login Credentials:');
   console.log('');
   console.log('   SUPER ADMIN:');
@@ -881,6 +889,10 @@ async function main() {
   console.log('');
   console.log('   KOPI KENANGAN OWNER:');
   console.log('   Email: owner@kopikenangan.com.au');
+  console.log('   Password: 1234abcd');
+  console.log('');
+  console.log('   WELLARD KEBAB HOUSE OWNER:');
+  console.log('   Email: wellardkebab@gmail.com');
   console.log('   Password: 1234abcd');
   console.log('');
   console.log('   CUSTOMER:');

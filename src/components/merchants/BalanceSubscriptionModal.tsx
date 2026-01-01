@@ -22,6 +22,7 @@ interface BalanceSubscriptionModalProps {
 }
 
 type TabType = "balance" | "subscription";
+type SubscriptionType = "TRIAL" | "DEPOSIT" | "MONTHLY" | "";
 
 export default function BalanceSubscriptionModal({
   isOpen,
@@ -45,6 +46,8 @@ export default function BalanceSubscriptionModal({
   const [balanceDescription, setBalanceDescription] = useState("");
 
   // Subscription form
+  const [subscriptionType, setSubscriptionType] = useState<SubscriptionType>("");
+  const [monthlyPeriodMonths, setMonthlyPeriodMonths] = useState("1");
   const [extendDays, setExtendDays] = useState("");
   const [subscriptionStatus, setSubscriptionStatus] = useState<"ACTIVE" | "SUSPENDED" | "">("");
   const [suspendReason, setSuspendReason] = useState("");
@@ -144,6 +147,19 @@ export default function BalanceSubscriptionModal({
 
       const body: Record<string, unknown> = {};
 
+      // Handle subscription type change
+      if (subscriptionType) {
+        body.type = subscriptionType;
+        if (subscriptionType === "MONTHLY") {
+          const months = parseInt(monthlyPeriodMonths);
+          if (isNaN(months) || months < 1 || months > 24) {
+            setError("Period months must be between 1 and 24");
+            return;
+          }
+          body.monthlyPeriodMonths = months;
+        }
+      }
+
       if (extendDays) {
         const days = parseInt(extendDays);
         if (isNaN(days) || days < 1 || days > 365) {
@@ -178,6 +194,8 @@ export default function BalanceSubscriptionModal({
 
       if (response.ok && data.success) {
         setSuccess("Subscription updated successfully");
+        setSubscriptionType("");
+        setMonthlyPeriodMonths("1");
         setExtendDays("");
         setSubscriptionStatus("");
         setSuspendReason("");
@@ -359,9 +377,51 @@ export default function BalanceSubscriptionModal({
         {/* Subscription Tab */}
         {activeTab === "subscription" && (
           <form onSubmit={handleUpdateSubscription} className="space-y-4">
+            {/* Subscription Type Change */}
             <div>
               <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Extend Trial (Days)
+                Change Subscription Type
+              </label>
+              <select
+                value={subscriptionType}
+                onChange={(e) => setSubscriptionType(e.target.value as SubscriptionType)}
+                className="w-full rounded-lg border border-gray-200 px-4 py-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+              >
+                <option value="">Keep current type</option>
+                <option value="TRIAL">Trial (30 days)</option>
+                <option value="DEPOSIT">Deposit (Pay-per-use)</option>
+                <option value="MONTHLY">Monthly Subscription</option>
+              </select>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                {subscriptionType === "TRIAL" && "Will reset to new 30-day trial period"}
+                {subscriptionType === "DEPOSIT" && "Merchant will pay per order commission"}
+                {subscriptionType === "MONTHLY" && "Fixed monthly fee subscription"}
+                {!subscriptionType && `Current: ${subscriptionData?.type || "None"}`}
+              </p>
+            </div>
+
+            {/* Monthly Period (only shown when MONTHLY is selected) */}
+            {subscriptionType === "MONTHLY" && (
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Subscription Period (Months)
+                </label>
+                <select
+                  value={monthlyPeriodMonths}
+                  onChange={(e) => setMonthlyPeriodMonths(e.target.value)}
+                  className="w-full rounded-lg border border-gray-200 px-4 py-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                >
+                  <option value="1">1 Month</option>
+                  <option value="3">3 Months</option>
+                  <option value="6">6 Months</option>
+                  <option value="12">12 Months (1 Year)</option>
+                </select>
+              </div>
+            )}
+
+            <div className="border-t border-gray-200 pt-4 dark:border-gray-700">
+              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Extend Period (Days)
               </label>
               <input
                 type="number"
@@ -373,7 +433,7 @@ export default function BalanceSubscriptionModal({
                 className="w-full rounded-lg border border-gray-200 px-4 py-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
               />
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                Extend the current trial period by this many days
+                Extend the current subscription period by this many days
               </p>
             </div>
 
@@ -409,7 +469,7 @@ export default function BalanceSubscriptionModal({
 
             <button
               type="submit"
-              disabled={loading || (!extendDays && !subscriptionStatus)}
+              disabled={loading || (!subscriptionType && !extendDays && !subscriptionStatus)}
               className="w-full rounded-lg bg-brand-500 px-4 py-3 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {loading ? "Processing..." : "Update Subscription"}

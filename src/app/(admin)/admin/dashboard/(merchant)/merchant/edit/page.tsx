@@ -14,6 +14,7 @@ import PerDayModeSchedule from "@/components/merchants/PerDayModeSchedule";
 import SpecialHoursManager from "@/components/merchants/SpecialHoursManager";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { TranslationKeys } from "@/lib/i18n";
+import SubscriptionRequired from "@/components/subscription/SubscriptionRequired";
 
 // Dynamically import map component
 const MapLocationPicker = dynamic(() => import("@/components/maps/MapLocationPicker"), { ssr: false });
@@ -1301,42 +1302,43 @@ export default function EditMerchantPage() {
   // ==================== MAIN RENDER ====================
 
   return (
-    <div>
-      <ToastContainer toasts={toasts} />
-      <PageBreadcrumb pageTitle="Edit Merchant" />
+    <SubscriptionRequired>
+      <div>
+        <ToastContainer toasts={toasts} />
+        <PageBreadcrumb pageTitle="Edit Merchant" />
 
-      <div className="mt-6 rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/3">
-        {/* Header */}
-        <div className="border-b border-gray-200 p-6 dark:border-gray-800">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-            {t("admin.merchantEdit.pageTitle")}
-          </h2>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            {t("admin.merchantEdit.setOpeningHours")}
-          </p>
-        </div>
-
-        {/* Tabs Navigation */}
-        <div className="px-6 pt-4">
-          <TabsNavigation
-            tabs={TAB_KEYS.map(tab => ({ id: tab.id, label: t(tab.key) }))}
-            activeTab={activeTab}
-            onTabChange={handleTabChange}
-          />
-        </div>
-
-        {/* Tab Content */}
-        <form onSubmit={handleSubmit}>
-          <div className="p-6">
-            {renderTabContent()}
+        <div className="mt-6 rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/3">
+          {/* Header */}
+          <div className="border-b border-gray-200 p-6 dark:border-gray-800">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+              {t("admin.merchantEdit.pageTitle")}
+            </h2>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              {t("admin.merchantEdit.setOpeningHours")}
+            </p>
           </div>
 
-          {/* Fixed Footer */}
-          <AdminFormFooter
-            onCancel={() => router.push("/admin/dashboard/merchant/view")}
-            isSubmitting={submitting}
-            submitLabel={t("admin.merchantEdit.saveChanges")}
-            submittingLabel={t("admin.merchantEdit.saving")}
+          {/* Tabs Navigation */}
+          <div className="px-6 pt-4">
+            <TabsNavigation
+              tabs={TAB_KEYS.map(tab => ({ id: tab.id, label: t(tab.key) }))}
+              activeTab={activeTab}
+              onTabChange={handleTabChange}
+            />
+          </div>
+
+          {/* Tab Content */}
+          <form onSubmit={handleSubmit}>
+            <div className="p-6">
+              {renderTabContent()}
+            </div>
+
+            {/* Fixed Footer */}
+            <AdminFormFooter
+              onCancel={() => router.push("/admin/dashboard/merchant/view")}
+              isSubmitting={submitting}
+              submitLabel={t("admin.merchantEdit.saveChanges")}
+              submittingLabel={t("admin.merchantEdit.saving")}
           />
         </form>
       </div>
@@ -1374,5 +1376,6 @@ export default function EditMerchantPage() {
         </div>
       )}
     </div>
+    </SubscriptionRequired>
   );
 }

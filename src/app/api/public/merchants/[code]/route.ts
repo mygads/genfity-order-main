@@ -58,10 +58,16 @@ export async function GET(
       if (subscription) {
         subscriptionStatus = subscription.status;
         subscriptionSuspendReason = subscription.suspendReason;
+      } else {
+        // No subscription found = treat as SUSPENDED
+        subscriptionStatus = 'SUSPENDED';
+        subscriptionSuspendReason = 'No active subscription';
       }
     } catch (subError) {
       console.warn('Failed to get subscription status:', subError);
-      // Default to ACTIVE if subscription check fails
+      // On error, treat as SUSPENDED to be safe
+      subscriptionStatus = 'SUSPENDED';
+      subscriptionSuspendReason = 'Unable to verify subscription';
     }
 
     // Return merchant info (exclude sensitive data)

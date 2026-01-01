@@ -10,6 +10,8 @@ import Backdrop from "@/layout/Backdrop";
 import SessionGuard from "@/components/auth/SessionGuard";
 import SubscriptionAlerts from "@/components/subscription/SubscriptionAlerts";
 import { useSessionSync } from "@/hooks/useSessionSync";
+import { useSubscriptionStatus } from "@/hooks/useSubscriptionStatus";
+import { useAuth } from "@/hooks/useAuth";
 import SWRProvider from "@/lib/providers/SWRProvider";
 import React from "react";
 
@@ -35,12 +37,14 @@ import React from "react";
  * - Mobile-friendly with backdrop overlay
  * - Auto-syncs session with server on page load
  */
-export default function AdminDashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+
+function DashboardContent({ children }: { children: React.ReactNode }) {
   const { isExpanded, isHovered, isMobileOpen } = useSidebar();
+  const { user } = useAuth();
+  
+  // Only check subscription status for merchant users
+  const isMerchantUser = user?.role === 'MERCHANT_OWNER' || user?.role === 'MERCHANT_STAFF';
+  const { isSuspended } = useSubscriptionStatus();
 
   // Sync session with server on page load/refresh
   useSessionSync();
@@ -52,35 +56,50 @@ export default function AdminDashboardLayout({
       ? "lg:ml-[290px]"
       : "lg:ml-[90px]";
 
+  // Only show padding if merchant user is suspended
+  const showSuspendedBannerPadding = isMerchantUser && isSuspended;
+
+  return (
+    <div className="min-h-screen xl:flex bg-gray-50 dark:bg-gray-900">
+      {/* Session Guard - Auto logout on token expiry */}
+      <SessionGuard />
+
+      {/* Sidebar and Backdrop */}
+      <AppSidebar />
+      <Backdrop />
+
+      {/* Main Content Area */}
+      <div
+        className={`flex-1 transition-all duration-300 ease-in-out ${mainContentMargin}`}
+      >
+        {/* Subscription Alerts - Fixed at top when suspended */}
+        <SubscriptionAlerts />
+
+        {/* Header - Add top padding when suspended alert is shown */}
+        <div className={showSuspendedBannerPadding ? "pt-[72px]" : ""}>
+          <AppHeader />
+        </div>
+
+        {/* Page Content */}
+        <div className="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6 overflow-x-hidden">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function AdminDashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <SWRProvider>
       <MerchantProvider>
         <AdminLanguageProvider>
           <ToastProvider>
-            <div className="min-h-screen xl:flex">
-              {/* Session Guard - Auto logout on token expiry */}
-              <SessionGuard />
-
-              {/* Sidebar and Backdrop */}
-              <AppSidebar />
-              <Backdrop />
-
-              {/* Main Content Area */}
-              <div
-                className={`flex-1 transition-all duration-300 ease-in-out ${mainContentMargin}`}
-              >
-                {/* Header */}
-                <AppHeader />
-
-                {/* Subscription Alerts (Trial/Suspended banners for merchants) */}
-                <SubscriptionAlerts />
-
-                {/* Page Content */}
-                <div className="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6 overflow-x-hidden">
-                  {children}
-                </div>
-              </div>
-            </div>
+            <DashboardContent>{children}</DashboardContent>
           </ToastProvider>
         </AdminLanguageProvider>
       </MerchantProvider>

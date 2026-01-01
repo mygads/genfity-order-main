@@ -7,6 +7,9 @@ import subscriptionRepository from '@/lib/repositories/SubscriptionRepository';
 import balanceRepository from '@/lib/repositories/BalanceRepository';
 import { NotFoundError, ValidationError, ERROR_CODES } from '@/lib/constants/errors';
 
+// Grace period configuration (in days)
+const GRACE_PERIOD_DAYS = 3;
+
 export interface SubscriptionStatus {
     merchantId: bigint;
     type: 'TRIAL' | 'DEPOSIT' | 'MONTHLY';
@@ -18,6 +21,10 @@ export interface SubscriptionStatus {
     balance: number | null;
     currency: string;
     suspendReason: string | null;
+    // Grace period fields
+    inGracePeriod: boolean;
+    graceDaysRemaining: number | null;
+    graceEndsAt: Date | null;
 }
 
 export interface SubscriptionPlanPricing {
@@ -89,16 +96,42 @@ class SubscriptionService {
         const currency = subscription.merchant?.currency || 'IDR';
         let daysRemaining: number | null = null;
         let balance: number | null = null;
+        let inGracePeriod = false;
+        let graceDaysRemaining: number | null = null;
+        let graceEndsAt: Date | null = null;
+
+        const now = new Date();
 
         // Calculate days remaining based on subscription type
         if (subscription.type === 'TRIAL' && subscription.trialEndsAt) {
-            const now = new Date();
             const diffMs = subscription.trialEndsAt.getTime() - now.getTime();
-            daysRemaining = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+            daysRemaining = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+            
+            // Check if in grace period (expired but within grace period)
+            if (daysRemaining <= 0 && subscription.status === 'ACTIVE') {
+                inGracePeriod = true;
+                graceEndsAt = new Date(subscription.trialEndsAt.getTime() + GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000);
+                const graceMs = graceEndsAt.getTime() - now.getTime();
+                graceDaysRemaining = Math.max(0, Math.ceil(graceMs / (1000 * 60 * 60 * 24)));
+                // Reset daysRemaining if in grace
+                daysRemaining = 0;
+            } else {
+                daysRemaining = Math.max(0, daysRemaining);
+            }
         } else if (subscription.type === 'MONTHLY' && subscription.currentPeriodEnd) {
-            const now = new Date();
             const diffMs = subscription.currentPeriodEnd.getTime() - now.getTime();
-            daysRemaining = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+            daysRemaining = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+            
+            // Check if in grace period
+            if (daysRemaining <= 0 && subscription.status === 'ACTIVE') {
+                inGracePeriod = true;
+                graceEndsAt = new Date(subscription.currentPeriodEnd.getTime() + GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000);
+                const graceMs = graceEndsAt.getTime() - now.getTime();
+                graceDaysRemaining = Math.max(0, Math.ceil(graceMs / (1000 * 60 * 60 * 24)));
+                daysRemaining = 0;
+            } else {
+                daysRemaining = Math.max(0, daysRemaining);
+            }
         }
 
         // Get balance for deposit mode
@@ -107,8 +140,8 @@ class SubscriptionService {
             balance = merchantBalance ? Number(merchantBalance.balance) : 0;
         }
 
-        // Check if subscription is actually valid
-        const isValid = this.checkSubscriptionValid(subscription, balance);
+        // Check if subscription is actually valid (considering grace period)
+        const isValid = this.checkSubscriptionValid(subscription, balance, inGracePeriod, graceDaysRemaining);
 
         return {
             merchantId,
@@ -121,18 +154,29 @@ class SubscriptionService {
             balance,
             currency,
             suspendReason: subscription.suspendReason,
+            inGracePeriod,
+            graceDaysRemaining,
+            graceEndsAt,
         };
     }
 
     /**
      * Check if subscription is valid (can accept orders)
+     * Grace period allows operation but with warnings
      */
     private checkSubscriptionValid(
         subscription: { type: string; status: string; trialEndsAt: Date | null; currentPeriodEnd: Date | null },
-        balance: number | null
+        balance: number | null,
+        inGracePeriod: boolean,
+        graceDaysRemaining: number | null
     ): boolean {
         if (subscription.status !== 'ACTIVE') {
             return false;
+        }
+
+        // If in grace period and still has grace days, still valid
+        if (inGracePeriod && graceDaysRemaining !== null && graceDaysRemaining > 0) {
+            return true;
         }
 
         const now = new Date();

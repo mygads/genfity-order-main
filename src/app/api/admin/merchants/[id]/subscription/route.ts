@@ -15,6 +15,7 @@ const updateSubscriptionSchema = z.object({
     type: z.enum(['TRIAL', 'DEPOSIT', 'MONTHLY']).optional(),
     status: z.enum(['ACTIVE', 'SUSPENDED', 'CANCELLED']).optional(),
     extendDays: z.number().min(1).max(365).optional(),
+    monthlyPeriodMonths: z.number().min(1).max(24).optional(), // For MONTHLY type
     suspendReason: z.string().max(500).optional(),
 });
 
@@ -68,24 +69,66 @@ async function handlePut(
             );
         }
 
-        const { status, extendDays, suspendReason } = validation.data;
+        const { type, status, extendDays, monthlyPeriodMonths, suspendReason } = validation.data;
 
-        // Handle extend trial via repository directly
-        if (extendDays) {
-            const subscription = await subscriptionRepository.getMerchantSubscription(merchantId);
-            if (subscription && subscription.trialEndsAt) {
-                const newTrialEnd = new Date(subscription.trialEndsAt);
-                newTrialEnd.setDate(newTrialEnd.getDate() + extendDays);
+        // Handle subscription type change
+        if (type) {
+            const currentSubscription = await subscriptionRepository.getMerchantSubscription(merchantId);
+            if (!currentSubscription) {
+                // Create new subscription if none exists
+                await subscriptionRepository.createMerchantSubscription(merchantId);
+            }
+
+            // Change subscription type
+            if (type === 'TRIAL') {
+                // Reset to trial with 30 days
                 await subscriptionRepository.updateMerchantSubscription(merchantId, {
-                    trialEndsAt: newTrialEnd,
+                    type: 'TRIAL',
+                    status: 'ACTIVE',
+                    trialStartedAt: new Date(),
+                    trialEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                    currentPeriodStart: null,
+                    currentPeriodEnd: null,
+                    suspendedAt: null,
+                    suspendReason: null,
                 });
+            } else if (type === 'DEPOSIT') {
+                await subscriptionRepository.upgradeToDeposit(merchantId);
+            } else if (type === 'MONTHLY') {
+                // Default to 1 month if not specified
+                await subscriptionRepository.upgradeToMonthly(merchantId, monthlyPeriodMonths || 1);
             }
         }
 
-        if (status === 'SUSPENDED' && suspendReason) {
-            await subscriptionRepository.suspendSubscription(merchantId, suspendReason);
-        } else if (status === 'ACTIVE') {
-            await subscriptionRepository.reactivateSubscription(merchantId);
+        // Handle extend trial/period via repository directly
+        if (extendDays) {
+            const subscription = await subscriptionRepository.getMerchantSubscription(merchantId);
+            if (subscription) {
+                if (subscription.type === 'TRIAL' && subscription.trialEndsAt) {
+                    const newTrialEnd = new Date(subscription.trialEndsAt);
+                    newTrialEnd.setDate(newTrialEnd.getDate() + extendDays);
+                    await subscriptionRepository.updateMerchantSubscription(merchantId, {
+                        trialEndsAt: newTrialEnd,
+                    });
+                } else if (subscription.type === 'MONTHLY') {
+                    // Extend monthly subscription by days
+                    const currentEnd = subscription.currentPeriodEnd || new Date();
+                    const newEnd = new Date(currentEnd);
+                    newEnd.setDate(newEnd.getDate() + extendDays);
+                    await subscriptionRepository.updateMerchantSubscription(merchantId, {
+                        currentPeriodEnd: newEnd,
+                    });
+                }
+            }
+        }
+
+        // Handle status change (only if type wasn't changed, since type change sets status)
+        if (status && !type) {
+            if (status === 'SUSPENDED' && suspendReason) {
+                await subscriptionRepository.suspendSubscription(merchantId, suspendReason);
+            } else if (status === 'ACTIVE') {
+                await subscriptionRepository.reactivateSubscription(merchantId);
+            }
         }
 
         const updatedStatus = await subscriptionService.getSubscriptionStatus(merchantId);

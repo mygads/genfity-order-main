@@ -28,6 +28,9 @@ interface CronJobSummary {
     totalErrors: number;
 }
 
+// Grace period days before full suspension
+const GRACE_PERIOD_DAYS = 3;
+
 class SubscriptionCronService {
     /**
      * Run all subscription cron tasks
@@ -36,10 +39,10 @@ class SubscriptionCronService {
         const startedAt = new Date();
         const results: CronResult[] = [];
 
-        // Task 1: Suspend expired trials
+        // Task 1: Suspend expired trials (only after grace period)
         results.push(await this.suspendExpiredTrials());
 
-        // Task 2: Suspend expired monthly subscriptions
+        // Task 2: Suspend expired monthly subscriptions (only after grace period)
         results.push(await this.suspendExpiredMonthly());
 
         // Task 3: Suspend negative balance merchants (deposit mode)
@@ -50,6 +53,9 @@ class SubscriptionCronService {
 
         // Task 5: Send low balance warnings
         results.push(await this.sendLowBalanceWarnings());
+
+        // Task 6: Send grace period warnings
+        results.push(await this.sendGracePeriodWarnings());
 
         const completedAt = new Date();
         const totalProcessed = results.reduce((sum, r) => sum + r.count, 0);
@@ -65,20 +71,21 @@ class SubscriptionCronService {
     }
 
     /**
-     * Suspend expired trial subscriptions
+     * Suspend expired trial subscriptions (after grace period)
      */
     async suspendExpiredTrials(): Promise<CronResult> {
         const details: string[] = [];
         const errors: string[] = [];
 
         try {
-            const expiredTrials = await subscriptionRepository.getExpiredTrials();
+            // Only get trials expired PAST the grace period
+            const expiredTrials = await subscriptionRepository.getExpiredTrials(GRACE_PERIOD_DAYS);
 
             for (const sub of expiredTrials) {
                 try {
                     await subscriptionRepository.suspendSubscription(
                         sub.merchantId,
-                        'Trial period ended'
+                        `Trial period ended (${GRACE_PERIOD_DAYS}-day grace period expired)`
                     );
 
                     // Send suspension notification
@@ -116,20 +123,21 @@ class SubscriptionCronService {
     }
 
     /**
-     * Suspend expired monthly subscriptions
+     * Suspend expired monthly subscriptions (after grace period)
      */
     async suspendExpiredMonthly(): Promise<CronResult> {
         const details: string[] = [];
         const errors: string[] = [];
 
         try {
-            const expiredMonthly = await subscriptionRepository.getExpiredMonthly();
+            // Only get monthly subscriptions expired PAST the grace period
+            const expiredMonthly = await subscriptionRepository.getExpiredMonthly(GRACE_PERIOD_DAYS);
 
             for (const sub of expiredMonthly) {
                 try {
                     await subscriptionRepository.suspendSubscription(
                         sub.merchantId,
-                        'Monthly subscription expired'
+                        `Monthly subscription expired (${GRACE_PERIOD_DAYS}-day grace period expired)`
                     );
 
                     // Send suspension notification
@@ -518,6 +526,187 @@ class SubscriptionCronService {
                 <a href="${process.env.NEXT_PUBLIC_APP_URL}/admin/dashboard/subscription/topup" 
                    style="display: inline-block; background-color: #ef4444; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
                     Aktifkan Kembali
+                </a>
+            </div>
+        </div>
+        <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+            <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+                © ${new Date().getFullYear()} Genfity. All rights reserved.
+            </p>
+        </div>
+    </div>
+</body>
+</html>`;
+    }
+
+    /**
+     * Send grace period warning notifications
+     * For merchants whose subscription/trial has expired but are still within grace period
+     */
+    async sendGracePeriodWarnings(): Promise<CronResult> {
+        const details: string[] = [];
+        const errors: string[] = [];
+        let count = 0;
+
+        try {
+            // Get trials in grace period
+            const trialsInGrace = await subscriptionRepository.getTrialsInGracePeriod(GRACE_PERIOD_DAYS);
+            
+            // Get monthly subscriptions in grace period
+            const monthlyInGrace = await subscriptionRepository.getMonthlyInGracePeriod(GRACE_PERIOD_DAYS);
+
+            // Process trials in grace
+            for (const sub of trialsInGrace) {
+                if (!sub.merchant.email) continue;
+                
+                try {
+                    const graceEndDate = new Date(sub.trialEndsAt!.getTime() + GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000);
+                    const daysLeft = Math.ceil((graceEndDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                    
+                    if (daysLeft <= 0) continue; // Already past grace
+
+                    const success = await emailService.sendEmail({
+                        to: sub.merchant.email,
+                        subject: `⚠️ Grace Period: ${daysLeft} hari sebelum ditangguhkan - Genfity`,
+                        html: this.getGracePeriodEmailHtml(
+                            sub.merchant.name,
+                            daysLeft,
+                            graceEndDate,
+                            'trial'
+                        ),
+                    });
+
+                    if (success) {
+                        details.push(`Grace warning (trial) sent to: ${sub.merchant.code} (${daysLeft}d left)`);
+                        count++;
+                    }
+
+                    // Also send in-app notification
+                    await userNotificationService.createForMerchant(
+                        sub.merchantId,
+                        'SUBSCRIPTION',
+                        `Masa Grace Period: ${daysLeft} hari tersisa`,
+                        `Trial Anda sudah berakhir. Upgrade sekarang atau toko akan ditangguhkan dalam ${daysLeft} hari.`,
+                        {
+                            metadata: { daysLeft, graceEndDate: graceEndDate.toISOString(), subscriptionType: 'TRIAL' },
+                            actionUrl: '/admin/dashboard/subscription/upgrade',
+                        }
+                    );
+                } catch (err) {
+                    errors.push(`Failed to send grace warning to ${sub.merchant.code}: ${err}`);
+                }
+            }
+
+            // Process monthly in grace
+            for (const sub of monthlyInGrace) {
+                if (!sub.merchant.email) continue;
+                
+                try {
+                    const graceEndDate = new Date(sub.currentPeriodEnd!.getTime() + GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000);
+                    const daysLeft = Math.ceil((graceEndDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                    
+                    if (daysLeft <= 0) continue; // Already past grace
+
+                    const success = await emailService.sendEmail({
+                        to: sub.merchant.email,
+                        subject: `⚠️ Grace Period: ${daysLeft} hari sebelum ditangguhkan - Genfity`,
+                        html: this.getGracePeriodEmailHtml(
+                            sub.merchant.name,
+                            daysLeft,
+                            graceEndDate,
+                            'monthly'
+                        ),
+                    });
+
+                    if (success) {
+                        details.push(`Grace warning (monthly) sent to: ${sub.merchant.code} (${daysLeft}d left)`);
+                        count++;
+                    }
+
+                    // Also send in-app notification
+                    await userNotificationService.createForMerchant(
+                        sub.merchantId,
+                        'SUBSCRIPTION',
+                        `Masa Grace Period: ${daysLeft} hari tersisa`,
+                        `Langganan bulanan Anda sudah berakhir. Perpanjang sekarang atau toko akan ditangguhkan dalam ${daysLeft} hari.`,
+                        {
+                            metadata: { daysLeft, graceEndDate: graceEndDate.toISOString(), subscriptionType: 'MONTHLY' },
+                            actionUrl: '/admin/dashboard/subscription/upgrade',
+                        }
+                    );
+                } catch (err) {
+                    errors.push(`Failed to send grace warning to ${sub.merchant.code}: ${err}`);
+                }
+            }
+
+            return {
+                task: 'Send Grace Period Warnings',
+                success: errors.length === 0,
+                count,
+                details,
+                errors: errors.length > 0 ? errors : undefined,
+            };
+        } catch (err) {
+            return {
+                task: 'Send Grace Period Warnings',
+                success: false,
+                count: 0,
+                errors: [`Task failed: ${err}`],
+            };
+        }
+    }
+
+    /**
+     * Get grace period warning email HTML
+     */
+    private getGracePeriodEmailHtml(
+        merchantName: string,
+        daysLeft: number,
+        graceEndDate: Date,
+        subType: 'trial' | 'monthly'
+    ): string {
+        const formattedDate = graceEndDate.toLocaleDateString('id-ID', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+        });
+        const subTypeText = subType === 'trial' ? 'Trial' : 'Langganan bulanan';
+
+        return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f9fafb; margin: 0; padding: 20px;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <div style="background: linear-gradient(135deg, #f59e0b, #d97706); padding: 30px; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 24px;">⚠️ Masa Grace Period</h1>
+        </div>
+        <div style="padding: 30px;">
+            <p style="color: #374151; font-size: 16px; line-height: 1.6;">
+                Halo <strong>${merchantName}</strong>,
+            </p>
+            <p style="color: #374151; font-size: 16px; line-height: 1.6;">
+                ${subTypeText} Anda telah berakhir, namun Anda masih dalam <strong>masa grace period</strong>.
+            </p>
+            <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 0 8px 8px 0;">
+                <p style="color: #92400e; margin: 0; font-weight: 600;">
+                    ⏰ Sisa waktu: <span style="color: #d97706; font-size: 18px;">${daysLeft} hari</span>
+                </p>
+                <p style="color: #78350f; margin: 8px 0 0 0; font-size: 14px;">
+                    Grace period berakhir: ${formattedDate}
+                </p>
+            </div>
+            <p style="color: #374151; font-size: 16px; line-height: 1.6;">
+                Selama grace period, toko Anda masih dapat menerima pesanan. Namun, jika tidak melakukan pembayaran sebelum grace period berakhir, toko akan <strong style="color: #ef4444;">ditangguhkan</strong>.
+            </p>
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="${process.env.NEXT_PUBLIC_APP_URL}/admin/dashboard/subscription/upgrade" 
+                   style="display: inline-block; background-color: #f59e0b; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                    Upgrade Sekarang
                 </a>
             </div>
         </div>

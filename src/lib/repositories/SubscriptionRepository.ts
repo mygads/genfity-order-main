@@ -141,15 +141,20 @@ class SubscriptionRepository {
     }
 
     /**
-     * Get expired trial subscriptions
+     * Get expired trial subscriptions (past grace period)
+     * Grace period: 3 days after trial ends
      */
-    async getExpiredTrials() {
+    async getExpiredTrials(gracePeriodDays: number = 3) {
+        const now = new Date();
+        // Only return trials where grace period has also ended
+        const graceEndDate = new Date(now.getTime() - gracePeriodDays * 24 * 60 * 60 * 1000);
+        
         return prisma.merchantSubscription.findMany({
             where: {
                 type: 'TRIAL',
                 status: 'ACTIVE',
                 trialEndsAt: {
-                    lt: new Date(),
+                    lt: graceEndDate, // Must be expired for at least grace period days
                 },
             },
             include: {
@@ -166,15 +171,78 @@ class SubscriptionRepository {
     }
 
     /**
-     * Get expired monthly subscriptions
+     * Get trials in grace period (expired but within grace period)
      */
-    async getExpiredMonthly() {
+    async getTrialsInGracePeriod(gracePeriodDays: number = 3) {
+        const now = new Date();
+        const graceEndDate = new Date(now.getTime() - gracePeriodDays * 24 * 60 * 60 * 1000);
+        
+        return prisma.merchantSubscription.findMany({
+            where: {
+                type: 'TRIAL',
+                status: 'ACTIVE',
+                trialEndsAt: {
+                    gte: graceEndDate, // Expired within grace period
+                    lt: now,            // But already expired
+                },
+            },
+            include: {
+                merchant: {
+                    select: {
+                        id: true,
+                        code: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+            },
+        });
+    }
+
+    /**
+     * Get expired monthly subscriptions (past grace period)
+     * Grace period: 3 days after current period ends
+     */
+    async getExpiredMonthly(gracePeriodDays: number = 3) {
+        const now = new Date();
+        // Only return monthly subs where grace period has also ended
+        const graceEndDate = new Date(now.getTime() - gracePeriodDays * 24 * 60 * 60 * 1000);
+        
         return prisma.merchantSubscription.findMany({
             where: {
                 type: 'MONTHLY',
                 status: 'ACTIVE',
                 currentPeriodEnd: {
-                    lt: new Date(),
+                    lt: graceEndDate, // Must be expired for at least grace period days
+                },
+            },
+            include: {
+                merchant: {
+                    select: {
+                        id: true,
+                        code: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+            },
+        });
+    }
+
+    /**
+     * Get monthly subscriptions in grace period
+     */
+    async getMonthlyInGracePeriod(gracePeriodDays: number = 3) {
+        const now = new Date();
+        const graceEndDate = new Date(now.getTime() - gracePeriodDays * 24 * 60 * 60 * 1000);
+        
+        return prisma.merchantSubscription.findMany({
+            where: {
+                type: 'MONTHLY',
+                status: 'ACTIVE',
+                currentPeriodEnd: {
+                    gte: graceEndDate, // Expired within grace period
+                    lt: now,            // But already expired
                 },
             },
             include: {

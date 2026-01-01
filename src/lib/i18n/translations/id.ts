@@ -2275,6 +2275,97 @@ const id = {
   "groupOrder.viewSession": "Lihat Pesanan Grup",
   "groupOrder.createDescription": "Buat grup dan bagikan kode",
   "groupOrder.joinDescription": "Masukkan kode untuk bergabung",
+
+  // ============================================================================
+  // SUBSCRIPTION ALERTS & MANAGEMENT
+  // ============================================================================
+  // Suspended Alert
+  "subscription.alert.title": "Toko Tidak Dapat Menerima Pesanan",
+  "subscription.alert.noSubscription": "Tidak ada langganan aktif.",
+  "subscription.alert.trialExpired": "Masa trial Anda telah berakhir.",
+  "subscription.alert.depositDepleted": "Saldo deposit Anda telah habis.",
+  "subscription.alert.monthlyExpired": "Langganan bulanan Anda telah berakhir.",
+  "subscription.alert.suspended": "Langganan Anda telah ditangguhkan.",
+  "subscription.alert.renewCta": "Silakan perbarui langganan untuk melanjutkan operasional.",
+  "subscription.alert.renewButton": "Perbarui Langganan",
+  
+  // Grace Period
+  "subscription.grace.title": "Langganan Segera Berakhir",
+  "subscription.grace.message": "Langganan Anda telah berakhir. Anda memiliki {days} hari masa tenggang tersisa.",
+  "subscription.grace.lastDay": "Ini adalah hari terakhir masa tenggang. Toko Anda akan ditangguhkan besok.",
+  "subscription.grace.renewNow": "Perbarui Sekarang untuk Menghindari Penangguhan",
+  
+  // Trial Banner
+  "subscription.trial.title": "Masa Trial",
+  "subscription.trial.daysRemaining": "Sisa {days} hari lagi",
+  "subscription.trial.endsToday": "Berakhir hari ini!",
+  "subscription.trial.upgradeNow": "Upgrade Sekarang",
+  
+  // Subscription Required
+  "subscription.required.title": "Langganan Diperlukan",
+  "subscription.required.message": "Silakan perbarui langganan untuk mengakses fitur ini.",
+  "subscription.required.viewDetails": "Lihat Detail Langganan",
+  
+  // Upgrade Prompt Modal
+  "subscription.upgrade.title": "Pilih Paket Anda",
+  "subscription.upgrade.subtitle": "Trial Anda akan segera berakhir. Pilih paket untuk terus menggunakan Genfity.",
+  "subscription.upgrade.trialEndsIn": "Trial berakhir dalam {days} hari",
+  "subscription.upgrade.deposit.title": "Mode Deposit",
+  "subscription.upgrade.deposit.description": "Bayar per pesanan. Top up saldo Anda dan kami akan memotong biaya untuk setiap pesanan.",
+  "subscription.upgrade.deposit.benefits.1": "Tanpa komitmen bulanan",
+  "subscription.upgrade.deposit.benefits.2": "Bayar hanya saat menerima pesanan",
+  "subscription.upgrade.deposit.benefits.3": "Jumlah top up fleksibel",
+  "subscription.upgrade.deposit.fee": "Biaya per pesanan",
+  "subscription.upgrade.monthly.title": "Paket Bulanan",
+  "subscription.upgrade.monthly.description": "Biaya bulanan tetap. Pesanan tak terbatas tanpa biaya tambahan.",
+  "subscription.upgrade.monthly.benefits.1": "Pesanan tak terbatas",
+  "subscription.upgrade.monthly.benefits.2": "Tanpa biaya per pesanan",
+  "subscription.upgrade.monthly.benefits.3": "Dukungan prioritas",
+  "subscription.upgrade.monthly.price": "per bulan",
+  "subscription.upgrade.selectPlan": "Pilih Paket",
+  "subscription.upgrade.currentPlan": "Paket Saat Ini",
+  "subscription.upgrade.later": "Ingatkan Nanti",
+  "subscription.upgrade.dontShowAgain": "Jangan tampilkan sampai trial berakhir",
+  
+  // Analytics Dashboard
+  "subscription.analytics.title": "Analitik Langganan",
+  "subscription.analytics.subtitle": "Pantau metrik langganan dan kesehatan merchant",
+  "subscription.analytics.overview": "Ringkasan",
+  "subscription.analytics.totalMerchants": "Total Merchant",
+  "subscription.analytics.activeMerchants": "Merchant Aktif",
+  "subscription.analytics.trialMerchants": "Merchant Trial",
+  "subscription.analytics.suspendedMerchants": "Merchant Ditangguhkan",
+  "subscription.analytics.conversionRate": "Tingkat Konversi Trial",
+  "subscription.analytics.churnRate": "Tingkat Churn Bulanan",
+  "subscription.analytics.mrr": "Pendapatan Berulang Bulanan",
+  "subscription.analytics.arr": "Pendapatan Berulang Tahunan",
+  "subscription.analytics.byType": "Merchant Berdasarkan Tipe Langganan",
+  "subscription.analytics.byStatus": "Merchant Berdasarkan Status",
+  "subscription.analytics.trialConversions": "Konversi Trial",
+  "subscription.analytics.conversionTrend": "Tren Konversi (6 Bulan Terakhir)",
+  "subscription.analytics.expiringTrials": "Trial Berakhir Minggu Ini",
+  "subscription.analytics.expiringMonthly": "Bulanan Berakhir Minggu Ini",
+  "subscription.analytics.recentChurn": "Churn Terbaru",
+  "subscription.analytics.noData": "Tidak ada data tersedia",
+  "subscription.analytics.filter.all": "Semua Waktu",
+  "subscription.analytics.filter.30days": "30 Hari Terakhir",
+  "subscription.analytics.filter.90days": "90 Hari Terakhir",
+  "subscription.analytics.filter.12months": "12 Bulan Terakhir",
+  
+  // Push Notifications
+  "subscription.push.title": "Notifikasi Push",
+  "subscription.push.enable": "Aktifkan Notifikasi Push",
+  "subscription.push.enabled": "Notifikasi push aktif",
+  "subscription.push.disabled": "Notifikasi push nonaktif",
+  "subscription.push.enableDescription": "Dapatkan notifikasi instan tentang pesanan, pembayaran, dan pembaruan langganan.",
+  "subscription.push.trialEnding.title": "Trial Segera Berakhir",
+  "subscription.push.trialEnding.body": "Trial Anda berakhir dalam {days} hari. Upgrade sekarang untuk terus menerima pesanan.",
+  "subscription.push.subscriptionExpired.title": "Langganan Berakhir",
+  "subscription.push.subscriptionExpired.body": "Langganan Anda telah berakhir. Perbarui sekarang untuk mengaktifkan kembali toko Anda.",
+  "subscription.push.gracePeriod.title": "Peringatan Masa Tenggang",
+  "subscription.push.gracePeriod.body": "Anda memiliki {days} hari masa tenggang tersisa. Perbarui untuk menghindari penangguhan.",
+  "subscription.push.lowBalance.title": "Peringatan Saldo Rendah",
+  "subscription.push.lowBalance.body": "Saldo Anda hampir habis. Top up untuk terus menerima pesanan.",
 };
 
 export default id;

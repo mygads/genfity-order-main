@@ -49,7 +49,7 @@ const AppHeader: React.FC = () => {
   };
 
   return (
-    <header data-header className="sticky top-0 flex w-full bg-white border-gray-200 z-30 dark:border-gray-800 dark:bg-gray-900 lg:border-b shadow-sm lg:shadow-none">
+    <header data-header className="sticky top-0 flex w-full bg-white border-b border-gray-200 z-30 dark:border-gray-800 dark:bg-gray-900 shadow-sm">
       <div className="flex items-center justify-between w-full px-3 py-2 lg:px-6 lg:py-3">
         {/* Left side - Menu toggle + Logo (mobile) */}
         <div className="flex items-center gap-2">

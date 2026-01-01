@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
-import { withMerchantOwner } from '@/lib/middleware/auth';
+import { withMerchant } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/middleware/auth';
 import subscriptionService from '@/lib/services/SubscriptionService';
 
@@ -30,11 +30,33 @@ async function handleGet(req: NextRequest, context: AuthContext) {
 
         const status = await subscriptionService.getSubscriptionStatus(merchantUser.merchantId);
 
+        // If no subscription found, return a "no subscription" status (not an error)
+        // This allows the frontend to show appropriate warning without breaking
         if (!status) {
-            return NextResponse.json(
-                { success: false, error: 'NO_SUBSCRIPTION', message: 'No subscription found' },
-                { status: 404 }
-            );
+            const merchantCurrency = merchantUser.merchant?.currency || 'IDR';
+            const pricing = await subscriptionService.getPlanPricing(merchantCurrency);
+            
+            return NextResponse.json({
+                success: true,
+                data: {
+                    subscription: {
+                        type: 'NONE' as const,
+                        status: 'SUSPENDED',
+                        isValid: false,
+                        daysRemaining: 0,
+                        trialEndsAt: null,
+                        currentPeriodEnd: null,
+                        suspendReason: 'No active subscription',
+                    },
+                    balance: null,
+                    pricing: {
+                        currency: merchantCurrency,
+                        depositMinimum: pricing.depositMinimum,
+                        orderFee: pricing.orderFee,
+                        monthlyPrice: pricing.monthlyPrice,
+                    },
+                },
+            });
         }
 
         // Get pricing for this merchant's currency
@@ -73,4 +95,5 @@ async function handleGet(req: NextRequest, context: AuthContext) {
     }
 }
 
-export const GET = withMerchantOwner(handleGet);
+// Allow both MERCHANT_OWNER and MERCHANT_STAFF to view subscription status
+export const GET = withMerchant(handleGet);

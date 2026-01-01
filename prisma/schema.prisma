@@ -39,6 +39,7 @@ model User {
   preferences         UserPreference?
   sessions            UserSession[]
   notifications       UserNotification[]
+  pushSubscriptions   PushSubscription[]
 
   @@index([email])
   @@index([role])
@@ -231,6 +232,7 @@ model Merchant {
   paymentRequests        PaymentRequest[]
   notificationLogs       NotificationLog[]
   userNotifications      UserNotification[]
+  pushSubscriptions      PushSubscription[]
   // Referral tracking
   referralCodeUsed       String?               @map("referral_code_used")
   // Group Order relation
@@ -1007,6 +1009,31 @@ model UserNotification {
   @@index([merchantId, targetRole])
   @@index([createdAt])
   @@map("user_notifications")
+}
+
+// ============================================
+// PUSH NOTIFICATIONS (Web Push)
+// ============================================
+
+model PushSubscription {
+  id          BigInt    @id @default(autoincrement())
+  userId      BigInt    @map("user_id")
+  merchantId  BigInt?   @map("merchant_id")
+  endpoint    String    @db.Text
+  p256dhKey   String    @map("p256dh_key") @db.Text
+  authKey     String    @map("auth_key") @db.Text
+  userAgent   String?   @map("user_agent")
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  merchant    Merchant? @relation(fields: [merchantId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, endpoint])
+  @@index([userId, isActive])
+  @@index([merchantId])
+  @@map("push_subscriptions")
 }
 
 // ============================================

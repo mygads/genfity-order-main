@@ -9,7 +9,7 @@ import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface SubscriptionData {
     subscription: {
-        type: 'TRIAL' | 'DEPOSIT' | 'MONTHLY';
+        type: 'TRIAL' | 'DEPOSIT' | 'MONTHLY' | 'NONE';
         status: 'ACTIVE' | 'SUSPENDED' | 'CANCELLED';
     };
     pricing: {

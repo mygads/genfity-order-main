@@ -3,7 +3,7 @@
 import React from "react";
 
 interface SubscriptionStatusBadgeProps {
-    type: 'TRIAL' | 'DEPOSIT' | 'MONTHLY';
+    type: 'TRIAL' | 'DEPOSIT' | 'MONTHLY' | 'NONE';
     status: 'ACTIVE' | 'SUSPENDED' | 'CANCELLED';
     daysRemaining?: number | null;
     balance?: number | null;
@@ -62,6 +62,14 @@ export default function SubscriptionStatusBadge({
                     bgClass: 'bg-blue-100 dark:bg-blue-900/30',
                     textClass: 'text-blue-800 dark:text-blue-200',
                     dotClass: 'bg-blue-500',
+                };
+            case 'NONE':
+                return {
+                    label: 'No Subscription',
+                    sublabel: null,
+                    bgClass: 'bg-gray-100 dark:bg-gray-900/30',
+                    textClass: 'text-gray-800 dark:text-gray-200',
+                    dotClass: 'bg-gray-500',
                 };
         }
     };

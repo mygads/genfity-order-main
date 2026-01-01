@@ -2281,6 +2281,97 @@ const en = {
   "groupOrder.viewSession": "View Group Order",
   "groupOrder.createDescription": "Start a group and share the code",
   "groupOrder.joinDescription": "Enter a code to join",
+
+  // ============================================================================
+  // SUBSCRIPTION ALERTS & MANAGEMENT
+  // ============================================================================
+  // Suspended Alert
+  "subscription.alert.title": "Store Cannot Accept Orders",
+  "subscription.alert.noSubscription": "No active subscription found.",
+  "subscription.alert.trialExpired": "Your trial period has ended.",
+  "subscription.alert.depositDepleted": "Your deposit balance has been depleted.",
+  "subscription.alert.monthlyExpired": "Your monthly subscription has expired.",
+  "subscription.alert.suspended": "Your subscription has been suspended.",
+  "subscription.alert.renewCta": "Please renew your subscription to continue operations.",
+  "subscription.alert.renewButton": "Renew Subscription",
+  
+  // Grace Period
+  "subscription.grace.title": "Subscription Expiring Soon",
+  "subscription.grace.message": "Your subscription has expired. You have {days} day(s) of grace period remaining.",
+  "subscription.grace.lastDay": "This is your last day of grace period. Your store will be suspended tomorrow.",
+  "subscription.grace.renewNow": "Renew Now to Avoid Suspension",
+  
+  // Trial Banner
+  "subscription.trial.title": "Trial Period",
+  "subscription.trial.daysRemaining": "{days} day(s) remaining",
+  "subscription.trial.endsToday": "Ends today!",
+  "subscription.trial.upgradeNow": "Upgrade Now",
+  
+  // Subscription Required
+  "subscription.required.title": "Subscription Required",
+  "subscription.required.message": "Please renew your subscription to access this feature.",
+  "subscription.required.viewDetails": "View Subscription Details",
+  
+  // Upgrade Prompt Modal
+  "subscription.upgrade.title": "Choose Your Plan",
+  "subscription.upgrade.subtitle": "Your trial is ending soon. Choose a plan to continue using Genfity.",
+  "subscription.upgrade.trialEndsIn": "Trial ends in {days} day(s)",
+  "subscription.upgrade.deposit.title": "Deposit Mode",
+  "subscription.upgrade.deposit.description": "Pay per order. Top up your balance and we deduct a fee for each order.",
+  "subscription.upgrade.deposit.benefits.1": "No monthly commitment",
+  "subscription.upgrade.deposit.benefits.2": "Pay only when you receive orders",
+  "subscription.upgrade.deposit.benefits.3": "Flexible top-up amounts",
+  "subscription.upgrade.deposit.fee": "Fee per order",
+  "subscription.upgrade.monthly.title": "Monthly Plan",
+  "subscription.upgrade.monthly.description": "Fixed monthly fee. Unlimited orders with no additional charges.",
+  "subscription.upgrade.monthly.benefits.1": "Unlimited orders",
+  "subscription.upgrade.monthly.benefits.2": "No per-order fees",
+  "subscription.upgrade.monthly.benefits.3": "Priority support",
+  "subscription.upgrade.monthly.price": "per month",
+  "subscription.upgrade.selectPlan": "Select Plan",
+  "subscription.upgrade.currentPlan": "Current Plan",
+  "subscription.upgrade.later": "Remind Me Later",
+  "subscription.upgrade.dontShowAgain": "Don't show until trial ends",
+  
+  // Analytics Dashboard
+  "subscription.analytics.title": "Subscription Analytics",
+  "subscription.analytics.subtitle": "Track subscription metrics and merchant health",
+  "subscription.analytics.overview": "Overview",
+  "subscription.analytics.totalMerchants": "Total Merchants",
+  "subscription.analytics.activeMerchants": "Active Merchants",
+  "subscription.analytics.trialMerchants": "Trial Merchants",
+  "subscription.analytics.suspendedMerchants": "Suspended Merchants",
+  "subscription.analytics.conversionRate": "Trial Conversion Rate",
+  "subscription.analytics.churnRate": "Monthly Churn Rate",
+  "subscription.analytics.mrr": "Monthly Recurring Revenue",
+  "subscription.analytics.arr": "Annual Recurring Revenue",
+  "subscription.analytics.byType": "Merchants by Subscription Type",
+  "subscription.analytics.byStatus": "Merchants by Status",
+  "subscription.analytics.trialConversions": "Trial Conversions",
+  "subscription.analytics.conversionTrend": "Conversion Trend (Last 6 Months)",
+  "subscription.analytics.expiringTrials": "Trials Expiring This Week",
+  "subscription.analytics.expiringMonthly": "Monthly Expiring This Week",
+  "subscription.analytics.recentChurn": "Recent Churn",
+  "subscription.analytics.noData": "No data available",
+  "subscription.analytics.filter.all": "All Time",
+  "subscription.analytics.filter.30days": "Last 30 Days",
+  "subscription.analytics.filter.90days": "Last 90 Days",
+  "subscription.analytics.filter.12months": "Last 12 Months",
+  
+  // Push Notifications
+  "subscription.push.title": "Push Notifications",
+  "subscription.push.enable": "Enable Push Notifications",
+  "subscription.push.enabled": "Push notifications enabled",
+  "subscription.push.disabled": "Push notifications disabled",
+  "subscription.push.enableDescription": "Get instant notifications about orders, payments, and subscription updates.",
+  "subscription.push.trialEnding.title": "Trial Ending Soon",
+  "subscription.push.trialEnding.body": "Your trial ends in {days} day(s). Upgrade now to continue receiving orders.",
+  "subscription.push.subscriptionExpired.title": "Subscription Expired",
+  "subscription.push.subscriptionExpired.body": "Your subscription has expired. Renew now to reactivate your store.",
+  "subscription.push.gracePeriod.title": "Grace Period Warning",
+  "subscription.push.gracePeriod.body": "You have {days} day(s) of grace period remaining. Renew to avoid suspension.",
+  "subscription.push.lowBalance.title": "Low Balance Warning",
+  "subscription.push.lowBalance.body": "Your balance is running low. Top up to continue receiving orders.",
 };
 
 export default en;

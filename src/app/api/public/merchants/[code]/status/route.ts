@@ -137,9 +137,14 @@ export async function GET(
       const subscription = await subscriptionRepository.getMerchantSubscription(merchant.id);
       if (subscription) {
         subscriptionStatus = subscription.status;
+      } else {
+        // No subscription found = treat as SUSPENDED
+        subscriptionStatus = 'SUSPENDED';
       }
     } catch (subError) {
       console.warn('Failed to get subscription status:', subError);
+      // On error, treat as SUSPENDED to be safe
+      subscriptionStatus = 'SUSPENDED';
     }
 
     // Return only status-related data
