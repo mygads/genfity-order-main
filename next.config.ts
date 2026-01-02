@@ -8,9 +8,15 @@ const nextConfig: NextConfig = {
     // Allow build to succeed even with type errors (warnings only)
     ignoreBuildErrors: false,
   },
-  eslint: {
-    // Allow build to succeed even with ESLint warnings
-    ignoreDuringBuilds: false,
+  // Note: eslint config moved to eslint.config.mjs in Next.js 16
+  // Turbopack configuration for Next.js 16
+  turbopack: {
+    rules: {
+      '*.svg': {
+        loaders: ['@svgr/webpack'],
+        as: '*.js',
+      },
+    },
   },
   images: {
     remotePatterns: [

@@ -6,7 +6,7 @@
 services:
   # PostgreSQL Database
   db:
-    image: postgres:16-alpine
+    image: postgres:17-alpine
     container_name: genfity-db
     restart: unless-stopped
     environment:
