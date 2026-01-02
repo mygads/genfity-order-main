@@ -1120,3 +1120,16 @@ export async function seedWellardKebabHouse() {
 
 // Export for direct execution
 export default seedWellardKebabHouse;
+
+// Self-invoking for direct execution
+if (require.main === module || process.argv[1]?.includes('wellard-kebab-house')) {
+  seedWellardKebabHouse()
+    .then(() => {
+      console.log('\n✅ Seed completed successfully!');
+      process.exit(0);
+    })
+    .catch((error) => {
+      console.error('❌ Seed failed:', error);
+      process.exit(1);
+    });
+}
