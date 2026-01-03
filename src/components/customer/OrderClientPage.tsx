@@ -1016,8 +1016,9 @@ export default function OrderClientPage({
 
       {/* ========================================
           FLOATING CART BUTTON
+          Hidden when store is closed - prevents checkout attempt
       ======================================== */}
-      <FloatingCartButton merchantCode={merchantCode} mode={mode as 'dinein' | 'takeaway'} />
+      <FloatingCartButton merchantCode={merchantCode} mode={mode as 'dinein' | 'takeaway'} storeOpen={storeOpen} />
 
       {/* ========================================
           MENU DETAIL MODAL

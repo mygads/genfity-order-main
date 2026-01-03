@@ -10,6 +10,7 @@ import { useCustomerData } from '@/context/CustomerDataContext';
 interface FloatingCartButtonProps {
   merchantCode: string;
   mode?: 'dinein' | 'takeaway';
+  storeOpen?: boolean; // When false, hide checkout button entirely
 }
 
 /**
@@ -20,7 +21,7 @@ interface FloatingCartButtonProps {
  * - Host: Goes to view-order page with groupOrder=true
  * - Non-host: Shows modal that only host can checkout
  */
-export default function FloatingCartButton({ merchantCode, mode }: FloatingCartButtonProps) {
+export default function FloatingCartButton({ merchantCode, mode, storeOpen = true }: FloatingCartButtonProps) {
   const router = useRouter();
   const { cart, getItemCount, getTotal } = useCart();
   const { isInGroupOrder, isHost, session } = useGroupOrder();
@@ -98,6 +99,11 @@ export default function FloatingCartButton({ merchantCode, mode }: FloatingCartB
     }
     setPrevItemCount(currentCount);
   }, [displayData.totalItems, prevItemCount]);
+
+  // Don't show if store is closed
+  if (!storeOpen) {
+    return null;
+  }
 
   // Don't show if no items
   if (!isInGroupOrder && (!cart || cart.items.length === 0)) {

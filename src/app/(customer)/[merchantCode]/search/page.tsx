@@ -14,6 +14,7 @@ import { useCustomerData } from '@/context/CustomerDataContext';
 import type { CachedAddonCategory } from '@/lib/utils/addonExtractor';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { TranslationKeys } from '@/lib/i18n';
+import { useStoreStatus } from '@/hooks/useStoreStatus';
 
 interface MenuItem {
   id: string;
@@ -72,6 +73,9 @@ export default function SearchPage() {
   const merchantCode = params.merchantCode as string;
   const mode = searchParams.get('mode') || 'takeaway';
   const refUrl = searchParams.get('ref') || `/${merchantCode}/order?mode=${mode}`;
+
+  // ✅ Check store status (open/closed)
+  const { storeOpen } = useStoreStatus(merchantCode, { refreshInterval: 30000 });
 
   // ✅ Use CustomerData Context for instant data access
   const { 
@@ -456,11 +460,14 @@ export default function SearchPage() {
                             ) : (<span style={{ fontSize: '14px', fontWeight: 700, color: available ? '#000000' : '#9CA3AF' }}>{formatCurrency(item.price, merchantInfo?.currency || 'AUD')}</span>)}
                           </div>
                           <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
-                            {/* Low Stock Indicator */}
-                            {available && item.trackStock && item.stockQty !== null && item.stockQty <= 10 && (
+                            {/* Low Stock Indicator - hide when store closed */}
+                            {available && storeOpen && item.trackStock && item.stockQty !== null && item.stockQty <= 10 && (
                               <span style={{ fontSize: '12px', fontWeight: 500, color: '#f97316' }}>{t('customer.menu.onlyLeft', { count: item.stockQty })}</span>
                             )}
-                            {!available ? (<span style={{ fontSize: '14px', fontWeight: 600, color: '#EF4444', fontFamily: 'Inter, sans-serif' }}>{t('customer.menu.soldOut')}</span>
+                            {!storeOpen ? (
+                              /* Store closed - no add button */
+                              null
+                            ) : !available ? (<span style={{ fontSize: '14px', fontWeight: 600, color: '#EF4444', fontFamily: 'Inter, sans-serif' }}>{t('customer.menu.soldOut')}</span>
                             ) : isInCart ? (
                               <div style={{ display: 'flex', alignItems: 'center', height: '32px', border: '1px solid #F05A28', borderRadius: '8px' }}>
                                 <button onClick={(e) => { e.stopPropagation(); handleOpenMenu(item); }} style={{ width: '32px', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', border: 'none', color: '#F05A28', cursor: 'pointer', fontSize: '16px' }}>−</button>
@@ -480,10 +487,10 @@ export default function SearchPage() {
         )}
       </div>
 
-      <FloatingCartButton merchantCode={merchantCode} mode={mode as 'dinein' | 'takeaway'} />
+      <FloatingCartButton merchantCode={merchantCode} mode={mode as 'dinein' | 'takeaway'} storeOpen={storeOpen} />
 
       {selectedMenu && (
-        <MenuDetailModal menu={selectedMenu} merchantCode={merchantCode} mode={mode} currency={merchantInfo?.currency || 'AUD'} editMode={Boolean(editingCartItem)} existingCartItem={editingCartItem} onClose={handleCloseMenuDetail} prefetchedAddons={menuAddonsCache[selectedMenu.id]} />
+        <MenuDetailModal menu={selectedMenu} merchantCode={merchantCode} mode={mode} currency={merchantInfo?.currency || 'AUD'} editMode={Boolean(editingCartItem)} existingCartItem={editingCartItem} onClose={handleCloseMenuDetail} prefetchedAddons={menuAddonsCache[selectedMenu.id]} storeOpen={storeOpen} />
       )}
 
       {cartOptionsMenu && (
