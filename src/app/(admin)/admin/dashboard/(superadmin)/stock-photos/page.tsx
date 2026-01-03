@@ -320,13 +320,22 @@ export default function StockPhotosPage() {
               Manage stock photos for merchants to use in their menus
             </p>
           </div>
-          <button
-            onClick={() => setIsUploadModalOpen(true)}
-            className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 transition-colors"
-          >
-            <FaPlus className="h-4 w-4" />
-            Upload Photo
-          </button>
+          <div className="flex items-center gap-2">
+            <a
+              href="/admin/dashboard/stock-photos/bulk-upload"
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+            >
+              <FaUpload className="h-4 w-4" />
+              Bulk Upload
+            </a>
+            <button
+              onClick={() => setIsUploadModalOpen(true)}
+              className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 transition-colors"
+            >
+              <FaPlus className="h-4 w-4" />
+              Upload Photo
+            </button>
+          </div>
         </div>
       </div>
 

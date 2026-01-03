@@ -104,6 +104,21 @@ class PaymentRequestService {
             transferProofUrl,
         });
 
+        // Record in subscription history that merchant submitted payment for verification
+        try {
+            await subscriptionHistoryService.recordPaymentSubmitted(
+                merchantId,
+                request.type as 'DEPOSIT_TOPUP' | 'MONTHLY_SUBSCRIPTION',
+                Number(request.amount),
+                request.currency,
+                requestId
+            );
+            console.log(`✅ Payment submission recorded in history for merchant ${merchantId}`);
+        } catch (historyError) {
+            console.error('Failed to record payment submission in history:', historyError);
+            // Don't fail if history recording fails
+        }
+
         // Get merchant info for notification
         try {
             const merchant = await prisma.merchant.findUnique({

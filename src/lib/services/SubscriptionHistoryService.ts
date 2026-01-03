@@ -123,6 +123,29 @@ class SubscriptionHistoryService {
     }
 
     /**
+     * Record payment submitted event (merchant confirms they have paid)
+     */
+    async recordPaymentSubmitted(
+        merchantId: bigint,
+        paymentType: 'DEPOSIT_TOPUP' | 'MONTHLY_SUBSCRIPTION',
+        amount: number,
+        currency: string,
+        requestId: bigint
+    ) {
+        const formattedAmount = currency === 'IDR' 
+            ? `Rp ${amount.toLocaleString()}` 
+            : `${currency} ${amount.toLocaleString()}`;
+        
+        return this.recordEvent({
+            merchantId,
+            eventType: 'PAYMENT_SUBMITTED',
+            reason: `Payment of ${formattedAmount} submitted for ${paymentType === 'DEPOSIT_TOPUP' ? 'deposit top-up' : 'monthly subscription'}. Awaiting verification.`,
+            metadata: { paymentType, amount, currency, requestId: requestId.toString() },
+            triggeredBy: 'MERCHANT',
+        });
+    }
+
+    /**
      * Record payment verified event
      */
     async recordPaymentReceived(
