@@ -395,7 +395,7 @@ export default function OrderClientPage({
   // Sync SWR menus with local state (real-time stock updates)
   // ========================================
   useEffect(() => {
-    if (swrMenus && swrMenus.length > 0) {
+    if (Array.isArray(swrMenus) && swrMenus.length > 0) {
       // Update local state with SWR data (includes stock updates from SSE)
       setAllMenuItems(swrMenus);
       console.log('📡 [SWR] Synced menus from SWR cache');
@@ -690,32 +690,32 @@ export default function OrderClientPage({
   }, [mode, tableNumber, selectedCategory, activeScrollTab, categories]);
 
   // ✅ MEMOIZED: Filter items by selected category
-  const displayedItems = useMemo(() =>
-    selectedCategory === 'all'
+  const displayedItems = useMemo(() => {
+    if (!Array.isArray(allMenuItems)) return [];
+    return selectedCategory === 'all'
       ? allMenuItems
       : allMenuItems.filter(item =>
         item.categories?.some(cat => cat.id === selectedCategory)
-      ),
-    [allMenuItems, selectedCategory]
-  );
+      );
+  }, [allMenuItems, selectedCategory]);
 
   // ✅ MEMOIZED: Get promo items
-  const promoItems = useMemo(() =>
-    allMenuItems.filter(item => item.isPromo && item.promoPrice),
-    [allMenuItems]
-  );
+  const promoItems = useMemo(() => {
+    if (!Array.isArray(allMenuItems)) return [];
+    return allMenuItems.filter(item => item.isPromo && item.promoPrice);
+  }, [allMenuItems]);
 
   // ✅ MEMOIZED: Get "Best Seller" items
-  const bestSellerItems = useMemo(() =>
-    allMenuItems.filter(item => item.isBestSeller),
-    [allMenuItems]
-  );
+  const bestSellerItems = useMemo(() => {
+    if (!Array.isArray(allMenuItems)) return [];
+    return allMenuItems.filter(item => item.isBestSeller);
+  }, [allMenuItems]);
 
   // ✅ MEMOIZED: Get "Recommendation" items
-  const recommendationItems = useMemo(() =>
-    allMenuItems.filter(item => item.isRecommended),
-    [allMenuItems]
-  );
+  const recommendationItems = useMemo(() => {
+    if (!Array.isArray(allMenuItems)) return [];
+    return allMenuItems.filter(item => item.isRecommended);
+  }, [allMenuItems]);
 
   // ✅ MEMOIZED: Build special categories for CategoryTabs
   const specialCategories = useMemo(() => {
@@ -1036,10 +1036,12 @@ export default function OrderClientPage({
                 )}
 
                 {/* All Categories Detailed Sections */}
-                {categories.map((category, index) => {
-                  const categoryItems = allMenuItems.filter(item =>
-                    item.categories?.some(cat => cat.id === category.id)
-                  );
+                {Array.isArray(categories) && categories.map((category, index) => {
+                  const categoryItems = Array.isArray(allMenuItems) 
+                    ? allMenuItems.filter(item =>
+                        item.categories?.some(cat => cat.id === category.id)
+                      )
+                    : [];
 
                   if (categoryItems.length === 0) return null;
 
