@@ -40,12 +40,6 @@ async function handlePost(
             where: { id: requestId },
             include: {
                 merchant: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                        currency: true,
-                    },
                     include: {
                         merchantBalance: true,
                         subscription: true,
