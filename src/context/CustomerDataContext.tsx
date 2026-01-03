@@ -314,7 +314,12 @@ export function CustomerDataProvider({ children }: CustomerDataProviderProps) {
   // PROCESS DATA
   // ============================================
 
-  const processMenuData = useCallback((rawMenus: MenuItem[]): MenuItem[] => {
+  const processMenuData = useCallback((rawMenus: unknown): MenuItem[] => {
+    // Defensive check - ensure rawMenus is an array
+    if (!Array.isArray(rawMenus)) {
+      console.warn('[CUSTOMER DATA] processMenuData received non-array:', typeof rawMenus);
+      return [];
+    }
     return rawMenus
       .filter((item: MenuItem) => item.isActive)
       .map((item: MenuItem) => ({
@@ -329,27 +334,52 @@ export function CustomerDataProvider({ children }: CustomerDataProviderProps) {
   }, [merchantData]);
 
   const menus = useMemo(() => {
-    if (!menusData?.success) return [];
-    return processMenuData(menusData.data);
-  }, [menusData, processMenuData]);
+    // Try SWR data first
+    if (menusData?.success && Array.isArray(menusData.data)) {
+      return processMenuData(menusData.data);
+    }
+    // Fallback to sessionStorage if SWR data not ready
+    if (merchantCode) {
+      const cached = readFromSessionStorage<{ success: boolean; data: MenuItem[] }>(
+        CACHE_KEYS.menus(merchantCode)
+      );
+      if (cached?.success && Array.isArray(cached.data)) {
+        return processMenuData(cached.data);
+      }
+    }
+    return [];
+  }, [menusData, merchantCode, processMenuData]);
 
   const categories = useMemo(() => {
-    if (!categoriesData?.success) return [];
-    return categoriesData.data.sort((a: Category, b: Category) => a.sortOrder - b.sortOrder);
-  }, [categoriesData]);
+    // Try SWR data first
+    if (categoriesData?.success && Array.isArray(categoriesData.data)) {
+      return [...categoriesData.data].sort((a: Category, b: Category) => a.sortOrder - b.sortOrder);
+    }
+    // Fallback to sessionStorage if SWR data not ready
+    if (merchantCode) {
+      const cached = readFromSessionStorage<{ success: boolean; data: Category[] }>(
+        CACHE_KEYS.categories(merchantCode)
+      );
+      if (cached?.success && Array.isArray(cached.data)) {
+        return [...cached.data].sort((a: Category, b: Category) => a.sortOrder - b.sortOrder);
+      }
+    }
+    return [];
+  }, [categoriesData, merchantCode]);
 
   const addonCache = useMemo(() => {
-    if (!menusData?.success) {
-      // Fallback to sessionStorage
-      if (merchantCode) {
-        const cached = readFromSessionStorage<Record<string, CachedAddonCategory[]>>(
-          CACHE_KEYS.addons(merchantCode)
-        );
-        return cached || {};
-      }
-      return {};
+    // Try SWR data first
+    if (menusData?.success && Array.isArray(menusData.data)) {
+      return extractAddonDataFromMenus(menusData.data);
     }
-    return extractAddonDataFromMenus(menusData.data);
+    // Fallback to sessionStorage
+    if (merchantCode) {
+      const cached = readFromSessionStorage<Record<string, CachedAddonCategory[]>>(
+        CACHE_KEYS.addons(merchantCode)
+      );
+      return cached || {};
+    }
+    return {};
   }, [menusData, merchantCode]);
 
   // Combined status
