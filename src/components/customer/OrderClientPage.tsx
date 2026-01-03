@@ -203,11 +203,10 @@ export default function OrderClientPage({
   // Customer Data Context - Initialize with ISR data for instant navigation on other pages
   const { 
     initializeData: initializeCustomerData, 
-    refreshData: refreshCustomerData, 
     menus: swrMenus, 
     categories: swrCategories,
     addonCache: swrAddonCache,
-    isValidating 
+    merchantInfo: swrMerchantInfo,
   } = useCustomerData();
 
   // Real-time stock updates via SSE
@@ -400,34 +399,22 @@ export default function OrderClientPage({
   }, [merchantCode, initialMerchant, initialMenus, initialCategories, initializeCustomerData]);
 
   // ========================================
-  // Sync SWR menus and categories with local state (real-time updates)
-  // Only update if SWR has newer/different data than current state
+  // Sync SWR data with local state (real-time updates)
+  // SWR data includes stock updates from SSE via CustomerDataContext
   // ========================================
   useEffect(() => {
-    // Sync menus from SWR (includes stock updates from SSE)
+    // Sync menus from SWR - always update to get latest stock
     if (Array.isArray(swrMenus) && swrMenus.length > 0) {
-      // Only update if different from current state
-      const currentIds = allMenuItems.map(m => m.id).sort().join(',');
-      const newIds = swrMenus.map(m => m.id).sort().join(',');
-      if (currentIds !== newIds || allMenuItems.length === 0) {
-        setAllMenuItems(swrMenus);
-        console.log('📡 [SWR] Synced menus from SWR cache:', swrMenus.length, 'items');
-      }
+      setAllMenuItems(swrMenus);
     }
-  }, [swrMenus, allMenuItems]);
+  }, [swrMenus]);
 
   useEffect(() => {
     // Sync categories from SWR
     if (Array.isArray(swrCategories) && swrCategories.length > 0) {
-      // Only update if different from current state
-      const currentIds = categories.map(c => c.id).sort().join(',');
-      const newIds = swrCategories.map(c => c.id).sort().join(',');
-      if (currentIds !== newIds || categories.length === 0) {
-        setCategories(swrCategories);
-        console.log('📡 [SWR] Synced categories from SWR cache:', swrCategories.length, 'categories');
-      }
+      setCategories(swrCategories);
     }
-  }, [swrCategories, categories]);
+  }, [swrCategories]);
 
   useEffect(() => {
     // Sync addon cache from SWR
@@ -442,121 +429,34 @@ export default function OrderClientPage({
   }, [swrAddonCache, menuAddonsCache]);
 
   // ========================================
-  // Fetch Merchant Info (Always Fresh - No Blocking Cache)
+  // Sync Merchant Info from SWR (auto-refresh handled by CustomerDataContext)
   // ========================================
   useEffect(() => {
-    const fetchMerchantInfo = async () => {
-      // Always fetch fresh data to ensure latest banner/logo
-      console.log('🔄 [MERCHANT] Fetching merchant info');
-      try {
-        const response = await fetch(`/api/public/merchants/${merchantCode}`);
-        const data = await response.json();
-
-        if (data.success) {
-          setMerchantInfo(data.data);
-          // Update cache for other pages
-          sessionStorage.setItem(`merchant_info_${merchantCode}`, JSON.stringify(data.data));
-        } else {
-          console.error('❌ [MERCHANT] Failed to fetch merchant info:', data.message);
-        }
-      } catch (err) {
-        console.error('❌ [MERCHANT] Error fetching merchant info:', err);
-      }
-    };
-
-    fetchMerchantInfo();
-  }, [merchantCode]);
-
-  // ========================================
-  // Fetch Menu Data with Cache - ONLY if no ISR data provided
-  // ISR data is already set via useState initial values
-  // This fetch is only for client-side navigation without ISR
-  // ========================================
-  useEffect(() => {
-    // Skip if ISR data already provided (page was server-rendered)
-    if (initialMenus.length > 0 && initialCategories.length > 0) {
-      console.log('✅ [MENU] Using ISR data, skipping API fetch');
-      // Save ISR data to sessionStorage for client navigation
-      sessionStorage.setItem(`categories_${merchantCode}`, JSON.stringify(initialCategories));
-      sessionStorage.setItem(`menus_${merchantCode}`, JSON.stringify(initialMenus));
-      if (Object.keys(menuAddonsCache).length > 0) {
-        sessionStorage.setItem(`addons_cache_${merchantCode}`, JSON.stringify(menuAddonsCache));
-      }
-      return;
+    if (swrMerchantInfo) {
+      setMerchantInfo(swrMerchantInfo);
     }
+  }, [swrMerchantInfo]);
 
-    const fetchData = async () => {
-      // Check cache first
-      const categoriesCacheKey = `categories_${merchantCode}`;
-      const menusCacheKey = `menus_${merchantCode}`;
-      const addonsCacheKey = `addons_cache_${merchantCode}`;
-      const cachedCategories = sessionStorage.getItem(categoriesCacheKey);
-      const cachedMenus = sessionStorage.getItem(menusCacheKey);
-      const cachedAddons = sessionStorage.getItem(addonsCacheKey);
-
-      if (cachedCategories && cachedMenus && cachedAddons) {
-        try {
-          const categories = JSON.parse(cachedCategories);
-          const menus = JSON.parse(cachedMenus);
-          const addons = JSON.parse(cachedAddons);
-          console.log('✅ [MENU] Using cached menu and addon data');
-          setCategories(categories);
-          setAllMenuItems(menus);
-          setMenuAddonsCache(addons);
-          setIsLoading(false);
-          return;
-        } catch {
-          console.warn('⚠️ [MENU] Failed to parse cached data, fetching fresh');
-        }
-      }
-
-      // Fetch from API
-      console.log('🔄 [MENU] Fetching fresh menu data');
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const [categoriesRes, menusRes] = await Promise.all([
-          fetch(`/api/public/merchants/${merchantCode}/categories`),
-          fetch(`/api/public/merchants/${merchantCode}/menus`),
-        ]);
-
-        const categoriesData = await categoriesRes.json();
-        const menusData = await menusRes.json();
-
-        if (categoriesData.success && Array.isArray(categoriesData.data)) {
-          const sorted = [...categoriesData.data].sort((a: Category, b: Category) => a.sortOrder - b.sortOrder);
-          setCategories(sorted);
-          sessionStorage.setItem(categoriesCacheKey, JSON.stringify(sorted));
-        }
-
-        if (menusData.success && Array.isArray(menusData.data)) {
-          const activeItems = menusData.data
-            .filter((item: MenuItem) => item.isActive)
-            .map((item: MenuItem) => ({
-              ...item,
-              price: typeof item.price === 'string' ? parseFloat(item.price) : item.price,
-            }));
-          setAllMenuItems(activeItems);
-          sessionStorage.setItem(menusCacheKey, JSON.stringify(activeItems));
-
-          // ✅ Extract addon data using utility function
-          const newAddonCache = extractAddonDataFromMenus(menusData.data);
-          setMenuAddonsCache(newAddonCache);
-          sessionStorage.setItem(addonsCacheKey, JSON.stringify(newAddonCache));
-          console.log('✅ [ADDONS] Extracted addon data from initial fetch. Cached', Object.keys(newAddonCache).length, 'menus');
-        } else {
-          setError(menusData.message || 'Failed to load menu');
-        }
-      } catch (err) {
-        console.error('Error fetching data:', err);
-        setError('Failed to load menu. Please try again.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
+  // ========================================
+  // Save ISR data to sessionStorage for SWR fallback
+  // SWR in CustomerDataContext handles all fetching
+  // ========================================
+  useEffect(() => {
+    // Save ISR data to sessionStorage when available
+    if (initialMenus.length > 0) {
+      sessionStorage.setItem(`menus_${merchantCode}`, JSON.stringify(initialMenus));
+    }
+    if (initialCategories.length > 0) {
+      sessionStorage.setItem(`categories_${merchantCode}`, JSON.stringify(initialCategories));
+    }
+    if (Object.keys(menuAddonsCache).length > 0) {
+      sessionStorage.setItem(`addons_cache_${merchantCode}`, JSON.stringify(menuAddonsCache));
+    }
+    
+    // Set loading to false if we have ISR data
+    if (initialMenus.length > 0 && initialCategories.length > 0) {
+      setIsLoading(false);
+    }
   }, [merchantCode, initialMenus, initialCategories, menuAddonsCache]);
 
   // ========================================
