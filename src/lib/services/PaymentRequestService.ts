@@ -8,6 +8,7 @@ import balanceRepository from '@/lib/repositories/BalanceRepository';
 import subscriptionRepository from '@/lib/repositories/SubscriptionRepository';
 import subscriptionService from '@/lib/services/SubscriptionService';
 import subscriptionAutoSwitchService from '@/lib/services/SubscriptionAutoSwitchService';
+import subscriptionHistoryService from '@/lib/services/SubscriptionHistoryService';
 import userNotificationService from '@/lib/services/UserNotificationService';
 import prisma from '@/lib/db/client';
 import { NotFoundError, ValidationError, ConflictError, ERROR_CODES } from '@/lib/constants/errors';
@@ -212,6 +213,28 @@ class PaymentRequestService {
             }
         }
 
+        // Get updated balance and subscription for history recording
+        const [updatedBalance, updatedSubscription] = await Promise.all([
+            prisma.merchantBalance.findUnique({ where: { merchantId: request.merchantId } }),
+            subscriptionRepository.getMerchantSubscription(request.merchantId),
+        ]);
+
+        // Record payment received in subscription history
+        try {
+            await subscriptionHistoryService.recordPaymentReceived(
+                request.merchantId,
+                request.type as 'DEPOSIT_TOPUP' | 'MONTHLY_SUBSCRIPTION',
+                Number(request.amount),
+                Number(updatedBalance?.balance ?? 0),
+                updatedSubscription?.currentPeriodEnd ?? null,
+                adminUserId
+            );
+            console.log(`✅ Payment history recorded for merchant ${request.merchantId}`);
+        } catch (historyError) {
+            console.error('Failed to record payment history:', historyError);
+            // Don't fail payment verification if history recording fails
+        }
+
         // Use SubscriptionAutoSwitchService to handle auto-switch and store activation
         try {
             const switchResult = await subscriptionAutoSwitchService.handlePaymentVerified(
@@ -254,7 +277,24 @@ class PaymentRequestService {
             throw new ValidationError('Cannot reject an already verified payment', ERROR_CODES.VALIDATION_FAILED);
         }
 
-        return paymentRequestRepository.rejectPayment(requestId, adminUserId, reason);
+        const result = await paymentRequestRepository.rejectPayment(requestId, adminUserId, reason);
+
+        // Record payment rejection in subscription history
+        try {
+            await subscriptionHistoryService.recordPaymentRejected(
+                request.merchantId,
+                request.type as 'DEPOSIT_TOPUP' | 'MONTHLY_SUBSCRIPTION',
+                Number(request.amount),
+                reason,
+                adminUserId
+            );
+            console.log(`✅ Payment rejection recorded for merchant ${request.merchantId}`);
+        } catch (historyError) {
+            console.error('Failed to record payment rejection history:', historyError);
+            // Don't fail rejection if history recording fails
+        }
+
+        return result;
     }
 
     /**
