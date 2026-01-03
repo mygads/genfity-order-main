@@ -702,7 +702,7 @@ export default function OrderClientPage({
       {/* Special Hours Banner - Show when today has special hours */}
       {todaySpecialHour && !todaySpecialHour.isClosed && specialHourName && (
         <div className="bg-blue-500 text-white px-4 py-2 text-center text-sm font-medium sticky top-0 z-50">
-          📅 Today: {specialHourName}
+          Today: {specialHourName}
           {todaySpecialHour.openTime && todaySpecialHour.closeTime && (
             <span className="ml-1">({todaySpecialHour.openTime} - {todaySpecialHour.closeTime})</span>
           )}
@@ -712,14 +712,14 @@ export default function OrderClientPage({
       {/* Special Holiday Closed Banner */}
       {todaySpecialHour?.isClosed && (
         <div className="bg-red-500 text-white px-4 py-2 text-center text-sm font-medium sticky top-0 z-50">
-          🚫 Closed Today{specialHourName ? `: ${specialHourName}` : ''}
+          Closed Today{specialHourName ? `: ${specialHourName}` : ''}
         </div>
       )}
 
       {/* Store Closing Soon Warning Banner */}
       {storeOpen && minutesUntilClose !== null && minutesUntilClose <= 30 && minutesUntilClose > 0 && (
         <div className={`bg-amber-500 text-white px-4 py-2 text-center text-sm font-medium sticky ${todaySpecialHour ? '' : 'top-0'} z-50`}>
-          ⚠️ Store closes in {minutesUntilClose} minute{minutesUntilClose !== 1 ? 's' : ''}
+          Store closes in {minutesUntilClose} minute{minutesUntilClose !== 1 ? 's' : ''}
         </div>
       )}
 

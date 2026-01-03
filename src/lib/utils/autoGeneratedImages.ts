@@ -519,30 +519,126 @@ export function getCachedBannerDataUrl(
 
 // ============== WATERMARK SYSTEM ==============
 
+// Custom font definitions for watermarks
+export const WATERMARK_FONTS = {
+  // System fonts (always available)
+  arial: { name: 'Arial', family: 'Arial, Helvetica, sans-serif', weight: 'bold' },
+  helvetica: { name: 'Helvetica', family: 'Helvetica, Arial, sans-serif', weight: 'bold' },
+  georgia: { name: 'Georgia', family: 'Georgia, Times, serif', weight: 'bold' },
+  times: { name: 'Times New Roman', family: '"Times New Roman", Times, serif', weight: 'bold' },
+  courier: { name: 'Courier', family: '"Courier New", Courier, monospace', weight: 'bold' },
+  verdana: { name: 'Verdana', family: 'Verdana, Geneva, sans-serif', weight: 'bold' },
+  impact: { name: 'Impact', family: 'Impact, Haettenschweiler, sans-serif', weight: 'normal' },
+  // Web-safe decorative fonts
+  brushScript: { name: 'Brush Script', family: '"Brush Script MT", cursive', weight: 'normal' },
+  copperplate: { name: 'Copperplate', family: 'Copperplate, "Copperplate Gothic Light", fantasy', weight: 'bold' },
+  // Modern sans-serif
+  system: { name: 'System UI', family: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif', weight: 'bold' },
+} as const;
+
+export type WatermarkFontKey = keyof typeof WATERMARK_FONTS;
+
+export interface WatermarkOptions {
+  text?: string;
+  opacity?: number;
+  fontSize?: number; // As percentage of min dimension (e.g., 0.08 = 8%)
+  color?: string;
+  fontKey?: WatermarkFontKey;
+  customFont?: string; // Custom font-family string
+  angle?: number; // Rotation angle in degrees
+  position?: 'diagonal' | 'corner' | 'center' | 'tile';
+}
+
+const DEFAULT_WATERMARK_OPTIONS: Required<WatermarkOptions> = {
+  text: 'GENFITY ORDER',
+  opacity: 0.08,
+  fontSize: 0.08,
+  color: '#000000',
+  fontKey: 'arial',
+  customFont: '',
+  angle: -30,
+  position: 'diagonal',
+};
+
 /**
- * Generate watermark SVG overlay
+ * Get font family string from font key or custom font
+ */
+function getWatermarkFontFamily(fontKey?: WatermarkFontKey, customFont?: string): string {
+  if (customFont && customFont.trim()) {
+    return customFont;
+  }
+  if (fontKey && WATERMARK_FONTS[fontKey]) {
+    return WATERMARK_FONTS[fontKey].family;
+  }
+  return WATERMARK_FONTS.arial.family;
+}
+
+/**
+ * Get font weight from font key
+ */
+function getWatermarkFontWeight(fontKey?: WatermarkFontKey): string {
+  if (fontKey && WATERMARK_FONTS[fontKey]) {
+    return WATERMARK_FONTS[fontKey].weight;
+  }
+  return 'bold';
+}
+
+/**
+ * Generate cache key for watermark
+ */
+function getWatermarkCacheKey(
+  width: number,
+  height: number,
+  options: WatermarkOptions
+): string {
+  const opts = { ...DEFAULT_WATERMARK_OPTIONS, ...options };
+  return `${SVG_CACHE_PREFIX}watermark_${width}x${height}_${opts.text}_${opts.opacity}_${opts.fontSize}_${opts.color}_${opts.fontKey}_${opts.angle}_${opts.position}`;
+}
+
+/**
+ * Generate watermark SVG overlay with custom options
  */
 export function generateWatermarkSVG(
   width: number = 400, 
   height: number = 400, 
-  text: string = 'GENFITY ORDER'
+  options: WatermarkOptions | string = {}
 ): string {
-  const fontSize = Math.min(width, height) * 0.08;
+  // Handle legacy string parameter (just text)
+  const opts = typeof options === 'string' 
+    ? { ...DEFAULT_WATERMARK_OPTIONS, text: options }
+    : { ...DEFAULT_WATERMARK_OPTIONS, ...options };
+  
+  const fontSize = Math.min(width, height) * opts.fontSize;
+  const fontFamily = getWatermarkFontFamily(opts.fontKey, opts.customFont);
+  const fontWeight = getWatermarkFontWeight(opts.fontKey);
+  
+  if (opts.position === 'corner') {
+    return generateCornerWatermarkSVGInternal(width, height, opts, fontFamily, fontWeight);
+  }
+  
+  if (opts.position === 'center') {
+    return generateCenterWatermarkSVG(width, height, opts, fontFamily, fontWeight, fontSize);
+  }
+  
+  if (opts.position === 'tile') {
+    return generateTileWatermarkSVG(width, height, opts, fontFamily, fontWeight, fontSize);
+  }
+  
+  // Default: diagonal
   const diagonal = Math.sqrt(width * width + height * height);
-  const angle = -30;
   
   return `
 <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
   <defs>
     <pattern id="watermarkPattern" patternUnits="userSpaceOnUse" width="${diagonal * 0.4}" height="${fontSize * 3}">
       <text x="0" y="${fontSize}" 
-            font-family="Arial, Helvetica, sans-serif" 
+            font-family="${fontFamily}" 
             font-size="${fontSize}" 
-            font-weight="bold"
-            fill="#000000" 
-            opacity="0.08"
-            transform="rotate(${angle})">
-        ${text}
+            font-weight="${fontWeight}"
+            fill="${opts.color}" 
+            opacity="${opts.opacity}"
+            transform="rotate(${opts.angle})">
+        ${opts.text}
       </text>
     </pattern>
   </defs>
@@ -552,15 +648,157 @@ export function generateWatermarkSVG(
 }
 
 /**
- * Convert watermark SVG to data URL
+ * Generate center watermark
+ */
+function generateCenterWatermarkSVG(
+  width: number,
+  height: number,
+  opts: Required<WatermarkOptions>,
+  fontFamily: string,
+  fontWeight: string,
+  fontSize: number
+): string {
+  return `
+<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+  <text x="50%" y="50%" 
+        text-anchor="middle" 
+        dominant-baseline="middle"
+        font-family="${fontFamily}" 
+        font-size="${fontSize * 1.5}" 
+        font-weight="${fontWeight}"
+        fill="${opts.color}" 
+        opacity="${opts.opacity}"
+        transform="rotate(${opts.angle} ${width / 2} ${height / 2})">
+    ${opts.text}
+  </text>
+</svg>
+  `.trim();
+}
+
+/**
+ * Generate tile watermark
+ */
+function generateTileWatermarkSVG(
+  width: number,
+  height: number,
+  opts: Required<WatermarkOptions>,
+  fontFamily: string,
+  fontWeight: string,
+  fontSize: number
+): string {
+  const tileWidth = opts.text.length * fontSize * 0.6 + fontSize * 2;
+  const tileHeight = fontSize * 2;
+  
+  return `
+<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+  <defs>
+    <pattern id="tilePattern" patternUnits="userSpaceOnUse" width="${tileWidth}" height="${tileHeight}">
+      <text x="${tileWidth / 2}" y="${tileHeight / 2}" 
+            text-anchor="middle" 
+            dominant-baseline="middle"
+            font-family="${fontFamily}" 
+            font-size="${fontSize}" 
+            font-weight="${fontWeight}"
+            fill="${opts.color}" 
+            opacity="${opts.opacity}">
+        ${opts.text}
+      </text>
+    </pattern>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#tilePattern)"/>
+</svg>
+  `.trim();
+}
+
+/**
+ * Internal corner watermark with options
+ */
+function generateCornerWatermarkSVGInternal(
+  width: number,
+  height: number,
+  opts: Required<WatermarkOptions>,
+  fontFamily: string,
+  fontWeight: string
+): string {
+  const fontSize = Math.min(width, height) * 0.04;
+  const padding = fontSize * 0.5;
+  
+  return `
+<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+  <defs>
+    <linearGradient id="watermarkGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:${opts.color};stop-opacity:0"/>
+      <stop offset="30%" style="stop-color:${opts.color};stop-opacity:0.5"/>
+      <stop offset="100%" style="stop-color:${opts.color};stop-opacity:0.7"/>
+    </linearGradient>
+  </defs>
+  <rect x="${width - fontSize * opts.text.length * 0.7 - padding * 3}" y="${height - fontSize - padding * 3}" 
+        width="${fontSize * opts.text.length * 0.7 + padding * 2}" height="${fontSize + padding * 2}" 
+        fill="url(#watermarkGradient)" rx="4"/>
+  <text x="${width - padding}" y="${height - padding}" 
+        text-anchor="end" 
+        font-family="${fontFamily}" 
+        font-size="${fontSize}" 
+        font-weight="${fontWeight}"
+        fill="#FFFFFF" 
+        opacity="0.9">
+    ${opts.text}
+  </text>
+</svg>
+  `.trim();
+}
+
+/**
+ * Convert watermark SVG to data URL with caching
  */
 export function getWatermarkDataUrl(
   width: number = 400, 
   height: number = 400, 
-  text: string = 'GENFITY ORDER'
+  options: WatermarkOptions | string = {}
 ): string {
-  const svg = generateWatermarkSVG(width, height, text);
-  return svgToDataUrl(svg);
+  const opts = typeof options === 'string' 
+    ? { text: options }
+    : options;
+  
+  const cacheKey = getWatermarkCacheKey(width, height, opts);
+  const cached = getCachedSVG(cacheKey);
+  
+  if (cached) return cached;
+  
+  const svg = generateWatermarkSVG(width, height, opts);
+  const dataUrl = svgToDataUrl(svg);
+  
+  setCachedSVG(cacheKey, dataUrl);
+  
+  return dataUrl;
+}
+
+/**
+ * Get cached watermark or generate new one
+ */
+export function getCachedWatermarkDataUrl(
+  width: number = 400,
+  height: number = 400,
+  options: WatermarkOptions = {}
+): string {
+  return getWatermarkDataUrl(width, height, options);
+}
+
+/**
+ * Preload watermark cache for common sizes
+ */
+export function preloadWatermarkCache(
+  sizes: Array<{ width: number; height: number }> = [
+    { width: 200, height: 200 },
+    { width: 400, height: 400 },
+    { width: 800, height: 800 },
+    { width: 1200, height: 800 },
+  ],
+  options: WatermarkOptions = {}
+): void {
+  sizes.forEach(({ width, height }) => {
+    getWatermarkDataUrl(width, height, options);
+  });
 }
 
 /**
@@ -569,14 +807,18 @@ export function getWatermarkDataUrl(
  */
 export async function applyWatermarkToImage(
   imageUrl: string,
-  watermarkText: string = 'GENFITY ORDER',
-  opacity: number = 0.15
+  options: WatermarkOptions | string = {}
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     if (typeof window === 'undefined') {
       reject(new Error('Watermarking only available in browser'));
       return;
     }
+
+    // Handle legacy string parameter
+    const opts = typeof options === 'string'
+      ? { ...DEFAULT_WATERMARK_OPTIONS, text: options }
+      : { ...DEFAULT_WATERMARK_OPTIONS, ...options };
 
     const img = new Image();
     img.crossOrigin = 'anonymous';
@@ -596,24 +838,50 @@ export async function applyWatermarkToImage(
       // Draw original image
       ctx.drawImage(img, 0, 0);
       
+      // Get font settings
+      const fontFamily = getWatermarkFontFamily(opts.fontKey, opts.customFont);
+      const fontWeight = getWatermarkFontWeight(opts.fontKey);
+      
       // Draw watermark pattern
       ctx.save();
-      ctx.globalAlpha = opacity;
+      ctx.globalAlpha = opts.opacity;
       
-      const fontSize = Math.min(canvas.width, canvas.height) * 0.06;
-      ctx.font = `bold ${fontSize}px Arial, Helvetica, sans-serif`;
-      ctx.fillStyle = '#000000';
+      const fontSize = Math.min(canvas.width, canvas.height) * opts.fontSize;
+      ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+      ctx.fillStyle = opts.color;
       
-      // Rotate canvas for diagonal watermark
-      ctx.translate(canvas.width / 2, canvas.height / 2);
-      ctx.rotate(-30 * Math.PI / 180);
-      ctx.translate(-canvas.width / 2, -canvas.height / 2);
-      
-      // Draw multiple watermark texts
-      const spacing = fontSize * 4;
-      for (let y = -canvas.height; y < canvas.height * 2; y += spacing) {
-        for (let x = -canvas.width; x < canvas.width * 2; x += watermarkText.length * fontSize * 0.6 + spacing) {
-          ctx.fillText(watermarkText, x, y);
+      if (opts.position === 'center') {
+        // Single center watermark
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate(opts.angle * Math.PI / 180);
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(opts.text, 0, 0);
+      } else if (opts.position === 'corner') {
+        // Corner watermark
+        const padding = fontSize * 0.5;
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(opts.text, canvas.width - padding, canvas.height - padding);
+      } else if (opts.position === 'tile') {
+        // Tile pattern
+        const spacing = fontSize * 3;
+        for (let y = 0; y < canvas.height + spacing; y += spacing) {
+          for (let x = 0; x < canvas.width + spacing; x += opts.text.length * fontSize * 0.6 + spacing) {
+            ctx.fillText(opts.text, x, y);
+          }
+        }
+      } else {
+        // Diagonal (default)
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate(opts.angle * Math.PI / 180);
+        ctx.translate(-canvas.width / 2, -canvas.height / 2);
+        
+        const spacing = fontSize * 4;
+        for (let y = -canvas.height; y < canvas.height * 2; y += spacing) {
+          for (let x = -canvas.width; x < canvas.width * 2; x += opts.text.length * fontSize * 0.6 + spacing) {
+            ctx.fillText(opts.text, x, y);
+          }
         }
       }
       
@@ -633,38 +901,28 @@ export async function applyWatermarkToImage(
 
 /**
  * Generate simple corner watermark (lighter, less intrusive)
+ * @deprecated Use generateWatermarkSVG with position: 'corner' instead
  */
 export function generateCornerWatermarkSVG(
   width: number = 400, 
   height: number = 400, 
   text: string = 'GENFITY'
 ): string {
-  const fontSize = Math.min(width, height) * 0.04;
-  const padding = fontSize * 0.5;
-  
-  return `
-<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-  <defs>
-    <linearGradient id="watermarkGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" style="stop-color:#000000;stop-opacity:0"/>
-      <stop offset="30%" style="stop-color:#000000;stop-opacity:0.5"/>
-      <stop offset="100%" style="stop-color:#000000;stop-opacity:0.7"/>
-    </linearGradient>
-  </defs>
-  <rect x="${width - fontSize * text.length * 0.7 - padding * 3}" y="${height - fontSize - padding * 3}" 
-        width="${fontSize * text.length * 0.7 + padding * 2}" height="${fontSize + padding * 2}" 
-        fill="url(#watermarkGradient)" rx="4"/>
-  <text x="${width - padding}" y="${height - padding}" 
-        text-anchor="end" 
-        font-family="Arial, Helvetica, sans-serif" 
-        font-size="${fontSize}" 
-        font-weight="bold"
-        fill="#FFFFFF" 
-        opacity="0.9">
-    ${text}
-  </text>
-</svg>
-  `.trim();
+  return generateWatermarkSVG(width, height, { text, position: 'corner' });
+}
+
+/**
+ * Get all available watermark fonts
+ */
+export function getAllWatermarkFonts(): typeof WATERMARK_FONTS {
+  return WATERMARK_FONTS;
+}
+
+/**
+ * Get watermark font by key
+ */
+export function getWatermarkFont(fontKey: WatermarkFontKey) {
+  return WATERMARK_FONTS[fontKey] || WATERMARK_FONTS.arial;
 }
 
 /**
