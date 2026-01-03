@@ -190,7 +190,6 @@ export default function OrderClientPage({
   const [showTableBadge, setShowTableBadge] = useState(false); // Track if table badge should be shown in header
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({}); // References to category sections
   const { initializeCart, cart, updateItem, removeItem } = useCart();
-  const autoRefreshIntervalRef = useRef<NodeJS.Timeout | null>(null); // Auto-refresh interval
 
   // Group Order State
   const { isInGroupOrder, updateMyCart } = useGroupOrder();
@@ -202,7 +201,14 @@ export default function OrderClientPage({
   const [prefilledGroupCode, setPrefilledGroupCode] = useState<string | undefined>(undefined);
 
   // Customer Data Context - Initialize with ISR data for instant navigation on other pages
-  const { initializeData: initializeCustomerData, refreshData: refreshCustomerData, menus: swrMenus, isValidating } = useCustomerData();
+  const { 
+    initializeData: initializeCustomerData, 
+    refreshData: refreshCustomerData, 
+    menus: swrMenus, 
+    categories: swrCategories,
+    addonCache: swrAddonCache,
+    isValidating 
+  } = useCustomerData();
 
   // Real-time stock updates via SSE
   const { isConnected: isStockStreamConnected } = useStockStream({
@@ -394,15 +400,46 @@ export default function OrderClientPage({
   }, [merchantCode, initialMerchant, initialMenus, initialCategories, initializeCustomerData]);
 
   // ========================================
-  // Sync SWR menus with local state (real-time stock updates)
+  // Sync SWR menus and categories with local state (real-time updates)
+  // Only update if SWR has newer/different data than current state
   // ========================================
   useEffect(() => {
+    // Sync menus from SWR (includes stock updates from SSE)
     if (Array.isArray(swrMenus) && swrMenus.length > 0) {
-      // Update local state with SWR data (includes stock updates from SSE)
-      setAllMenuItems(swrMenus);
-      console.log('📡 [SWR] Synced menus from SWR cache');
+      // Only update if different from current state
+      const currentIds = allMenuItems.map(m => m.id).sort().join(',');
+      const newIds = swrMenus.map(m => m.id).sort().join(',');
+      if (currentIds !== newIds || allMenuItems.length === 0) {
+        setAllMenuItems(swrMenus);
+        console.log('📡 [SWR] Synced menus from SWR cache:', swrMenus.length, 'items');
+      }
     }
-  }, [swrMenus]);
+  }, [swrMenus, allMenuItems]);
+
+  useEffect(() => {
+    // Sync categories from SWR
+    if (Array.isArray(swrCategories) && swrCategories.length > 0) {
+      // Only update if different from current state
+      const currentIds = categories.map(c => c.id).sort().join(',');
+      const newIds = swrCategories.map(c => c.id).sort().join(',');
+      if (currentIds !== newIds || categories.length === 0) {
+        setCategories(swrCategories);
+        console.log('📡 [SWR] Synced categories from SWR cache:', swrCategories.length, 'categories');
+      }
+    }
+  }, [swrCategories, categories]);
+
+  useEffect(() => {
+    // Sync addon cache from SWR
+    if (swrAddonCache && Object.keys(swrAddonCache).length > 0) {
+      const currentKeys = Object.keys(menuAddonsCache).length;
+      const newKeys = Object.keys(swrAddonCache).length;
+      if (currentKeys !== newKeys || currentKeys === 0) {
+        setMenuAddonsCache(swrAddonCache);
+        console.log('📡 [SWR] Synced addon cache:', newKeys, 'menus');
+      }
+    }
+  }, [swrAddonCache, menuAddonsCache]);
 
   // ========================================
   // Fetch Merchant Info (Always Fresh - No Blocking Cache)
@@ -431,9 +468,23 @@ export default function OrderClientPage({
   }, [merchantCode]);
 
   // ========================================
-  // Fetch Menu Data with Cache
+  // Fetch Menu Data with Cache - ONLY if no ISR data provided
+  // ISR data is already set via useState initial values
+  // This fetch is only for client-side navigation without ISR
   // ========================================
   useEffect(() => {
+    // Skip if ISR data already provided (page was server-rendered)
+    if (initialMenus.length > 0 && initialCategories.length > 0) {
+      console.log('✅ [MENU] Using ISR data, skipping API fetch');
+      // Save ISR data to sessionStorage for client navigation
+      sessionStorage.setItem(`categories_${merchantCode}`, JSON.stringify(initialCategories));
+      sessionStorage.setItem(`menus_${merchantCode}`, JSON.stringify(initialMenus));
+      if (Object.keys(menuAddonsCache).length > 0) {
+        sessionStorage.setItem(`addons_cache_${merchantCode}`, JSON.stringify(menuAddonsCache));
+      }
+      return;
+    }
+
     const fetchData = async () => {
       // Check cache first
       const categoriesCacheKey = `categories_${merchantCode}`;
@@ -506,66 +557,15 @@ export default function OrderClientPage({
     };
 
     fetchData();
-  }, [merchantCode]);
+  }, [merchantCode, initialMenus, initialCategories, menuAddonsCache]);
 
   // ========================================
-  // Auto-refresh menu data, addon data, AND merchant info every 15 seconds in background
+  // NOTE: Auto-refresh is handled by SWR in CustomerDataContext
+  // - Menus: refresh every 15s
+  // - Categories: refresh every 60s
+  // - Merchant Info: refresh every 30s
+  // No manual setInterval needed - SWR syncs via swrMenus/swrCategories useEffects above
   // ========================================
-  useEffect(() => {
-    if (allMenuItems.length === 0) return;
-
-    const autoRefreshData = async () => {
-      try {
-        console.log('🔄 [AUTO-REFRESH] Fetching latest data...');
-
-        // Fetch merchant info (for banner/logo updates)
-        const merchantResponse = await fetch(`/api/public/merchants/${merchantCode}`);
-        const merchantData = await merchantResponse.json();
-
-        if (merchantData.success) {
-          setMerchantInfo(merchantData.data);
-          sessionStorage.setItem(`merchant_info_${merchantCode}`, JSON.stringify(merchantData.data));
-        }
-
-        // Fetch menus (includes addon categories and items with stock info)
-        const menusResponse = await fetch(`/api/public/merchants/${merchantCode}/menus`);
-        const menusData = await menusResponse.json();
-
-        if (menusData.success && Array.isArray(menusData.data)) {
-          const activeItems = menusData.data
-            .filter((item: MenuItem) => item.isActive)
-            .map((item: MenuItem) => ({
-              ...item,
-              price: typeof item.price === 'string' ? parseFloat(item.price) : item.price,
-            }));
-
-          // Update menus state and cache
-          setAllMenuItems(activeItems);
-          sessionStorage.setItem(`menus_${merchantCode}`, JSON.stringify(activeItems));
-
-          // ✅ Extract addon data using utility function
-          const newAddonCache = extractAddonDataFromMenus(menusData.data);
-          setMenuAddonsCache(newAddonCache);
-          sessionStorage.setItem(`addons_cache_${merchantCode}`, JSON.stringify(newAddonCache));
-
-          console.log('✅ [AUTO-REFRESH] All data updated');
-        }
-      } catch (err) {
-        console.error('❌ [AUTO-REFRESH] Failed to refresh data:', err);
-      }
-    };
-
-    // Set up interval for auto-refresh every 15 seconds
-    autoRefreshIntervalRef.current = setInterval(autoRefreshData, 15000);
-
-    // Cleanup interval on unmount
-    return () => {
-      if (autoRefreshIntervalRef.current) {
-        clearInterval(autoRefreshIntervalRef.current);
-        console.log('🛑 [AUTO-REFRESH] Stopped auto-refresh');
-      }
-    };
-  }, [allMenuItems.length, merchantCode]);
 
   useEffect(() => {
     initializeCart(merchantCode, mode as 'dinein' | 'takeaway');
