@@ -639,8 +639,8 @@ export default function OrderClientPage({
         let currentCategory = '';
 
         // Check special sections first (in order: promo, best-seller, recommendation)
-        const specialSections = ['promo', 'best-seller', 'recommendation'];
-        for (const sectionId of specialSections) {
+        const specialSections: string[] = ['promo', 'best-seller', 'recommendation'];
+        for (const sectionId of (Array.isArray(specialSections) ? specialSections : [])) {
           const element = sectionRefs.current[sectionId];
           if (element) {
             const rect = element.getBoundingClientRect();
@@ -651,7 +651,8 @@ export default function OrderClientPage({
         }
 
         // Then check regular categories
-        for (const [categoryId, element] of Object.entries(sectionRefs.current)) {
+        const sectionEntries = Object.entries(sectionRefs.current || {});
+        for (const [categoryId, element] of sectionEntries) {
           if (specialSections.includes(categoryId)) continue; // Skip special sections
           if (element) {
             const rect = element.getBoundingClientRect();
@@ -665,10 +666,10 @@ export default function OrderClientPage({
 
         // Default to first available special category or first category
         if (!currentCategory) {
-          if (sectionRefs.current['promo']) currentCategory = 'promo';
-          else if (sectionRefs.current['best-seller']) currentCategory = 'best-seller';
-          else if (sectionRefs.current['recommendation']) currentCategory = 'recommendation';
-          else if (categories.length > 0) currentCategory = categories[0].id;
+          if (sectionRefs.current?.['promo']) currentCategory = 'promo';
+          else if (sectionRefs.current?.['best-seller']) currentCategory = 'best-seller';
+          else if (sectionRefs.current?.['recommendation']) currentCategory = 'recommendation';
+          else if (Array.isArray(categories) && categories.length > 0) currentCategory = categories[0].id;
         }
 
         // Only update if different to avoid unnecessary re-renders
@@ -720,17 +721,17 @@ export default function OrderClientPage({
   // ✅ MEMOIZED: Build special categories for CategoryTabs
   const specialCategories = useMemo(() => {
     const result: { id: string; name: string }[] = [];
-    if (promoItems.length > 0) {
+    if (Array.isArray(promoItems) && promoItems.length > 0) {
       result.push({ id: 'promo', name: 'Promo' });
     }
-    if (bestSellerItems.length > 0) {
+    if (Array.isArray(bestSellerItems) && bestSellerItems.length > 0) {
       result.push({ id: 'best-seller', name: 'Best Seller' });
     }
-    if (recommendationItems.length > 0) {
+    if (Array.isArray(recommendationItems) && recommendationItems.length > 0) {
       result.push({ id: 'recommendation', name: 'Recommendation' });
     }
     return result;
-  }, [promoItems.length, bestSellerItems.length, recommendationItems.length]);
+  }, [promoItems, bestSellerItems, recommendationItems]);
 
   // ========================================
   // RENDER - NEW LAYOUT
@@ -845,7 +846,7 @@ export default function OrderClientPage({
               {merchantInfo && (
                 <RestaurantInfoCard
                   name={merchantInfo.name}
-                  openingHours={displayOpeningHours.map(h => ({
+                  openingHours={(Array.isArray(displayOpeningHours) ? displayOpeningHours : []).map(h => ({
                     dayOfWeek: h.dayOfWeek,
                     openTime: h.openTime || '',
                     closeTime: h.closeTime || '',
@@ -1197,7 +1198,7 @@ export default function OrderClientPage({
             name: merchantInfo.name,
             address: merchantInfo.address,
             phone: merchantInfo.phone,
-            openingHours: displayOpeningHours.map(h => ({ ...h, is24Hours: (h as { is24Hours?: boolean }).is24Hours ?? false })),
+            openingHours: (Array.isArray(displayOpeningHours) ? displayOpeningHours : []).map(h => ({ ...h, is24Hours: (h as { is24Hours?: boolean }).is24Hours ?? false })),
           }}
         />
       )}

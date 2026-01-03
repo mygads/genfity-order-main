@@ -64,7 +64,10 @@ export default function CategoryTabs({
     }, [activeTab]);
 
     // Combine special categories and regular categories
-    const allTabs = [...specialCategories, ...categories];
+    // Defensive check: ensure both are arrays before spreading
+    const safeSpecialCategories = Array.isArray(specialCategories) ? specialCategories : [];
+    const safeCategories = Array.isArray(categories) ? categories : [];
+    const allTabs = [...safeSpecialCategories, ...safeCategories];
 
     return (
         <div
