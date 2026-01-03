@@ -1,6 +1,6 @@
 {
-  "name": "genfity-order-system",
-  "version": "0.0.1",
+  "name": "genfity-order",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
