@@ -9,6 +9,7 @@
  * - startDate: ISO date string (optional)
  * - endDate: ISO date string (optional)
  * - search: string (optional, search in description)
+ * - includePending: boolean (optional, include pending payment requests)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -16,6 +17,21 @@ import prisma from '@/lib/db/client';
 import { withMerchantOwner } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/middleware/auth';
 import type { BalanceTransactionType, Prisma } from '@prisma/client';
+
+interface TransactionItem {
+    id: string;
+    type: string;
+    amount: number;
+    balanceBefore: number;
+    balanceAfter: number;
+    description: string | null;
+    createdAt: Date;
+    // Payment request specific fields
+    status?: string;
+    paymentRequestId?: string;
+    paymentType?: string;
+    isPaymentRequest?: boolean;
+}
 
 /**
  * GET /api/merchant/balance/transactions
@@ -43,79 +59,141 @@ async function handleGet(req: NextRequest, context: AuthContext) {
         const startDate = searchParams.get('startDate');
         const endDate = searchParams.get('endDate');
         const search = searchParams.get('search');
+        const includePending = searchParams.get('includePending') === 'true';
 
         // Get balance record
         const balance = await prisma.merchantBalance.findUnique({
             where: { merchantId: merchantUser.merchantId },
         });
 
-        if (!balance) {
-            return NextResponse.json({
-                success: true,
-                data: {
-                    transactions: [],
-                    pagination: { total: 0, limit, offset, hasMore: false },
-                },
-            });
+        // Build where clause for transactions
+        const transactionWhere: Prisma.BalanceTransactionWhereInput = {};
+        
+        if (balance) {
+            transactionWhere.balanceId = balance.id;
+        } else {
+            // No balance record, return empty for transactions
+            transactionWhere.balanceId = BigInt(-1); // Will match nothing
         }
 
-        // Build where clause
-        const where: Prisma.BalanceTransactionWhereInput = {
-            balanceId: balance.id,
-        };
-
         if (type) {
-            where.type = type;
+            transactionWhere.type = type;
         }
 
         if (startDate || endDate) {
-            where.createdAt = {};
+            transactionWhere.createdAt = {};
             if (startDate) {
-                where.createdAt.gte = new Date(startDate);
+                transactionWhere.createdAt.gte = new Date(startDate);
             }
             if (endDate) {
                 // Include the entire end date
                 const endDateTime = new Date(endDate);
                 endDateTime.setHours(23, 59, 59, 999);
-                where.createdAt.lte = endDateTime;
+                transactionWhere.createdAt.lte = endDateTime;
             }
         }
 
         if (search) {
-            where.description = {
+            transactionWhere.description = {
                 contains: search,
                 mode: 'insensitive',
             };
         }
 
-        const [transactions, total] = await Promise.all([
+        // Fetch transactions
+        const [transactions, transactionTotal] = await Promise.all([
             prisma.balanceTransaction.findMany({
-                where,
+                where: transactionWhere,
                 orderBy: { createdAt: 'desc' },
-                take: limit,
+                take: includePending ? limit : limit,
                 skip: offset,
             }),
-            prisma.balanceTransaction.count({ where }),
+            prisma.balanceTransaction.count({ where: transactionWhere }),
         ]);
+
+        // Fetch pending payment requests if requested
+        let pendingRequests: TransactionItem[] = [];
+        let pendingTotal = 0;
+
+        if (includePending && offset === 0) {
+            // Build where clause for payment requests
+            const paymentRequestWhere: Prisma.PaymentRequestWhereInput = {
+                merchantId: merchantUser.merchantId,
+                status: { in: ['PENDING', 'CONFIRMED', 'REJECTED'] },
+            };
+
+            if (startDate || endDate) {
+                paymentRequestWhere.createdAt = {};
+                if (startDate) {
+                    paymentRequestWhere.createdAt.gte = new Date(startDate);
+                }
+                if (endDate) {
+                    const endDateTime = new Date(endDate);
+                    endDateTime.setHours(23, 59, 59, 999);
+                    paymentRequestWhere.createdAt.lte = endDateTime;
+                }
+            }
+
+            const [requests, requestCount] = await Promise.all([
+                prisma.paymentRequest.findMany({
+                    where: paymentRequestWhere,
+                    orderBy: { createdAt: 'desc' },
+                    take: 10, // Limit pending requests shown
+                }),
+                prisma.paymentRequest.count({ where: paymentRequestWhere }),
+            ]);
+
+            pendingRequests = requests.map(r => ({
+                id: `pr_${r.id.toString()}`,
+                type: r.type === 'DEPOSIT_TOPUP' ? 'PENDING_DEPOSIT' : 'PENDING_SUBSCRIPTION',
+                amount: Number(r.amount),
+                balanceBefore: 0,
+                balanceAfter: 0,
+                description: getPaymentRequestDescription(r.type, r.status, Number(r.amount), r.currency),
+                createdAt: r.createdAt,
+                status: r.status,
+                paymentRequestId: r.id.toString(),
+                paymentType: r.type,
+                isPaymentRequest: true,
+            }));
+
+            pendingTotal = requestCount;
+        }
+
+        // Transform and merge results
+        const transactionItems: TransactionItem[] = transactions.map(t => ({
+            id: t.id.toString(),
+            type: t.type,
+            amount: Number(t.amount),
+            balanceBefore: Number(t.balanceBefore),
+            balanceAfter: Number(t.balanceAfter),
+            description: t.description,
+            createdAt: t.createdAt,
+            isPaymentRequest: false,
+        }));
+
+        // Merge and sort by date (pending first, then by date)
+        const allItems = [...pendingRequests, ...transactionItems].sort((a, b) => {
+            // Pending requests first
+            if (a.isPaymentRequest && !b.isPaymentRequest) return -1;
+            if (!a.isPaymentRequest && b.isPaymentRequest) return 1;
+            // Then by date descending
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        });
+
+        const total = transactionTotal + (includePending ? pendingTotal : 0);
 
         return NextResponse.json({
             success: true,
             data: {
-                transactions: transactions.map(t => ({
-                    id: t.id.toString(),
-                    type: t.type,
-                    amount: Number(t.amount),
-                    balanceBefore: Number(t.balanceBefore),
-                    balanceAfter: Number(t.balanceAfter),
-                    description: t.description,
-                    createdAt: t.createdAt,
-                })),
+                transactions: allItems.slice(0, limit),
                 pagination: {
                     total,
                     limit,
                     offset,
-                    hasMore: offset + transactions.length < total,
+                    hasMore: offset + allItems.length < total,
                 },
+                pendingCount: pendingTotal,
             },
         });
     } catch (error) {
@@ -124,6 +202,36 @@ async function handleGet(req: NextRequest, context: AuthContext) {
             { success: false, error: 'INTERNAL_ERROR', message: 'Failed to get transactions' },
             { status: 500 }
         );
+    }
+}
+
+/**
+ * Generate description for payment request based on status
+ */
+function getPaymentRequestDescription(
+    type: string,
+    status: string,
+    amount: number,
+    currency: string
+): string {
+    const typeLabel = type === 'DEPOSIT_TOPUP' ? 'Top Up' : 'Monthly Subscription';
+    const amountStr = currency === 'IDR' 
+        ? `Rp ${amount.toLocaleString()}` 
+        : `A$${amount.toFixed(2)}`;
+
+    switch (status) {
+        case 'PENDING':
+            return `${typeLabel} ${amountStr} - Waiting for payment`;
+        case 'CONFIRMED':
+            return `${typeLabel} ${amountStr} - Waiting for admin verification`;
+        case 'REJECTED':
+            return `${typeLabel} ${amountStr} - Payment rejected`;
+        case 'VERIFIED':
+            return `${typeLabel} ${amountStr} - Payment verified`;
+        case 'EXPIRED':
+            return `${typeLabel} ${amountStr} - Request expired`;
+        default:
+            return `${typeLabel} ${amountStr}`;
     }
 }
 

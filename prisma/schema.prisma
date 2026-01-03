@@ -40,6 +40,7 @@ model User {
   sessions            UserSession[]
   notifications       UserNotification[]
   pushSubscriptions   PushSubscription[]
+  stockPhotosUploaded StockPhoto[]       @relation("StockPhotoUploadedBy")
 
   @@index([email])
   @@index([role])
@@ -675,6 +676,10 @@ model SubscriptionPlan {
   description         String?
   // Trial settings
   trialDays           Int      @default(30) @map("trial_days")
+  // Monthly subscription days (default 31)
+  monthlyDays         Int      @default(31) @map("monthly_days")
+  // Grace period days (for expired trials/subscriptions before suspension)
+  gracePeriodDays     Int      @default(3) @map("grace_period_days")
   // IDR Pricing
   depositMinimumIdr   Decimal  @default(100000) @map("deposit_minimum_idr") @db.Decimal(12, 2)
   orderFeeIdr         Decimal  @default(250) @map("order_fee_idr") @db.Decimal(12, 2)
@@ -897,8 +902,12 @@ enum NotificationType {
   NEGATIVE_BALANCE        // Balance is negative (auto-suspended)
   SUBSCRIPTION_SUSPENDED  // Subscription suspended
   PAYMENT_VERIFIED        // Payment verified
+  PAYMENT_REJECTED        // Payment request rejected
   MONTHLY_EXPIRING_7_DAYS // Monthly subscription expiring in 7 days
   MONTHLY_EXPIRED         // Monthly subscription expired
+  AUTO_SWITCH_TO_DEPOSIT  // Auto-switched to deposit mode
+  AUTO_SWITCH_TO_MONTHLY  // Auto-switched to monthly mode
+  SUBSCRIPTION_REACTIVATED // Subscription reactivated
 }
 
 model NotificationLog {
@@ -918,6 +927,57 @@ model NotificationLog {
   @@index([type])
   @@index([sentAt])
   @@map("notification_logs")
+}
+
+// ============================================
+// SUBSCRIPTION HISTORY / AUDIT LOG
+// ============================================
+
+enum SubscriptionEventType {
+  CREATED              // Initial subscription created
+  TRIAL_STARTED        // Trial period started
+  TRIAL_EXPIRED        // Trial period ended
+  UPGRADED_TO_DEPOSIT  // Switched to deposit mode
+  UPGRADED_TO_MONTHLY  // Switched to monthly mode
+  AUTO_SWITCHED        // Auto-switched between modes
+  MANUAL_SWITCHED      // Manually switched between modes
+  SUSPENDED            // Subscription suspended
+  REACTIVATED          // Subscription reactivated
+  PAYMENT_RECEIVED     // Payment verified and applied
+  PAYMENT_REJECTED     // Payment request rejected
+  PERIOD_EXTENDED      // Monthly period extended
+  BALANCE_TOPUP        // Balance topped up
+  ORDER_FEE_DEDUCTED   // Order fee deducted from balance
+  GRACE_PERIOD_STARTED // Grace period started
+  CANCELLED            // Subscription cancelled
+}
+
+model SubscriptionHistory {
+  id                  BigInt                @id @default(autoincrement())
+  merchantId          BigInt                @map("merchant_id")
+  eventType           SubscriptionEventType @map("event_type")
+  // Before state
+  previousType        String?               @map("previous_type")
+  previousStatus      String?               @map("previous_status")
+  previousBalance     Decimal?              @map("previous_balance") @db.Decimal(12, 2)
+  previousPeriodEnd   DateTime?             @map("previous_period_end") @db.Timestamptz(6)
+  // After state
+  newType             String?               @map("new_type")
+  newStatus           String?               @map("new_status")
+  newBalance          Decimal?              @map("new_balance") @db.Decimal(12, 2)
+  newPeriodEnd        DateTime?             @map("new_period_end") @db.Timestamptz(6)
+  // Additional info
+  reason              String?               // Human-readable reason
+  metadata            Json?                 // Additional context (paymentRequestId, etc)
+  triggeredBy         String?               @map("triggered_by") // 'SYSTEM', 'ADMIN', 'MERCHANT'
+  triggeredByUserId   BigInt?               @map("triggered_by_user_id")
+  // Timestamps
+  createdAt           DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([merchantId])
+  @@index([eventType])
+  @@index([createdAt])
+  @@map("subscription_history")
 }
 
 // ============================================
@@ -1009,6 +1069,39 @@ model UserNotification {
   @@index([merchantId, targetRole])
   @@index([createdAt])
   @@map("user_notifications")
+}
+
+// Notification Retry Queue for failed notifications with exponential backoff
+enum NotificationRetryStatus {
+  PENDING
+  RETRYING
+  SUCCESS
+  FAILED
+}
+
+model NotificationRetryQueue {
+  id            BigInt                    @id @default(autoincrement())
+  notificationId BigInt?                  @map("notification_id")
+  merchantId    BigInt?                   @map("merchant_id")
+  userId        BigInt?                   @map("user_id")
+  category      UserNotificationCategory
+  title         String
+  message       String
+  metadata      Json?
+  actionUrl     String?                   @map("action_url")
+  targetRole    UserRole?                 @map("target_role")
+  retryCount    Int                       @default(0) @map("retry_count")
+  maxRetries    Int                       @default(5) @map("max_retries")
+  nextRetryAt   DateTime?                 @map("next_retry_at") @db.Timestamptz(6)
+  lastError     String?                   @map("last_error") @db.Text
+  status        NotificationRetryStatus   @default(PENDING)
+  createdAt     DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([status, nextRetryAt])
+  @@index([merchantId])
+  @@index([userId])
+  @@map("notification_retry_queue")
 }
 
 // ============================================
@@ -1126,4 +1219,30 @@ model GroupJoinAttempt {
   
   @@index([deviceId, createdAt])
   @@map("group_join_attempts")
+}
+
+// ============================================
+// STOCK PHOTO LIBRARY
+// ============================================
+
+// Stock photos provided by Super Admin for merchants to use
+model StockPhoto {
+  id              BigInt    @id @default(autoincrement())
+  category        String    // Category name for searching (e.g., "Burger", "Pizza", "Drinks")
+  name            String    // Display name of the photo
+  imageUrl        String    @map("image_url") // URL to the stock photo
+  thumbnailUrl    String?   @map("thumbnail_url") // Optional smaller thumbnail
+  uploadedByUserId BigInt   @map("uploaded_by_user_id") // Super Admin who uploaded
+  isActive        Boolean   @default(true) @map("is_active")
+  usageCount      Int       @default(0) @map("usage_count") // Track how many times used
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  
+  uploadedBy      User      @relation("StockPhotoUploadedBy", fields: [uploadedByUserId], references: [id])
+  
+  @@index([category])
+  @@index([name])
+  @@index([isActive])
+  @@index([uploadedByUserId])
+  @@map("stock_photos")
 }

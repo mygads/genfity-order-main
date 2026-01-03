@@ -308,6 +308,8 @@ export async function POST(request: NextRequest) {
       sessionId: BigInt(0), // Will update after session creation
       role: 'CUSTOMER',
       email: customerEmail,
+      customerId: customerId.toString(), // For customer API validation
+      name: customerName, // For customer API validation
     }, sessionDuration);
 
     const refreshToken = generateRefreshToken({
@@ -334,6 +336,8 @@ export async function POST(request: NextRequest) {
       sessionId: session.id,
       role: 'CUSTOMER',
       email: customerEmail,
+      customerId: customerId.toString(), // For customer API validation
+      name: customerName, // For customer API validation
     }, sessionDuration);
 
     // Update session with final token

@@ -8,10 +8,12 @@ import prisma from '@/lib/db/client';
 import { withMerchant } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/middleware/auth';
 import subscriptionService from '@/lib/services/SubscriptionService';
+import subscriptionAutoSwitchService from '@/lib/services/SubscriptionAutoSwitchService';
 
 /**
  * GET /api/merchant/subscription
  * Get subscription status for current merchant
+ * Also triggers auto-switch check on each access
  */
 async function handleGet(req: NextRequest, context: AuthContext) {
     try {
@@ -26,6 +28,23 @@ async function handleGet(req: NextRequest, context: AuthContext) {
                 { success: false, error: 'MERCHANT_NOT_FOUND', message: 'Merchant not found' },
                 { status: 404 }
             );
+        }
+
+        // Auto-check and switch subscription if needed
+        // This runs every time merchant user accesses the dashboard
+        try {
+            const switchResult = await subscriptionAutoSwitchService.checkAndAutoSwitch(merchantUser.merchantId);
+            if (switchResult.action !== 'NO_CHANGE') {
+                console.log(`📋 Dashboard access triggered subscription auto-switch:`, {
+                    merchant: switchResult.merchantCode,
+                    action: switchResult.action,
+                    reason: switchResult.reason,
+                    storeOpened: switchResult.storeOpened,
+                });
+            }
+        } catch (switchError) {
+            console.error('Auto-switch check failed:', switchError);
+            // Don't fail the request if auto-switch fails
         }
 
         const status = await subscriptionService.getSubscriptionStatus(merchantUser.merchantId);

@@ -277,11 +277,23 @@ class SubscriptionRepository {
     }
 
     /**
+     * Get monthly subscription days from plan settings
+     */
+    private async getMonthlyDays(): Promise<number> {
+        const plan = await prisma.subscriptionPlan.findFirst({
+            where: { isActive: true },
+            select: { monthlyDays: true },
+        });
+        return plan?.monthlyDays ?? 31; // Default to 31 days
+    }
+
+    /**
      * Upgrade to monthly mode
      */
     async upgradeToMonthly(merchantId: bigint, months: number) {
         const now = new Date();
-        const periodEnd = new Date(now.getTime() + months * 30 * 24 * 60 * 60 * 1000);
+        const monthlyDays = await this.getMonthlyDays();
+        const periodEnd = new Date(now.getTime() + months * monthlyDays * 24 * 60 * 60 * 1000);
 
         return prisma.merchantSubscription.update({
             where: { merchantId },
@@ -311,7 +323,8 @@ class SubscriptionRepository {
             ? subscription.currentPeriodEnd
             : new Date();
 
-        const newPeriodEnd = new Date(startFrom.getTime() + months * 30 * 24 * 60 * 60 * 1000);
+        const monthlyDays = await this.getMonthlyDays();
+        const newPeriodEnd = new Date(startFrom.getTime() + months * monthlyDays * 24 * 60 * 60 * 1000);
 
         return prisma.merchantSubscription.update({
             where: { merchantId },

@@ -160,6 +160,7 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                     }))}
                     onClick={() => setShowOutletInfo(true)}
                     isClosed={!storeOpen}
+                    logoUrl={merchant.logoUrl}
                 />
             </div>
 

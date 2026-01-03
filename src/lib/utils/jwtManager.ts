@@ -41,6 +41,9 @@ export function generateAccessToken(
     role: payload.role,
     email: payload.email,
     ...(payload.merchantId && { merchantId: payload.merchantId.toString() }),
+    // Customer-specific fields for verifyCustomerToken validation
+    ...(payload.customerId && { customerId: payload.customerId }),
+    ...(payload.name && { name: payload.name }),
   };
   
   return jwt.sign(serializedPayload, JWT_SECRET, {

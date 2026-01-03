@@ -8,6 +8,7 @@ import { NextResponse } from 'next/server';
 import { withSuperAdmin, AuthContext } from '@/lib/middleware/auth';
 import prisma from '@/lib/db/client';
 import { serializeBigInt } from '@/lib/utils/serializer';
+import subscriptionHistoryService from '@/lib/services/SubscriptionHistoryService';
 
 interface SubscriptionMetrics {
     overview: {
@@ -45,6 +46,19 @@ interface SubscriptionMetrics {
         churns: number;
         activeEnd: number;
     }>;
+    eventHistory: {
+        eventCounts: Record<string, number>;
+        dailyEvents: Record<string, Record<string, number>>;
+        recentEvents: Array<{
+            id: string;
+            merchantId: string;
+            eventType: string;
+            previousType: string | null;
+            newType: string | null;
+            reason: string | null;
+            createdAt: Date;
+        }>;
+    };
 }
 
 export const GET = withSuperAdmin(async (
@@ -55,9 +69,13 @@ export const GET = withSuperAdmin(async (
         const now = new Date();
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
         
-        // Grace period calculation (3 days)
-        const gracePeriodDays = 3;
+        // Get grace period from subscription plan
+        const subscriptionPlan = await prisma.subscriptionPlan.findUnique({
+            where: { planKey: 'MONTHLY_BASIC' },
+        });
+        const gracePeriodDays = (subscriptionPlan as { gracePeriodDays?: number })?.gracePeriodDays || 3;
         const graceThreshold = new Date(now.getTime() - gracePeriodDays * 24 * 60 * 60 * 1000);
 
         // Get all merchants with subscriptions
@@ -241,12 +259,52 @@ export const GET = withSuperAdmin(async (
             });
         }
 
+        // Get event history from SubscriptionHistory table
+        const [eventCounts, dailyEvents, recentEventsData] = await Promise.all([
+            subscriptionHistoryService.getEventCounts({
+                startDate: thirtyDaysAgo,
+                endDate: now,
+            }),
+            subscriptionHistoryService.getDailyEventCounts({
+                startDate: thirtyDaysAgo,
+                endDate: now,
+            }),
+            subscriptionHistoryService.getAnalyticsData({
+                startDate: thirtyDaysAgo,
+                endDate: now,
+                limit: 50,
+            }),
+        ]);
+
+        const eventHistory = {
+            eventCounts,
+            dailyEvents,
+            recentEvents: recentEventsData.events.map((e: {
+                id: bigint;
+                merchantId: bigint;
+                eventType: string;
+                previousType: string | null;
+                newType: string | null;
+                reason: string | null;
+                createdAt: Date;
+            }) => ({
+                id: e.id.toString(),
+                merchantId: e.merchantId.toString(),
+                eventType: e.eventType,
+                previousType: e.previousType,
+                newType: e.newType,
+                reason: e.reason,
+                createdAt: e.createdAt,
+            })),
+        };
+
         const metrics: SubscriptionMetrics = {
             overview,
             conversion,
             revenue,
             trends,
             timeline,
+            eventHistory,
         };
 
         return NextResponse.json({

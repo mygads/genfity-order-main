@@ -133,11 +133,14 @@ class CustomerAuthService {
     });
 
     // Generate JWT tokens with customer-specific payload
+    // ✅ CRITICAL: Must include customerId and name for verifyCustomerToken() validation
     const accessToken = generateAccessToken({
-      userId: customer.id, // Use userId field for compatibility
+      userId: customer.id, // Required for JWT structure
       sessionId: session.id,
       role: 'CUSTOMER', // Virtual role for customer
       email: customer.email,
+      customerId: customer.id.toString(), // For customer API validation
+      name: customer.name, // For customer API validation
     }, sessionDuration);
 
     const refreshToken = generateRefreshToken({

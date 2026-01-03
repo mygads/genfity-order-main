@@ -645,7 +645,7 @@ export default function CustomersPage() {
                         </span>
                       </td>
                       <td className="px-4 py-4 text-sm font-medium text-gray-800 dark:text-white/90">
-                        {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(customer.totalSpent || 0)}
+                        {(customer.totalSpent || 0).toLocaleString()}
                       </td>
                       <td className="px-4 py-4">
                         <button

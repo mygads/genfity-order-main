@@ -994,6 +994,38 @@ export async function seedWellardKebabHouse() {
   }
   console.log(`✅ Opening hours created (7 days)`);
 
+  // 4.5. Create Subscription and Balance
+  const existingSubscription = await prisma.merchantSubscription.findUnique({
+    where: { merchantId: merchant.id },
+  });
+
+  if (!existingSubscription) {
+    const now = new Date();
+    const trialEndsAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
+
+    await prisma.merchantSubscription.create({
+      data: {
+        merchantId: merchant.id,
+        type: 'TRIAL',
+        status: 'ACTIVE',
+        trialStartedAt: now,
+        trialEndsAt,
+      },
+    });
+
+    // Also create balance record
+    await prisma.merchantBalance.create({
+      data: {
+        merchantId: merchant.id,
+        balance: 0,
+      },
+    });
+
+    console.log(`✅ Subscription created (30-day trial)`);
+  } else {
+    console.log(`✅ Subscription already exists`);
+  }
+
   // 5. Create Menu Categories
   const categoryMap: Record<string, bigint> = {};
   for (const cat of menuCategories) {

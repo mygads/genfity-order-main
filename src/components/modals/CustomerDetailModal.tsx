@@ -62,11 +62,8 @@ export default function CustomerDetailModal({
     };
 
     const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat("id-ID", {
-            style: "currency",
-            currency: "IDR",
-            minimumFractionDigits: 0,
-        }).format(amount);
+        // Display without specific currency since customers may order from multiple merchants
+        return amount.toLocaleString();
     };
 
     const getStatusColor = (status: string) => {

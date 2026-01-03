@@ -234,6 +234,27 @@ class AuthService {
       });
     }
 
+    // Auto-check and switch subscription on login for merchant users
+    if (merchantId && (user.role === 'MERCHANT_OWNER' || user.role === 'MERCHANT_STAFF')) {
+      import('@/lib/services/SubscriptionAutoSwitchService').then(({ default: subscriptionAutoSwitchService }) => {
+        subscriptionAutoSwitchService.checkAndAutoSwitch(merchantId).then(result => {
+          if (result.action !== 'NO_CHANGE') {
+            console.log(`📋 Login subscription auto-switch for ${result.merchantCode}:`, {
+              action: result.action,
+              previousType: result.previousType,
+              newType: result.newType,
+              reason: result.reason,
+              storeOpened: result.storeOpened,
+            });
+          }
+        }).catch(err => {
+          console.error('⚠️ Subscription auto-switch on login failed:', err);
+        });
+      }).catch(err => {
+        console.error('⚠️ Failed to import subscription auto-switch service:', err);
+      });
+    }
+
     // Calculate expiresIn using dynamic session duration
     const expiresIn = this.getSessionDuration(user.role, credentials.rememberMe);
 

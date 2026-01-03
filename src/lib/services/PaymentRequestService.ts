@@ -7,6 +7,7 @@ import paymentRequestRepository from '@/lib/repositories/PaymentRequestRepositor
 import balanceRepository from '@/lib/repositories/BalanceRepository';
 import subscriptionRepository from '@/lib/repositories/SubscriptionRepository';
 import subscriptionService from '@/lib/services/SubscriptionService';
+import subscriptionAutoSwitchService from '@/lib/services/SubscriptionAutoSwitchService';
 import userNotificationService from '@/lib/services/UserNotificationService';
 import prisma from '@/lib/db/client';
 import { NotFoundError, ValidationError, ConflictError, ERROR_CODES } from '@/lib/constants/errors';
@@ -175,27 +176,61 @@ class PaymentRequestService {
                 `Top-up from payment request #${request.id}`,
                 requestId
             );
-
-            // Reactivate if suspended
-            await this.reactivateIfNeeded(request.merchantId, 'DEPOSIT');
         } else if (request.type === 'MONTHLY_SUBSCRIPTION') {
             const months = request.monthsRequested || 1;
 
             // Get current subscription
             const subscription = await subscriptionRepository.getMerchantSubscription(request.merchantId);
 
-            if (subscription) {
-                if (subscription.type === 'MONTHLY') {
-                    // Extend existing subscription
-                    await subscriptionRepository.extendMonthlySubscription(request.merchantId, months);
-                } else {
-                    // Upgrade to monthly
-                    await subscriptionRepository.upgradeToMonthly(request.merchantId, months);
-                }
+            if (!subscription) {
+                // No subscription exists, create monthly subscription via upgradeToMonthly
+                await subscriptionRepository.upgradeToMonthly(request.merchantId, months);
+            } else if (subscription.type === 'MONTHLY') {
+                // Extend existing monthly subscription
+                await subscriptionRepository.extendMonthlySubscription(request.merchantId, months);
+            } else {
+                // TRIAL or DEPOSIT - just extend/set the monthly period without changing type yet
+                // The auto-switch service will handle type switching
+                const now = new Date();
+                const startFrom = subscription.currentPeriodEnd && subscription.currentPeriodEnd > now
+                    ? subscription.currentPeriodEnd
+                    : now;
+                
+                // Get monthly days from plan (default 31)
+                const plan = await prisma.subscriptionPlan.findFirst({
+                    where: { isActive: true },
+                    select: { monthlyDays: true },
+                });
+                const monthlyDays = plan?.monthlyDays ?? 31;
+                
+                const newPeriodEnd = new Date(startFrom.getTime() + months * monthlyDays * 24 * 60 * 60 * 1000);
+                
+                await subscriptionRepository.updateMerchantSubscription(request.merchantId, {
+                    currentPeriodStart: subscription.currentPeriodEnd ? undefined : now,
+                    currentPeriodEnd: newPeriodEnd,
+                });
             }
+        }
 
-            // Reactivate if suspended
-            await this.reactivateIfNeeded(request.merchantId, 'MONTHLY');
+        // Use SubscriptionAutoSwitchService to handle auto-switch and store activation
+        try {
+            const switchResult = await subscriptionAutoSwitchService.handlePaymentVerified(
+                request.merchantId,
+                request.type as 'DEPOSIT_TOPUP' | 'MONTHLY_SUBSCRIPTION',
+                Number(request.amount),
+                request.monthsRequested || undefined
+            );
+            console.log(`📋 Payment verification auto-switch result:`, {
+                merchant: switchResult.merchantCode,
+                action: switchResult.action,
+                reason: switchResult.reason,
+                storeOpened: switchResult.storeOpened,
+            });
+        } catch (switchError) {
+            console.error('Failed to run auto-switch after payment verification:', switchError);
+            // Don't fail payment verification if auto-switch fails
+            // Fall back to simple reactivation
+            await this.reactivateIfNeeded(request.merchantId, request.type);
         }
 
         return request;

@@ -50,6 +50,9 @@ export interface JWTPayload {
   role: UserRole | 'CUSTOMER'; // CUSTOMER is virtual role for customer auth
   email: string;
   merchantId?: bigint;
+  // Customer-specific fields (used by verifyCustomerToken)
+  customerId?: string;
+  name?: string;
   iat?: number;
   exp?: number;
 }

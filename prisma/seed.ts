@@ -799,6 +799,8 @@ async function main() {
         displayName: 'Default Plan',
         description: 'Default subscription plan with trial, deposit, and monthly options',
         trialDays: 30,
+        monthlyDays: 31, // Monthly subscription is 31 days
+        gracePeriodDays: 3, // 3-day grace period before suspension
         // IDR Pricing
         depositMinimumIdr: 100000,
         orderFeeIdr: 250,
@@ -819,7 +821,15 @@ async function main() {
     });
     console.log('✅ Subscription plan created: Default Plan');
   } else {
-    console.log('✅ Subscription plan already exists');
+    // Update existing plan with new fields if missing
+    await prisma.subscriptionPlan.update({
+      where: { planKey: 'default' },
+      data: {
+        monthlyDays: 31,
+        gracePeriodDays: 3,
+      },
+    });
+    console.log('✅ Subscription plan updated with monthlyDays and gracePeriodDays');
   }
 
   // ============================================
@@ -893,10 +903,6 @@ async function main() {
   console.log('');
   console.log('   WELLARD KEBAB HOUSE OWNER:');
   console.log('   Email: wellardkebab@gmail.com');
-  console.log('   Password: 1234abcd');
-  console.log('');
-  console.log('   CUSTOMER:');
-  console.log('   Email: alice@example.com');
   console.log('   Password: 1234abcd');
   console.log('');
   console.log('═══════════════════════════════════════════════');

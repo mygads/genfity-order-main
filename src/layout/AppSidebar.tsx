@@ -36,7 +36,9 @@ import {
   FaMoneyBillWave,
   FaCogs,
   FaQrcode,
-  FaUserTie
+  FaUserTie,
+  FaImages,
+  FaStamp
 } from "react-icons/fa";
 import MerchantBanner from "../components/merchants/MerchantBanner";
 
@@ -115,6 +117,18 @@ const superAdminNavGroups: NavGroup[] = [
         icon: <FaTicketAlt />,
         nameKey: "admin.nav.referralCodes",
         path: "/admin/dashboard/referral-codes",
+        roles: ["SUPER_ADMIN"],
+      },
+      {
+        icon: <FaImages />,
+        nameKey: "admin.nav.stockPhotos",
+        path: "/admin/dashboard/stock-photos",
+        roles: ["SUPER_ADMIN"],
+      },
+      {
+        icon: <FaStamp />,
+        nameKey: "admin.nav.watermarkSettings",
+        path: "/admin/dashboard/watermark-settings",
         roles: ["SUPER_ADMIN"],
       },
     ],

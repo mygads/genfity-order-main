@@ -6,10 +6,12 @@ import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import AdminFormFooter from "@/components/common/AdminFormFooter";
 import { FormPageSkeleton } from '@/components/common/SkeletonLoaders';
 import Image from "next/image";
+import { FaUpload, FaImages } from "react-icons/fa";
 import ManageMenuAddonCategoriesModal from "@/components/menu/ManageMenuAddonCategoriesModal";
 import ViewMenuAddonCategoriesModal from "@/components/menu/ViewMenuAddonCategoriesModal";
 import { useMerchant } from "@/context/MerchantContext";
 import { getCurrencySymbol } from "@/lib/utils/format";
+import StockPhotoPicker from "@/components/menu/StockPhotoPicker";
 
 interface MenuAddonCategory {
   addonCategoryId: string;
@@ -84,6 +86,10 @@ export default function EditMenuPage() {
   const [showViewAddonsModal, setShowViewAddonsModal] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [originalFormData, setOriginalFormData] = useState<MenuFormData | null>(null);
+
+  // Image source state: 'upload' or 'stock'
+  const [imageSource, setImageSource] = useState<'upload' | 'stock'>('upload');
+  const [showStockPhotoPicker, setShowStockPhotoPicker] = useState(false);
 
   // Category selection state
   const [allCategories, setAllCategories] = useState<Category[]>([]);
@@ -541,6 +547,34 @@ export default function EditMenuPage() {
                 Menu Image
               </label>
 
+              {/* Image Source Tabs */}
+              <div className="mb-3 flex rounded-lg bg-gray-100 p-1 dark:bg-gray-800">
+                <button
+                  type="button"
+                  onClick={() => setImageSource('upload')}
+                  className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all ${
+                    imageSource === 'upload'
+                      ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white'
+                      : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
+                  }`}
+                >
+                  <FaUpload className="h-3.5 w-3.5" />
+                  Upload
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setImageSource('stock')}
+                  className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all ${
+                    imageSource === 'stock'
+                      ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white'
+                      : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
+                  }`}
+                >
+                  <FaImages className="h-3.5 w-3.5" />
+                  Stock Photos
+                </button>
+              </div>
+
               <div className={`relative rounded-2xl border-2 border-dashed transition-all ${formData.imageUrl
                 ? 'border-success-300 bg-success-50/50 dark:border-success-700 dark:bg-success-900/10'
                 : 'border-gray-300 bg-gray-50 hover:border-primary-400 hover:bg-primary-50/50 dark:border-gray-700 dark:bg-gray-900 dark:hover:border-primary-600'
@@ -564,7 +598,7 @@ export default function EditMenuPage() {
                       </svg>
                     </button>
                   </div>
-                ) : (
+                ) : imageSource === 'upload' ? (
                   <label className="flex aspect-square cursor-pointer flex-col items-center justify-center p-6">
                     <input
                       type="file"
@@ -603,10 +637,37 @@ export default function EditMenuPage() {
                       </>
                     )}
                   </label>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowStockPhotoPicker(true)}
+                    className="flex aspect-square w-full cursor-pointer flex-col items-center justify-center p-6"
+                  >
+                    <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">
+                      <FaImages className="h-7 w-7" />
+                    </div>
+                    <p className="mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Browse Stock Photos
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Choose from available stock photos
+                    </p>
+                  </button>
                 )}
               </div>
             </div>
           </div>
+
+          {/* Stock Photo Picker Modal */}
+          <StockPhotoPicker
+            isOpen={showStockPhotoPicker}
+            onClose={() => setShowStockPhotoPicker(false)}
+            onSelect={(imageUrl: string) => {
+              setFormData(prev => ({ ...prev, imageUrl }));
+              setShowStockPhotoPicker(false);
+            }}
+            currentImageUrl={formData.imageUrl}
+          />
 
           {/* Divider */}
           <div className="my-8 border-t border-gray-100 dark:border-gray-800" />

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 /**
- * Middleware for route protection and authentication
+ * Proxy for route protection and authentication
  * 
  * Protects:
  * - /admin/* routes: Require SUPER_ADMIN | MERCHANT_OWNER | MERCHANT_STAFF
@@ -15,9 +15,9 @@ import type { NextRequest } from 'next/server';
  * - /admin/reset-password
  * 
  * Note: JWT verification is done in API routes and server components
- * This middleware only checks for token presence and redirects accordingly
+ * This proxy only checks for token presence and redirects accordingly
  */
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Skip middleware for public routes

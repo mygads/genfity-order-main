@@ -821,6 +821,7 @@ export default function OrderClientPage({
                     setShowOutletInfo(true);
                   }}
                   isClosed={!storeOpen}
+                  logoUrl={merchantInfo.logoUrl}
                 />
               )}
             </div>

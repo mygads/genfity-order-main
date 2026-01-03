@@ -159,7 +159,7 @@ export function AdminLanguageProvider({
       try {
         const response = await fetch('/api/admin/preferences/language', {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('adminAccessToken') || ''}`,
+            'Authorization': `Bearer ${localStorage.getItem('accessToken') || ''}`,
           },
         });
         
@@ -196,7 +196,7 @@ export function AdminLanguageProvider({
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('adminAccessToken') || ''}`,
+            'Authorization': `Bearer ${localStorage.getItem('accessToken') || ''}`,
           },
           body: JSON.stringify({ language: newLocale }),
         });

@@ -36,18 +36,40 @@ cleanup() {
     echo
 }
 
+# Subscription cleanup (payment requests, logs, history)
+subscription_cleanup() {
+    log "Running subscription cleanup..."
+    curl -s -X POST "$BASE_URL/api/cron/subscription-cleanup" \
+        -H "Authorization: Bearer $CRON_SECRET" \
+        -H "Content-Type: application/json"
+    echo
+}
+
+# Notification retry - process failed notifications with exponential backoff
+notification_retry() {
+    log "Running notification retry..."
+    curl -s -X POST "$BASE_URL/api/cron/notification-retry" \
+        -H "Authorization: Bearer $CRON_SECRET" \
+        -H "Content-Type: application/json"
+    echo
+}
+
 # Run based on argument
 case "$1" in
     stock-reset) stock_reset ;;
     subscriptions) subscriptions ;;
     cleanup) cleanup ;;
+    subscription-cleanup) subscription_cleanup ;;
+    notification-retry) notification_retry ;;
     all)
         stock_reset
         subscriptions
         cleanup
+        subscription_cleanup
+        notification_retry
         ;;
     *)
-        echo "Usage: $0 {stock-reset|subscriptions|cleanup|all}"
+        echo "Usage: $0 {stock-reset|subscriptions|cleanup|subscription-cleanup|notification-retry|all}"
         exit 1
         ;;
 esac

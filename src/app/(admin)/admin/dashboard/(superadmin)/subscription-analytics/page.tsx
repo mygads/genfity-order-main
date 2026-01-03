@@ -55,6 +55,19 @@ interface SubscriptionMetrics {
         churns: number;
         activeEnd: number;
     }>;
+    eventHistory?: {
+        eventCounts: Record<string, number>;
+        dailyEvents: Record<string, Record<string, number>>;
+        recentEvents: Array<{
+            id: string;
+            merchantId: string;
+            eventType: string;
+            previousType: string | null;
+            newType: string | null;
+            reason: string | null;
+            createdAt: string;
+        }>;
+    };
 }
 
 function formatCurrency(amount: number, currency: string = 'IDR'): string {
@@ -65,6 +78,37 @@ function formatCurrency(amount: number, currency: string = 'IDR'): string {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
     }).format(amount);
+}
+
+// Event type display helper
+function getEventTypeDisplay(eventType: string): { label: string; color: string; bgColor: string } {
+    const eventMap: Record<string, { label: string; color: string; bgColor: string }> = {
+        'CREATED': { label: 'Created', color: 'text-blue-600 dark:text-blue-400', bgColor: 'bg-blue-100 dark:bg-blue-900/30' },
+        'TRIAL_EXPIRED': { label: 'Trial Expired', color: 'text-yellow-600 dark:text-yellow-400', bgColor: 'bg-yellow-100 dark:bg-yellow-900/30' },
+        'AUTO_SWITCHED': { label: 'Auto Switch', color: 'text-orange-600 dark:text-orange-400', bgColor: 'bg-orange-100 dark:bg-orange-900/30' },
+        'SUSPENDED': { label: 'Suspended', color: 'text-red-600 dark:text-red-400', bgColor: 'bg-red-100 dark:bg-red-900/30' },
+        'REACTIVATED': { label: 'Reactivated', color: 'text-green-600 dark:text-green-400', bgColor: 'bg-green-100 dark:bg-green-900/30' },
+        'PAYMENT_RECEIVED': { label: 'Payment', color: 'text-emerald-600 dark:text-emerald-400', bgColor: 'bg-emerald-100 dark:bg-emerald-900/30' },
+        'PAYMENT_REJECTED': { label: 'Rejected', color: 'text-red-600 dark:text-red-400', bgColor: 'bg-red-100 dark:bg-red-900/30' },
+        'ORDER_FEE_DEDUCTED': { label: 'Fee Deducted', color: 'text-gray-600 dark:text-gray-400', bgColor: 'bg-gray-100 dark:bg-gray-900/30' },
+        'MANUAL_ADJUSTMENT': { label: 'Adjustment', color: 'text-purple-600 dark:text-purple-400', bgColor: 'bg-purple-100 dark:bg-purple-900/30' },
+    };
+    return eventMap[eventType] || { label: eventType, color: 'text-gray-600 dark:text-gray-400', bgColor: 'bg-gray-100 dark:bg-gray-900/30' };
+}
+
+function formatRelativeTime(dateString: string): string {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const seconds = Math.floor(diff / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (days > 0) return `${days}d ago`;
+    if (hours > 0) return `${hours}h ago`;
+    if (minutes > 0) return `${minutes}m ago`;
+    return 'Just now';
 }
 
 // Stat Card Component
@@ -426,6 +470,114 @@ export default function SubscriptionAnalyticsPage() {
                     </div>
                 </div>
             </section>
+
+            {/* Subscription Event History */}
+            {metrics.eventHistory && (
+                <section className="space-y-6">
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                        {t('subscription.analytics.eventHistory')}
+                    </h2>
+                    
+                    {/* Event Type Counts */}
+                    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+                        <h3 className="text-md font-medium text-gray-900 dark:text-white mb-4">
+                            {t('subscription.analytics.eventCounts')} ({t('subscription.analytics.last30Days')})
+                        </h3>
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                            {Object.entries(metrics.eventHistory.eventCounts).map(([eventType, count]) => {
+                                const display = getEventTypeDisplay(eventType);
+                                return (
+                                    <div key={eventType} className={`${display.bgColor} rounded-lg p-4 text-center`}>
+                                        <p className={`text-2xl font-bold ${display.color}`}>{count}</p>
+                                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{display.label}</p>
+                                    </div>
+                                );
+                            })}
+                            {Object.keys(metrics.eventHistory.eventCounts).length === 0 && (
+                                <p className="col-span-full text-center text-gray-500 dark:text-gray-400 py-4">
+                                    {t('subscription.analytics.noEventsYet')}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Recent Events Table */}
+                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+                        <div className="p-6 border-b border-gray-100 dark:border-gray-700">
+                            <h3 className="text-md font-medium text-gray-900 dark:text-white">
+                                {t('subscription.analytics.recentEvents')}
+                            </h3>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead className="bg-gray-50 dark:bg-gray-700/50">
+                                    <tr>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                            {t('subscription.analytics.time')}
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                            {t('subscription.analytics.event')}
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                            {t('subscription.analytics.merchantId')}
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                            {t('subscription.analytics.change')}
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                            {t('subscription.analytics.reason')}
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                    {metrics.eventHistory.recentEvents.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={5} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                                                {t('subscription.analytics.noEventsYet')}
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        metrics.eventHistory.recentEvents.map((event) => {
+                                            const display = getEventTypeDisplay(event.eventType);
+                                            return (
+                                                <tr key={event.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                                        {formatRelativeTime(event.createdAt)}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <span className={`px-2 py-1 text-xs font-medium rounded ${display.bgColor} ${display.color}`}>
+                                                            {display.label}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900 dark:text-gray-100">
+                                                        #{event.merchantId}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                                                        {event.previousType && event.newType ? (
+                                                            <span>
+                                                                <span className="text-gray-400">{event.previousType}</span>
+                                                                <span className="mx-2">→</span>
+                                                                <span className="font-medium">{event.newType}</span>
+                                                            </span>
+                                                        ) : event.newType ? (
+                                                            <span className="font-medium">{event.newType}</span>
+                                                        ) : (
+                                                            '-'
+                                                        )}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate" title={event.reason || ''}>
+                                                        {event.reason || '-'}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+            )}
         </div>
     );
 }

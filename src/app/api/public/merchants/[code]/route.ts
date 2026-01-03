@@ -47,30 +47,51 @@ export async function GET(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const merchantData = merchant as unknown as Record<string, any>;
 
-    // Check subscription status
+    // Check subscription status and auto-switch if needed
     let subscriptionStatus = 'ACTIVE';
     let subscriptionSuspendReason: string | null = null;
+    let subscriptionType: string | null = null;
 
     try {
+      const { default: subscriptionAutoSwitchService } = await import('@/lib/services/SubscriptionAutoSwitchService');
       const { default: subscriptionRepository } = await import('@/lib/repositories/SubscriptionRepository');
+      
+      // Run auto-switch check (this handles expired trials/monthly, auto-opens store, etc.)
+      const switchResult = await subscriptionAutoSwitchService.checkAndAutoSwitch(BigInt(merchantData.id));
+      
+      if (switchResult.action !== 'NO_CHANGE') {
+        console.log(`📋 Customer access triggered subscription auto-switch for ${switchResult.merchantCode}:`, {
+          action: switchResult.action,
+          reason: switchResult.reason,
+          storeOpened: switchResult.storeOpened,
+        });
+      }
+
+      // Get fresh subscription status after auto-switch
       const subscription = await subscriptionRepository.getMerchantSubscription(BigInt(merchantData.id));
 
       if (subscription) {
         subscriptionStatus = subscription.status;
         subscriptionSuspendReason = subscription.suspendReason;
+        subscriptionType = subscription.type;
       } else {
         // No subscription found = treat as SUSPENDED
         subscriptionStatus = 'SUSPENDED';
         subscriptionSuspendReason = 'No active subscription';
       }
     } catch (subError) {
-      console.warn('Failed to get subscription status:', subError);
+      console.warn('Failed to get/update subscription status:', subError);
       // On error, treat as SUSPENDED to be safe
       subscriptionStatus = 'SUSPENDED';
       subscriptionSuspendReason = 'Unable to verify subscription';
     }
 
+    // Refresh merchant data after auto-switch (isOpen might have changed)
+    const refreshedMerchant = await merchantService.getMerchantByCode(params.code);
+    const refreshedData = refreshedMerchant as unknown as Record<string, any>;
+
     // Return merchant info (exclude sensitive data)
+    // Use refreshed data for isOpen as it may have been updated by auto-switch
     const publicMerchantInfo = {
       id: merchantData.id.toString(),
       code: merchantData.code,
@@ -87,10 +108,11 @@ export async function GET(
       mapUrl: merchantData.mapUrl,
       description: merchantData.description,
       isActive: merchantData.isActive,
-      isOpen: merchantData.isOpen,
+      isOpen: refreshedData?.isOpen ?? merchantData.isOpen, // Use refreshed isOpen
       // Subscription status (for showing "store suspended" message)
       subscriptionStatus,
       subscriptionSuspendReason,
+      subscriptionType, // Include subscription type for UI decisions
       // Sale mode settings
       isDineInEnabled: merchantData.isDineInEnabled ?? true,
       isTakeawayEnabled: merchantData.isTakeawayEnabled ?? true,

@@ -152,27 +152,6 @@ export default function PaymentVerificationPage() {
         <div>
             <PageBreadcrumb pageTitle={t("admin.paymentVerification.title")} />
 
-            {/* Summary */}
-            <div className="mb-6 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
-                        <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                            />
-                        </svg>
-                    </div>
-                    <div>
-                        <p className="font-semibold text-amber-800 dark:text-amber-200">
-                            {t("admin.paymentVerification.pending").replace('{count}', requests.length.toString())}
-                        </p>
-                        <p className="text-sm text-amber-700 dark:text-amber-300">
-                            {t("admin.paymentVerification.subtitle")}
-                        </p>
-                    </div>
-                </div>
-            </div>
-
             {/* Payment List */}
             {requests.length === 0 ? (
                 <div className="text-center py-16 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
