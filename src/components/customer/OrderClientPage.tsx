@@ -34,6 +34,8 @@ import JoinGroupModal from '@/components/customer/JoinGroupModal';
 import GroupOrderSubmitModal from '@/components/customer/GroupOrderSubmitModal';
 import GroupOrderChoiceModal from '@/components/customer/GroupOrderChoiceModal';
 import { useGroupOrder } from '@/context/GroupOrderContext';
+import { useCustomerData } from '@/context/CustomerDataContext';
+import { useStockStream } from '@/hooks/useStockStream';
 
 interface MenuItem {
   id: string; // ✅ String from API (BigInt serialized)
@@ -199,6 +201,15 @@ export default function OrderClientPage({
   const [showGroupSubmitModal, setShowGroupSubmitModal] = useState(false);
   const [prefilledGroupCode, setPrefilledGroupCode] = useState<string | undefined>(undefined);
 
+  // Customer Data Context - Initialize with ISR data for instant navigation on other pages
+  const { initializeData: initializeCustomerData, refreshData: refreshCustomerData, menus: swrMenus, isValidating } = useCustomerData();
+
+  // Real-time stock updates via SSE
+  const { isConnected: isStockStreamConnected } = useStockStream({
+    merchantCode,
+    enabled: true,
+  });
+
   // URL params for auto-join
   const searchParams = useSearchParams();
   const groupCodeFromUrl = searchParams.get('group');
@@ -363,6 +374,33 @@ export default function OrderClientPage({
       window.history.replaceState({}, '', newUrl);
     }
   }, [groupCodeFromUrl, merchantCode, mode, isInGroupOrder]);
+
+  // ========================================
+  // Initialize CustomerData Context with ISR Data
+  // This enables instant navigation to other pages (search, view-order, etc.)
+  // ========================================
+  useEffect(() => {
+    // Initialize context with ISR data for instant navigation
+    if (initialMerchant || initialMenus.length > 0 || initialCategories.length > 0) {
+      initializeCustomerData(merchantCode, {
+        merchant: initialMerchant,
+        menus: initialMenus,
+        categories: initialCategories,
+      });
+      console.log('✅ [ORDER PAGE] Initialized CustomerData Context with ISR data');
+    }
+  }, [merchantCode, initialMerchant, initialMenus, initialCategories, initializeCustomerData]);
+
+  // ========================================
+  // Sync SWR menus with local state (real-time stock updates)
+  // ========================================
+  useEffect(() => {
+    if (swrMenus && swrMenus.length > 0) {
+      // Update local state with SWR data (includes stock updates from SSE)
+      setAllMenuItems(swrMenus);
+      console.log('📡 [SWR] Synced menus from SWR cache');
+    }
+  }, [swrMenus]);
 
   // ========================================
   // Fetch Merchant Info (Always Fresh - No Blocking Cache)

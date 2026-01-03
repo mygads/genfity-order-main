@@ -1,10 +1,11 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useCart } from '@/context/CartContext';
 import { useGroupOrder } from '@/context/GroupOrderContext';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import { useCustomerData } from '@/context/CustomerDataContext';
 
 interface FloatingCartButtonProps {
   merchantCode: string;
@@ -24,9 +25,23 @@ export default function FloatingCartButton({ merchantCode, mode }: FloatingCartB
   const { cart, getItemCount, getTotal } = useCart();
   const { isInGroupOrder, isHost, session } = useGroupOrder();
   const { t } = useTranslation();
+  const { preloadViewOrder, preloadPayment } = useCustomerData();
   const [pulse, setPulse] = useState(false);
   const [prevItemCount, setPrevItemCount] = useState(0);
   const [showNonHostModal, setShowNonHostModal] = useState(false);
+  const [hasPreloaded, setHasPreloaded] = useState(false);
+
+  /**
+   * Preload data for next pages on hover
+   * Uses SWR cache warming for instant navigation
+   */
+  const handleMouseEnter = useCallback(() => {
+    if (!hasPreloaded) {
+      preloadViewOrder();
+      preloadPayment();
+      setHasPreloaded(true);
+    }
+  }, [hasPreloaded, preloadViewOrder, preloadPayment]);
 
   // Format currency
   const formatPrice = (amount: number, currency: string = 'AUD'): string => {
@@ -115,6 +130,8 @@ export default function FloatingCartButton({ merchantCode, mode }: FloatingCartB
       <div className="fixed bottom-0 left-0 right-0 z-50 max-w-[450px] mx-auto px-4 pb-5">
         <button
           onClick={handleClick}
+          onMouseEnter={handleMouseEnter}
+          onTouchStart={handleMouseEnter}
           className={`
             w-full
             flex items-stretch justify-between

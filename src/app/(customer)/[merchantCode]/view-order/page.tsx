@@ -5,6 +5,7 @@ import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import MenuDetailModal from '@/components/menu/MenuDetailModal';
 import { useCart } from '@/context/CartContext';
 import { useGroupOrder } from '@/context/GroupOrderContext';
+import { useCustomerData } from '@/context/CustomerDataContext';
 import type { CartItem } from '@/context/CartContext';
 import { formatCurrency } from '@/lib/utils/format';
 import { calculateCartSubtotal } from '@/lib/utils/priceCalculator';
@@ -54,6 +55,9 @@ export default function ViewOrderPage() {
 
   const { cart, updateItem, removeItem, initializeCart, addItem } = useCart();
   const { isInGroupOrder: _isInGroupOrder, isHost, session } = useGroupOrder();
+  
+  // ✅ Use CustomerData Context for instant merchant info access
+  const { merchantInfo: contextMerchantInfo, menus: contextMenus, initializeData, isInitialized } = useCustomerData();
 
   const [isLoading, setIsLoading] = useState(true);
   const [showOtherFees, setShowOtherFees] = useState(false);
@@ -78,48 +82,41 @@ export default function ViewOrderPage() {
     setIsLoading(false);
   }, [merchantCode, mode, initializeCart]);
 
-  // Fetch merchant settings and related menus
+  // ✅ Initialize context for this merchant
   useEffect(() => {
-    const fetchMerchantData = async () => {
-      try {
-        // Fetch merchant settings
-        const settingsResponse = await fetch(`/api/public/merchants/${merchantCode}`);
-        const settingsData = await settingsResponse.json();
+    initializeData(merchantCode);
+  }, [merchantCode, initializeData]);
 
-        if (settingsData.success) {
-          if (settingsData.data.enableTax) {
-            setMerchantTaxPercentage(Number(settingsData.data.taxPercentage) || 0);
-          }
-          if (settingsData.data.enableServiceCharge) {
-            setMerchantServiceChargePercent(Number(settingsData.data.serviceChargePercent) || 0);
-          }
-          if (settingsData.data.enablePackagingFee && mode === 'takeaway') {
-            setMerchantPackagingFee(Number(settingsData.data.packagingFeeAmount) || 0);
-          }
-          setMerchantCurrency(settingsData.data.currency || 'AUD');
-        }
-
-        // Fetch related menus for upselling
-        const menusResponse = await fetch(`/api/public/merchants/${merchantCode}/menus?limit=5`);
-        const menusData = await menusResponse.json();
-
-        if (menusData.success && menusData.data) {
-          // Filter out items already in cart
-          const cartMenuIds = cart?.items.map(item => item.menuId) || [];
-          const filteredMenus = menusData.data
-            .filter((menu: RelatedMenuItem) => !cartMenuIds.includes(menu.id.toString()))
-            .slice(0, 4);
-          _setRelatedMenus(filteredMenus);
-        }
-      } catch (error) {
-        console.error('Failed to fetch merchant data:', error);
+  // ✅ Use Context data when available (instant navigation)
+  useEffect(() => {
+    if (isInitialized && contextMerchantInfo) {
+      console.log('✅ [VIEW-ORDER] Using CustomerData Context - instant load');
+      
+      if (contextMerchantInfo.enableTax) {
+        setMerchantTaxPercentage(Number(contextMerchantInfo.taxPercentage) || 0);
       }
-    };
+      if (contextMerchantInfo.enableServiceCharge) {
+        setMerchantServiceChargePercent(Number(contextMerchantInfo.serviceChargePercent) || 0);
+      }
+      if (contextMerchantInfo.enablePackagingFee && mode === 'takeaway') {
+        setMerchantPackagingFee(Number(contextMerchantInfo.packagingFeeAmount) || 0);
+      }
+      setMerchantCurrency(contextMerchantInfo.currency || 'AUD');
 
-    if (merchantCode) {
-      fetchMerchantData();
+      // Filter out items already in cart for related menus
+      const cartMenuIds = cart?.items.map(item => item.menuId) || [];
+      const filteredMenus = contextMenus
+        .filter((menu) => !cartMenuIds.includes(menu.id.toString()) && menu.isActive)
+        .slice(0, 4)
+        .map(menu => ({
+          id: menu.id,
+          name: menu.name,
+          price: menu.price,
+          imageUrl: menu.imageUrl,
+        }));
+      _setRelatedMenus(filteredMenus);
     }
-  }, [merchantCode, mode, cart?.items]);
+  }, [isInitialized, contextMerchantInfo, contextMenus, mode, cart?.items]);
 
   // Redirect if cart is empty (not for group order checkout)
   useEffect(() => {

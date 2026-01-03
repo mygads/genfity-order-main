@@ -11,6 +11,7 @@ import type { OrderMode } from '@/lib/types/customer';
 import PaymentConfirmationModal from '@/components/modals/PaymentConfirmationModal';
 import { useCart } from '@/context/CartContext';
 import { useGroupOrder } from '@/context/GroupOrderContext';
+import { useCustomerData } from '@/context/CustomerDataContext';
 import { calculateCartSubtotal } from '@/lib/utils/priceCalculator';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 
@@ -58,6 +59,9 @@ export default function PaymentPage() {
     session: _groupSession,
     splitBill: _splitBill
   } = useGroupOrder();
+  
+  // ✅ Use CustomerData Context for instant merchant info access
+  const { merchantInfo: contextMerchantInfo, initializeData, isInitialized } = useCustomerData();
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -133,42 +137,28 @@ export default function PaymentPage() {
     }
   }, [merchantCode, mode, initializeCart]);
 
-  // Fetch merchant settings
+  // ✅ Initialize context for this merchant
   useEffect(() => {
-    const fetchMerchantSettings = async () => {
-      try {
-        const response = await fetch(`/api/public/merchants/${merchantCode}`);
-        const data = await response.json();
+    initializeData(merchantCode);
+  }, [merchantCode, initializeData]);
 
-        if (data.success) {
-          // ✅ Set tax percentage
-          if (data.data.enableTax) {
-            setMerchantTaxPercentage(Number(data.data.taxPercentage) || 0);
-            console.log('✅ [PAYMENT] Merchant tax %:', data.data.taxPercentage);
-          }
-          // ✅ Set service charge
-          if (data.data.enableServiceCharge) {
-            setMerchantServiceChargePercent(Number(data.data.serviceChargePercent) || 0);
-            console.log('✅ [PAYMENT] Service charge %:', data.data.serviceChargePercent);
-          }
-          // ✅ Set packaging fee (for takeaway)
-          if (data.data.enablePackagingFee && mode === 'takeaway') {
-            setMerchantPackagingFee(Number(data.data.packagingFeeAmount) || 0);
-            console.log('✅ [PAYMENT] Packaging fee:', data.data.packagingFeeAmount);
-          }
-          // ✅ Set currency
-          setMerchantCurrency(data.data.currency || 'AUD');
-          console.log('✅ [PAYMENT] Merchant currency:', data.data.currency);
-        }
-      } catch (error) {
-        console.error('❌ [PAYMENT] Failed to fetch merchant settings:', error);
+  // ✅ Use Context data when available (instant navigation)
+  useEffect(() => {
+    if (isInitialized && contextMerchantInfo) {
+      console.log('✅ [PAYMENT] Using CustomerData Context - instant load');
+      
+      if (contextMerchantInfo.enableTax) {
+        setMerchantTaxPercentage(Number(contextMerchantInfo.taxPercentage) || 0);
       }
-    };
-
-    if (merchantCode) {
-      fetchMerchantSettings();
+      if (contextMerchantInfo.enableServiceCharge) {
+        setMerchantServiceChargePercent(Number(contextMerchantInfo.serviceChargePercent) || 0);
+      }
+      if (contextMerchantInfo.enablePackagingFee && mode === 'takeaway') {
+        setMerchantPackagingFee(Number(contextMerchantInfo.packagingFeeAmount) || 0);
+      }
+      setMerchantCurrency(contextMerchantInfo.currency || 'AUD');
     }
-  }, [merchantCode, mode]);
+  }, [isInitialized, contextMerchantInfo, mode]);
 
   /**
    * ✅ FIXED: Only redirect if NOT processing order

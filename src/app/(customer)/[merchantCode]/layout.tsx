@@ -5,56 +5,64 @@ import { useParams } from 'next/navigation';
 import { useLanguage } from '@/context/LanguageContext';
 import { getLocaleFromCurrency } from '@/lib/i18n';
 import { GroupOrderProvider } from '@/context/GroupOrderContext';
+import { CustomerDataProvider, useCustomerData } from '@/context/CustomerDataContext';
 
 interface MerchantLayoutProps {
   children: ReactNode;
 }
 
 /**
- * Merchant Code Layout
- * 
- * Updates the language context based on merchant currency:
- * - IDR → Indonesian (id)
- * - Other → English (en)
- * 
- * The CustomerLanguageProvider is in the parent layout.
- * This layout just updates the locale based on merchant currency.
+ * Inner layout component that handles language and data initialization
  */
-export default function MerchantLayout({ children }: MerchantLayoutProps) {
+function MerchantLayoutInner({ children }: MerchantLayoutProps) {
   const params = useParams();
   const merchantCode = params?.merchantCode as string;
   const { setLocale } = useLanguage();
+  const { initializeData, merchantInfo } = useCustomerData();
 
-  // Fetch merchant currency and update locale on mount
+  // Initialize customer data context on mount
   useEffect(() => {
-    async function fetchMerchantCurrency() {
-      if (!merchantCode) return;
+    if (merchantCode) {
+      initializeData(merchantCode);
+    }
+  }, [merchantCode, initializeData]);
 
-      try {
-        const response = await fetch(`/api/public/merchants/${merchantCode}`);
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.data?.currency) {
-            // Only update locale if user hasn't manually changed it (no saved preference)
-            const saved = localStorage.getItem('genfity_customer_locale');
-            if (!saved) {
-              const newLocale = getLocaleFromCurrency(data.data.currency);
-              setLocale(newLocale);
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Failed to fetch merchant currency:', error);
+  // Update locale based on merchant currency (from context or fetch)
+  useEffect(() => {
+    if (merchantInfo?.currency) {
+      // Only update locale if user hasn't manually changed it (no saved preference)
+      const saved = localStorage.getItem('genfity_customer_locale');
+      if (!saved) {
+        const newLocale = getLocaleFromCurrency(merchantInfo.currency);
+        setLocale(newLocale);
       }
     }
-
-    fetchMerchantCurrency();
-  }, [merchantCode, setLocale]);
+  }, [merchantInfo?.currency, setLocale]);
 
   return (
     <GroupOrderProvider>
       {children}
     </GroupOrderProvider>
+  );
+}
+
+/**
+ * Merchant Code Layout
+ * 
+ * Provides:
+ * - CustomerDataProvider: Centralized data management for menus, categories, merchant info
+ * - GroupOrderProvider: Group ordering functionality
+ * - Language auto-detection based on merchant currency
+ * 
+ * @description
+ * This layout wraps all [merchantCode] routes to ensure data is shared
+ * across pages for instant navigation without re-fetching.
+ */
+export default function MerchantLayout({ children }: MerchantLayoutProps) {
+  return (
+    <CustomerDataProvider>
+      <MerchantLayoutInner>{children}</MerchantLayoutInner>
+    </CustomerDataProvider>
   );
 }
 

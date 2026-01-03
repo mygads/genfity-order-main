@@ -10,7 +10,8 @@ import MenuInCartModal from '@/components/menu/MenuInCartModal';
 import { useCart } from '@/context/CartContext';
 import type { CartItem } from '@/context/CartContext';
 import { formatCurrency } from '@/lib/utils/format';
-import { extractAddonDataFromMenus, type CachedAddonCategory } from '@/lib/utils/addonExtractor';
+import { useCustomerData } from '@/context/CustomerDataContext';
+import type { CachedAddonCategory } from '@/lib/utils/addonExtractor';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { TranslationKeys } from '@/lib/i18n';
 
@@ -72,10 +73,19 @@ export default function SearchPage() {
   const mode = searchParams.get('mode') || 'takeaway';
   const refUrl = searchParams.get('ref') || `/${merchantCode}/order?mode=${mode}`;
 
+  // ✅ Use CustomerData Context for instant data access
+  const { 
+    merchantInfo: contextMerchantInfo, 
+    menus: contextMenus, 
+    addonCache: contextAddonCache,
+    isInitialized,
+    initializeData 
+  } = useCustomerData();
+
   const [searchQuery, setSearchQuery] = useState('');
   const [allMenuItems, setAllMenuItems] = useState<MenuItem[]>([]);
   const [menuAddonsCache, setMenuAddonsCache] = useState<Record<string, CachedAddonCategory[]>>({});
-  const [merchantInfo, setMerchantInfo] = useState<MerchantInfo | null>(null);
+  const [merchantInfo, setMerchantInfo] = useState<{ id: string; code: string; name: string; currency: string } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMenu, setSelectedMenu] = useState<MenuItem | null>(null);
   const [editingCartItem, setEditingCartItem] = useState<CartItem | null>(null);
@@ -99,91 +109,38 @@ export default function SearchPage() {
     initializeCart(merchantCode, mode as 'dinein' | 'takeaway');
   }, [merchantCode, mode, initializeCart]);
 
+  // ✅ Initialize data from Context (instant if available from Order page)
   useEffect(() => {
-    const fetchMerchantInfo = async () => {
-      const cacheKey = `merchant_info_${merchantCode}`;
-      const cached = sessionStorage.getItem(cacheKey);
+    // Ensure context is initialized for this merchant
+    initializeData(merchantCode);
+  }, [merchantCode, initializeData]);
 
-      if (cached) {
-        try {
-          const cachedData = JSON.parse(cached);
-          setMerchantInfo(cachedData);
-          return;
-        } catch { }
-      }
-
-      try {
-        const response = await fetch(`/api/public/merchants/${merchantCode}`);
-        const data = await response.json();
-        if (data.success) {
-          setMerchantInfo(data.data);
-          sessionStorage.setItem(cacheKey, JSON.stringify(data.data));
-        }
-      } catch (err) {
-        console.error('Error fetching merchant info:', err);
-      }
-    };
-    fetchMerchantInfo();
-  }, [merchantCode]);
-
+  // ✅ Use Context data when available (instant navigation)
   useEffect(() => {
-    const fetchMenus = async () => {
-      const menusCacheKey = `menus_${merchantCode}`;
-      const addonsCacheKey = `addons_cache_${merchantCode}`;
-      const cachedMenus = sessionStorage.getItem(menusCacheKey);
-      const cachedAddons = sessionStorage.getItem(addonsCacheKey);
-
-      if (cachedMenus && cachedAddons) {
-        try {
-          const menus = JSON.parse(cachedMenus);
-          const addons = JSON.parse(cachedAddons);
-          const activeItems = menus.filter((item: MenuItem) => item.isActive);
-          setAllMenuItems(activeItems);
-          setMenuAddonsCache(addons);
-
-          // Set max price from menu items
-          const prices = activeItems.map((m: MenuItem) => m.isPromo && m.promoPrice ? m.promoPrice : m.price);
-          const calculatedMax = Math.ceil(Math.max(...prices, 100));
-          setMaxPrice(calculatedMax);
-          setPriceRange([0, calculatedMax]);
-
-          setIsLoading(false);
-          return;
-        } catch { }
+    if (isInitialized && contextMenus.length > 0) {
+      console.log('✅ [SEARCH] Using CustomerData Context - instant load');
+      const activeItems = contextMenus.filter((item) => item.isActive) as MenuItem[];
+      setAllMenuItems(activeItems);
+      setMenuAddonsCache(contextAddonCache);
+      
+      if (contextMerchantInfo) {
+        setMerchantInfo({
+          id: contextMerchantInfo.id,
+          code: contextMerchantInfo.code,
+          name: contextMerchantInfo.name,
+          currency: contextMerchantInfo.currency,
+        });
       }
-
-      setIsLoading(true);
-      try {
-        const response = await fetch(`/api/public/merchants/${merchantCode}/menus`);
-        const data = await response.json();
-        if (data.success) {
-          const activeItems = data.data
-            .filter((item: MenuItem) => item.isActive)
-            .map((item: MenuItem) => ({
-              ...item,
-              price: typeof item.price === 'string' ? parseFloat(item.price) : item.price,
-            }));
-          setAllMenuItems(activeItems);
-          sessionStorage.setItem(menusCacheKey, JSON.stringify(activeItems));
-
-          const newAddonCache = extractAddonDataFromMenus(data.data);
-          setMenuAddonsCache(newAddonCache);
-          sessionStorage.setItem(addonsCacheKey, JSON.stringify(newAddonCache));
-
-          // Set max price
-          const prices = activeItems.map((m: MenuItem) => m.isPromo && m.promoPrice ? m.promoPrice : m.price);
-          const calculatedMax = Math.ceil(Math.max(...prices, 100));
-          setMaxPrice(calculatedMax);
-          setPriceRange([0, calculatedMax]);
-        }
-      } catch (err) {
-        console.error('Error fetching menus:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchMenus();
-  }, [merchantCode]);
+      
+      // Calculate max price
+      const prices = activeItems.map((m) => m.isPromo && m.promoPrice ? m.promoPrice : m.price);
+      const calculatedMax = Math.ceil(Math.max(...prices, 100));
+      setMaxPrice(calculatedMax);
+      setPriceRange([0, calculatedMax]);
+      
+      setIsLoading(false);
+    }
+  }, [isInitialized, contextMenus, contextAddonCache, contextMerchantInfo]);
 
   // ✅ Get unique categories from menu items
   const availableCategories = useMemo(() => {

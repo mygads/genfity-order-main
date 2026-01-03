@@ -8,6 +8,7 @@ import { useTranslation } from '@/lib/i18n/useTranslation';
 import { TranslationKeys } from '@/lib/i18n';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/context/ToastContext';
+import { useCustomerData } from '@/context/CustomerDataContext';
 
 interface OrderHistoryItem {
   id: bigint;
@@ -75,6 +76,9 @@ export default function OrderHistoryPage() {
   const merchantCode = params.merchantCode as string | undefined;
   const mode = searchParams.get('mode') as 'dinein' | 'takeaway' | null;
   const ref = searchParams.get('ref');
+  
+  // ✅ Use CustomerData Context for instant merchant info access
+  const { merchantInfo: contextMerchantInfo, initializeData, isInitialized } = useCustomerData();
 
   const [orders, setOrders] = useState<OrderHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -85,6 +89,21 @@ export default function OrderHistoryPage() {
 
   // ✅ FIX: Add hydration guard to prevent SSR/CSR mismatch
   const [isMounted, setIsMounted] = useState(false);
+
+  // ✅ Initialize context for this merchant
+  useEffect(() => {
+    if (merchantCode) {
+      initializeData(merchantCode);
+    }
+  }, [merchantCode, initializeData]);
+
+  // ✅ Use Context data when available (instant navigation)
+  useEffect(() => {
+    if (isInitialized && contextMerchantInfo) {
+      console.log('✅ [HISTORY] Using CustomerData Context - instant load');
+      setMerchantCurrency(contextMerchantInfo.currency || 'AUD');
+    }
+  }, [isInitialized, contextMerchantInfo]);
 
   /**
    * ✅ FIXED: Hydration-safe authentication check
@@ -119,36 +138,9 @@ export default function OrderHistoryPage() {
       return;
     }
 
-    // ✅ 4. Fetch merchant info if merchantCode available
-    if (merchantCode) {
-      fetchMerchantInfo(merchantCode);
-    }
-
-    // ✅ 5. Fetch orders if authenticated
+    // ✅ 4. Fetch orders if authenticated (merchant info from context)
     fetchOrders(customerAuth);
   }, [router, merchantCode, mode]);
-
-  /**
-   * ✅ NEW: Fetch merchant info to get currency
-   * 
-   * @param code - Merchant code
-   * 
-   * @specification STEP_04_API_ENDPOINTS.txt - Merchant Endpoints
-   */
-  const fetchMerchantInfo = async (code: string) => {
-    try {
-      const response = await fetch(`/api/public/merchants/${code}`);
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.data.currency) {
-          setMerchantCurrency(data.data.currency);
-          console.log('✅ [ORDER HISTORY] Merchant currency:', data.data.currency);
-        }
-      }
-    } catch (error) {
-      console.error('❌ [ORDER HISTORY] Failed to fetch merchant info:', error);
-    }
-  };
 
   /**
    * Fetch orders from API
