@@ -147,8 +147,23 @@ async function handleDelete(
   try {
     const params = await contextParams.params;
     const menuId = BigInt(params?.id || '0');
+    const { merchantId, userId } = context;
 
-    await menuService.deleteMenu(menuId);
+    // Verify menu belongs to this merchant
+    const menu = await menuService.getMenuWithAddons(menuId);
+    if (!menu || menu.merchantId !== merchantId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'NOT_FOUND',
+          message: 'Menu item not found or does not belong to your merchant',
+          statusCode: 404,
+        },
+        { status: 404 }
+      );
+    }
+
+    await menuService.deleteMenu(menuId, userId);
 
     return NextResponse.json({
       success: true,

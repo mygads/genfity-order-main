@@ -7,6 +7,7 @@ import RestaurantBanner from '@/components/customer/RestaurantBanner';
 import RestaurantInfoCard from '@/components/customer/RestaurantInfoCard';
 import LanguageSelectorModal from '@/components/customer/LanguageSelectorModal';
 import { LanguageToggle } from '@/components/common/LanguageSelector';
+import PoweredByFooter from '@/components/common/PoweredByFooter';
 import { useStoreStatus } from '@/hooks/useStoreStatus';
 import { useToast } from '@/hooks/useToast';
 import { useTranslation } from '@/lib/i18n/useTranslation';
@@ -286,11 +287,8 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
             )}
 
             {/* Footer - Powered by Genfity */}
-            <div className="mt-auto px-4 py-4 text-center">
-                <div className="flex items-center justify-center gap-2 text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">{t('common.poweredBy')}</span>
-                    <span className="font-semibold text-gray-900 dark:text-white">Genfity</span>
-                </div>
+            <div className="mt-auto px-4 py-4">
+                <PoweredByFooter size="md" />
             </div>
 
             {/* Outlet Info Modal */}

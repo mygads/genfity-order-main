@@ -4,6 +4,7 @@ import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams, useParams } from 'next/navigation';
 import { getCustomerAuth, clearCustomerAuth } from '@/lib/utils/localStorage';
 import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';
+import PoweredByFooter from '@/components/common/PoweredByFooter';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import LanguageSelectorModal from '@/components/customer/LanguageSelectorModal';
 
@@ -209,8 +210,8 @@ function ProfileContent() {
       )}
 
       {/* Powered By Footer */}
-      <div className="py-4 text-center text-xs text-gray-400">
-        {t('common.poweredBy')} <span className="font-semibold">GENFITY</span>
+      <div className="py-4">
+        <PoweredByFooter />
       </div>
 
       {/* Logout Confirmation Modal - ESB Bottom Sheet Style */}

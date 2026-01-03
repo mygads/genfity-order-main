@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { saveCustomerAuth } from '@/lib/utils/localStorage';
 import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';
+import PoweredByFooter from '@/components/common/PoweredByFooter';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 
 /**
@@ -471,16 +472,8 @@ function LoginForm() {
       </footer> */}
 
       {/* Powered By Footer */}
-      <div className="py-6 text-center text-xs text-gray-500 dark:text-gray-400">
-        {t('common.poweredBy')}{' '}
-        <a
-          href="https://genfity.com"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="font-semibold hover:text-orange-500 transition-colors"
-        >
-          Genfity Digital Solution
-        </a>
+      <div className="py-6">
+        <PoweredByFooter size="md" />
       </div>
     </div>
   );

@@ -3,6 +3,7 @@
 import { Suspense } from 'react';
 import { useRouter, useSearchParams, useParams } from 'next/navigation';
 import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';
+import PoweredByFooter from '@/components/common/PoweredByFooter';
 
 /**
  * Privacy Policy Page - Genfity
@@ -285,8 +286,8 @@ function PrivacyPolicyContent() {
             </div>
 
             {/* Powered By Footer */}
-            <div className="py-4 text-center text-xs text-gray-400 border-t border-gray-200 dark:border-gray-700">
-                Powered By <span className="font-semibold">GENFITY</span>
+            <div className="py-4 border-t border-gray-200 dark:border-gray-700">
+                <PoweredByFooter />
             </div>
         </div>
     );

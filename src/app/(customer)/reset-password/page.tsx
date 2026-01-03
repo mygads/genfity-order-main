@@ -4,6 +4,7 @@ import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';
+import PoweredByFooter from '@/components/common/PoweredByFooter';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 
 /**
@@ -268,8 +269,8 @@ function ResetPasswordForm() {
             </main>
 
             {/* Powered By Footer */}
-            <div className="py-4 text-center text-xs text-gray-400">
-                {t('common.poweredBy')} <span className="font-semibold">GENFITY</span>
+            <div className="py-4">
+                <PoweredByFooter />
             </div>
         </div>
     );
