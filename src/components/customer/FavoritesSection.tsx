@@ -58,7 +58,9 @@ export default function FavoritesSection({
     }, [merchantCode]);
 
     // Get favorite menu items
-    const favoriteItems = allMenuItems.filter(item => favoriteIds.includes(item.id));
+    const favoriteItems = Array.isArray(allMenuItems) 
+        ? allMenuItems.filter(item => favoriteIds.includes(item.id))
+        : [];
 
     // Don't render if no favorites
     if (favoriteItems.length === 0) return null;

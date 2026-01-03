@@ -218,7 +218,7 @@ export default function OrderClientPage({
   const displayOpeningHours = liveOpeningHours.length > 0 ? liveOpeningHours : (merchantInfo?.openingHours || []);
 
   const getMenuCartItems = (menuId: string): CartItem[] => {
-    if (!cart) return [];
+    if (!cart || !Array.isArray(cart.items)) return [];
     return cart.items.filter((item) => item.menuId === menuId);
   };
 
@@ -243,6 +243,7 @@ export default function OrderClientPage({
    * Opens the cart options modal since there might be multiple configurations
    */
   const handleIncreaseQtyFromCard = (menuId: string) => {
+    if (!Array.isArray(allMenuItems)) return;
     const menuItem = allMenuItems.find(m => m.id === menuId);
     if (menuItem) {
       setCartOptionsMenu(menuItem);
@@ -254,6 +255,7 @@ export default function OrderClientPage({
    * Opens the cart options modal to choose which configuration to decrease
    */
   const handleDecreaseQtyFromCard = (menuId: string) => {
+    if (!Array.isArray(allMenuItems)) return;
     const menuItem = allMenuItems.find(m => m.id === menuId);
     if (menuItem) {
       setCartOptionsMenu(menuItem);
@@ -264,7 +266,7 @@ export default function OrderClientPage({
    * Get total quantity of a menu item in cart (including all variants with different addons)
    */
   const getMenuQuantityInCart = (menuId: string): number => {
-    if (!cart) return 0;
+    if (!cart || !Array.isArray(cart.items)) return 0;
     return cart.items
       .filter(item => item.menuId === menuId)
       .reduce((sum, item) => sum + item.quantity, 0);
@@ -471,13 +473,13 @@ export default function OrderClientPage({
         const categoriesData = await categoriesRes.json();
         const menusData = await menusRes.json();
 
-        if (categoriesData.success) {
-          const sorted = categoriesData.data.sort((a: Category, b: Category) => a.sortOrder - b.sortOrder);
+        if (categoriesData.success && Array.isArray(categoriesData.data)) {
+          const sorted = [...categoriesData.data].sort((a: Category, b: Category) => a.sortOrder - b.sortOrder);
           setCategories(sorted);
           sessionStorage.setItem(categoriesCacheKey, JSON.stringify(sorted));
         }
 
-        if (menusData.success) {
+        if (menusData.success && Array.isArray(menusData.data)) {
           const activeItems = menusData.data
             .filter((item: MenuItem) => item.isActive)
             .map((item: MenuItem) => ({
@@ -529,7 +531,7 @@ export default function OrderClientPage({
         const menusResponse = await fetch(`/api/public/merchants/${merchantCode}/menus`);
         const menusData = await menusResponse.json();
 
-        if (menusData.success) {
+        if (menusData.success && Array.isArray(menusData.data)) {
           const activeItems = menusData.data
             .filter((item: MenuItem) => item.isActive)
             .map((item: MenuItem) => ({
@@ -573,12 +575,12 @@ export default function OrderClientPage({
   // Group Order Cart Sync - Update group cart when local cart changes
   // ========================================
   useEffect(() => {
-    if (!isInGroupOrder || !cart) return;
+    if (!isInGroupOrder || !cart || !Array.isArray(cart.items)) return;
 
     // Calculate subtotal
     const subtotal = cart.items.reduce((sum, item) => {
       const itemPrice = item.price * item.quantity;
-      const addonsPrice = (item.addons || []).reduce((a, addon) => a + addon.price, 0) * item.quantity;
+      const addonsPrice = (Array.isArray(item.addons) ? item.addons : []).reduce((a, addon) => a + addon.price, 0) * item.quantity;
       return sum + itemPrice + addonsPrice;
     }, 0);
 
@@ -932,6 +934,7 @@ export default function OrderClientPage({
                     merchantCode={merchantCode}
                     currency={merchantInfo?.currency || 'AUD'}
                     onMenuClick={(menuId) => {
+                      if (!Array.isArray(allMenuItems)) return;
                       const menuItem = allMenuItems.find(m => m.id === menuId);
                       if (menuItem) {
                         handleOpenMenu(menuItem);
