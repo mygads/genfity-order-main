@@ -87,7 +87,7 @@ export default function RestaurantInfoCard({ name, openingHours, onClick, isClos
       tabIndex={0}
       aria-label={`${name} information`}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 min-w-0 flex-1">
         {/* Merchant Logo - 48x48px rounded square (1:1 ratio) */}
         <div 
           className="relative shrink-0 overflow-hidden"
@@ -118,38 +118,42 @@ export default function RestaurantInfoCard({ name, openingHours, onClick, isClos
           )}
         </div>
 
-        {/* CLOSED Badge - Show when store is closed */}
-        {isClosed && (
-          <span
-            className="shrink-0"
-            style={{
-              backgroundColor: '#EF4444',
-              color: '#FFFFFF',
-              padding: '4px 10px',
-              borderRadius: '6px',
-              fontSize: '12px',
-              fontWeight: 700,
-              fontFamily: 'Inter, sans-serif',
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px',
-            }}
-          >
-            {t('common.closed')}
-          </span>
-        )}
-        <div>
-          <h2
-            className="font-bold"
-            style={{
-              fontSize: '16px',
-              fontWeight: 700,
-              color: '#212529',
-              fontFamily: 'Inter, sans-serif',
-            }}
-          >
-            {name}
-          </h2>
+        <div className="min-w-0 flex-1">
+          {/* Name and CLOSED badge in same row */}
+          <div className="flex items-center gap-2">
+            <h2
+              className="font-bold truncate"
+              style={{
+                fontSize: '16px',
+                fontWeight: 700,
+                color: '#212529',
+                fontFamily: 'Inter, sans-serif',
+              }}
+            >
+              {name}
+            </h2>
+            {/* CLOSED Badge - Show when store is closed */}
+            {isClosed && (
+              <span
+                className="shrink-0"
+                style={{
+                  backgroundColor: '#EF4444',
+                  color: '#FFFFFF',
+                  padding: '2px 6px',
+                  borderRadius: '4px',
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  fontFamily: 'Inter, sans-serif',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.3px',
+                }}
+              >
+                {t('common.closed')}
+              </span>
+            )}
+          </div>
           <p
+            className="truncate"
             style={{
               fontSize: '14px',
               color: '#666666',
