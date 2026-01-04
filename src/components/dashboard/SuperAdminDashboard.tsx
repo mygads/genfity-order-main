@@ -39,6 +39,17 @@ interface ChartData {
     IDR: { totalRevenue: number; totalOrders: number; avgOrderValue: number };
     AUD: { totalRevenue: number; totalOrders: number; avgOrderValue: number };
   };
+  monthOverMonth?: {
+    currentMonthRevenue: number;
+    lastMonthRevenue: number;
+    revenueGrowth: number;
+    currentMonthOrders: number;
+    lastMonthOrders: number;
+    orderGrowth: number;
+    currentMonthCustomers: number;
+    lastMonthCustomers: number;
+    customerGrowth: number;
+  };
 }
 
 /**
@@ -59,6 +70,7 @@ export default function SuperAdminDashboard({
   const [chartPeriod, setChartPeriod] = useState<'7d' | '30d' | '90d' | '1y'>('30d');
   const [chartData, setChartData] = useState<ChartData | null>(null);
   const [chartLoading, setChartLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
 
   const fetchChartData = useCallback(async () => {
     try {
@@ -88,6 +100,92 @@ export default function SuperAdminDashboard({
   useEffect(() => {
     fetchChartData();
   }, [fetchChartData]);
+
+  /**
+   * Export revenue data to CSV
+   */
+  const handleExportRevenue = useCallback(() => {
+    if (!chartData) return;
+
+    setExporting(true);
+
+    try {
+      // Build CSV data
+      const headers = ['Date', 'Revenue', 'Orders', 'Avg Order Value'];
+      const rows = chartData.revenueData.map(d => [
+        d.date,
+        d.revenue.toString(),
+        d.orderCount.toString(),
+        d.orderCount > 0 ? (d.revenue / d.orderCount).toFixed(2) : '0',
+      ]);
+
+      // Add summary section
+      rows.push([]);
+      rows.push(['Summary']);
+      rows.push(['Total Revenue', chartData.summary.totalRevenue.toString()]);
+      rows.push(['Total Orders', chartData.summary.totalOrders.toString()]);
+      rows.push(['Avg Order Value', chartData.summary.avgOrderValue.toFixed(2)]);
+
+      // Add currency breakdown
+      if (chartData.revenueByCurrency) {
+        rows.push([]);
+        rows.push(['Revenue by Currency']);
+        rows.push(['Currency', 'Revenue', 'Orders', 'Avg Order Value']);
+        rows.push([
+          'IDR',
+          chartData.revenueByCurrency.IDR.totalRevenue.toString(),
+          chartData.revenueByCurrency.IDR.totalOrders.toString(),
+          chartData.revenueByCurrency.IDR.avgOrderValue.toFixed(2),
+        ]);
+        rows.push([
+          'AUD',
+          chartData.revenueByCurrency.AUD.totalRevenue.toString(),
+          chartData.revenueByCurrency.AUD.totalOrders.toString(),
+          chartData.revenueByCurrency.AUD.avgOrderValue.toFixed(2),
+        ]);
+      }
+
+      // Add MoM comparison
+      if (chartData.monthOverMonth) {
+        rows.push([]);
+        rows.push(['Month-over-Month Comparison']);
+        rows.push(['Metric', 'This Month', 'Last Month', 'Growth %']);
+        rows.push([
+          'Revenue',
+          chartData.monthOverMonth.currentMonthRevenue.toString(),
+          chartData.monthOverMonth.lastMonthRevenue.toString(),
+          `${chartData.monthOverMonth.revenueGrowth}%`,
+        ]);
+        rows.push([
+          'Orders',
+          chartData.monthOverMonth.currentMonthOrders.toString(),
+          chartData.monthOverMonth.lastMonthOrders.toString(),
+          `${chartData.monthOverMonth.orderGrowth}%`,
+        ]);
+        rows.push([
+          'New Customers',
+          chartData.monthOverMonth.currentMonthCustomers.toString(),
+          chartData.monthOverMonth.lastMonthCustomers.toString(),
+          `${chartData.monthOverMonth.customerGrowth}%`,
+        ]);
+      }
+
+      const csvContent = [headers, ...rows]
+        .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+        .join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `revenue_report_${chartPeriod}_${new Date().toISOString().split('T')[0]}.csv`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } catch (error) {
+      console.error('Error exporting revenue:', error);
+    } finally {
+      setExporting(false);
+    }
+  }, [chartData, chartPeriod]);
 
   return (
     <div className="space-y-6">
@@ -230,6 +328,91 @@ export default function SuperAdminDashboard({
         </div>
       </div>
 
+      {/* Month-over-Month Comparison */}
+      {chartData?.monthOverMonth && (
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              {t('admin.superadmin.dashboard.monthOverMonth') || 'Month-over-Month Comparison'}
+            </h3>
+            <span className="text-sm text-gray-500 dark:text-gray-400">
+              {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} vs{' '}
+              {new Date(new Date().setMonth(new Date().getMonth() - 1)).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+            </span>
+          </div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            {/* Revenue Growth */}
+            <div className="rounded-xl bg-gray-50 p-4 dark:bg-gray-800">
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Revenue Growth</p>
+              <div className="mt-2 flex items-baseline gap-2">
+                <span className={`text-2xl font-bold ${chartData.monthOverMonth.revenueGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {chartData.monthOverMonth.revenueGrowth >= 0 ? '+' : ''}{chartData.monthOverMonth.revenueGrowth}%
+                </span>
+                <svg
+                  className={`h-4 w-4 ${chartData.monthOverMonth.revenueGrowth >= 0 ? 'text-green-600' : 'text-red-600 rotate-180'}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                </svg>
+              </div>
+              <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                This month: ${chartData.monthOverMonth.currentMonthRevenue.toLocaleString()}
+                <br />
+                Last month: ${chartData.monthOverMonth.lastMonthRevenue.toLocaleString()}
+              </div>
+            </div>
+
+            {/* Orders Growth */}
+            <div className="rounded-xl bg-gray-50 p-4 dark:bg-gray-800">
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Orders Growth</p>
+              <div className="mt-2 flex items-baseline gap-2">
+                <span className={`text-2xl font-bold ${chartData.monthOverMonth.orderGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {chartData.monthOverMonth.orderGrowth >= 0 ? '+' : ''}{chartData.monthOverMonth.orderGrowth}%
+                </span>
+                <svg
+                  className={`h-4 w-4 ${chartData.monthOverMonth.orderGrowth >= 0 ? 'text-green-600' : 'text-red-600 rotate-180'}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                </svg>
+              </div>
+              <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                This month: {chartData.monthOverMonth.currentMonthOrders} orders
+                <br />
+                Last month: {chartData.monthOverMonth.lastMonthOrders} orders
+              </div>
+            </div>
+
+            {/* Customers Growth */}
+            <div className="rounded-xl bg-gray-50 p-4 dark:bg-gray-800">
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">New Customers Growth</p>
+              <div className="mt-2 flex items-baseline gap-2">
+                <span className={`text-2xl font-bold ${chartData.monthOverMonth.customerGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {chartData.monthOverMonth.customerGrowth >= 0 ? '+' : ''}{chartData.monthOverMonth.customerGrowth}%
+                </span>
+                <svg
+                  className={`h-4 w-4 ${chartData.monthOverMonth.customerGrowth >= 0 ? 'text-green-600' : 'text-red-600 rotate-180'}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                </svg>
+              </div>
+              <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                This month: {chartData.monthOverMonth.currentMonthCustomers} new
+                <br />
+                Last month: {chartData.monthOverMonth.lastMonthCustomers} new
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Charts Section */}
       <div className="space-y-6">
         {/* Period Selector */}
@@ -237,19 +420,43 @@ export default function SuperAdminDashboard({
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
             {t('admin.superadmin.dashboard.analyticsOverview') || 'Analytics Overview'}
           </h2>
-          <div className="flex gap-2">
-            {(['7d', '30d', '90d', '1y'] as const).map((period) => (
-              <button
-                key={period}
-                onClick={() => setChartPeriod(period)}
-                className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${chartPeriod === period
-                  ? 'bg-brand-500 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
-                  }`}
-              >
-                {period === '7d' ? '7 Days' : period === '30d' ? '30 Days' : period === '90d' ? '90 Days' : '1 Year'}
-              </button>
-            ))}
+          <div className="flex items-center gap-4">
+            <div className="flex gap-2">
+              {(['7d', '30d', '90d', '1y'] as const).map((period) => (
+                <button
+                  key={period}
+                  onClick={() => setChartPeriod(period)}
+                  className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${chartPeriod === period
+                    ? 'bg-brand-500 text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                    }`}
+                >
+                  {period === '7d' ? '7 Days' : period === '30d' ? '30 Days' : period === '90d' ? '90 Days' : '1 Year'}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={handleExportRevenue}
+              disabled={exporting || chartLoading || !chartData}
+              className="flex items-center gap-2 px-4 py-1.5 text-sm font-medium rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {exporting ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>Exporting...</span>
+                </>
+              ) : (
+                <>
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <span>Export CSV</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
 

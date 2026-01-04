@@ -122,6 +122,7 @@ class BalanceRepository {
 
     /**
      * Deduct balance (order fee) - with transaction safety
+     * Now allows negative balance - will be handled by cron at midnight
      */
     async deductBalance(
         merchantId: bigint,
@@ -139,11 +140,7 @@ class BalanceRepository {
             }
 
             const balanceBefore = Number(balance.balance);
-
-            if (balanceBefore < amount) {
-                throw new Error('Insufficient balance');
-            }
-
+            // Allow negative balance - cron job will handle at midnight
             const balanceAfter = balanceBefore - amount;
 
             // Update balance
@@ -169,8 +166,10 @@ class BalanceRepository {
 
             return {
                 balance: updatedBalance,
+                balanceBefore,
                 newBalance: balanceAfter,
                 isZero: balanceAfter <= 0,
+                isNegative: balanceAfter < 0,
             };
         });
     }

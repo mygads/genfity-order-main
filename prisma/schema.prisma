@@ -25,15 +25,19 @@ model User {
   addonCatsCreated    AddonCategory[] @relation("AddonCatCreatedBy")
   addonCatsDeleted    AddonCategory[] @relation("AddonCatDeletedBy")
   addonCatsUpdated    AddonCategory[] @relation("AddonCatUpdatedBy")
+  addonCatsRestored   AddonCategory[] @relation("AddonCatRestoredBy")
   addonItemsCreated   AddonItem[]     @relation("AddonItemCreatedBy")
   addonItemsDeleted   AddonItem[]     @relation("AddonItemDeletedBy")
   addonItemsUpdated   AddonItem[]     @relation("AddonItemUpdatedBy")
+  addonItemsRestored  AddonItem[]     @relation("AddonItemRestoredBy")
   categoriesCreated   MenuCategory[]  @relation("CategoryCreatedBy")
   categoriesDeleted   MenuCategory[]  @relation("CategoryDeletedBy")
   categoriesUpdated   MenuCategory[]  @relation("CategoryUpdatedBy")
+  categoriesRestored  MenuCategory[]  @relation("CategoryRestoredBy")
   menusCreated        Menu[]          @relation("MenuCreatedBy")
   menusDeleted        Menu[]          @relation("MenuDeletedBy")
   menusUpdated        Menu[]          @relation("MenuUpdatedBy")
+  menusRestored       Menu[]          @relation("MenuRestoredBy")
   merchantUsers       MerchantUser[]
   paymentsRecorded    Payment[]       @relation("PaymentRecordedBy")
   preferences         UserPreference?
@@ -323,16 +327,19 @@ model MenuCategory {
   isActive        Boolean            @default(true) @map("is_active")
   createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
-  createdByUserId BigInt?            @map("created_by_user_id")
-  deletedAt       DateTime?          @map("deleted_at") @db.Timestamptz(6)
-  deletedByUserId BigInt?            @map("deleted_by_user_id")
-  updatedByUserId BigInt?            @map("updated_by_user_id")
-  createdBy       User?              @relation("CategoryCreatedBy", fields: [createdByUserId], references: [id])
-  deletedBy       User?              @relation("CategoryDeletedBy", fields: [deletedByUserId], references: [id])
-  merchant        Merchant           @relation(fields: [merchantId], references: [id], onDelete: Cascade)
-  updatedBy       User?              @relation("CategoryUpdatedBy", fields: [updatedByUserId], references: [id])
-  menuItems       MenuCategoryItem[]
-  menus           Menu[]
+  createdByUserId  BigInt?            @map("created_by_user_id")
+  deletedAt        DateTime?          @map("deleted_at") @db.Timestamptz(6)
+  deletedByUserId  BigInt?            @map("deleted_by_user_id")
+  updatedByUserId  BigInt?            @map("updated_by_user_id")
+  restoredAt       DateTime?          @map("restored_at") @db.Timestamptz(6)
+  restoredByUserId BigInt?            @map("restored_by_user_id")
+  createdBy        User?              @relation("CategoryCreatedBy", fields: [createdByUserId], references: [id])
+  deletedBy        User?              @relation("CategoryDeletedBy", fields: [deletedByUserId], references: [id])
+  merchant         Merchant           @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  updatedBy        User?              @relation("CategoryUpdatedBy", fields: [updatedByUserId], references: [id])
+  restoredBy       User?              @relation("CategoryRestoredBy", fields: [restoredByUserId], references: [id])
+  menuItems        MenuCategoryItem[]
+  menus            Menu[]
 
   @@index([merchantId])
   @@index([sortOrder])
@@ -375,6 +382,8 @@ model Menu {
   deletedAt          DateTime?           @map("deleted_at") @db.Timestamptz(6)
   deletedByUserId    BigInt?             @map("deleted_by_user_id")
   updatedByUserId    BigInt?             @map("updated_by_user_id")
+  restoredAt         DateTime?           @map("restored_at") @db.Timestamptz(6)
+  restoredByUserId   BigInt?             @map("restored_by_user_id")
   isSpicy            Boolean             @default(false) @map("is_spicy")
   isBestSeller       Boolean             @default(false) @map("is_best_seller")
   isSignature        Boolean             @default(false) @map("is_signature")
@@ -393,6 +402,7 @@ model Menu {
   deletedBy          User?               @relation("MenuDeletedBy", fields: [deletedByUserId], references: [id])
   merchant           Merchant            @relation(fields: [merchantId], references: [id], onDelete: Cascade)
   updatedBy          User?               @relation("MenuUpdatedBy", fields: [updatedByUserId], references: [id])
+  restoredBy         User?               @relation("MenuRestoredBy", fields: [restoredByUserId], references: [id])
   orderItems         OrderItem[]
   menuBookItems      MenuBookItem[]
   specialPriceItems  SpecialPriceItem[]
@@ -420,10 +430,13 @@ model AddonCategory {
   deletedAt           DateTime?           @map("deleted_at") @db.Timestamptz(6)
   deletedByUserId     BigInt?             @map("deleted_by_user_id")
   updatedByUserId     BigInt?             @map("updated_by_user_id")
+  restoredAt          DateTime?           @map("restored_at") @db.Timestamptz(6)
+  restoredByUserId    BigInt?             @map("restored_by_user_id")
   createdBy           User?               @relation("AddonCatCreatedBy", fields: [createdByUserId], references: [id])
   deletedBy           User?               @relation("AddonCatDeletedBy", fields: [deletedByUserId], references: [id])
   merchant            Merchant            @relation(fields: [merchantId], references: [id], onDelete: Cascade)
   updatedBy           User?               @relation("AddonCatUpdatedBy", fields: [updatedByUserId], references: [id])
+  restoredBy          User?               @relation("AddonCatRestoredBy", fields: [restoredByUserId], references: [id])
   addonItems          AddonItem[]
   menuAddonCategories MenuAddonCategory[]
 
@@ -452,10 +465,13 @@ model AddonItem {
   deletedByUserId    BigInt?          @map("deleted_by_user_id")
   lastStockResetAt   DateTime?        @map("last_stock_reset_at") @db.Timestamptz(6)
   updatedByUserId    BigInt?          @map("updated_by_user_id")
+  restoredAt         DateTime?        @map("restored_at") @db.Timestamptz(6)
+  restoredByUserId   BigInt?          @map("restored_by_user_id")
   addonCategory      AddonCategory    @relation(fields: [addonCategoryId], references: [id], onDelete: Cascade)
   createdBy          User?            @relation("AddonItemCreatedBy", fields: [createdByUserId], references: [id])
   deletedBy          User?            @relation("AddonItemDeletedBy", fields: [deletedByUserId], references: [id])
   updatedBy          User?            @relation("AddonItemUpdatedBy", fields: [updatedByUserId], references: [id])
+  restoredBy         User?            @relation("AddonItemRestoredBy", fields: [restoredByUserId], references: [id])
   orderItemAddons    OrderItemAddon[]
 
   @@index([addonCategoryId])
@@ -906,10 +922,15 @@ enum NotificationType {
   PAYMENT_VERIFIED        // Payment verified
   PAYMENT_REJECTED        // Payment request rejected
   MONTHLY_EXPIRING_7_DAYS // Monthly subscription expiring in 7 days
+  MONTHLY_EXPIRING_3_DAYS // Monthly subscription expiring in 3 days
+  MONTHLY_EXPIRING_1_DAY  // Monthly subscription expiring tomorrow
+  MONTHLY_EXPIRING        // Monthly subscription expiring (generic)
   MONTHLY_EXPIRED         // Monthly subscription expired
   AUTO_SWITCH_TO_DEPOSIT  // Auto-switched to deposit mode
   AUTO_SWITCH_TO_MONTHLY  // Auto-switched to monthly mode
   SUBSCRIPTION_REACTIVATED // Subscription reactivated
+  STORE_CLOSED_BALANCE    // Store closed due to negative balance
+  STORE_CLOSED_SUBSCRIPTION // Store closed due to expired subscription
 }
 
 model NotificationLog {

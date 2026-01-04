@@ -397,6 +397,100 @@ class UserNotificationService {
     }
 
     /**
+     * Notify merchant owner about negative balance (real-time when balance goes negative)
+     */
+    async notifyNegativeBalance(
+        merchantId: bigint,
+        balance: number,
+        orderNumber: string,
+        currency: string
+    ) {
+        // Create in-app notification
+        await this.createForMerchant(
+            merchantId,
+            'SUBSCRIPTION',
+            '⚠️ Negative Balance Warning',
+            `Your balance is now negative after order #${orderNumber}. Top up before midnight to avoid store closure.`,
+            {
+                targetRole: 'MERCHANT_OWNER',
+                actionUrl: '/admin/dashboard/subscription/topup',
+                metadata: { balance, orderNumber },
+            }
+        );
+
+        // Also send push notification to all subscribed merchant users
+        await this.sendPushToMerchant(merchantId, async (pushService, subscription, merchant) => {
+            return pushService.sendNegativeBalanceNotification(
+                subscription,
+                merchant.name,
+                balance,
+                orderNumber,
+                currency,
+                'en'
+            );
+        });
+    }
+
+    /**
+     * Send push notification to all subscribed users of a merchant
+     */
+    private async sendPushToMerchant(
+        merchantId: bigint,
+        sendFn: (
+            pushService: typeof import('./WebPushService').default,
+            subscription: { endpoint: string; keys: { p256dh: string; auth: string } },
+            merchant: { name: string; currency: string }
+        ) => Promise<boolean>
+    ) {
+        try {
+            // Dynamically import to avoid circular dependency
+            const webPushService = (await import('./WebPushService')).default;
+            
+            // Get merchant info
+            const merchant = await prisma.merchant.findUnique({
+                where: { id: merchantId },
+                select: { name: true, currency: true },
+            });
+
+            if (!merchant) return;
+
+            // Get all active push subscriptions for this merchant's users
+            const pushSubscriptions = await prisma.pushSubscription.findMany({
+                where: {
+                    merchantId,
+                    isActive: true,
+                },
+                select: {
+                    endpoint: true,
+                    p256dhKey: true,
+                    authKey: true,
+                },
+            });
+
+            // Send push to each subscription
+            for (const sub of pushSubscriptions) {
+                try {
+                    await sendFn(
+                        webPushService,
+                        {
+                            endpoint: sub.endpoint,
+                            keys: {
+                                p256dh: sub.p256dhKey,
+                                auth: sub.authKey,
+                            },
+                        },
+                        merchant
+                    );
+                } catch (err) {
+                    console.error(`Failed to send push notification to ${sub.endpoint}:`, err);
+                }
+            }
+        } catch (err) {
+            console.error('Failed to send push notifications to merchant:', err);
+        }
+    }
+
+    /**
      * Notify super admins about new merchant registration
      */
     async notifyNewMerchantRegistration(merchantName: string, merchantCode: string, merchantId: bigint) {

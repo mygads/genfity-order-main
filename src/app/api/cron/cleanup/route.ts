@@ -7,12 +7,15 @@
  * 2. Delete expired customer sessions
  * 3. Expire old pending payment requests
  * 4. Clean up old notification logs (optional)
+ * 5. Permanently delete soft-deleted data (>30 days)
+ * 6. Clean orphaned blob images
  * 
  * Should be scheduled to run daily or hourly
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
+import dataCleanupService from '@/lib/services/DataCleanupService';
 
 const CRON_SECRET = process.env.CRON_SECRET;
 
@@ -165,6 +168,31 @@ export async function POST(req: NextRequest) {
         } catch (error) {
             results.push({
                 task: 'Clean Expired Reset Tokens',
+                deletedCount: 0,
+                success: false,
+                error: error instanceof Error ? error.message : 'Unknown error',
+            });
+        }
+
+        // Task 6: Permanently delete soft-deleted data (>30 days) and clean orphaned images
+        try {
+            console.log('🗑️ Running data cleanup tasks...');
+            const dataCleanupResults = await dataCleanupService.runAllTasks();
+            
+            // Add individual results from data cleanup
+            dataCleanupResults.results.forEach((result: CleanupResult) => {
+                results.push({
+                    task: result.task,
+                    deletedCount: result.deletedCount,
+                    success: result.success,
+                    error: result.error,
+                });
+            });
+            
+            console.log(`✅ Data cleanup completed: ${dataCleanupResults.totalDeleted} items cleaned`);
+        } catch (error) {
+            results.push({
+                task: 'Data Cleanup (Soft Deletes & Images)',
                 deletedCount: 0,
                 success: false,
                 error: error instanceof Error ? error.message : 'Unknown error',

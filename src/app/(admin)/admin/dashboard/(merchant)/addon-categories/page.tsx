@@ -11,6 +11,7 @@ import { CategoriesPageSkeleton } from "@/components/common/SkeletonLoaders";
 import { useMerchant } from "@/context/MerchantContext";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useToast } from "@/context/ToastContext";
+import ArchiveModal from "@/components/common/ArchiveModal";
 
 interface AddonCategory {
   id: string;
@@ -96,6 +97,7 @@ function AddonCategoriesPageContent() {
   // Bulk selection states
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
 
   // Initialize pagination from URL search params
   const initialPage = parseInt(searchParams.get('page') || '1', 10);
@@ -690,6 +692,16 @@ function AddonCategoriesPageContent() {
                 </>
               )}
               <button
+                onClick={() => setShowArchiveModal(true)}
+                className="inline-flex h-11 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                title={t("common.archiveDescription")}
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                </svg>
+                {t("common.archive")}
+              </button>
+              <button
                 onClick={() => {
                   try {
                     exportAddonCategories(categories);
@@ -1020,6 +1032,15 @@ function AddonCategoriesPageContent() {
         )}
       </div>
 
+      {/* Archive Modal */}
+      <ArchiveModal
+        isOpen={showArchiveModal}
+        onClose={() => setShowArchiveModal(false)}
+        onRestoreSuccess={() => {
+          fetchCategories();
+          showSuccess('Item restored successfully!');
+        }}
+      />
     </div>
   );
 }

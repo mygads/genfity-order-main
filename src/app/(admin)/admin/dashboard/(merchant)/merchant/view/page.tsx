@@ -145,7 +145,7 @@ export default function ViewMerchantPage() {
           isManualOverride: merchantData.isManualOverride ?? false,
           address: merchantData.address,
           email: merchantData.email,
-          phone: merchantData.phone,
+          phone: merchantData.phoneNumber || merchantData.phone || '',
           description: merchantData.description,
           country: merchantData.country || "Australia",
           currency: merchantData.currency || "AUD",

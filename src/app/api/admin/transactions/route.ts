@@ -117,6 +117,78 @@ async function handleGet(req: NextRequest) {
       _count: true,
     });
 
+    // Get daily trends for the last 30 days
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const dailyTrendsRaw = await prisma.$queryRaw<Array<{
+      date: Date;
+      type: string;
+      total_amount: unknown;
+      transaction_count: bigint;
+    }>>`
+      SELECT 
+        DATE(created_at) as date,
+        type,
+        SUM(amount) as total_amount,
+        COUNT(*) as transaction_count
+      FROM balance_transactions
+      WHERE created_at >= ${thirtyDaysAgo}
+      GROUP BY DATE(created_at), type
+      ORDER BY date ASC
+    `;
+
+    // Transform daily trends into a more usable format
+    const trendsMap = new Map<string, {
+      date: string;
+      deposits: number;
+      orderFees: number;
+      subscriptions: number;
+      refunds: number;
+      adjustments: number;
+      total: number;
+    }>();
+
+    dailyTrendsRaw.forEach((row) => {
+      const dateStr = new Date(row.date).toISOString().split('T')[0];
+      if (!trendsMap.has(dateStr)) {
+        trendsMap.set(dateStr, {
+          date: dateStr,
+          deposits: 0,
+          orderFees: 0,
+          subscriptions: 0,
+          refunds: 0,
+          adjustments: 0,
+          total: 0,
+        });
+      }
+      const dayData = trendsMap.get(dateStr)!;
+      const amount = Number(row.total_amount);
+      
+      switch (row.type) {
+        case 'DEPOSIT':
+          dayData.deposits = amount;
+          break;
+        case 'ORDER_FEE':
+          dayData.orderFees = Math.abs(amount);
+          break;
+        case 'SUBSCRIPTION':
+          dayData.subscriptions = Math.abs(amount);
+          break;
+        case 'REFUND':
+          dayData.refunds = amount;
+          break;
+        case 'ADJUSTMENT':
+          dayData.adjustments = amount;
+          break;
+      }
+      dayData.total += amount;
+    });
+
+    const dailyTrends = Array.from(trendsMap.values()).sort((a, b) => 
+      a.date.localeCompare(b.date)
+    );
+
     return NextResponse.json({
       success: true,
       data: {
@@ -138,6 +210,7 @@ async function handleGet(req: NextRequest) {
           },
         })),
         summary: serializeBigInt(summary),
+        dailyTrends,
         pagination: {
           total,
           limit,

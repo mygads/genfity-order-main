@@ -7,6 +7,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withSuperAdmin } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/middleware/auth';
 import balanceService from '@/lib/services/BalanceService';
+import emailService from '@/lib/services/EmailService';
+import prisma from '@/lib/db/client';
 import { z } from 'zod';
 
 const adjustSchema = z.object({
@@ -35,12 +37,64 @@ async function handlePost(
 
         const { amount, description } = validation.data;
 
+        // Get merchant info before adjustment for email
+        const merchant = await prisma.merchant.findUnique({
+            where: { id: merchantId },
+            select: { 
+                name: true, 
+                email: true, 
+                currency: true,
+                merchantBalance: {
+                    select: { balance: true }
+                }
+            },
+        });
+
+        if (!merchant) {
+            return NextResponse.json(
+                { success: false, error: 'NOT_FOUND', message: 'Merchant not found' },
+                { status: 404 }
+            );
+        }
+
+        // Get admin name for email
+        const admin = await prisma.user.findUnique({
+            where: { id: context.userId },
+            select: { name: true },
+        });
+
         await balanceService.adjustBalance(
             merchantId,
             amount,
             description,
             context.userId
         );
+
+        // Get new balance after adjustment
+        const updatedBalance = await prisma.merchantBalance.findUnique({
+            where: { merchantId },
+            select: { balance: true },
+        });
+
+        // Send email notification to merchant
+        if (merchant.email) {
+            try {
+                await emailService.sendBalanceAdjustmentNotification({
+                    to: merchant.email,
+                    merchantName: merchant.name,
+                    amount: amount,
+                    description: description,
+                    newBalance: updatedBalance ? Number(updatedBalance.balance) : 0,
+                    currency: merchant.currency || 'AUD',
+                    adjustedBy: admin?.name || 'Administrator',
+                    adjustedAt: new Date(),
+                });
+                console.log(`✅ Balance adjustment email sent to ${merchant.email}`);
+            } catch (emailError) {
+                console.error('Failed to send balance adjustment email:', emailError);
+                // Don't fail the request if email fails
+            }
+        }
 
         return NextResponse.json({
             success: true,

@@ -57,6 +57,9 @@ class SubscriptionCronService {
         // Task 6: Send grace period warnings
         results.push(await this.sendGracePeriodWarnings());
 
+        // Task 7: Send monthly subscription expiring warnings (7, 3, 1 days)
+        results.push(await this.sendMonthlyExpiringWarnings());
+
         const completedAt = new Date();
         const totalProcessed = results.reduce((sum, r) => sum + r.count, 0);
         const totalErrors = results.reduce((sum, r) => sum + (r.errors?.length || 0), 0);
@@ -72,6 +75,7 @@ class SubscriptionCronService {
 
     /**
      * Suspend expired trial subscriptions (after grace period)
+     * Also closes the store
      */
     async suspendExpiredTrials(): Promise<CronResult> {
         const details: string[] = [];
@@ -88,6 +92,12 @@ class SubscriptionCronService {
                         `Trial period ended (${GRACE_PERIOD_DAYS}-day grace period expired)`
                     );
 
+                    // Close the store
+                    await subscriptionRepository.closeMerchantStore(
+                        sub.merchantId,
+                        'Store closed due to expired trial'
+                    );
+
                     // Send suspension notification
                     if (sub.merchant.email) {
                         await this.sendSuspensionNotification(
@@ -95,11 +105,11 @@ class SubscriptionCronService {
                             sub.merchant.email,
                             sub.merchant.name,
                             'TRIAL_EXPIRED',
-                            'Trial period has ended'
+                            'Trial period has ended. Your store has been closed. Please upgrade to continue.'
                         );
                     }
 
-                    details.push(`Suspended: ${sub.merchant.code} (${sub.merchant.name})`);
+                    details.push(`Suspended & Store Closed: ${sub.merchant.code} (${sub.merchant.name})`);
                 } catch (err) {
                     errors.push(`Failed to suspend ${sub.merchant.code}: ${err}`);
                 }
@@ -124,6 +134,7 @@ class SubscriptionCronService {
 
     /**
      * Suspend expired monthly subscriptions (after grace period)
+     * Also closes the store
      */
     async suspendExpiredMonthly(): Promise<CronResult> {
         const details: string[] = [];
@@ -140,6 +151,12 @@ class SubscriptionCronService {
                         `Monthly subscription expired (${GRACE_PERIOD_DAYS}-day grace period expired)`
                     );
 
+                    // Close the store
+                    await subscriptionRepository.closeMerchantStore(
+                        sub.merchantId,
+                        'Store closed due to expired monthly subscription'
+                    );
+
                     // Send suspension notification
                     if (sub.merchant.email) {
                         await this.sendSuspensionNotification(
@@ -147,11 +164,11 @@ class SubscriptionCronService {
                             sub.merchant.email,
                             sub.merchant.name,
                             'MONTHLY_EXPIRED',
-                            'Monthly subscription has expired'
+                            'Monthly subscription has expired. Your store has been closed. Please renew to continue.'
                         );
                     }
 
-                    details.push(`Suspended: ${sub.merchant.code} (${sub.merchant.name})`);
+                    details.push(`Suspended & Store Closed: ${sub.merchant.code} (${sub.merchant.name})`);
                 } catch (err) {
                     errors.push(`Failed to suspend ${sub.merchant.code}: ${err}`);
                 }
@@ -176,6 +193,7 @@ class SubscriptionCronService {
 
     /**
      * Suspend merchants with negative balance (deposit mode only)
+     * Also closes the store at midnight
      */
     async suspendNegativeBalance(): Promise<CronResult> {
         const details: string[] = [];
@@ -186,9 +204,16 @@ class SubscriptionCronService {
 
             for (const item of negativeBalanceMerchants) {
                 try {
+                    // Suspend subscription
                     await subscriptionRepository.suspendSubscription(
                         item.merchantId,
                         `Negative balance: ${item.currency === 'AUD' ? 'A$' : 'Rp'} ${Math.abs(item.balance).toLocaleString()}`
+                    );
+
+                    // Close the store (isOpen=false, isManualOverride=true)
+                    await subscriptionRepository.closeMerchantStore(
+                        item.merchantId,
+                        'Store closed due to negative balance'
                     );
 
                     // Send suspension notification
@@ -198,11 +223,11 @@ class SubscriptionCronService {
                             item.email,
                             item.name,
                             'NEGATIVE_BALANCE',
-                            'Your balance is negative. Please top up to continue service.'
+                            'Your balance is negative. Please top up to continue service. Your store has been closed.'
                         );
                     }
 
-                    details.push(`Suspended: ${item.code} (Balance: ${item.balance})`);
+                    details.push(`Suspended & Store Closed: ${item.code} (Balance: ${item.balance})`);
                 } catch (err) {
                     errors.push(`Failed to suspend ${item.code}: ${err}`);
                 }
@@ -719,7 +744,130 @@ class SubscriptionCronService {
 </body>
 </html>`;
     }
-}
+    /**
+     * Send monthly subscription expiring warnings (7, 3, 1 days before expiry)
+     */
+    async sendMonthlyExpiringWarnings(): Promise<CronResult> {
+        const details: string[] = [];
+        const errors: string[] = [];
+        let count = 0;
+
+        try {
+            // Check for 7, 3, and 1 day warnings before monthly subscription expires
+            for (const days of [7, 3, 1]) {
+                const targetDate = new Date();
+                targetDate.setDate(targetDate.getDate() + days);
+                
+                // Find merchants with monthly subscription expiring around target date
+                const merchants = await notificationRepository.getMerchantsNeedingMonthlyWarning(days);
+
+                for (const item of merchants) {
+                    try {
+                        const success = await emailService.sendEmail({
+                            to: item.merchant.email,
+                            subject: `Langganan Bulanan Berakhir dalam ${days} Hari - Genfity`,
+                            html: this.getMonthlyExpiringEmailHtml(
+                                item.merchant.name,
+                                days,
+                                item.currentPeriodEnd!
+                            ),
+                        });
+
+                        await notificationRepository.logNotification(
+                            item.merchantId,
+                            'MONTHLY_EXPIRING' as NotificationType,
+                            item.merchant.email,
+                            success,
+                            undefined,
+                            { daysRemaining: days }
+                        );
+
+                        if (success) {
+                            details.push(`${days}d monthly warning sent to: ${item.merchant.code}`);
+                            count++;
+                        }
+                    } catch (err) {
+                        errors.push(`Failed to send monthly warning to ${item.merchant.code}: ${err}`);
+                    }
+                }
+            }
+
+            return {
+                task: 'Send Monthly Expiring Warnings',
+                success: errors.length === 0,
+                count,
+                details,
+                errors: errors.length > 0 ? errors : undefined,
+            };
+        } catch (err) {
+            return {
+                task: 'Send Monthly Expiring Warnings',
+                success: false,
+                count: 0,
+                errors: [`Task failed: ${err}`],
+            };
+        }
+    }
+
+    /**
+     * Get monthly subscription expiring email HTML
+     */
+    private getMonthlyExpiringEmailHtml(
+        merchantName: string,
+        daysRemaining: number,
+        expiresAt: Date
+    ): string {
+        const formattedDate = expiresAt.toLocaleDateString('id-ID', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+        });
+
+        const urgencyColor = daysRemaining <= 1 ? '#ef4444' : daysRemaining <= 3 ? '#f97316' : '#3b82f6';
+
+        return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f9fafb; margin: 0; padding: 20px;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <div style="background: linear-gradient(135deg, ${urgencyColor}, #6366f1); padding: 30px; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 24px;">📅 Langganan Hampir Berakhir</h1>
+        </div>
+        <div style="padding: 30px;">
+            <p style="color: #374151; font-size: 16px; line-height: 1.6;">
+                Halo <strong>${merchantName}</strong>,
+            </p>
+            <p style="color: #374151; font-size: 16px; line-height: 1.6;">
+                Langganan bulanan Anda akan berakhir dalam <strong style="color: ${urgencyColor};">${daysRemaining} hari</strong> pada tanggal <strong>${formattedDate}</strong>.
+            </p>
+            <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 15px; margin: 20px 0; border-radius: 0 8px 8px 0;">
+                <p style="color: #1e40af; margin: 0; font-size: 14px;">
+                    💡 Jika tidak diperpanjang, toko Anda akan ditutup setelah masa grace period (${3} hari setelah berakhir).
+                </p>
+            </div>
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="${process.env.NEXT_PUBLIC_APP_URL}/admin/dashboard/subscription/topup?type=monthly" 
+                   style="display: inline-block; background-color: #3b82f6; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                    Perpanjang Sekarang
+                </a>
+            </div>
+            <p style="color: #6b7280; font-size: 14px; line-height: 1.6;">
+                Alternatif: Anda juga dapat beralih ke mode Deposit untuk bayar per pesanan.
+            </p>
+        </div>
+        <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+            <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+                © ${new Date().getFullYear()} Genfity. All rights reserved.
+            </p>
+        </div>
+    </div>
+</body>
+</html>`;
+    }}
 
 const subscriptionCronService = new SubscriptionCronService();
 export default subscriptionCronService;

@@ -5,6 +5,7 @@ import Link from "next/link";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { useSWRStatic } from "@/hooks/useSWRWithAuth";
 import SuspendedAlert from "@/components/subscription/SuspendedAlert";
+import ConfirmDialog from "@/components/modals/ConfirmDialog";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { FaWallet, FaCalendarAlt, FaClock, FaExchangeAlt, FaArrowRight, FaCheckCircle, FaExclamationTriangle, FaHistory, FaCreditCard, FaInfoCircle } from "react-icons/fa";
 
@@ -69,6 +70,8 @@ interface ApiResponse<T> {
 export default function SubscriptionPage() {
     const { t, locale } = useTranslation();
     const [switching, setSwitching] = useState(false);
+    const [switchModalOpen, setSwitchModalOpen] = useState(false);
+    const [pendingSwitchType, setPendingSwitchType] = useState<'DEPOSIT' | 'MONTHLY' | null>(null);
 
     // Fetch all data
     const { data: subscriptionResponse, error: subscriptionError, isLoading: subscriptionLoading } = 
@@ -123,16 +126,15 @@ export default function SubscriptionPage() {
     };
 
     const handleSwitch = async (newType: 'DEPOSIT' | 'MONTHLY') => {
-        const confirmMsg = newType === 'DEPOSIT'
-            ? (locale === 'id' 
-                ? 'Beralih ke mode Deposit? Langganan bulanan akan dijeda dan Anda akan menggunakan saldo.'
-                : 'Switch to Deposit mode? Monthly subscription will be paused and you\'ll use your balance.')
-            : (locale === 'id'
-                ? 'Beralih ke langganan Bulanan? Saldo Anda akan tetap tersimpan.'
-                : 'Switch to Monthly subscription? Your balance will be preserved.');
+        // Open confirmation modal instead of browser confirm
+        setPendingSwitchType(newType);
+        setSwitchModalOpen(true);
+    };
 
-        if (!confirm(confirmMsg)) return;
-
+    const confirmSwitch = async () => {
+        if (!pendingSwitchType) return;
+        
+        setSwitchModalOpen(false);
         setSwitching(true);
         try {
             const token = localStorage.getItem('accessToken');
@@ -142,7 +144,7 @@ export default function SubscriptionPage() {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`,
                 },
-                body: JSON.stringify({ newType }),
+                body: JSON.stringify({ newType: pendingSwitchType }),
             });
             const data = await res.json();
             if (data.success) {
@@ -630,6 +632,31 @@ export default function SubscriptionPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Switch Mode Confirmation Modal */}
+            <ConfirmDialog
+                isOpen={switchModalOpen}
+                title={pendingSwitchType === 'DEPOSIT' 
+                    ? (locale === 'id' ? 'Beralih ke Mode Deposit?' : 'Switch to Deposit Mode?')
+                    : (locale === 'id' ? 'Beralih ke Langganan Bulanan?' : 'Switch to Monthly Subscription?')
+                }
+                message={pendingSwitchType === 'DEPOSIT'
+                    ? (locale === 'id' 
+                        ? 'Langganan bulanan akan dijeda dan Anda akan mulai menggunakan saldo deposit. Biaya per pesanan akan dikenakan untuk setiap order yang diterima.'
+                        : 'Monthly subscription will be paused and you\'ll start using your deposit balance. A fee per order will be charged for each accepted order.')
+                    : (locale === 'id'
+                        ? 'Anda akan beralih ke langganan bulanan tanpa biaya per pesanan. Saldo deposit Anda akan tetap tersimpan dan dapat digunakan di kemudian hari.'
+                        : 'You\'ll switch to monthly subscription with no per-order fees. Your deposit balance will be preserved and can be used later.')
+                }
+                confirmText={locale === 'id' ? 'Ya, Beralih' : 'Yes, Switch'}
+                cancelText={locale === 'id' ? 'Batal' : 'Cancel'}
+                variant="info"
+                onConfirm={confirmSwitch}
+                onCancel={() => {
+                    setSwitchModalOpen(false);
+                    setPendingSwitchType(null);
+                }}
+            />
         </div>
     );
 }

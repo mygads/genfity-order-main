@@ -278,6 +278,71 @@ async function handleGet(req: NextRequest) {
       },
     };
 
+    // Calculate Month-over-Month comparison
+    const currentMonth = new Date();
+    currentMonth.setDate(1);
+    currentMonth.setHours(0, 0, 0, 0);
+
+    const lastMonth = new Date(currentMonth);
+    lastMonth.setMonth(lastMonth.getMonth() - 1);
+
+    const twoMonthsAgo = new Date(lastMonth);
+    twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 1);
+
+    // Current month revenue
+    const currentMonthOrders = await prisma.order.findMany({
+      where: {
+        createdAt: { gte: currentMonth },
+        status: 'COMPLETED',
+      },
+      select: { totalAmount: true },
+    });
+    const currentMonthRevenue = currentMonthOrders.reduce((sum, o) => sum + Number(o.totalAmount), 0);
+    const currentMonthOrderCount = currentMonthOrders.length;
+
+    // Last month revenue
+    const lastMonthOrders = await prisma.order.findMany({
+      where: {
+        createdAt: { gte: lastMonth, lt: currentMonth },
+        status: 'COMPLETED',
+      },
+      select: { totalAmount: true },
+    });
+    const lastMonthRevenue = lastMonthOrders.reduce((sum, o) => sum + Number(o.totalAmount), 0);
+    const lastMonthOrderCount = lastMonthOrders.length;
+
+    // Calculate growth percentages
+    const revenueGrowth = lastMonthRevenue > 0 
+      ? ((currentMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100 
+      : (currentMonthRevenue > 0 ? 100 : 0);
+
+    const orderGrowth = lastMonthOrderCount > 0 
+      ? ((currentMonthOrderCount - lastMonthOrderCount) / lastMonthOrderCount) * 100 
+      : (currentMonthOrderCount > 0 ? 100 : 0);
+
+    // Current and last month customers
+    const currentMonthCustomers = await prisma.customer.count({
+      where: { createdAt: { gte: currentMonth } },
+    });
+    const lastMonthCustomers = await prisma.customer.count({
+      where: { createdAt: { gte: lastMonth, lt: currentMonth } },
+    });
+    const customerGrowthPct = lastMonthCustomers > 0 
+      ? ((currentMonthCustomers - lastMonthCustomers) / lastMonthCustomers) * 100 
+      : (currentMonthCustomers > 0 ? 100 : 0);
+
+    const monthOverMonth = {
+      currentMonthRevenue,
+      lastMonthRevenue,
+      revenueGrowth: Math.round(revenueGrowth * 10) / 10, // Round to 1 decimal
+      currentMonthOrders: currentMonthOrderCount,
+      lastMonthOrders: lastMonthOrderCount,
+      orderGrowth: Math.round(orderGrowth * 10) / 10,
+      currentMonthCustomers,
+      lastMonthCustomers,
+      customerGrowth: Math.round(customerGrowthPct * 10) / 10,
+    };
+
     return NextResponse.json({
       success: true,
       data: {
@@ -293,6 +358,7 @@ async function handleGet(req: NextRequest) {
           currentTotalCustomers: runningTotal,
         },
         revenueByCurrency,
+        monthOverMonth,
       },
     });
   } catch (error) {

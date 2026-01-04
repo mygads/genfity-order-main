@@ -31,8 +31,16 @@ interface SubscriptionMetrics {
         arr: number;  // Annual Recurring Revenue
         totalDeposits: number;
         avgDepositAmount: number;
+        totalOrderFees: number;  // Total order fees collected
         currency: string;
     };
+    revenueTrends: Array<{
+        month: string;
+        deposits: number;
+        orderFees: number;
+        monthlySubscriptions: number;
+        totalRevenue: number;
+    }>;
     trends: {
         newTrialsThisMonth: number;
         conversionsThisMonth: number;
@@ -177,13 +185,72 @@ export const GET = withSuperAdmin(async (
             },
         });
 
+        // Get total order fees from balance transactions
+        const totalOrderFees = await prisma.balanceTransaction.aggregate({
+            where: {
+                type: 'ORDER_FEE',
+            },
+            _sum: {
+                amount: true,
+            },
+        });
+
         const revenue = {
             mrr,
             arr,
             totalDeposits: Number(totalDeposits._sum?.amount || 0),
             avgDepositAmount: Number(totalDeposits._avg?.amount || 0),
+            totalOrderFees: Math.abs(Number(totalOrderFees._sum?.amount || 0)),
             currency: 'IDR',  // Primary currency
         };
+
+        // Generate 6-month revenue trends
+        const revenueTrends: SubscriptionMetrics['revenueTrends'] = [];
+        for (let i = 5; i >= 0; i--) {
+            const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59);
+            const monthLabel = monthStart.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+
+            // Deposits this month
+            const monthlyDeposits = await prisma.balanceTransaction.aggregate({
+                where: {
+                    type: 'DEPOSIT',
+                    createdAt: { gte: monthStart, lte: monthEnd },
+                },
+                _sum: { amount: true },
+            });
+
+            // Order fees this month (deductions are negative, so we use absolute value)
+            const monthlyOrderFees = await prisma.balanceTransaction.aggregate({
+                where: {
+                    type: 'ORDER_FEE',
+                    createdAt: { gte: monthStart, lte: monthEnd },
+                },
+                _sum: { amount: true },
+            });
+
+            // Monthly subscription payments (from payment requests)
+            const monthlySubPayments = await prisma.paymentRequest.aggregate({
+                where: {
+                    status: 'VERIFIED',
+                    type: 'MONTHLY_SUBSCRIPTION',
+                    verifiedAt: { gte: monthStart, lte: monthEnd },
+                },
+                _sum: { amount: true },
+            });
+
+            const deposits = Number(monthlyDeposits._sum?.amount || 0);
+            const orderFees = Math.abs(Number(monthlyOrderFees._sum?.amount || 0));
+            const monthlySubscriptions = Number(monthlySubPayments._sum?.amount || 0);
+
+            revenueTrends.push({
+                month: monthLabel,
+                deposits,
+                orderFees,
+                monthlySubscriptions,
+                totalRevenue: deposits + orderFees + monthlySubscriptions,
+            });
+        }
 
         // Trends this month
         const newTrialsThisMonth = allSubscriptions.filter(s => 
@@ -302,6 +369,7 @@ export const GET = withSuperAdmin(async (
             overview,
             conversion,
             revenue,
+            revenueTrends,
             trends,
             timeline,
             eventHistory,

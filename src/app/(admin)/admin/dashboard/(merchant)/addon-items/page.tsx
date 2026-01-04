@@ -13,6 +13,8 @@ import CreateOptionModal from "@/components/common/CreateOptionModal";
 import DuplicateAddonItemModal from "@/components/modals/DuplicateAddonItemModal";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { getCurrencySymbol } from "@/lib/utils/format";
+import ArchiveModal from "@/components/common/ArchiveModal";
+import { exportAddonItemsForBulkUpload } from "@/lib/utils/excelExport";
 
 interface AddonCategory {
   id: string;
@@ -62,6 +64,7 @@ function AddonItemsPageContent() {
   // Create option modal state
   const [showCreateOptionModal, setShowCreateOptionModal] = useState(false);
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [authToken, setAuthToken] = useState<string>("");
 
   const [items, setItems] = useState<AddonItem[]>([]);
@@ -407,6 +410,34 @@ function AddonItemsPageContent() {
             </div>
             <div className="flex gap-3">
               <button
+                onClick={() => setShowArchiveModal(true)}
+                className="inline-flex h-11 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                title={t("common.archiveDescription")}
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                </svg>
+                {t("common.archive")}
+              </button>
+              <button
+                onClick={() => {
+                  try {
+                    exportAddonItemsForBulkUpload(items, merchant?.currency || 'AUD');
+                    showSuccess('Addon items exported successfully!');
+                  } catch (err) {
+                    showError(err instanceof Error ? err.message : 'Export failed');
+                  }
+                }}
+                disabled={items.length === 0}
+                className="inline-flex h-11 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                title="Export to Excel"
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                {t("common.export")}
+              </button>
+              <button
                 onClick={() => setShowDuplicateModal(true)}
                 className="inline-flex h-11 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
               >
@@ -607,6 +638,16 @@ function AddonItemsPageContent() {
         }}
         token={authToken}
         categories={categories}
+      />
+
+      {/* Archive Modal */}
+      <ArchiveModal
+        isOpen={showArchiveModal}
+        onClose={() => setShowArchiveModal(false)}
+        onRestoreSuccess={() => {
+          fetchData();
+          showSuccess('Item restored successfully!');
+        }}
       />
     </div>
   );

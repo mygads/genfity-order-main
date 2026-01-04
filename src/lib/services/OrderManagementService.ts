@@ -29,6 +29,8 @@ import {
 } from '@/lib/types/order';
 import { validateStatusTransition } from '@/lib/utils/orderStatusRules';
 import emailService from '@/lib/services/EmailService';
+import balanceService from '@/lib/services/BalanceService';
+import subscriptionHistoryService from '@/lib/services/SubscriptionHistoryService';
 
 export class OrderManagementService {
   /**
@@ -131,6 +133,7 @@ export class OrderManagementService {
         ...(data.status === 'COMPLETED' && { completedAt: new Date() }),
         ...(data.status === 'CANCELLED' && { cancelledAt: new Date() }),
         ...(data.status === 'READY' && { actualReadyAt: new Date() }),
+        ...(data.status === 'ACCEPTED' && { acceptedAt: new Date() }),
       },
       include: {
         ...ORDER_DETAIL_INCLUDE,
@@ -141,6 +144,21 @@ export class OrderManagementService {
         },
       },
     });
+
+    // Deduct order fee when order is ACCEPTED (for deposit mode subscription)
+    if (data.status === 'ACCEPTED' && order.merchantId) {
+      try {
+        const deductResult = await balanceService.deductOrderFee(
+          order.merchantId,
+          orderId,
+          order.orderNumber
+        );
+        console.log(`[Order ${order.orderNumber}] Balance deduction result:`, deductResult);
+      } catch (deductError) {
+        console.error(`[Order ${order.orderNumber}] Failed to deduct order fee:`, deductError);
+        // Don't throw - fee deduction failure shouldn't block the status update
+      }
+    }
 
     // Send email notification when order is completed
     if (data.status === 'COMPLETED' && updated.customer?.email) {

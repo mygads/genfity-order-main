@@ -40,8 +40,16 @@ interface SubscriptionMetrics {
         arr: number;
         totalDeposits: number;
         avgDepositAmount: number;
+        totalOrderFees: number;
         currency: string;
     };
+    revenueTrends: Array<{
+        month: string;
+        deposits: number;
+        orderFees: number;
+        monthlySubscriptions: number;
+        totalRevenue: number;
+    }>;
     trends: {
         newTrialsThisMonth: number;
         conversionsThisMonth: number;
@@ -371,7 +379,7 @@ export default function SubscriptionAnalyticsPage() {
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                     {t('subscription.analytics.revenueMetrics')}
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                     <StatCard
                         title={t('subscription.analytics.mrr')}
                         value={formatCurrency(metrics.revenue.mrr, metrics.revenue.currency)}
@@ -393,6 +401,13 @@ export default function SubscriptionAnalyticsPage() {
                         color="blue"
                     />
                     <StatCard
+                        title="Order Fees"
+                        value={formatCurrency(metrics.revenue.totalOrderFees || 0, metrics.revenue.currency)}
+                        subtitle="Total collected"
+                        icon={<svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>}
+                        color="yellow"
+                    />
+                    <StatCard
                         title={t('subscription.analytics.avgDeposit')}
                         value={formatCurrency(metrics.revenue.avgDepositAmount, metrics.revenue.currency)}
                         icon={<svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>}
@@ -400,6 +415,73 @@ export default function SubscriptionAnalyticsPage() {
                     />
                 </div>
             </section>
+
+            {/* Revenue Trends Chart */}
+            {metrics.revenueTrends && metrics.revenueTrends.length > 0 && (
+                <section>
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                        Revenue Trends (6 Months)
+                    </h2>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Total Revenue Chart */}
+                        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+                            <h3 className="text-md font-medium text-gray-900 dark:text-white mb-4">
+                                Total Revenue
+                            </h3>
+                            <div className="h-64">
+                                <LineChart 
+                                    data={metrics.revenueTrends.map(item => ({
+                                        label: item.month,
+                                        value: item.totalRevenue,
+                                    }))}
+                                    height={250}
+                                    color="#10b981"
+                                    title="Revenue"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Revenue Breakdown Table */}
+                        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+                            <h3 className="text-md font-medium text-gray-900 dark:text-white mb-4">
+                                Revenue Breakdown
+                            </h3>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="border-b border-gray-200 dark:border-gray-700">
+                                            <th className="text-left py-2 text-gray-500 dark:text-gray-400">Month</th>
+                                            <th className="text-right py-2 text-gray-500 dark:text-gray-400">Deposits</th>
+                                            <th className="text-right py-2 text-gray-500 dark:text-gray-400">Order Fees</th>
+                                            <th className="text-right py-2 text-gray-500 dark:text-gray-400">Monthly Subs</th>
+                                            <th className="text-right py-2 font-medium text-gray-700 dark:text-gray-300">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {metrics.revenueTrends.map((item, idx) => (
+                                            <tr key={idx} className="border-b border-gray-100 dark:border-gray-700/50">
+                                                <td className="py-2 text-gray-900 dark:text-gray-100">{item.month}</td>
+                                                <td className="py-2 text-right text-blue-600 dark:text-blue-400">
+                                                    {formatCurrency(item.deposits, metrics.revenue.currency)}
+                                                </td>
+                                                <td className="py-2 text-right text-yellow-600 dark:text-yellow-400">
+                                                    {formatCurrency(item.orderFees, metrics.revenue.currency)}
+                                                </td>
+                                                <td className="py-2 text-right text-green-600 dark:text-green-400">
+                                                    {formatCurrency(item.monthlySubscriptions, metrics.revenue.currency)}
+                                                </td>
+                                                <td className="py-2 text-right font-medium text-gray-900 dark:text-gray-100">
+                                                    {formatCurrency(item.totalRevenue, metrics.revenue.currency)}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            )}
 
             {/* Trends This Month */}
             <section>

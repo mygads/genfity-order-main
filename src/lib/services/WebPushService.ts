@@ -331,6 +331,50 @@ class WebPushService {
 
         return this.sendPushNotification(subscription, payload);
     }
+
+    /**
+     * Send negative balance warning push notification
+     * Sent immediately when balance goes negative after order acceptance
+     */
+    async sendNegativeBalanceNotification(
+        subscription: PushSubscription,
+        merchantName: string,
+        balance: number,
+        orderNumber: string,
+        currency: string,
+        locale: string = 'en'
+    ): Promise<boolean> {
+        const formattedBalance = new Intl.NumberFormat(
+            locale === 'id' ? 'id-ID' : 'en-AU',
+            { style: 'currency', currency }
+        ).format(Math.abs(balance));
+
+        const payload: PushNotificationPayload = {
+            title: locale === 'id'
+                ? '⚠️ Saldo Negatif!'
+                : '⚠️ Negative Balance!',
+            body: locale === 'id'
+                ? `Saldo ${merchantName}: -${formattedBalance} setelah pesanan #${orderNumber}. Top up sebelum tengah malam untuk menghindari penutupan toko.`
+                : `${merchantName} balance: -${formattedBalance} after order #${orderNumber}. Top up before midnight to avoid store closure.`,
+            tag: 'negative-balance',
+            data: {
+                type: 'NEGATIVE_BALANCE',
+                balance,
+                orderNumber,
+                url: '/admin/dashboard/subscription/topup',
+            },
+            actions: [
+                {
+                    action: 'topup',
+                    title: locale === 'id' ? 'Top Up Sekarang' : 'Top Up Now',
+                },
+            ],
+            requireInteraction: true,
+            vibrate: [500, 200, 500, 200, 500],
+        };
+
+        return this.sendPushNotification(subscription, payload);
+    }
 }
 
 const webPushService = new WebPushService();

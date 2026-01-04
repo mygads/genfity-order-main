@@ -550,6 +550,189 @@ class EmailService {
       html,
     });
   }
+
+  /**
+   * Send balance adjustment notification email to merchant
+   */
+  async sendBalanceAdjustmentNotification(params: {
+    to: string;
+    merchantName: string;
+    amount: number;
+    description: string;
+    newBalance: number;
+    currency: string;
+    adjustedBy: string;
+    adjustedAt: Date;
+  }): Promise<boolean> {
+    const dashboardUrl = `${process.env.NEXT_PUBLIC_APP_URL}/admin/dashboard/subscription`;
+    const isPositive = params.amount >= 0;
+    const amountSign = isPositive ? '+' : '';
+    
+    // Format currency
+    const formatCurrency = (amount: number) => {
+      if (params.currency === 'AUD') {
+        return `A$${Math.abs(amount).toLocaleString('en-AU', { minimumFractionDigits: 2 })}`;
+      }
+      return `Rp ${Math.abs(amount).toLocaleString('id-ID')}`;
+    };
+
+    const formattedAmount = `${amountSign}${formatCurrency(params.amount)}`;
+    const formattedBalance = formatCurrency(params.newBalance);
+    const formattedDate = new Intl.DateTimeFormat('en-AU', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(params.adjustedAt);
+
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Balance Adjustment Notification</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <div style="background: linear-gradient(135deg, ${isPositive ? '#10b981' : '#ef4444'} 0%, ${isPositive ? '#059669' : '#dc2626'} 100%); padding: 40px 30px; text-align: center;">
+            <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: bold;">
+                Balance Adjustment
+            </h1>
+            <p style="margin: 10px 0 0; color: rgba(255,255,255,0.9); font-size: 14px;">
+                Your account balance has been adjusted
+            </p>
+        </div>
+        <div style="padding: 30px;">
+            <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px;">
+                Hello <strong>${params.merchantName}</strong>,
+            </p>
+            
+            <p style="color: #374151; font-size: 16px; line-height: 1.6;">
+                Your subscription balance has been ${isPositive ? 'increased' : 'decreased'} by an administrator.
+            </p>
+
+            <div style="background-color: ${isPositive ? '#f0fdf4' : '#fef2f2'}; border: 1px solid ${isPositive ? '#bbf7d0' : '#fecaca'}; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="color: ${isPositive ? '#166534' : '#dc2626'}; padding: 8px 0; font-size: 14px;">Adjustment Amount:</td>
+                        <td style="color: ${isPositive ? '#166534' : '#dc2626'}; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">${formattedAmount}</td>
+                    </tr>
+                    <tr>
+                        <td style="color: ${isPositive ? '#166534' : '#dc2626'}; padding: 8px 0; font-size: 14px;">New Balance:</td>
+                        <td style="color: ${isPositive ? '#166534' : '#dc2626'}; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">${formattedBalance}</td>
+                    </tr>
+                    <tr>
+                        <td style="color: ${isPositive ? '#166534' : '#dc2626'}; padding: 8px 0; font-size: 14px;">Date:</td>
+                        <td style="color: ${isPositive ? '#166534' : '#dc2626'}; padding: 8px 0; font-size: 14px; text-align: right;">${formattedDate}</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div style="background-color: #f3f4f6; border-radius: 8px; padding: 16px; margin: 20px 0;">
+                <p style="color: #6b7280; font-size: 12px; margin: 0 0 4px; text-transform: uppercase; letter-spacing: 0.5px;">Reason</p>
+                <p style="color: #374151; font-size: 14px; margin: 0;">${params.description}</p>
+            </div>
+
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="${dashboardUrl}" 
+                   style="display: inline-block; background-color: #f97316; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                    View Dashboard
+                </a>
+            </div>
+
+            <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 20px 0 0;">
+                If you have any questions about this adjustment, please contact support.
+            </p>
+        </div>
+        <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+            <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+                © ${new Date().getFullYear()} Genfity. All rights reserved.
+            </p>
+        </div>
+    </div>
+</body>
+</html>`;
+
+    return this.sendEmail({
+      to: params.to,
+      subject: `Balance ${isPositive ? 'Added' : 'Deducted'}: ${formattedAmount} - Genfity`,
+      html,
+    });
+  }
+
+  /**
+   * Send subscription extension notification email to merchant
+   */
+  async sendSubscriptionExtensionNotification(params: {
+    to: string;
+    merchantName: string;
+    daysExtended: number;
+    newExpiryDate: Date;
+    extendedBy: string;
+  }): Promise<boolean> {
+    const dashboardUrl = `${process.env.NEXT_PUBLIC_APP_URL}/admin/dashboard/subscription`;
+    const formattedDate = new Intl.DateTimeFormat('en-AU', {
+      dateStyle: 'full',
+    }).format(params.newExpiryDate);
+
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subscription Extended</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <div style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); padding: 40px 30px; text-align: center;">
+            <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: bold;">
+                🎉 Subscription Extended!
+            </h1>
+            <p style="margin: 10px 0 0; color: rgba(255,255,255,0.9); font-size: 14px;">
+                Your subscription has been extended by ${params.daysExtended} days
+            </p>
+        </div>
+        <div style="padding: 30px;">
+            <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px;">
+                Hello <strong>${params.merchantName}</strong>,
+            </p>
+            
+            <p style="color: #374151; font-size: 16px; line-height: 1.6;">
+                Great news! Your subscription has been extended by an administrator.
+            </p>
+
+            <div style="background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;">
+                <p style="color: #1e40af; font-size: 14px; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.5px;">New Expiry Date</p>
+                <p style="color: #1e40af; font-size: 24px; font-weight: bold; margin: 0;">${formattedDate}</p>
+                <p style="color: #3b82f6; font-size: 14px; margin: 8px 0 0;">+${params.daysExtended} days added</p>
+            </div>
+
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="${dashboardUrl}" 
+                   style="display: inline-block; background-color: #f97316; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                    View Subscription
+                </a>
+            </div>
+
+            <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 20px 0 0;">
+                Thank you for using Genfity!
+            </p>
+        </div>
+        <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+            <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+                © ${new Date().getFullYear()} Genfity. All rights reserved.
+            </p>
+        </div>
+    </div>
+</body>
+</html>`;
+
+    return this.sendEmail({
+      to: params.to,
+      subject: `Subscription Extended - +${params.daysExtended} Days - Genfity`,
+      html,
+    });
+  }
 }
 
 // Singleton pattern with global caching for Next.js dev mode hot reload

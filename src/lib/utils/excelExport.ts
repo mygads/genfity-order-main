@@ -281,3 +281,79 @@ export function exportAddonItems(data: unknown[], _merchantCurrency = 'AUD'): vo
     data,
   });
 }
+
+/**
+ * Export addon items in bulk upload compatible format
+ * This format matches the bulk upload template structure for import/export compatibility
+ */
+export function exportAddonItemsForBulkUpload(data: unknown[], _merchantCurrency = 'AUD'): void {
+  exportToExcel({
+    filename: `addon_items_bulk_export_${new Date().toISOString().split('T')[0]}`,
+    sheetName: 'Addon Items',
+    columns: [
+      { header: 'ID (do not edit)', key: 'id', width: 15 },
+      { 
+        header: 'Addon Category Name *', 
+        key: 'addonCategory',
+        width: 25,
+        format: (value) => {
+          const cat = value as { name?: string } | undefined;
+          return cat?.name || '';
+        }
+      },
+      { header: 'Name *', key: 'name', width: 25 },
+      { header: 'Description', key: 'description', width: 35 },
+      { 
+        header: 'Price *', 
+        key: 'price',
+        width: 12,
+        format: (value) => typeof value === 'number' || typeof value === 'string' 
+          ? Number(parseFloat(String(value)).toFixed(2))
+          : 0
+      },
+      { 
+        header: 'Input Type (SELECT/QTY)', 
+        key: 'inputType',
+        width: 22,
+        format: (value) => String(value || 'SELECT')
+      },
+      { 
+        header: 'Is Active', 
+        key: 'isActive',
+        width: 10,
+        format: (value) => value ? 'Yes' : 'No'
+      },
+      { 
+        header: 'Track Stock', 
+        key: 'trackStock',
+        width: 12,
+        format: (value) => value ? 'Yes' : 'No'
+      },
+      { 
+        header: 'Stock Qty', 
+        key: 'stockQty',
+        width: 10,
+        format: (value) => value !== null && value !== undefined && value !== '' ? Number(value) : ''
+      },
+      { 
+        header: 'Daily Stock Template', 
+        key: 'dailyStockTemplate',
+        width: 18,
+        format: (value) => value !== null && value !== undefined && value !== '' ? Number(value) : ''
+      },
+      { 
+        header: 'Auto Reset Stock', 
+        key: 'autoResetStock',
+        width: 15,
+        format: (value) => value ? 'Yes' : 'No'
+      },
+      { 
+        header: 'Display Order', 
+        key: 'displayOrder',
+        width: 12,
+        format: (value) => typeof value === 'number' ? value : 0
+      },
+    ],
+    data,
+  });
+}

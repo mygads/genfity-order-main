@@ -6,6 +6,8 @@
 import balanceRepository from '@/lib/repositories/BalanceRepository';
 import subscriptionRepository from '@/lib/repositories/SubscriptionRepository';
 import subscriptionService from '@/lib/services/SubscriptionService';
+import subscriptionHistoryService from '@/lib/services/SubscriptionHistoryService';
+import userNotificationService from '@/lib/services/UserNotificationService';
 
 export interface BalanceInfo {
     balance: number;
@@ -63,6 +65,8 @@ class BalanceService {
         const subscription = await subscriptionRepository.getMerchantSubscription(merchantId);
         if (subscription && subscription.status === 'SUSPENDED' && subscription.type === 'DEPOSIT') {
             await subscriptionRepository.reactivateSubscription(merchantId);
+            // Also reopen the store
+            await subscriptionRepository.reopenMerchantStore(merchantId);
         }
     }
 
@@ -97,18 +101,34 @@ class BalanceService {
                 `Order fee for #${orderNumber}`
             );
 
-            // If balance is now zero or negative, should suspend
-            if (result.isZero) {
-                await subscriptionRepository.suspendSubscription(
-                    merchantId,
-                    'Deposit balance depleted'
-                );
-            }
+            // Log to subscription history
+            await subscriptionHistoryService.recordOrderFeeDeducted(
+                merchantId,
+                orderId,
+                orderFee,
+                result.balanceBefore,
+                result.newBalance
+            );
 
+            // If balance is now negative, send real-time push notification
+            if (result.isNegative) {
+                try {
+                    await userNotificationService.notifyNegativeBalance(
+                        merchantId,
+                        result.newBalance,
+                        orderNumber,
+                        currency
+                    );
+                    console.log(`[Order ${orderNumber}] Negative balance notification sent to merchant`);
+                } catch (notifyError) {
+                    console.error(`[Order ${orderNumber}] Failed to send negative balance notification:`, notifyError);
+                }
+            }
+            
             return {
                 success: true,
                 newBalance: result.newBalance,
-                shouldSuspend: result.isZero,
+                shouldSuspend: false, // Changed: Don't suspend immediately, let cron handle at midnight
             };
         } catch (error) {
             if (error instanceof Error && error.message === 'Insufficient balance') {

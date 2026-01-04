@@ -7,6 +7,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import {
   FaArrowCircleDown,
   FaArrowCircleUp,
@@ -15,7 +16,11 @@ import {
   FaSync,
   FaTimes,
   FaMoneyBillWave,
+  FaChartLine,
 } from 'react-icons/fa';
+
+// Dynamic import for ApexCharts (SSR disabled)
+const ReactApexChart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
 // Transaction types for filtering
 const TRANSACTION_TYPES = [
@@ -51,6 +56,16 @@ interface Summary {
   _count: number;
 }
 
+interface DailyTrend {
+  date: string;
+  deposits: number;
+  orderFees: number;
+  subscriptions: number;
+  refunds: number;
+  adjustments: number;
+  total: number;
+}
+
 interface Pagination {
   total: number;
   limit: number;
@@ -62,6 +77,8 @@ export default function TransactionsPage() {
   const router = useRouter();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [summary, setSummary] = useState<Summary[]>([]);
+  const [dailyTrends, setDailyTrends] = useState<DailyTrend[]>([]);
+  const [showChart, setShowChart] = useState(true);
   const [pagination, setPagination] = useState<Pagination>({
     total: 0,
     limit: 50,
@@ -113,6 +130,7 @@ export default function TransactionsPage() {
 
       setTransactions(data.data.transactions);
       setSummary(data.data.summary);
+      setDailyTrends(data.data.dailyTrends || []);
       setPagination(data.data.pagination);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -251,6 +269,110 @@ export default function TransactionsPage() {
             );
           })}
         </div>
+
+        {/* Transaction Trends Chart */}
+        {dailyTrends.length > 0 && (
+          <div className="mb-6 rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="flex items-center justify-between border-b border-gray-200 p-4 dark:border-gray-700">
+              <div className="flex items-center gap-2">
+                <FaChartLine className="h-5 w-5 text-blue-500" />
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Transaction Trends (Last 30 Days)
+                </h2>
+              </div>
+              <button
+                onClick={() => setShowChart(!showChart)}
+                className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                {showChart ? 'Hide Chart' : 'Show Chart'}
+              </button>
+            </div>
+            {showChart && (
+              <div className="p-4">
+                <ReactApexChart
+                  type="area"
+                  height={300}
+                  options={{
+                    chart: {
+                      fontFamily: 'Outfit, sans-serif',
+                      type: 'area',
+                      toolbar: { show: false },
+                      zoom: { enabled: false },
+                    },
+                    colors: ['#10b981', '#ef4444', '#3b82f6', '#f59e0b'],
+                    stroke: {
+                      width: 2,
+                      curve: 'smooth',
+                    },
+                    fill: {
+                      type: 'gradient',
+                      gradient: {
+                        shadeIntensity: 1,
+                        opacityFrom: 0.4,
+                        opacityTo: 0.05,
+                        stops: [0, 90, 100],
+                      },
+                    },
+                    dataLabels: { enabled: false },
+                    xaxis: {
+                      categories: dailyTrends.map((d) => {
+                        const date = new Date(d.date);
+                        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                      }),
+                      axisBorder: { show: false },
+                      axisTicks: { show: false },
+                      labels: {
+                        style: { fontSize: '11px' },
+                        rotate: -45,
+                        rotateAlways: dailyTrends.length > 15,
+                      },
+                    },
+                    yaxis: {
+                      labels: {
+                        formatter: (val: number) => {
+                          if (val >= 1000000) return `$${(val / 1000000).toFixed(1)}M`;
+                          if (val >= 1000) return `$${(val / 1000).toFixed(0)}K`;
+                          return `$${Math.round(val)}`;
+                        },
+                      },
+                    },
+                    legend: {
+                      position: 'top',
+                      horizontalAlign: 'right',
+                    },
+                    grid: {
+                      borderColor: '#e5e7eb',
+                      strokeDashArray: 4,
+                    },
+                    tooltip: {
+                      y: {
+                        formatter: (val: number) => `$${val.toLocaleString()}`,
+                      },
+                    },
+                  }}
+                  series={[
+                    {
+                      name: 'Deposits',
+                      data: dailyTrends.map((d) => d.deposits),
+                    },
+                    {
+                      name: 'Order Fees',
+                      data: dailyTrends.map((d) => d.orderFees),
+                    },
+                    {
+                      name: 'Subscriptions',
+                      data: dailyTrends.map((d) => d.subscriptions),
+                    },
+                    {
+                      name: 'Adjustments',
+                      data: dailyTrends.map((d) => Math.abs(d.adjustments)),
+                    },
+                  ]}
+                />
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Search and Filters */}
         <div className="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">

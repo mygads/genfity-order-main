@@ -221,6 +221,56 @@ class NotificationRepository {
 
         return result;
     }
+
+    /**
+     * Get merchants that need monthly subscription expiring notifications
+     * Returns merchants with monthly subscription ending within X days who haven't been notified
+     */
+    async getMerchantsNeedingMonthlyWarning(daysRemaining: number) {
+        const now = new Date();
+        const targetDate = new Date(now.getTime() + daysRemaining * 24 * 60 * 60 * 1000);
+        const startOfTargetDay = new Date(targetDate);
+        startOfTargetDay.setHours(0, 0, 0, 0);
+        const endOfTargetDay = new Date(targetDate);
+        endOfTargetDay.setHours(23, 59, 59, 999);
+
+        // Get merchants with monthly subscription ending on target date
+        const merchants = await prisma.merchantSubscription.findMany({
+            where: {
+                type: 'MONTHLY',
+                status: 'ACTIVE',
+                currentPeriodEnd: {
+                    gte: startOfTargetDay,
+                    lte: endOfTargetDay,
+                },
+            },
+            include: {
+                merchant: {
+                    select: {
+                        id: true,
+                        code: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+            },
+        });
+
+        // Filter out merchants who were already notified
+        const result = [];
+        for (const sub of merchants) {
+            const alreadySent = await this.wasNotificationSentRecently(
+                sub.merchantId,
+                'MONTHLY_EXPIRING' as NotificationType,
+                48 // Don't send same notification within 48 hours
+            );
+            if (!alreadySent) {
+                result.push(sub);
+            }
+        }
+
+        return result;
+    }
 }
 
 const notificationRepository = new NotificationRepository();

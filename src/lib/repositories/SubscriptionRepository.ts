@@ -339,7 +339,7 @@ class SubscriptionRepository {
 
     /**
      * Get merchants with negative balance (deposit mode only)
-     * These should be auto-suspended
+     * These should be auto-suspended at midnight
      */
     async getNegativeBalanceMerchants() {
         // Get deposit mode merchants that are still active
@@ -376,6 +376,69 @@ class SubscriptionRepository {
         }
 
         return result;
+    }
+
+    /**
+     * Close merchant store (set isOpen=false, isManualOverride=true)
+     * Used by cron job for subscription/balance issues
+     */
+    async closeMerchantStore(merchantId: bigint, reason: string) {
+        return prisma.merchant.update({
+            where: { id: merchantId },
+            data: {
+                isOpen: false,
+                isManualOverride: true,
+            },
+        });
+    }
+
+    /**
+     * Reopen merchant store (set isOpen=true, isManualOverride=false)
+     * Used when subscription is reactivated or balance topped up
+     */
+    async reopenMerchantStore(merchantId: bigint) {
+        return prisma.merchant.update({
+            where: { id: merchantId },
+            data: {
+                isOpen: true,
+                isManualOverride: false,
+            },
+        });
+    }
+
+    /**
+     * Get minimum top up required for merchant with negative balance
+     * Returns: abs(negative balance) + minimum deposit
+     */
+    async getMinimumTopUpRequired(merchantId: bigint): Promise<{ minimumAmount: number; currency: string; negativeBalance: number; depositMinimum: number }> {
+        const subscription = await this.getMerchantSubscription(merchantId);
+        if (!subscription) {
+            throw new Error('Subscription not found');
+        }
+
+        const balance = await prisma.merchantBalance.findUnique({
+            where: { merchantId },
+        });
+
+        const currency = subscription.merchant?.currency || 'IDR';
+        const plan = await prisma.subscriptionPlan.findFirst({
+            where: { isActive: true },
+        });
+
+        const depositMinimum = currency === 'AUD' 
+            ? Number(plan?.depositMinimumAud ?? 2)
+            : Number(plan?.depositMinimumIdr ?? 50000);
+
+        const currentBalance = balance ? Number(balance.balance) : 0;
+        const negativeBalance = currentBalance < 0 ? Math.abs(currentBalance) : 0;
+        const minimumAmount = negativeBalance + depositMinimum;
+
+        return {
+            minimumAmount,
+            currency,
+            negativeBalance,
+            depositMinimum,
+        };
     }
 }
 

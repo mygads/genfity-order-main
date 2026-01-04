@@ -99,7 +99,15 @@ async function handleGet(req: NextRequest, context: AuthContext) {
         AND placed_at >= ${startDate}
         AND placed_at <= ${endDate}
     `;
-    const totalSummary = totalSummaryResult[0];
+    const totalSummary = totalSummaryResult[0] || {
+      total_orders: BigInt(0),
+      total_subtotal: 0,
+      total_tax: 0,
+      total_service_charge: 0,
+      total_packaging_fee: 0,
+      grand_total: 0,
+      avg_order_value: 0,
+    };
 
     // 3. Order Status Breakdown
     const orderStatusBreakdown = await prisma.order.groupBy({

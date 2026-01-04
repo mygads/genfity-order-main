@@ -15,6 +15,7 @@ import { useSWRWithAuth, useSWRStatic } from "@/hooks/useSWRWithAuth";
 import { MenuPageSkeleton } from "@/components/common/SkeletonLoaders";
 import { useMerchant } from "@/context/MerchantContext";
 import CreateOptionModal from "@/components/common/CreateOptionModal";
+import ArchiveModal from "@/components/common/ArchiveModal";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { formatCurrency as formatCurrencyUtil } from "@/lib/utils/format";
 
@@ -115,6 +116,7 @@ function MerchantMenuPageContent() {
   // Bulk selection states
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
 
   // Single delete confirmation state
   const [deleteConfirm, setDeleteConfirm] = useState<{
@@ -631,6 +633,16 @@ function MerchantMenuPageContent() {
                   </button>
                 </>
               )}
+              <button
+                onClick={() => setShowArchiveModal(true)}
+                className="inline-flex h-11 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                title={t("common.archiveDescription")}
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                </svg>
+                {t("common.archive")}
+              </button>
               <button
                 onClick={() => {
                   try {
@@ -1278,6 +1290,17 @@ function MerchantMenuPageContent() {
         bulkUploadLabel="Bulk Upload from Excel"
         onSingleCreate={() => router.push('/admin/dashboard/menu/create')}
         onBulkUpload={() => router.push('/admin/dashboard/menu/bulk-upload')}
+      />
+
+      {/* Archive Modal */}
+      <ArchiveModal
+        isOpen={showArchiveModal}
+        onClose={() => setShowArchiveModal(false)}
+        onRestoreSuccess={() => {
+          fetchData();
+          setSuccess('Item restored successfully!');
+          setTimeout(() => setSuccess(null), 3000);
+        }}
       />
     </div>
   );

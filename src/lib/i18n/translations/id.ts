@@ -45,6 +45,8 @@ const id = {
   "common.import": "Impor",
   "common.download": "Unduh",
   "common.upload": "Unggah",
+  "common.archive": "Arsip",
+  "common.restore": "Pulihkan",
   "common.success": "Berhasil",
   "common.error": "Error",
   "common.failed": "Gagal",

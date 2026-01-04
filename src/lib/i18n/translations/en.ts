@@ -51,6 +51,8 @@ const en = {
   "common.import": "Import",
   "common.download": "Download",
   "common.upload": "Upload",
+  "common.archive": "Archive",
+  "common.restore": "Restore",
   "common.success": "Success",
   "common.error": "Error",
   "common.failed": "Failed",

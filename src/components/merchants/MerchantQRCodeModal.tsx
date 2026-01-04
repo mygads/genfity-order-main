@@ -37,7 +37,7 @@ const MerchantQRCodeModal: React.FC<MerchantQRCodeModalProps> = ({
         width: 300,
         margin: 2,
         color: {
-          dark: "#6366f1", // brand-500
+          dark: "#000000", // Black for better scanning
           light: "#ffffff",
         },
         errorCorrectionLevel: "H",
