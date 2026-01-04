@@ -60,11 +60,11 @@ export default function MapContent({ latitude, longitude, onLocationChange, heig
   const center: LatLngExpression = initialPosition || defaultCenter;
 
   return (
-    <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800" style={{ height }}>
+    <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800 relative" style={{ height, zIndex: 1 }}>
       <MapContainer
         center={center}
         zoom={initialPosition ? 15 : 12}
-        style={{ height: '100%', width: '100%' }}
+        style={{ height: '100%', width: '100%', zIndex: 1 }}
         key={`${latitude}-${longitude}`}
       >
         <TileLayer

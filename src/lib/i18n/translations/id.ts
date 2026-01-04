@@ -1025,6 +1025,7 @@ const id = {
   "admin.merchant.feesCharges": "Biaya & Tagihan",
   "admin.merchant.location": "Lokasi",
   "admin.merchant.openingHours": "Jam Buka",
+  "admin.merchant.pin": "PIN",
   "admin.merchant.storeLogo": "Logo Toko",
   "admin.merchant.storeOpen": "Toko Buka",
   "admin.merchant.storeClosed": "Toko Tutup",

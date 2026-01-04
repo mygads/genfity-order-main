@@ -25,6 +25,7 @@ interface Merchant {
   logoUrl?: string;
   address?: string;
   phone?: string;
+  hasDeletePin?: boolean;
 }
 
 interface MerchantContextType {

@@ -17,6 +17,7 @@ import {
   FaEye,
   FaChevronLeft,
   FaChevronRight,
+  FaTrash,
 } from 'react-icons/fa';
 import { OrderStatus, PaymentStatus, OrderType } from '@prisma/client';
 import { exportOrdersToCSV, exportOrdersToExcel } from '@/lib/utils/exportOrders';
@@ -44,6 +45,8 @@ interface Order {
 interface OrderHistoryTableProps {
   orders: Order[];
   onViewOrder?: (orderId: string | number) => void;
+  onDeleteOrder?: (orderId: string | number) => void;
+  hasDeletePin?: boolean;
   loading?: boolean;
 }
 
@@ -94,6 +97,8 @@ const PaymentStatusBadge: React.FC<{ status: PaymentStatus }> = ({ status }) => 
 export const OrderHistoryTable: React.FC<OrderHistoryTableProps> = ({
   orders,
   onViewOrder,
+  onDeleteOrder,
+  hasDeletePin = false,
   loading = false,
 }) => {
   const { currency } = useMerchant();
@@ -388,13 +393,24 @@ export const OrderHistoryTable: React.FC<OrderHistoryTableProps> = ({
                       </div>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={() => onViewOrder?.(order.id)}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                      >
-                        <FaEye />
-                        View
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => onViewOrder?.(order.id)}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                        >
+                          <FaEye />
+                          View
+                        </button>
+                        {hasDeletePin && (
+                          <button
+                            onClick={() => onDeleteOrder?.(order.id)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-error-200 dark:border-error-800 bg-error-50 dark:bg-error-900/20 text-error-600 dark:text-error-400 text-sm hover:bg-error-100 dark:hover:bg-error-900/40 transition-colors"
+                            title="Delete Order"
+                          >
+                            <FaTrash />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))

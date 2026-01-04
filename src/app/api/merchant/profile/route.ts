@@ -51,9 +51,19 @@ async function handleGet(req: NextRequest, authContext: AuthContext) {
       );
     }
 
+    // Add hasDeletePin flag (don't expose the actual PIN)
+    // Map phone to phoneNumber for frontend compatibility
+    const merchantData = serializeBigInt(merchant) as Record<string, unknown>;
+    const { deletePin: _deletePin, phone, ...restMerchantData } = merchantData;
+    const responseData = {
+      ...restMerchantData,
+      phoneNumber: phone || '', // Map phone -> phoneNumber for frontend
+      hasDeletePin: !!merchant.deletePin,
+    };
+
     return NextResponse.json({
       success: true,
-      data: serializeBigInt(merchant),
+      data: responseData,
       message: 'Merchant profile retrieved successfully',
       statusCode: 200,
     });

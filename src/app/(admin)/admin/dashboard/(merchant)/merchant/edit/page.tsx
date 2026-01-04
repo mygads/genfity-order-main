@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import dynamic from "next/dynamic";
+import { FaKey, FaEye, FaEyeSlash } from "react-icons/fa";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import AdminFormFooter from "@/components/common/AdminFormFooter";
 import TabsNavigation from "@/components/common/TabsNavigation";
@@ -68,6 +69,7 @@ const TAB_KEYS: Array<{ id: string; key: TranslationKeys }> = [
   { id: "fees", key: "admin.merchant.feesCharges" },
   { id: "location", key: "admin.merchant.location" },
   { id: "hours", key: "admin.merchant.openingHours" },
+  { id: "pin", key: "admin.merchant.pin" },
 ];
 
 /**
@@ -98,6 +100,13 @@ export default function EditMerchantPage() {
   // Collapsible sections
   const [showCustomLabels, setShowCustomLabels] = useState(false);
   const [showModeSchedules, setShowModeSchedules] = useState(false);
+
+  // PIN state
+  const [deletePin, setDeletePin] = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
+  const [hasExistingPin, setHasExistingPin] = useState(false);
+  const [showPin, setShowPin] = useState(false);
+  const [savingPin, setSavingPin] = useState(false);
 
   const [formData, setFormData] = useState<MerchantFormData>({
     name: "",
@@ -201,6 +210,9 @@ export default function EditMerchantPage() {
         enablePackagingFee: merchant.enablePackagingFee || false,
         packagingFeeAmount: merchant.packagingFeeAmount ? parseFloat(merchant.packagingFeeAmount) : 0,
       });
+
+      // Set PIN status
+      setHasExistingPin(!!merchant.hasDeletePin);
 
       // Set opening hours if available
       if (merchant.openingHours && Array.isArray(merchant.openingHours)) {
@@ -460,11 +472,7 @@ export default function EditMerchantPage() {
       setOriginalOpeningHours(JSON.parse(JSON.stringify(openingHours)));
 
       showSuccess("Success", "Merchant information updated successfully!");
-
-      // Refresh page to update navbar/currency display throughout the app
-      setTimeout(() => {
-        window.location.reload();
-      }, 500); // Small delay to show success toast
+      // Stay on the current tab - no reload needed
     } catch (err) {
       showError("Error", err instanceof Error ? err.message : "Failed to update merchant");
     } finally {
@@ -533,8 +541,9 @@ export default function EditMerchantPage() {
         <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
           {t("admin.merchantEdit.bannerDesc")}
         </p>
-        <div className="flex flex-col gap-3">
-          <div className="relative h-32 w-full overflow-hidden rounded-lg border-2 border-gray-200 dark:border-gray-700">
+        <div className="flex flex-col sm:flex-row gap-4 items-start">
+          {/* Banner Preview - 2:1 aspect ratio */}
+          <div className="relative w-full sm:flex-1 overflow-hidden rounded-lg border-2 border-gray-200 dark:border-gray-700" style={{ aspectRatio: '2/1' }}>
             {formData.bannerUrl ? (
               <Image
                 src={formData.bannerUrl}
@@ -553,7 +562,8 @@ export default function EditMerchantPage() {
               </div>
             )}
           </div>
-          <div>
+          {/* Upload Button - on right for desktop, below for mobile */}
+          <div className="flex flex-col items-start">
             <input
               ref={bannerInputRef}
               type="file"
@@ -565,7 +575,7 @@ export default function EditMerchantPage() {
               type="button"
               onClick={() => bannerInputRef.current?.click()}
               disabled={uploadingBanner}
-              className="inline-flex h-9 items-center rounded-lg bg-gray-100 px-4 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+              className="inline-flex h-10 items-center rounded-lg bg-brand-500 px-4 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
             >
               {uploadingBanner ? t("admin.merchantEdit.uploadingBanner") : t("admin.merchantEdit.changeBanner")}
             </button>
@@ -1200,6 +1210,194 @@ export default function EditMerchantPage() {
     </div>
   );
 
+  /**
+   * PIN Tab - Delete PIN management
+   */
+  const handleSavePin = async () => {
+    if (deletePin.length !== 4 || !/^\d{4}$/.test(deletePin)) {
+      showError("Invalid PIN", "PIN must be exactly 4 digits");
+      return;
+    }
+    if (deletePin !== confirmPin) {
+      showError("PIN Mismatch", "PIN and confirmation do not match");
+      return;
+    }
+
+    setSavingPin(true);
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) {
+        router.push("/admin/login");
+        return;
+      }
+
+      const response = await fetch("/api/merchant/delete-pin", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ pin: deletePin }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to save PIN");
+      }
+
+      showSuccess("Success", hasExistingPin ? "PIN updated successfully" : "PIN set successfully");
+      setHasExistingPin(true);
+      setDeletePin("");
+      setConfirmPin("");
+    } catch (err) {
+      showError("Error", err instanceof Error ? err.message : "Failed to save PIN");
+    } finally {
+      setSavingPin(false);
+    }
+  };
+
+  const handleRemovePin = async () => {
+    if (!confirm("Are you sure you want to remove the delete PIN? Orders can be deleted without verification.")) {
+      return;
+    }
+
+    setSavingPin(true);
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) {
+        router.push("/admin/login");
+        return;
+      }
+
+      const response = await fetch("/api/merchant/delete-pin", {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to remove PIN");
+      }
+
+      showSuccess("Success", "PIN removed successfully");
+      setHasExistingPin(false);
+      setDeletePin("");
+      setConfirmPin("");
+    } catch (err) {
+      showError("Error", err instanceof Error ? err.message : "Failed to remove PIN");
+    } finally {
+      setSavingPin(false);
+    }
+  };
+
+  const PinTab = () => (
+    <div className="space-y-6">
+      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-100 dark:bg-brand-900/20">
+            <FaKey className="h-5 w-5 text-brand-600 dark:text-brand-400" />
+          </div>
+          <div>
+            <h4 className="text-sm font-medium text-gray-900 dark:text-white">
+              Delete PIN Protection
+            </h4>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Set a 4-digit PIN to protect order deletion. When enabled, staff must enter this PIN before deleting any order.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {hasExistingPin && (
+        <div className="rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-900/20">
+          <div className="flex items-center gap-2">
+            <svg className="h-5 w-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="text-sm font-medium text-green-700 dark:text-green-400">
+              Delete PIN is currently enabled
+            </span>
+          </div>
+          <p className="mt-2 text-sm text-green-600 dark:text-green-500">
+            Enter a new PIN below to change it, or click Remove PIN to disable.
+          </p>
+        </div>
+      )}
+
+      <div className="space-y-4">
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            {hasExistingPin ? "New PIN" : "Set PIN"} <span className="text-red-500">*</span>
+          </label>
+          <div className="relative">
+            <input
+              type={showPin ? "text" : "password"}
+              value={deletePin}
+              onChange={(e) => {
+                const val = e.target.value.replace(/\D/g, '').slice(0, 4);
+                setDeletePin(val);
+              }}
+              placeholder="Enter 4-digit PIN"
+              maxLength={4}
+              className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 pr-12 text-lg tracking-widest text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPin(!showPin)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            >
+              {showPin ? <FaEyeSlash className="h-5 w-5" /> : <FaEye className="h-5 w-5" />}
+            </button>
+          </div>
+          <p className="mt-1 text-xs text-gray-500">Numbers only, exactly 4 digits</p>
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Confirm PIN <span className="text-red-500">*</span>
+          </label>
+          <input
+            type={showPin ? "text" : "password"}
+            value={confirmPin}
+            onChange={(e) => {
+              const val = e.target.value.replace(/\D/g, '').slice(0, 4);
+              setConfirmPin(val);
+            }}
+            placeholder="Confirm 4-digit PIN"
+            maxLength={4}
+            className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-lg tracking-widest text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+          />
+          {confirmPin && deletePin !== confirmPin && (
+            <p className="mt-1 text-xs text-red-500">PINs do not match</p>
+          )}
+        </div>
+
+        <div className="flex gap-3 pt-2">
+          <button
+            type="button"
+            onClick={handleSavePin}
+            disabled={savingPin || deletePin.length !== 4 || deletePin !== confirmPin}
+            className="inline-flex h-10 items-center rounded-lg bg-brand-500 px-4 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {savingPin ? "Saving..." : hasExistingPin ? "Update PIN" : "Set PIN"}
+          </button>
+          {hasExistingPin && (
+            <button
+              type="button"
+              onClick={handleRemovePin}
+              disabled={savingPin}
+              className="inline-flex h-10 items-center rounded-lg border border-red-300 px-4 text-sm font-medium text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
+            >
+              Remove PIN
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
   // ==================== RENDER ACTIVE TAB CONTENT ====================
 
   const renderTabContent = () => {
@@ -1214,6 +1412,8 @@ export default function EditMerchantPage() {
         return <LocationTab />;
       case "hours":
         return <OpeningHoursTab />;
+      case "pin":
+        return <PinTab />;
       default:
         return <BasicInfoTab />;
     }

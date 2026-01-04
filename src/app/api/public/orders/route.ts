@@ -545,33 +545,53 @@ export async function POST(req: NextRequest) {
     // ========================================
 
     /**
-     * ✅ SIMPLIFIED: Shorter order number format
-     * Format: ORD-YYYYMMDD-XXXX
-     * - YYYYMMDD: Date
-     * - XXXX: Sequence + random suffix for uniqueness
+     * ✅ SIMPLIFIED: 4-character alphanumeric order number
+     * Format: A1BC (4 chars, A-Z + 0-9)
+     * - Easy to read/communicate verbally
+     * - Unique per merchant per day (resets daily)
      */
     const generateOrderNumber = async (merchantId: bigint): Promise<string> => {
-      const today = new Date();
-      const dateStr = today.toISOString().split('T')[0].replace(/-/g, '');
+      const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      const maxRetries = 10;
+      let attempt = 0;
 
-      const todayStart = new Date(today);
-      todayStart.setHours(0, 0, 0, 0);
-      const todayEnd = new Date(today);
-      todayEnd.setHours(23, 59, 59, 999);
+      while (attempt < maxRetries) {
+        // Generate 4-character alphanumeric code
+        let orderNumber = '';
+        for (let i = 0; i < 4; i++) {
+          orderNumber += characters.charAt(Math.floor(Math.random() * characters.length));
+        }
 
-      const orderCount = await prisma.order.count({
-        where: {
-          merchantId: merchantId,
-          placedAt: {
-            gte: todayStart,
-            lte: todayEnd,
+        // Check if this order number already exists for this merchant (today only)
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const todayEnd = new Date();
+        todayEnd.setHours(23, 59, 59, 999);
+
+        const existingOrder = await prisma.order.findFirst({
+          where: {
+            merchantId: merchantId,
+            orderNumber: orderNumber,
+            placedAt: {
+              gte: todayStart,
+              lte: todayEnd,
+            },
           },
-        },
-      });
+        });
 
-      const sequenceNumber = String(orderCount + 1).padStart(4, '0');
-      const randomSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-      return `ORD-${dateStr}-${sequenceNumber}${randomSuffix}`;
+        if (!existingOrder) {
+          console.log(`📝 [ORDER] Generated unique order number: ${orderNumber} (attempt ${attempt + 1})`);
+          return orderNumber;
+        }
+
+        attempt++;
+        console.warn(`⚠️ [ORDER] Order number ${orderNumber} collision, retrying... (attempt ${attempt})`);
+      }
+
+      // Fallback: add timestamp suffix if all retries fail
+      const fallback = `${Date.now().toString(36).slice(-4).toUpperCase()}`;
+      console.warn(`⚠️ [ORDER] Max retries reached, using fallback: ${fallback}`);
+      return fallback;
     };
 
     const orderNumber = await generateOrderNumber(merchant.id);

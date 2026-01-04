@@ -11,10 +11,12 @@ import { useRouter } from 'next/navigation';
 import { FaHistory } from 'react-icons/fa';
 import OrderHistoryTable from '@/components/orders/OrderHistoryTable';
 import { OrderDetailModal } from '@/components/orders/OrderDetailModal';
+import { DeletePinModal } from '@/components/modals/DeletePinModal';
 import DateRangeFilter, { DateRange } from '@/components/orders/DateRangeFilter';
 import type { OrderStatus, OrderType } from '@prisma/client';
 import { useMerchant } from '@/context/MerchantContext';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import { useToast } from '@/context/ToastContext';
 
 // ===== TYPES =====
 
@@ -38,12 +40,17 @@ interface OrderData {
 export default function OrderHistoryPage() {
   const router = useRouter();
   const { t } = useTranslation();
+  const { showSuccess, showError } = useToast();
   const [loading, setLoading] = useState(true);
   const [orderData, setOrderData] = useState<OrderData | null>(null);
   const [_merchant, setMerchant] = useState<{ currency: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [hasDeletePin, setHasDeletePin] = useState(false);
+  const [deleteOrderId, setDeleteOrderId] = useState<string | null>(null);
+  const [deleteOrderNumber, setDeleteOrderNumber] = useState<string | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   // Date range (default: last 30 days)
   const [dateRange, setDateRange] = useState<DateRange>({
@@ -57,6 +64,8 @@ export default function OrderHistoryPage() {
   React.useEffect(() => {
     if (merchantData) {
       setMerchant(merchantData);
+      // Check if merchant has delete PIN
+      setHasDeletePin(!!merchantData.hasDeletePin);
     }
   }, [merchantData]);
 
@@ -118,6 +127,49 @@ export default function OrderHistoryPage() {
     fetchOrders();
   };
 
+  const handleDeleteOrder = (orderId: string | number) => {
+    const order = orderData?.orders.find((o) => String(o.id) === String(orderId));
+    setDeleteOrderId(String(orderId));
+    setDeleteOrderNumber(order?.orderNumber || null);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async (pin: string) => {
+    if (!deleteOrderId) return;
+
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      throw new Error('Not authenticated');
+    }
+
+    const response = await fetch(`/api/merchant/orders/${deleteOrderId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ pin }),
+    });
+
+    const data = await response.json();
+
+    if (!data.success) {
+      throw new Error(data.message || 'Failed to delete order');
+    }
+
+    showSuccess('Order deleted successfully');
+    setIsDeleteModalOpen(false);
+    setDeleteOrderId(null);
+    setDeleteOrderNumber(null);
+    fetchOrders();
+  };
+
+  const handleCloseDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+    setDeleteOrderId(null);
+    setDeleteOrderNumber(null);
+  };
+
   return (
     <div>
       {/* Title Section */}
@@ -145,6 +197,8 @@ export default function OrderHistoryPage() {
         <OrderHistoryTable
           orders={orderData.orders}
           onViewOrder={handleViewOrder}
+          onDeleteOrder={handleDeleteOrder}
+          hasDeletePin={hasDeletePin}
           loading={loading}
         />
       )}
@@ -187,6 +241,14 @@ export default function OrderHistoryPage() {
           onUpdate={handleCloseModal}
         />
       )}
+
+      {/* Delete PIN Modal */}
+      <DeletePinModal
+        isOpen={isDeleteModalOpen}
+        onClose={handleCloseDeleteModal}
+        onConfirm={handleConfirmDelete}
+        orderNumber={deleteOrderNumber || undefined}
+      />
     </div>
   );
 }

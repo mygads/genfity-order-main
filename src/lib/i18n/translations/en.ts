@@ -1031,6 +1031,7 @@ const en = {
   "admin.merchant.feesCharges": "Fees & Charges",
   "admin.merchant.location": "Location",
   "admin.merchant.openingHours": "Opening Hours",
+  "admin.merchant.pin": "PIN",
   "admin.merchant.storeLogo": "Store Logo",
   "admin.merchant.storeOpen": "Store Open",
   "admin.merchant.storeClosed": "Store Closed",

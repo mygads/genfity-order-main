@@ -236,6 +236,8 @@ model Merchant {
   pushSubscriptions      PushSubscription[]
   // Referral tracking
   referralCodeUsed       String?               @map("referral_code_used")
+  // PIN for order deletion (4 digits, hashed)
+  deletePin              String?               @map("delete_pin")
   // Group Order relation
   groupOrderSessions     GroupOrderSession[]
 

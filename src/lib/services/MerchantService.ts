@@ -153,11 +153,26 @@ class MerchantService {
       }
     }
 
-    // Check merchant code uniqueness
-    const codeExists = await merchantRepository.codeExists(input.code);
+    // Check merchant code uniqueness and auto-regenerate if collision
+    let merchantCode = input.code;
+    let codeExists = await merchantRepository.codeExists(merchantCode);
+    let attempts = 0;
+    const maxAttempts = 10;
+    
+    while (codeExists && attempts < maxAttempts) {
+      // Generate a new unique code by adding random characters
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      merchantCode = '';
+      for (let i = 0; i < 4; i++) {
+        merchantCode += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      codeExists = await merchantRepository.codeExists(merchantCode);
+      attempts++;
+    }
+    
     if (codeExists) {
       throw new ConflictError(
-        'Merchant code already exists',
+        'Unable to generate unique merchant code. Please try again.',
         ERROR_CODES.MERCHANT_CODE_EXISTS
       );
     }
@@ -189,7 +204,7 @@ class MerchantService {
     const merchant = await merchantRepository.createWithUser(
       {
         name: input.name,
-        code: input.code,
+        code: merchantCode, // Use the validated/regenerated code
         description: input.description,
         address: input.address,
         phone: input.phoneNumber, // Map phoneNumber to phone (Prisma field)

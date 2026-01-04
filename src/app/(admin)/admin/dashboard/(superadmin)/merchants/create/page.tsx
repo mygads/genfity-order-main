@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
@@ -9,6 +9,36 @@ import { COUNTRIES, CURRENCIES, TIMEZONES } from "@/lib/constants/location";
 
 // Dynamically import map component
 const MapLocationPicker = dynamic(() => import("@/components/maps/MapLocationPicker"), { ssr: false });
+
+/**
+ * Generate a 4-character uppercase code (A-Z only)
+ * Uses name characters if provided, otherwise random
+ */
+function generateMerchantCode(name: string): string {
+  // Clean the name - remove non-alphabetic characters and convert to uppercase
+  const cleanName = name.replace(/[^a-zA-Z]/g, '').toUpperCase();
+  
+  if (cleanName.length >= 4) {
+    // Use first 4 characters of the cleaned name
+    return cleanName.substring(0, 4);
+  } else if (cleanName.length > 0) {
+    // Pad with random letters if name is shorter than 4 characters
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    let code = cleanName;
+    while (code.length < 4) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
+  } else {
+    // Generate random 4 letter code if no valid name characters
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    let code = '';
+    for (let i = 0; i < 4; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
+  }
+}
 
 interface MerchantFormData {
   name: string;
@@ -34,6 +64,7 @@ export default function CreateMerchantPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [generatedCode, setGeneratedCode] = useState<string>("");
   
   const [formData, setFormData] = useState<MerchantFormData>({
     name: "",
@@ -52,6 +83,18 @@ export default function CreateMerchantPage() {
     latitude: null,
     longitude: null,
   });
+
+  // Auto-generate code when name has at least 4 characters
+  useEffect(() => {
+    if (formData.name.replace(/[^a-zA-Z]/g, '').length >= 4) {
+      const code = generateMerchantCode(formData.name);
+      setGeneratedCode(code);
+      setFormData(prev => ({ ...prev, code }));
+    } else if (formData.name.length === 0) {
+      setGeneratedCode("");
+      setFormData(prev => ({ ...prev, code: "" }));
+    }
+  }, [formData.name]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -166,17 +209,28 @@ export default function CreateMerchantPage() {
 
               <div>
                 <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Merchant Code <span className="text-error-500">*</span>
+                  Merchant Code <span className="text-xs text-gray-500">(auto-generated)</span>
                 </label>
-                <input
-                  type="text"
-                  name="code"
-                  value={formData.code}
-                  onChange={handleChange}
-                  required
-                  className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 font-mono text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                  placeholder="e.g., REST001"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    name="code"
+                    value={generatedCode}
+                    readOnly
+                    className="h-11 w-full rounded-lg border border-gray-200 bg-gray-50 px-4 font-mono text-sm text-gray-800 dark:border-gray-800 dark:bg-gray-800 dark:text-white/90 cursor-not-allowed"
+                    placeholder="Auto-generated from name"
+                  />
+                  {generatedCode && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <span className="inline-flex items-center rounded-full bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-700 dark:bg-brand-900/30 dark:text-brand-400">
+                        Auto
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Enter at least 4 letters in merchant name to generate code
+                </p>
               </div>
             </div>
 
