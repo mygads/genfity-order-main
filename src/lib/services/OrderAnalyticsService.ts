@@ -251,6 +251,7 @@ export class OrderAnalyticsService {
     >();
 
     orderItems.forEach((item) => {
+      if (!item.menuId) return; // Skip items without menuId
       const menuId = item.menuId.toString();
       const existing = menuMap.get(menuId);
 

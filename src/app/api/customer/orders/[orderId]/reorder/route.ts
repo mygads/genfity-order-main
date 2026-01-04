@@ -142,7 +142,9 @@ export async function GET(
     }
 
     // Build re-order items with availability check
-    const reorderItems = order.orderItems.map((item: typeof order.orderItems[0]) => {
+    const reorderItems = order.orderItems
+      .filter((item: typeof order.orderItems[0]) => item.menuId !== null)
+      .map((item: typeof order.orderItems[0]) => {
       const menu = item.menu;
 
       // Check menu availability
@@ -178,7 +180,7 @@ export async function GET(
       });
 
       return {
-        menuId: item.menuId.toString(),
+        menuId: item.menuId!.toString(),
         menuName: item.menuName,
         originalPrice: decimalToNumber(item.menuPrice),
         currentPrice: menu ? decimalToNumber(menu.price) : null,
@@ -201,8 +203,8 @@ export async function GET(
     });
 
     // Calculate summary
-    const availableItems = reorderItems.filter((item: { isAvailable: boolean; allAddonsAvailable: boolean }) => item.isAvailable && item.allAddonsAvailable);
-    const unavailableItems = reorderItems.filter((item: { isAvailable: boolean; allAddonsAvailable: boolean }) => !item.isAvailable || !item.allAddonsAvailable);
+    const availableItems = reorderItems.filter((item) => item.isAvailable && item.allAddonsAvailable);
+    const unavailableItems = reorderItems.filter((item) => !item.isAvailable || !item.allAddonsAvailable);
 
     return NextResponse.json({
       success: true,

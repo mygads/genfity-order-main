@@ -83,6 +83,7 @@ export class MenuRepository {
     const results = await prisma.menu.findMany({
       where: {
         merchantId,
+        deletedAt: null, // ✅ Filter out soft-deleted items
         // ✅ NEW: Use many-to-many relationship
         ...(categoryId && {
           categories: {
@@ -206,14 +207,30 @@ export class MenuRepository {
     return serializeData(result);
   }
 
+  /**
+   * Soft delete menu (sets deletedAt timestamp)
+   * Also removes category relationships to keep data clean
+   */
   async deleteMenu(id: bigint, deletedByUserId?: bigint) {
-    const result = await prisma.menu.update({
-      where: { id },
-      data: {
-        deletedAt: new Date(),
-        deletedByUserId,
-      },
+    // Use transaction to ensure both operations complete
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Remove all category relationships first
+      await tx.menuCategoryItem.deleteMany({
+        where: { menuId: id },
+      });
+
+      // 2. Soft delete the menu
+      const menu = await tx.menu.update({
+        where: { id },
+        data: {
+          deletedAt: new Date(),
+          deletedByUserId,
+        },
+      });
+
+      return menu;
     });
+
     return serializeData(result);
   }
 
@@ -262,6 +279,16 @@ export class MenuRepository {
   async removeAllMenuCategories(menuId: bigint) {
     const result = await prisma.menuCategoryItem.deleteMany({
       where: { menuId },
+    });
+    return serializeData(result);
+  }
+
+  /**
+   * Remove a category from ALL menus (used when deleting a category)
+   */
+  async removeCategoryFromAllMenus(categoryId: bigint) {
+    const result = await prisma.menuCategoryItem.deleteMany({
+      where: { categoryId },
     });
     return serializeData(result);
   }
@@ -351,6 +378,16 @@ export class MenuRepository {
         deletedAt: new Date(),
         deletedByUserId,
       },
+    });
+    return serializeData(result);
+  }
+
+  /**
+   * Remove an addon category from ALL menus (used when deleting addon category)
+   */
+  async removeAddonCategoryFromAllMenus(addonCategoryId: bigint) {
+    const result = await prisma.menuAddonCategory.deleteMany({
+      where: { addonCategoryId },
     });
     return serializeData(result);
   }

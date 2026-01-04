@@ -343,6 +343,7 @@ export class OrderManagementService {
     const averageOrderValue = totalOrders > 0 ? totalRevenue / completedPayments : 0;
 
     const itemCounts = orders.flatMap(o => o.orderItems).reduce((acc, item) => {
+      if (!item.menuId) return acc; // Skip items without menuId
       const key = item.menuId.toString();
       if (!acc[key]) {
         acc[key] = {

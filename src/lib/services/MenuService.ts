@@ -156,6 +156,8 @@ class MenuService {
 
   /**
    * Delete menu category
+   * This will remove the category from all associated menu items first,
+   * then soft delete the category
    */
   async deleteCategory(categoryId: bigint, userId?: bigint): Promise<void> {
     // Validate category exists
@@ -167,15 +169,10 @@ class MenuService {
       );
     }
 
-    // Check if category has menus
-    const menus = await menuRepository.findAllMenus(existing.merchantId, categoryId, true);
-    if (menus.length > 0) {
-      throw new ConflictError(
-        'Cannot delete category with existing menu items',
-        ERROR_CODES.CONFLICT
-      );
-    }
+    // Remove category from all menu items first (remove the relationship, not the menu)
+    await menuRepository.removeCategoryFromAllMenus(categoryId);
 
+    // Now delete the category (soft delete)
     await menuRepository.deleteCategory(categoryId, userId);
   }
 
@@ -325,7 +322,8 @@ class MenuService {
   }
 
   /**
-   * Delete menu item
+   * Delete menu item (soft delete)
+   * Sets deletedAt timestamp and removes category relationships
    */
   async deleteMenu(menuId: bigint, userId?: bigint): Promise<void> {
     // Validate menu exists
@@ -602,15 +600,10 @@ class MenuService {
       );
     }
 
-    // Check if category has items
-    const items = await menuRepository.findAddonItemsByCategoryId(categoryId);
-    if (items.length > 0) {
-      throw new ConflictError(
-        'Cannot delete addon category with existing items',
-        ERROR_CODES.CONFLICT
-      );
-    }
+    // Remove this addon category from all menus first
+    await menuRepository.removeAddonCategoryFromAllMenus(categoryId);
 
+    // Now soft delete the addon category
     await menuRepository.deleteAddonCategory(categoryId, userId);
   }
 

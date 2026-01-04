@@ -215,8 +215,10 @@ async function handleGet(req: NextRequest, context: AuthContext) {
           count: item._count.id,
           revenue: Number(item._sum.totalAmount) || 0,
         })),
-        topMenuItems: topMenuItems.map(item => ({
-          menuId: item.menuId.toString(),
+        topMenuItems: topMenuItems
+          .filter(item => item.menuId !== null)
+          .map(item => ({
+          menuId: item.menuId!.toString(),
           menuName: item.menuName,
           totalQuantity: item._sum.quantity || 0,
           totalRevenue: Number(item._sum.subtotal) || 0,

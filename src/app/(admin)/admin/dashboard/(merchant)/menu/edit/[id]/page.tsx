@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import AdminFormFooter from "@/components/common/AdminFormFooter";
 import { FormPageSkeleton } from '@/components/common/SkeletonLoaders';
@@ -70,9 +70,14 @@ interface Category {
 export default function EditMenuPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const menuId = params.id as string;
+  const returnPage = searchParams.get('returnPage');
   const { currency } = useMerchant();
   const currencySymbol = getCurrencySymbol(currency);
+
+  // Build return URL with pagination
+  const menuListUrl = returnPage ? `/admin/dashboard/menu?page=${returnPage}` : '/admin/dashboard/menu';
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -396,7 +401,7 @@ export default function EditMenuPage() {
         });
       }
 
-      router.push("/admin/dashboard/menu");
+      router.push(menuListUrl);
 
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
@@ -969,7 +974,7 @@ export default function EditMenuPage() {
 
           {/* Fixed Footer */}
           <AdminFormFooter
-            onCancel={() => router.push("/admin/dashboard/menu")}
+            onCancel={() => router.push(menuListUrl)}
             isSubmitting={submitting}
             submitLabel="Update Menu Item"
             submittingLabel="Updating..."

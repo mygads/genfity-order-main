@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useCallback, useEffect, useRef, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState, useCallback, useEffect, useRef, useMemo, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import ViewAddonItemsModal from "@/components/addon-categories/ViewAddonItemsModal";
 import MenuRelationshipModal from "@/components/addon-categories/MenuRelationshipModal";
 import EmptyState from "@/components/ui/EmptyState";
@@ -49,8 +49,9 @@ interface AddonCategoriesApiResponse {
   data: AddonCategory[];
 }
 
-export default function AddonCategoriesPage() {
+function AddonCategoriesPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useTranslation();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -94,11 +95,26 @@ export default function AddonCategoriesPage() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
+  // Initialize pagination from URL search params
+  const initialPage = parseInt(searchParams.get('page') || '1', 10);
+
   // Pagination & Filter states
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(initialPage);
   const [itemsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+
+  // Update URL when page changes (for persistence)
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (currentPage > 1) {
+      params.set('page', currentPage.toString());
+    } else {
+      params.delete('page');
+    }
+    const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
+    window.history.replaceState(null, '', newUrl);
+  }, [currentPage, searchParams]);
 
   // SWR hooks for data fetching with caching
   const {
@@ -1006,5 +1022,14 @@ export default function AddonCategoriesPage() {
       </div>
 
     </div>
+  );
+}
+
+// Export with Suspense wrapper for useSearchParams
+export default function AddonCategoriesPage() {
+  return (
+    <Suspense fallback={<CategoriesPageSkeleton />}>
+      <AddonCategoriesPageContent />
+    </Suspense>
   );
 }

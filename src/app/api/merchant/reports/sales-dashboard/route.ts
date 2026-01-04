@@ -174,6 +174,7 @@ async function handler(
 
     completedOrders.forEach(order => {
       order.orderItems.forEach(item => {
+        if (!item.menuId) return; // Skip items without menuId
         const key = item.menuId.toString();
         const existing = itemSalesMap.get(key) || {
           menuId: key,

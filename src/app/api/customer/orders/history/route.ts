@@ -178,7 +178,7 @@ export async function GET(request: NextRequest) {
       },
       items: order.orderItems.map((item) => ({
         id: item.id.toString(),
-        menuId: item.menuId.toString(),
+        menuId: item.menuId?.toString() || null,
         menuName: item.menuName,
         menuPrice: decimalToNumber(item.menuPrice),
         quantity: item.quantity,

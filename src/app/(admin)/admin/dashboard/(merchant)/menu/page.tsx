@@ -1035,7 +1035,7 @@ function MerchantMenuPageContent() {
                                     {t("admin.menu.manageCategories")}
                                   </button>
                                   <Link
-                                    href={`/admin/dashboard/menu/edit/${item.id}`}
+                                    href={`/admin/dashboard/menu/edit/${item.id}${currentPage > 1 ? `?returnPage=${currentPage}` : ''}`}
                                     className="flex w-full items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
                                     onClick={() => setOpenDropdownId(null)}
                                   >
