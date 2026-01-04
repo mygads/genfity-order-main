@@ -63,6 +63,7 @@ async function getHandler(request: NextRequest, authContext: AuthContext) {
       orderBy: [
         { category: 'asc' },
         { createdAt: 'desc' },
+        { id: 'asc' }, // Stable tie-breaker for consistent ordering
       ],
       skip: offset,
       take: limit,

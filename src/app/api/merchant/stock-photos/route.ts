@@ -61,6 +61,7 @@ async function getHandler(request: NextRequest, _authContext: AuthContext) {
         { category: 'asc' },
         { usageCount: 'desc' },
         { createdAt: 'desc' },
+        { id: 'asc' }, // Stable tie-breaker for consistent ordering
       ],
       skip: offset,
       take: limit,

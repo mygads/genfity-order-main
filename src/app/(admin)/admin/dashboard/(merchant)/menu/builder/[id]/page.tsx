@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import MenuBuilderTabs from '@/components/menu/MenuBuilderTabs';
 import { MenuBuilderSkeleton } from '@/components/common/SkeletonLoaders';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import { useToast } from '@/context/ToastContext';
 
 /**
  * Menu Builder Page
@@ -60,6 +61,7 @@ export default function MenuBuilderPage() {
   const router = useRouter();
   const params = useParams();
   const { t } = useTranslation();
+  const { showSuccess, showError } = useToast();
   const menuId = params.id === 'new' ? null : params.id ? parseInt(params.id as string) : null;
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -67,6 +69,7 @@ export default function MenuBuilderPage() {
   const [initialData, setInitialData] = useState<MenuFormData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -133,7 +136,7 @@ export default function MenuBuilderPage() {
       }
     } catch (error) {
       console.error('Error fetching data:', error);
-      alert(t('admin.menuBuilder.loadingError'));
+      showError(t('admin.menuBuilder.loadingError'));
     } finally {
       setIsLoading(false);
     }
@@ -182,20 +185,18 @@ export default function MenuBuilderPage() {
         throw new Error(responseData.message || t('admin.menuBuilder.saveFailed'));
       }
       
-      alert(t('admin.menuBuilder.saveSuccess'));
+      showSuccess(t('admin.menuBuilder.saveSuccess'));
       router.push('/admin/dashboard/menu');
     } catch (error) {
       console.error('Error saving menu:', error);
-      alert(error instanceof Error ? error.message : t('admin.menuBuilder.saveFailed'));
+      showError(error instanceof Error ? error.message : t('admin.menuBuilder.saveFailed'));
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleCancel = () => {
-    if (confirm(t('admin.menuBuilder.cancelConfirm'))) {
-      router.push('/admin/dashboard/menu');
-    }
+    setShowCancelConfirm(true);
   };
 
   if (isLoading) {
@@ -225,6 +226,48 @@ export default function MenuBuilderPage() {
         onCancel={handleCancel}
         isLoading={isSaving}
       />
+
+      {/* Cancel Confirmation Modal */}
+      {showCancelConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-lg dark:border-gray-800 dark:bg-gray-900">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-warning-100 dark:bg-warning-900/20">
+                <svg className="h-6 w-6 text-warning-600 dark:text-warning-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {t('admin.menuBuilder.cancelConfirmTitle') || 'Discard Changes?'}
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {t('admin.menuBuilder.cancelConfirmSubtitle') || 'Your unsaved changes will be lost'}
+                </p>
+              </div>
+            </div>
+
+            <p className="mb-6 text-sm text-gray-700 dark:text-gray-300">
+              {t('admin.menuBuilder.cancelConfirm') || 'Are you sure you want to cancel? All unsaved changes will be lost.'}
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowCancelConfirm(false)}
+                className="flex-1 h-11 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                {t('common.keepEditing') || 'Keep Editing'}
+              </button>
+              <button
+                onClick={() => router.push('/admin/dashboard/menu')}
+                className="flex-1 h-11 rounded-lg bg-error-600 text-sm font-medium text-white hover:bg-error-700"
+              >
+                {t('common.discardChanges') || 'Discard Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -91,6 +91,20 @@ async function handlePost(
     const params = await routeContext.params;
     const categoryId = BigInt(params.id);
     const body = await req.json();
+    
+    // Validate menuId is provided
+    if (!body.menuId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'VALIDATION_ERROR',
+          message: 'Menu ID is required',
+          statusCode: 400,
+        },
+        { status: 400 }
+      );
+    }
+    
     const menuId = BigInt(body.menuId);
 
     // Get merchant

@@ -150,8 +150,9 @@ async function handleDelete(
     const { merchantId, userId } = context;
 
     // Verify menu belongs to this merchant
+    // Note: menu.merchantId is serialized to string, so we need to compare with String(merchantId)
     const menu = await menuService.getMenuWithAddons(menuId);
-    if (!menu || menu.merchantId !== merchantId) {
+    if (!menu || String(menu.merchantId) !== String(merchantId)) {
       return NextResponse.json(
         {
           success: false,

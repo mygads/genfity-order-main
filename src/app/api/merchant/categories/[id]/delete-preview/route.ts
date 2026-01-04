@@ -88,6 +88,10 @@ async function handleGet(
           id: serializeBigInt(category.id),
           name: category.name,
         },
+        // Legacy field names for frontend compatibility
+        menuItemsCount: uniqueMenus.length,
+        menuNames: uniqueMenus.slice(0, 10).map(m => m.name),
+        // New field names
         affectedMenusCount: uniqueMenus.length,
         affectedMenus: serializeBigInt(uniqueMenus.slice(0, 10)), // Limit to 10 for preview
         hasMoreMenus: uniqueMenus.length > 10,

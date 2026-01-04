@@ -116,6 +116,14 @@ function MerchantMenuPageContent() {
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
+  // Single delete confirmation state
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    show: boolean;
+    id: string;
+    name: string;
+    loading: boolean;
+  }>({ show: false, id: "", name: "", loading: false });
+
   // Initialize pagination from URL search params
   const initialPage = parseInt(searchParams.get('page') || '1', 10);
   
@@ -294,10 +302,15 @@ function MerchantMenuPageContent() {
     );
   }
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to delete "${name}"?`)) {
-      return;
-    }
+  const handleDelete = (id: string, name: string) => {
+    // Show delete confirmation modal
+    setDeleteConfirm({ show: true, id, name, loading: false });
+  };
+
+  // Confirm and execute delete
+  const confirmDelete = async () => {
+    const { id } = deleteConfirm;
+    setDeleteConfirm({ show: false, id: "", name: "", loading: false });
 
     try {
       const token = localStorage.getItem("accessToken");
@@ -1206,6 +1219,49 @@ function MerchantMenuPageContent() {
                 className="flex-1 h-11 rounded-lg bg-error-600 text-sm font-medium text-white hover:bg-error-700"
               >
                 Delete {selectedItems.length} Item{selectedItems.length > 1 ? 's' : ''}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Single Delete Confirmation Modal */}
+      {deleteConfirm.show && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-lg dark:border-gray-800 dark:bg-gray-900">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-error-100 dark:bg-error-900/20">
+                <svg className="h-6 w-6 text-error-600 dark:text-error-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Delete Menu Item
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  This action cannot be undone
+                </p>
+              </div>
+            </div>
+
+            <p className="mb-6 text-sm text-gray-700 dark:text-gray-300">
+              Are you sure you want to delete &ldquo;<span className="font-medium">{deleteConfirm.name}</span>&rdquo;?
+              This will permanently remove it from your menu.
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteConfirm({ show: false, id: "", name: "", loading: false })}
+                className="flex-1 h-11 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="flex-1 h-11 rounded-lg bg-error-600 text-sm font-medium text-white hover:bg-error-700"
+              >
+                Delete Menu Item
               </button>
             </div>
           </div>

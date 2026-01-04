@@ -86,8 +86,10 @@ export default function StockPhotosPage() {
     return `/api/admin/stock-photos?${params.toString()}`;
   }, [selectedCategory, searchQuery, currentPage]);
 
-  // Fetch stock photos
-  const { data, error, isLoading, mutate } = useSWRWithAuth<StockPhotosApiResponse>(apiUrl);
+  // Fetch stock photos - disable revalidateOnFocus to prevent unnecessary refetching
+  const { data, error, isLoading, mutate } = useSWRWithAuth<StockPhotosApiResponse>(apiUrl, {
+    revalidateOnFocus: false,
+  });
 
   const photos = data?.data?.photos || [];
   const categories = data?.data?.categories || [];

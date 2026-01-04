@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { FileIcon, FolderIcon, PlusIcon, EyeIcon } from '@/icons';
 import { useMerchant } from '@/context/MerchantContext';
 import { getCurrencySymbol } from '@/lib/utils/format';
+import { useToast } from '@/context/ToastContext';
 import StockPhotoPicker from './StockPhotoPicker';
 
 /**
@@ -86,6 +87,7 @@ export default function MenuBuilderTabs({
   isLoading = false,
 }: MenuBuilderTabsProps) {
   const { currency } = useMerchant();
+  const { showError } = useToast();
   const currencySymbol = getCurrencySymbol(currency);
   const [activeTab, setActiveTab] = useState<TabKey>('basic');
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -203,13 +205,13 @@ export default function MenuBuilderTabs({
 
     // Validate file type - accept all image formats
     if (!file.type.startsWith('image/')) {
-      alert('Invalid file type. Please upload an image file.');
+      showError('Invalid file type. Please upload an image file.');
       return;
     }
 
     const maxSizeMB = 5;
     if (file.size > maxSizeMB * 1024 * 1024) {
-      alert(`File size must be less than ${maxSizeMB}MB.`);
+      showError(`File size must be less than ${maxSizeMB}MB.`);
       return;
     }
 
@@ -258,7 +260,7 @@ export default function MenuBuilderTabs({
         xhr.send(formData);
       });
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to upload image');
+      showError(error instanceof Error ? error.message : 'Failed to upload image');
     } finally {
       setUploadingImage(false);
       setUploadProgress(0);
