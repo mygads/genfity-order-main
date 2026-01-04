@@ -187,14 +187,17 @@ async function handleGet(req: NextRequest, context: AuthContext) {
         }),
       ]);
 
+      // Only count COMPLETED orders for revenue
       const revenue = await prisma.order.aggregate({
-        where: { merchantId },
+        where: { merchantId, status: 'COMPLETED' },
         _sum: { totalAmount: true },
       });
 
+      // Only count COMPLETED orders for today's revenue
       const todayRevenue = await prisma.order.aggregate({
         where: {
           merchantId,
+          status: 'COMPLETED',
           createdAt: {
             gte: new Date(new Date().setHours(0, 0, 0, 0)),
           },

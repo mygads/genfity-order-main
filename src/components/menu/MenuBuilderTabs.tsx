@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { FileIcon, FolderIcon, PlusIcon, EyeIcon } from '@/icons';
 import { useMerchant } from '@/context/MerchantContext';
 import { getCurrencySymbol } from '@/lib/utils/format';
+import StockPhotoPicker from './StockPhotoPicker';
 
 /**
  * Menu Builder Tabs Component
@@ -89,6 +90,7 @@ export default function MenuBuilderTabs({
   const [activeTab, setActiveTab] = useState<TabKey>('basic');
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [showStockPhotoPicker, setShowStockPhotoPicker] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<number[]>(
     initialData?.categoryIds || []
   );
@@ -540,6 +542,19 @@ export default function MenuBuilderTabs({
                     </label>
                   )}
                 </div>
+                {/* Stock Photo Button */}
+                <button
+                  type="button"
+                  onClick={() => setShowStockPhotoPicker(true)}
+                  className="mt-3 w-full rounded-xl border-2 border-dashed border-gray-300 px-4 py-3 text-sm font-medium text-gray-600 transition-all hover:border-brand-400 hover:bg-brand-50 hover:text-brand-600 dark:border-gray-700 dark:text-gray-400 dark:hover:border-brand-500 dark:hover:bg-brand-900/20 dark:hover:text-brand-400"
+                >
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Browse Stock Photos
+                  </span>
+                </button>
               </div>
             </div>
 
@@ -1111,6 +1126,16 @@ export default function MenuBuilderTabs({
           </div>
         </div>
       </form>
+
+      {/* Stock Photo Picker Modal */}
+      <StockPhotoPicker
+        isOpen={showStockPhotoPicker}
+        onClose={() => setShowStockPhotoPicker(false)}
+        onSelect={(url) => {
+          setValue('imageUrl', url);
+          setShowStockPhotoPicker(false);
+        }}
+      />
     </div>
   );
 }

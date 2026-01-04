@@ -164,7 +164,8 @@ export default function StaffManagementPage() {
         return;
       }
 
-      const response = await fetch(`/api/merchant/staff/${selectedStaff.id}/permissions`, {
+      // Use userId instead of id - the API expects the user ID, not the merchantUser ID
+      const response = await fetch(`/api/merchant/staff/${selectedStaff.userId}/permissions`, {
         method: "PUT",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -200,7 +201,8 @@ export default function StaffManagementPage() {
         return;
       }
 
-      const response = await fetch(`/api/merchant/staff/${staffMember.id}/permissions`, {
+      // Use userId instead of id - the API expects the user ID, not the merchantUser ID
+      const response = await fetch(`/api/merchant/staff/${staffMember.userId}/permissions`, {
         method: "PATCH",
         headers: {
           "Authorization": `Bearer ${token}`,

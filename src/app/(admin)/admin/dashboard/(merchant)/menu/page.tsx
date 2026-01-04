@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 // Removed QuickFilterPills - replaced with dropdown selects for minimalist design
@@ -97,6 +97,7 @@ interface CategoriesApiResponse {
 
 export default function MerchantMenuPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useTranslation();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -115,8 +116,11 @@ export default function MerchantMenuPage() {
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
+  // Initialize pagination from URL search params
+  const initialPage = parseInt(searchParams.get('page') || '1', 10);
+  
   // Pagination & Filter states
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(initialPage);
   const [itemsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCategory, setFilterCategory] = useState<string>("all");
@@ -126,6 +130,18 @@ export default function MerchantMenuPage() {
 
   // Dropdown open states for multi-select filters
   const [isStockDropdownOpen, setIsStockDropdownOpen] = useState(false);
+
+  // Update URL when page changes (for persistence)
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (currentPage > 1) {
+      params.set('page', currentPage.toString());
+    } else {
+      params.delete('page');
+    }
+    const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
+    window.history.replaceState(null, '', newUrl);
+  }, [currentPage, searchParams]);
 
   // SWR hooks for data fetching with caching
   const {

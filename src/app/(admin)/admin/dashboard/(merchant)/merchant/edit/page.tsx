@@ -1292,112 +1292,6 @@ export default function EditMerchantPage() {
     }
   };
 
-  const PinTab = () => (
-    <div className="space-y-6">
-      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-100 dark:bg-brand-900/20">
-            <FaKey className="h-5 w-5 text-brand-600 dark:text-brand-400" />
-          </div>
-          <div>
-            <h4 className="text-sm font-medium text-gray-900 dark:text-white">
-              Delete PIN Protection
-            </h4>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Set a 4-digit PIN to protect order deletion. When enabled, staff must enter this PIN before deleting any order.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {hasExistingPin && (
-        <div className="rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-900/20">
-          <div className="flex items-center gap-2">
-            <svg className="h-5 w-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span className="text-sm font-medium text-green-700 dark:text-green-400">
-              Delete PIN is currently enabled
-            </span>
-          </div>
-          <p className="mt-2 text-sm text-green-600 dark:text-green-500">
-            Enter a new PIN below to change it, or click Remove PIN to disable.
-          </p>
-        </div>
-      )}
-
-      <div className="space-y-4">
-        <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-            {hasExistingPin ? "New PIN" : "Set PIN"} <span className="text-red-500">*</span>
-          </label>
-          <div className="relative">
-            <input
-              type={showPin ? "text" : "password"}
-              value={deletePin}
-              onChange={(e) => {
-                const val = e.target.value.replace(/\D/g, '').slice(0, 4);
-                setDeletePin(val);
-              }}
-              placeholder="Enter 4-digit PIN"
-              maxLength={4}
-              className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 pr-12 text-lg tracking-widest text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPin(!showPin)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-            >
-              {showPin ? <FaEyeSlash className="h-5 w-5" /> : <FaEye className="h-5 w-5" />}
-            </button>
-          </div>
-          <p className="mt-1 text-xs text-gray-500">Numbers only, exactly 4 digits</p>
-        </div>
-
-        <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Confirm PIN <span className="text-red-500">*</span>
-          </label>
-          <input
-            type={showPin ? "text" : "password"}
-            value={confirmPin}
-            onChange={(e) => {
-              const val = e.target.value.replace(/\D/g, '').slice(0, 4);
-              setConfirmPin(val);
-            }}
-            placeholder="Confirm 4-digit PIN"
-            maxLength={4}
-            className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-lg tracking-widest text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-          />
-          {confirmPin && deletePin !== confirmPin && (
-            <p className="mt-1 text-xs text-red-500">PINs do not match</p>
-          )}
-        </div>
-
-        <div className="flex gap-3 pt-2">
-          <button
-            type="button"
-            onClick={handleSavePin}
-            disabled={savingPin || deletePin.length !== 4 || deletePin !== confirmPin}
-            className="inline-flex h-10 items-center rounded-lg bg-brand-500 px-4 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {savingPin ? "Saving..." : hasExistingPin ? "Update PIN" : "Set PIN"}
-          </button>
-          {hasExistingPin && (
-            <button
-              type="button"
-              onClick={handleRemovePin}
-              disabled={savingPin}
-              className="inline-flex h-10 items-center rounded-lg border border-red-300 px-4 text-sm font-medium text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
-            >
-              Remove PIN
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-
   // ==================== RENDER ACTIVE TAB CONTENT ====================
 
   const renderTabContent = () => {
@@ -1413,7 +1307,112 @@ export default function EditMerchantPage() {
       case "hours":
         return <OpeningHoursTab />;
       case "pin":
-        return <PinTab />;
+        // PIN tab rendered inline to avoid re-mount on state change
+        return (
+          <div className="space-y-6">
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-100 dark:bg-brand-900/20">
+                  <FaKey className="h-5 w-5 text-brand-600 dark:text-brand-400" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-gray-900 dark:text-white">
+                    Delete PIN Protection
+                  </h4>
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    Set a 4-digit PIN to protect order deletion. When enabled, staff must enter this PIN before deleting any order.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {hasExistingPin && (
+              <div className="rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-900/20">
+                <div className="flex items-center gap-2">
+                  <svg className="h-5 w-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="text-sm font-medium text-green-700 dark:text-green-400">
+                    Delete PIN is currently enabled
+                  </span>
+                </div>
+                <p className="mt-2 text-sm text-green-600 dark:text-green-500">
+                  Enter a new PIN below to change it, or click Remove PIN to disable.
+                </p>
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {hasExistingPin ? "New PIN" : "Set PIN"} <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPin ? "text" : "password"}
+                    value={deletePin}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '').slice(0, 4);
+                      setDeletePin(val);
+                    }}
+                    placeholder="Enter 4-digit PIN"
+                    maxLength={4}
+                    className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 pr-12 text-lg tracking-widest text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPin(!showPin)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  >
+                    {showPin ? <FaEyeSlash className="h-5 w-5" /> : <FaEye className="h-5 w-5" />}
+                  </button>
+                </div>
+                <p className="mt-1 text-xs text-gray-500">Numbers only, exactly 4 digits</p>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Confirm PIN <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type={showPin ? "text" : "password"}
+                  value={confirmPin}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 4);
+                    setConfirmPin(val);
+                  }}
+                  placeholder="Confirm 4-digit PIN"
+                  maxLength={4}
+                  className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-lg tracking-widest text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                />
+                {confirmPin && deletePin !== confirmPin && (
+                  <p className="mt-1 text-xs text-red-500">PINs do not match</p>
+                )}
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={handleSavePin}
+                  disabled={savingPin || deletePin.length !== 4 || deletePin !== confirmPin}
+                  className="inline-flex h-10 items-center rounded-lg bg-brand-500 px-4 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {savingPin ? "Saving..." : hasExistingPin ? "Update PIN" : "Set PIN"}
+                </button>
+                {hasExistingPin && (
+                  <button
+                    type="button"
+                    onClick={handleRemovePin}
+                    disabled={savingPin}
+                    className="inline-flex h-10 items-center rounded-lg border border-red-300 px-4 text-sm font-medium text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
+                  >
+                    Remove PIN
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        );
       default:
         return <BasicInfoTab />;
     }
