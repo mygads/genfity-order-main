@@ -356,31 +356,25 @@ export default function StockPhotosPage() {
             </div>
           </div>
 
-          {/* Category Filter */}
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => handleCategoryChange("")}
-              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-                selectedCategory === ""
-                  ? "bg-brand-500 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300"
-              }`}
+          {/* Category Filter - Searchable Dropdown */}
+          <div className="relative min-w-[200px]">
+            <select
+              value={selectedCategory}
+              onChange={(e) => handleCategoryChange(e.target.value)}
+              className="w-full appearance-none rounded-lg border border-gray-200 bg-white py-2 pl-4 pr-10 text-sm focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white"
             >
-              All ({pagination.total})
-            </button>
-            {categories.map((cat) => (
-              <button
-                key={cat.name}
-                onClick={() => handleCategoryChange(cat.name)}
-                className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-                  selectedCategory === cat.name
-                    ? "bg-brand-500 text-white"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300"
-                }`}
-              >
-                {cat.name} ({cat.count})
-              </button>
-            ))}
+              <option value="">All Categories ({pagination.total})</option>
+              {categories.map((cat) => (
+                <option key={cat.name} value={cat.name}>
+                  {cat.name} ({cat.count})
+                </option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+              <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
           </div>
         </div>
       </div>

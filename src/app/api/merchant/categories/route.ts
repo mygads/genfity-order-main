@@ -37,7 +37,10 @@ async function handleGet(req: NextRequest, authContext: AuthContext) {
 
     // Get categories with menu count
     const categories = await prisma.menuCategory.findMany({
-      where: { merchantId: merchantUser.merchantId },
+      where: { 
+        merchantId: merchantUser.merchantId,
+        deletedAt: null, // Filter out soft-deleted categories
+      },
       include: {
         _count: {
           select: { 

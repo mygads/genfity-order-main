@@ -18,15 +18,23 @@ export class AddonRepository {
    */
   async getAddonCategories(merchantId: bigint) {
     return await prisma.addonCategory.findMany({
-      where: { merchantId },
+      where: { 
+        merchantId,
+        deletedAt: null, // Filter out soft-deleted categories
+      },
       include: {
         addonItems: {
-          where: { isActive: true },
+          where: { 
+            isActive: true,
+            deletedAt: null, // Filter out soft-deleted items
+          },
           orderBy: { displayOrder: 'asc' },
         },
         _count: {
           select: {
-            addonItems: true,
+            addonItems: {
+              where: { deletedAt: null },
+            },
             menuAddonCategories: true,
           },
         },
@@ -165,7 +173,10 @@ export class AddonRepository {
     }
 
     return await prisma.addonItem.findMany({
-      where: { addonCategoryId },
+      where: { 
+        addonCategoryId,
+        deletedAt: null, // Filter out soft-deleted items
+      },
       include: {
         addonCategory: {
           select: {
@@ -184,8 +195,10 @@ export class AddonRepository {
   async getAllAddonItemsByMerchant(merchantId: bigint) {
     return await prisma.addonItem.findMany({
       where: {
+        deletedAt: null, // Filter out soft-deleted items
         addonCategory: {
           merchantId,
+          deletedAt: null, // Also filter out items from soft-deleted categories
         },
       },
       include: {

@@ -9,6 +9,7 @@ import { useSWRStatic } from "@/hooks/useSWRWithAuth";
 import { CategoriesPageSkeleton } from "@/components/common/SkeletonLoaders";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useMerchant } from "@/context/MerchantContext";
+import { useToast } from "@/context/ToastContext";
 
 interface Category {
   id: string;
@@ -46,9 +47,8 @@ export default function MerchantCategoriesPage() {
   const router = useRouter();
   const { t } = useTranslation();
   const { formatCurrency } = useMerchant();
+  const { showSuccess, showError } = useToast();
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
 
   const [filteredCategories, setFilteredCategories] = useState<Category[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -72,8 +72,15 @@ export default function MerchantCategoriesPage() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
-  // Single delete confirmation
-  const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; id: string; name: string }>({ show: false, id: "", name: "" });
+  // Single delete confirmation with preview data
+  const [deleteConfirm, setDeleteConfirm] = useState<{ 
+    show: boolean; 
+    id: string; 
+    name: string; 
+    menuItemsCount: number;
+    menuList: string;
+    loading: boolean;
+  }>({ show: false, id: "", name: "", menuItemsCount: 0, menuList: "", loading: false });
 
   const [formData, setFormData] = useState<CategoryFormData>({
     name: "",
@@ -226,8 +233,6 @@ export default function MerchantCategoriesPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    setError(null);
-    setSuccess(null);
 
     try {
       const token = localStorage.getItem("accessToken");
@@ -257,14 +262,14 @@ export default function MerchantCategoriesPage() {
         throw new Error(data.message || `Failed to ${editingId ? 'update' : 'create'} category`);
       }
 
-      setSuccess(`Category ${editingId ? 'updated' : 'created'} successfully!`);
+      showSuccess(`Category ${editingId ? 'updated' : 'created'} successfully!`);
       setShowForm(false);
       setEditingId(null);
       setFormData({ name: "", description: "" });
 
       fetchCategories();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      showError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setSubmitting(false);
     }
@@ -277,8 +282,6 @@ export default function MerchantCategoriesPage() {
       description: category.description || "",
     });
     setShowForm(true);
-    setError(null);
-    setSuccess(null);
   };
 
   const handleToggleActive = async (id: string, currentStatus: boolean, name: string) => {
@@ -301,24 +304,63 @@ export default function MerchantCategoriesPage() {
         throw new Error(data.message || "Failed to toggle category status");
       }
 
-      setSuccess(`Category "${name}" ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
-      setTimeout(() => setSuccess(null), 3000);
+      showSuccess(`Category "${name}" ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
       fetchCategories();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-      setTimeout(() => setError(null), 5000);
+      showError(err instanceof Error ? err.message : "An error occurred");
     }
   };
 
-  // Show delete confirmation modal
-  const handleDelete = (id: string, name: string) => {
-    setDeleteConfirm({ show: true, id, name });
+  // Show delete confirmation modal with preview data
+  const handleDelete = async (id: string, name: string) => {
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) {
+        router.push("/admin/login");
+        return;
+      }
+
+      // Show loading state immediately
+      setDeleteConfirm({ show: true, id, name, menuItemsCount: 0, menuList: "", loading: true });
+
+      // Fetch delete preview
+      const previewResponse = await fetch(`/api/merchant/categories/${id}/delete-preview`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (previewResponse.ok) {
+        const previewData = await previewResponse.json();
+        const { menuItemsCount, menuNames } = previewData.data;
+        
+        let menuList = "";
+        if (menuItemsCount > 0 && menuNames?.length > 0) {
+          const displayNames = menuNames.slice(0, 3).join(", ");
+          const remainingCount = menuItemsCount - 3;
+          menuList = remainingCount > 0 ? `${displayNames}, and ${remainingCount} more` : displayNames;
+        }
+
+        setDeleteConfirm({ 
+          show: true, 
+          id, 
+          name, 
+          menuItemsCount, 
+          menuList, 
+          loading: false 
+        });
+      } else {
+        // Fallback - show without preview
+        setDeleteConfirm({ show: true, id, name, menuItemsCount: 0, menuList: "", loading: false });
+      }
+    } catch (err) {
+      showError(err instanceof Error ? err.message : "An error occurred");
+      setDeleteConfirm({ show: false, id: "", name: "", menuItemsCount: 0, menuList: "", loading: false });
+    }
   };
 
   // Confirm and execute delete
   const confirmDelete = async () => {
     const { id } = deleteConfirm;
-    setDeleteConfirm({ show: false, id: "", name: "" });
+    setDeleteConfirm({ show: false, id: "", name: "", menuItemsCount: 0, menuList: "", loading: false });
 
     try {
       const token = localStorage.getItem("accessToken");
@@ -339,12 +381,10 @@ export default function MerchantCategoriesPage() {
         throw new Error(data.message || "Failed to delete category");
       }
 
-      setSuccess("Category deleted successfully!");
-      setTimeout(() => setSuccess(null), 3000);
+      showSuccess("Category deleted successfully!");
       fetchCategories();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-      setTimeout(() => setError(null), 5000);
+      showError(err instanceof Error ? err.message : "An error occurred");
     }
   };
 
@@ -352,8 +392,6 @@ export default function MerchantCategoriesPage() {
     setShowForm(false);
     setEditingId(null);
     setFormData({ name: "", description: "" });
-    setError(null);
-    setSuccess(null);
   };
 
   const handleReorder = async (reorderedCategories: Category[]) => {
@@ -393,13 +431,11 @@ export default function MerchantCategoriesPage() {
         throw new Error(data.message || "Failed to reorder categories");
       }
 
-      setSuccess("Categories reordered successfully!");
-      setTimeout(() => setSuccess(null), 3000);
+      showSuccess("Categories reordered successfully!");
       setHasUnsavedOrder(false);
       setPendingReorder(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-      setTimeout(() => setError(null), 5000);
+      showError(err instanceof Error ? err.message : "An error occurred");
       fetchCategories();
     }
   };
@@ -455,14 +491,12 @@ export default function MerchantCategoriesPage() {
         throw new Error(data.message || "Failed to delete categories");
       }
 
-      setSuccess(`${selectedCategories.length} category(ies) deleted successfully`);
-      setTimeout(() => setSuccess(null), 3000);
+      showSuccess(`${selectedCategories.length} category(ies) deleted successfully`);
       setSelectedCategories([]);
       setShowBulkDeleteConfirm(false);
       fetchCategories();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-      setTimeout(() => setError(null), 5000);
+      showError(err instanceof Error ? err.message : "An error occurred");
       setShowBulkDeleteConfirm(false);
     }
   };
@@ -491,19 +525,16 @@ export default function MerchantCategoriesPage() {
         throw new Error(data.message || `Failed to update ${field}`);
       }
 
-      setSuccess(`Category ${field} updated successfully!`);
-      setTimeout(() => setSuccess(null), 3000);
+      showSuccess(`Category ${field} updated successfully!`);
       fetchCategories();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-      setTimeout(() => setError(null), 5000);
+      showError(err instanceof Error ? err.message : "An error occurred");
       throw err;
     }
   };
 
   const handleManageMenus = async (category: Category) => {
     setSelectedCategory(category);
-    setError(null);
     setLoadingMenus(true);
     setAvailableMenus([]);
     setCategoryMenus([]);
@@ -535,7 +566,7 @@ export default function MerchantCategoriesPage() {
         setCategoryMenus(data.success && data.data ? data.data : []);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load menus");
+      showError(err instanceof Error ? err.message : "Failed to load menus");
     } finally {
       setLoadingMenus(false);
     }
@@ -550,8 +581,7 @@ export default function MerchantCategoriesPage() {
 
     // Optimistic update - immediately update UI
     setCategoryMenus(prev => [...prev, menuToAdd]);
-    setSuccess("Menu added to category!");
-    setTimeout(() => setSuccess(null), 3000);
+    showSuccess("Menu added to category!");
 
     try {
       const token = localStorage.getItem("accessToken");
@@ -579,8 +609,7 @@ export default function MerchantCategoriesPage() {
     } catch (err) {
       // Revert optimistic update on error
       setCategoryMenus(prev => prev.filter(m => m.id !== menuId));
-      setError(err instanceof Error ? err.message : "An error occurred");
-      setTimeout(() => setError(null), 5000);
+      showError(err instanceof Error ? err.message : "An error occurred");
     }
   };
 
@@ -592,8 +621,7 @@ export default function MerchantCategoriesPage() {
 
     // Optimistic update - immediately update UI
     setCategoryMenus(prev => prev.filter(m => m.id !== menuId));
-    setSuccess("Menu removed from category!");
-    setTimeout(() => setSuccess(null), 3000);
+    showSuccess("Menu removed from category!");
 
     try {
       const token = localStorage.getItem("accessToken");
@@ -621,26 +649,13 @@ export default function MerchantCategoriesPage() {
       if (removedMenu) {
         setCategoryMenus(prev => [...prev, removedMenu]);
       }
-      setError(err instanceof Error ? err.message : "An error occurred");
-      setTimeout(() => setError(null), 5000);
+      showError(err instanceof Error ? err.message : "An error occurred");
     }
   };
 
   return (
     <div>
       <div className="space-y-6">
-        {error && (
-          <div className="rounded-lg bg-error-50 p-4 dark:bg-error-900/20">
-            <p className="text-sm text-error-600 dark:text-error-400">{error}</p>
-          </div>
-        )}
-
-        {success && (
-          <div className="rounded-lg bg-success-50 p-4 dark:bg-success-900/20">
-            <p className="text-sm text-success-600 dark:text-success-400">{success}</p>
-          </div>
-        )}
-
         {showForm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
             <div className="w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-800 dark:bg-gray-900">
@@ -759,11 +774,9 @@ export default function MerchantCategoriesPage() {
                     onClick={() => {
                       try {
                         exportCategories(categories);
-                        setSuccess('Categories exported successfully!');
-                        setTimeout(() => setSuccess(null), 3000);
+                        showSuccess('Categories exported successfully!');
                       } catch (err) {
-                        setError(err instanceof Error ? err.message : 'Export failed');
-                        setTimeout(() => setError(null), 5000);
+                        showError(err instanceof Error ? err.message : 'Export failed');
                       }
                     }}
                     disabled={categories.length === 0}
@@ -1319,7 +1332,7 @@ export default function MerchantCategoriesPage() {
           </div>
         )}
 
-        {/* Single Delete Confirmation Modal */}
+        {/* Single Delete Confirmation Modal with Preview */}
         {deleteConfirm.show && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
             <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-lg dark:border-gray-800 dark:bg-gray-900">
@@ -1339,21 +1352,54 @@ export default function MerchantCategoriesPage() {
                 </div>
               </div>
 
-              <p className="mb-6 text-sm text-gray-700 dark:text-gray-300">
-                Are you sure you want to delete &ldquo;<span className="font-medium">{deleteConfirm.name}</span>&rdquo;?
-                This will permanently remove it from your menu.
-              </p>
+              {deleteConfirm.loading ? (
+                <div className="mb-6 flex items-center justify-center py-4">
+                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-primary-500"></div>
+                  <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">Loading preview...</span>
+                </div>
+              ) : (
+                <>
+                  <p className="mb-4 text-sm text-gray-700 dark:text-gray-300">
+                    Are you sure you want to delete &ldquo;<span className="font-medium">{deleteConfirm.name}</span>&rdquo;?
+                    This will permanently remove it from your menu.
+                  </p>
+
+                  {deleteConfirm.menuItemsCount > 0 && (
+                    <div className="mb-4 rounded-lg bg-warning-50 p-3 dark:bg-warning-900/20">
+                      <div className="flex items-start gap-2">
+                        <svg className="h-5 w-5 shrink-0 text-warning-600 dark:text-warning-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <div>
+                          <p className="text-sm font-medium text-warning-800 dark:text-warning-200">
+                            This category has {deleteConfirm.menuItemsCount} menu item{deleteConfirm.menuItemsCount > 1 ? 's' : ''}
+                          </p>
+                          {deleteConfirm.menuList && (
+                            <p className="mt-1 text-xs text-warning-700 dark:text-warning-300">
+                              {deleteConfirm.menuList}
+                            </p>
+                          )}
+                          <p className="mt-1 text-xs text-warning-600 dark:text-warning-400">
+                            These menu items will be removed from this category.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
 
               <div className="flex gap-3">
                 <button
-                  onClick={() => setDeleteConfirm({ show: false, id: "", name: "" })}
+                  onClick={() => setDeleteConfirm({ show: false, id: "", name: "", menuItemsCount: 0, menuList: "", loading: false })}
                   className="flex-1 h-11 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={confirmDelete}
-                  className="flex-1 h-11 rounded-lg bg-error-600 text-sm font-medium text-white hover:bg-error-700"
+                  disabled={deleteConfirm.loading}
+                  className="flex-1 h-11 rounded-lg bg-error-600 text-sm font-medium text-white hover:bg-error-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Delete Category
                 </button>

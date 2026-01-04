@@ -200,22 +200,21 @@ class MenuService {
       );
     }
 
-    // Validate category exists and belongs to merchant
-    if (!input.categoryId) {
-      throw new ValidationError('Category ID is required', ERROR_CODES.REQUIRED_FIELD);
-    }
-    const category = await menuRepository.findCategoryById(input.categoryId);
-    if (!category) {
-      throw new NotFoundError(
-        'Category not found',
-        ERROR_CODES.CATEGORY_NOT_FOUND
-      );
-    }
-    if (category.merchantId !== input.merchantId) {
-      throw new ValidationError(
-        'Category does not belong to this merchant',
-        ERROR_CODES.VALIDATION_FAILED
-      );
+    // Validate category if provided (category is optional)
+    if (input.categoryId) {
+      const category = await menuRepository.findCategoryById(input.categoryId);
+      if (!category) {
+        throw new NotFoundError(
+          'Category not found',
+          ERROR_CODES.CATEGORY_NOT_FOUND
+        );
+      }
+      if (category.merchantId !== input.merchantId) {
+        throw new ValidationError(
+          'Category does not belong to this merchant',
+          ERROR_CODES.VALIDATION_FAILED
+        );
+      }
     }
 
     // Validate required fields

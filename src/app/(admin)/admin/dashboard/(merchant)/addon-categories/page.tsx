@@ -10,6 +10,7 @@ import { useSWRStatic } from "@/hooks/useSWRWithAuth";
 import { CategoriesPageSkeleton } from "@/components/common/SkeletonLoaders";
 import { useMerchant } from "@/context/MerchantContext";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { useToast } from "@/context/ToastContext";
 
 interface AddonCategory {
   id: string;
@@ -53,9 +54,8 @@ function AddonCategoriesPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useTranslation();
+  const { showSuccess, showError } = useToast();
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
 
   const [filteredCategories, setFilteredCategories] = useState<AddonCategory[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -72,14 +72,16 @@ function AddonCategoriesPageContent() {
     categoryName: string;
   }>({ show: false, categoryId: null, categoryName: "" });
 
-  // Single delete confirmation modal
+  // Single delete confirmation modal with preview data
   const [deleteConfirm, setDeleteConfirm] = useState<{
     show: boolean;
     id: string;
     name: string;
     menuCount: number;
     menuList: string;
-  }>({ show: false, id: "", name: "", menuCount: 0, menuList: "" });
+    addonItemsCount: number;
+    loading: boolean;
+  }>({ show: false, id: "", name: "", menuCount: 0, menuList: "", addonItemsCount: 0, loading: false });
 
   // Editing state - null means creating new, string ID means editing
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
@@ -237,8 +239,6 @@ function AddonCategoriesPageContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    setError(null);
-    setSuccess(null);
 
     const isEditing = !!editingCategoryId;
 
@@ -276,16 +276,14 @@ function AddonCategoriesPageContent() {
         throw new Error(data.message || `Failed to ${isEditing ? 'update' : 'create'} addon category`);
       }
 
-      setSuccess(`Addon category ${isEditing ? 'updated' : 'created'} successfully!`);
-      setTimeout(() => setSuccess(null), 3000);
+      showSuccess(`Addon category ${isEditing ? 'updated' : 'created'} successfully!`);
       setShowForm(false);
       setEditingCategoryId(null);
       setFormData({ name: "", description: "", minSelection: 0, maxSelection: "" });
 
       fetchCategories();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-      setTimeout(() => setError(null), 5000);
+      showError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setSubmitting(false);
     }
@@ -333,7 +331,7 @@ function AddonCategoriesPageContent() {
       }
     } catch (err) {
       console.error('Failed to fetch items:', err);
-      setError('Failed to load items');
+      showError('Failed to load items');
     }
   };
 
@@ -365,12 +363,10 @@ function AddonCategoriesPageContent() {
         throw new Error(data.message || "Failed to toggle status");
       }
 
-      setSuccess(`Addon category "${name}" ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
-      setTimeout(() => setSuccess(null), 3000);
+      showSuccess(`Addon category "${name}" ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
       fetchCategories();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-      setTimeout(() => setError(null), 5000);
+      showError(err instanceof Error ? err.message : "An error occurred");
     }
   };
 
@@ -444,19 +440,17 @@ function AddonCategoriesPageContent() {
         throw new Error(data.message || "Failed to delete addon categories");
       }
 
-      setSuccess(`${selectedCategories.length} addon category(ies) deleted successfully`);
-      setTimeout(() => setSuccess(null), 3000);
+      showSuccess(`${selectedCategories.length} addon category(ies) deleted successfully`);
       setSelectedCategories([]);
       setShowBulkDeleteConfirm(false);
       fetchCategories();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-      setTimeout(() => setError(null), 5000);
+      showError(err instanceof Error ? err.message : "An error occurred");
       setShowBulkDeleteConfirm(false);
     }
   };
 
-  // Show delete confirmation modal (fetch relationships first)
+  // Show delete confirmation modal with preview data
   const handleDelete = async (id: string, name: string) => {
     try {
       const token = localStorage.getItem("accessToken");
@@ -465,37 +459,48 @@ function AddonCategoriesPageContent() {
         return;
       }
 
-      // Check if addon category has menu relationships
-      const relationshipsResponse = await fetch(`/api/merchant/addon-categories/${id}/relationships`, {
+      // Show loading state immediately
+      setDeleteConfirm({ show: true, id, name, menuCount: 0, menuList: "", addonItemsCount: 0, loading: true });
+
+      // Fetch delete preview
+      const previewResponse = await fetch(`/api/merchant/addon-categories/${id}/delete-preview`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      let menuCount = 0;
-      let menuList = "";
-
-      if (relationshipsResponse.ok) {
-        const relationshipsData = await relationshipsResponse.json();
-        menuCount = relationshipsData.data?.length || 0;
-
-        if (menuCount > 0) {
-          const menuNames = relationshipsData.data.slice(0, 3).map((m: { name: string }) => m.name).join(", ");
-          const remainingCount = menuCount - 3;
+      if (previewResponse.ok) {
+        const previewData = await previewResponse.json();
+        const { affectedMenusCount, affectedMenus, addonItemsCount } = previewData.data;
+        
+        let menuList = "";
+        if (affectedMenusCount > 0 && affectedMenus?.length > 0) {
+          const menuNames = affectedMenus.slice(0, 3).map((m: { name: string }) => m.name).join(", ");
+          const remainingCount = affectedMenusCount - 3;
           menuList = remainingCount > 0 ? `${menuNames}, and ${remainingCount} more` : menuNames;
         }
-      }
 
-      // Show confirmation modal
-      setDeleteConfirm({ show: true, id, name, menuCount, menuList });
+        setDeleteConfirm({ 
+          show: true, 
+          id, 
+          name, 
+          menuCount: affectedMenusCount, 
+          menuList, 
+          addonItemsCount: addonItemsCount || 0,
+          loading: false 
+        });
+      } else {
+        // Fallback - show without preview
+        setDeleteConfirm({ show: true, id, name, menuCount: 0, menuList: "", addonItemsCount: 0, loading: false });
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-      setTimeout(() => setError(null), 5000);
+      showError(err instanceof Error ? err.message : "An error occurred");
+      setDeleteConfirm({ show: false, id: "", name: "", menuCount: 0, menuList: "", addonItemsCount: 0, loading: false });
     }
   };
 
   // Confirm and execute delete
   const confirmDeleteCategory = async () => {
     const { id } = deleteConfirm;
-    setDeleteConfirm({ show: false, id: "", name: "", menuCount: 0, menuList: "" });
+    setDeleteConfirm({ show: false, id: "", name: "", menuCount: 0, menuList: "", addonItemsCount: 0, loading: false });
 
     try {
       const token = localStorage.getItem("accessToken");
@@ -516,12 +521,10 @@ function AddonCategoriesPageContent() {
         throw new Error(data.message || "Failed to delete addon category");
       }
 
-      setSuccess("Addon category deleted successfully!");
-      setTimeout(() => setSuccess(null), 3000);
+      showSuccess("Addon category deleted successfully!");
       fetchCategories();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-      setTimeout(() => setError(null), 5000);
+      showError(err instanceof Error ? err.message : "An error occurred");
     }
   };
 
@@ -530,25 +533,11 @@ function AddonCategoriesPageContent() {
     setShowForm(false);
     setEditingCategoryId(null);
     setFormData({ name: "", description: "", minSelection: 0, maxSelection: "" });
-    setError(null);
-    setSuccess(null);
   };
 
   return (
     <div>
       <div className="space-y-6">
-        {error && (
-          <div className="rounded-lg bg-error-50 p-4 dark:bg-error-900/20">
-            <p className="text-sm text-error-600 dark:text-error-400">{error}</p>
-          </div>
-        )}
-
-        {success && (
-          <div className="rounded-lg bg-success-50 p-4 dark:bg-success-900/20">
-            <p className="text-sm text-success-600 dark:text-success-400">{success}</p>
-          </div>
-        )}
-
         {showForm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
             <div className="w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-800 dark:bg-gray-900">
@@ -704,11 +693,9 @@ function AddonCategoriesPageContent() {
                 onClick={() => {
                   try {
                     exportAddonCategories(categories);
-                    setSuccess('Addon categories exported successfully!');
-                    setTimeout(() => setSuccess(null), 3000);
+                    showSuccess('Addon categories exported successfully!');
                   } catch (err) {
-                    setError(err instanceof Error ? err.message : 'Export failed');
-                    setTimeout(() => setError(null), 5000);
+                    showError(err instanceof Error ? err.message : 'Export failed');
                   }
                 }}
                 disabled={categories.length === 0}
@@ -977,45 +964,57 @@ function AddonCategoriesPageContent() {
                 </div>
               </div>
 
-              {deleteConfirm.menuCount > 0 ? (
-                <div className="mb-6">
-                  <div className="mb-3 rounded-lg border border-warning-200 bg-warning-50 p-3 dark:border-warning-900/50 dark:bg-warning-900/20">
-                    <div className="flex items-center gap-2 text-sm font-medium text-warning-700 dark:text-warning-400">
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                      </svg>
-                      Warning: This addon category is in use
-                    </div>
-                    <p className="mt-1 text-xs text-warning-600 dark:text-warning-500">
-                      Used by {deleteConfirm.menuCount} menu{deleteConfirm.menuCount > 1 ? 's' : ''}: {deleteConfirm.menuList}
-                    </p>
-                  </div>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">
-                    Are you sure you want to delete &ldquo;<span className="font-medium">{deleteConfirm.name}</span>&rdquo;?
-                    This will break the menu configurations.
-                  </p>
+              {deleteConfirm.loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" />
                 </div>
               ) : (
-                <p className="mb-6 text-sm text-gray-700 dark:text-gray-300">
-                  Are you sure you want to delete &ldquo;<span className="font-medium">{deleteConfirm.name}</span>&rdquo;?
-                  This will also delete all addon items in this category.
-                </p>
-              )}
+                <>
+                  {(deleteConfirm.menuCount > 0 || deleteConfirm.addonItemsCount > 0) ? (
+                    <div className="mb-6">
+                      <div className="mb-3 rounded-lg border border-warning-200 bg-warning-50 p-3 dark:border-warning-900/50 dark:bg-warning-900/20">
+                        <div className="flex items-center gap-2 text-sm font-medium text-warning-700 dark:text-warning-400">
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                          </svg>
+                          Warning: This will affect the following
+                        </div>
+                        <ul className="mt-2 space-y-1 text-xs text-warning-600 dark:text-warning-500">
+                          {deleteConfirm.menuCount > 0 && (
+                            <li>• Removes from {deleteConfirm.menuCount} menu{deleteConfirm.menuCount > 1 ? 's' : ''}: {deleteConfirm.menuList}</li>
+                          )}
+                          {deleteConfirm.addonItemsCount > 0 && (
+                            <li>• Deletes {deleteConfirm.addonItemsCount} addon item{deleteConfirm.addonItemsCount > 1 ? 's' : ''} in this category</li>
+                          )}
+                        </ul>
+                      </div>
+                      <p className="text-sm text-gray-700 dark:text-gray-300">
+                        Are you sure you want to delete &ldquo;<span className="font-medium">{deleteConfirm.name}</span>&rdquo;?
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="mb-6 text-sm text-gray-700 dark:text-gray-300">
+                      Are you sure you want to delete &ldquo;<span className="font-medium">{deleteConfirm.name}</span>&rdquo;?
+                      This addon category is not assigned to any menus and has no items.
+                    </p>
+                  )}
 
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setDeleteConfirm({ show: false, id: "", name: "", menuCount: 0, menuList: "" })}
-                  className="flex-1 h-11 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={confirmDeleteCategory}
-                  className="flex-1 h-11 rounded-lg bg-error-600 text-sm font-medium text-white hover:bg-error-700"
-                >
-                  Delete Category
-                </button>
-              </div>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setDeleteConfirm({ show: false, id: "", name: "", menuCount: 0, menuList: "", addonItemsCount: 0, loading: false })}
+                      className="flex-1 h-11 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={confirmDeleteCategory}
+                      className="flex-1 h-11 rounded-lg bg-error-600 text-sm font-medium text-white hover:bg-error-700"
+                    >
+                      Delete Category
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
