@@ -122,29 +122,22 @@ export class AddonRepository {
 
   /**
    * Delete addon category (soft delete)
+   * First removes the category from all menus, then soft deletes
    */
   async deleteAddonCategory(id: bigint, merchantId: bigint, userId?: bigint) {
     // Check if category exists
     const category = await prisma.addonCategory.findFirst({
       where: { id, merchantId, deletedAt: null },
-      include: {
-        _count: {
-          select: {
-            menuAddonCategories: true,
-          },
-        },
-      },
     });
 
     if (!category) {
       throw new Error('Addon category not found');
     }
 
-    if (category._count.menuAddonCategories > 0) {
-      throw new Error(
-        'Cannot delete addon category that is assigned to menu items'
-      );
-    }
+    // Remove this addon category from all menus first
+    await prisma.menuAddonCategory.deleteMany({
+      where: { addonCategoryId: id },
+    });
 
     // Soft delete
     return await prisma.addonCategory.update({
