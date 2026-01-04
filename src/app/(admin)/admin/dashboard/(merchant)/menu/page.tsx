@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -95,7 +95,7 @@ interface CategoriesApiResponse {
   data: Category[];
 }
 
-export default function MerchantMenuPage() {
+function MerchantMenuPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useTranslation();
@@ -1224,6 +1224,15 @@ export default function MerchantMenuPage() {
         onBulkUpload={() => router.push('/admin/dashboard/menu/bulk-upload')}
       />
     </div>
+  );
+}
+
+// Wrapper component with Suspense for useSearchParams
+export default function MerchantMenuPage() {
+  return (
+    <Suspense fallback={<MenuPageSkeleton />}>
+      <MerchantMenuPageContent />
+    </Suspense>
   );
 }
 
