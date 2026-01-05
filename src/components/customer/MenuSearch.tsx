@@ -158,17 +158,17 @@ export default function MenuSearch({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-white dark:bg-gray-900">
+    <div className="fixed inset-0 z-50 bg-white">
       {/* Header */}
-      <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 z-10">
+      <div className="sticky top-0 bg-white border-b border-gray-200 z-10">
         <div className="flex items-center px-4 py-3 gap-3">
           {/* Back button */}
           <button
             onClick={onClose}
-            className="p-2 -ml-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+            className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors"
             aria-label="Back"
           >
-            <svg className="w-5 h-5 text-gray-700 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-5 h-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
@@ -181,7 +181,7 @@ export default function MenuSearch({
               value={query}
               onChange={handleInputChange}
               placeholder={t('customer.search.placeholder')}
-              className="w-full h-10 pl-10 pr-4 bg-gray-100 dark:bg-gray-800 rounded-full text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
+              className="w-full h-10 pl-10 pr-4 bg-gray-100 rounded-full text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
             <svg
               className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
@@ -201,7 +201,7 @@ export default function MenuSearch({
                 setResults([]);
                 inputRef.current?.focus();
               }}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
             >
               <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -223,17 +223,17 @@ export default function MenuSearch({
         {/* Results */}
         {!isLoading && results.length > 0 && (
           <div className="px-4 py-4 space-y-3">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-sm text-gray-500">
               {results.length} {t('customer.search.resultsFound')}
             </p>
             {results.map((item) => (
               <button
                 key={item.id}
                 onClick={() => handleSelectItem(item)}
-                className="w-full flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-orange-300 dark:hover:border-orange-600 transition-colors text-left"
+                className="w-full flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-200 hover:border-orange-300 transition-colors text-left"
               >
                 {/* Image */}
-                <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden shrink-0">
+                <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden shrink-0">
                   {item.imageUrl ? (
                     <Image
                       src={item.imageUrl}
@@ -254,7 +254,7 @@ export default function MenuSearch({
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start gap-2">
-                    <h3 className="font-medium text-gray-900 dark:text-white truncate">
+                    <h3 className="font-medium text-gray-900 truncate">
                       {item.name}
                     </h3>
                     {/* Badges */}
@@ -263,14 +263,14 @@ export default function MenuSearch({
                         <span className="text-xs">🌶️</span>
                       )}
                       {item.isBestSeller && (
-                        <span className="text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 px-1.5 py-0.5 rounded-full text-[10px] font-medium">
+                        <span className="text-xs bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded-full text-[10px] font-medium">
                           Best
                         </span>
                       )}
                     </div>
                   </div>
                   {item.description && (
-                    <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-1 mt-0.5">
+                    <p className="text-sm text-gray-500 line-clamp-1 mt-0.5">
                       {item.description}
                     </p>
                   )}
@@ -278,7 +278,7 @@ export default function MenuSearch({
                   <div className="mt-1">
                     {item.isPromo && item.promoPrice ? (
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-orange-600 dark:text-orange-400">
+                        <span className="text-sm font-semibold text-orange-600">
                           {formatPrice(item.promoPrice)}
                         </span>
                         <span className="text-xs text-gray-400 line-through">
@@ -286,7 +286,7 @@ export default function MenuSearch({
                         </span>
                       </div>
                     ) : (
-                      <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                      <span className="text-sm font-semibold text-gray-900">
                         {formatPrice(item.price)}
                       </span>
                     )}
@@ -295,7 +295,7 @@ export default function MenuSearch({
 
                 {/* Stock warning */}
                 {item.trackStock && item.stockQty !== null && item.stockQty <= 5 && (
-                  <span className="text-xs text-orange-600 dark:text-orange-400 shrink-0">
+                  <span className="text-xs text-orange-600 shrink-0">
                     {item.stockQty === 0 ? t('customer.menu.outOfStock') : `${item.stockQty} left`}
                   </span>
                 )}
@@ -307,13 +307,13 @@ export default function MenuSearch({
         {/* No results */}
         {!isLoading && query.length >= 2 && results.length === 0 && (
           <div className="flex flex-col items-center justify-center py-12 px-4">
-            <svg className="w-16 h-16 text-gray-300 dark:text-gray-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-16 h-16 text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
-            <p className="text-gray-500 dark:text-gray-400 text-center">
+            <p className="text-gray-500 text-center">
               {t('customer.search.noResults')} &quot;{query}&quot;
             </p>
-            <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+            <p className="text-sm text-gray-400 mt-1">
               {t('customer.search.tryDifferent')}
             </p>
           </div>
@@ -323,12 +323,12 @@ export default function MenuSearch({
         {!query && recentSearches.length > 0 && (
           <div className="px-4 py-4">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <p className="text-sm font-medium text-gray-700">
                 {t('customer.search.recentSearches')}
               </p>
               <button
                 onClick={clearRecentSearches}
-                className="text-xs text-orange-600 dark:text-orange-400 hover:underline"
+                className="text-xs text-orange-600 hover:underline"
               >
                 {t('common.clearAll')}
               </button>
@@ -338,7 +338,7 @@ export default function MenuSearch({
                 <button
                   key={index}
                   onClick={() => handleRecentSearchClick(search)}
-                  className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-full text-sm hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                  className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors"
                 >
                   {search}
                 </button>
@@ -350,10 +350,10 @@ export default function MenuSearch({
         {/* Empty state (no query, no recent) */}
         {!query && recentSearches.length === 0 && (
           <div className="flex flex-col items-center justify-center py-12 px-4">
-            <svg className="w-16 h-16 text-gray-300 dark:text-gray-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-16 h-16 text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
-            <p className="text-gray-500 dark:text-gray-400 text-center">
+            <p className="text-gray-500 text-center">
               {t('customer.search.startTyping')}
             </p>
           </div>

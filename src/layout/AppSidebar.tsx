@@ -40,7 +40,8 @@ import {
   FaImages,
   FaStamp,
   FaHandshake,
-  FaMoneyCheckAlt
+  FaMoneyCheckAlt,
+  FaUserCog,
 } from "react-icons/fa";
 import MerchantBanner from "../components/merchants/MerchantBanner";
 
@@ -57,7 +58,7 @@ type NavGroup = {
   items: NavItem[];
 };
 
-// Super Admin Menu Groups
+// Super Admin Menu Groups - Organized by function
 const superAdminNavGroups: NavGroup[] = [
   {
     titleKey: "admin.nav.main",
@@ -71,7 +72,7 @@ const superAdminNavGroups: NavGroup[] = [
     ],
   },
   {
-    titleKey: "admin.nav.management",
+    titleKey: "admin.nav.userManagement",
     items: [
       {
         icon: <FaStore />,
@@ -97,6 +98,11 @@ const superAdminNavGroups: NavGroup[] = [
         path: "/admin/dashboard/influencers",
         roles: ["SUPER_ADMIN"],
       },
+    ],
+  },
+  {
+    titleKey: "admin.nav.finance",
+    items: [
       {
         icon: <FaCreditCard />,
         nameKey: "admin.nav.paymentVerification",
@@ -121,10 +127,27 @@ const superAdminNavGroups: NavGroup[] = [
         path: "/admin/dashboard/merchant-balance",
         roles: ["SUPER_ADMIN"],
       },
+    ],
+  },
+  {
+    titleKey: "admin.nav.platformSettings",
+    items: [
       {
         icon: <FaCog />,
         nameKey: "admin.nav.subscriptionSettings",
         path: "/admin/dashboard/subscription-settings",
+        roles: ["SUPER_ADMIN"],
+      },
+      {
+        icon: <FaMoneyBillWave />,
+        nameKey: "admin.nav.financialSettings",
+        path: "/admin/dashboard/financial-settings",
+        roles: ["SUPER_ADMIN"],
+      },
+      {
+        icon: <FaUserCog />,
+        nameKey: "admin.nav.influencerSettings",
+        path: "/admin/dashboard/influencer-settings",
         roles: ["SUPER_ADMIN"],
       },
       {
@@ -530,7 +553,7 @@ const AppSidebar: React.FC = () => {
             ) : (
               /* Render menu groups */
               navGroups.map((group, groupIndex) => (
-                <div key={groupIndex}>
+                <div key={groupIndex} data-nav-group={group.titleKey.replace('admin.nav.', '')}>
                   <h2
                     className={`mb-3 text-xs font-semibold uppercase flex leading-5 text-gray-500 dark:text-gray-400 ${!isExpanded && !isHovered
                       ? "lg:justify-center"
@@ -549,6 +572,7 @@ const AppSidebar: React.FC = () => {
                         <Link
                           href={nav.path}
                           prefetch={true}
+                          data-nav-item={nav.path}
                           onClick={() => {
                             // Auto-close sidebar on mobile when menu item is clicked
                             if (window.innerWidth < 1024) {

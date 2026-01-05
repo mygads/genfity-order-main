@@ -12,6 +12,7 @@ import { useMerchant } from "@/context/MerchantContext";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useToast } from "@/context/ToastContext";
 import ArchiveModal from "@/components/common/ArchiveModal";
+import { useContextualHint, CONTEXTUAL_HINTS, useClickHereHint, CLICK_HINTS } from "@/lib/tutorial";
 
 interface AddonCategory {
   id: string;
@@ -56,6 +57,8 @@ function AddonCategoriesPageContent() {
   const searchParams = useSearchParams();
   const { t } = useTranslation();
   const { showSuccess, showError } = useToast();
+  const { showHint } = useContextualHint();
+  const { showClickHint } = useClickHereHint();
   const [submitting, setSubmitting] = useState(false);
 
   const [filteredCategories, setFilteredCategories] = useState<AddonCategory[]>([]);
@@ -140,6 +143,21 @@ function AddonCategoriesPageContent() {
     ? { currency: merchantData.currency || "AUD" }
     : { currency: "AUD" };
   const loading = categoriesLoading || merchantLoading;
+
+  // Show contextual hints on first visit or empty state
+  useEffect(() => {
+    if (!loading) {
+      if (categories.length === 0) {
+        showHint(CONTEXTUAL_HINTS.emptyAddons);
+        // Show click hint pointing to Add Addon Category button
+        setTimeout(() => {
+          showClickHint(CLICK_HINTS.addAddonCategoryButton);
+        }, 1000);
+      } else {
+        showHint(CONTEXTUAL_HINTS.addonCategoryFirstVisit);
+      }
+    }
+  }, [loading, categories.length, showHint, showClickHint]);
 
   // Function to refetch data (for backwards compatibility)
   const fetchCategories = useCallback(async () => {
@@ -538,10 +556,10 @@ function AddonCategoriesPageContent() {
   };
 
   return (
-    <div>
+    <div data-tutorial="addon-categories-page">
       <div className="space-y-6">
         {showForm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div data-tutorial="addon-category-form-modal" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
             <div className="w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-800 dark:bg-gray-900">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
@@ -557,8 +575,8 @@ function AddonCategoriesPageContent() {
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
+              <form data-tutorial="addon-category-form" onSubmit={handleSubmit} className="space-y-4">
+                <div data-tutorial="addon-category-name-field">
                   <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                     {t("admin.addonCategories.categoryName")} <span className="text-error-500">*</span>
                   </label>
@@ -587,7 +605,7 @@ function AddonCategoriesPageContent() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div data-tutorial="addon-category-selection-rules" className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                       {t("admin.addonCategories.minSelection")} <span className="text-error-500">*</span>
@@ -720,6 +738,7 @@ function AddonCategoriesPageContent() {
                 Export
               </button>
               <button
+                data-tutorial="add-addon-category-btn"
                 onClick={() => setShowForm(true)}
                 className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary-500 px-6 text-sm font-medium text-white hover:bg-primary-600 focus:outline-none focus:ring-3 focus:ring-primary-500/20"
               >
@@ -732,8 +751,8 @@ function AddonCategoriesPageContent() {
           </div>
 
           {/* Search and Filters */}
-          <div className="mb-5 grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div>
+          <div data-tutorial="addon-category-filters" className="mb-5 grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div data-tutorial="addon-category-search">
               <input
                 type="text"
                 placeholder={t("admin.addonCategories.searchPlaceholder")}
@@ -756,17 +775,19 @@ function AddonCategoriesPageContent() {
           </div>
 
           {filteredCategories.length === 0 ? (
-            <EmptyState
-              type={categories.length === 0 ? "no-addon" : "no-results"}
-              title={categories.length === 0 ? undefined : t("admin.addonCategories.noMatch")}
-              description={categories.length === 0 ? undefined : t("admin.addonCategories.tryAdjusting")}
-              action={categories.length === 0 ? {
-                label: t("admin.addonCategories.createCategory"),
-                onClick: () => setShowForm(true)
-              } : undefined}
-            />
+            <div data-tutorial="addon-category-empty-state">
+              <EmptyState
+                type={categories.length === 0 ? "no-addon" : "no-results"}
+                title={categories.length === 0 ? undefined : t("admin.addonCategories.noMatch")}
+                description={categories.length === 0 ? undefined : t("admin.addonCategories.tryAdjusting")}
+                action={categories.length === 0 ? {
+                  label: t("admin.addonCategories.createCategory"),
+                  onClick: () => setShowForm(true)
+                } : undefined}
+              />
+            </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div data-tutorial="addon-category-list" className="overflow-x-auto">
               <table className="w-full table-auto">
                 <thead>
                   <tr className="bg-gray-50 text-left dark:bg-gray-900/50">

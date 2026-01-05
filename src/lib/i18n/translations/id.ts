@@ -447,6 +447,9 @@ const id = {
   "admin.nav.main": "Utama",
   "admin.nav.dashboard": "Dashboard",
   "admin.nav.management": "Manajemen",
+  "admin.nav.userManagement": "Manajemen Pengguna",
+  "admin.nav.finance": "Keuangan",
+  "admin.nav.platformSettings": "Pengaturan Platform",
   "admin.nav.merchants": "Merchant",
   "admin.nav.users": "Pengguna",
   "admin.nav.analytics": "Analitik",
@@ -486,6 +489,8 @@ const id = {
   "admin.nav.customers": "Pelanggan",
   "admin.nav.influencers": "Influencer",
   "admin.nav.influencerWithdrawals": "Penarikan Influencer",
+  "admin.nav.influencerSettings": "Pengaturan Influencer",
+  "admin.nav.financialSettings": "Pengaturan Keuangan",
 
   // Subscription Settings Page (Super Admin)
   "admin.subscriptionSettings.title": "Pengaturan Langganan",
@@ -511,6 +516,20 @@ const id = {
   "admin.subscriptionSettings.saveChanges": "Simpan Perubahan",
   "admin.subscriptionSettings.success": "Pengaturan berhasil disimpan!",
   "admin.subscriptionSettings.error": "Gagal menyimpan pengaturan",
+
+  // Influencer Settings
+  "admin.influencerSettings.title": "Pengaturan Influencer",
+  "admin.influencerSettings.commission.title": "Komisi Referral",
+  "admin.influencerSettings.commission.subtitle": "Konfigurasi persentase komisi untuk mitra referral",
+  "admin.influencerSettings.commission.firstPayment": "Komisi Pembayaran Pertama (%)",
+  "admin.influencerSettings.commission.recurringPayment": "Komisi Pembayaran Berulang (%)",
+  "admin.influencerSettings.withdrawal.title": "Pengaturan Penarikan",
+  "admin.influencerSettings.withdrawal.subtitle": "Atur batas penarikan minimum untuk influencer",
+  "admin.influencerSettings.withdrawal.minAmount": "Jumlah Penarikan Minimum",
+  "admin.influencerSettings.saveChanges": "Simpan Perubahan",
+  "admin.influencerSettings.saving": "Menyimpan...",
+  "admin.influencerSettings.success": "Pengaturan berhasil diperbarui",
+  "admin.influencerSettings.error": "Gagal memperbarui pengaturan",
 
   // Payment Verification Page (Super Admin)
   "admin.paymentVerification.title": "Verifikasi Pembayaran",
@@ -1644,14 +1663,14 @@ const id = {
   "landing.faq.subtitle": "Semua yang perlu Anda ketahui tentang platform dan bagaimana ini membantu bisnis Anda berkembang.",
   "landing.faq.stillHaveQuestions": "Masih ada pertanyaan?",
   "landing.faq.contactUs": "Hubungi Support",
-  
+
   // FAQ Categories
   "landing.faq.category.general": "Umum",
   "landing.faq.category.features": "Fitur",
   "landing.faq.category.pricing": "Harga",
   "landing.faq.category.technical": "Teknis",
   "landing.faq.category.support": "Dukungan",
-  
+
   // General FAQs
   "landing.faq.general.q1": "Apa itu GENFITY Order?",
   "landing.faq.general.a1": "GENFITY Order adalah platform pemesanan online dan manajemen restoran yang membantu bisnis F&B menyederhanakan operasional. Termasuk pemesanan QR code, sistem tampilan dapur, analitik real-time, dan manajemen inventaris—semua bisa diakses dari perangkat apa saja.",
@@ -1661,7 +1680,7 @@ const id = {
   "landing.faq.general.a3": "Sebagian besar bisnis bisa live dalam 24 jam. Setup dasar hanya butuh sekitar 30 menit—cukup daftar, tambahkan menu, cetak QR code, dan Anda siap menerima pesanan. Tim onboarding kami siap membantu jika diperlukan.",
   "landing.faq.general.q4": "Apakah staff saya perlu dilatih khusus?",
   "landing.faq.general.a4": "Interface-nya dirancang intuitif dan mudah digunakan. Kebanyakan staff bisa mempelajari sistem dalam waktu kurang dari 30 menit. Kami juga menyediakan video tutorial dan dokumentasi sebagai referensi.",
-  
+
   // Features FAQs
   "landing.faq.features.q1": "Apakah analisis data berjalan real-time?",
   "landing.faq.features.a1": "Ya, semua data penjualan, inventaris, dan insight pelanggan diperbarui secara real-time. Anda bisa melihat pesanan masuk dan laporan terupdate instan di dashboard saat transaksi terjadi.",
@@ -1673,7 +1692,7 @@ const id = {
   "landing.faq.features.a4": "Ya, GENFITY mendukung Dine-In (dengan nomor meja), Pick-Up, dan Delivery. Anda bisa mengaktifkan atau menonaktifkan setiap mode sesuai kebutuhan bisnis dan mengatur jam operasional berbeda untuk masing-masing.",
   "landing.faq.features.q5": "Bisakah saya menyesuaikan tampilan pemesanan pelanggan?",
   "landing.faq.features.a5": "Ya, Anda bisa upload logo, menyesuaikan warna, menambah kategori menu, mengatur item unggulan, dan menulis deskripsi dalam berbagai bahasa (saat ini mendukung Bahasa Indonesia dan Inggris).",
-  
+
   // Pricing FAQs
   "landing.faq.pricing.q1": "Bagaimana sistem harga Flexi (berbasis deposit) bekerja?",
   "landing.faq.pricing.a1": "Anda mengisi saldo kredit (minimum Rp 50.000). Kami memotong biaya kecil (Rp 250) hanya saat ada pesanan sukses. Jika tidak ada pesanan, Anda tidak bayar apa-apa. Ideal untuk bisnis yang baru memulai atau dengan volume pesanan bervariasi.",
@@ -1683,7 +1702,7 @@ const id = {
   "landing.faq.pricing.a3": "Tidak ada komitmen jangka panjang. Paket Flexi dan Pro sama-sama bayar sesuai pemakaian. Anda bisa membatalkan, pause, atau ganti paket kapan saja tanpa penalti. Kami percaya harus selalu memberikan nilai terbaik setiap bulan.",
   "landing.faq.pricing.q4": "Apakah ada biaya tersembunyi?",
   "landing.faq.pricing.a4": "Tidak ada biaya tersembunyi. Harga kami transparan—yang Anda lihat adalah yang Anda bayar. Tidak ada biaya setup, tidak ada biaya transaksi di luar yang tertera, dan tidak ada kejutan tagihan.",
-  
+
   // Technical FAQs
   "landing.faq.technical.q1": "Apakah saya butuh perangkat keras khusus?",
   "landing.faq.technical.a1": "Tidak perlu hardware khusus. GENFITY berjalan di perangkat apa saja dengan browser modern—laptop, tablet, atau smartphone. Gunakan perangkat yang sudah Anda miliki untuk menekan biaya. Untuk struk, kami mendukung printer thermal standar 58mm/80mm.",
@@ -1695,10 +1714,10 @@ const id = {
   "landing.faq.technical.a4": "Kami sedang mengembangkan integrasi dengan sistem POS populer. Saat ini, GENFITY bisa bekerja berdampingan dengan setup yang sudah ada—banyak bisnis menggunakan kami khusus untuk pesanan online sambil tetap memakai POS in-house untuk walk-in.",
   "landing.faq.technical.q5": "Bisakah saya pakai domain sendiri?",
   "landing.faq.technical.a5": "Ya, pelanggan paket Pro bisa mapping domain sendiri (contoh: order.kafeanda.com). Kami yang urus semua setup teknis termasuk sertifikat SSL. Brand Anda, domain Anda.",
-  
+
   // Support FAQs
   "landing.faq.support.q1": "Bagaimana cara mendapatkan bantuan jika ada masalah?",
-  "landing.faq.support.a1": "Kami menyediakan berbagai channel support: email (sales@genfity.com) dan WhatsApp (085174314023). Pelanggan paket Pro mendapat dukungan prioritas dengan waktu respons lebih cepat. Tim kami tersedia Senin-Sabtu, jam 9 pagi - 9 malam.",
+  "landing.faq.support.a1": "Kami menyediakan berbagai channel support: email (genfity@gmail.com) dan WhatsApp (085174314023). Pelanggan paket Pro mendapat dukungan prioritas dengan waktu respons lebih cepat. Tim kami tersedia Senin-Sabtu, jam 9 pagi - 9 malam.",
   "landing.faq.support.q2": "Apakah ada batasan jumlah akun staff?",
   "landing.faq.support.a2": "Tidak ada batasan. Paket Flexi dan Pro sama-sama menyediakan akun staff unlimited. Anda bisa memberikan peran berbeda (Kasir, Dapur, Admin) dengan izin khusus untuk mengontrol apa yang bisa diakses setiap anggota tim.",
   "landing.faq.support.q3": "Bisakah saya mengekspor data penjualan?",
@@ -2015,6 +2034,9 @@ const id = {
   "register.merchantNamePlaceholder": "Cth: Warung Makan Barokah",
   "register.merchantCode": "Kode Merchant",
   "register.merchantCodeHint": "Ini akan menjadi URL halaman pesanan Anda",
+  "register.merchantCodeHintNew": "4-8 karakter huruf kapital dan angka. Contoh: ABCD, CAFE01",
+  "register.influencerCode": "Kode Influencer",
+  "register.influencerCodeHint": "Kode referral dari influencer (terkunci)",
   "register.address": "Alamat",
   "register.addressPlaceholder": "Alamat lengkap merchant",
   "register.phone": "Nomor Telepon",
@@ -2063,7 +2085,9 @@ const id = {
   // Validation errors
   "validation.merchantNameMin": "Nama merchant minimal 2 karakter",
   "validation.merchantCodeMin": "Kode merchant minimal 3 karakter",
-  "validation.merchantCodeFormat": "Kode hanya boleh huruf, angka, dan strip",
+  "validation.merchantCodeMin4": "Kode merchant minimal 4 karakter",
+  "validation.merchantCodeMax8": "Kode merchant maksimal 8 karakter",
+  "validation.merchantCodeFormat": "Kode hanya boleh huruf kapital dan angka",
   "validation.ownerNameMin": "Nama pemilik minimal 2 karakter",
   "validation.emailInvalid": "Format email tidak valid",
   "validation.passwordMin": "Password minimal 8 karakter",
@@ -2342,24 +2366,24 @@ const id = {
   "subscription.alert.suspended": "Langganan Anda telah ditangguhkan.",
   "subscription.alert.renewCta": "Silakan perbarui langganan untuk melanjutkan operasional.",
   "subscription.alert.renewButton": "Perbarui Langganan",
-  
+
   // Grace Period
   "subscription.grace.title": "Langganan Segera Berakhir",
   "subscription.grace.message": "Langganan Anda telah berakhir. Anda memiliki {days} hari masa tenggang tersisa.",
   "subscription.grace.lastDay": "Ini adalah hari terakhir masa tenggang. Toko Anda akan ditangguhkan besok.",
   "subscription.grace.renewNow": "Perbarui Sekarang untuk Menghindari Penangguhan",
-  
+
   // Trial Banner
   "subscription.trial.title": "Masa Trial",
   "subscription.trial.daysRemaining": "Sisa {days} hari lagi",
   "subscription.trial.endsToday": "Berakhir hari ini!",
   "subscription.trial.upgradeNow": "Upgrade Sekarang",
-  
+
   // Subscription Required
   "subscription.required.title": "Langganan Diperlukan",
   "subscription.required.message": "Silakan perbarui langganan untuk mengakses fitur ini.",
   "subscription.required.viewDetails": "Lihat Detail Langganan",
-  
+
   // Upgrade Prompt Modal
   "subscription.upgrade.title": "Pilih Paket Anda",
   "subscription.upgrade.subtitle": "Trial Anda akan segera berakhir. Pilih paket untuk terus menggunakan Genfity.",
@@ -2380,7 +2404,7 @@ const id = {
   "subscription.upgrade.currentPlan": "Paket Saat Ini",
   "subscription.upgrade.later": "Ingatkan Nanti",
   "subscription.upgrade.dontShowAgain": "Jangan tampilkan sampai trial berakhir",
-  
+
   // Analytics Dashboard
   "subscription.analytics.title": "Analitik Langganan",
   "subscription.analytics.subtitle": "Pantau metrik langganan dan kesehatan merchant",
@@ -2438,7 +2462,7 @@ const id = {
   "subscription.analytics.merchantId": "ID Merchant",
   "subscription.analytics.change": "Perubahan",
   "subscription.analytics.reason": "Alasan",
-  
+
   // Push Notifications
   "subscription.push.title": "Notifikasi Push",
   "subscription.push.enable": "Aktifkan Notifikasi Push",
@@ -2453,6 +2477,33 @@ const id = {
   "subscription.push.gracePeriod.body": "Anda memiliki {days} hari masa tenggang tersisa. Perbarui untuk menghindari penangguhan.",
   "subscription.push.lowBalance.title": "Peringatan Saldo Rendah",
   "subscription.push.lowBalance.body": "Saldo Anda hampir habis. Top up untuk terus menerima pesanan.",
+
+  // ============================================================================
+  // CHECKLIST - Getting Started Checklist
+  // ============================================================================
+  "checklist.title": "Mulai Memulai",
+  "checklist.tasksComplete": "tugas selesai",
+  "checklist.merchantInfo": "Lengkapi Info Toko",
+  "checklist.merchantInfoDesc": "Tambahkan nama toko, logo, dan detail kontak",
+  "checklist.categories": "Buat Kategori",
+  "checklist.categoriesDesc": "Tambahkan minimal 1 kategori menu",
+  "checklist.menuItems": "Tambah Menu",
+  "checklist.menuItemsDesc": "Tambahkan minimal 3 item ke menu Anda",
+  "checklist.addons": "Atur Addon",
+  "checklist.optional": "(Opsional)",
+  "checklist.addonsDesc": "Buat kategori addon untuk kustomisasi",
+  "checklist.skip": "Lewati",
+  "checklist.qrTables": "Buat QR Meja",
+  "checklist.qrTablesDesc": "Generate kode QR untuk pemesanan meja",
+  "checklist.openingHours": "Atur Jam Buka",
+  "checklist.openingHoursDesc": "Tentukan jam operasional toko Anda",
+  "checklist.footer": "Selesaikan tugas-tugas ini untuk menyiapkan toko Anda!",
+  "checklist.allComplete": "Semua tugas selesai! 🎉",
+  "checklist.dismiss": "Tutup",
+  "checklist.dismissed": "Checklist setup ditutup",
+  "checklist.complete": "🎉 Setup Selesai!",
+  "checklist.completeDesc": "Toko Anda siap menerima pesanan. Kerja bagus!",
+  "checklist.showAgain": "Tampilkan checklist",
 };
 
 export default id;

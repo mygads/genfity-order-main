@@ -88,9 +88,9 @@ export default function GroupOrderSubmitModal({
             />
 
             {/* Modal */}
-            <div className="relative bg-white dark:bg-gray-900 rounded-2xl w-full max-w-md mx-4 overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="relative bg-white rounded-2xl w-full max-w-md mx-4 overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
                 {/* Header */}
-                <div className="px-6 py-5 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-green-500 to-emerald-500">
+                <div className="px-6 py-5 border-b border-gray-200 bg-gradient-to-r from-green-500 to-emerald-500">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 bg-white/20 backdrop-blur rounded-full flex items-center justify-center">
@@ -117,7 +117,7 @@ export default function GroupOrderSubmitModal({
                 <form onSubmit={handleSubmit} className="p-6 space-y-5">
                     {/* Name */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
                             Name *
                         </label>
                         <input
@@ -125,7 +125,7 @@ export default function GroupOrderSubmitModal({
                             value={customerName}
                             onChange={(e) => setCustomerName(e.target.value)}
                             placeholder="Enter your name"
-                            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                            className="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                             maxLength={100}
                             autoFocus
                         />
@@ -133,7 +133,7 @@ export default function GroupOrderSubmitModal({
 
                     {/* Email */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
                             Email *
                         </label>
                         <input
@@ -141,14 +141,14 @@ export default function GroupOrderSubmitModal({
                             value={customerEmail}
                             onChange={(e) => setCustomerEmail(e.target.value)}
                             placeholder="Enter your email"
-                            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                            className="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                             maxLength={100}
                         />
                     </div>
 
                     {/* Phone */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
                             Phone (optional)
                         </label>
                         <input
@@ -156,14 +156,14 @@ export default function GroupOrderSubmitModal({
                             value={customerPhone}
                             onChange={(e) => setCustomerPhone(e.target.value)}
                             placeholder="Enter your phone number"
-                            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                            className="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                             maxLength={20}
                         />
                     </div>
 
                     {/* Notes */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
                             Order Notes (optional)
                         </label>
                         <textarea
@@ -171,14 +171,14 @@ export default function GroupOrderSubmitModal({
                             onChange={(e) => setNotes(e.target.value)}
                             placeholder="Any special requests..."
                             rows={2}
-                            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all resize-none"
+                            className="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all resize-none"
                             maxLength={500}
                         />
                     </div>
 
                     {/* Error */}
                     {error && (
-                        <div className="p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400 text-sm">
+                        <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
                             {error}
                         </div>
                     )}

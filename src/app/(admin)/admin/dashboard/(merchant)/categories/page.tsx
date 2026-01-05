@@ -11,6 +11,7 @@ import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useMerchant } from "@/context/MerchantContext";
 import { useToast } from "@/context/ToastContext";
 import ArchiveModal from "@/components/common/ArchiveModal";
+import { useContextualHint, CONTEXTUAL_HINTS, useClickHereHint, CLICK_HINTS } from "@/lib/tutorial";
 
 interface Category {
   id: string;
@@ -49,6 +50,8 @@ export default function MerchantCategoriesPage() {
   const { t } = useTranslation();
   const { formatCurrency } = useMerchant();
   const { showSuccess, showError } = useToast();
+  const { showHint } = useContextualHint();
+  const { showClickHint } = useClickHereHint();
   const [submitting, setSubmitting] = useState(false);
 
   const [filteredCategories, setFilteredCategories] = useState<Category[]>([]);
@@ -183,6 +186,17 @@ export default function MerchantCategoriesPage() {
   const totalPages = Math.ceil(filteredCategories.length / itemsPerPage);
 
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
+
+  // Show contextual hint when categories are empty
+  useEffect(() => {
+    if (!loading && categories.length === 0) {
+      showHint(CONTEXTUAL_HINTS.emptyCategories);
+      // Show click hint pointing to Add Category button
+      setTimeout(() => {
+        showClickHint(CLICK_HINTS.addCategoryButton);
+      }, 1000);
+    }
+  }, [loading, categories.length, showHint, showClickHint]);
 
   // Show skeleton loader during initial load
   if (loading) {
@@ -656,11 +670,11 @@ export default function MerchantCategoriesPage() {
   };
 
   return (
-    <div>
+    <div data-tutorial="categories-page">
       <div className="space-y-6">
         {showForm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-800 dark:bg-gray-900">
+            <div className="w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-800 dark:bg-gray-900" data-tutorial="category-form-modal">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
                   {editingId ? t("admin.categories.editCategory") : t("admin.categories.createNew")}
@@ -675,8 +689,8 @@ export default function MerchantCategoriesPage() {
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
+              <form onSubmit={handleSubmit} className="space-y-4" data-tutorial="category-form">
+                <div data-tutorial="category-name-field">
                   <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                     {t("admin.categories.categoryName")} <span className="text-error-500">*</span>
                   </label>
@@ -801,6 +815,7 @@ export default function MerchantCategoriesPage() {
                     {t("common.export")}
                   </button>
                   <button
+                    data-tutorial="add-category-btn"
                     onClick={() => setShowForm(true)}
                     className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary-500 px-6 text-sm font-medium text-white hover:bg-primary-600 focus:outline-none focus:ring-3 focus:ring-primary-500/20"
                   >
@@ -813,8 +828,8 @@ export default function MerchantCategoriesPage() {
               </div>
 
               {/* Search and Filters */}
-              <div className="mb-5 grid grid-cols-1 gap-4 md:grid-cols-3">
-                <div>
+              <div data-tutorial="category-filters" className="mb-5 grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div data-tutorial="category-search">
                   <input
                     type="text"
                     placeholder={t("admin.categories.searchPlaceholder")}
@@ -849,14 +864,16 @@ export default function MerchantCategoriesPage() {
               </div>
 
               {filteredCategories.length === 0 ? (
-                <EmptyState
-                  type={categories.length === 0 ? "no-category" : "no-results"}
-                  title={categories.length === 0 ? undefined : t("admin.categories.noMatch")}
-                  description={categories.length === 0 ? undefined : t("admin.categories.tryAdjusting")}
-                  action={categories.length === 0 ? { label: t("admin.categories.createFirst"), onClick: () => setShowForm(true) } : undefined}
-                />
+                <div data-tutorial="category-empty-state">
+                  <EmptyState
+                    type={categories.length === 0 ? "no-category" : "no-results"}
+                    title={categories.length === 0 ? undefined : t("admin.categories.noMatch")}
+                    description={categories.length === 0 ? undefined : t("admin.categories.tryAdjusting")}
+                    action={categories.length === 0 ? { label: t("admin.categories.createFirst"), onClick: () => setShowForm(true) } : undefined}
+                  />
+                </div>
               ) : (
-                <div className="overflow-x-auto">
+                <div data-tutorial="category-list" className="overflow-x-auto">
                   <table className="w-full table-auto">
                     <thead>
                       <tr className="bg-gray-50 text-left dark:bg-gray-900/50">

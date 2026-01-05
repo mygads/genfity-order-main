@@ -1,0 +1,342 @@
+/**
+ * Menu Tutorial Steps
+ * Create, edit, builder, and bulk upload tutorials
+ */
+
+import type { TutorialStep } from '../types';
+
+// ============================================
+// CREATE MENU TUTORIAL - Step by step
+// ============================================
+
+export const createMenuSteps: TutorialStep[] = [
+  {
+    id: 'go-to-menu-page',
+    title: 'Go to Menu Items',
+    description: 'First, let\'s navigate to the Menu Items page where you can see and manage all your menu items.',
+    targetSelector: '[data-nav-item="/admin/dashboard/menu"]',
+    position: 'right',
+    spotlightPadding: 4,
+    actionText: 'Go to Menu Items',
+    navigateTo: '/admin/dashboard/menu',
+    showPointer: true,
+    pointerDirection: 'left',
+    pointerLabel: 'Click here!',
+  },
+  {
+    id: 'menu-list-overview',
+    title: 'Menu Items List',
+    description: 'Here you can see all your menu items. You can search, filter by category, and sort them. Each card shows the menu name, price, category, and status.',
+    targetSelector: '[data-tutorial="menu-list"]',
+    position: 'bottom',
+    spotlightPadding: 8,
+  },
+  {
+    id: 'menu-filter-section',
+    title: 'Filter & Search',
+    description: 'Use these filters to quickly find specific menu items. You can search by name, filter by category, or filter by status (active/inactive).',
+    targetSelector: '[data-tutorial="menu-filters"]',
+    position: 'bottom',
+    spotlightPadding: 8,
+    showPointer: true,
+    pointerDirection: 'up',
+    pointerIcon: 'search',
+  },
+  {
+    id: 'menu-add-button',
+    title: 'Click "Add Menu" Button',
+    description: 'Click this button to create a new menu item. This will open the menu creation form.',
+    targetSelector: '[data-tutorial="add-menu-btn"]',
+    position: 'bottom-left',
+    spotlightPadding: 8,
+    actionText: 'Create New Menu',
+    navigateTo: '/admin/dashboard/menu/create',
+    showPointer: true,
+    pointerDirection: 'left',
+    pointerLabel: 'Click here!',
+    pointerIcon: 'plus',
+  },
+  {
+    id: 'menu-form-name',
+    title: 'Enter Menu Name',
+    description: 'Give your menu item a clear, appetizing name. This is what customers will see when ordering. Example: "Nasi Goreng Special" or "Chicken Satay".',
+    targetSelector: '[data-tutorial="menu-name"]',
+    position: 'right',
+    spotlightPadding: 8,
+    showPointer: true,
+    pointerDirection: 'left',
+    pointerIcon: 'edit',
+    requiresInteraction: true,
+  },
+  {
+    id: 'menu-form-description',
+    title: 'Add Description',
+    description: 'Write a tempting description of your dish. Include key ingredients, cooking style, or portion size. This helps customers decide what to order!',
+    targetSelector: '[data-tutorial="menu-description"]',
+    position: 'right',
+    spotlightPadding: 8,
+    showPointer: true,
+    pointerDirection: 'left',
+    pointerIcon: 'edit',
+  },
+  {
+    id: 'menu-form-price',
+    title: 'Set the Price',
+    description: 'Enter the selling price for this menu item. The currency is based on your merchant settings.',
+    targetSelector: '[data-tutorial="menu-price"]',
+    position: 'right',
+    spotlightPadding: 8,
+    showPointer: true,
+    pointerDirection: 'left',
+    pointerLabel: 'Enter price',
+  },
+  {
+    id: 'menu-form-image',
+    title: 'Upload Food Photo',
+    description: 'A great photo increases orders! Upload a high-quality image of your dish. Tip: Use good lighting and show the food from above or at a 45° angle.',
+    targetSelector: '[data-tutorial="menu-image"]',
+    position: 'right',
+    spotlightPadding: 12,
+    showPointer: true,
+    pointerDirection: 'up',
+    pointerLabel: 'Upload photo',
+  },
+  {
+    id: 'menu-form-category',
+    title: 'Select Categories',
+    description: 'Choose which categories this menu belongs to. A menu can be in multiple categories (e.g., "Lunch Special" and "Rice Dishes"). If you don\'t have categories yet, create them first!',
+    targetSelector: '[data-tutorial="menu-category"]',
+    position: 'right',
+    spotlightPadding: 8,
+    showPointer: true,
+    pointerDirection: 'left',
+  },
+  {
+    id: 'menu-form-addons',
+    title: 'Link Addon Options (Optional)',
+    description: 'If you have addon categories (like "Size", "Spice Level", "Extra Toppings"), link them here so customers can customize this dish.',
+    targetSelector: '[data-tutorial="menu-addons"]',
+    position: 'right',
+    spotlightPadding: 8,
+  },
+  {
+    id: 'menu-form-stock',
+    title: 'Stock Settings (Optional)',
+    description: 'Enable "Track Stock" if you want to limit availability. When stock reaches 0, the item will show as "Sold Out" to customers.',
+    targetSelector: '[data-tutorial="menu-stock"]',
+    position: 'right',
+    spotlightPadding: 8,
+  },
+  {
+    id: 'menu-form-status',
+    title: 'Set Menu Status',
+    description: 'Toggle this to make the menu Active (visible to customers) or Inactive (hidden). You can activate it later when you\'re ready.',
+    targetSelector: '[data-tutorial="menu-status"]',
+    position: 'right',
+    spotlightPadding: 8,
+    showPointer: true,
+    pointerDirection: 'left',
+    pointerIcon: 'eye',
+  },
+  {
+    id: 'menu-form-save',
+    title: 'Save Your Menu! 🎉',
+    description: 'Click "Save" to publish your menu item. It will immediately appear on your online ordering page for customers to see!',
+    targetSelector: '[data-tutorial="menu-save-btn"]',
+    position: 'top',
+    spotlightPadding: 8,
+    showPointer: true,
+    pointerDirection: 'up',
+    pointerLabel: 'Save now!',
+    pointerIcon: 'check',
+  },
+];
+
+// ============================================
+// EDIT MENU TUTORIAL
+// ============================================
+
+export const editMenuSteps: TutorialStep[] = [
+  {
+    id: 'go-to-menu-list',
+    title: 'Go to Menu Items',
+    description: 'Navigate to the Menu Items page to see all your existing menus.',
+    targetSelector: '[data-nav-item="/admin/dashboard/menu"]',
+    position: 'right',
+    spotlightPadding: 4,
+    actionText: 'Go to Menu Items',
+    navigateTo: '/admin/dashboard/menu',
+  },
+  {
+    id: 'find-menu-to-edit',
+    title: 'Find Menu to Edit',
+    description: 'Use the search bar or scroll to find the menu item you want to edit. You can also filter by category.',
+    targetSelector: '[data-tutorial="menu-filters"]',
+    position: 'bottom',
+    spotlightPadding: 8,
+  },
+  {
+    id: 'click-menu-card',
+    title: 'Click on Menu Card',
+    description: 'Click on any menu card to view its details. You\'ll see the full information and action buttons.',
+    targetSelector: '[data-tutorial="menu-card"]',
+    position: 'right',
+    spotlightPadding: 8,
+  },
+  {
+    id: 'click-edit-button',
+    title: 'Click Edit Button',
+    description: 'Click the "Edit" button (pencil icon) to open the edit form. You can change any details of the menu.',
+    targetSelector: '[data-tutorial="menu-edit-btn"]',
+    position: 'left',
+    spotlightPadding: 8,
+  },
+  {
+    id: 'edit-menu-form',
+    title: 'Update Menu Details',
+    description: 'Now you can update the name, description, price, image, categories, addons, or stock settings. Make your changes and click Save!',
+    targetSelector: '[data-tutorial="menu-form"]',
+    position: 'right',
+    spotlightPadding: 12,
+  },
+  {
+    id: 'save-changes',
+    title: 'Save Your Changes',
+    description: 'Click "Save" to update your menu item. Changes will be visible to customers immediately!',
+    targetSelector: '[data-tutorial="menu-save-btn"]',
+    position: 'top',
+    spotlightPadding: 8,
+  },
+];
+
+// ============================================
+// MENU BUILDER TUTORIAL
+// ============================================
+
+export const menuBuilderSteps: TutorialStep[] = [
+  {
+    id: 'go-to-builder',
+    title: 'Go to Menu Builder',
+    description: 'The Menu Builder provides a visual, drag-and-drop experience to create menus. Let\'s check it out!',
+    targetSelector: '[data-nav-item="/admin/dashboard/menu/builder/new"]',
+    position: 'right',
+    spotlightPadding: 4,
+    actionText: 'Open Menu Builder',
+    navigateTo: '/admin/dashboard/menu/builder/new',
+  },
+  {
+    id: 'builder-overview',
+    title: 'Menu Builder Overview',
+    description: 'This is the visual menu builder. You can see a live preview of how your menu will look to customers as you build it!',
+    targetSelector: '[data-tutorial="builder-preview"]',
+    position: 'left',
+    spotlightPadding: 8,
+  },
+  {
+    id: 'builder-basic-info',
+    title: 'Fill Basic Information',
+    description: 'Start by entering the menu name, description, and price. The preview will update in real-time!',
+    targetSelector: '[data-tutorial="builder-basic"]',
+    position: 'right',
+    spotlightPadding: 12,
+  },
+  {
+    id: 'builder-image',
+    title: 'Upload or Select Image',
+    description: 'Upload your own photo or choose from our stock photo library. A good image makes all the difference!',
+    targetSelector: '[data-tutorial="builder-image"]',
+    position: 'right',
+    spotlightPadding: 8,
+  },
+  {
+    id: 'builder-categories',
+    title: 'Assign to Categories',
+    description: 'Select which categories this menu belongs to. This helps customers find your menu easily.',
+    targetSelector: '[data-tutorial="builder-categories"]',
+    position: 'right',
+    spotlightPadding: 8,
+  },
+  {
+    id: 'builder-addons',
+    title: 'Add Customization Options',
+    description: 'Link addon categories so customers can customize their order (size, toppings, etc.).',
+    targetSelector: '[data-tutorial="builder-addons"]',
+    position: 'right',
+    spotlightPadding: 8,
+  },
+  {
+    id: 'builder-save',
+    title: 'Publish Your Menu',
+    description: 'Click "Save & Publish" to make your menu live. You can also save as draft to continue later.',
+    targetSelector: '[data-tutorial="builder-save"]',
+    position: 'top',
+    spotlightPadding: 8,
+  },
+];
+
+// ============================================
+// BULK UPLOAD MENU TUTORIAL
+// ============================================
+
+export const bulkUploadMenuSteps: TutorialStep[] = [
+  {
+    id: 'go-to-menu',
+    title: 'Go to Menu Items',
+    description: 'First, navigate to the Menu Items page.',
+    targetSelector: '[data-nav-item="/admin/dashboard/menu"]',
+    position: 'right',
+    spotlightPadding: 4,
+    actionText: 'Go to Menu Items',
+    navigateTo: '/admin/dashboard/menu',
+  },
+  {
+    id: 'click-bulk-upload',
+    title: 'Click Bulk Upload',
+    description: 'Click the "Bulk Upload" button to upload multiple menu items at once using a spreadsheet.',
+    targetSelector: '[data-tutorial="bulk-upload-btn"]',
+    position: 'bottom-left',
+    spotlightPadding: 8,
+    actionText: 'Open Bulk Upload',
+    navigateTo: '/admin/dashboard/menu/bulk-upload',
+  },
+  {
+    id: 'download-template',
+    title: 'Download Template',
+    description: 'First, download the Excel template. This has all the required columns and example data.',
+    targetSelector: '[data-tutorial="download-template"]',
+    position: 'right',
+    spotlightPadding: 8,
+  },
+  {
+    id: 'fill-template',
+    title: 'Fill the Template',
+    description: 'Open the template in Excel or Google Sheets. Fill in your menu items following the format. Each row is one menu item.',
+    targetSelector: '[data-tutorial="template-guide"]',
+    position: 'bottom',
+    spotlightPadding: 8,
+  },
+  {
+    id: 'upload-file',
+    title: 'Upload Your File',
+    description: 'Drag and drop your filled template here, or click to browse. Supported formats: .xlsx, .xls, .csv',
+    targetSelector: '[data-tutorial="upload-zone"]',
+    position: 'bottom',
+    spotlightPadding: 12,
+  },
+  {
+    id: 'preview-data',
+    title: 'Preview & Validate',
+    description: 'Review the parsed data. The system will highlight any errors (missing fields, invalid prices, etc.). Fix any issues before proceeding.',
+    targetSelector: '[data-tutorial="preview-table"]',
+    position: 'bottom',
+    spotlightPadding: 8,
+  },
+  {
+    id: 'confirm-upload',
+    title: 'Confirm & Upload',
+    description: 'Click "Upload All" to create all menu items at once. This is much faster than adding them one by one!',
+    targetSelector: '[data-tutorial="confirm-upload"]',
+    position: 'top',
+    spotlightPadding: 8,
+  },
+];

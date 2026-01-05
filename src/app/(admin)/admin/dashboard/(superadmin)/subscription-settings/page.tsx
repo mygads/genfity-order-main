@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/useToast";
 import { useSWRStatic } from "@/hooks/useSWRWithAuth";
 import { useSWRConfig } from "swr";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { FaDollarSign, FaSyncAlt } from "react-icons/fa";
 
 interface SubscriptionPlan {
     id: string;
@@ -49,7 +50,7 @@ export default function SubscriptionSettingsPage() {
     const { success: showSuccess, error: showError } = useToast();
     const { mutate } = useSWRConfig();
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [activeTab, setActiveTab] = useState<'pricing' | 'bank' | 'referral'>('pricing');
+    const [activeTab, setActiveTab] = useState<'pricing' | 'bank'>('pricing');
 
     const {
         data: response,
@@ -76,9 +77,6 @@ export default function SubscriptionSettingsPage() {
         bankNameAud: '',
         bankAccountAud: '',
         bankAccountNameAud: '',
-        // Influencer Commission
-        influencerFirstCommissionPercent: 10,
-        influencerRecurringCommissionPercent: 5,
     });
 
     // Load plan data into form
@@ -98,8 +96,6 @@ export default function SubscriptionSettingsPage() {
                 bankNameAud: plan.bankNameAud || '',
                 bankAccountAud: plan.bankAccountAud || '',
                 bankAccountNameAud: plan.bankAccountNameAud || '',
-                influencerFirstCommissionPercent: plan.influencerFirstCommissionPercent || 10,
-                influencerRecurringCommissionPercent: plan.influencerRecurringCommissionPercent || 5,
             });
         }
     }, [plan]);
@@ -180,16 +176,7 @@ export default function SubscriptionSettingsPage() {
                     >
                         {t("admin.subscriptionSettings.tabs.bank")}
                     </button>
-                    <button
-                        onClick={() => setActiveTab('referral')}
-                        className={`px-4 py-2 rounded-lg font-medium transition-colors
-              ${activeTab === 'referral'
-                                ? 'bg-orange-500 text-white'
-                                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200'
-                            }`}
-                    >
-                        Referral Commission
-                    </button>
+
                 </div>
 
                 {/* Pricing Tab */}
@@ -464,120 +451,7 @@ export default function SubscriptionSettingsPage() {
                     </div>
                 )}
 
-                {/* Referral Tab */}
-                {activeTab === 'referral' && (
-                    <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-                        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                            Referral Commission Settings
-                        </h2>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-                            Configure the commission percentages for referral partners (influencers) when merchants make deposits or subscription payments.
-                        </p>
 
-                        {/* Commission Info Cards */}
-                        <div className="grid gap-4 sm:grid-cols-2 mb-6">
-                            <div className="p-4 rounded-lg bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <svg className="w-5 h-5 text-orange-600 dark:text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    <span className="font-medium text-orange-900 dark:text-orange-200">First Payment</span>
-                                </div>
-                                <p className="text-xs text-orange-700 dark:text-orange-300">
-                                    Commission when merchant makes their first deposit or subscription payment after signing up via referral.
-                                </p>
-                            </div>
-                            <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                    </svg>
-                                    <span className="font-medium text-blue-900 dark:text-blue-200">Recurring Payment</span>
-                                </div>
-                                <p className="text-xs text-blue-700 dark:text-blue-300">
-                                    Commission for all subsequent payments made by the referred merchant (deposits, subscriptions, etc.).
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Commission Settings */}
-                        <div className="grid gap-6 sm:grid-cols-2 mb-6">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                    First Payment Commission (%)
-                                </label>
-                                <div className="relative">
-                                    <input
-                                        type="number"
-                                        value={formData.influencerFirstCommissionPercent}
-                                        onChange={(e) => handleChange('influencerFirstCommissionPercent', Number(e.target.value))}
-                                        min={0}
-                                        max={100}
-                                        step={0.5}
-                                        className="w-full px-4 py-2 pr-12 rounded-lg border border-gray-300 dark:border-gray-600 
-                      bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                      focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                                    />
-                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500">%</span>
-                                </div>
-                                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                    Recommended: 10% for first payment
-                                </p>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                    Recurring Payment Commission (%)
-                                </label>
-                                <div className="relative">
-                                    <input
-                                        type="number"
-                                        value={formData.influencerRecurringCommissionPercent}
-                                        onChange={(e) => handleChange('influencerRecurringCommissionPercent', Number(e.target.value))}
-                                        min={0}
-                                        max={100}
-                                        step={0.5}
-                                        className="w-full px-4 py-2 pr-12 rounded-lg border border-gray-300 dark:border-gray-600 
-                      bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                      focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                                    />
-                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500">%</span>
-                                </div>
-                                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                    Recommended: 5% for recurring payments
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Example Calculation */}
-                        <div className="p-4 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 mb-6">
-                            <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-                                Example Calculation
-                            </h4>
-                            <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                                <p>
-                                    If a referred merchant deposits <strong>Rp 1,000,000</strong>:
-                                </p>
-                                <ul className="list-disc list-inside ml-2 space-y-1">
-                                    <li>
-                                        First payment: Referrer earns <strong>Rp {(1000000 * formData.influencerFirstCommissionPercent / 100).toLocaleString('id-ID')}</strong> ({formData.influencerFirstCommissionPercent}%)
-                                    </li>
-                                    <li>
-                                        Recurring payment: Referrer earns <strong>Rp {(1000000 * formData.influencerRecurringCommissionPercent / 100).toLocaleString('id-ID')}</strong> ({formData.influencerRecurringCommissionPercent}%)
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-
-                        <button
-                            onClick={handleSubmit}
-                            disabled={isSubmitting}
-                            className="px-6 py-2 rounded-lg font-medium text-white
-                bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 transition-colors"
-                        >
-                            {isSubmitting ? t("admin.subscriptionSettings.saving") : t("admin.subscriptionSettings.saveChanges")}
-                        </button>
-                    </div>
-                )}
             </div>
         </div>
     );

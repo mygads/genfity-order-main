@@ -16,6 +16,7 @@ import SpecialHoursManager from "@/components/merchants/SpecialHoursManager";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { TranslationKeys } from "@/lib/i18n";
 import SubscriptionRequired from "@/components/subscription/SubscriptionRequired";
+import { useContextualHint, CONTEXTUAL_HINTS } from "@/lib/tutorial";
 
 // Dynamically import map component
 const MapLocationPicker = dynamic(() => import("@/components/maps/MapLocationPicker"), { ssr: false });
@@ -81,6 +82,7 @@ export default function EditMerchantPage() {
   const router = useRouter();
   const { t } = useTranslation();
   const { toasts, success: showSuccess, error: showError } = useToast();
+  const { showHint } = useContextualHint();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
@@ -150,6 +152,17 @@ export default function EditMerchantPage() {
     { dayOfWeek: 5, openTime: "09:00", closeTime: "22:00", isClosed: false },
     { dayOfWeek: 6, openTime: "09:00", closeTime: "22:00", isClosed: false },
   ]);
+
+  // Show contextual hints on first visit
+  useEffect(() => {
+    if (!loading) {
+      showHint(CONTEXTUAL_HINTS.merchantSettingsFirstVisit);
+      // Show opening hours tip when on opening hours tab
+      if (activeTab === 'hours') {
+        showHint(CONTEXTUAL_HINTS.openingHoursTip);
+      }
+    }
+  }, [loading, activeTab, showHint]);
 
   useEffect(() => {
     fetchMerchant();
@@ -1502,7 +1515,7 @@ export default function EditMerchantPage() {
 
   return (
     <SubscriptionRequired>
-      <div>
+      <div data-tutorial="merchant-settings-page">
         <ToastContainer toasts={toasts} />
         <PageBreadcrumb pageTitle="Edit Merchant" />
 
@@ -1518,7 +1531,7 @@ export default function EditMerchantPage() {
           </div>
 
           {/* Tabs Navigation */}
-          <div className="px-6 pt-4">
+          <div data-tutorial="merchant-settings-tabs" className="px-6 pt-4">
             <TabsNavigation
               tabs={TAB_KEYS.map(tab => ({ id: tab.id, label: t(tab.key) }))}
               activeTab={activeTab}
@@ -1527,7 +1540,7 @@ export default function EditMerchantPage() {
           </div>
 
           {/* Tab Content */}
-          <form onSubmit={handleSubmit}>
+          <form data-tutorial="merchant-settings-form" onSubmit={handleSubmit}>
             <div className="p-6">
               {renderTabContent()}
             </div>

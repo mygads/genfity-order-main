@@ -58,7 +58,7 @@ function getBaseTemplate(content: string, _footerEmail: string): string {
                 <tr>
                   <td align="center">
                     <p style="margin: 0 0 8px 0; font-size: 13px; color: #737373;">
-                      Need assistance? <a href="mailto:sales@genfity.com" style="color: #171717; text-decoration: underline;">sales@genfity.com</a>
+                      Need assistance? <a href="mailto:genfity@gmail.com" style="color: #171717; text-decoration: underline;">genfity@gmail.com</a>
                     </p>
                     <p style="margin: 0; font-size: 12px; color: #a3a3a3;">
                       © ${new Date().getFullYear()} Genfity Digital Solution. All rights reserved.

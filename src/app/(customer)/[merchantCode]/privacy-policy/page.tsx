@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense } from 'react';
+import { FaArrowLeft, FaEnvelope, FaPhone, FaBuilding } from "react-icons/fa";
 import { useRouter, useSearchParams, useParams } from 'next/navigation';
 import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';
 import PoweredByFooter from '@/components/common/PoweredByFooter';
@@ -29,9 +30,9 @@ function PrivacyPolicyContent() {
     };
 
     return (
-        <div className="min-h-screen bg-white dark:bg-gray-900 flex flex-col">
+        <div className="min-h-screen bg-white flex flex-col">
             {/* Header */}
-            <header className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700 shadow-md">
+            <header className="sticky top-0 z-10 bg-white border-b border-gray-300 shadow-md">
                 <div className="flex items-center px-4 py-3">
                     <button
                         onClick={handleBack}
@@ -42,7 +43,7 @@ function PrivacyPolicyContent() {
                             <path d="M19 12H5M12 19l-7-7 7-7" />
                         </svg>
                     </button>
-                    <h1 className="flex-1 text-center font-semibold text-gray-900 dark:text-white text-base pr-10">
+                    <h1 className="flex-1 text-center font-semibold text-gray-900 text-base pr-10">
                         Privacy Policy
                     </h1>
                 </div>
@@ -51,17 +52,17 @@ function PrivacyPolicyContent() {
             {/* Content */}
             <div className="flex-1 px-4 py-6 overflow-y-auto">
                 <div className="max-w-none">
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+                    <h2 className="text-xl font-bold text-gray-900 mb-4">
                         Our Privacy Policy
                     </h2>
 
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                    <p className="text-sm text-gray-500 mb-6">
                         Effective as of December 2024
                     </p>
 
                     {/* Table of Contents */}
-                    <div className="mb-8 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Contents</h3>
+                    <div className="mb-8 p-4 bg-gray-50 rounded-lg">
+                        <h3 className="text-sm font-semibold text-gray-900 mb-3">Contents</h3>
                         <ol className="list-decimal list-inside text-sm text-orange-500 space-y-1">
                             <li><a href="#introduction" className="hover:underline">Introduction</a></li>
                             <li><a href="#collection" className="hover:underline">Collection and Storage of Personal Data</a></li>
@@ -260,25 +261,54 @@ function PrivacyPolicyContent() {
 
                     {/* 11. Contact */}
                     <section id="contact" className="mb-8">
-                        <h3 className="text-base font-bold text-gray-900 dark:text-white mb-3">
+                        <h3 className="text-base font-bold text-gray-900 mb-3">
                             11. Contact
                         </h3>
-                        <div className="text-sm text-gray-600 dark:text-gray-400 space-y-4">
+                        <div className="text-sm text-gray-600 space-y-4">
                             <p>
                                 If you wish to submit questions regarding the processing of your Data or other questions regarding this Policy, please contact us through:
                             </p>
-                            <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg space-y-3">
+                            <div className="p-4 bg-gray-50 rounded-lg space-y-4">
                                 <div>
-                                    <p className="font-medium text-gray-900 dark:text-white">Indonesia:</p>
-                                    <p>PT Generation Infinity Indonesia</p>
-                                    <p>Email: support@genfity.com</p>
+                                    <p className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                                        <FaEnvelope className="text-orange-500" />
+                                        Email
+                                    </p>
+                                    <a href="mailto:genfity@gmail.com" className="text-orange-500 hover:text-orange-600 font-medium">
+                                        genfity@gmail.com
+                                    </a>
                                 </div>
                                 <div>
-                                    <p className="font-medium text-gray-900 dark:text-white">Australia:</p>
-                                    <p>Genfity Digital Solutions</p>
-                                    <p>Email: support@genfity.com</p>
+                                    <p className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                                        <FaPhone className="text-orange-500" />
+                                        Phone / WhatsApp
+                                    </p>
+                                    <a href="tel:+6285174314023" className="text-orange-500 hover:text-orange-600 font-medium">
+                                        +62 851 7431 4023
+                                    </a>
+                                </div>
+                                <div className="pt-3 border-t border-gray-200">
+                                    <p className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                                        <FaBuilding className="text-orange-500" />
+                                        Our Offices
+                                    </p>
+                                    <div className="space-y-3">
+                                        <div className="pl-1">
+                                            <p className="font-medium text-gray-800">🇮🇩 Indonesia</p>
+                                            <p className="text-gray-700 font-medium">PT Generation Infinity Indonesia</p>
+                                            <p className="text-gray-600">Bandung, Jawa Barat, Indonesia</p>
+                                        </div>
+                                        <div className="pl-1">
+                                            <p className="font-medium text-gray-800">🇦🇺 Australia</p>
+                                            <p className="text-gray-700 font-medium">Genfity Digital Solutions</p>
+                                            <p className="text-gray-600">157 Braidwood DR, Australind WA 6233, Australia</p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
+                            <p className="text-xs text-gray-500 mt-4">
+                                We aim to respond to all inquiries within 2-3 business days.
+                            </p>
                         </div>
                     </section>
 
@@ -286,7 +316,7 @@ function PrivacyPolicyContent() {
             </div>
 
             {/* Powered By Footer */}
-            <div className="py-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="py-4 border-t border-gray-200">
                 <PoweredByFooter />
             </div>
         </div>

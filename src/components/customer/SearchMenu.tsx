@@ -64,7 +64,7 @@ export default function SearchMenu({
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [priceRange, setPriceRange] = useState<{ min?: number; max?: number }>({});
   const [showFilters, setShowFilters] = useState(false);
-  
+
   const debouncedQuery = useDebounce(query, 300);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -121,7 +121,7 @@ export default function SearchMenu({
       const response = await fetch(
         `/api/public/menu/${merchantCode}/search?${params.toString()}`
       );
-      
+
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
@@ -241,9 +241,9 @@ export default function SearchMenu({
                       type="number"
                       placeholder="Min"
                       value={priceRange.min || ''}
-                      onChange={(e) => setPriceRange(prev => ({ 
-                        ...prev, 
-                        min: e.target.value ? parseFloat(e.target.value) : undefined 
+                      onChange={(e) => setPriceRange(prev => ({
+                        ...prev,
+                        min: e.target.value ? parseFloat(e.target.value) : undefined
                       }))}
                       className="w-1/2 px-2 py-1 text-sm border rounded dark:bg-gray-800 dark:border-gray-600"
                     />
@@ -251,9 +251,9 @@ export default function SearchMenu({
                       type="number"
                       placeholder="Max"
                       value={priceRange.max || ''}
-                      onChange={(e) => setPriceRange(prev => ({ 
-                        ...prev, 
-                        max: e.target.value ? parseFloat(e.target.value) : undefined 
+                      onChange={(e) => setPriceRange(prev => ({
+                        ...prev,
+                        max: e.target.value ? parseFloat(e.target.value) : undefined
                       }))}
                       className="w-1/2 px-2 py-1 text-sm border rounded dark:bg-gray-800 dark:border-gray-600"
                     />
@@ -314,12 +314,24 @@ export default function SearchMenu({
                       <h4 className="font-medium text-gray-900 dark:text-white truncate">
                         {item.name}
                       </h4>
-                      {item.isSpicy && <span className="text-xs">🌶️</span>}
-                      {item.isBestSeller && (
-                        <span className="text-xs bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded">
-                          Best Seller
-                        </span>
-                      )}
+                      {/* Badge Icons - Matching order page style */}
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        {item.isBestSeller && (
+                          <div style={{ width: '18px', height: '18px', position: 'relative', borderRadius: '50%', overflow: 'hidden' }}>
+                            <Image src="/images/menu-badges/best-seller.png" alt="Best Seller" fill className="object-cover" />
+                          </div>
+                        )}
+                        {item.isSignature && (
+                          <div style={{ width: '18px', height: '18px', position: 'relative', borderRadius: '50%', overflow: 'hidden' }}>
+                            <Image src="/images/menu-badges/signature.png" alt="Signature" fill className="object-cover" />
+                          </div>
+                        )}
+                        {item.isSpicy && (
+                          <div style={{ width: '18px', height: '18px', position: 'relative', borderRadius: '50%', overflow: 'hidden' }}>
+                            <Image src="/images/menu-badges/spicy.png" alt="Spicy" fill className="object-cover" />
+                          </div>
+                        )}
+                      </div>
                     </div>
                     {item.description && (
                       <p className="text-xs text-gray-500 dark:text-gray-400 truncate">

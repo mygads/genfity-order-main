@@ -26,6 +26,7 @@ import {
   FaCompress,
   FaSearch,
 } from 'react-icons/fa';
+import { useContextualHint, CONTEXTUAL_HINTS, useClickHereHint, CLICK_HINTS } from '@/lib/tutorial';
 import { OrderKanbanBoard } from '@/components/orders/OrderKanbanBoard';
 import { OrderKanbanListView } from '@/components/orders/OrderKanbanListView';
 import { OrderTabListView } from '@/components/orders/OrderTabListView';
@@ -64,6 +65,8 @@ function MerchantOrdersPageContent() {
   const _router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useTranslation();
+  const { showHint } = useContextualHint();
+  const { showClickHint } = useClickHereHint();
 
   // State management
   const [viewMode, setViewMode] = useState<ViewMode>('kanban-card');
@@ -108,6 +111,19 @@ function MerchantOrdersPageContent() {
       setLoading(false);
     }
   }, [merchantData, merchantLoading]);
+
+  // Show contextual hints on first visit
+  useEffect(() => {
+    if (!loading) {
+      showHint(CONTEXTUAL_HINTS.ordersFirstVisit);
+      // Show view modes tip after a delay with click hint
+      const timer = setTimeout(() => {
+        showHint(CONTEXTUAL_HINTS.orderViewModes);
+        showClickHint(CLICK_HINTS.orderViewModesButton);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, showHint, showClickHint]);
 
   const fetchMerchantId = useCallback(async () => {
     // Kept for backwards compatibility, but now uses context data
@@ -268,7 +284,7 @@ function MerchantOrdersPageContent() {
   }
 
   return (
-    <div className={`${displayMode !== 'normal' ? 'fixed inset-0 z-50 overflow-hidden bg-white dark:bg-gray-950 flex flex-col' : 'flex flex-col h-[calc(100vh-100px)]'}`}>
+    <div data-tutorial="orders-page" className={`${displayMode !== 'normal' ? 'fixed inset-0 z-50 overflow-hidden bg-white dark:bg-gray-950 flex flex-col' : 'flex flex-col h-[calc(100vh-100px)]'}`}>
       {/* Header - Always Sticky like Kitchen Display */}
       <div className={`sticky top-0 z-40 bg-white/95 backdrop-blur-sm dark:bg-gray-950/95 border-b border-gray-200 dark:border-gray-800 ${displayMode !== 'normal' ? 'px-6 pt-6 pb-4' : 'pb-4 -mx-6 px-6 pt-0'}`}>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -282,7 +298,7 @@ function MerchantOrdersPageContent() {
           </div>
 
           {/* Search Bar */}
-          <div className="relative w-full lg:w-auto lg:min-w-[400px]">
+          <div data-tutorial="order-search" className="relative w-full lg:w-auto lg:min-w-[400px]">
             <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
               <FaSearch className="h-4 w-4 text-gray-400" />
             </div>
@@ -305,7 +321,7 @@ function MerchantOrdersPageContent() {
 
           <div className="flex flex-wrap items-center gap-3">
             {/* View Mode Selector */}
-            <div className="flex items-center gap-1 rounded-lg border border-gray-200 bg-white p-1 dark:border-gray-800 dark:bg-gray-900">
+            <div data-tutorial="order-view-modes" className="flex items-center gap-1 rounded-lg border border-gray-200 bg-white p-1 dark:border-gray-800 dark:bg-gray-900">
               <button
                 onClick={() => setViewMode('kanban-card')}
                 className={`flex h-8 items-center gap-2 rounded-md px-3 text-xs font-semibold transition-all ${viewMode === 'kanban-card'
@@ -343,6 +359,7 @@ function MerchantOrdersPageContent() {
 
             {/* Filter Toggle */}
             <button
+              data-tutorial="order-filters-btn"
               onClick={() => setShowFilters(!showFilters)}
               className={`flex h-10 items-center gap-2 rounded-lg border px-4 text-sm font-medium transition-colors ${showFilters
                 ? 'border-primary-200 bg-primary-50 text-primary-700 dark:border-primary-800 dark:bg-primary-900/20 dark:text-primary-400'
@@ -355,6 +372,7 @@ function MerchantOrdersPageContent() {
 
             {/* Bulk Mode Toggle */}
             <button
+              data-tutorial="order-bulk-mode"
               onClick={toggleBulkMode}
               className={`flex h-10 items-center gap-2 rounded-lg border px-4 text-sm font-medium transition-colors ${bulkMode
                 ? 'border-primary-200 bg-primary-50 text-primary-700 dark:border-primary-800 dark:bg-primary-900/20 dark:text-primary-400'
@@ -367,6 +385,7 @@ function MerchantOrdersPageContent() {
 
             {/* Progressive Display Mode: Normal → Clean → Fullscreen */}
             <button
+              data-tutorial="order-fullscreen"
               onClick={async () => {
                 if (displayMode === 'normal') {
                   // Go to clean mode
@@ -471,7 +490,7 @@ function MerchantOrdersPageContent() {
 
         {/* Order Views - Conditional Rendering Based on View Mode */}
         {merchantId && (
-          <>
+          <div data-tutorial="order-kanban-board">
             {viewMode === 'kanban-card' && (
               <OrderKanbanBoard
                 merchantId={merchantId}
@@ -529,7 +548,7 @@ function MerchantOrdersPageContent() {
                 }}
               />
             )}
-          </>
+          </div>
         )}
 
         {/* Order Detail Modal - handles both clicked orders and URL-triggered orders */}

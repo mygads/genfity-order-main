@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, createContext, useContext } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { ThemeProvider } from "@/context/ThemeContext";
 import InfluencerSidebar from "@/layout/InfluencerSidebar";
 
@@ -32,13 +32,26 @@ export function useInfluencer() {
   return context;
 }
 
+// Auth pages that don't require authentication
+const AUTH_PAGES = ['/influencer/login', '/influencer/register', '/influencer/forgot-password', '/influencer/reset-password'];
+
 function InfluencerLayoutContent({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [influencer, setInfluencer] = useState<InfluencerData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+  // Check if current page is an auth page
+  const isAuthPage = AUTH_PAGES.some(page => pathname?.startsWith(page));
+
   const fetchInfluencer = useCallback(async () => {
+    // Skip auth check for auth pages
+    if (isAuthPage) {
+      setIsLoading(false);
+      return;
+    }
+
     const token = localStorage.getItem('influencerAccessToken');
     if (!token) {
       router.push('/influencer/login');
@@ -75,7 +88,7 @@ function InfluencerLayoutContent({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [router]);
+  }, [router, isAuthPage]);
 
   useEffect(() => {
     fetchInfluencer();
@@ -84,7 +97,16 @@ function InfluencerLayoutContent({ children }: { children: React.ReactNode }) {
   // Close sidebar on route change for mobile
   useEffect(() => {
     setIsSidebarOpen(false);
-  }, []);
+  }, [pathname]);
+
+  // For auth pages, render without sidebar and auth check
+  if (isAuthPage) {
+    return (
+      <ThemeProvider>
+        {children}
+      </ThemeProvider>
+    );
+  }
 
   if (isLoading) {
     return (

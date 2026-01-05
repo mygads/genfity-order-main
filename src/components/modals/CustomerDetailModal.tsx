@@ -24,6 +24,10 @@ interface CustomerDetail {
     lastOrderAt?: string | null;
     orders?: Order[];
     _count?: { orders: number };
+    // Computed fields from API
+    spentByCurrency?: Record<string, number>;
+    computedLastOrderAt?: string | null;
+    computedTotalOrders?: number;
 }
 
 interface CustomerDetailModalProps {
@@ -121,8 +125,8 @@ export default function CustomerDetailModal({
                                         </h3>
                                         <span
                                             className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${customer.isActive
-                                                    ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                                                    : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                                                ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                                : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
                                                 }`}
                                         >
                                             {customer.isActive ? "Active" : "Inactive"}
@@ -151,15 +155,26 @@ export default function CustomerDetailModal({
                             <div className="grid grid-cols-3 gap-4">
                                 <div className="rounded-xl bg-blue-50 p-4 dark:bg-blue-900/20">
                                     <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                                        {customer._count?.orders || customer.totalOrders || 0}
+                                        {customer.computedTotalOrders || customer._count?.orders || customer.totalOrders || 0}
                                     </div>
                                     <div className="text-sm text-blue-600/70 dark:text-blue-400/70">
                                         Total Orders
                                     </div>
                                 </div>
                                 <div className="rounded-xl bg-green-50 p-4 dark:bg-green-900/20">
-                                    <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                                        {formatCurrency(customer.totalSpent || 0)}
+                                    <div className="text-lg font-bold text-green-600 dark:text-green-400">
+                                        {customer.spentByCurrency && Object.keys(customer.spentByCurrency).length > 0 ? (
+                                            <div className="space-y-1">
+                                                {Object.entries(customer.spentByCurrency).map(([currency, amount]) => (
+                                                    <div key={currency} className="flex items-baseline gap-1">
+                                                        <span className="text-xs font-normal">{currency === 'AUD' ? 'A$' : currency === 'IDR' ? 'Rp' : currency}</span>
+                                                        <span>{formatCurrency(amount)}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            formatCurrency(customer.totalSpent || 0)
+                                        )}
                                     </div>
                                     <div className="text-sm text-green-600/70 dark:text-green-400/70">
                                         Total Spent
@@ -167,7 +182,9 @@ export default function CustomerDetailModal({
                                 </div>
                                 <div className="rounded-xl bg-purple-50 p-4 dark:bg-purple-900/20">
                                     <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                                        {customer.lastOrderAt ? formatDate(customer.lastOrderAt) : "-"}
+                                        {(customer.computedLastOrderAt || customer.lastOrderAt)
+                                            ? formatDate(customer.computedLastOrderAt || customer.lastOrderAt!)
+                                            : "-"}
                                     </div>
                                     <div className="text-sm text-purple-600/70 dark:text-purple-400/70">
                                         Last Order

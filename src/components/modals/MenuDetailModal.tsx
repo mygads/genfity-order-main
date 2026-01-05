@@ -33,6 +33,7 @@ export default function MenuDetailModal({
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState('');
   const [selectedAddons, setSelectedAddons] = useState<Set<bigint>>(new Set());
+  const [isExpanded, setIsExpanded] = useState(false);
 
   // Format currency - A$ for AUD
   const formatPrice = (amount: number): string => {
@@ -53,6 +54,7 @@ export default function MenuDetailModal({
       setQuantity(1);
       setNotes('');
       setSelectedAddons(new Set());
+      setIsExpanded(false);
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
@@ -173,6 +175,8 @@ export default function MenuDetailModal({
                 className="object-cover"
                 sizes="100vw"
                 style={{ borderRadius: '0 0 16px 16px' }}
+                quality={100}
+                unoptimized
               />
             ) : (
               <div
@@ -217,29 +221,32 @@ export default function MenuDetailModal({
             </button>
 
             {/* Expand Button - Below Close */}
-            <button
-              style={{
-                position: 'absolute',
-                top: '64px',
-                right: '16px',
-                width: '40px',
-                height: '40px',
-                borderRadius: '50%',
-                backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                border: 'none',
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                zIndex: 10,
-              }}
-              aria-label="Expand"
-            >
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <path d="M4 8L10 14L16 8" stroke="#333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
+            {menu.imageUrl && (
+              <button
+                onClick={() => setIsExpanded(true)}
+                style={{
+                  position: 'absolute',
+                  top: '64px',
+                  right: '16px',
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                  border: 'none',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  zIndex: 10,
+                }}
+                aria-label="Expand Image"
+              >
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <path d="M3 7V3h4M17 7V3h-4M3 13v4h4M17 13v4h-4" stroke="#333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+            )}
 
             {/* Unavailable Badge */}
             {!menu.isAvailable && (
@@ -595,6 +602,79 @@ export default function MenuDetailModal({
           </button>
         </div>
       </div>
+
+      {/* Expanded Image Lightbox */}
+      {isExpanded && menu.imageUrl && (
+        <div
+          onClick={() => setIsExpanded(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.9)',
+            zIndex: 500,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+          }}
+        >
+          {/* Close button hint */}
+          <button
+            onClick={() => setIsExpanded(false)}
+            style={{
+              position: 'absolute',
+              top: '16px',
+              right: '16px',
+              width: '44px',
+              height: '44px',
+              borderRadius: '50%',
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              border: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              zIndex: 510,
+            }}
+            aria-label="Close expanded view"
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M18 6L6 18M6 6L18 18" stroke="white" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </button>
+
+          {/* Full Quality Image - stops propagation to prevent closing when clicking image */}
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: 'relative',
+              maxWidth: '90vw',
+              maxHeight: '80vh',
+              cursor: 'default',
+            }}
+          >
+            <Image
+              src={menu.imageUrl}
+              alt={menu.name}
+              width={800}
+              height={600}
+              style={{
+                maxWidth: '90vw',
+                maxHeight: '80vh',
+                width: 'auto',
+                height: 'auto',
+                objectFit: 'contain',
+                borderRadius: '8px',
+              }}
+              quality={100}
+              unoptimized
+            />
+          </div>
+        </div>
+      )}
     </>
   );
 }

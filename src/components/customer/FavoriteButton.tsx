@@ -75,7 +75,7 @@ export default function FavoriteButton({
         ${sizeClasses[size]}
         flex items-center justify-center
         rounded-full
-        bg-white/90 dark:bg-gray-800/90
+        bg-white/90 
         backdrop-blur-sm
         shadow-sm
         hover:scale-110

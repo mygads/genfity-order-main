@@ -50,6 +50,16 @@ class EmailService {
           user: smtpUser,
           pass: smtpPassword,
         },
+        // Timeout settings to prevent hanging connections
+        connectionTimeout: 30000, // 30 seconds to establish connection
+        greetingTimeout: 30000,   // 30 seconds for SMTP greeting
+        socketTimeout: 60000,     // 60 seconds for socket inactivity
+        // Pool settings for better performance
+        pool: true,
+        maxConnections: 5,
+        maxMessages: 100,
+        rateDelta: 1000,
+        rateLimit: 5, // 5 emails per second max
       });
 
       // Only log once in development to avoid spam
@@ -63,7 +73,7 @@ class EmailService {
   }
 
   /**
-   * Send email
+   * Send email with retry mechanism
    */
   public async sendEmail(options: {
     to: string;
@@ -76,20 +86,38 @@ class EmailService {
       return false;
     }
 
-    try {
-      const info = await this.transporter.sendMail({
-        from: options.from || process.env.SMTP_FROM_EMAIL || 'noreply@genfity.com',
-        to: options.to,
-        subject: options.subject,
-        html: options.html,
-      });
+    const maxRetries = 3;
+    let lastError: Error | null = null;
 
-      console.log('✅ Email sent:', info.messageId);
-      return true;
-    } catch (error) {
-      console.error('❌ Failed to send email:', error);
-      return false;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const info = await this.transporter.sendMail({
+          from: options.from || process.env.SMTP_FROM_EMAIL || 'noreply@genfity.com',
+          to: options.to,
+          subject: options.subject,
+          html: options.html,
+        });
+
+        console.log('✅ Email sent:', info.messageId);
+        return true;
+      } catch (error) {
+        lastError = error as Error;
+        const isTimeout = (error as NodeJS.ErrnoException).code === 'ETIMEDOUT' || 
+                          (error as Error).message?.includes('timeout');
+        
+        console.warn(`⚠️ Email attempt ${attempt}/${maxRetries} failed:`, 
+          isTimeout ? 'Connection timeout' : (error as Error).message);
+
+        if (attempt < maxRetries && isTimeout) {
+          // Wait before retry (exponential backoff)
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+          continue;
+        }
+      }
     }
+
+    console.error('❌ Failed to send email after retries:', lastError?.message);
+    return false;
   }
 
   /**

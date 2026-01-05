@@ -453,6 +453,9 @@ const en = {
   "admin.nav.main": "Main",
   "admin.nav.dashboard": "Dashboard",
   "admin.nav.management": "Management",
+  "admin.nav.userManagement": "User Management",
+  "admin.nav.finance": "Finance",
+  "admin.nav.platformSettings": "Platform Settings",
   "admin.nav.merchants": "Merchants",
   "admin.nav.users": "Users",
   "admin.nav.analytics": "Analytics",
@@ -486,12 +489,14 @@ const en = {
   "admin.nav.transactions": "Transactions",
   "admin.nav.merchantBalance": "Merchant Balance",
   "admin.nav.subscriptionSettings": "Subscription Settings",
+  "admin.nav.financialSettings": "Financial Settings",
   "admin.nav.referralCodes": "Referral Codes",
   "admin.nav.stockPhotos": "Stock Photos",
   "admin.nav.watermarkSettings": "Watermark Settings",
   "admin.nav.customers": "Customers",
   "admin.nav.influencers": "Influencers",
   "admin.nav.influencerWithdrawals": "Influencer Withdrawals",
+  "admin.nav.influencerSettings": "Influencer Settings",
 
   // Subscription Settings Page (Super Admin)
   "admin.subscriptionSettings.title": "Subscription Settings",
@@ -517,6 +522,20 @@ const en = {
   "admin.subscriptionSettings.saveChanges": "Save Changes",
   "admin.subscriptionSettings.success": "Settings saved successfully!",
   "admin.subscriptionSettings.error": "Failed to save settings",
+
+  // Influencer Settings
+  "admin.influencerSettings.title": "Influencer Settings",
+  "admin.influencerSettings.commission.title": "Referral Commission",
+  "admin.influencerSettings.commission.subtitle": "Configure commission percentages for referral partners",
+  "admin.influencerSettings.commission.firstPayment": "First Payment Commission (%)",
+  "admin.influencerSettings.commission.recurringPayment": "Recurring Payment Commission (%)",
+  "admin.influencerSettings.withdrawal.title": "Withdrawal Settings",
+  "admin.influencerSettings.withdrawal.subtitle": "Set minimum withdrawal limits for influencers",
+  "admin.influencerSettings.withdrawal.minAmount": "Minimum Withdrawal Amount",
+  "admin.influencerSettings.saveChanges": "Save Changes",
+  "admin.influencerSettings.saving": "Saving...",
+  "admin.influencerSettings.success": "Settings updated successfully",
+  "admin.influencerSettings.error": "Failed to update settings",
 
   // Payment Verification Page (Super Admin)
   "admin.paymentVerification.title": "Payment Verification",
@@ -1650,14 +1669,14 @@ const en = {
   "landing.faq.subtitle": "Everything you need to know about the platform and how it helps your business grow.",
   "landing.faq.stillHaveQuestions": "Still have questions?",
   "landing.faq.contactUs": "Contact Support",
-  
+
   // FAQ Categories
   "landing.faq.category.general": "General",
   "landing.faq.category.features": "Features",
   "landing.faq.category.pricing": "Pricing",
   "landing.faq.category.technical": "Technical",
   "landing.faq.category.support": "Support",
-  
+
   // General FAQs
   "landing.faq.general.q1": "What is GENFITY Order?",
   "landing.faq.general.a1": "GENFITY Order is a comprehensive online ordering and restaurant management platform that helps F&B businesses streamline their operations. It includes QR code ordering, kitchen display systems, real-time analytics, and inventory management—all accessible from any device.",
@@ -1667,7 +1686,7 @@ const en = {
   "landing.faq.general.a3": "Most businesses go live within 24 hours. Basic setup takes about 30 minutes—just register, add your menu items, print QR codes, and you're ready to receive orders. Our onboarding team is available to help if needed.",
   "landing.faq.general.q4": "Is training required for my staff?",
   "landing.faq.general.a4": "The interface is designed to be intuitive and easy to use. Most staff members can learn the system in under 30 minutes. We also provide video tutorials and documentation for reference.",
-  
+
   // Features FAQs
   "landing.faq.features.q1": "Is the data analysis real-time?",
   "landing.faq.features.a1": "Yes, all sales data, inventory, and customer insights are updated in real-time. You can see orders coming in and reports updating instantly on your dashboard as transactions happen.",
@@ -1679,7 +1698,7 @@ const en = {
   "landing.faq.features.a4": "Yes, GENFITY supports Dine-In (with table numbers), Pick-Up, and Delivery modes. You can enable or disable each mode based on your business needs and set different operating hours for each.",
   "landing.faq.features.q5": "Can I customize the customer ordering interface?",
   "landing.faq.features.a5": "Yes, you can upload your logo, customize colors, add menu categories, set featured items, and write descriptions in multiple languages (English and Indonesian currently supported).",
-  
+
   // Pricing FAQs
   "landing.faq.pricing.q1": "How does the Flexi (deposit-based) pricing work?",
   "landing.faq.pricing.a1": "You top up a credit balance (minimum Rp 50,000). We deduct a small fee (Rp 250) only when you receive a successful order. If you have no orders, you pay nothing. Ideal for businesses just starting out or with variable order volumes.",
@@ -1689,7 +1708,7 @@ const en = {
   "landing.faq.pricing.a3": "No long-term commitments. Both Flexi and Pro plans are pay-as-you-go. You can cancel, pause, or switch plans at any time without penalty. We believe in earning your business every month.",
   "landing.faq.pricing.q4": "Are there any hidden fees?",
   "landing.faq.pricing.a4": "No hidden fees. Our pricing is transparent—what you see is what you pay. There are no setup fees, no transaction fees beyond the stated amount, and no surprise charges.",
-  
+
   // Technical FAQs
   "landing.faq.technical.q1": "Do I need special hardware?",
   "landing.faq.technical.a1": "No special hardware required. GENFITY works on any device with a modern browser—laptops, tablets, or smartphones. Use your existing devices to keep costs down. For receipts, we support standard 58mm/80mm thermal printers.",
@@ -1701,10 +1720,10 @@ const en = {
   "landing.faq.technical.a4": "We're developing integrations with popular POS systems. Currently, GENFITY can work alongside your existing setup—many businesses use us specifically for online orders while keeping their in-house POS for walk-ins.",
   "landing.faq.technical.q5": "Can I use my own domain name?",
   "landing.faq.technical.a5": "Yes, Pro plan subscribers can map their own domain (e.g., order.yourcafe.com). We handle all the technical setup including SSL certificates. Your brand, your domain.",
-  
+
   // Support FAQs
   "landing.faq.support.q1": "How do I get help if I have issues?",
-  "landing.faq.support.a1": "We offer multiple support channels: email (sales@genfity.com) and WhatsApp (085174314023). Pro plan customers get priority support with faster response times. Our team is available Monday-Saturday, 9 AM - 9 PM.",
+  "landing.faq.support.a1": "We offer multiple support channels: email (genfity@gmail.com) and WhatsApp (085174314023). Pro plan customers get priority support with faster response times. Our team is available Monday-Saturday, 9 AM - 9 PM.",
   "landing.faq.support.q2": "Is there a limit on staff accounts?",
   "landing.faq.support.a2": "No limits. Both Flexi and Pro plans include unlimited staff accounts. You can assign different roles (Cashier, Kitchen, Admin) with specific permissions to control what each team member can access.",
   "landing.faq.support.q3": "Can I export my sales data?",
@@ -2021,6 +2040,9 @@ const en = {
   "register.merchantNamePlaceholder": "e.g. Barokah Restaurant",
   "register.merchantCode": "Merchant Code",
   "register.merchantCodeHint": "This will be your order page URL",
+  "register.merchantCodeHintNew": "4-8 uppercase letters and numbers. Example: ABCD, CAFE01",
+  "register.influencerCode": "Influencer Code",
+  "register.influencerCodeHint": "Referral code from influencer (locked)",
   "register.address": "Address",
   "register.addressPlaceholder": "Full merchant address",
   "register.phone": "Phone Number",
@@ -2069,7 +2091,9 @@ const en = {
   // Validation errors
   "validation.merchantNameMin": "Merchant name must be at least 2 characters",
   "validation.merchantCodeMin": "Merchant code must be at least 3 characters",
-  "validation.merchantCodeFormat": "Code can only contain letters, numbers, and dashes",
+  "validation.merchantCodeMin4": "Merchant code must be at least 4 characters",
+  "validation.merchantCodeMax8": "Merchant code must be at most 8 characters",
+  "validation.merchantCodeFormat": "Code can only contain uppercase letters and numbers",
   "validation.ownerNameMin": "Owner name must be at least 2 characters",
   "validation.emailInvalid": "Invalid email format",
   "validation.passwordMin": "Password must be at least 8 characters",
@@ -2348,24 +2372,24 @@ const en = {
   "subscription.alert.suspended": "Your subscription has been suspended.",
   "subscription.alert.renewCta": "Please renew your subscription to continue operations.",
   "subscription.alert.renewButton": "Renew Subscription",
-  
+
   // Grace Period
   "subscription.grace.title": "Subscription Expiring Soon",
   "subscription.grace.message": "Your subscription has expired. You have {days} day(s) of grace period remaining.",
   "subscription.grace.lastDay": "This is your last day of grace period. Your store will be suspended tomorrow.",
   "subscription.grace.renewNow": "Renew Now to Avoid Suspension",
-  
+
   // Trial Banner
   "subscription.trial.title": "Trial Period",
   "subscription.trial.daysRemaining": "{days} day(s) remaining",
   "subscription.trial.endsToday": "Ends today!",
   "subscription.trial.upgradeNow": "Upgrade Now",
-  
+
   // Subscription Required
   "subscription.required.title": "Subscription Required",
   "subscription.required.message": "Please renew your subscription to access this feature.",
   "subscription.required.viewDetails": "View Subscription Details",
-  
+
   // Upgrade Prompt Modal
   "subscription.upgrade.title": "Choose Your Plan",
   "subscription.upgrade.subtitle": "Your trial is ending soon. Choose a plan to continue using Genfity.",
@@ -2386,7 +2410,7 @@ const en = {
   "subscription.upgrade.currentPlan": "Current Plan",
   "subscription.upgrade.later": "Remind Me Later",
   "subscription.upgrade.dontShowAgain": "Don't show until trial ends",
-  
+
   // Analytics Dashboard
   "subscription.analytics.title": "Subscription Analytics",
   "subscription.analytics.subtitle": "Track subscription metrics and merchant health",
@@ -2444,7 +2468,7 @@ const en = {
   "subscription.analytics.merchantId": "Merchant ID",
   "subscription.analytics.change": "Change",
   "subscription.analytics.reason": "Reason",
-  
+
   // Push Notifications
   "subscription.push.title": "Push Notifications",
   "subscription.push.enable": "Enable Push Notifications",
@@ -2459,6 +2483,33 @@ const en = {
   "subscription.push.gracePeriod.body": "You have {days} day(s) of grace period remaining. Renew to avoid suspension.",
   "subscription.push.lowBalance.title": "Low Balance Warning",
   "subscription.push.lowBalance.body": "Your balance is running low. Top up to continue receiving orders.",
+
+  // ============================================================================
+  // CHECKLIST - Getting Started Checklist
+  // ============================================================================
+  "checklist.title": "Getting Started",
+  "checklist.tasksComplete": "tasks complete",
+  "checklist.merchantInfo": "Complete Store Info",
+  "checklist.merchantInfoDesc": "Add your store name, logo, and contact details",
+  "checklist.categories": "Create Categories",
+  "checklist.categoriesDesc": "Add at least 1 menu category",
+  "checklist.menuItems": "Add Menu Items",
+  "checklist.menuItemsDesc": "Add at least 3 items to your menu",
+  "checklist.addons": "Set Up Addons",
+  "checklist.optional": "(Optional)",
+  "checklist.addonsDesc": "Create addon categories for customizations",
+  "checklist.skip": "Skip",
+  "checklist.qrTables": "Create QR Tables",
+  "checklist.qrTablesDesc": "Generate QR codes for table ordering",
+  "checklist.openingHours": "Set Opening Hours",
+  "checklist.openingHoursDesc": "Define your store's operating hours",
+  "checklist.footer": "Complete these tasks to get your store ready!",
+  "checklist.allComplete": "All tasks completed! 🎉",
+  "checklist.dismiss": "Dismiss",
+  "checklist.dismissed": "Setup checklist dismissed",
+  "checklist.complete": "🎉 Setup Complete!",
+  "checklist.completeDesc": "Your store is ready to accept orders. Great job!",
+  "checklist.showAgain": "Show checklist",
 };
 
 export default en;

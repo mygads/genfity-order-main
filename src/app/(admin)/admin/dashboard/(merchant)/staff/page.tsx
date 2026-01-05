@@ -12,6 +12,7 @@ import { useSWRStatic } from "@/hooks/useSWRWithAuth";
 import { StaffPageSkeleton } from "@/components/common/SkeletonLoaders";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { useContextualHint, CONTEXTUAL_HINTS, useClickHereHint, CLICK_HINTS } from "@/lib/tutorial";
 
 interface Staff {
   id: string;
@@ -37,6 +38,8 @@ export default function StaffManagementPage() {
   const { t } = useTranslation();
   const { toasts, success: showSuccess, error: showError } = useToast();
   const { user } = useAdminAuth();
+  const { showHint } = useContextualHint();
+  const { showClickHint } = useClickHereHint();
 
   const [filteredStaff, setFilteredStaff] = useState<Staff[]>([]);
   const [search, setSearch] = useState("");
@@ -80,6 +83,19 @@ export default function StaffManagementPage() {
 
     return () => clearTimeout(timer);
   }, [search, staff]);
+
+  // Show contextual hint on first visit
+  useEffect(() => {
+    if (!loading) {
+      showHint(CONTEXTUAL_HINTS.staffFirstVisit);
+      // If no staff, show click hint pointing to Add Staff button
+      if (staff.length === 0) {
+        setTimeout(() => {
+          showClickHint(CLICK_HINTS.addStaffButton);
+        }, 1000);
+      }
+    }
+  }, [loading, staff.length, showHint, showClickHint]);
 
   // Show skeleton loader during initial load
   if (loading) {
@@ -227,16 +243,16 @@ export default function StaffManagementPage() {
   const isCurrentUserOwner = user?.role === 'MERCHANT_OWNER';
 
   return (
-    <div>
+    <div data-tutorial="staff-page">
       <ToastContainer toasts={toasts} />
       <PageBreadcrumb pageTitle={t("admin.staff.title")} />
 
       <div className="mt-6 space-y-5">
         {/* Header Actions */}
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-white/3">
+        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-white/3" data-tutorial="staff-actions">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex-1 min-w-[200px] max-w-md">
-              <div className="relative">
+              <div className="relative" data-tutorial="staff-search">
                 <input
                   type="text"
                   value={search}
@@ -260,10 +276,11 @@ export default function StaffManagementPage() {
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-3" data-tutorial="staff-buttons">
               <button
                 onClick={() => setShowAddModal(true)}
                 className="inline-flex items-center gap-2 rounded-lg border border-brand-200 bg-brand-50 px-4 py-2.5 text-sm font-medium text-brand-700 transition-all hover:bg-brand-100 dark:border-brand-800 dark:bg-brand-900/30 dark:text-brand-400"
+                data-tutorial="add-staff-btn"
               >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
@@ -273,6 +290,7 @@ export default function StaffManagementPage() {
               <button
                 onClick={() => setShowInviteModal(true)}
                 className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white transition-all hover:bg-brand-600"
+                data-tutorial="invite-staff-btn"
               >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />

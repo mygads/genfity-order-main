@@ -27,6 +27,8 @@ const updatePlanSchema = z.object({
     // Influencer Commission Settings
     influencerFirstCommissionPercent: z.number().min(0).max(100).optional(),
     influencerRecurringCommissionPercent: z.number().min(0).max(100).optional(),
+    influencerMinWithdrawalIdr: z.number().positive().optional(),
+    influencerMinWithdrawalAud: z.number().positive().optional(),
 });
 
 async function handleGet(_req: NextRequest, _context: AuthContext) {
@@ -35,7 +37,7 @@ async function handleGet(_req: NextRequest, _context: AuthContext) {
 
         return NextResponse.json({
             success: true,
-            data: plans.map((plan: { id: bigint; planKey: string; displayName: string; description: string | null; trialDays: number; depositMinimumIdr: unknown; orderFeeIdr: unknown; monthlyPriceIdr: unknown; depositMinimumAud: unknown; orderFeeAud: unknown; monthlyPriceAud: unknown; bankNameIdr: string | null; bankAccountIdr: string | null; bankAccountNameIdr: string | null; bankNameAud: string | null; bankAccountAud: string | null; bankAccountNameAud: string | null; influencerFirstCommissionPercent: unknown; influencerRecurringCommissionPercent: unknown; isActive: boolean }) => ({
+            data: plans.map((plan: any) => ({
                 id: plan.id.toString(),
                 planKey: plan.planKey,
                 displayName: plan.displayName,
@@ -55,6 +57,8 @@ async function handleGet(_req: NextRequest, _context: AuthContext) {
                 bankAccountNameAud: plan.bankAccountNameAud,
                 influencerFirstCommissionPercent: Number(plan.influencerFirstCommissionPercent),
                 influencerRecurringCommissionPercent: Number(plan.influencerRecurringCommissionPercent),
+                influencerMinWithdrawalIdr: Number(plan.influencerMinWithdrawalIdr),
+                influencerMinWithdrawalAud: Number(plan.influencerMinWithdrawalAud),
                 isActive: plan.isActive,
             })),
         });

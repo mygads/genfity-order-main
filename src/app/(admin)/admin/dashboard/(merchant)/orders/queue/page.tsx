@@ -14,10 +14,12 @@ import { FaSync, FaExpand, FaCompress, FaEye, FaBell, FaCheck } from 'react-icon
 import type { OrderWithDetails } from '@/lib/types/order';
 import { playNotificationSound } from '@/lib/utils/soundNotification';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import { useContextualHint, CONTEXTUAL_HINTS } from '@/lib/tutorial/components/ContextualHint';
 
 export default function QueueDisplayPage() {
   const router = useRouter();
   const { t } = useTranslation();
+  const { showHint } = useContextualHint();
   
   const [orders, setOrders] = useState<OrderWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,6 +27,18 @@ export default function QueueDisplayPage() {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [displayMode, setDisplayMode] = useState<'normal' | 'clean' | 'fullscreen'>('normal');
   const [previousOrderIds, setPreviousOrderIds] = useState<Set<string>>(new Set());
+
+  // Show contextual hints on first visit
+  useEffect(() => {
+    if (!loading) {
+      showHint(CONTEXTUAL_HINTS.ordersQueueFirstVisit);
+      // Show sound notification tip after 3 seconds
+      const timer = setTimeout(() => {
+        showHint(CONTEXTUAL_HINTS.ordersQueueSoundAlert);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, showHint]);
 
   // Fetch READY orders
   const fetchOrders = useCallback(async () => {

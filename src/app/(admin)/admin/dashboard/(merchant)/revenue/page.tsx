@@ -10,6 +10,7 @@ import OrderBreakdownCards from "@/components/revenue/OrderBreakdownCards";
 import { RevenuePageSkeleton } from "@/components/common/SkeletonLoaders";
 import { useMerchant } from "@/context/MerchantContext";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { useContextualHint, CONTEXTUAL_HINTS, useClickHereHint, CLICK_HINTS } from "@/lib/tutorial";
 
 interface RevenueAnalytics {
   dateRange: {
@@ -67,6 +68,8 @@ export default function MerchantRevenuePage() {
   const router = useRouter();
   const { t } = useTranslation();
   const { merchant: _merchant } = useMerchant();
+  const { showHint } = useContextualHint();
+  const { showClickHint } = useClickHereHint();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [analytics, setAnalytics] = useState<RevenueAnalytics | null>(null);
@@ -125,6 +128,18 @@ export default function MerchantRevenuePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startDate, endDate]);
 
+  // Show contextual hint on first visit
+  useEffect(() => {
+    if (!loading) {
+      showHint(CONTEXTUAL_HINTS.revenueFirstVisit);
+      // Show click hint for export button after delay
+      const timer = setTimeout(() => {
+        showClickHint(CLICK_HINTS.exportRevenueButton);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, showHint, showClickHint]);
+
   const handleExportCSV = () => {
     if (!analytics) return;
 
@@ -156,12 +171,12 @@ export default function MerchantRevenuePage() {
   }
 
   return (
-    <div>
+    <div data-tutorial="revenue-page">
       <PageBreadcrumb pageTitle={t("admin.revenue.title")} />
 
       {/* Date Range & Export */}
-      <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="mb-6 flex items-center justify-between" data-tutorial="revenue-controls">
+        <div className="flex items-center gap-3" data-tutorial="revenue-date-filter">
           <select
             value={`${startDate}|${endDate}`}
             onChange={(e) => {
@@ -196,6 +211,7 @@ export default function MerchantRevenuePage() {
           onClick={handleExportCSV}
           disabled={!analytics || analytics.dailyRevenue.length === 0}
           className="flex h-10 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:hover:bg-gray-800"
+          data-tutorial="revenue-export-btn"
         >
           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />

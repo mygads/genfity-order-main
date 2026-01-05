@@ -265,14 +265,14 @@ export default function CustomerHeader({
   };
 
   return (
-    <header className="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+    <header className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
       {/* ========================================
           LEFT: Back Button (Conditional)
       ======================================== */}
       {showBackButton && (
         <button
           onClick={handleBackClick}
-          className="p-2 -ml-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+          className="p-2 -ml-2 hover:bg-gray-100 rounded-lg transition-colors"
           aria-label="Go back"
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -314,7 +314,7 @@ export default function CustomerHeader({
 
         {/* Merchant Name & Status */}
         <div className="flex-1 min-w-0">
-          <h1 className="text-base font-bold text-gray-900 dark:text-white truncate">
+          <h1 className="text-base font-bold text-gray-900 truncate">
             {title || merchantInfo?.name || (merchantCode ? merchantCode.toUpperCase() : 'GENFITY')}
           </h1>
           {merchantInfo && (() => {
@@ -322,7 +322,7 @@ export default function CustomerHeader({
             return (
               <div className="flex items-center gap-1.5 text-xs">
                 <span className={`w-1.5 h-1.5 rounded-full ${isOpen ? 'bg-green-500' : 'bg-red-500'}`} />
-                <span className={`truncate ${isOpen ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
+                <span className={`truncate ${isOpen ? 'text-green-700' : 'text-red-700'}`}>
                   {merchantInfo.city}, {merchantInfo.state} • {statusText}
                 </span>
               </div>
@@ -341,7 +341,7 @@ export default function CustomerHeader({
         {!isMounted ? (
           /* ✅ Loading placeholder during hydration */
           <div className="flex gap-2">
-            <div className="w-20 h-9 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
+            <div className="w-20 h-9 bg-gray-200 rounded-lg animate-pulse" />
           </div>
         ) : merchantCode && isAuthenticated ? (
           /* ✅ AUTHENTICATED WITH MERCHANT: Show History & Profile buttons */
@@ -349,7 +349,7 @@ export default function CustomerHeader({
             {/* History Button */}
             <button
               onClick={handleHistoryClick}
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-all duration-200"
+              className="p-2 rounded-lg hover:bg-gray-100 text-gray-700 transition-all duration-200"
               aria-label="Order History"
               title="Order History"
             >
@@ -369,7 +369,7 @@ export default function CustomerHeader({
             {/* Profile Button */}
             <button
               onClick={handleProfileClick}
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-all duration-200"
+              className="p-2 rounded-lg hover:bg-gray-100 text-gray-700 transition-all duration-200"
               aria-label="Profile"
               title="Profile"
             >
@@ -396,7 +396,7 @@ export default function CustomerHeader({
               console.log('🔗 [CUSTOMER HEADER] Navigate to login:', loginUrl);
               router.push(loginUrl);
             }}
-            className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200"
+            className="px-3 py-1.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-all duration-200"
             aria-label="Sign In"
           >
             Sign In

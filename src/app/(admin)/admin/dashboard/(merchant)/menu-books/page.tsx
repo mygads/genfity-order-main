@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { useContextualHint, CONTEXTUAL_HINTS } from "@/lib/tutorial/components/ContextualHint";
 
 interface MenuBook {
     id: string;
@@ -22,12 +23,24 @@ interface MenuBook {
 export default function MenuBooksPage() {
     const router = useRouter();
     const { t } = useTranslation();
+    const { showHint } = useContextualHint();
     const [loading, setLoading] = useState(true);
     const [menuBooks, setMenuBooks] = useState<MenuBook[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [deleting, setDeleting] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
+
+    // Show contextual hint on first visit or empty state
+    useEffect(() => {
+        if (!loading) {
+            if (menuBooks.length === 0) {
+                showHint(CONTEXTUAL_HINTS.menuBooksEmpty);
+            } else {
+                showHint(CONTEXTUAL_HINTS.menuBooksFirstVisit);
+            }
+        }
+    }, [loading, menuBooks.length, showHint]);
 
     const fetchMenuBooks = useCallback(async () => {
         try {

@@ -33,7 +33,7 @@ export default function GroupOrderButton({
         return (
             <button
                 onClick={onViewGroupClick}
-                className="w-full flex items-center justify-between px-4 py-3 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 border border-purple-200 dark:border-purple-700 rounded-xl hover:shadow-md transition-all duration-200"
+                className="w-full flex items-center justify-between px-4 py-3 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-xl hover:shadow-md transition-all duration-200"
             >
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center">
@@ -41,7 +41,7 @@ export default function GroupOrderButton({
                     </div>
                     <div className="text-left">
                         <div className="flex items-center gap-2">
-                            <span className="font-semibold text-purple-700 dark:text-purple-300">
+                            <span className="font-semibold text-purple-700">
                                 {t("groupOrder.title") || "Group Order"}
                             </span>
                             {isHost && (
@@ -50,12 +50,12 @@ export default function GroupOrderButton({
                                 </span>
                             )}
                         </div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400">
+                        <div className="text-sm text-gray-600">
                             {session.sessionCode} • {participantCount} {participantCount === 1 ? "person" : "people"}
                         </div>
                     </div>
                 </div>
-                <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400">
+                <div className="flex items-center gap-2 text-purple-600">
                     <span className="text-sm font-medium">
                         {t("common.view") || "View"}
                     </span>
@@ -86,7 +86,7 @@ export default function GroupOrderButton({
             <button
                 onClick={onJoinClick}
                 disabled={disabled}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white dark:bg-gray-800 text-purple-600 dark:text-purple-400 border-2 border-purple-200 dark:border-purple-700 rounded-xl font-medium hover:bg-purple-50 dark:hover:bg-purple-900/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white text-purple-600 border-2 border-purple-200 rounded-xl font-medium hover:bg-purple-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
             >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />

@@ -7,6 +7,7 @@ import UserDropdown from "@/components/header/UserDropdown";
 import SearchDropdown from "@/components/header/SearchDropdown";
 import { useSidebar } from "@/context/SidebarContext";
 import { useAuth } from "@/hooks/useAuth";
+import { HintPanelButton, HintPanel, useTutorialOptional } from "@/lib/tutorial";
 import Image from "next/image";
 import Link from "next/link";
 import React, { useState, useEffect } from "react";
@@ -16,6 +17,10 @@ const AppHeader: React.FC = () => {
   const [isApplicationMenuOpen, setApplicationMenuOpen] = useState(false);
   const { user } = useAuth();
   const [isMobile, setIsMobile] = useState(false);
+  const tutorialContext = useTutorialOptional();
+
+  // Check if tutorial context is available (only for merchant users)
+  const showTutorialHelp = tutorialContext && (user?.role === 'MERCHANT_OWNER' || user?.role === 'MERCHANT_STAFF');
 
   const { isMobileOpen, toggleSidebar, toggleMobileSidebar } = useSidebar();
 
@@ -49,7 +54,7 @@ const AppHeader: React.FC = () => {
   };
 
   return (
-    <header data-header className="sticky top-0 flex w-full bg-white border-b border-gray-200 z-30 dark:border-gray-800 dark:bg-gray-900 shadow-sm">
+    <header data-header className="fixed top-0 left-0 right-0 flex w-full bg-white border-b border-gray-200 z-40 dark:border-gray-800 dark:bg-gray-900 shadow-sm">
       <div className="flex items-center justify-between w-full px-3 py-2 lg:px-6 lg:py-3">
         {/* Left side - Menu toggle + Logo (mobile) */}
         <div className="flex items-center gap-2">
@@ -98,11 +103,25 @@ const AppHeader: React.FC = () => {
             {user?.role !== "SUPER_ADMIN" && <CurrencyBadge />}
             <LanguageSelector mode="compact" dropdownPosition="right" />
             <ThemeToggleButton />
+            {/* Tutorial Help Button - Only for merchants */}
+            {showTutorialHelp && (
+              <div className="relative">
+                <HintPanelButton />
+                <HintPanel />
+              </div>
+            )}
             <NotificationDropdown />
           </div>
 
           {/* Mobile: show notification + menu toggle */}
           <div className="flex lg:hidden items-center gap-1">
+            {/* Tutorial Help Button - Mobile */}
+            {showTutorialHelp && (
+              <div className="relative">
+                <HintPanelButton />
+                <HintPanel />
+              </div>
+            )}
             <NotificationDropdown />
             <button
               onClick={toggleApplicationMenu}

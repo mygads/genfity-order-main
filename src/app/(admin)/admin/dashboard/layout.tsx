@@ -13,6 +13,7 @@ import { useSessionSync } from "@/hooks/useSessionSync";
 import { useSubscriptionStatus } from "@/hooks/useSubscriptionStatus";
 import { useAuth } from "@/hooks/useAuth";
 import SWRProvider from "@/lib/providers/SWRProvider";
+import { TutorialProvider, TutorialSpotlight, ContextualHintProvider, TipsOfTheDay } from "@/lib/tutorial";
 import React from "react";
 
 /**
@@ -59,33 +60,58 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   // Only show padding if merchant user is suspended
   const showSuspendedBannerPadding = isMerchantUser && isSuspended;
 
+  // Get user permissions from localStorage (same as useAuth hook)
+  const userPermissions = React.useMemo(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const cached = localStorage.getItem('userPermissions');
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  }, []);
+
   return (
-    <div className="min-h-screen xl:flex bg-gray-50 dark:bg-gray-900">
-      {/* Session Guard - Auto logout on token expiry */}
-      <SessionGuard />
+    <TutorialProvider
+      userId={user?.id?.toString()}
+      userRole={user?.role as 'MERCHANT_OWNER' | 'MERCHANT_STAFF' | 'SUPER_ADMIN' | 'CUSTOMER'}
+      userPermissions={userPermissions}
+    >
+      <ContextualHintProvider>
+        <div className="min-h-screen xl:flex bg-gray-50 dark:bg-gray-900">
+          {/* Session Guard - Auto logout on token expiry */}
+          <SessionGuard />
 
-      {/* Sidebar and Backdrop */}
-      <AppSidebar />
-      <Backdrop />
+          {/* Sidebar and Backdrop */}
+          <AppSidebar />
+          <Backdrop />
 
-      {/* Main Content Area */}
-      <div
-        className={`flex-1 transition-all duration-300 ease-in-out ${mainContentMargin}`}
-      >
-        {/* Subscription Alerts - Fixed at top when suspended */}
-        <SubscriptionAlerts />
+          {/* Tutorial Spotlight Overlay */}
+          <TutorialSpotlight />
 
-        {/* Header - Add top padding when suspended alert is shown */}
-        <div className={showSuspendedBannerPadding ? "pt-[72px]" : ""}>
-          <AppHeader />
+          {/* Tips of the Day - Shows daily rotating tips */}
+          <TipsOfTheDay position="bottom-right" delayMs={3000} />
+
+          {/* Main Content Area */}
+          <div
+            className={`flex-1 transition-all duration-300 ease-in-out ${mainContentMargin}`}
+          >
+            {/* Subscription Alerts - Fixed at top when suspended */}
+            <SubscriptionAlerts />
+
+            {/* Header - Add top padding when suspended alert is shown */}
+            <div className={showSuspendedBannerPadding ? "pt-[72px]" : ""}>
+              <AppHeader />
+            </div>
+
+            {/* Page Content - Add top padding for fixed header (h-[56px] on mobile, h-[64px] on lg) */}
+            <div className="pt-[70px] lg:pt-[80px] p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6 overflow-x-hidden">
+              {children}
+            </div>
+          </div>
         </div>
-
-        {/* Page Content */}
-        <div className="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6 overflow-x-hidden">
-          {children}
-        </div>
-      </div>
-    </div>
+      </ContextualHintProvider>
+    </TutorialProvider>
   );
 }
 

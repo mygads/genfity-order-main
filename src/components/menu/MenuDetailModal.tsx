@@ -578,8 +578,10 @@ export default function MenuDetailModal({
               src={menu.imageUrl || '/images/default-menu.png'}
               alt={menu.name}
               fill
+              quality={90}
               className="object-cover"
-              sizes="420px"
+              sizes="(max-width: 500px) 100vw, 500px"
+              priority
             />
 
             {/* Gradient Overlay - Top 1/5 of image */}
@@ -624,7 +626,7 @@ export default function MenuDetailModal({
             {/* Share Button */}
             <button
               onClick={handleShare}
-              className={`absolute top-3 ${menu.imageUrl ? 'left-14' : 'left-3'} w-8 h-8 bg-white/90 dark:bg-gray-800/90 rounded-full flex items-center justify-center shadow-md hover:bg-white dark:hover:bg-gray-800 transition-colors`}
+              className={`absolute top-3 ${menu.imageUrl ? 'left-14' : 'left-3'} w-8 h-8 bg-white/90 dark:bg-gray-800/90 rounded-full flex items-center justify-center shadow-md hover:bg-white dark:hover:bg-gray-800 transition-colors dark:text-white`}
               style={{ zIndex: 2 }}
               aria-label="Share menu item"
               title={showCopied ? 'Link copied!' : 'Share'}
@@ -1063,11 +1065,17 @@ export default function MenuDetailModal({
       `}</style>
       </div>
 
-      {/* Image Zoom Modal */}
+      {/* Image Zoom Modal - Full quality with click outside to close */}
       {isImageZoomed && (
-        <div className="fixed inset-0 z-400 flex items-center justify-center bg-black">
+        <div 
+          className="fixed inset-0 z-400 flex items-center justify-center bg-black/95 cursor-pointer"
+          onClick={() => setIsImageZoomed(false)} // Click outside image to close
+        >
           {/* Zoomed Image Container - Max 500px */}
-          <div className="relative w-full max-w-[500px] h-auto">
+          <div 
+            className="relative w-full max-w-[500px] h-auto cursor-default"
+            onClick={(e) => e.stopPropagation()} // Prevent close when clicking image
+          >
             {/* Gradient Overlay - Top 1/5 of image */}
             <div
               className="absolute top-0 left-0 right-0 z-405 pointer-events-none"
@@ -1088,14 +1096,16 @@ export default function MenuDetailModal({
               </svg>
             </button>
 
-            {/* Zoomed Image */}
+            {/* Zoomed Image - Full quality, no blur */}
             <Image
               src={menu.imageUrl || '/images/default-menu.png'}
               alt={menu.name}
-              width={500}
-              height={500}
+              width={1000}
+              height={1000}
+              quality={100}
               className="w-full h-auto object-contain"
               priority
+              unoptimized
             />
           </div>
         </div>

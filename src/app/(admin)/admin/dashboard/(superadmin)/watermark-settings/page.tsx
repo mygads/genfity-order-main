@@ -56,22 +56,28 @@ export default function WatermarkSettingsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [useCustomFont, setUseCustomFont] = useState(false);
+  const [isPageLoading, setIsPageLoading] = useState(true);
   
   // Sample image for preview
   const sampleImageUrl = '/images/menu-badges/signature.png';
   
   // Load saved settings
   useEffect(() => {
-    const saved = localStorage.getItem('watermark_settings');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setSettings({ ...DEFAULT_SETTINGS, ...parsed });
-        setUseCustomFont(!!parsed.customFont);
-      } catch {
-        // Use defaults
+    const loadSettings = async () => {
+      setIsPageLoading(true);
+      const saved = localStorage.getItem('watermark_settings');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          setSettings({ ...DEFAULT_SETTINGS, ...parsed });
+          setUseCustomFont(!!parsed.customFont);
+        } catch {
+          // Use defaults
+        }
       }
-    }
+      setIsPageLoading(false);
+    };
+    loadSettings();
   }, []);
   
   // Generate preview
@@ -189,19 +195,49 @@ export default function WatermarkSettingsPage() {
     });
   };
   
+  if (isPageLoading) {
+    return (
+      <div className="min-h-[400px] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          Watermark Settings
-        </h1>
-        <p className="mt-2 text-gray-600 dark:text-gray-400">
-          Customize the watermark appearance for stock photos
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Watermark Settings</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Customize the watermark appearance for stock photos
+          </p>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid gap-4 sm:grid-cols-4">
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700">
+          <p className="text-sm text-gray-500 dark:text-gray-400">Status</p>
+          <p className={`text-2xl font-bold mt-1 ${settings.enabled ? 'text-green-600 dark:text-green-400' : 'text-gray-400'}`}>
+            {settings.enabled ? 'Enabled' : 'Disabled'}
+          </p>
+        </div>
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700">
+          <p className="text-sm text-gray-500 dark:text-gray-400">Position</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1 capitalize">{settings.position}</p>
+        </div>
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700">
+          <p className="text-sm text-gray-500 dark:text-gray-400">Opacity</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{Math.round(settings.opacity * 100)}%</p>
+        </div>
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700">
+          <p className="text-sm text-gray-500 dark:text-gray-400">Font Size</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1 capitalize">{settings.fontSize}</p>
+        </div>
       </div>
       
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Settings Form */}
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
@@ -215,7 +251,7 @@ export default function WatermarkSettingsPage() {
                 type="checkbox"
                 checked={settings.enabled}
                 onChange={(e) => setSettings({ ...settings, enabled: e.target.checked })}
-                className="w-5 h-5 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+                className="w-5 h-5 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
               />
               <span className="text-sm font-medium text-gray-900 dark:text-white">
                 Enable Watermark
@@ -234,7 +270,7 @@ export default function WatermarkSettingsPage() {
               onChange={(e) => setSettings({ ...settings, text: e.target.value })}
               disabled={!settings.enabled}
               placeholder="Enter watermark text"
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent dark:bg-gray-700 dark:text-white disabled:opacity-50"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white disabled:opacity-50"
             />
           </div>
           
@@ -251,7 +287,7 @@ export default function WatermarkSettingsPage() {
                   disabled={!settings.enabled}
                   className={`px-4 py-2 text-sm font-medium rounded-lg border transition-colors ${
                     settings.position === pos
-                      ? 'border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-900/20 dark:text-brand-400'
+                      ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400'
                       : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
                   } disabled:opacity-50`}
                 >
@@ -294,7 +330,7 @@ export default function WatermarkSettingsPage() {
                   disabled={!settings.enabled}
                   className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg border transition-colors ${
                     settings.fontSize === size
-                      ? 'border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-900/20 dark:text-brand-400'
+                      ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400'
                       : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
                   } disabled:opacity-50`}
                 >
@@ -318,7 +354,7 @@ export default function WatermarkSettingsPage() {
                   checked={!useCustomFont}
                   onChange={() => setUseCustomFont(false)}
                   disabled={!settings.enabled}
-                  className="text-brand-500 focus:ring-brand-500"
+                  className="text-blue-500 focus:ring-blue-500"
                 />
                 <span className="text-sm text-gray-700 dark:text-gray-300">Preset Font</span>
               </label>
@@ -328,7 +364,7 @@ export default function WatermarkSettingsPage() {
                   checked={useCustomFont}
                   onChange={() => setUseCustomFont(true)}
                   disabled={!settings.enabled}
-                  className="text-brand-500 focus:ring-brand-500"
+                  className="text-blue-500 focus:ring-blue-500"
                 />
                 <span className="text-sm text-gray-700 dark:text-gray-300">Custom Font</span>
               </label>
@@ -339,7 +375,7 @@ export default function WatermarkSettingsPage() {
                 value={settings.fontKey}
                 onChange={(e) => setSettings({ ...settings, fontKey: e.target.value as WatermarkFontKey })}
                 disabled={!settings.enabled}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent dark:bg-gray-700 dark:text-white disabled:opacity-50"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white disabled:opacity-50"
               >
                 {Object.entries(AVAILABLE_FONTS).map(([key, font]) => (
                   <option key={key} value={key} style={{ fontFamily: font.family }}>
@@ -354,7 +390,7 @@ export default function WatermarkSettingsPage() {
                 onChange={(e) => setSettings({ ...settings, customFont: e.target.value })}
                 disabled={!settings.enabled}
                 placeholder="e.g., 'Roboto', sans-serif"
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent dark:bg-gray-700 dark:text-white disabled:opacity-50"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white disabled:opacity-50"
               />
             )}
             
@@ -414,7 +450,7 @@ export default function WatermarkSettingsPage() {
                 value={settings.color}
                 onChange={(e) => setSettings({ ...settings, color: e.target.value })}
                 disabled={!settings.enabled}
-                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent dark:bg-gray-700 dark:text-white disabled:opacity-50"
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white disabled:opacity-50"
               />
             </div>
           </div>
@@ -431,7 +467,7 @@ export default function WatermarkSettingsPage() {
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-brand-500 rounded-lg hover:bg-brand-600 transition-colors disabled:opacity-50"
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50"
             >
               <FaSave className="w-4 h-4" />
               {isSaving ? 'Saving...' : 'Save Settings'}
@@ -448,7 +484,7 @@ export default function WatermarkSettingsPage() {
             <button
               onClick={generatePreview}
               disabled={isLoading}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/20 rounded-lg transition-colors"
+              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
             >
               <FaEye className="w-4 h-4" />
               Refresh
@@ -458,7 +494,7 @@ export default function WatermarkSettingsPage() {
           <div className="aspect-square rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600">
             {isLoading ? (
               <div className="w-full h-full flex items-center justify-center">
-                <div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin" />
+                <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
               </div>
             ) : previewUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -481,7 +517,7 @@ export default function WatermarkSettingsPage() {
       </div>
       
       {/* Usage Info */}
-      <div className="mt-8 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800 p-6">
+      <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800 p-6">
         <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-2">
           How Watermarks Work
         </h3>

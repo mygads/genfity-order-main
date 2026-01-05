@@ -109,6 +109,32 @@ export async function GET(
     const menuIds = menus.map(m => m.id);
     const activePromoPrices = await SpecialPriceService.getActivePromoPrices(menuIds);
 
+    // Get order counts for best seller sorting
+    // Count completed orders for each menu in the last 90 days
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+    
+    const orderCounts = await prisma.orderItem.groupBy({
+      by: ['menuId'],
+      where: {
+        menuId: { in: menuIds },
+        order: {
+          merchantId: merchant.id,
+          status: { in: ['COMPLETED', 'READY', 'IN_PROGRESS', 'ACCEPTED'] },
+          createdAt: { gte: ninetyDaysAgo },
+        },
+      },
+      _sum: {
+        quantity: true,
+      },
+    });
+
+    // Create a map of menuId -> orderCount
+    const orderCountMap = new Map<string, number>();
+    orderCounts.forEach(item => {
+      orderCountMap.set(item.menuId.toString(), item._sum?.quantity || 0);
+    });
+
     // Format response with serialization and computed promo data
     const formattedMenus = menus.map((menu) => {
       const menuIdStr = menu.id.toString();
@@ -128,6 +154,7 @@ export async function GET(
         isSignature: menu.isSignature,
         isRecommended: menu.isRecommended,
         promoPrice, // Computed from SpecialPrice
+        orderCount: orderCountMap.get(menuIdStr) || 0, // Order count for best seller sorting
         trackStock: menu.trackStock,
         stockQty: menu.stockQty,
         categories: menu.categories.map(mc => ({

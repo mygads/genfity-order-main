@@ -74,7 +74,7 @@ export default function RestaurantInfoCard({ name, openingHours, onClick, isClos
   return (
     <div
       onClick={onClick}
-      className="flex items-center justify-between cursor-pointer transition-all duration-200 hover:shadow-md bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 shadow-sm font-['Inter',sans-serif]"
+      className="flex items-center justify-between cursor-pointer transition-all duration-200 hover:shadow-md bg-white  border-gray-200  rounded-2xl p-4 shadow-sm font-['Inter',sans-serif]"
       role="button"
       tabIndex={0}
       aria-label={`${name} information`}
@@ -82,7 +82,7 @@ export default function RestaurantInfoCard({ name, openingHours, onClick, isClos
       <div className="flex items-center gap-3 min-w-0 flex-1">
         {/* Merchant Logo - 48x48px rounded square (1:1 ratio) */}
         <div 
-          className="relative shrink-0 overflow-hidden w-12 h-12 rounded-[10px] border border-gray-200 dark:border-gray-700"
+          className="relative shrink-0 overflow-hidden w-12 h-12 rounded-[10px] border border-gray-200 "
         >
           {displayLogoUrl.startsWith('data:') ? (
             // SVG data URL (auto-generated)
@@ -108,7 +108,7 @@ export default function RestaurantInfoCard({ name, openingHours, onClick, isClos
           {/* Name and CLOSED badge in same row */}
           <div className="flex items-center gap-2">
             <h2
-              className="font-bold truncate text-base text-gray-900 dark:text-white font-['Inter',sans-serif]"
+              className="font-bold truncate text-base text-gray-900  font-['Inter',sans-serif]"
             >
               {name}
             </h2>
@@ -122,13 +122,13 @@ export default function RestaurantInfoCard({ name, openingHours, onClick, isClos
             )}
           </div>
           <p
-            className="truncate text-sm text-gray-500 dark:text-gray-400 font-['Inter',sans-serif]"
+            className="truncate text-sm text-gray-500  font-['Inter',sans-serif]"
           >
             {getMerchantStatus()}
           </p>
         </div>
       </div>
-      <ChevronRight className="text-gray-400 dark:text-gray-500 shrink-0" width="20" height="20" />
+      <ChevronRight className="text-gray-400  shrink-0" width="20" height="20" />
     </div>
   );
 }

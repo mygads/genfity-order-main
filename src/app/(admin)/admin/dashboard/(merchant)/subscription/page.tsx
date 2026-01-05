@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { useSWRStatic } from "@/hooks/useSWRWithAuth";
 import SuspendedAlert from "@/components/subscription/SuspendedAlert";
 import ConfirmDialog from "@/components/modals/ConfirmDialog";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { useContextualHint, CONTEXTUAL_HINTS } from "@/lib/tutorial/components/ContextualHint";
 import { FaWallet, FaCalendarAlt, FaClock, FaExchangeAlt, FaArrowRight, FaCheckCircle, FaExclamationTriangle, FaHistory, FaCreditCard, FaInfoCircle } from "react-icons/fa";
 
 interface SubscriptionData {
@@ -69,6 +70,7 @@ interface ApiResponse<T> {
  */
 export default function SubscriptionPage() {
     const { t, locale } = useTranslation();
+    const { showHint } = useContextualHint();
     const [switching, setSwitching] = useState(false);
     const [switchModalOpen, setSwitchModalOpen] = useState(false);
     const [pendingSwitchType, setPendingSwitchType] = useState<'DEPOSIT' | 'MONTHLY' | null>(null);
@@ -86,6 +88,17 @@ export default function SubscriptionPage() {
     const balanceInfo = balanceResponse?.data;
     const canSwitch = canSwitchResponse?.data;
     const transactions = transactionsResponse?.data?.transactions || [];
+
+    // Show contextual hint on first visit
+    useEffect(() => {
+        if (!subscriptionLoading) {
+            showHint(CONTEXTUAL_HINTS.subscriptionFirstVisit);
+            // Show low balance warning if applicable
+            if (balanceInfo?.isLow) {
+                setTimeout(() => showHint(CONTEXTUAL_HINTS.subscriptionLowBalance), 3000);
+            }
+        }
+    }, [subscriptionLoading, balanceInfo?.isLow, showHint]);
 
     // Helpers
     const formatCurrency = (amount: number, currency: string) => {

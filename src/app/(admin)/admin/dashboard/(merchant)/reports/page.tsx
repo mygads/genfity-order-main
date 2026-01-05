@@ -12,10 +12,13 @@ import { PeriodComparison, CustomerAnalytics, OperationalMetrics } from '@/compo
 import { TopMenuItemsChart, HourlyDistributionChart } from '@/components/revenue';
 import { ReportsPageSkeleton } from '@/components/common/SkeletonLoaders';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import { useContextualHint, CONTEXTUAL_HINTS, useClickHereHint, CLICK_HINTS } from "@/lib/tutorial";
 
 export default function ReportsPage() {
   const router = useRouter();
   const { t } = useTranslation();
+  const { showHint } = useContextualHint();
+  const { showClickHint } = useClickHereHint();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<{
@@ -57,6 +60,18 @@ export default function ReportsPage() {
     fetchReportsData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startDate, endDate]);
+
+  // Show contextual hint on first visit
+  useEffect(() => {
+    if (!loading) {
+      showHint(CONTEXTUAL_HINTS.exportReportsTip);
+      // Show click hint for export button after delay
+      const timer = setTimeout(() => {
+        showClickHint(CLICK_HINTS.exportReportsButton);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, showHint, showClickHint]);
 
   const fetchReportsData = async () => {
     try {
@@ -112,7 +127,7 @@ export default function ReportsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-tutorial="reports-page">
       {/* Page Title */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
@@ -124,8 +139,8 @@ export default function ReportsPage() {
       </div>
 
       {/* Date Range & Export */}
-      <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="mb-6 flex items-center justify-between" data-tutorial="reports-controls">
+        <div className="flex items-center gap-3" data-tutorial="reports-date-filter">
           <select
             value={`${startDate}|${endDate}`}
             onChange={(e) => {
@@ -160,6 +175,7 @@ export default function ReportsPage() {
           onClick={handleExportPDF}
           disabled={!data}
           className="flex h-10 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:hover:bg-gray-800"
+          data-tutorial="reports-export-btn"
         >
           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />

@@ -55,13 +55,13 @@ const SORT_OPTION_KEYS: { value: SortOption; key: TranslationKeys }[] = [
   { value: 'popular', key: 'customer.menu.sortPopular' },
 ];
 
-// Dietary/Tag filters with translation keys
-const DIETARY_FILTER_KEYS: Array<{ key: string; labelKey: TranslationKeys; emoji: string; color: string }> = [
-  { key: 'isSpicy', labelKey: 'customer.menu.spicy', emoji: '🌶️', color: 'bg-red-100 text-red-700 border-red-300' },
-  { key: 'isBestSeller', labelKey: 'customer.menu.bestSeller', emoji: '⭐', color: 'bg-yellow-100 text-yellow-700 border-yellow-300' },
-  { key: 'isSignature', labelKey: 'customer.menu.signature', emoji: '👨‍🍳', color: 'bg-purple-100 text-purple-700 border-purple-300' },
-  { key: 'isRecommended', labelKey: 'customer.menu.recommended', emoji: '👍', color: 'bg-green-100 text-green-700 border-green-300' },
-  { key: 'isPromo', labelKey: 'customer.menu.promo', emoji: '🏷️', color: 'bg-orange-100 text-orange-700 border-orange-300' },
+// Dietary/Tag filters with translation keys and badge images
+const DIETARY_FILTER_KEYS: Array<{ key: string; labelKey: TranslationKeys; image: string; color: string }> = [
+  { key: 'isSpicy', labelKey: 'customer.menu.spicy', image: '/images/menu-badges/spicy.png', color: 'bg-red-100 text-red-700 border-red-300' },
+  { key: 'isBestSeller', labelKey: 'customer.menu.bestSeller', image: '/images/menu-badges/best-seller.png', color: 'bg-yellow-100 text-yellow-700 border-yellow-300' },
+  { key: 'isSignature', labelKey: 'customer.menu.signature', image: '/images/menu-badges/signature.png', color: 'bg-purple-100 text-purple-700 border-purple-300' },
+  { key: 'isRecommended', labelKey: 'customer.menu.recommended', image: '/images/menu-badges/recommended.png', color: 'bg-green-100 text-green-700 border-green-300' },
+  { key: 'isPromo', labelKey: 'customer.menu.promo', image: '/images/menu-badges/promo.png', color: 'bg-orange-100 text-orange-700 border-orange-300' },
 ];
 
 export default function SearchPage() {
@@ -371,12 +371,19 @@ export default function SearchPage() {
                         : [...prev, filter.key]
                     );
                   }}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-all ${selectedDietaryFilters.includes(filter.key)
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border transition-all ${selectedDietaryFilters.includes(filter.key)
                     ? filter.color + ' border-current'
                     : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'
                     }`}
                 >
-                  {filter.emoji} {t(filter.labelKey)}
+                  <Image 
+                    src={filter.image} 
+                    alt="" 
+                    width={16} 
+                    height={16} 
+                    className="w-4 h-4 object-contain"
+                  />
+                  {t(filter.labelKey)}
                 </button>
               ))}
             </div>

@@ -11,6 +11,7 @@ import MerchantQRCodeModal from "@/components/merchants/MerchantQRCodeModal";
 import { isStoreEffectivelyOpen } from "@/lib/utils/storeStatus";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { formatCurrency } from "@/lib/utils/format";
+import { useContextualHint, CONTEXTUAL_HINTS } from "@/lib/tutorial/components/ContextualHint";
 
 // Dynamically import map component
 const MapContent = dynamic(() => import("@/components/maps/MapContent"), { ssr: false });
@@ -69,12 +70,20 @@ export default function ViewMerchantPage() {
   const router = useRouter();
   const { user } = useAuth();
   const { t } = useTranslation();
+  const { showHint } = useContextualHint();
   const [merchant, setMerchant] = useState<MerchantData | null>(null);
   const [loading, setLoading] = useState(true);
   const [showQRModal, setShowQRModal] = useState(false);
   const [isTogglingOpen, setIsTogglingOpen] = useState(false);
 
   const isMerchantOwner = user?.role === "MERCHANT_OWNER";
+
+  // Show contextual hint on first visit
+  useEffect(() => {
+    if (!loading && merchant) {
+      showHint(CONTEXTUAL_HINTS.merchantViewTip);
+    }
+  }, [loading, merchant, showHint]);
 
   useEffect(() => {
     fetchMerchantDetails();

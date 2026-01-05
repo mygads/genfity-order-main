@@ -54,6 +54,7 @@ interface MenuItem {
   isSignature?: boolean;
   isRecommended?: boolean;
   promoPrice?: number; // ✅ From API: decimalToNumber(Decimal) → number with 2 decimal precision
+  orderCount?: number; // ✅ Number of times this item has been ordered (for popularity sorting)
 }
 
 interface Category {
@@ -201,9 +202,9 @@ export default function OrderClientPage({
   const [prefilledGroupCode, setPrefilledGroupCode] = useState<string | undefined>(undefined);
 
   // Customer Data Context - Initialize with ISR data for instant navigation on other pages
-  const { 
-    initializeData: initializeCustomerData, 
-    menus: swrMenus, 
+  const {
+    initializeData: initializeCustomerData,
+    menus: swrMenus,
     categories: swrCategories,
     addonCache: swrAddonCache,
     merchantInfo: swrMerchantInfo,
@@ -452,7 +453,7 @@ export default function OrderClientPage({
     if (Object.keys(menuAddonsCache).length > 0) {
       sessionStorage.setItem(`addons_cache_${merchantCode}`, JSON.stringify(menuAddonsCache));
     }
-    
+
     // Set loading to false if we have ISR data
     if (initialMenus.length > 0 && initialCategories.length > 0) {
       setIsLoading(false);
@@ -608,10 +609,12 @@ export default function OrderClientPage({
     return allMenuItems.filter(item => item.isPromo && item.promoPrice);
   }, [allMenuItems]);
 
-  // ✅ MEMOIZED: Get "Best Seller" items
+  // ✅ MEMOIZED: Get "Best Seller" items - sorted by order count (most popular first)
   const bestSellerItems = useMemo(() => {
     if (!Array.isArray(allMenuItems)) return [];
-    return allMenuItems.filter(item => item.isBestSeller);
+    return allMenuItems
+      .filter(item => item.isBestSeller)
+      .sort((a, b) => (b.orderCount || 0) - (a.orderCount || 0));
   }, [allMenuItems]);
 
   // ✅ MEMOIZED: Get "Recommendation" items
@@ -708,7 +711,7 @@ export default function OrderClientPage({
       <div className="relative" data-banner>
         {isLoading ? (
           /* Banner Loading Skeleton */
-          <div className="w-full h-48 bg-gray-200 dark:bg-gray-800 animate-pulse" />
+          <div className="w-full h-48 bg-gray-200 animate-pulse" />
         ) : (
           <RestaurantBanner
             imageUrl={merchantInfo?.logoUrl}
@@ -725,7 +728,7 @@ export default function OrderClientPage({
       <div className={`pb-24 ${!storeOpen ? 'relative' : ''}`}>
         {/* Gray overlay for content when store is closed */}
         {!storeOpen && (
-          <div className="absolute inset-0 bg-gray-100/50 dark:bg-gray-900/50 pointer-events-none z-0" />
+          <div className="absolute inset-0 bg-gray-100/50 pointer-events-none z-0" />
         )}
 
         {/* Error Alert */}
@@ -941,10 +944,10 @@ export default function OrderClientPage({
 
                 {/* All Categories Detailed Sections */}
                 {Array.isArray(categories) && categories.map((category, index) => {
-                  const categoryItems = Array.isArray(allMenuItems) 
+                  const categoryItems = Array.isArray(allMenuItems)
                     ? allMenuItems.filter(item =>
-                        item.categories?.some(cat => cat.id === category.id)
-                      )
+                      item.categories?.some(cat => cat.id === category.id)
+                    )
                     : [];
 
                   if (categoryItems.length === 0) return null;

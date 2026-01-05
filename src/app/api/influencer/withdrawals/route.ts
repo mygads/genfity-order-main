@@ -75,9 +75,21 @@ async function postHandler(
     }
 
     // Minimum withdrawal amounts
+    // Minimum withdrawal amounts (default fallback)
+    let minIdr = 100000;
+    let minAud = 20;
+
+    // Fetch dynamic settings from subscription plan
+    const plan = await prisma.subscriptionPlan.findFirst({ where: { isActive: true } });
+    if (plan) {
+      // Values from DB are Decimal, convert to Number
+      minIdr = Number(plan.influencerMinWithdrawalIdr ?? 100000);
+      minAud = Number(plan.influencerMinWithdrawalAud ?? 20);
+    }
+
     const minimumWithdrawal: Record<string, number> = {
-      IDR: 100000, // 100k IDR
-      AUD: 20,     // 20 AUD
+      IDR: minIdr,
+      AUD: minAud,
     };
 
     if (amount < (minimumWithdrawal[currency] || 0)) {

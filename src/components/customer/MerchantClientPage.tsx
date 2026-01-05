@@ -168,7 +168,7 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
             {/* How to use Genfity Order Section - Gray overlay when closed */}
             <div className={`px-3 my-4 ${!storeOpen ? 'opacity-50 grayscale' : ''}`}>
                 <div className="text-center">
-                    <h3 className="my-4 mb-2 text-base font-semibold text-gray-900 dark:text-white">
+                    <h3 className="my-4 mb-2 text-base font-semibold text-gray-900">
                         {t('customer.howTo.title')}
                     </h3>
 
@@ -182,7 +182,7 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                                 alt={t('customer.howTo.step1')}
                                 className="w-14 h-14 mb-1"
                             />
-                            <span className="text-xs text-gray-700 dark:text-gray-300 font-medium">{t('customer.howTo.step1')}</span>
+                            <span className="text-xs text-gray-700 font-medium">{t('customer.howTo.step1')}</span>
                         </div>
 
                         {/* Arrow */}
@@ -198,7 +198,7 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                                 alt={t('customer.howTo.step2')}
                                 className="w-14 h-14 mb-1"
                             />
-                            <span className="text-xs text-gray-700 dark:text-gray-300 font-medium">{t('customer.howTo.step2')}</span>
+                            <span className="text-xs text-gray-700  font-medium">{t('customer.howTo.step2')}</span>
                         </div>
 
                         {/* Arrow */}
@@ -214,7 +214,7 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                                 alt={t('customer.howTo.step3')}
                                 className="w-14 h-14 mb-1"
                             />
-                            <span className="text-xs text-gray-700 dark:text-gray-300 font-medium">{t('customer.howTo.step3')}</span>
+                            <span className="text-xs text-gray-700 font-medium">{t('customer.howTo.step3')}</span>
                         </div>
                     </div>
                 </div>
@@ -224,7 +224,7 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
             {(isDineInEnabled || isTakeawayEnabled) && (
                 <div className={`px-3 mb-6 ${!storeOpen ? 'opacity-60' : ''}`}>
                     <div className="text-center">
-                        <h3 className="my-4 mb-4 text-base font-semibold text-gray-900 dark:text-white">
+                        <h3 className="my-4 mb-4 text-base font-semibold text-gray-900">
                             {t('customer.mode.howToEat')}
                         </h3>
 
@@ -235,14 +235,14 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                                 <button
                                     id="mode-dinein"
                                     onClick={() => handleModeSelect('dinein')}
-                                    className={`w-full h-12 border rounded-lg text-base font-medium  transition-colors duration-200 shadow-lg flex items-center justify-center gap-2 ${storeOpen && isDineInAvailable
-                                        ? 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800'
-                                        : 'border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800'
+                                    className={`w-full h-12 border rounded-lg text-base font-medium transition-colors duration-200 shadow-lg flex items-center justify-center gap-2 ${storeOpen && isDineInAvailable
+                                        ? 'border-gray-300 bg-white text-gray-900 hover:bg-gray-50'
+                                        : 'border-gray-200 text-gray-400 bg-gray-100'
                                         }`}
                                 >
                                     <span>{dineInLabel}</span>
                                     {(!storeOpen || !isDineInAvailable) && (
-                                        <span className="text-xs bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded">
+                                        <span className="text-xs bg-gray-300 text-gray-600 px-2 py-0.5 rounded">
                                             {t('customer.mode.unavailableNow')}
                                         </span>
                                     )}
@@ -255,13 +255,13 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                                     id="mode-takeaway"
                                     onClick={() => handleModeSelect('takeaway')}
                                     className={`w-full h-12 border rounded-lg text-base font-medium transition-colors duration-200 shadow-lg flex items-center justify-center gap-2 ${storeOpen && isTakeawayAvailable
-                                        ? 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800'
-                                        : 'border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800'
+                                        ? 'border-gray-300 bg-white text-gray-900 hover:bg-gray-50'
+                                        : 'border-gray-200 text-gray-400 bg-gray-100'
                                         }`}
                                 >
                                     <span>{takeawayLabel}</span>
                                     {(!storeOpen || !isTakeawayAvailable) && (
-                                        <span className="text-xs bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded">
+                                        <span className="text-xs bg-gray-300 text-gray-600 px-2 py-0.5 rounded">
                                             {t('customer.mode.unavailableNow')}
                                         </span>
                                     )}
@@ -275,11 +275,11 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
             {/* Show message if no modes enabled */}
             {!isDineInEnabled && !isTakeawayEnabled && (
                 <div className="px-3 mb-6">
-                    <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800 text-center">
-                        <p className="text-amber-700 dark:text-amber-300 font-medium">
+                    <div className="p-4 bg-amber-50 rounded-xl border border-amber-200 text-center">
+                        <p className="text-amber-700 font-medium">
                             {t('customer.mode.orderingUnavailable')}
                         </p>
-                        <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">
+                        <p className="text-sm text-amber-600 mt-1">
                             {t('customer.mode.contactMerchant')}
                         </p>
                     </div>
@@ -315,7 +315,7 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
             {/* Floating Language Toggle - Only on main merchant page */}
             <div className="fixed bottom-4 z-50 pointer-events-none" style={{ left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: '500px' }}>
                 <div className="pointer-events-auto absolute bottom-0 right-4">
-                    <LanguageToggle className="shadow-lg border border-gray-200 dark:border-gray-700" />
+                    <LanguageToggle className="shadow-lg border border-gray-200" />
                 </div>
             </div>
         </>

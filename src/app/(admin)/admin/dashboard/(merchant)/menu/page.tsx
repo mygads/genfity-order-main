@@ -18,6 +18,7 @@ import CreateOptionModal from "@/components/common/CreateOptionModal";
 import ArchiveModal from "@/components/common/ArchiveModal";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { formatCurrency as formatCurrencyUtil } from "@/lib/utils/format";
+import { useContextualHint, CONTEXTUAL_HINTS, useClickHereHint, CLICK_HINTS } from "@/lib/tutorial";
 
 interface MenuAddonCategory {
   addonCategoryId: string;
@@ -100,6 +101,8 @@ function MerchantMenuPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useTranslation();
+  const { showHint } = useContextualHint();
+  const { showClickHint } = useClickHereHint();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -271,6 +274,17 @@ function MerchantMenuPageContent() {
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredMenuItems.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredMenuItems.length / itemsPerPage);
+
+  // Show contextual hint when menu is empty
+  useEffect(() => {
+    if (!loading && menuItems.length === 0) {
+      showHint(CONTEXTUAL_HINTS.emptyMenu);
+      // Show click hint pointing to Add Menu button
+      setTimeout(() => {
+        showClickHint(CLICK_HINTS.addMenuButton);
+      }, 1000);
+    }
+  }, [loading, menuItems.length, showHint, showClickHint]);
 
   // Show skeleton loader during initial load
   if (loading) {
@@ -581,7 +595,7 @@ function MerchantMenuPageContent() {
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
   return (
-    <div>
+    <div data-tutorial="menu-page">
       <div className="space-y-6">
         {error && (
           <div className="rounded-lg bg-error-50 p-4 dark:bg-error-900/20">
@@ -595,7 +609,7 @@ function MerchantMenuPageContent() {
           </div>
         )}
 
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6">
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6" data-tutorial="menu-list">
           <div className="mb-5 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">{t("admin.menu.listTitle")}</h3>
             <div className="flex items-center gap-3">
@@ -665,6 +679,7 @@ function MerchantMenuPageContent() {
               </button>
               <button
                 onClick={() => setShowCreateOptionModal(true)}
+                data-tutorial="add-menu-btn"
                 className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary-500 px-6 text-sm font-medium text-white hover:bg-primary-600 focus:outline-none focus:ring-3 focus:ring-primary-500/20"
               >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -676,10 +691,10 @@ function MerchantMenuPageContent() {
           </div>
 
           {/* Search and Filters - Inline Layout */}
-          <div className="mb-5">
+          <div className="mb-5" data-tutorial="menu-filters">
             <div className="flex flex-wrap items-center gap-3">
               {/* Search Bar - Takes remaining space */}
-              <div className="relative flex-1 min-w-[200px]">
+              <div className="relative flex-1 min-w-[200px]" data-tutorial="menu-search">
                 <svg className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>

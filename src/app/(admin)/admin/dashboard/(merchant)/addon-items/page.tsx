@@ -15,6 +15,7 @@ import { useTranslation } from "@/lib/i18n/useTranslation";
 import { getCurrencySymbol } from "@/lib/utils/format";
 import ArchiveModal from "@/components/common/ArchiveModal";
 import { exportAddonItemsForBulkUpload } from "@/lib/utils/excelExport";
+import { useContextualHint, CONTEXTUAL_HINTS, useClickHereHint, CLICK_HINTS } from "@/lib/tutorial";
 
 interface AddonCategory {
   id: string;
@@ -58,6 +59,8 @@ function AddonItemsPageContent() {
   const { t } = useTranslation();
   const { merchant: merchantData } = useMerchant();
   const { showSuccess, showError } = useToast();
+  const { showHint } = useContextualHint();
+  const { showClickHint } = useClickHereHint();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
@@ -160,6 +163,17 @@ function AddonItemsPageContent() {
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Show contextual hint when no addon items exist
+  useEffect(() => {
+    if (!loading && items.length === 0) {
+      showHint(CONTEXTUAL_HINTS.emptyAddons);
+      // Show click hint pointing to Add Addon Item button
+      setTimeout(() => {
+        showClickHint(CLICK_HINTS.addAddonItemButton);
+      }, 1000);
+    }
+  }, [loading, items.length, showHint, showClickHint]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -398,9 +412,9 @@ function AddonItemsPageContent() {
   }
 
   return (
-    <div>
+    <div data-tutorial="addon-items-page">
       <div className="space-y-6">
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6">
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6" data-tutorial="addon-items-list">
           <div className="mb-5 flex items-center justify-between">
             <div>
               <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">Addon Items</h3>
@@ -408,7 +422,7 @@ function AddonItemsPageContent() {
                 Manage addon items with SELECT (single choice) or QTY (quantity input) types
               </p>
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-3" data-tutorial="addon-items-actions">
               <button
                 onClick={() => setShowArchiveModal(true)}
                 className="inline-flex h-11 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
@@ -447,6 +461,7 @@ function AddonItemsPageContent() {
               <button
                 onClick={() => setShowCreateOptionModal(true)}
                 className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary-500 px-6 text-sm font-medium text-white hover:bg-primary-600 focus:outline-none focus:ring-3 focus:ring-primary-500/20"
+                data-tutorial="add-addon-item-btn"
               >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />

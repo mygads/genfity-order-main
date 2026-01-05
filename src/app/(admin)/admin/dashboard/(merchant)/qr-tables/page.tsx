@@ -6,8 +6,9 @@ import { QRCodeSVG } from "qrcode.react";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { useToast } from "@/hooks/useToast";
 import ToastContainer from "@/components/ui/ToastContainer";
-import { DownloadIcon } from "@/icons";
+import { FaDownload } from "react-icons/fa";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { useContextualHint, CONTEXTUAL_HINTS, useClickHereHint, CLICK_HINTS } from "@/lib/tutorial";
 
 interface MerchantData {
   code: string;
@@ -27,6 +28,8 @@ export default function QRTablesPage() {
   const { t } = useTranslation();
   const { toasts, success: showSuccess, error: showError } = useToast();
   const hiddenQrRef = useRef<HTMLDivElement>(null);
+  const { showHint } = useContextualHint();
+  const { showClickHint } = useClickHereHint();
 
   const [loading, setLoading] = useState(true);
   const [merchant, setMerchant] = useState<MerchantData | null>(null);
@@ -34,6 +37,23 @@ export default function QRTablesPage() {
   const [downloadSize, setDownloadSize] = useState<number>(256);
   const [downloading, setDownloading] = useState(false);
   const [downloadingTable, setDownloadingTable] = useState<number | null>(null);
+
+  // Show contextual hints on first visit
+  useEffect(() => {
+    if (!loading && merchant) {
+      if (tableCount === 0) {
+        showHint(CONTEXTUAL_HINTS.emptyQrTables);
+      } else {
+        showHint(CONTEXTUAL_HINTS.qrTablesFirstVisit);
+        // Show print tip after delay with click hint
+        const timer = setTimeout(() => {
+          showHint(CONTEXTUAL_HINTS.qrPrintTip);
+          showClickHint(CLICK_HINTS.qrDownloadAllButton);
+        }, 5000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [loading, merchant, tableCount, showHint, showClickHint]);
 
   useEffect(() => {
     fetchMerchant();
@@ -276,13 +296,13 @@ export default function QRTablesPage() {
   }
 
   return (
-    <div>
+    <div data-tutorial="qr-tables-page">
       <ToastContainer toasts={toasts} />
       <PageBreadcrumb pageTitle={t("admin.qrTables.title")} />
 
       <div className="mt-6 space-y-6">
         {/* Settings Card */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-4 sm:p-6 dark:border-gray-800 dark:bg-white/3">
+        <div data-tutorial="qr-settings-card" className="rounded-2xl border border-gray-200 bg-white p-4 sm:p-6 dark:border-gray-800 dark:bg-white/3">
           <div className="mb-6 border-b border-gray-200 pb-5 dark:border-gray-800">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
               QR Code Generator
@@ -294,7 +314,7 @@ export default function QRTablesPage() {
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {/* Table Count Input */}
-            <div>
+            <div data-tutorial="qr-table-count">
               <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Number of Tables
               </label>
@@ -310,7 +330,7 @@ export default function QRTablesPage() {
             </div>
 
             {/* Download Size Select */}
-            <div>
+            <div data-tutorial="qr-download-size">
               <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Download Size
               </label>
@@ -339,14 +359,14 @@ export default function QRTablesPage() {
             </div>
 
             {/* Download All Button */}
-            <div className="flex items-end">
+            <div data-tutorial="qr-download-all" className="flex items-end">
               <button
                 type="button"
                 onClick={handleDownloadAll}
                 disabled={tableCount === 0 || downloading}
                 className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-orange-500 px-4 text-sm font-medium text-white transition-colors hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <DownloadIcon className="h-4 w-4" />
+                <FaDownload className="h-4 w-4" />
                 {downloading ? `Downloading...` : `Download All (${tableCount})`}
               </button>
             </div>
@@ -355,7 +375,7 @@ export default function QRTablesPage() {
 
         {/* QR Codes Grid */}
         {tableCount > 0 && (
-          <div className="rounded-2xl border border-gray-200 bg-white p-4 sm:p-6 dark:border-gray-800 dark:bg-white/3">
+          <div data-tutorial="qr-codes-grid" className="rounded-2xl border border-gray-200 bg-white p-4 sm:p-6 dark:border-gray-800 dark:bg-white/3">
             <div className="mb-6 border-b border-gray-200 pb-5 dark:border-gray-800">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                 Generated QR Codes
@@ -399,7 +419,7 @@ export default function QRTablesPage() {
                     disabled={downloadingTable === tableNumber}
                     className="mt-2 flex h-8 w-full items-center justify-center gap-1.5 rounded-lg bg-orange-500 text-xs font-medium text-white transition-colors hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    <DownloadIcon className="h-3.5 w-3.5" />
+                    <FaDownload className="h-3.5 w-3.5" />
                     {downloadingTable === tableNumber ? "..." : t("admin.qrTables.download")}
                   </button>
                 </div>

@@ -258,16 +258,53 @@ function MerchantRegisterContent() {
         }
     };
 
-    // Auto-generate slug from merchant name
+    // Auto-generate slug from merchant name (4 characters, uppercase)
     const handleMerchantNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const name = e.target.value;
+        // Generate 4 character code from merchant name
+        const cleanName = name.replace(/[^a-zA-Z0-9\s]/g, '').trim();
+        const words = cleanName.split(/\s+/).filter(w => w.length > 0);
+        let autoCode = '';
+        
+        if (words.length >= 4) {
+            // Take first letter of first 4 words (e.g., "Wellard Kebab House Store" → "WKHS")
+            autoCode = words.slice(0, 4).map(w => w[0]).join('');
+        } else if (words.length === 3) {
+            // Take first letter of each word + first letter of first word again
+            autoCode = words.map(w => w[0]).join('') + (words[0][1] || words[0][0]);
+        } else if (words.length === 2) {
+            // Take first 2 letters of each word (e.g., "Wellard Kebab" → "WEKE")
+            autoCode = words[0].slice(0, 2) + words[1].slice(0, 2);
+        } else if (cleanName.length > 0) {
+            // Single word - take first 4 chars (e.g., "Wellard" → "WELL")
+            autoCode = cleanName.slice(0, 4);
+        }
+        
+        // Ensure at least 4 characters by padding with first word chars if needed
+        while (autoCode.length < 4 && cleanName.length > autoCode.length) {
+            autoCode += cleanName[autoCode.length] || '';
+        }
+        
         setFormData(prev => ({
             ...prev,
             merchantName: name,
-            merchantCode: prev.merchantCode || name.toLowerCase().replace(/[^a-z0-9]/g, "-").replace(/-+/g, "-").slice(0, 20),
+            // Always update auto-generated code (user can still manually change it)
+            merchantCode: autoCode.toUpperCase().slice(0, 8),
         }));
         if (formErrors.merchantName) {
             setFormErrors(prev => ({ ...prev, merchantName: "" }));
+        }
+        if (formErrors.merchantCode) {
+            setFormErrors(prev => ({ ...prev, merchantCode: "" }));
+        }
+    };
+
+    // Handle merchant code change - auto uppercase, min 4 max 8 chars
+    const handleMerchantCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+        setFormData(prev => ({ ...prev, merchantCode: value }));
+        if (formErrors.merchantCode) {
+            setFormErrors(prev => ({ ...prev, merchantCode: "" }));
         }
     };
 
@@ -276,9 +313,11 @@ function MerchantRegisterContent() {
         if (!formData.merchantName || formData.merchantName.length < 2) {
             errors.merchantName = t("validation.merchantNameMin");
         }
-        if (!formData.merchantCode || formData.merchantCode.length < 3) {
-            errors.merchantCode = t("validation.merchantCodeMin");
-        } else if (!/^[a-zA-Z0-9-]+$/.test(formData.merchantCode)) {
+        if (!formData.merchantCode || formData.merchantCode.length < 4) {
+            errors.merchantCode = t("validation.merchantCodeMin4");
+        } else if (formData.merchantCode.length > 8) {
+            errors.merchantCode = t("validation.merchantCodeMax8");
+        } else if (!/^[A-Z0-9]+$/.test(formData.merchantCode)) {
             errors.merchantCode = t("validation.merchantCodeFormat");
         }
         setFormErrors(errors);
@@ -576,13 +615,14 @@ function MerchantRegisterContent() {
                                             type="text"
                                             name="merchantCode"
                                             value={formData.merchantCode}
-                                            onChange={handleChange}
-                                            className={`flex-1 px-4 py-2.5 rounded-r-lg border ${formErrors.merchantCode ? "border-red-500" : "border-gray-300"} focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm`}
-                                            placeholder="warung-barokah"
+                                            onChange={handleMerchantCodeChange}
+                                            maxLength={8}
+                                            className={`flex-1 px-4 py-2.5 rounded-r-lg border ${formErrors.merchantCode ? "border-red-500" : "border-gray-300"} focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm uppercase`}
+                                            placeholder="ABCD"
                                         />
                                     </div>
                                     {formErrors.merchantCode && <p className="text-red-500 text-xs mt-1">{formErrors.merchantCode}</p>}
-                                    <p className="text-gray-500 text-xs mt-1">{t("register.merchantCodeHint")}</p>
+                                    <p className="text-gray-500 text-xs mt-1">{t("register.merchantCodeHintNew")}</p>
                                 </div>
 
                                 {/* Location Detection Section */}
@@ -703,6 +743,24 @@ function MerchantRegisterContent() {
                                     />
                                     <p className="text-gray-500 text-xs mt-1">{t("register.referralCodeHint")}</p>
                                 </div>
+
+                                {/* Influencer Code - locked if from URL */}
+                                {influencerCodeFromUrl && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            {t("register.influencerCode")}
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="influencerCode"
+                                            value={formData.influencerCode}
+                                            readOnly
+                                            disabled
+                                            className="w-full px-4 py-2.5 rounded-lg border border-gray-300 bg-gray-100 text-gray-600 text-sm cursor-not-allowed"
+                                        />
+                                        <p className="text-gray-500 text-xs mt-1">{t("register.influencerCodeHint")}</p>
+                                    </div>
+                                )}
 
                                 <button
                                     type="button"

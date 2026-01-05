@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { useContextualHint, CONTEXTUAL_HINTS } from "@/lib/tutorial/components/ContextualHint";
 
 interface SpecialPrice {
     id: string;
@@ -25,12 +26,24 @@ const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 export default function SpecialPricesPage() {
     const router = useRouter();
     const { t } = useTranslation();
+    const { showHint } = useContextualHint();
     const [loading, setLoading] = useState(true);
     const [specialPrices, setSpecialPrices] = useState<SpecialPrice[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [deleting, setDeleting] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
+
+    // Show contextual hint on first visit or empty state
+    useEffect(() => {
+        if (!loading) {
+            if (specialPrices.length === 0) {
+                showHint(CONTEXTUAL_HINTS.specialPricesEmpty);
+            } else {
+                showHint(CONTEXTUAL_HINTS.specialPricesFirstVisit);
+            }
+        }
+    }, [loading, specialPrices.length, showHint]);
 
     const fetchData = useCallback(async () => {
         try {

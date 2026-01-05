@@ -1,0 +1,170 @@
+/**
+ * Category Tutorial Steps
+ * Create and manage menu categories
+ */
+
+import type { TutorialStep } from '../types';
+
+// ============================================
+// CREATE CATEGORY TUTORIAL
+// ============================================
+
+export const createCategorySteps: TutorialStep[] = [
+  {
+    id: 'go-to-categories',
+    title: 'Go to Categories',
+    description: 'Categories help organize your menu. Let\'s navigate to the Categories page.',
+    targetSelector: '[data-nav-item="/admin/dashboard/categories"]',
+    position: 'right',
+    spotlightPadding: 4,
+    actionText: 'Go to Categories',
+    navigateTo: '/admin/dashboard/categories',
+    showPointer: true,
+    pointerDirection: 'left',
+    pointerLabel: 'Click here!',
+  },
+  {
+    id: 'category-list-overview',
+    title: 'Categories Overview',
+    description: 'Here you can see all your menu categories. Categories are displayed to customers in this order. You can drag to reorder them!',
+    targetSelector: '[data-tutorial="category-list"]',
+    position: 'bottom',
+    spotlightPadding: 8,
+  },
+  {
+    id: 'click-add-category',
+    title: 'Click "Add Category"',
+    description: 'Click this button to create a new category. Common examples: "Main Course", "Appetizers", "Beverages", "Desserts".',
+    targetSelector: '[data-tutorial="add-category-btn"]',
+    position: 'bottom-left',
+    spotlightPadding: 8,
+    showPointer: true,
+    pointerDirection: 'left',
+    pointerLabel: 'Click here!',
+    pointerIcon: 'plus',
+    actionText: 'Open Form', // This triggers click on Next
+  },
+  {
+    id: 'category-modal',
+    title: 'Category Form',
+    description: 'A form will appear. Fill in the category details here.',
+    targetSelector: '[data-tutorial="category-modal"]',
+    position: 'right',
+    spotlightPadding: 12,
+  },
+  {
+    id: 'category-name',
+    title: 'Enter Category Name',
+    description: 'Give your category a clear, short name. This is what customers will see when browsing your menu.',
+    targetSelector: '[data-tutorial="category-name"]',
+    position: 'right',
+    spotlightPadding: 8,
+    showPointer: true,
+    pointerDirection: 'left',
+    pointerIcon: 'edit',
+  },
+  {
+    id: 'category-description',
+    title: 'Add Description (Optional)',
+    description: 'Add a short description to help customers understand what\'s in this category. Example: "Hearty main dishes with rice or noodles".',
+    targetSelector: '[data-tutorial="category-description"]',
+    position: 'right',
+    spotlightPadding: 8,
+  },
+  {
+    id: 'category-image',
+    title: 'Upload Category Image (Optional)',
+    description: 'You can add an image to represent this category. This makes your menu more visually appealing!',
+    targetSelector: '[data-tutorial="category-image"]',
+    position: 'right',
+    spotlightPadding: 8,
+  },
+  {
+    id: 'category-save',
+    title: 'Save Category',
+    description: 'Click "Save" to create your category. You can now assign menu items to this category!',
+    targetSelector: '[data-tutorial="category-save-btn"]',
+    position: 'top',
+    spotlightPadding: 8,
+    showPointer: true,
+    pointerDirection: 'up',
+    pointerLabel: 'Save!',
+    pointerIcon: 'check',
+  },
+  {
+    id: 'category-reorder',
+    title: 'Reorder Categories',
+    description: 'Drag and drop categories to change their display order. The first category appears first on your menu page!',
+    targetSelector: '[data-tutorial="category-drag-handle"]',
+    position: 'left',
+    spotlightPadding: 8,
+    showPointer: true,
+    pointerDirection: 'right',
+    pointerIcon: 'hand-pointer',
+  },
+];
+
+// ============================================
+// EDIT CATEGORY TUTORIAL
+// ============================================
+
+export const editCategorySteps: TutorialStep[] = [
+  {
+    id: 'go-to-categories',
+    title: 'Go to Categories',
+    description: 'Navigate to the Categories page to manage your existing categories.',
+    targetSelector: '[data-nav-item="/admin/dashboard/categories"]',
+    position: 'right',
+    spotlightPadding: 4,
+    actionText: 'Go to Categories',
+    navigateTo: '/admin/dashboard/categories',
+  },
+  {
+    id: 'find-category',
+    title: 'Find the Category',
+    description: 'Scroll to find the category you want to edit. Categories are listed in their display order.',
+    targetSelector: '[data-tutorial="category-list"]',
+    position: 'bottom',
+    spotlightPadding: 8,
+  },
+  {
+    id: 'click-category-menu',
+    title: 'Click Menu Button',
+    description: 'Click the three-dot menu (⋮) button on the category card to see available actions.',
+    targetSelector: '[data-tutorial="category-menu-btn"]',
+    position: 'left',
+    spotlightPadding: 8,
+  },
+  {
+    id: 'click-edit',
+    title: 'Click "Edit"',
+    description: 'Select "Edit" from the dropdown menu to open the edit form.',
+    targetSelector: '[data-tutorial="category-edit-option"]',
+    position: 'left',
+    spotlightPadding: 8,
+  },
+  {
+    id: 'update-category',
+    title: 'Update Category Details',
+    description: 'Make your changes to the name, description, or image. The form works the same as when creating.',
+    targetSelector: '[data-tutorial="category-modal"]',
+    position: 'right',
+    spotlightPadding: 12,
+  },
+  {
+    id: 'save-changes',
+    title: 'Save Changes',
+    description: 'Click "Save" to update the category. Changes are reflected immediately on your menu!',
+    targetSelector: '[data-tutorial="category-save-btn"]',
+    position: 'top',
+    spotlightPadding: 8,
+  },
+  {
+    id: 'delete-category',
+    title: 'Delete Category (Careful!)',
+    description: 'You can also delete a category from the menu. Note: Menu items in this category won\'t be deleted, just uncategorized.',
+    targetSelector: '[data-tutorial="category-delete-option"]',
+    position: 'left',
+    spotlightPadding: 8,
+  },
+];

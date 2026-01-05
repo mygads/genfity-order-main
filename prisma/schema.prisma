@@ -71,20 +71,24 @@ model UserSession {
 }
 
 model UserPreference {
-  id                 BigInt   @id @default(autoincrement())
-  userId             BigInt   @unique @map("user_id")
-  theme              String   @default("light")
-  language           String   @default("en")
-  timezone           String   @default("Asia/Jakarta")
-  dateFormat         String   @default("DD/MM/YYYY") @map("date_format")
-  timeFormat         String   @default("24h") @map("time_format")
-  currency           String   @default("AUD")
-  emailNotifications Boolean  @default(true) @map("email_notifications")
-  orderNotifications Boolean  @default(true) @map("order_notifications")
-  marketingEmails    Boolean  @default(false) @map("marketing_emails")
-  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                    BigInt   @id @default(autoincrement())
+  userId                BigInt   @unique @map("user_id")
+  theme                 String   @default("light")
+  language              String   @default("en")
+  timezone              String   @default("Asia/Jakarta")
+  dateFormat            String   @default("DD/MM/YYYY") @map("date_format")
+  timeFormat            String   @default("24h") @map("time_format")
+  currency              String   @default("AUD")
+  emailNotifications    Boolean  @default(true) @map("email_notifications")
+  orderNotifications    Boolean  @default(true) @map("order_notifications")
+  marketingEmails       Boolean  @default(false) @map("marketing_emails")
+  // Tutorial & Onboarding
+  hasCompletedOnboarding Boolean  @default(false) @map("has_completed_onboarding")
+  completedTutorials    String[] @default([]) @map("completed_tutorials") // Array of tutorial IDs
+  lastHintDismissedAt   DateTime? @map("last_hint_dismissed_at") @db.Timestamptz(6)
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("user_preferences")
@@ -868,6 +872,8 @@ model SubscriptionPlan {
   // Influencer Commission Settings
   influencerFirstCommissionPercent  Decimal  @default(10) @map("influencer_first_commission_percent") @db.Decimal(5, 2)
   influencerRecurringCommissionPercent  Decimal  @default(5) @map("influencer_recurring_commission_percent") @db.Decimal(5, 2)
+  influencerMinWithdrawalIdr      Decimal  @default(100000) @map("influencer_min_withdrawal_idr") @db.Decimal(12, 2)
+  influencerMinWithdrawalAud      Decimal  @default(20) @map("influencer_min_withdrawal_aud") @db.Decimal(12, 2)
   // Admin
   isActive            Boolean  @default(true) @map("is_active")
   createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)

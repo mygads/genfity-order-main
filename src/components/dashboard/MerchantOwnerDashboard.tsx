@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { isStoreEffectivelyOpen, type OpeningHour } from '@/lib/utils/storeStatus';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import { SetupProgress } from '@/lib/tutorial';
 import {
   FaDollarSign,
   FaClock,
@@ -173,6 +174,9 @@ export default function MerchantOwnerDashboard({
 
   return (
     <div className="space-y-6">
+      {/* Setup Progress - Horizontal steps for new merchants (auto-hides when complete) */}
+      <SetupProgress />
+
       {/* Merchant Header - Clean Design */}
       <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -212,12 +216,14 @@ export default function MerchantOwnerDashboard({
               </div>
             </div>
           </div>
-          <StoreToggleButton
-            initialIsOpen={merchant.isOpen ?? true}
-            initialIsManualOverride={merchant.isManualOverride ?? false}
-            effectivelyOpen={effectivelyOpen}
-            merchantId={merchant.id.toString()}
-          />
+          <div className="flex items-center gap-3">
+            <StoreToggleButton
+              initialIsOpen={merchant.isOpen ?? true}
+              initialIsManualOverride={merchant.isManualOverride ?? false}
+              effectivelyOpen={effectivelyOpen}
+              merchantId={merchant.id.toString()}
+            />
+          </div>
         </div>
       </div>
 
