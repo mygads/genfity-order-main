@@ -299,10 +299,10 @@ export default function OrderSummaryCashPage() {
       <div className="flex-1 flex items-center justify-center px-4">
         <div className="text-center max-w-sm">
           <div className="text-6xl mb-4">❌</div>
-          <p className="text-base text-gray-900 dark:text-white font-semibold mb-2">
+          <p className="text-base text-gray-900 font-semibold mb-2">
             {t('customer.orderSummary.orderNotFound')}
           </p>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">{error}</p>
+          <p className="text-sm text-gray-600 mb-6">{error}</p>
           <button
             onClick={() => router.push(`/${merchantCode}/order?mode=${mode}`)}
             className="px-6 py-3 bg-orange-500 text-white text-sm font-semibold rounded-lg hover:bg-orange-600 transition-all active:scale-[0.98]"
@@ -322,13 +322,13 @@ export default function OrderSummaryCashPage() {
       {/* ========================================
           HEADER - ESB Style (Centered with Shadow)
       ======================================== */}
-      <header className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700 shadow-md">
+      <header className="sticky top-0 z-10 bg-white border-b border-gray-300 shadow-md">
         <div className="flex items-center justify-between px-5 py-4 relative">
           {/* Empty left spacer for centering */}
           <div className="w-8" />
 
           <h1
-            className="text-gray-900 dark:text-white absolute left-1/2 transform -translate-x-1/2"
+            className="text-gray-900 absolute left-1/2 transform -translate-x-1/2"
             style={{
               fontSize: '16px',
               fontWeight: 500,
@@ -342,7 +342,7 @@ export default function OrderSummaryCashPage() {
           {isLoggedIn ? (
             <button
               onClick={() => router.push(`/${merchantCode}/order?mode=${mode}`)}
-              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
               aria-label="Close"
             >
               <svg
@@ -354,7 +354,7 @@ export default function OrderSummaryCashPage() {
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className="text-gray-600 dark:text-gray-300"
+                className="text-gray-600"
               >
                 <line x1="18" y1="6" x2="6" y2="18" />
                 <line x1="6" y1="6" x2="18" y2="18" />

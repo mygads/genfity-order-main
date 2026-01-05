@@ -115,9 +115,9 @@ function EditProfileContent() {
     }
 
     return (
-        <div className="min-h-screen bg-white dark:bg-gray-900 flex flex-col">
+        <div className="min-h-screen bg-white flex flex-col">
             {/* Header */}
-            <header className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700 shadow-md">
+            <header className="sticky top-0 z-10 bg-white border-b border-gray-300 shadow-md">
                 <div className="flex items-center px-4 py-3">
                     <button
                         onClick={handleBack}
@@ -128,7 +128,7 @@ function EditProfileContent() {
                             <path d="M19 12H5M12 19l-7-7 7-7" />
                         </svg>
                     </button>
-                    <h1 className="flex-1 text-center font-semibold text-gray-900 dark:text-white text-base pr-10">
+                    <h1 className="flex-1 text-center font-semibold text-gray-900 text-base pr-10">
                         {t('customer.profile.editProfile')}
                     </h1>
                 </div>
@@ -138,63 +138,63 @@ function EditProfileContent() {
             <div className="flex-1 px-4 py-6">
                 {/* Error Message */}
                 {error && (
-                    <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <p className="text-sm text-red-600">{error}</p>
                     </div>
                 )}
 
                 {/* Success Message */}
                 {success && (
-                    <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                        <p className="text-sm text-green-600 dark:text-green-400">{t('customer.profile.profileUpdated')}</p>
+                    <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <p className="text-sm text-green-600">{t('customer.profile.profileUpdated')}</p>
                     </div>
                 )}
 
                 {/* Name Field */}
                 <div className="mb-6">
-                    <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">
+                    <label className="block text-sm text-gray-500 mb-2">
                         {t('auth.name')}
                     </label>
                     <input
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        className="w-full px-4 py-3 bg-white dark:bg-gray-800 border-b border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-base focus:outline-none focus:border-orange-500 transition-colors"
+                        className="w-full px-4 py-3 bg-white border-b border-gray-300 text-gray-900 text-base focus:outline-none focus:border-orange-500 transition-colors"
                         placeholder="Your name"
                     />
                 </div>
 
                 {/* Phone Field (Read-only) */}
                 <div className="mb-6">
-                    <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">
+                    <label className="block text-sm text-gray-500 mb-2">
                         {t('auth.phoneNumber')}
                     </label>
                     <input
                         type="text"
                         value={phone}
                         disabled
-                        className="w-full px-4 py-3 bg-gray-100 dark:bg-gray-700 border-b border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500 text-base cursor-not-allowed"
+                        className="w-full px-4 py-3 bg-gray-100 border-b border-gray-300 text-gray-400 text-base cursor-not-allowed"
                         placeholder="Phone number"
                     />
                 </div>
 
                 {/* Email Field */}
                 <div className="mb-6">
-                    <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">
+                    <label className="block text-sm text-gray-500 mb-2">
                         {t('auth.email')}
                     </label>
                     <input
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="w-full px-4 py-3 bg-white dark:bg-gray-800 border-b border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-base focus:outline-none focus:border-orange-500 transition-colors"
+                        className="w-full px-4 py-3 bg-white border-b border-gray-300 text-gray-900 text-base focus:outline-none focus:border-orange-500 transition-colors"
                         placeholder="Your email"
                     />
                 </div>
             </div>
 
             {/* Fixed Bottom Save Button */}
-            <div className="sticky bottom-0 left-0 right-0 p-4 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
+            <div className="sticky bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200">
                 <button
                     onClick={handleSave}
                     disabled={isSaving}

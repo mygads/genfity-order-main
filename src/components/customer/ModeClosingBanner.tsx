@@ -97,16 +97,16 @@ export default function ModeClosingBanner({
 
     // Color based on urgency
     const bgColor = minutesRemaining <= 10
-        ? "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800"
-        : "bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800";
+        ? "bg-red-50 border-red-200"
+        : "bg-amber-50 border-amber-200";
 
     const textColor = minutesRemaining <= 10
-        ? "text-red-700 dark:text-red-300"
-        : "text-amber-700 dark:text-amber-300";
+        ? "text-red-700"
+        : "text-amber-700";
 
     const iconColor = minutesRemaining <= 10
-        ? "text-red-500 dark:text-red-400"
-        : "text-amber-500 dark:text-amber-400";
+        ? "text-red-500"
+        : "text-amber-500";
 
     return (
         <div className={`flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg border mx-4 my-2 ${bgColor}`}>

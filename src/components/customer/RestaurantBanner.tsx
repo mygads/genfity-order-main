@@ -54,7 +54,7 @@ export default function RestaurantBanner({ imageUrl, bannerUrl, merchantName, is
 
   return (
     <div
-      className="relative w-full bg-gray-100 dark:bg-gray-800 overflow-hidden"
+      className="relative w-full bg-gray-100 overflow-hidden"
       style={{
         height: '214px',
         borderRadius: '0 0 8px 8px', // Bottom corners only

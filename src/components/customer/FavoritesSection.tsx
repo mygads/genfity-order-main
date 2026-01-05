@@ -82,11 +82,11 @@ export default function FavoritesSection({
         <div className="space-y-3">
             {/* Section Header */}
             <div className="flex items-center justify-between px-4">
-                <h2 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
                     <span className="text-red-500">❤️</span>
                     Your Favorites
                 </h2>
-                <span className="text-xs text-gray-500 dark:text-gray-400">
+                <span className="text-xs text-gray-500">
                     {favoriteItems.length} items
                 </span>
             </div>
@@ -139,7 +139,7 @@ export default function FavoritesSection({
                                 </div>
 
                                 {/* Name */}
-                                <h4 className="mt-2 text-xs font-semibold text-gray-900 dark:text-white line-clamp-2">
+                                <h4 className="mt-2 text-xs font-semibold text-gray-900 line-clamp-2">
                                     {item.name}
                                 </h4>
 

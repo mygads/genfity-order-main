@@ -15,7 +15,7 @@ export function Skeleton({ className = '', width = 'w-full', height = 'h-4' }: {
 }) {
   return (
     <div
-      className={`animate-pulse rounded bg-gray-200 dark:bg-gray-700 ${width} ${height} ${className}`}
+      className={`animate-pulse rounded bg-gray-200 ${width} ${height} ${className}`}
       aria-hidden="true"
     />
   );
@@ -1254,7 +1254,7 @@ export function OrderSummaryCashSkeleton() {
   return (
     <>
       {/* Header Skeleton - ESB Style */}
-      <header className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700 shadow-md">
+      <header className="sticky top-0 z-10 bg-white border-b border-gray-300 shadow-md">
         <div className="flex items-center justify-center px-5 py-4">
           <Skeleton width="w-32" height="h-6" />
         </div>
@@ -1724,7 +1724,7 @@ export function InfluencerSettingsSkeleton() {
       {/* Bank Details Form Skeleton */}
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
         <Skeleton width="w-28" height="h-6" className="mb-6" />
-        
+
         {/* IDR Bank */}
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-4">

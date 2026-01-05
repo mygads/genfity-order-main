@@ -154,32 +154,32 @@ export default function JoinGroupModal({
             />
 
             <div className={`fixed inset-x-0 bottom-0 z-[100] flex justify-center ${isClosing ? 'animate-slideDown' : 'animate-slideUp'}`}>
-                <div className="w-full max-w-[500px] bg-white dark:bg-gray-900 rounded-t-2xl shadow-2xl">
+                <div className="w-full max-w-[500px] bg-white rounded-t-2xl shadow-2xl">
                     {/* Header */}
-                    <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
                         <div className="flex items-center gap-2">
                             {step === 'name' && (
                                 <button
                                     onClick={() => setStep('code')}
-                                    className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                                    className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 transition-colors"
                                 >
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                                     </svg>
                                 </button>
                             )}
-                            <h2 className="text-lg font-semibold text-gray-900 dark:text-white" style={{ margin: 0, lineHeight: 'normal' }}>
+                            <h2 className="text-lg font-semibold text-gray-900" style={{ margin: 0, lineHeight: 'normal' }}>
                                 {t('groupOrder.joinSession') || 'Join Existing Group'}
                             </h2>
                             {step === 'name' && (
-                                <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs font-mono rounded">
+                                <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-mono rounded">
                                     {code.join('')}
                                 </span>
                             )}
                         </div>
                         <button
                             onClick={handleClose}
-                            className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                            className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-gray-100 transition-colors"
                         >
                             <svg width="18" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -191,7 +191,7 @@ export default function JoinGroupModal({
                     <div className="px-4 py-4">
                         {step === 'code' ? (
                             <>
-                                <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-3">
+                                <label className="block text-sm font-semibold text-gray-900 mb-3">
                                     {t('groupOrder.enterCode') || 'Enter Group Code'}<span className="text-red-500">*</span>
                                 </label>
 
@@ -206,18 +206,18 @@ export default function JoinGroupModal({
                                             value={char}
                                             onChange={(e) => handleCodeChange(index, e.target.value)}
                                             onKeyDown={(e) => handleKeyDown(index, e)}
-                                            className="w-14 h-14 text-center text-2xl font-bold uppercase bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
+                                            className="w-14 h-14 text-center text-2xl font-bold uppercase bg-white border-2 border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
                                         />
                                     ))}
                                 </div>
 
                                 {error && (
-                                    <p className="mt-2 text-sm text-red-600 dark:text-red-400 text-center" role="alert">
+                                    <p className="mt-2 text-sm text-red-600 text-center" role="alert">
                                         {error}
                                     </p>
                                 )}
 
-                                <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">
+                                <p className="text-xs text-gray-500 text-center mt-2">
                                     {t('groupOrder.codeHint') || 'Ask the host for the 4-character code'}
                                 </p>
                             </>
@@ -227,7 +227,7 @@ export default function JoinGroupModal({
                                 <div className="mb-4">
                                     <label
                                         htmlFor="joinName"
-                                        className="block text-sm font-semibold text-gray-900 dark:text-white mb-2"
+                                        className="block text-sm font-semibold text-gray-900 mb-2"
                                     >
                                         {t('groupOrder.yourName') || 'Your Name'}<span className="text-red-500">*</span>
                                     </label>
@@ -241,10 +241,10 @@ export default function JoinGroupModal({
                                         placeholder={t('groupOrder.enterName') || 'Enter your name'}
                                         autoFocus
                                         disabled={isLoading}
-                                        className="w-full h-12 px-4 text-left bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-orange-500 dark:focus:ring-orange-400 focus:border-orange-500 dark:focus:border-orange-400 transition-all disabled:bg-gray-100 dark:disabled:bg-gray-700"
+                                        className="w-full h-12 px-4 text-left bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-all disabled:bg-gray-100"
                                     />
                                     {error && (
-                                        <p className="mt-2 text-sm text-red-600 dark:text-red-400" role="alert">
+                                        <p className="mt-2 text-sm text-red-600" role="alert">
                                             {error}
                                         </p>
                                     )}
@@ -259,7 +259,7 @@ export default function JoinGroupModal({
                             <button
                                 onClick={handleNextStep}
                                 disabled={code.join('').length < 4}
-                                className="w-full h-12 bg-orange-500 text-white font-medium rounded-md hover:bg-orange-600 transition-colors disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:text-gray-500 dark:disabled:text-gray-500 disabled:cursor-not-allowed"
+                                className="w-full h-12 bg-orange-500 text-white font-medium rounded-md hover:bg-orange-600 transition-colors disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed"
                             >
                                 {t('common.next') || 'Next'}
                             </button>
@@ -267,7 +267,7 @@ export default function JoinGroupModal({
                             <button
                                 onClick={handleSubmit}
                                 disabled={!name.trim() || isLoading}
-                                className="w-full h-12 bg-orange-500 text-white font-medium rounded-md hover:bg-orange-600 transition-colors disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:text-gray-500 dark:disabled:text-gray-500 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                className="w-full h-12 bg-orange-500 text-white font-medium rounded-md hover:bg-orange-600 transition-colors disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                             >
                                 {isLoading ? (
                                     <>

@@ -200,17 +200,17 @@ export default function FloatingCartButton({ merchantCode, mode, storeOpen = tru
             onClick={() => setShowNonHostModal(false)}
           />
           <div className="fixed inset-x-0 bottom-0 z-[100] flex justify-center animate-slideUp">
-            <div className="w-full max-w-[500px] bg-white dark:bg-gray-900 rounded-t-2xl shadow-2xl p-6">
+            <div className="w-full max-w-[500px] bg-white rounded-t-2xl shadow-2xl p-6">
               <div className="text-center mb-6">
-                <div className="w-16 h-16 mx-auto mb-4 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-orange-100 rounded-full flex items-center justify-center">
                   <svg className="w-8 h-8 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
                   Host Only Checkout
                 </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className="text-sm text-gray-600">
                   Only the group host can submit the order and complete payment. Your items have been added to the group order.
                 </p>
               </div>

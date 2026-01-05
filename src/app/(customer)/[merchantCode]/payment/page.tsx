@@ -409,10 +409,10 @@ export default function PaymentPage() {
     return (
       <>
         {/* Header Skeleton */}
-        <div className="sticky top-0 z-50 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div className="sticky top-0 z-50 bg-white border-b border-gray-200">
           <div className="flex items-center justify-between px-4 h-14">
-            <div className="w-6 h-6 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
-            <div className="w-24 h-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+            <div className="w-6 h-6 bg-gray-200 rounded-full animate-pulse" />
+            <div className="w-24 h-5 bg-gray-200 rounded animate-pulse" />
             <div className="w-10" />
           </div>
         </div>
@@ -420,37 +420,37 @@ export default function PaymentPage() {
         <main className="flex-1 overflow-y-auto py-4 pb-6">
           {/* Order Type Badge Skeleton */}
           <section className="pb-3">
-            <div className="mt-4 mx-4 h-9 bg-gray-100 dark:bg-gray-700 rounded-lg animate-pulse" />
+            <div className="mt-4 mx-4 h-9 bg-gray-100 rounded-lg animate-pulse" />
           </section>
 
           {/* Customer Info Form Skeleton */}
           <div className="p-4 pb-0">
-            <div className="w-48 h-5 bg-gray-200 dark:bg-gray-700 rounded mb-3 animate-pulse" />
+            <div className="w-48 h-5 bg-gray-200 rounded mb-3 animate-pulse" />
 
             {/* Name Field Skeleton */}
-            <div className="w-24 h-4 bg-gray-200 dark:bg-gray-700 rounded mb-1 animate-pulse" />
-            <div className="w-full h-12 bg-gray-100 dark:bg-gray-700 rounded-xl mb-3 animate-pulse" />
+            <div className="w-24 h-4 bg-gray-200 rounded mb-1 animate-pulse" />
+            <div className="w-full h-12 bg-gray-100 rounded-xl mb-3 animate-pulse" />
 
             {/* Phone Field Skeleton */}
-            <div className="w-32 h-4 bg-gray-200 dark:bg-gray-700 rounded mb-1 animate-pulse" />
-            <div className="w-full h-12 bg-gray-100 dark:bg-gray-700 rounded-xl mb-3 animate-pulse" />
+            <div className="w-32 h-4 bg-gray-200 rounded mb-1 animate-pulse" />
+            <div className="w-full h-12 bg-gray-100 rounded-xl mb-3 animate-pulse" />
 
             {/* Email Field Skeleton */}
-            <div className="w-36 h-4 bg-gray-200 dark:bg-gray-700 rounded mb-1 animate-pulse" />
-            <div className="w-full h-12 bg-gray-100 dark:bg-gray-700 rounded-xl mb-3 animate-pulse" />
+            <div className="w-36 h-4 bg-gray-200 rounded mb-1 animate-pulse" />
+            <div className="w-full h-12 bg-gray-100 rounded-xl mb-3 animate-pulse" />
           </div>
 
           {/* Cashier Image Skeleton */}
           <div className="flex flex-col items-center text-center mb-20 px-8 py-8">
-            <div className="w-64 h-48 bg-gray-200 dark:bg-gray-700 rounded-lg mb-3 animate-pulse" />
-            <div className="w-56 h-4 bg-gray-200 dark:bg-gray-700 rounded mb-2 animate-pulse" />
-            <div className="w-48 h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+            <div className="w-64 h-48 bg-gray-200 rounded-lg mb-3 animate-pulse" />
+            <div className="w-56 h-4 bg-gray-200 rounded mb-2 animate-pulse" />
+            <div className="w-48 h-4 bg-gray-200 rounded animate-pulse" />
           </div>
         </main>
 
         {/* Bottom Payment Bar Skeleton */}
         <div
-          className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 z-10"
+          className="fixed bottom-0 left-0 right-0 bg-white z-10"
           style={{
             boxShadow: '0 -4px 12px rgba(0,0,0,0.15)',
             borderRadius: '16px 16px 0 0',
@@ -460,10 +460,10 @@ export default function PaymentPage() {
         >
           <div className="flex pt-3 px-4 pb-2 m-4 items-center gap-4">
             <div className="flex flex-col w-1/2 gap-2">
-              <div className="w-28 h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-              <div className="w-24 h-6 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              <div className="w-28 h-4 bg-gray-200 rounded animate-pulse" />
+              <div className="w-24 h-6 bg-gray-200 rounded animate-pulse" />
             </div>
-            <div className="w-1/2 h-12 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
+            <div className="w-1/2 h-12 bg-gray-200 rounded-lg animate-pulse" />
           </div>
         </div>
       </>
@@ -473,7 +473,7 @@ export default function PaymentPage() {
   return (
     <>
       {/* Header - Profile Style */}
-      <header className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700 shadow-md">
+      <header className="sticky top-0 z-10 bg-white border-b border-gray-300 shadow-md">
         <div className="flex items-center px-4 py-3">
           <button
             onClick={() => router.push(`/${merchantCode}/view-order?mode=${mode}`)}
@@ -484,7 +484,7 @@ export default function PaymentPage() {
               <path d="M19 12H5M12 19l-7-7 7-7" />
             </svg>
           </button>
-          <h1 className="flex-1 text-center font-semibold text-gray-900 dark:text-white text-base pr-10">
+          <h1 className="flex-1 text-center font-semibold text-gray-900 text-base pr-10">
             {t('customer.payment.title')}
           </h1>
         </div>
@@ -494,8 +494,8 @@ export default function PaymentPage() {
 
         {/* API Error Message */}
         {apiError && (
-          <div className="m-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-            <p className="text-sm text-red-600 dark:text-red-400">⚠️ {apiError}</p>
+          <div className="m-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-600">⚠️ {apiError}</p>
           </div>
         )}
 

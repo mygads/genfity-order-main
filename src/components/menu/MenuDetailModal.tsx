@@ -562,7 +562,7 @@ export default function MenuDetailModal({
 
       {/* Modal Container - Constrained to 500px like layout */}
       <div
-        className={`relative w-full max-w-[500px] h-full bg-white dark:bg-gray-800 flex flex-col overflow-hidden transition-transform duration-250 ${isClosing ? 'translate-y-full' : 'translate-y-0'}`}
+        className={`relative w-full max-w-[500px] h-full bg-white flex flex-col overflow-hidden transition-transform duration-250 ${isClosing ? 'translate-y-full' : 'translate-y-0'}`}
         style={{ animation: isClosing ? 'none' : 'slideUp 0.3s ease-out' }}
       >
         {/* Full Screen Modal within 500px container - Burjo ESB Style */}
@@ -571,7 +571,7 @@ export default function MenuDetailModal({
         <div className="flex-1 overflow-y-auto scrollbar-hide pb-32">
           {/* Image Banner with Buttons */}
           <div
-            className={`relative w-full h-[250px] bg-gray-200 dark:bg-gray-700 ${menu.imageUrl ? 'cursor-pointer' : 'cursor-default'}`}
+            className={`relative w-full h-[250px] bg-gray-200 ${menu.imageUrl ? 'cursor-pointer' : 'cursor-default'}`}
             onClick={() => menu.imageUrl && setIsImageZoomed(true)}
           >
             <Image
@@ -600,10 +600,10 @@ export default function MenuDetailModal({
                 e.stopPropagation();
                 handleClose();
               }}
-              className="absolute top-3 right-3 w-8 h-8 bg-white/90 dark:bg-gray-800/90 rounded-full flex items-center justify-center shadow-md hover:bg-white dark:hover:bg-gray-800 transition-colors z-20"
+              className="absolute top-3 right-3 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center shadow-md hover:bg-white transition-colors z-20"
               aria-label="Close"
             >
-              <FaTimes className="w-4 h-4 text-gray-700 dark:text-white" />
+              <FaTimes className="w-4 h-4 text-gray-700" />
             </button>
 
             {/* Expand Button - Only show if has image */}
@@ -613,7 +613,7 @@ export default function MenuDetailModal({
                   e.stopPropagation();
                   setIsImageZoomed(true);
                 }}
-                className="absolute top-3 left-3 w-8 h-8 bg-white/90 dark:bg-gray-800/90 rounded-full flex items-center justify-center shadow-md hover:bg-white dark:hover:bg-gray-800 transition-colors"
+                className="absolute top-3 left-3 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center shadow-md hover:bg-white transition-colors"
                 style={{ zIndex: 2 }}
                 aria-label="Expand image"
               >
@@ -626,7 +626,7 @@ export default function MenuDetailModal({
             {/* Share Button */}
             <button
               onClick={handleShare}
-              className={`absolute top-3 ${menu.imageUrl ? 'left-14' : 'left-3'} w-8 h-8 bg-white/90 dark:bg-gray-800/90 rounded-full flex items-center justify-center shadow-md hover:bg-white dark:hover:bg-gray-800 transition-colors dark:text-white`}
+              className={`absolute top-3 ${menu.imageUrl ? 'left-14' : 'left-3'} w-8 h-8 bg-white/90 rounded-full flex items-center justify-center shadow-md hover:bg-white transition-colors`}
               style={{ zIndex: 2 }}
               aria-label="Share menu item"
               title={showCopied ? 'Link copied!' : 'Share'}
@@ -655,7 +655,7 @@ export default function MenuDetailModal({
           </div>
 
           {/* Menu Info Section - Overlaps image with rounded top */}
-          <section className="px-4 py-3 bg-white dark:bg-gray-800 rounded-t-2xl relative -mt-4 z-10">
+          <section className="px-4 py-3 bg-white rounded-t-2xl relative -mt-4 z-10">
             {/* Menu Badges (Recommended, Best Seller, Spicy, Signature) */}
             {(menu.isRecommended || menu.isBestSeller || menu.isSpicy || menu.isSignature || menu.isPromo) && (
               <div className="flex flex-wrap gap-2 mb-2">
@@ -669,7 +669,7 @@ export default function MenuDetailModal({
                 )}
                 {menu.isRecommended && (
                   <div
-                    className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-green-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
+                    className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-green-300 hover:ring-offset-1"
                     title="Recommended"
                   >
                     <Image
@@ -682,7 +682,7 @@ export default function MenuDetailModal({
                 )}
                 {menu.isBestSeller && (
                   <div
-                    className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-amber-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
+                    className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-amber-300 hover:ring-offset-1"
                     title="Best Seller"
                   >
                     <Image
@@ -695,7 +695,7 @@ export default function MenuDetailModal({
                 )}
                 {menu.isSignature && (
                   <div
-                    className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-purple-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
+                    className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-purple-300 hover:ring-offset-1"
                     title="Signature"
                   >
                     <Image
@@ -708,7 +708,7 @@ export default function MenuDetailModal({
                 )}
                 {menu.isSpicy && (
                   <div
-                    className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-orange-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
+                    className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-orange-300 hover:ring-offset-1"
                     title="Spicy"
                   >
                     <Image
@@ -724,13 +724,13 @@ export default function MenuDetailModal({
 
             {/* Menu Name Row with Favorite Button */}
             <div className="flex items-start justify-between gap-2 mb-1">
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white flex-1">
+              <h1 className="text-xl font-bold text-gray-900 flex-1">
                 {menu.name}
               </h1>
               {/* Favorite Button */}
               <button
                 onClick={handleToggleFavorite}
-                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
                 aria-label={isFav ? 'Remove from favorites' : 'Add to favorites'}
               >
                 {isFav ? (
@@ -744,7 +744,7 @@ export default function MenuDetailModal({
             {/* Price Display - Show promo price with strikethrough if available */}
             {menu.isPromo && menu.promoPrice ? (
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-lg font-semibold text-gray-900 dark:text-white">
+                <span className="text-lg font-semibold text-gray-900">
                   {formatCurrency(menu.promoPrice, currency)}
                 </span>
                 <span className="text-sm text-gray-400 line-through">
@@ -752,21 +752,21 @@ export default function MenuDetailModal({
                 </span>
               </div>
             ) : (
-              <div className="text-base font-semibold text-gray-900 dark:text-white mb-2">
+              <div className="text-base font-semibold text-gray-900 mb-2">
                 {formatCurrency(menu.price, currency)}
               </div>
             )}
 
             {/* Description */}
             {menu.description && (
-              <p className="text-[13px] text-gray-500 dark:text-gray-400 leading-relaxed">
+              <p className="text-[13px] text-gray-500 leading-relaxed">
                 {menu.description}
               </p>
             )}
           </section>
 
           {/* Thin Divider */}
-          <hr className="border-t-2 border-gray-200 dark:border-gray-700" style={{ margin: 0 }} />
+          <hr className="border-t-2 border-gray-200" style={{ margin: 0 }} />
 
           {/* Add-ons Section */}
           {isLoading ? (
@@ -791,22 +791,22 @@ export default function MenuDetailModal({
                         addonCategoryRefs.current[category.id] = el;
                       }}
                       id={`addon-category-${category.id}`}
-                      className={`px-4 py-3 ${missingCategoryId === category.id ? 'bg-orange-50 dark:bg-orange-900/10' : ''}`}
+                      className={`px-4 py-3 ${missingCategoryId === category.id ? 'bg-orange-50' : ''}`}
                       style={{ position: 'relative' }}
                     >
                       {/* Category Header */}
                       <div className="w-full mb-2 flex items-start justify-between">
                         <div className="flex-1">
-                          <h2 className="text-base font-bold text-gray-900 dark:text-white m-0">
+                          <h2 className="text-base font-bold text-gray-900 m-0">
                             {category.name}
                           </h2>
                           {category.type === 'required' ? (
-                            <p className={`text-xs font-medium ${isIncomplete ? 'text-orange-600 dark:text-orange-400' : 'text-gray-900 dark:text-gray-400'}`}>
+                            <p className={`text-xs font-medium ${isIncomplete ? 'text-orange-600' : 'text-gray-900'}`}>
                               Required
                               {category.maxSelections > 0 ? ` • max ${category.maxSelections}` : ''}
                             </p>
                           ) : (
-                            <p className="text-xs text-gray-900 dark:text-gray-400">
+                            <p className="text-xs text-gray-900">
                               Optional
                               {category.maxSelections > 0 ? ` • max ${category.maxSelections}` : ''}
                             </p>
@@ -861,11 +861,11 @@ export default function MenuDetailModal({
                                   }
                                 }}
                               >
-                                <span className={`text-sm ${!addon.isAvailable ? 'text-gray-400 dark:text-gray-500 line-through' : isSelected ? 'text-gray-800 dark:text-white font-semibold' : 'text-gray-800 dark:text-white'}`}>
+                                <span className={`text-sm ${!addon.isAvailable ? 'text-gray-400 line-through' : isSelected ? 'text-gray-800 font-semibold' : 'text-gray-800'}`}>
                                   {addon.name}
                                 </span>
                                 {addon.price > 0 && (
-                                  <span className={`text-sm font-bold ml-1 ${!addon.isAvailable ? 'text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-white'}`}>
+                                  <span className={`text-sm font-bold ml-1 ${!addon.isAvailable ? 'text-gray-400' : 'text-gray-900'}`}>
                                     (+ {formatCurrency(addon.price, currency)})
                                   </span>
                                 )}
@@ -874,7 +874,7 @@ export default function MenuDetailModal({
                               {/* Right side: Input controls */}
                               {!addon.isAvailable ? (
                                 /* Sold Out */
-                                <span className="text-xs font-semibold text-red-500 dark:text-red-400 px-2 py-1 bg-red-50 dark:bg-red-900/20 rounded">
+                                <span className="text-xs font-semibold text-red-500 px-2 py-1 bg-red-50 rounded">
                                   Sold out
                                 </span>
                               ) : isSingleChoice ? (
@@ -884,7 +884,7 @@ export default function MenuDetailModal({
                                   onClick={() => handleRadioSelect(category.id, addon.id)}
                                   className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all shrink-0 ${isSelected
                                     ? 'border-orange-500 bg-orange-500'
-                                    : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
+                                    : 'border-gray-300 hover:border-gray-400'
                                     }`}
                                   aria-label={`Select ${addon.name}`}
                                 >
@@ -901,21 +901,21 @@ export default function MenuDetailModal({
                                     type="button"
                                     onClick={() => handleAddonQtyChange(addon.id, -1)}
                                     disabled={addonQty === 0}
-                                    className="w-6 h-6 rounded-full border border-gray-300 dark:border-gray-600 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                                    className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                                     aria-label="Decrease quantity"
                                   >
-                                    <svg className="w-4 h-4 text-gray-500 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                                    <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
                                     </svg>
                                   </button>
-                                  <span className="text-sm font-semibold text-gray-900 dark:text-white min-w-6 text-center">
+                                  <span className="text-sm font-semibold text-gray-900 min-w-6 text-center">
                                     {addonQty}
                                   </span>
                                   <button
                                     type="button"
                                     onClick={() => handleAddonQtyChange(addon.id, 1)}
                                     disabled={isMaxReached}
-                                    className="w-7 h-7 rounded-full border border-orange-500 text-orange-500 flex items-center justify-center hover:bg-orange-50 dark:hover:bg-orange-900/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                                    className="w-7 h-7 rounded-full border border-orange-500 text-orange-500 flex items-center justify-center hover:bg-orange-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                                     aria-label="Increase quantity"
                                   >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
@@ -932,8 +932,8 @@ export default function MenuDetailModal({
                                   className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all shrink-0 ${isSelected
                                     ? 'border-orange-500 bg-orange-500'
                                     : isMaxReached
-                                      ? 'border-gray-200 dark:border-gray-700 opacity-50 cursor-not-allowed'
-                                      : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
+                                      ? 'border-gray-200 opacity-50 cursor-not-allowed'
+                                      : 'border-gray-300 hover:border-gray-400'
                                     }`}
                                   aria-label={`${isSelected ? 'Deselect' : 'Select'} ${addon.name}`}
                                 >
@@ -952,24 +952,24 @@ export default function MenuDetailModal({
 
                     {/* Divider between categories */}
                     {index < addonCategories.length - 1 && (
-                      <hr className="border-t border-gray-200 dark:border-gray-700" style={{ margin: 0 }} />
+                      <hr className="border-t border-gray-200" style={{ margin: 0 }} />
                     )}
                   </div>
                 );
               })}
 
               {/* Thick Divider after all addons */}
-              <hr className="border-t-2 border-gray-200 dark:border-gray-700" style={{ margin: 0 }} />
+              <hr className="border-t-2 border-gray-200" style={{ margin: 0 }} />
             </section>
           ) : null}
 
           {/* Notes Section */}
           <div className="px-4 py-3">
             <div className="flex flex-col items-start mb-2">
-              <h2 className="text-base font-bold text-gray-900 dark:text-white m-0">
+              <h2 className="text-base font-bold text-gray-900 m-0">
                 Notes
               </h2>
-              <span className="text-sm text-gray-900 dark:text-gray-400">Optional</span>
+              <span className="text-sm text-gray-900">Optional</span>
             </div>
             <textarea
               value={notes}
@@ -977,7 +977,7 @@ export default function MenuDetailModal({
               placeholder="Example: Dont add onions!"
               maxLength={100}
               rows={4}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500 dark:focus:ring-orange-400 resize-none"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none"
             />
           </div>
 
@@ -988,10 +988,10 @@ export default function MenuDetailModal({
         {/* Fixed Bottom Bar - Burjo ESB Style */}
         {/* Hide entire bottom bar when store is closed */}
         {storeOpen && (
-          <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[500px] bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 rounded-t-2xl z-310" style={{ boxShadow: '0 -4px 6px -1px rgba(0, 0, 0, 0.1), 0 -2px 4px -1px rgba(0, 0, 0, 0.06)' }}>
+          <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[500px] bg-white border-t border-gray-200 rounded-t-2xl z-310" style={{ boxShadow: '0 -4px 6px -1px rgba(0, 0, 0, 0.1), 0 -2px 4px -1px rgba(0, 0, 0, 0.06)' }}>
             {/* Total Order Row */}
             <div className="flex items-center justify-between px-4 py-4">
-              <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <div className="text-sm font-medium text-gray-700">
                 Total Order
               </div>
 
@@ -1000,24 +1000,24 @@ export default function MenuDetailModal({
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
                   disabled={quantity === 1}
-                  className="w-6 h-6 rounded-full border border-black dark:border-gray-600 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-gray-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                  className="w-6 h-6 rounded-full border border-black flex items-center justify-center hover:bg-gray-100 hover:border-gray-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                   aria-label="Decrease order quantity"
                 >
-                  <svg className="w-4 h-4 text-black dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                  <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
                   </svg>
                 </button>
 
-                <span className="text-base font-semibold text-gray-900 dark:text-white min-w-6 text-center">
+                <span className="text-base font-semibold text-gray-900 min-w-6 text-center">
                   {quantity}
                 </span>
 
                 <button
                   onClick={() => setQuantity(quantity + 1)}
-                  className="w-6 h-6 rounded-full border border-black dark:border-gray-600 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-gray-400 transition-all"
+                  className="w-6 h-6 rounded-full border border-black flex items-center justify-center hover:bg-gray-100 hover:border-gray-400 transition-all"
                   aria-label="Increase order quantity"
                 >
-                  <svg className="w-4 h-4 text-black dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                  <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                   </svg>
                 </button>
@@ -1029,7 +1029,7 @@ export default function MenuDetailModal({
               <button
                 onClick={handleAddToCart}
                 disabled={!isAvailable}
-                className="w-full h-11 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-lg disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:text-gray-500 dark:disabled:text-gray-400 disabled:cursor-not-allowed transition-all active:scale-[0.98] flex items-center justify-center px-5"
+                className="w-full h-11 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-lg disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed transition-all active:scale-[0.98] flex items-center justify-center px-5"
               >
                 <span className="text-md">{editMode ? 'Update Order ' : 'Add Orders '}</span>
 
@@ -1067,12 +1067,12 @@ export default function MenuDetailModal({
 
       {/* Image Zoom Modal - Full quality with click outside to close */}
       {isImageZoomed && (
-        <div 
+        <div
           className="fixed inset-0 z-400 flex items-center justify-center bg-black/95 cursor-pointer"
           onClick={() => setIsImageZoomed(false)} // Click outside image to close
         >
           {/* Zoomed Image Container - Max 500px */}
-          <div 
+          <div
             className="relative w-full max-w-[500px] h-auto cursor-default"
             onClick={(e) => e.stopPropagation()} // Prevent close when clicking image
           >

@@ -63,14 +63,14 @@ export default function GroupOrderChoiceModal({
                     onClick={handleClose}
                 />
                 <div className={`fixed inset-x-0 bottom-0 z-[100] flex justify-center ${isClosing ? 'animate-slideDown' : 'animate-slideUp'}`}>
-                    <div className="w-full max-w-[500px] bg-white dark:bg-gray-900 rounded-t-2xl shadow-2xl">
-                        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-                            <h2 className="text-lg font-semibold text-gray-900 dark:text-white" style={{ margin: 0, lineHeight: 'normal' }}>
+                    <div className="w-full max-w-[500px] bg-white rounded-t-2xl shadow-2xl">
+                        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+                            <h2 className="text-lg font-semibold text-gray-900" style={{ margin: 0, lineHeight: 'normal' }}>
                                 {t('groupOrder.title') || 'Group Order'}
                             </h2>
                             <button
                                 onClick={handleClose}
-                                className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                                className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-gray-100 transition-colors"
                             >
                                 <HiXMark className="w-5 h-5 text-gray-500" />
                             </button>
@@ -80,16 +80,16 @@ export default function GroupOrderChoiceModal({
                             {/* Active Session Card - Same styling as create/join */}
                             <button
                                 onClick={handleViewGroup}
-                                className="w-full flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                                className="w-full flex items-center gap-4 p-4 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors"
                             >
                                 <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center">
                                     <HiUserGroup className="w-6 h-6 text-white" />
                                 </div>
                                 <div className="flex-1 text-left">
-                                    <p className="font-semibold text-gray-900 dark:text-white">
+                                    <p className="font-semibold text-gray-900">
                                         {t('groupOrder.activeSession') || 'Active Group Order'}
                                     </p>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                                    <p className="text-sm text-gray-500">
                                         Code: <span className="font-mono font-bold text-orange-600">{session.sessionCode}</span>
                                     </p>
                                 </div>
@@ -120,15 +120,15 @@ export default function GroupOrderChoiceModal({
             />
 
             <div className={`fixed inset-x-0 bottom-0 z-[100] flex justify-center ${isClosing ? 'animate-slideDown' : 'animate-slideUp'}`}>
-                <div className="w-full max-w-[500px] bg-white dark:bg-gray-900 rounded-t-2xl shadow-2xl">
+                <div className="w-full max-w-[500px] bg-white rounded-t-2xl shadow-2xl">
                     {/* Header */}
-                    <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-                        <h2 className="text-lg font-semibold text-gray-900 dark:text-white" style={{ margin: 0, lineHeight: 'normal' }}>
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+                        <h2 className="text-lg font-semibold text-gray-900" style={{ margin: 0, lineHeight: 'normal' }}>
                             {t('groupOrder.title') || 'Group Order'}
                         </h2>
                         <button
                             onClick={handleClose}
-                            className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                            className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-gray-100 transition-colors"
                         >
                             <HiXMark className="w-5 h-5 text-gray-500" />
                         </button>
@@ -136,7 +136,7 @@ export default function GroupOrderChoiceModal({
 
                     {/* Description */}
                     <div className="px-4 pt-4 pb-2">
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <p className="text-sm text-gray-600">
                             {t('groupOrder.subtitle') || 'Order together with friends and split the bill'}
                         </p>
                     </div>
@@ -146,16 +146,16 @@ export default function GroupOrderChoiceModal({
                         {/* Create Group */}
                         <button
                             onClick={handleCreate}
-                            className="w-full flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                            className="w-full flex items-center gap-4 p-4 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors"
                         >
                             <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center">
                                 <HiPlus className="w-6 h-6 text-white" />
                             </div>
                             <div className="flex-1 text-left">
-                                <p className="font-semibold text-gray-900 dark:text-white">
+                                <p className="font-semibold text-gray-900">
                                     {t('groupOrder.createSession') || 'Create New Group'}
                                 </p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                <p className="text-sm text-gray-500">
                                     {t('groupOrder.createDescription') || 'Start a group and share the code'}
                                 </p>
                             </div>
@@ -165,16 +165,16 @@ export default function GroupOrderChoiceModal({
                         {/* Join Group */}
                         <button
                             onClick={handleJoin}
-                            className="w-full flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                            className="w-full flex items-center gap-4 p-4 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors"
                         >
                             <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center">
                                 <HiUserPlus className="w-6 h-6 text-white" />
                             </div>
                             <div className="flex-1 text-left">
-                                <p className="font-semibold text-gray-900 dark:text-white">
+                                <p className="font-semibold text-gray-900">
                                     {t('groupOrder.joinSession') || 'Join Existing Group'}
                                 </p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                <p className="text-sm text-gray-500">
                                     {t('groupOrder.joinDescription') || 'Enter a code to join'}
                                 </p>
                             </div>

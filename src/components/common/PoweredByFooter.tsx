@@ -22,7 +22,7 @@ export default function PoweredByFooter({ className = "", size = "sm" }: Powered
 
   return (
     <div className={`flex items-center justify-center gap-2 ${textSize} ${className}`}>
-      <span className="text-gray-500 dark:text-gray-400">{t("common.poweredBy")}</span>
+      <span className="text-gray-500">{t("common.poweredBy")}</span>
       <a
         href="https://genfity.com"
         target="_blank"
