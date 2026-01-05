@@ -7,6 +7,7 @@ import Image from 'next/image';
 import FloatingCartButton from '@/components/cart/FloatingCartButton';
 import MenuDetailModal from '@/components/menu/MenuDetailModal';
 import MenuInCartModal from '@/components/menu/MenuInCartModal';
+import LazyMenuImage from '@/components/customer/LazyMenuImage';
 import { useCart } from '@/context/CartContext';
 import type { CartItem } from '@/context/CartContext';
 import { formatCurrency } from '@/lib/utils/format';
@@ -437,7 +438,7 @@ export default function SearchPage() {
                     <div key={item.id} style={{ position: 'relative', display: 'flex', gap: '12px', paddingTop: '16px', paddingBottom: '16px', borderBottom: index < filteredItems.length - 1 ? '2px solid #e4e2e2ff' : 'none' }}>
                       {isInCart && (<div style={{ position: 'absolute', left: '-16px', top: '10px', bottom: '10px', width: '4px', backgroundColor: '#F05A28', borderRadius: '0 2px 2px 0' }} />)}
                       <div onClick={() => available && handleOpenMenu(item)} style={{ position: 'relative', width: '70px', height: '70px', flexShrink: 0, borderRadius: '8px', overflow: 'hidden', backgroundColor: '#f3f4f6', cursor: available ? 'pointer' : 'default', filter: available ? 'none' : 'grayscale(100%)', opacity: available ? 1 : 0.6 }}>
-                        <Image src={item.imageUrl || '/images/default-menu.png'} alt={item.name} fill className="object-cover" sizes="70px" />
+                        <LazyMenuImage src={item.imageUrl} alt={item.name} className="object-cover" sizes="70px" rootMargin="300px" priority={index < 3} />
                       </div>
                       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
                         <h4 onClick={() => available && handleOpenMenu(item)} className="line-clamp-2" style={{ fontFamily: 'Inter, sans-serif', fontSize: '15px', fontWeight: 700, color: available ? '#000000' : '#9CA3AF', lineHeight: '1.4', margin: 0, cursor: available ? 'pointer' : 'default' }}>{item.name}</h4>

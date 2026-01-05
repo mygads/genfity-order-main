@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { EyeIcon, EyeCloseIcon } from "@/icons";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { TranslationKeys } from "@/lib/i18n";
@@ -25,6 +25,7 @@ interface FormData {
     password: string;
     confirmPassword: string;
     referralCode: string;
+    influencerCode: string;
 }
 
 // Supported countries and their configurations
@@ -113,7 +114,27 @@ const carouselSlides: Array<{
     ];
 
 export default function MerchantRegisterPage() {
+    return (
+        <Suspense fallback={<RegisterPageLoading />}>
+            <MerchantRegisterContent />
+        </Suspense>
+    );
+}
+
+function RegisterPageLoading() {
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100">
+            <div className="animate-pulse flex flex-col items-center">
+                <div className="w-12 h-12 bg-gray-300 rounded-full mb-4" />
+                <div className="w-32 h-4 bg-gray-300 rounded" />
+            </div>
+        </div>
+    );
+}
+
+function MerchantRegisterContent() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { t } = useTranslation();
     const geolocation = useGeolocation();
     const [step, setStep] = useState<1 | 2>(1);
@@ -125,6 +146,10 @@ export default function MerchantRegisterPage() {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [locationDetected, setLocationDetected] = useState(false);
     const [detectedCountryFromGPS, setDetectedCountryFromGPS] = useState<string | null>(null);
+    
+    // Get influencer referral code from URL parameter
+    const influencerCodeFromUrl = searchParams.get('ref') || '';
+    
     const [formData, setFormData] = useState<FormData>({
         merchantName: "",
         merchantCode: "",
@@ -141,6 +166,7 @@ export default function MerchantRegisterPage() {
         password: "",
         confirmPassword: "",
         referralCode: "",
+        influencerCode: influencerCodeFromUrl,
     });
     const [formErrors, setFormErrors] = useState<FormErrors>({});
 
@@ -157,6 +183,16 @@ export default function MerchantRegisterPage() {
         }, 5000);
         return () => clearInterval(interval);
     }, []);
+
+    // Sync influencer code from URL parameter
+    useEffect(() => {
+        if (influencerCodeFromUrl && influencerCodeFromUrl !== formData.influencerCode) {
+            setFormData(prev => ({
+                ...prev,
+                influencerCode: influencerCodeFromUrl,
+            }));
+        }
+    }, [influencerCodeFromUrl, formData.influencerCode]);
 
     // Auto-detect location from timezone on mount (no permission needed)
     useEffect(() => {

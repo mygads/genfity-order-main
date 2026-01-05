@@ -490,6 +490,8 @@ const en = {
   "admin.nav.stockPhotos": "Stock Photos",
   "admin.nav.watermarkSettings": "Watermark Settings",
   "admin.nav.customers": "Customers",
+  "admin.nav.influencers": "Influencers",
+  "admin.nav.influencerWithdrawals": "Influencer Withdrawals",
 
   // Subscription Settings Page (Super Admin)
   "admin.subscriptionSettings.title": "Subscription Settings",

@@ -47,12 +47,14 @@ export interface LoginResponse {
 export interface JWTPayload {
   userId: bigint;
   sessionId: bigint;
-  role: UserRole | 'CUSTOMER'; // CUSTOMER is virtual role for customer auth
+  role: UserRole | 'CUSTOMER' | 'INFLUENCER'; // CUSTOMER and INFLUENCER are virtual roles
   email: string;
   merchantId?: bigint;
   // Customer-specific fields (used by verifyCustomerToken)
   customerId?: string;
   name?: string;
+  // Influencer-specific fields
+  influencerId?: string;
   iat?: number;
   exp?: number;
 }

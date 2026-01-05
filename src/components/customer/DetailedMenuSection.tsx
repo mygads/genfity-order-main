@@ -2,7 +2,7 @@
  * Detailed Menu Section Component - Burjo ESB Style
  * 
  * Layout:
- * - Image: Fixed 70x70px, top-left
+ * - Image: Fixed 70x70px, top-left, lazy loaded
  * - Title: Top right of image
  * - Description: Below title, with ellipsis
  * - Badges: Below description
@@ -15,6 +15,7 @@
 import Image from 'next/image';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import FavoriteButton from './FavoriteButton';
+import LazyMenuImage from './LazyMenuImage';
 
 interface MenuItem {
     id: string;
@@ -122,7 +123,7 @@ export default function DetailedMenuSection({
                                 />
                             )}
 
-                            {/* Image - Fixed 70x70px */}
+                            {/* Image - Fixed 70x70px with lazy loading */}
                             <div
                                 onClick={() => isAvailable && onAddItem?.(item)}
                                 style={{
@@ -138,12 +139,13 @@ export default function DetailedMenuSection({
                                     opacity: isAvailable ? 1 : 0.6,
                                 }}
                             >
-                                <Image
-                                    src={item.imageUrl || '/images/default-menu.png'}
+                                <LazyMenuImage
+                                    src={item.imageUrl}
                                     alt={item.name}
-                                    fill
                                     className="object-cover"
                                     sizes="70px"
+                                    rootMargin="300px" 
+                                    priority={index < 3}
                                 />
                                 {/* Favorite Button */}
                                 {merchantCode && (

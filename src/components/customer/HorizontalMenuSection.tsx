@@ -11,6 +11,7 @@
 import Image from 'next/image';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import FavoriteButton from './FavoriteButton';
+import LazyMenuImage from './LazyMenuImage';
 
 interface MenuItem {
     id: string;
@@ -108,7 +109,7 @@ export default function HorizontalMenuSection({
             {/* Horizontal Scroll Container */}
             <div className="px-4 overflow-x-auto scrollbar-hide">
                 <div className="flex pb-2" style={{ gap: '10px' }}>
-                    {items.map((item) => {
+                    {items.map((item, index) => {
                         const isAvailable = item.isActive && (!item.trackStock || (item.stockQty !== null && item.stockQty > 0));
                         const quantityInCart = getItemQuantityInCart ? getItemQuantityInCart(item.id) : 0;
                         const isInCart = quantityInCart > 0;
@@ -124,7 +125,7 @@ export default function HorizontalMenuSection({
                                     borderBottom: isInCart ? '4px solid rgb(240, 90, 40)' : 'none',
                                 }}
                             >
-                                {/* Image Container - 178px square */}
+                                {/* Image Container - 178px square with lazy loading */}
                                 <div
                                     onClick={() => isAvailable && onItemClick?.(item)}
                                     className={isAvailable ? 'cursor-pointer' : 'cursor-not-allowed'}
@@ -137,12 +138,14 @@ export default function HorizontalMenuSection({
                                         backgroundColor: '#f3f4f6',
                                     }}
                                 >
-                                    <Image
-                                        src={item.imageUrl || '/images/default-menu.png'}
+                                    <LazyMenuImage
+                                        src={item.imageUrl}
                                         alt={item.name}
-                                        fill
                                         className="object-cover"
                                         sizes="178px"
+                                        rootMargin="400px"
+                                        scrollDirection="horizontal"
+                                        priority={index < 2}
                                     />
 
                                     {/* Promo Badge - only show if isPromoSection */}

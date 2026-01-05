@@ -48,6 +48,9 @@ export default function EditMerchantPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [originalCode, setOriginalCode] = useState(""); // Track original code for comparison
+  const [codeCheckLoading, setCodeCheckLoading] = useState(false);
+  const [codeError, setCodeError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<MerchantFormData>({
     name: "",
@@ -115,6 +118,9 @@ export default function EditMerchantPage() {
           longitude: merchant.longitude ? parseFloat(merchant.longitude) : null,
         });
 
+        // Store original code for comparison
+        setOriginalCode(merchant.code || "");
+
         // Set opening hours if available
         if (merchant.openingHours && Array.isArray(merchant.openingHours)) {
           const hoursMap = new Map(
@@ -152,10 +158,60 @@ export default function EditMerchantPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+    
+    // Handle merchant code changes with validation
+    if (name === 'code') {
+      const upperValue = value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      setFormData(prev => ({
+        ...prev,
+        [name]: upperValue
+      }));
+      
+      // Clear previous error
+      setCodeError(null);
+      
+      // Validate format
+      if (upperValue && (upperValue.length < 4 || upperValue.length > 20)) {
+        setCodeError('Code must be 4-20 characters');
+        return;
+      }
+      
+      // Check availability if code is different from original
+      if (upperValue && upperValue !== originalCode) {
+        checkCodeAvailability(upperValue);
+      }
+      return;
+    }
+    
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
+  };
+
+  // Debounced code availability check
+  const checkCodeAvailability = async (code: string) => {
+    if (code.length < 4) return;
+    
+    setCodeCheckLoading(true);
+    setCodeError(null);
+    
+    try {
+      const token = localStorage.getItem("accessToken");
+      const response = await fetch(`/api/admin/merchants/check-code?code=${encodeURIComponent(code)}&excludeId=${merchantId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      
+      const data = await response.json();
+      
+      if (data.exists) {
+        setCodeError(`Code '${code}' is already in use by another merchant`);
+      }
+    } catch {
+      // Ignore errors in availability check
+    } finally {
+      setCodeCheckLoading(false);
+    }
   };
 
   const handleOpeningHourChange = (dayOfWeek: number, field: keyof OpeningHour, value: string | boolean) => {
@@ -216,6 +272,18 @@ export default function EditMerchantPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate code before submitting
+    if (codeError) {
+      showError('Validation Error', codeError);
+      return;
+    }
+    
+    if (formData.code.length < 4) {
+      showError('Validation Error', 'Merchant code must be at least 4 characters');
+      return;
+    }
+    
     setSubmitting(true);
 
     try {
@@ -344,16 +412,37 @@ export default function EditMerchantPage() {
             <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
               Merchant Code <span className="text-error-500">*</span>
             </label>
-            <input
-              type="text"
-              name="code"
-              value={formData.code}
-              onChange={handleChange}
-              required
-              disabled
-              className="h-11 w-full rounded-lg border border-gray-200 bg-gray-50 px-4 text-sm text-gray-500 cursor-not-allowed dark:border-gray-800 dark:bg-gray-800 dark:text-gray-400"
-            />
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Merchant code cannot be changed</p>
+            <div className="relative">
+              <input
+                type="text"
+                name="code"
+                value={formData.code}
+                onChange={handleChange}
+                required
+                minLength={4}
+                maxLength={20}
+                placeholder="e.g., MERCHANT01"
+                className={`h-11 w-full rounded-lg border px-4 text-sm uppercase placeholder:text-gray-400 focus:outline-none focus:ring-3 ${
+                  codeError 
+                    ? 'border-error-500 bg-error-50 text-error-700 focus:border-error-500 focus:ring-error-500/10 dark:border-error-500 dark:bg-error-900/20 dark:text-error-400' 
+                    : 'border-gray-200 bg-white text-gray-800 focus:border-brand-300 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90'
+                }`}
+              />
+              {codeCheckLoading && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-brand-500"></div>
+                </div>
+              )}
+            </div>
+            {codeError ? (
+              <p className="mt-1 text-xs text-error-600 dark:text-error-400">{codeError}</p>
+            ) : formData.code !== originalCode && formData.code.length >= 4 && !codeCheckLoading ? (
+              <p className="mt-1 text-xs text-success-600 dark:text-success-400">✓ Code is available</p>
+            ) : (
+              <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                ⚠️ Changing merchant code will affect the URL for customers (e.g., order.genfity.com/{formData.code || 'CODE'})
+              </p>
+            )}
           </div>
 
           <div>

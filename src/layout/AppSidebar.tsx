@@ -38,7 +38,9 @@ import {
   FaQrcode,
   FaUserTie,
   FaImages,
-  FaStamp
+  FaStamp,
+  FaHandshake,
+  FaMoneyCheckAlt
 } from "react-icons/fa";
 import MerchantBanner from "../components/merchants/MerchantBanner";
 
@@ -90,9 +92,21 @@ const superAdminNavGroups: NavGroup[] = [
         roles: ["SUPER_ADMIN"],
       },
       {
+        icon: <FaHandshake />,
+        nameKey: "admin.nav.influencers",
+        path: "/admin/dashboard/influencers",
+        roles: ["SUPER_ADMIN"],
+      },
+      {
         icon: <FaCreditCard />,
         nameKey: "admin.nav.paymentVerification",
         path: "/admin/dashboard/payment-verification",
+        roles: ["SUPER_ADMIN"],
+      },
+      {
+        icon: <FaMoneyCheckAlt />,
+        nameKey: "admin.nav.influencerWithdrawals",
+        path: "/admin/dashboard/influencer-withdrawals",
         roles: ["SUPER_ADMIN"],
       },
       {
@@ -111,12 +125,6 @@ const superAdminNavGroups: NavGroup[] = [
         icon: <FaCog />,
         nameKey: "admin.nav.subscriptionSettings",
         path: "/admin/dashboard/subscription-settings",
-        roles: ["SUPER_ADMIN"],
-      },
-      {
-        icon: <FaTicketAlt />,
-        nameKey: "admin.nav.referralCodes",
-        path: "/admin/dashboard/referral-codes",
         roles: ["SUPER_ADMIN"],
       },
       {

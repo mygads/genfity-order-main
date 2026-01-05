@@ -662,21 +662,73 @@ function AdminLoginForm() {
 /**
  * Admin Login Page
  */
-export default function AdminLoginPage() {
+/**
+ * Admin Login Page Skeleton
+ * Shows while the main form is loading
+ */
+function AdminLoginSkeleton() {
   return (
-    <Suspense
-      fallback={
-        <div
-          className="flex min-h-screen items-center justify-center"
-          style={{ background: 'linear-gradient(109.78deg, #FFFFFF 2.1%, #E7EEF5 100%)' }}
-        >
-          <div className="text-center">
-            <div className="mb-4 text-4xl">⏳</div>
-            <p style={{ color: '#6B7280', fontFamily: 'Inter, sans-serif' }}>Loading...</p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-[#173C82]/5 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 -left-40 w-80 h-80 bg-orange-500/5 rounded-full blur-3xl" />
+      </div>
+      <div className="relative z-10 min-h-screen flex items-center justify-center p-4 md:p-8 lg:p-12">
+        <div className="w-full max-w-6xl flex flex-col lg:flex-row items-stretch gap-8 lg:gap-0">
+          {/* Left Panel Skeleton */}
+          <div className="hidden lg:flex flex-col justify-between flex-1 bg-gradient-to-br from-[#173C82] to-[#0f2a5c] rounded-l-2xl p-10 relative overflow-hidden">
+            <div className="h-10 w-40 bg-white/20 rounded-lg animate-pulse" />
+            <div className="flex-1 flex flex-col justify-center py-8 space-y-6">
+              <div className="w-full h-[220px] bg-white/10 rounded-2xl animate-pulse" />
+              <div className="space-y-3">
+                <div className="h-6 w-3/4 mx-auto bg-white/20 rounded animate-pulse" />
+                <div className="h-4 w-full bg-white/10 rounded animate-pulse" />
+                <div className="h-4 w-2/3 mx-auto bg-white/10 rounded animate-pulse" />
+              </div>
+            </div>
+          </div>
+          {/* Right Form Skeleton */}
+          <div className="w-full lg:w-[480px] bg-white dark:bg-gray-800 lg:rounded-r-2xl lg:rounded-l-none rounded-2xl shadow-2xl shadow-gray-200/50 dark:shadow-none">
+            <div className="p-6 sm:p-8 lg:p-10">
+              {/* Mobile Logo Skeleton */}
+              <div className="flex justify-center mb-6 lg:hidden">
+                <div className="h-10 w-36 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              </div>
+              {/* Header Skeleton */}
+              <div className="text-center mb-8 space-y-3">
+                <div className="h-7 w-48 mx-auto bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                <div className="h-4 w-64 mx-auto bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
+              </div>
+              {/* Form Fields Skeleton */}
+              <div className="space-y-5">
+                <div>
+                  <div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded mb-2 animate-pulse" />
+                  <div className="h-11 w-full bg-gray-100 dark:bg-gray-700 rounded-lg animate-pulse" />
+                </div>
+                <div>
+                  <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded mb-2 animate-pulse" />
+                  <div className="h-11 w-full bg-gray-100 dark:bg-gray-700 rounded-lg animate-pulse" />
+                </div>
+                <div className="flex justify-end">
+                  <div className="h-4 w-28 bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
+                </div>
+                <div className="h-12 w-full bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
+              </div>
+              {/* Register Link Skeleton */}
+              <div className="mt-8 flex justify-center">
+                <div className="h-4 w-48 bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
+              </div>
+            </div>
           </div>
         </div>
-      }
-    >
+      </div>
+    </div>
+  );
+}
+
+export default function AdminLoginPage() {
+  return (
+    <Suspense fallback={<AdminLoginSkeleton />}>
       <AdminLoginForm />
     </Suspense>
   );

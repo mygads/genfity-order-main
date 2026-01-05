@@ -1,0 +1,361 @@
+'use client';
+
+import { useState, Suspense } from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import {
+  FaBell,
+  FaWallet,
+  FaChartBar,
+  FaTimesCircle,
+  FaEyeSlash,
+  FaEye,
+  FaSpinner,
+} from 'react-icons/fa';
+
+/**
+ * Influencer Login Skeleton
+ */
+function InfluencerLoginSkeleton() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-orange-50/30 to-slate-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 -left-40 w-80 h-80 bg-[#173C82]/5 rounded-full blur-3xl" />
+      </div>
+      <div className="relative z-10 min-h-screen flex items-center justify-center p-4 md:p-8 lg:p-12">
+        <div className="w-full max-w-5xl flex flex-col lg:flex-row items-stretch gap-8 lg:gap-0">
+          {/* Left Panel Skeleton */}
+          <div className="hidden lg:flex flex-col justify-between flex-1 bg-gradient-to-br from-orange-500 to-orange-600 rounded-l-2xl p-10 relative overflow-hidden">
+            <div className="h-10 w-40 bg-white/20 rounded-lg animate-pulse" />
+            <div className="flex-1 flex flex-col justify-center py-8 space-y-6">
+              <div className="h-8 w-3/4 bg-white/20 rounded animate-pulse" />
+              <div className="h-4 w-full bg-white/10 rounded animate-pulse" />
+              <div className="space-y-3 pt-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="h-16 bg-white/10 rounded-lg animate-pulse" />
+                ))}
+              </div>
+            </div>
+          </div>
+          {/* Right Form Skeleton */}
+          <div className="w-full lg:w-[420px] bg-white dark:bg-gray-800 lg:rounded-r-2xl lg:rounded-l-none rounded-2xl shadow-2xl shadow-gray-200/50 dark:shadow-none">
+            <div className="p-6 sm:p-8 lg:p-10">
+              <div className="flex justify-center mb-8 lg:hidden">
+                <div className="h-10 w-36 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              </div>
+              <div className="text-center mb-8 space-y-3">
+                <div className="h-7 w-48 mx-auto bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                <div className="h-4 w-64 mx-auto bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
+              </div>
+              <div className="space-y-5">
+                <div>
+                  <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded mb-2 animate-pulse" />
+                  <div className="h-12 w-full bg-gray-100 dark:bg-gray-700 rounded-lg animate-pulse" />
+                </div>
+                <div>
+                  <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded mb-2 animate-pulse" />
+                  <div className="h-12 w-full bg-gray-100 dark:bg-gray-700 rounded-lg animate-pulse" />
+                </div>
+                <div className="h-12 w-full bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
+              </div>
+              <div className="mt-6 flex justify-center">
+                <div className="h-4 w-40 bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InfluencerLoginForm() {
+  const router = useRouter();
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData((prev) => ({
+      ...prev,
+      [e.target.name]: e.target.value,
+    }));
+    if (error) setError('');
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+
+    if (!formData.email || !formData.password) {
+      setError('Please enter your email and password');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/influencer/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email.toLowerCase(),
+          password: formData.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.message || 'Login failed. Please try again.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Save tokens and redirect
+      localStorage.setItem('influencerAccessToken', data.data.accessToken);
+      localStorage.setItem('influencerRefreshToken', data.data.refreshToken);
+      localStorage.setItem('influencerData', JSON.stringify(data.data.influencer));
+      
+      router.push('/influencer/dashboard');
+    } catch {
+      setError('Network error. Please try again.');
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-orange-50/30 to-slate-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
+      {/* Background Pattern */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 -left-40 w-80 h-80 bg-[#173C82]/5 rounded-full blur-3xl" />
+      </div>
+
+      <div className="relative z-10 min-h-screen flex items-center justify-center p-4 md:p-8 lg:p-12">
+        <div className="w-full max-w-5xl flex flex-col lg:flex-row items-stretch gap-8 lg:gap-0">
+          {/* Left Side - Info Panel */}
+          <div className="hidden lg:flex flex-col justify-between flex-1 bg-gradient-to-br from-orange-500 to-orange-600 rounded-l-2xl p-10 text-white relative overflow-hidden">
+            {/* Decorative elements */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+            
+            {/* Logo */}
+            <div className="relative z-10">
+              <Link href="/" className="inline-block">
+                <Image
+                  src="/images/logo/logo-dark-mode.png"
+                  alt="GENFITY"
+                  width={160}
+                  height={45}
+                  priority
+                />
+              </Link>
+            </div>
+
+            {/* Content */}
+            <div className="relative z-10 flex-1 flex flex-col justify-center py-8">
+              <div className="space-y-6">
+                <h2 className="text-3xl font-bold leading-tight">
+                  Welcome Back, Partner!
+                </h2>
+                
+                <p className="text-orange-100 leading-relaxed">
+                  Sign in to your influencer dashboard to track your referrals, 
+                  earnings, and manage your withdrawal requests.
+                </p>
+
+                <div className="space-y-3 pt-4">
+                  <div className="flex items-center gap-3 bg-white/10 rounded-lg p-3">
+                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                      <FaBell className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="font-medium">Real-time Notifications</div>
+                      <div className="text-sm text-orange-200">Get notified when you earn</div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3 bg-white/10 rounded-lg p-3">
+                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                      <FaWallet className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="font-medium">Easy Withdrawals</div>
+                      <div className="text-sm text-orange-200">Withdraw your earnings anytime</div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3 bg-white/10 rounded-lg p-3">
+                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                      <FaChartBar className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="font-medium">Detailed Analytics</div>
+                      <div className="text-sm text-orange-200">Track all your referrals</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="relative z-10 pt-4 border-t border-white/10">
+              <p className="text-sm text-orange-200">
+                Not an influencer yet?{' '}
+                <Link href="/influencer/register" className="text-white font-medium hover:underline">
+                  Join our program →
+                </Link>
+              </p>
+            </div>
+          </div>
+
+          {/* Right Side - Login Form */}
+          <div className="w-full lg:w-[420px] bg-white dark:bg-gray-800 lg:rounded-r-2xl lg:rounded-l-none rounded-2xl shadow-2xl shadow-gray-200/50 dark:shadow-none">
+            <div className="p-6 sm:p-8 lg:p-10">
+              {/* Mobile Logo */}
+              <div className="flex justify-center mb-8 lg:hidden">
+                <Link href="/">
+                  <Image
+                    src="/images/logo/logo.png"
+                    alt="GENFITY"
+                    width={150}
+                    height={42}
+                    className="dark:hidden"
+                    priority
+                  />
+                  <Image
+                    src="/images/logo/logo-dark-mode.png"
+                    alt="GENFITY"
+                    width={150}
+                    height={42}
+                    className="hidden dark:block"
+                    priority
+                  />
+                </Link>
+              </div>
+
+              {/* Header */}
+              <div className="text-center mb-8">
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                  Influencer Sign In
+                </h1>
+                <p className="text-gray-500 dark:text-gray-400 text-sm">
+                  Enter your credentials to access your dashboard
+                </p>
+              </div>
+
+              {/* Error Alert */}
+              {error && (
+                <div className="mb-6 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 flex items-start gap-3">
+                  <FaTimesCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                  <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+                </div>
+              )}
+
+              {/* Login Form */}
+              <form onSubmit={handleSubmit} className="space-y-5">
+                {/* Email */}
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                    Email Address
+                  </label>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={formData.email}
+                    onChange={handleChange}
+                    required
+                    disabled={isLoading}
+                    className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm bg-white dark:bg-gray-700 dark:text-white disabled:opacity-50"
+                  />
+                </div>
+
+                {/* Password */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Password
+                    </label>
+                    <Link 
+                      href="/influencer/forgot-password" 
+                      className="text-xs text-orange-500 hover:text-orange-600 font-medium"
+                    >
+                      Forgot Password?
+                    </Link>
+                  </div>
+                  <div className="relative">
+                    <input
+                      id="password"
+                      name="password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Enter your password"
+                      value={formData.password}
+                      onChange={handleChange}
+                      required
+                      disabled={isLoading}
+                      className="w-full px-4 py-3 pr-10 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm bg-white dark:bg-gray-700 dark:text-white disabled:opacity-50"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      {showPassword ? (
+                        <FaEyeSlash className="w-5 h-5" />
+                      ) : (
+                        <FaEye className="w-5 h-5" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Submit Button */}
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full py-3 px-4 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isLoading ? (
+                    <>
+                      <FaSpinner className="animate-spin h-5 w-5" />
+                      Signing In...
+                    </>
+                  ) : (
+                    'Sign In'
+                  )}
+                </button>
+
+                {/* Register Link */}
+                <p className="text-center text-sm text-gray-500 dark:text-gray-400">
+                  Don&apos;t have an account?{' '}
+                  <Link href="/influencer/register" className="text-orange-500 hover:text-orange-600 font-medium">
+                    Create Account
+                  </Link>
+                </p>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function InfluencerLoginPage() {
+  return (
+    <Suspense fallback={<InfluencerLoginSkeleton />}>
+      <InfluencerLoginForm />
+    </Suspense>
+  );
+}

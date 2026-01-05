@@ -9,9 +9,10 @@ import { JWTPayload, RefreshTokenPayload, UserRole } from '@/lib/types/auth';
 interface DecodedToken {
   userId: string;
   sessionId: string;
-  role: UserRole | 'CUSTOMER'; // CUSTOMER is virtual role for customer auth
+  role: UserRole | 'CUSTOMER' | 'INFLUENCER'; // CUSTOMER and INFLUENCER are virtual roles
   email: string;
   merchantId?: string;
+  influencerId?: string;
   iat: number;
   exp: number;
 }
@@ -44,6 +45,8 @@ export function generateAccessToken(
     // Customer-specific fields for verifyCustomerToken validation
     ...(payload.customerId && { customerId: payload.customerId }),
     ...(payload.name && { name: payload.name }),
+    // Influencer-specific fields
+    ...(payload.influencerId && { influencerId: payload.influencerId }),
   };
   
   return jwt.sign(serializedPayload, JWT_SECRET, {

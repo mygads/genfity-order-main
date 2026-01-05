@@ -484,6 +484,8 @@ const id = {
   "admin.nav.stockPhotos": "Foto Stok",
   "admin.nav.watermarkSettings": "Pengaturan Watermark",
   "admin.nav.customers": "Pelanggan",
+  "admin.nav.influencers": "Influencer",
+  "admin.nav.influencerWithdrawals": "Penarikan Influencer",
 
   // Subscription Settings Page (Super Admin)
   "admin.subscriptionSettings.title": "Pengaturan Langganan",

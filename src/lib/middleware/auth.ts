@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import authService from '@/lib/services/AuthService';
 import customerAuthService from '@/lib/services/CustomerAuthService';
+import influencerAuthService from '@/lib/services/InfluencerAuthService';
 import { extractTokenFromHeader } from '@/lib/utils/jwtManager';
 import { AuthenticationError, AuthorizationError, ERROR_CODES } from '@/lib/constants/errors';
 import { handleError } from '@/lib/middleware/errorHandler';
@@ -27,6 +28,15 @@ export interface AuthContext {
  */
 export interface CustomerAuthContext {
   customerId: bigint;
+  sessionId: bigint;
+  email: string;
+}
+
+/**
+ * Influencer authentication context
+ */
+export interface InfluencerAuthContext {
+  influencerId: bigint;
   sessionId: bigint;
   email: string;
 }
@@ -287,6 +297,70 @@ export async function optionalCustomerAuth(
 
     const customerContext = await customerAuthService.verifyToken(token);
     return customerContext;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Middleware for Influencer routes
+ * Uses separate influencer authentication system
+ */
+export function withInfluencer(
+  handler: (
+    request: NextRequest,
+    context: InfluencerAuthContext,
+    routeContext: { params: Promise<Record<string, string>> }
+  ) => Promise<NextResponse>
+) {
+  return async (request: NextRequest, routeContext: { params: Promise<Record<string, string>> }) => {
+    try {
+      // Extract token from Authorization header
+      const authHeader = request.headers.get('authorization');
+      const token = extractTokenFromHeader(authHeader);
+
+      if (!token) {
+        throw new AuthenticationError(
+          'Authorization token required',
+          ERROR_CODES.UNAUTHORIZED
+        );
+      }
+
+      // Verify influencer token
+      const influencerContext = await influencerAuthService.verifyToken(token);
+
+      if (!influencerContext) {
+        throw new AuthenticationError(
+          'Invalid or expired token',
+          ERROR_CODES.TOKEN_INVALID
+        );
+      }
+
+      // Call the actual handler with influencer context
+      return await handler(request, influencerContext, routeContext);
+    } catch (error) {
+      return handleError(error);
+    }
+  };
+}
+
+/**
+ * Optional influencer authentication - doesn't fail if no token
+ * Returns null if not authenticated
+ */
+export async function optionalInfluencerAuth(
+  request: NextRequest
+): Promise<InfluencerAuthContext | null> {
+  try {
+    const authHeader = request.headers.get('authorization');
+    const token = extractTokenFromHeader(authHeader);
+
+    if (!token) {
+      return null;
+    }
+
+    const influencerContext = await influencerAuthService.verifyToken(token);
+    return influencerContext;
   } catch {
     return null;
   }

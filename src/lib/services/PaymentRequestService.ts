@@ -10,6 +10,7 @@ import subscriptionService from '@/lib/services/SubscriptionService';
 import subscriptionAutoSwitchService from '@/lib/services/SubscriptionAutoSwitchService';
 import subscriptionHistoryService from '@/lib/services/SubscriptionHistoryService';
 import userNotificationService from '@/lib/services/UserNotificationService';
+import influencerCommissionService from '@/lib/services/InfluencerCommissionService';
 import prisma from '@/lib/db/client';
 import { NotFoundError, ValidationError, ConflictError, ERROR_CODES } from '@/lib/constants/errors';
 
@@ -269,6 +270,30 @@ class PaymentRequestService {
             // Don't fail payment verification if auto-switch fails
             // Fall back to simple reactivation
             await this.reactivateIfNeeded(request.merchantId, request.type);
+        }
+
+        // Process influencer commission if merchant was referred
+        try {
+            const commissionResult = await influencerCommissionService.processPaymentCommission(
+                request.merchantId,
+                Number(request.amount),
+                request.currency,
+                requestId
+            );
+            if (commissionResult.success && commissionResult.commissionAmount) {
+                console.log(`💰 Influencer commission processed:`, {
+                    influencerId: commissionResult.influencerId?.toString(),
+                    amount: commissionResult.commissionAmount,
+                    currency: commissionResult.currency,
+                    rate: commissionResult.commissionRate,
+                    isFirstPayment: commissionResult.isFirstPayment,
+                });
+            } else if (commissionResult.error && commissionResult.error !== 'Merchant has no referrer') {
+                console.log(`ℹ️ Commission not processed: ${commissionResult.error}`);
+            }
+        } catch (commissionError) {
+            console.error('Failed to process influencer commission:', commissionError);
+            // Don't fail payment verification if commission processing fails
         }
 
         return request;

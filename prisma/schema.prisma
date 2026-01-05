@@ -91,6 +91,154 @@ model UserPreference {
 }
 
 // ============================================
+// INFLUENCER (Referral Partner System)
+// ============================================
+
+model Influencer {
+  id                  BigInt              @id @default(autoincrement())
+  name                String
+  email               String              @unique
+  phone               String?
+  passwordHash        String              @map("password_hash")
+  referralCode        String              @unique @map("referral_code") // Their unique code for merchants to use
+  country             String              @default("Indonesia") // For default currency
+  defaultCurrency     String              @default("IDR") @map("default_currency")
+  profilePictureUrl   String?             @map("profile_picture_url")
+  isActive            Boolean             @default(true) @map("is_active")
+  isApproved          Boolean             @default(false) @map("is_approved") // Needs admin approval
+  approvedAt          DateTime?           @map("approved_at") @db.Timestamptz(6)
+  approvedByUserId    BigInt?             @map("approved_by_user_id")
+  resetToken          String?             @map("reset_token")
+  resetTokenExpiresAt DateTime?           @map("reset_token_expires_at") @db.Timestamptz(6)
+  lastLoginAt         DateTime?           @map("last_login_at") @db.Timestamptz(6)
+  // Bank Details for Withdrawals
+  bankNameIdr         String?             @map("bank_name_idr")
+  bankAccountIdr      String?             @map("bank_account_idr")
+  bankAccountNameIdr  String?             @map("bank_account_name_idr")
+  bankNameAud         String?             @map("bank_name_aud")
+  bankAccountAud      String?             @map("bank_account_aud")
+  bankAccountNameAud  String?             @map("bank_account_name_aud")
+  // Timestamps
+  createdAt           DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  
+  sessions            InfluencerSession[]
+  balances            InfluencerBalance[]
+  transactions        InfluencerTransaction[]
+  withdrawals         InfluencerWithdrawal[]
+  referredMerchants   Merchant[]          @relation("MerchantReferredBy")
+
+  @@index([email])
+  @@index([referralCode])
+  @@index([isActive])
+  @@index([isApproved])
+  @@map("influencers")
+}
+
+model InfluencerSession {
+  id               BigInt        @id @default(autoincrement())
+  influencerId     BigInt        @map("influencer_id")
+  token            String        @unique
+  deviceInfo       String?       @map("device_info")
+  ipAddress        String?       @map("ip_address")
+  status           SessionStatus @default(ACTIVE)
+  expiresAt        DateTime      @map("expires_at") @db.Timestamptz(6)
+  refreshExpiresAt DateTime?     @map("refresh_expires_at") @db.Timestamptz(6)
+  createdAt        DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+  influencer       Influencer    @relation(fields: [influencerId], references: [id], onDelete: Cascade)
+
+  @@index([influencerId])
+  @@index([token])
+  @@index([status])
+  @@map("influencer_sessions")
+}
+
+model InfluencerBalance {
+  id               BigInt              @id @default(autoincrement())
+  influencerId     BigInt              @map("influencer_id")
+  currency         String              @default("IDR") // IDR or AUD
+  balance          Decimal             @default(0) @db.Decimal(12, 2)
+  totalEarned      Decimal             @default(0) @map("total_earned") @db.Decimal(12, 2)
+  totalWithdrawn   Decimal             @default(0) @map("total_withdrawn") @db.Decimal(12, 2)
+  createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  
+  influencer       Influencer          @relation(fields: [influencerId], references: [id], onDelete: Cascade)
+
+  @@unique([influencerId, currency])
+  @@index([influencerId])
+  @@map("influencer_balances")
+}
+
+model InfluencerTransaction {
+  id               BigInt                    @id @default(autoincrement())
+  influencerId     BigInt                    @map("influencer_id")
+  merchantId       BigInt?                   @map("merchant_id") // Which merchant generated this commission
+  type             InfluencerTransactionType
+  currency         String                    @default("IDR")
+  amount           Decimal                   @db.Decimal(12, 2)
+  balanceBefore    Decimal                   @map("balance_before") @db.Decimal(12, 2)
+  balanceAfter     Decimal                   @map("balance_after") @db.Decimal(12, 2)
+  description      String?
+  // For commission: track what generated it
+  paymentRequestId BigInt?                   @map("payment_request_id")
+  isFirstPayment   Boolean                   @default(false) @map("is_first_payment") // First payment from merchant gets higher commission
+  commissionRate   Decimal?                  @map("commission_rate") @db.Decimal(5, 2) // The rate used for this transaction
+  createdAt        DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  influencer       Influencer                @relation(fields: [influencerId], references: [id], onDelete: Cascade)
+
+  @@index([influencerId])
+  @@index([merchantId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("influencer_transactions")
+}
+
+model InfluencerWithdrawal {
+  id               BigInt                      @id @default(autoincrement())
+  influencerId     BigInt                      @map("influencer_id")
+  currency         String                      @default("IDR")
+  amount           Decimal                     @db.Decimal(12, 2)
+  status           InfluencerWithdrawalStatus  @default(PENDING)
+  // Bank details (copied from influencer at time of request)
+  bankName         String                      @map("bank_name")
+  bankAccountNumber String                     @map("bank_account_number")
+  bankAccountName  String                      @map("bank_account_name")
+  // Admin processing
+  processedAt      DateTime?                   @map("processed_at") @db.Timestamptz(6)
+  processedByUserId BigInt?                    @map("processed_by_user_id")
+  transferProofUrl String?                     @map("transfer_proof_url")
+  rejectedAt       DateTime?                   @map("rejected_at") @db.Timestamptz(6)
+  rejectionReason  String?                     @map("rejection_reason")
+  notes            String?
+  createdAt        DateTime                    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime                    @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  influencer       Influencer                  @relation(fields: [influencerId], references: [id], onDelete: Cascade)
+
+  @@index([influencerId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("influencer_withdrawals")
+}
+
+enum InfluencerTransactionType {
+  COMMISSION_FIRST    // First-time commission from merchant payment
+  COMMISSION_RECURRING // Recurring commission from merchant payment
+  WITHDRAWAL          // Withdrawal deduction
+  ADJUSTMENT          // Admin adjustment
+}
+
+enum InfluencerWithdrawalStatus {
+  PENDING             // Waiting for admin processing
+  PROCESSING          // Admin is processing
+  COMPLETED           // Transfer completed
+  REJECTED            // Rejected by admin
+}
+
+// ============================================
 // CUSTOMER (Separate from Admin/Merchant Users)
 // ============================================
 
@@ -238,8 +386,11 @@ model Merchant {
   notificationLogs       NotificationLog[]
   userNotifications      UserNotification[]
   pushSubscriptions      PushSubscription[]
-  // Referral tracking
+  // Referral/Influencer tracking
   referralCodeUsed       String?               @map("referral_code_used")
+  referredByInfluencerId BigInt?               @map("referred_by_influencer_id")
+  referredByInfluencer   Influencer?           @relation("MerchantReferredBy", fields: [referredByInfluencerId], references: [id])
+  hasGivenFirstCommission Boolean              @default(false) @map("has_given_first_commission") // Track if first commission was given
   // PIN for order deletion (4 digits, hashed)
   deletePin              String?               @map("delete_pin")
   // Group Order relation
@@ -247,6 +398,7 @@ model Merchant {
 
   @@index([code])
   @@index([isActive])
+  @@index([referredByInfluencerId])
   @@map("merchants")
 }
 
@@ -713,6 +865,9 @@ model SubscriptionPlan {
   bankNameAud         String?  @map("bank_name_aud")
   bankAccountAud      String?  @map("bank_account_aud")
   bankAccountNameAud  String?  @map("bank_account_name_aud")
+  // Influencer Commission Settings
+  influencerFirstCommissionPercent  Decimal  @default(10) @map("influencer_first_commission_percent") @db.Decimal(5, 2)
+  influencerRecurringCommissionPercent  Decimal  @default(5) @map("influencer_recurring_commission_percent") @db.Decimal(5, 2)
   // Admin
   isActive            Boolean  @default(true) @map("is_active")
   createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)

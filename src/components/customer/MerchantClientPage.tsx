@@ -235,8 +235,8 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                                 <button
                                     id="mode-dinein"
                                     onClick={() => handleModeSelect('dinein')}
-                                    className={`w-full h-12 border rounded-lg text-base font-medium shadow-sm transition-colors duration-200 shadow-lg flex items-center justify-center gap-2 ${storeOpen && isDineInAvailable
-                                        ? 'border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800'
+                                    className={`w-full h-12 border rounded-lg text-base font-medium  transition-colors duration-200 shadow-lg flex items-center justify-center gap-2 ${storeOpen && isDineInAvailable
+                                        ? 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800'
                                         : 'border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800'
                                         }`}
                                 >
@@ -254,8 +254,8 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                                 <button
                                     id="mode-takeaway"
                                     onClick={() => handleModeSelect('takeaway')}
-                                    className={`w-full h-12 border rounded-lg text-base font-medium shadow-sm transition-colors duration-200 shadow-lg flex items-center justify-center gap-2 ${storeOpen && isTakeawayAvailable
-                                        ? 'border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800'
+                                    className={`w-full h-12 border rounded-lg text-base font-medium transition-colors duration-200 shadow-lg flex items-center justify-center gap-2 ${storeOpen && isTakeawayAvailable
+                                        ? 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800'
                                         : 'border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800'
                                         }`}
                                 >

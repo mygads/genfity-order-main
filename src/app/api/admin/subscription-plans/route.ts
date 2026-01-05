@@ -24,6 +24,9 @@ const updatePlanSchema = z.object({
     bankNameAud: z.string().max(100).optional(),
     bankAccountAud: z.string().max(50).optional(),
     bankAccountNameAud: z.string().max(100).optional(),
+    // Influencer Commission Settings
+    influencerFirstCommissionPercent: z.number().min(0).max(100).optional(),
+    influencerRecurringCommissionPercent: z.number().min(0).max(100).optional(),
 });
 
 async function handleGet(_req: NextRequest, _context: AuthContext) {
@@ -32,7 +35,7 @@ async function handleGet(_req: NextRequest, _context: AuthContext) {
 
         return NextResponse.json({
             success: true,
-            data: plans.map((plan: { id: bigint; planKey: string; displayName: string; description: string | null; trialDays: number; depositMinimumIdr: unknown; orderFeeIdr: unknown; monthlyPriceIdr: unknown; depositMinimumAud: unknown; orderFeeAud: unknown; monthlyPriceAud: unknown; bankNameIdr: string | null; bankAccountIdr: string | null; bankAccountNameIdr: string | null; bankNameAud: string | null; bankAccountAud: string | null; bankAccountNameAud: string | null; isActive: boolean }) => ({
+            data: plans.map((plan: { id: bigint; planKey: string; displayName: string; description: string | null; trialDays: number; depositMinimumIdr: unknown; orderFeeIdr: unknown; monthlyPriceIdr: unknown; depositMinimumAud: unknown; orderFeeAud: unknown; monthlyPriceAud: unknown; bankNameIdr: string | null; bankAccountIdr: string | null; bankAccountNameIdr: string | null; bankNameAud: string | null; bankAccountAud: string | null; bankAccountNameAud: string | null; influencerFirstCommissionPercent: unknown; influencerRecurringCommissionPercent: unknown; isActive: boolean }) => ({
                 id: plan.id.toString(),
                 planKey: plan.planKey,
                 displayName: plan.displayName,
@@ -50,6 +53,8 @@ async function handleGet(_req: NextRequest, _context: AuthContext) {
                 bankNameAud: plan.bankNameAud,
                 bankAccountAud: plan.bankAccountAud,
                 bankAccountNameAud: plan.bankAccountNameAud,
+                influencerFirstCommissionPercent: Number(plan.influencerFirstCommissionPercent),
+                influencerRecurringCommissionPercent: Number(plan.influencerRecurringCommissionPercent),
                 isActive: plan.isActive,
             })),
         });

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { FaTrashRestore, FaTimes, FaCalendarAlt, FaBox, FaTag, FaLayerGroup, FaPuzzlePiece, FaClock, FaInfoCircle } from "react-icons/fa";
+import { FaTrashRestore, FaTimes, FaCalendarAlt, FaBox, FaTag, FaLayerGroup, FaPuzzlePiece, FaClock, FaInfoCircle, FaTrashAlt } from "react-icons/fa";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface DeletedItem {
@@ -51,6 +51,8 @@ export default function ArchiveModal({
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [restoring, setRestoring] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{ show: boolean; item: DeletedItem | null; type: TabType | null }>({ show: false, item: null, type: null });
   const [data, setData] = useState<DeletedItemsData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('menus');
@@ -152,6 +154,56 @@ export default function ArchiveModal({
       setError(err instanceof Error ? err.message : "Failed to restore item");
     } finally {
       setRestoring(null);
+    }
+  };
+
+  // Permanently delete item
+  const handlePermanentDelete = async (item: DeletedItem, type: TabType) => {
+    try {
+      setDeleting(item.id);
+      setConfirmDelete({ show: false, item: null, type: null });
+      
+      const token = localStorage.getItem("accessToken");
+      if (!token) {
+        throw new Error("Not authenticated");
+      }
+
+      // Determine API endpoint based on type
+      let endpoint = '';
+      switch (type) {
+        case 'menus':
+          endpoint = `/api/merchant/menu/${item.id}/permanent-delete`;
+          break;
+        case 'categories':
+          endpoint = `/api/merchant/categories/${item.id}/permanent-delete`;
+          break;
+        case 'addon-categories':
+          endpoint = `/api/merchant/addon-categories/${item.id}/permanent-delete`;
+          break;
+        case 'addon-items':
+          endpoint = `/api/merchant/addon-items/${item.id}/permanent-delete`;
+          break;
+      }
+
+      const response = await fetch(endpoint, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.message || "Failed to delete item permanently");
+      }
+
+      // Refresh the list
+      await fetchDeletedItems();
+      
+      // Call success callback
+      onRestoreSuccess?.();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete item permanently");
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -366,23 +418,35 @@ export default function ArchiveModal({
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => handleRestore(item, activeTab)}
-                    disabled={restoring === item.id}
-                    className="flex items-center gap-2 rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {restoring === item.id ? (
-                      <>
+                  <div className="flex items-center gap-2">
+                    {/* Permanent Delete Button */}
+                    <button
+                      onClick={() => setConfirmDelete({ show: true, item, type: activeTab })}
+                      disabled={deleting === item.id || restoring === item.id}
+                      className="flex items-center gap-2 rounded-lg border border-error-300 bg-white px-3 py-2 text-sm font-medium text-error-600 hover:bg-error-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-error-700 dark:bg-gray-800 dark:text-error-400 dark:hover:bg-error-900/20"
+                      title="Delete permanently"
+                    >
+                      {deleting === item.id ? (
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-error-500 border-t-transparent"></div>
+                      ) : (
+                        <FaTrashAlt className="h-4 w-4" />
+                      )}
+                    </button>
+
+                    {/* Restore Button */}
+                    <button
+                      onClick={() => handleRestore(item, activeTab)}
+                      disabled={restoring === item.id || deleting === item.id}
+                      className="flex items-center gap-2 rounded-lg bg-primary-500 px-3 py-2 text-sm font-medium text-white hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-50"
+                      title="Restore item"
+                    >
+                      {restoring === item.id ? (
                         <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-                        Restoring...
-                      </>
-                    ) : (
-                      <>
+                      ) : (
                         <FaTrashRestore className="h-4 w-4" />
-                        Restore
-                      </>
-                    )}
-                  </button>
+                      )}
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -403,6 +467,41 @@ export default function ArchiveModal({
           </div>
         </div>
       </div>
+
+      {/* Permanent Delete Confirmation Modal */}
+      {confirmDelete.show && confirmDelete.item && confirmDelete.type && (
+        <>
+          <div className="fixed inset-0 z-[300] bg-black/50 backdrop-blur-sm" onClick={() => setConfirmDelete({ show: false, item: null, type: null })} />
+          <div className="fixed inset-0 z-[350] flex items-center justify-center p-4">
+            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-800">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-error-100 dark:bg-error-900/30">
+                <FaTrashAlt className="h-6 w-6 text-error-600 dark:text-error-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Delete Permanently?
+              </h3>
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                Are you sure you want to permanently delete <strong className="text-gray-900 dark:text-white">{confirmDelete.item.name}</strong>? 
+                This action cannot be undone and the item will be removed forever.
+              </p>
+              <div className="mt-6 flex gap-3">
+                <button
+                  onClick={() => setConfirmDelete({ show: false, item: null, type: null })}
+                  className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handlePermanentDelete(confirmDelete.item!, confirmDelete.type!)}
+                  className="flex-1 rounded-lg bg-error-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-error-700"
+                >
+                  Delete Forever
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </>
   );
 }

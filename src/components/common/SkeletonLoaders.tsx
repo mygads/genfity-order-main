@@ -1443,3 +1443,394 @@ export function OrderSummaryCashSkeleton() {
     </>
   );
 }
+
+/**
+ * =====================================================
+ * INFLUENCER PAGE SKELETONS
+ * =====================================================
+ */
+
+/**
+ * Influencer Stats Card Skeleton
+ */
+export function InfluencerStatsCardSkeleton() {
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+      <div className="flex items-start justify-between">
+        <div className="space-y-2 flex-1">
+          <Skeleton width="w-20" height="h-3" />
+          <Skeleton width="w-28" height="h-7" />
+        </div>
+        <Skeleton width="w-10" height="h-10" className="rounded-lg" />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Influencer Balance Card Skeleton
+ */
+export function InfluencerBalanceCardSkeleton() {
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Skeleton width="w-8" height="h-8" className="rounded" />
+          <Skeleton width="w-12" height="h-5" />
+        </div>
+        <Skeleton width="w-24" height="h-8" className="rounded-lg" />
+      </div>
+      <div className="space-y-3">
+        <div>
+          <Skeleton width="w-16" height="h-3" className="mb-1" />
+          <Skeleton width="w-32" height="h-8" />
+        </div>
+        <div className="flex gap-6">
+          <div className="flex-1">
+            <Skeleton width="w-16" height="h-3" className="mb-1" />
+            <Skeleton width="w-24" height="h-5" />
+          </div>
+          <div className="flex-1">
+            <Skeleton width="w-16" height="h-3" className="mb-1" />
+            <Skeleton width="w-24" height="h-5" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Influencer Transaction Item Skeleton
+ */
+export function InfluencerTransactionItemSkeleton() {
+  return (
+    <div className="flex items-center justify-between py-3">
+      <div className="flex items-center gap-3">
+        <Skeleton width="w-10" height="h-10" className="rounded-full" />
+        <div className="space-y-1">
+          <Skeleton width="w-28" height="h-4" />
+          <Skeleton width="w-36" height="h-3" />
+        </div>
+      </div>
+      <div className="text-right space-y-1">
+        <Skeleton width="w-20" height="h-5" />
+        <Skeleton width="w-16" height="h-3" />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Influencer Merchant Item Skeleton
+ */
+export function InfluencerMerchantItemSkeleton() {
+  return (
+    <div className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
+      <div className="flex items-center gap-3">
+        <Skeleton width="w-10" height="h-10" className="rounded-lg" />
+        <div className="space-y-1">
+          <Skeleton width="w-32" height="h-4" />
+          <Skeleton width="w-20" height="h-3" />
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <Skeleton width="w-16" height="h-5" className="rounded-full" />
+        <Skeleton width="w-16" height="h-5" className="rounded-full" />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Influencer Dashboard Page Skeleton
+ */
+export function InfluencerDashboardSkeleton() {
+  return (
+    <div className="space-y-6">
+      {/* Referral Code Card Skeleton */}
+      <div className="rounded-xl border border-gray-200 bg-gradient-to-r from-orange-500 to-orange-600 p-5 dark:border-gray-700">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="space-y-2">
+            <Skeleton width="w-24" height="h-4" className="bg-white/30" />
+            <Skeleton width="w-40" height="h-8" className="bg-white/30" />
+          </div>
+          <div className="flex gap-2">
+            <Skeleton width="w-24" height="h-9" className="rounded-lg bg-white/30" />
+            <Skeleton width="w-28" height="h-9" className="rounded-lg bg-white/30" />
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Grid Skeleton */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <InfluencerStatsCardSkeleton />
+        <InfluencerStatsCardSkeleton />
+        <InfluencerStatsCardSkeleton />
+        <InfluencerStatsCardSkeleton />
+      </div>
+
+      {/* Balance Cards Skeleton */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <InfluencerBalanceCardSkeleton />
+        <InfluencerBalanceCardSkeleton />
+      </div>
+
+      {/* Referred Merchants & Transactions Skeleton */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Referred Merchants */}
+        <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+          <div className="flex items-center justify-between mb-4">
+            <Skeleton width="w-32" height="h-5" />
+            <Skeleton width="w-16" height="h-4" />
+          </div>
+          <div className="divide-y divide-gray-100 dark:divide-gray-700">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <InfluencerMerchantItemSkeleton key={i} />
+            ))}
+          </div>
+        </div>
+
+        {/* Recent Transactions */}
+        <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+          <div className="flex items-center justify-between mb-4">
+            <Skeleton width="w-36" height="h-5" />
+            <Skeleton width="w-16" height="h-4" />
+          </div>
+          <div className="divide-y divide-gray-100 dark:divide-gray-700">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <InfluencerTransactionItemSkeleton key={i} />
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Influencer Transactions Page Skeleton
+ */
+export function InfluencerTransactionsSkeleton() {
+  return (
+    <div className="space-y-6">
+      {/* Filters Skeleton */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+        <div className="flex flex-wrap gap-4">
+          <div>
+            <Skeleton width="w-12" height="h-3" className="mb-1.5" />
+            <Skeleton width="w-36" height="h-10" className="rounded-lg" />
+          </div>
+          <div>
+            <Skeleton width="w-16" height="h-3" className="mb-1.5" />
+            <Skeleton width="w-32" height="h-10" className="rounded-lg" />
+          </div>
+        </div>
+      </div>
+
+      {/* Transactions List Skeleton */}
+      <div className="space-y-4">
+        {Array.from({ length: 3 }).map((_, groupIndex) => (
+          <div key={groupIndex} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            {/* Date Header */}
+            <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
+              <Skeleton width="w-36" height="h-4" />
+            </div>
+            {/* Transaction Items */}
+            <div className="divide-y divide-gray-100 dark:divide-gray-700">
+              {Array.from({ length: 2 }).map((_, i) => (
+                <div key={i} className="px-4 py-3">
+                  <InfluencerTransactionItemSkeleton />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Influencer Withdrawals Page Skeleton
+ */
+export function InfluencerWithdrawalsSkeleton() {
+  return (
+    <div className="space-y-6">
+      {/* Balance Cards */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <InfluencerBalanceCardSkeleton />
+        <InfluencerBalanceCardSkeleton />
+      </div>
+
+      {/* Action Button */}
+      <div className="flex justify-end">
+        <Skeleton width="w-40" height="h-10" className="rounded-lg" />
+      </div>
+
+      {/* Withdrawal History Skeleton */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-700">
+          <Skeleton width="w-36" height="h-5" />
+        </div>
+        <div className="divide-y divide-gray-100 dark:divide-gray-700">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="px-5 py-4 flex items-center justify-between">
+              <div className="space-y-1">
+                <Skeleton width="w-24" height="h-5" />
+                <Skeleton width="w-32" height="h-3" />
+              </div>
+              <div className="text-right space-y-1">
+                <Skeleton width="w-20" height="h-5" className="rounded-full" />
+                <Skeleton width="w-28" height="h-3" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Influencer Settings Page Skeleton
+ */
+export function InfluencerSettingsSkeleton() {
+  return (
+    <div className="space-y-6">
+      {/* Profile Info Card */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+        <Skeleton width="w-36" height="h-6" className="mb-6" />
+        <div className="flex items-center gap-6 mb-6">
+          <Skeleton width="w-20" height="h-20" className="rounded-full shrink-0" />
+          <div className="flex-1 space-y-2">
+            <Skeleton width="w-40" height="h-6" />
+            <Skeleton width="w-48" height="h-4" />
+            <Skeleton width="w-32" height="h-4" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <Skeleton width="w-16" height="h-3" />
+            <Skeleton width="w-full" height="h-4" />
+          </div>
+          <div className="space-y-1">
+            <Skeleton width="w-20" height="h-3" />
+            <Skeleton width="w-full" height="h-4" />
+          </div>
+        </div>
+      </div>
+
+      {/* Bank Details Form Skeleton */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+        <Skeleton width="w-28" height="h-6" className="mb-6" />
+        
+        {/* IDR Bank */}
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Skeleton width="w-10" height="h-6" className="rounded" />
+            <Skeleton width="w-24" height="h-4" />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="space-y-1">
+              <Skeleton width="w-20" height="h-3" />
+              <Skeleton width="w-full" height="h-10" className="rounded-lg" />
+            </div>
+            <div className="space-y-1">
+              <Skeleton width="w-28" height="h-3" />
+              <Skeleton width="w-full" height="h-10" className="rounded-lg" />
+            </div>
+            <div className="space-y-1">
+              <Skeleton width="w-24" height="h-3" />
+              <Skeleton width="w-full" height="h-10" className="rounded-lg" />
+            </div>
+          </div>
+        </div>
+
+        {/* AUD Bank */}
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Skeleton width="w-10" height="h-6" className="rounded" />
+            <Skeleton width="w-24" height="h-4" />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-4">
+            <div className="space-y-1">
+              <Skeleton width="w-20" height="h-3" />
+              <Skeleton width="w-full" height="h-10" className="rounded-lg" />
+            </div>
+            <div className="space-y-1">
+              <Skeleton width="w-10" height="h-3" />
+              <Skeleton width="w-full" height="h-10" className="rounded-lg" />
+            </div>
+            <div className="space-y-1">
+              <Skeleton width="w-28" height="h-3" />
+              <Skeleton width="w-full" height="h-10" className="rounded-lg" />
+            </div>
+            <div className="space-y-1">
+              <Skeleton width="w-24" height="h-3" />
+              <Skeleton width="w-full" height="h-10" className="rounded-lg" />
+            </div>
+          </div>
+        </div>
+
+        {/* Save Button */}
+        <Skeleton width="w-32" height="h-10" className="rounded-lg" />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Influencer Profile Page Skeleton
+ */
+export function InfluencerProfileSkeleton() {
+  return (
+    <div className="space-y-6">
+      {/* Profile Header */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+        <div className="flex flex-col md:flex-row items-center gap-6">
+          {/* Profile Picture */}
+          <div className="relative">
+            <Skeleton width="w-28" height="h-28" className="rounded-full" />
+            <Skeleton width="w-8" height="h-8" className="rounded-full absolute bottom-0 right-0" />
+          </div>
+          {/* Profile Info */}
+          <div className="flex-1 text-center md:text-left space-y-2">
+            <Skeleton width="w-48" height="h-7" className="mx-auto md:mx-0" />
+            <Skeleton width="w-56" height="h-4" className="mx-auto md:mx-0" />
+            <div className="flex justify-center md:justify-start gap-2 mt-3">
+              <Skeleton width="w-20" height="h-6" className="rounded-full" />
+              <Skeleton width="w-16" height="h-6" className="rounded-full" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Profile Form */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+        <Skeleton width="w-32" height="h-6" className="mb-6" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-1">
+            <Skeleton width="w-16" height="h-3" />
+            <Skeleton width="w-full" height="h-10" className="rounded-lg" />
+          </div>
+          <div className="space-y-1">
+            <Skeleton width="w-12" height="h-3" />
+            <Skeleton width="w-full" height="h-10" className="rounded-lg" />
+          </div>
+          <div className="space-y-1">
+            <Skeleton width="w-20" height="h-3" />
+            <Skeleton width="w-full" height="h-10" className="rounded-lg" />
+          </div>
+          <div className="space-y-1">
+            <Skeleton width="w-16" height="h-3" />
+            <Skeleton width="w-full" height="h-10" className="rounded-lg" />
+          </div>
+        </div>
+        <div className="flex justify-end mt-6">
+          <Skeleton width="w-32" height="h-10" className="rounded-lg" />
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -74,15 +74,7 @@ export default function RestaurantInfoCard({ name, openingHours, onClick, isClos
   return (
     <div
       onClick={onClick}
-      className="flex items-center justify-between cursor-pointer transition-all duration-200 hover:shadow-md"
-      style={{
-        backgroundColor: '#ffffff',
-        border: '0.66px solid #E6E6E6',
-        borderRadius: '16px',
-        padding: '16px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-        fontFamily: 'Inter, sans-serif',
-      }}
+      className="flex items-center justify-between cursor-pointer transition-all duration-200 hover:shadow-md bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 shadow-sm font-['Inter',sans-serif]"
       role="button"
       tabIndex={0}
       aria-label={`${name} information`}
@@ -90,13 +82,7 @@ export default function RestaurantInfoCard({ name, openingHours, onClick, isClos
       <div className="flex items-center gap-3 min-w-0 flex-1">
         {/* Merchant Logo - 48x48px rounded square (1:1 ratio) */}
         <div 
-          className="relative shrink-0 overflow-hidden"
-          style={{
-            width: '48px',
-            height: '48px',
-            borderRadius: '10px',
-            border: '1px solid #E6E6E6',
-          }}
+          className="relative shrink-0 overflow-hidden w-12 h-12 rounded-[10px] border border-gray-200 dark:border-gray-700"
         >
           {displayLogoUrl.startsWith('data:') ? (
             // SVG data URL (auto-generated)
@@ -122,49 +108,27 @@ export default function RestaurantInfoCard({ name, openingHours, onClick, isClos
           {/* Name and CLOSED badge in same row */}
           <div className="flex items-center gap-2">
             <h2
-              className="font-bold truncate"
-              style={{
-                fontSize: '16px',
-                fontWeight: 700,
-                color: '#212529',
-                fontFamily: 'Inter, sans-serif',
-              }}
+              className="font-bold truncate text-base text-gray-900 dark:text-white font-['Inter',sans-serif]"
             >
               {name}
             </h2>
             {/* CLOSED Badge - Show when store is closed */}
             {isClosed && (
               <span
-                className="shrink-0"
-                style={{
-                  backgroundColor: '#EF4444',
-                  color: '#FFFFFF',
-                  padding: '2px 6px',
-                  borderRadius: '4px',
-                  fontSize: '10px',
-                  fontWeight: 700,
-                  fontFamily: 'Inter, sans-serif',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.3px',
-                }}
+                className="shrink-0 bg-red-500 text-white px-1.5 py-0.5 rounded text-[10px] font-bold font-['Inter',sans-serif] uppercase tracking-wide"
               >
                 {t('common.closed')}
               </span>
             )}
           </div>
           <p
-            className="truncate"
-            style={{
-              fontSize: '14px',
-              color: '#666666',
-              fontFamily: 'Inter, sans-serif',
-            }}
+            className="truncate text-sm text-gray-500 dark:text-gray-400 font-['Inter',sans-serif]"
           >
             {getMerchantStatus()}
           </p>
         </div>
       </div>
-      <ChevronRight style={{ color: '#999999', flexShrink: 0 }} width="20" height="20" />
+      <ChevronRight className="text-gray-400 dark:text-gray-500 shrink-0" width="20" height="20" />
     </div>
   );
 }

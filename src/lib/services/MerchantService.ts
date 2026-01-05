@@ -52,6 +52,7 @@ export interface CreateMerchantInput {
  * Merchant update input
  */
 export interface UpdateMerchantInput {
+  code?: string; // Super admin can update merchant code
   name?: string;
   description?: string;
   address?: string;
@@ -281,6 +282,21 @@ class MerchantService {
       );
     }
 
+    // Validate and check merchant code uniqueness if changing
+    if (input.code !== undefined && input.code !== existing.code) {
+      // Validate merchant code format
+      validateMerchantCode(input.code);
+
+      // Check if the new code is already in use by another merchant
+      const codeExists = await merchantRepository.codeExists(input.code);
+      if (codeExists) {
+        throw new ConflictError(
+          `Merchant code '${input.code}' is already in use by another merchant`,
+          ERROR_CODES.MERCHANT_CODE_EXISTS
+        );
+      }
+    }
+
     // Validate tax rate if provided
     if (input.taxRate !== undefined) {
       if (input.taxRate < 0 || input.taxRate > 100) {
@@ -298,6 +314,7 @@ class MerchantService {
 
     // Map input fields to Prisma schema fields
     const updateData: Record<string, unknown> = {};
+    if (input.code !== undefined) updateData.code = input.code; // Super admin can update merchant code
     if (input.name !== undefined) updateData.name = input.name;
     if (input.description !== undefined) updateData.description = input.description;
     if (input.address !== undefined) updateData.address = input.address;

@@ -37,8 +37,10 @@ const registerSchema = z.object({
     password: z.string().min(8, 'Password minimal 8 karakter'),
     confirmPassword: z.string(),
 
-    // Referral code (optional)
+    // Referral code (optional) - for discount code system
     referralCode: z.string().optional(),
+    // Influencer referral code (optional) - for partner referral system
+    influencerCode: z.string().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
     message: "Password tidak cocok",
     path: ["confirmPassword"],
@@ -80,6 +82,39 @@ export async function POST(req: NextRequest) {
             validatedReferralCode = referralValidation.code || null;
         }
 
+        // Validate influencer referral code if provided
+        let influencerId: bigint | null = null;
+        if (data.influencerCode && data.influencerCode.trim() !== '') {
+            const influencer = await prisma.influencer.findUnique({
+                where: { referralCode: data.influencerCode.trim().toUpperCase() },
+                select: { id: true, isActive: true, isApproved: true },
+            });
+            
+            if (!influencer) {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        error: 'INVALID_INFLUENCER_CODE',
+                        message: 'Kode partner referral tidak valid',
+                    },
+                    { status: 400 }
+                );
+            }
+            
+            if (!influencer.isActive || !influencer.isApproved) {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        error: 'INACTIVE_INFLUENCER',
+                        message: 'Kode partner referral tidak aktif',
+                    },
+                    { status: 400 }
+                );
+            }
+            
+            influencerId = influencer.id;
+        }
+
         // Create merchant with owner (this also creates trial subscription)
         const result = await merchantService.createMerchant({
             name: data.merchantName,
@@ -116,6 +151,20 @@ export async function POST(req: NextRequest) {
             } catch (referralError) {
                 console.error('Failed to record referral usage:', referralError);
                 // Don't fail registration if referral tracking fails
+            }
+        }
+
+        // If influencer referral code was used, link merchant to influencer
+        if (influencerId) {
+            try {
+                await prisma.merchant.update({
+                    where: { id: result.merchant.id },
+                    data: { referredByInfluencerId: influencerId },
+                });
+                console.log(`✅ Merchant ${result.merchant.code} linked to influencer ${influencerId}`);
+            } catch (influencerError) {
+                console.error('Failed to link merchant to influencer:', influencerError);
+                // Don't fail registration if influencer tracking fails
             }
         }
 
@@ -170,6 +219,7 @@ export async function POST(req: NextRequest) {
                 ownerEmail: result.owner.email,
                 trialDays: 30,
                 referralCodeUsed: validatedReferralCode?.code || null,
+                influencerReferral: influencerId ? true : false,
             },
         });
     } catch (error) {
