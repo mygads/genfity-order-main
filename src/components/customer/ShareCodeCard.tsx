@@ -83,7 +83,7 @@ export default function ShareCodeCard({
         <div className="space-y-4">
             {/* QR Code - No container, full width */}
             <div className="text-center">
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                <p className="text-sm text-gray-500 mb-4">
                     {t("groupOrder.scanQR") || "Scan to join instantly"}
                 </p>
 
@@ -99,17 +99,17 @@ export default function ShareCodeCard({
 
                 {/* Simple code text - tappable */}
                 <button onClick={handleCopyCode} className="group">
-                    <p className="text-2xl font-mono font-bold text-gray-900 dark:text-white tracking-widest">
+                    <p className="text-2xl font-mono font-bold text-gray-900 tracking-widest">
                         {sessionCode}
                     </p>
-                    <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                    <p className="text-xs text-orange-600 mt-1">
                         {copied ? "✓ Copied!" : t("groupOrder.copyCode") || "Tap to copy"}
                     </p>
                 </button>
             </div>
 
             {/* Info Row */}
-            <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 pt-3 border-t border-gray-100 dark:border-gray-700">
+            <div className="flex items-center justify-between text-sm text-gray-500 pt-3 border-t border-gray-100">
                 <div className="flex items-center gap-1.5">
                     <span>👥</span>
                     <span>{participantCount} {participantCount === 1 ? "person" : "people"}</span>
@@ -126,7 +126,7 @@ export default function ShareCodeCard({
             <div className="flex gap-3">
                 <button
                     onClick={handleCopyLink}
-                    className="flex-1 flex items-center justify-center gap-2 py-3 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm font-medium"
+                    className="flex-1 flex items-center justify-center gap-2 py-3 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors text-sm font-medium"
                 >
                     <HiLink className="w-4 h-4" />
                     <span>Copy Link</span>
@@ -144,7 +144,7 @@ export default function ShareCodeCard({
             {onClose && (
                 <button
                     onClick={onClose}
-                    className="w-full py-2.5 text-gray-500 dark:text-gray-400 text-sm hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                    className="w-full py-2.5 text-gray-500 text-sm hover:text-gray-700 transition-colors"
                 >
                     Close
                 </button>

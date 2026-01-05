@@ -275,10 +275,10 @@ export default function OrderTrackPage() {
                     <svg className="w-16 h-16 mx-auto mb-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
                     </svg>
-                    <p className="text-base text-gray-900 dark:text-white font-semibold mb-2">
+                    <p className="text-base text-gray-900 font-semibold mb-2">
                         {t('customer.track.orderNotFound')}
                     </p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">{error}</p>
+                    <p className="text-sm text-gray-600 mb-6">{error}</p>
                     <button
                         onClick={() => router.back()}
                         className="px-6 py-3 bg-orange-500 text-white text-sm font-semibold rounded-lg hover:bg-orange-600 transition-all active:scale-[0.98]"
@@ -298,17 +298,17 @@ export default function OrderTrackPage() {
     return (
         <>
             {/* Header - Profile Style */}
-            <header className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700 shadow-md">
+            <header className="sticky top-0 z-10 bg-white border-b border-gray-300 shadow-md">
                 <div className="flex items-center px-4 py-3">
                     <button
                         onClick={handleBack}
                         className="w-10 h-10 flex items-center justify-center -ml-2"
                         aria-label="Go back"
                     >
-                        <FaArrowLeft className="w-5 h-5 text-gray-700 dark:text-white" />
+                        <FaArrowLeft className="w-5 h-5 text-gray-700" />
                     </button>
 
-                    <h1 className="flex-1 text-center font-semibold text-gray-900 dark:text-white text-base">
+                    <h1 className="flex-1 text-center font-semibold text-gray-900 text-base">
                         {t('customer.track.title')}
                     </h1>
 
@@ -318,7 +318,7 @@ export default function OrderTrackPage() {
                         className="w-10 h-10 flex items-center justify-center -mr-2"
                         aria-label="Refresh"
                     >
-                        <FaSync className={`w-5 h-5 text-gray-700 dark:text-white ${isRefreshing ? 'animate-spin' : ''}`} />
+                        <FaSync className={`w-5 h-5 text-gray-700 ${isRefreshing ? 'animate-spin' : ''}`} />
                     </button>
                 </div>
             </header>
@@ -326,16 +326,16 @@ export default function OrderTrackPage() {
             {/* Content */}
             <div className="flex-1 overflow-y-auto pb-32">
                 {/* Order Number Badge */}
-                <div className="px-6 py-6 text-center border-b border-gray-200 dark:border-gray-800">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg mb-3">
-                        <span className="text-lg font-mono font-bold text-gray-900 dark:text-white">
+                <div className="px-6 py-6 text-center border-b border-gray-200">
+                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg mb-3">
+                        <span className="text-lg font-mono font-bold text-gray-900">
                             {order.orderNumber}
                         </span>
                     </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <p className="text-sm text-gray-600">
                         {order.orderType === 'DINE_IN' ? `${t('admin.orders.table')} #${order.tableNumber}` : t('customer.track.takeawayOrder')}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                    <p className="text-xs text-gray-500 mt-1">
                         {t('customer.track.lastUpdated')} {lastUpdated.toLocaleTimeString()}
                     </p>
                 </div>
@@ -349,7 +349,7 @@ export default function OrderTrackPage() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
                             </svg>
                             <h2 className="text-xl font-bold text-red-600 mb-2">{t('customer.track.orderCancelled')}</h2>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                            <p className="text-sm text-gray-600">
                                 {t('customer.status.cancelledDesc')}
                             </p>
                         </div>
@@ -358,7 +358,7 @@ export default function OrderTrackPage() {
                             {/* Progress Bar */}
                             <div className="relative mb-8">
                                 {/* Background Bar */}
-                                <div className="absolute top-4 left-0 right-0 h-1 bg-gray-200 dark:bg-gray-700 rounded-full" />
+                                <div className="absolute top-4 left-0 right-0 h-1 bg-gray-200 rounded-full" />
 
                                 {/* Active Bar */}
                                 <div
@@ -379,9 +379,9 @@ export default function OrderTrackPage() {
                                                     className={`
                             w-8 h-8 rounded-full flex items-center justify-center text-sm
                             transition-all duration-300
-                            ${isCurrent ? 'bg-orange-500 text-white ring-4 ring-orange-200 dark:ring-orange-900 scale-110' :
+                            ${isCurrent ? 'bg-orange-500 text-white ring-4 ring-orange-200 scale-110' :
                                                             isActive ? 'bg-orange-500 text-white' :
-                                                                'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}
+                                                                'bg-gray-200 text-gray-500'}
                           `}
                                                 >
                                                     {/* FA Icons for each step */}
@@ -395,9 +395,9 @@ export default function OrderTrackPage() {
                                                 {/* Label */}
                                                 <span className={`
                           mt-2 text-xs font-medium text-center
-                          ${isCurrent ? 'text-orange-600 dark:text-orange-400' :
-                                                        isActive ? 'text-gray-900 dark:text-white' :
-                                                            'text-gray-400 dark:text-gray-500'}
+                          ${isCurrent ? 'text-orange-600' :
+                                                        isActive ? 'text-gray-900' :
+                                                            'text-gray-400'}
                         `}>
                                                     {t(step.labelKey)}
                                                 </span>
@@ -409,25 +409,25 @@ export default function OrderTrackPage() {
 
                             {/* Current Status Card */}
                             <div className={`
-                p-6 rounded-xl text-center mb-6 bg-white dark:bg-gray-800
-                ${isReady ? 'border-2 border-green-500' : 'border border-gray-200 dark:border-gray-700'}
+                p-6 rounded-xl text-center mb-6 bg-white
+                ${isReady ? 'border-2 border-green-500' : 'border border-gray-200'}
               `}>
                                 {/* Status Icon - FA Icons */}
-                                <div className={`w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center ${isReady ? 'bg-green-100 dark:bg-green-900/30 text-green-600' : 'bg-orange-100 dark:bg-orange-900/30 text-orange-600'}`}>
+                                <div className={`w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center ${isReady ? 'bg-green-100 text-green-600' : 'bg-orange-100 text-orange-600'}`}>
                                     {currentStepIndex === 0 && <FaClock className="w-6 h-6" />}
                                     {currentStepIndex === 1 && <FaCheckCircle className="w-6 h-6" />}
                                     {currentStepIndex === 2 && <FaBolt className="w-6 h-6" />}
                                     {currentStepIndex === 3 && <FaBell className="w-6 h-6" />}
                                     {currentStepIndex === 4 && <FaCheck className="w-6 h-6" />}
                                 </div>
-                                <h2 className={`text-xl font-bold mb-2 ${isReady ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-white'}`}>
+                                <h2 className={`text-xl font-bold mb-2 ${isReady ? 'text-green-600' : 'text-gray-900'}`}>
                                     {isCompleted ? t('customer.track.orderCompleted') :
                                         isReady ? t('customer.track.orderReady') :
                                             t(STATUS_STEPS[currentStepIndex]?.descriptionKey) || t('customer.loading.processingOrder')}
                                 </h2>
 
                                 {!isCompleted && (
-                                    <div className="flex items-center justify-center gap-2 text-gray-600 dark:text-gray-400">
+                                    <div className="flex items-center justify-center gap-2 text-gray-600">
                                         <FaClock className="w-5 h-5" />
                                         <span className="text-sm font-medium">
                                             {t('customer.track.estimated')} {getEstimatedWaitTime(order.status)}
@@ -436,7 +436,7 @@ export default function OrderTrackPage() {
                                 )}
 
                                 {isReady && (
-                                    <p className="mt-3 text-sm text-green-600 dark:text-green-400 font-medium">
+                                    <p className="mt-3 text-sm text-green-600 font-medium">
                                         {t('customer.track.pickupMessage')}
                                     </p>
                                 )}
@@ -448,7 +448,7 @@ export default function OrderTrackPage() {
                 {/* Group Order Badge (if applicable) */}
                 {groupOrderData?.isGroupOrder && groupOrderData.session && (
                     <div className="px-6 pb-4">
-                        <div className="flex items-center justify-between p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl">
+                        <div className="flex items-center justify-between p-4 bg-purple-50 border border-purple-200 rounded-xl">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center">
                                     <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -456,17 +456,17 @@ export default function OrderTrackPage() {
                                     </svg>
                                 </div>
                                 <div>
-                                    <p className="text-sm font-semibold text-purple-700 dark:text-purple-300">
+                                    <p className="text-sm font-semibold text-purple-700">
                                         Group Order
                                     </p>
-                                    <p className="text-xs text-purple-600 dark:text-purple-400">
+                                    <p className="text-xs text-purple-600">
                                         {groupOrderData.session.participantCount} participants • Code: {groupOrderData.session.sessionCode}
                                     </p>
                                 </div>
                             </div>
                             <button
                                 onClick={() => setShowSplitBill(!showSplitBill)}
-                                className="px-3 py-1.5 text-xs font-medium text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-800 rounded-lg hover:bg-purple-200 dark:hover:bg-purple-700 transition-colors"
+                                className="px-3 py-1.5 text-xs font-medium text-purple-700 bg-purple-100 rounded-lg hover:bg-purple-200 transition-colors"
                             >
                                 {showSplitBill ? 'Hide Split' : 'Split Bill'}
                             </button>
@@ -477,25 +477,25 @@ export default function OrderTrackPage() {
                 {/* Split Bill View (Group Orders) */}
                 {groupOrderData?.isGroupOrder && showSplitBill && groupOrderData.splitBill && (
                     <div className="px-6 pb-4">
-                        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
-                            <div className="p-4 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-                                <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                            <div className="p-4 bg-gray-50 border-b border-gray-200">
+                                <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                                     </svg>
                                     Bill Split by Participant
                                 </h3>
                             </div>
-                            <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                            <div className="divide-y divide-gray-100">
                                 {groupOrderData.splitBill.map((participant) => (
                                     <div key={participant.participantId} className="p-4">
                                         <div className="flex items-center justify-between mb-2">
                                             <div className="flex items-center gap-2">
-                                                <span className="text-sm font-medium text-gray-900 dark:text-white">
+                                                <span className="text-sm font-medium text-gray-900">
                                                     {participant.participantName}
                                                 </span>
                                                 {participant.isHost && (
-                                                    <span className="px-1.5 py-0.5 text-[10px] font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded">
+                                                    <span className="px-1.5 py-0.5 text-[10px] font-medium bg-orange-100 text-orange-600 rounded">
                                                         HOST
                                                     </span>
                                                 )}
@@ -504,7 +504,7 @@ export default function OrderTrackPage() {
                                                 {formatCurrency(participant.total, order.merchant.currency)}
                                             </span>
                                         </div>
-                                        <div className="text-xs text-gray-500 dark:text-gray-400 space-y-0.5">
+                                        <div className="text-xs text-gray-500 space-y-0.5">
                                             <div className="flex justify-between">
                                                 <span>Items ({participant.itemCount})</span>
                                                 <span>{formatCurrency(participant.subtotal, order.merchant.currency)}</span>
@@ -537,7 +537,7 @@ export default function OrderTrackPage() {
 
                 {/* Order Details - Show by participant for group orders */}
                 <div className="px-6 pb-6">
-                    <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-4">
+                    <h3 className="text-base font-semibold text-gray-900 mb-4">
                         {t('customer.track.orderItems')}
                     </h3>
 
@@ -545,53 +545,53 @@ export default function OrderTrackPage() {
                     {groupOrderData?.isGroupOrder && groupOrderData.participants ? (
                         <div className="space-y-4">
                             {groupOrderData.participants.map((participant) => (
-                                <div key={participant.id} className="bg-gray-50 dark:bg-gray-800 rounded-xl overflow-hidden">
+                                <div key={participant.id} className="bg-gray-50 rounded-xl overflow-hidden">
                                     {/* Participant Header */}
-                                    <div className="flex items-center justify-between px-4 py-3 bg-gray-100 dark:bg-gray-700">
+                                    <div className="flex items-center justify-between px-4 py-3 bg-gray-100">
                                         <div className="flex items-center gap-2">
                                             <div className="w-7 h-7 bg-orange-500 rounded-full flex items-center justify-center text-white text-xs font-medium">
                                                 {participant.name.charAt(0).toUpperCase()}
                                             </div>
-                                            <span className="text-sm font-medium text-gray-900 dark:text-white">
+                                            <span className="text-sm font-medium text-gray-900">
                                                 {participant.name}
                                             </span>
                                             {participant.isHost && (
-                                                <span className="px-1.5 py-0.5 text-[10px] font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded">
+                                                <span className="px-1.5 py-0.5 text-[10px] font-medium bg-orange-100 text-orange-600 rounded">
                                                     HOST
                                                 </span>
                                             )}
                                         </div>
-                                        <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                        <span className="text-sm font-semibold text-gray-700">
                                             {formatCurrency(participant.subtotal, order.merchant.currency)}
                                         </span>
                                     </div>
                                     {/* Participant Items */}
-                                    <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                                    <div className="divide-y divide-gray-200">
                                         {participant.items.length > 0 ? (
                                             participant.items.map((item) => (
                                                 <div key={item.id} className="flex justify-between items-start px-4 py-3">
                                                     <div>
-                                                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                                        <p className="text-sm font-medium text-gray-900">
                                                             {item.quantity}x {item.menuName}
                                                         </p>
                                                         {item.addons.length > 0 && (
-                                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                                            <p className="text-xs text-gray-500 mt-0.5">
                                                                 + {item.addons.map(a => a.name).join(', ')}
                                                             </p>
                                                         )}
                                                         {item.notes && (
-                                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                                            <p className="text-xs text-gray-500 mt-0.5">
                                                                 📝 {item.notes}
                                                             </p>
                                                         )}
                                                     </div>
-                                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                    <span className="text-sm font-medium text-gray-700">
                                                         {formatCurrency(item.subtotal, order.merchant.currency)}
                                                     </span>
                                                 </div>
                                             ))
                                         ) : (
-                                            <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 italic">
+                                            <div className="px-4 py-3 text-sm text-gray-500 italic">
                                                 No items ordered
                                             </div>
                                         )}
@@ -605,14 +605,14 @@ export default function OrderTrackPage() {
                             {order.orderItems.map((item, index) => (
                                 <div
                                     key={index}
-                                    className="flex justify-between items-start p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                                    className="flex justify-between items-start p-3 bg-gray-50 rounded-lg"
                                 >
                                     <div>
-                                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                        <p className="text-sm font-medium text-gray-900">
                                             {item.quantity}x {item.menuName}
                                         </p>
                                         {item.addons && item.addons.length > 0 && (
-                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                            <p className="text-xs text-gray-500 mt-0.5">
                                                 + {item.addons.map(a => {
                                                     const addonPrice = a.price * (a.quantity || 1);
                                                     return addonPrice > 0 ? `${a.name} (${formatPrice(addonPrice, order.merchant.currency)})` : `${a.name} (Free)`;
@@ -620,12 +620,12 @@ export default function OrderTrackPage() {
                                             </p>
                                         )}
                                         {item.notes && (
-                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                            <p className="text-xs text-gray-500 mt-1">
                                                 <FaStickyNote className="inline w-3 h-3 mr-1" />{item.notes}
                                             </p>
                                         )}
                                     </div>
-                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    <span className="text-sm font-medium text-gray-700">
                                         {formatPrice(item.menuPrice * item.quantity, order.merchant.currency)}
                                     </span>
                                 </div>
@@ -634,8 +634,8 @@ export default function OrderTrackPage() {
                     )}
 
                     {/* Total */}
-                    <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                        <span className="text-base font-semibold text-gray-900 dark:text-white">{t('customer.payment.total')}</span>
+                    <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200">
+                        <span className="text-base font-semibold text-gray-900">{t('customer.payment.total')}</span>
                         <span className="text-lg font-bold text-orange-500">
                             {formatCurrency(order.totalAmount, order.merchant.currency)}
                         </span>
@@ -644,7 +644,7 @@ export default function OrderTrackPage() {
             </div>
 
             {/* Fixed Bottom Actions */}
-            <div className="fixed bottom-0 left-0 right-0 max-w-[500px] mx-auto px-6 py-4 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 space-y-3">
+            <div className="fixed bottom-0 left-0 right-0 max-w-[500px] mx-auto px-6 py-4 bg-white border-t border-gray-200 space-y-3">
 
                 <button
                     onClick={handleNewOrder}

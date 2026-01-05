@@ -883,7 +883,7 @@ export default function OrderClientPage({
                     </div>
                     {/* Divider */}
                     <div className="px-4 mt-6">
-                      <hr className="border-gray-200 dark:border-gray-700" />
+                      <hr className="border-gray-200" />
                     </div>
                   </>
                 )}
@@ -910,7 +910,7 @@ export default function OrderClientPage({
                     </div>
                     {/* Divider */}
                     <div className="px-4 mt-6">
-                      <hr className="border-gray-200 dark:border-gray-700" />
+                      <hr className="border-gray-200" />
                     </div>
                   </>
                 )}
@@ -937,7 +937,7 @@ export default function OrderClientPage({
                     </div>
                     {/* Divider */}
                     <div className="px-4 mt-6">
-                      <hr className="border-gray-200 dark:border-gray-700" />
+                      <hr className="border-gray-200" />
                     </div>
                   </>
                 )}
@@ -976,7 +976,7 @@ export default function OrderClientPage({
                       {/* Divider between categories */}
                       {index < categories.length - 1 && (
                         <div className="px-4 mt-6">
-                          <hr className="border-gray-200 dark:border-gray-700" />
+                          <hr className="border-gray-200" />
                         </div>
                       )}
                     </div>
@@ -987,7 +987,7 @@ export default function OrderClientPage({
               /* Show single category when specific category selected */
               <>
                 <div className="px-4 mt-4">
-                  <hr className="border-gray-200 dark:border-gray-700" />
+                  <hr className="border-gray-200" />
                 </div>
                 <div className="mt-4">
                   <DetailedMenuSection

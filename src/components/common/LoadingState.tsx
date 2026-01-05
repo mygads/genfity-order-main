@@ -79,7 +79,7 @@ export default function LoadingState({
      */
     const Message = () => (
         message ? (
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-3">
+            <p className="text-sm text-gray-600 mt-3">
                 {message}
             </p>
         ) : null
@@ -90,7 +90,7 @@ export default function LoadingState({
      */
     if (type === 'page') {
         return (
-            <div className="flex flex-col min-h-screen max-w-[420px] mx-auto bg-white dark:bg-gray-900 items-center justify-center">
+            <div className="flex flex-col min-h-screen max-w-[420px] mx-auto bg-white items-center justify-center">
                 <Spinner />
                 <Message />
             </div>
@@ -116,7 +116,7 @@ export default function LoadingState({
      */
     if (type === 'fullscreen') {
         return (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm">
                 <div className="text-center">
                     <div className="flex justify-center mb-4">
                         <Spinner />

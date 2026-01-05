@@ -298,7 +298,7 @@ export default function OrderHistoryPage() {
     const config = statusConfig[status.toLowerCase()] || statusConfig.pending;
 
     return (
-      <span className={`px-3 py-1 rounded-full text-xs font-semibold bg-white dark:bg-gray-800 border ${config.border} ${config.text}`}>
+      <span className={`px-3 py-1 rounded-full text-xs font-semibold bg-white border ${config.border} ${config.text}`}>
         {t(config.labelKey)}
       </span>
     );
@@ -370,7 +370,7 @@ export default function OrderHistoryPage() {
   return (
     <div className="">
       {/* Fixed Header - Profile Style */}
-      <header className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700 shadow-md">
+      <header className="sticky top-0 z-10 bg-white border-b border-gray-300 shadow-md">
         <div className="flex items-center px-4 py-3">
           {/* Back Button */}
           <button
@@ -383,18 +383,18 @@ export default function OrderHistoryPage() {
             </svg>
           </button>
           {/* Title */}
-          <h1 className="flex-1 text-center font-semibold text-gray-900 dark:text-white text-base pr-10">
+          <h1 className="flex-1 text-center font-semibold text-gray-900 text-base pr-10">
             {t('customer.history.title')}
           </h1>
         </div>
 
         {/* Filter Tabs - Evenly Spaced */}
-        <div className="flex border-t border-gray-200 dark:border-gray-700">
+        <div className="flex border-t border-gray-200">
           <button
             onClick={() => setFilter('all')}
             className={`flex-1 py-3 text-sm font-medium transition-colors ${filter === 'all'
               ? 'text-orange-500 border-b-2 border-orange-500'
-              : 'text-gray-500 dark:text-gray-400 border-b-2 border-transparent'
+              : 'text-gray-500 border-b-2 border-transparent'
               }`}
           >
             {t('customer.history.allOrders')}
@@ -403,7 +403,7 @@ export default function OrderHistoryPage() {
             onClick={() => setFilter('pending')}
             className={`flex-1 py-3 text-sm font-medium transition-colors ${filter === 'pending'
               ? 'text-orange-500 border-b-2 border-orange-500'
-              : 'text-gray-500 dark:text-gray-400 border-b-2 border-transparent'
+              : 'text-gray-500 border-b-2 border-transparent'
               }`}
           >
             {t('customer.history.activeOrders')}
@@ -412,7 +412,7 @@ export default function OrderHistoryPage() {
             onClick={() => setFilter('completed')}
             className={`flex-1 py-3 text-sm font-medium transition-colors ${filter === 'completed'
               ? 'text-orange-500 border-b-2 border-orange-500'
-              : 'text-gray-500 dark:text-gray-400 border-b-2 border-transparent'
+              : 'text-gray-500 border-b-2 border-transparent'
               }`}
           >
             {t('customer.history.completedOrders')}
@@ -428,27 +428,27 @@ export default function OrderHistoryPage() {
             {Array.from({ length: 5 }).map((_, i) => (
               <div
                 key={i}
-                className="p-4 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800"
+                className="p-4 border border-gray-200 rounded-xl bg-white"
               >
                 {/* Header Skeleton */}
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex-1 min-w-0">
-                    <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-2" />
-                    <div className="h-3 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                    <div className="h-4 w-32 bg-gray-200 rounded animate-pulse mb-2" />
+                    <div className="h-3 w-24 bg-gray-200 rounded animate-pulse" />
                   </div>
-                  <div className="h-6 w-20 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
+                  <div className="h-6 w-20 bg-gray-200 rounded-full animate-pulse" />
                 </div>
 
                 {/* Order Number Skeleton */}
-                <div className="mb-3 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <div className="h-3 w-20 bg-gray-200 dark:bg-gray-600 rounded animate-pulse mb-1" />
-                  <div className="h-4 w-28 bg-gray-200 dark:bg-gray-600 rounded animate-pulse" />
+                <div className="mb-3 p-2 bg-gray-50 rounded-lg">
+                  <div className="h-3 w-20 bg-gray-200 rounded animate-pulse mb-1" />
+                  <div className="h-4 w-28 bg-gray-200 rounded animate-pulse" />
                 </div>
 
                 {/* Footer Skeleton */}
-                <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-700">
-                  <div className="h-3 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                  <div className="h-5 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                <div className="flex items-center justify-between pt-3 border-t border-gray-200">
+                  <div className="h-3 w-32 bg-gray-200 rounded animate-pulse" />
+                  <div className="h-5 w-20 bg-gray-200 rounded animate-pulse" />
                 </div>
               </div>
             ))}
@@ -459,10 +459,10 @@ export default function OrderHistoryPage() {
             <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
-            <p className="text-base font-semibold text-gray-900 dark:text-white mb-2">
+            <p className="text-base font-semibold text-gray-900 mb-2">
               {filter === 'all' ? t('customer.history.noOrders') : t('common.noResults')}
             </p>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+            <p className="text-sm text-gray-600 mb-6">
               {filter === 'all'
                 ? t('customer.history.noOrdersDesc')
                 : t('customer.history.noOrdersFiltered', { filter: filter === 'pending' ? t('customer.history.activeOrders').toLowerCase() : t('customer.history.completedOrders').toLowerCase() })}
@@ -484,15 +484,15 @@ export default function OrderHistoryPage() {
               return (
                 <div
                   key={order.id.toString()}
-                  className="p-4 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800"
+                  className="p-4 border border-gray-200 rounded-xl bg-white"
                 >
                   {/* Order Header */}
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-gray-900 dark:text-white mb-1 truncate">
+                      <p className="text-sm font-bold text-gray-900 mb-1 truncate">
                         {order.merchantName}
                       </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                      <p className="text-xs text-gray-500">
                         {formatDate(order.placedAt)}
                       </p>
                     </div>
@@ -500,16 +500,16 @@ export default function OrderHistoryPage() {
                   </div>
 
                   {/* Order Number */}
-                  <div className="mb-3 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                    <p className="text-xs text-gray-600 dark:text-gray-400">{t('customer.track.orderNumber')}</p>
-                    <p className="text-sm font-bold text-gray-900 dark:text-white font-mono">
+                  <div className="mb-3 p-2 bg-gray-50 rounded-lg">
+                    <p className="text-xs text-gray-600">{t('customer.track.orderNumber')}</p>
+                    <p className="text-sm font-bold text-gray-900 font-mono">
                       #{order.orderNumber}
                     </p>
                   </div>
 
                   {/* Order Details */}
-                  <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-700">
-                    <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                  <div className="flex items-center justify-between pt-3 border-t border-gray-200">
+                    <div className="flex items-center gap-2 text-xs text-gray-600">
                       {/* Mode Icon - SVG instead of emoji */}
                       {order.mode === 'dinein' ? (
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -530,14 +530,14 @@ export default function OrderHistoryPage() {
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex gap-2 mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex gap-2 mt-4 pt-3 border-t border-gray-200">
                     {/* View Order Button - Always visible */}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleOrderClick(order);
                       }}
-                      className="flex-1 py-2 text-sm font-semibold text-orange-500 border border-orange-500 rounded-lg hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-all"
+                      className="flex-1 py-2 text-sm font-semibold text-orange-500 border border-orange-500 rounded-lg hover:bg-orange-50 transition-all"
                     >
                       {t('customer.history.viewOrder')}
                     </button>

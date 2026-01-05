@@ -49,12 +49,12 @@ const ModeUnavailableModal: React.FC<ModeUnavailableModalProps> = ({
       />
 
       {/* Dialog */}
-      <div className="relative z-10 mx-4 w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-800 dark:bg-gray-900 animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative z-10 mx-4 w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-xl animate-in fade-in zoom-in-95 duration-200">
         {/* Icon */}
         <div className="mb-4 flex justify-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-amber-100">
             <svg
-              className="h-7 w-7 text-amber-600 dark:text-amber-400"
+              className="h-7 w-7 text-amber-600"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -71,14 +71,14 @@ const ModeUnavailableModal: React.FC<ModeUnavailableModalProps> = ({
 
         {/* Header */}
         <div className="mb-2 text-center">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <h3 className="text-lg font-semibold text-gray-900">
             {currentModeLabel} No Longer Available
           </h3>
         </div>
 
         {/* Message */}
         <div className="mb-6 text-center">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-sm text-gray-600">
             {alternativeMode ? (
               <>
                 The <span className="font-medium">{currentModeLabel}</span> mode is no longer available at this time.
@@ -107,14 +107,14 @@ const ModeUnavailableModal: React.FC<ModeUnavailableModalProps> = ({
           <button
             type="button"
             onClick={onGoBack}
-            className="h-12 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-white/[0.03] dark:text-gray-300 dark:hover:bg-white/[0.05]"
+            className="h-12 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             {alternativeMode ? 'Go Back' : 'Return to Store'}
           </button>
         </div>
 
         {/* Cart Notice */}
-        <p className="mt-4 text-center text-xs text-gray-500 dark:text-gray-500">
+        <p className="mt-4 text-center text-xs text-gray-500">
           Your cart items will be preserved when switching modes
         </p>
       </div>

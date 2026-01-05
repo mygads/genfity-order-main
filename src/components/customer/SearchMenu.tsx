@@ -198,10 +198,10 @@ export default function SearchMenu({
           onFocus={() => setIsOpen(true)}
           placeholder={placeholder}
           className="block w-full pl-10 pr-10 py-2.5 text-sm border border-gray-300 rounded-lg 
-                     bg-white dark:bg-gray-800 dark:border-gray-700
+                     bg-white
                      focus:ring-2 focus:ring-orange-500 focus:border-transparent
-                     placeholder-gray-400 dark:placeholder-gray-500
-                     text-gray-900 dark:text-white"
+                     placeholder-gray-400
+                     text-gray-900"
         />
         {query && (
           <button
@@ -219,11 +219,11 @@ export default function SearchMenu({
 
       {/* Search Dropdown */}
       {isOpen && (
-        <div className="absolute z-50 w-full mt-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 max-h-[70vh] overflow-hidden">
+        <div className="absolute z-50 w-full mt-2 bg-white rounded-lg shadow-lg border border-gray-200 max-h-[70vh] overflow-hidden">
           {/* Filters Toggle */}
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="w-full px-4 py-2 text-xs text-left text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between"
+            className="w-full px-4 py-2 text-xs text-left text-gray-500 hover:bg-gray-50 flex items-center justify-between"
           >
             <span>Filters {selectedCategory || priceRange.min || priceRange.max ? '(Active)' : ''}</span>
             <span className="text-gray-400">{showFilters ? '▲' : '▼'}</span>
@@ -231,7 +231,7 @@ export default function SearchMenu({
 
           {/* Filters Panel */}
           {showFilters && (
-            <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+            <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
               <div className="space-y-3">
                 {/* Price Range */}
                 <div>
@@ -245,7 +245,7 @@ export default function SearchMenu({
                         ...prev,
                         min: e.target.value ? parseFloat(e.target.value) : undefined
                       }))}
-                      className="w-1/2 px-2 py-1 text-sm border rounded dark:bg-gray-800 dark:border-gray-600"
+                      className="w-1/2 px-2 py-1 text-sm border rounded"
                     />
                     <input
                       type="number"
@@ -255,7 +255,7 @@ export default function SearchMenu({
                         ...prev,
                         max: e.target.value ? parseFloat(e.target.value) : undefined
                       }))}
-                      className="w-1/2 px-2 py-1 text-sm border rounded dark:bg-gray-800 dark:border-gray-600"
+                      className="w-1/2 px-2 py-1 text-sm border rounded"
                     />
                   </div>
                 </div>
@@ -289,10 +289,10 @@ export default function SearchMenu({
                 <button
                   key={item.id}
                   onClick={() => handleSelectItem(item)}
-                  className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700 text-left border-b border-gray-100 dark:border-gray-700 last:border-0"
+                  className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 text-left border-b border-gray-100 last:border-0"
                 >
                   {/* Image */}
-                  <div className="w-12 h-12 rounded-lg bg-gray-100 dark:bg-gray-700 overflow-hidden flex-shrink-0">
+                  <div className="w-12 h-12 rounded-lg bg-gray-100 overflow-hidden flex-shrink-0">
                     {item.imageUrl ? (
                       <Image
                         src={item.imageUrl}
@@ -311,7 +311,7 @@ export default function SearchMenu({
                   {/* Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <h4 className="font-medium text-gray-900 dark:text-white truncate">
+                      <h4 className="font-medium text-gray-900 truncate">
                         {item.name}
                       </h4>
                       {/* Badge Icons - Matching order page style */}
@@ -334,7 +334,7 @@ export default function SearchMenu({
                       </div>
                     </div>
                     {item.description && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                      <p className="text-xs text-gray-500 truncate">
                         {item.description}
                       </p>
                     )}
@@ -349,7 +349,7 @@ export default function SearchMenu({
                           </span>
                         </>
                       ) : (
-                        <span className="text-sm font-medium text-gray-900 dark:text-white">
+                        <span className="text-sm font-medium text-gray-900">
                           {formatPrice(item.price)}
                         </span>
                       )}
@@ -385,7 +385,7 @@ export default function SearchMenu({
                   <button
                     key={index}
                     onClick={() => handleRecentSearchClick(search)}
-                    className="w-full px-3 py-2 text-sm text-left text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg flex items-center gap-2"
+                    className="w-full px-3 py-2 text-sm text-left text-gray-700 hover:bg-gray-50 rounded-lg flex items-center gap-2"
                   >
                     <SearchIcon className="h-4 w-4 text-gray-400" />
                     {search}

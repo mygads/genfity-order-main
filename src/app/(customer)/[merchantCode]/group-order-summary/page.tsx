@@ -68,10 +68,10 @@ export default function GroupOrderSummaryPage({
 
     if (!session && !splitBill) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
                 <div className="text-center">
                     <div className="animate-spin w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full mx-auto mb-4" />
-                    <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+                    <p className="text-gray-600">Loading...</p>
                 </div>
             </div>
         );
@@ -81,7 +81,7 @@ export default function GroupOrderSummaryPage({
         (splitBill || []).reduce((sum, p) => sum + p.total, 0);
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="min-h-screen bg-gray-50">
             {/* Success Header */}
             <div className="bg-gradient-to-r from-green-500 to-emerald-500 px-6 py-8 text-center text-white">
                 <div className="w-16 h-16 bg-white/20 backdrop-blur rounded-full flex items-center justify-center mx-auto mb-4">
@@ -101,16 +101,16 @@ export default function GroupOrderSummaryPage({
 
             {/* Split Bill Section */}
             <div className="px-4 py-6 -mt-4">
-                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden">
+                <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
                     {/* Header */}
-                    <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700">
+                    <div className="px-5 py-4 border-b border-gray-100">
                         <div className="flex items-center gap-3">
                             <span className="text-2xl">💸</span>
                             <div>
-                                <h2 className="font-semibold text-gray-900 dark:text-white">
+                                <h2 className="font-semibold text-gray-900">
                                     {t("groupOrder.splitBill") || "Split Bill"}
                                 </h2>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                <p className="text-sm text-gray-500">
                                     {(splitBill || []).length} participants
                                 </p>
                             </div>
@@ -118,7 +118,7 @@ export default function GroupOrderSummaryPage({
                     </div>
 
                     {/* Participant Breakdown */}
-                    <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                    <div className="divide-y divide-gray-100">
                         {(splitBill || []).map((participant, _index) => (
                             <div key={participant.participantId} className="px-5 py-4">
                                 <div className="flex items-center justify-between">
@@ -131,22 +131,22 @@ export default function GroupOrderSummaryPage({
                                         </div>
                                         <div>
                                             <div className="flex items-center gap-2">
-                                                <span className="font-medium text-gray-900 dark:text-white">
+                                                <span className="font-medium text-gray-900">
                                                     {participant.participantName}
                                                 </span>
                                                 {participant.isHost && (
-                                                    <span className="text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400 px-2 py-0.5 rounded-full">
+                                                    <span className="text-xs bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full">
                                                         Host
                                                     </span>
                                                 )}
                                             </div>
-                                            <div className="text-sm text-gray-500 dark:text-gray-400">
+                                            <div className="text-sm text-gray-500">
                                                 Subtotal: {formatCurrency(participant.subtotal, currency)}
                                             </div>
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <div className="font-bold text-lg text-gray-900 dark:text-white">
+                                        <div className="font-bold text-lg text-gray-900">
                                             {formatCurrency(participant.total, currency)}
                                         </div>
                                         {(participant.taxShare > 0 || participant.serviceChargeShare > 0) && (
@@ -161,12 +161,12 @@ export default function GroupOrderSummaryPage({
                     </div>
 
                     {/* Total */}
-                    <div className="px-5 py-4 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-100 dark:border-gray-700">
+                    <div className="px-5 py-4 bg-gray-50 border-t border-gray-100">
                         <div className="flex items-center justify-between">
-                            <span className="font-semibold text-gray-700 dark:text-gray-300">
+                            <span className="font-semibold text-gray-700">
                                 Total Order
                             </span>
-                            <span className="text-xl font-bold text-green-600 dark:text-green-400">
+                            <span className="text-xl font-bold text-green-600">
                                 {formatCurrency(totalAmount, currency)}
                             </span>
                         </div>
@@ -176,14 +176,14 @@ export default function GroupOrderSummaryPage({
 
             {/* Info Cards */}
             <div className="px-4 pb-6 space-y-3">
-                <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                     <div className="flex items-start gap-3">
                         <span className="text-xl">💡</span>
                         <div>
-                            <h3 className="font-medium text-blue-800 dark:text-blue-300 mb-1">
+                            <h3 className="font-medium text-blue-800 mb-1">
                                 How to pay
                             </h3>
-                            <p className="text-sm text-blue-600 dark:text-blue-400">
+                            <p className="text-sm text-blue-600">
                                 Each participant pays their share at the counter. Show this screen to the staff.
                             </p>
                         </div>
@@ -192,12 +192,12 @@ export default function GroupOrderSummaryPage({
             </div>
 
             {/* Action Buttons */}
-            <div className="fixed bottom-0 left-0 right-0 p-4 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 max-w-[500px] mx-auto">
+            <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200 max-w-[500px] mx-auto">
                 <div className="flex gap-3">
                     {orderNumber && (
                         <button
                             onClick={handleTrackOrder}
-                            className="flex-1 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                            className="flex-1 py-3 border-2 border-gray-200 rounded-xl font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                         >
                             Track Order
                         </button>

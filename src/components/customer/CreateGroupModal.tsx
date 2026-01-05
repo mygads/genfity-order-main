@@ -108,20 +108,20 @@ export default function CreateGroupModal({
             />
 
             <div className={`fixed inset-x-0 bottom-0 z-[100] flex justify-center ${isClosing ? 'animate-slideDown' : 'animate-slideUp'}`}>
-                <div className="w-full max-w-[500px] bg-white dark:bg-gray-900 rounded-t-2xl shadow-2xl">
+                <div className="w-full max-w-[500px] bg-white rounded-t-2xl shadow-2xl">
                     {/* Header with mode badge on right */}
-                    <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-                        <h2 className="text-lg font-semibold text-gray-900 dark:text-white" style={{ margin: 0, lineHeight: 'normal' }}>
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+                        <h2 className="text-lg font-semibold text-gray-900" style={{ margin: 0, lineHeight: 'normal' }}>
                             {t('groupOrder.createSession') || 'Create New Group'}
                         </h2>
                         <div className="flex items-center gap-2">
                             {/* Mode badge - small text, no bg */}
-                            <span className="text-sm text-gray-500 dark:text-gray-400">
+                            <span className="text-sm text-gray-500">
                                 {modeText}
                             </span>
                             <button
                                 onClick={handleClose}
-                                className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                                className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-gray-100 transition-colors"
                             >
                                 <HiXMark className="w-5 h-5 text-gray-500" />
                             </button>
@@ -134,7 +134,7 @@ export default function CreateGroupModal({
                         <div className="mb-4">
                             <label
                                 htmlFor="hostName"
-                                className="block text-sm font-semibold text-gray-900 dark:text-white mb-2"
+                                className="block text-sm font-semibold text-gray-900 mb-2"
                             >
                                 {t('groupOrder.yourName') || 'Your Name'}<span className="text-red-500">*</span>
                             </label>
@@ -148,16 +148,16 @@ export default function CreateGroupModal({
                                 placeholder={t('groupOrder.enterName') || 'Enter your name'}
                                 autoFocus
                                 disabled={isLoading}
-                                className="w-full h-12 px-4 text-left bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-orange-500 dark:focus:ring-orange-400 focus:border-orange-500 dark:focus:border-orange-400 transition-all disabled:bg-gray-100 dark:disabled:bg-gray-700"
+                                className="w-full h-12 px-4 text-left bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-all disabled:bg-gray-100"
                             />
                             {error && (
-                                <p className="mt-2 text-sm text-red-600 dark:text-red-400" role="alert">
+                                <p className="mt-2 text-sm text-red-600" role="alert">
                                     {error}
                                 </p>
                             )}
                         </div>
 
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                        <p className="text-xs text-gray-500 mb-4">
                             {t('groupOrder.createHint') || 'After creating, share the code with your friends to join.'}
                         </p>
                     </div>
@@ -167,7 +167,7 @@ export default function CreateGroupModal({
                         <button
                             onClick={handleSubmit}
                             disabled={!hostName.trim() || isLoading}
-                            className="w-full h-12 bg-orange-500 text-white font-medium rounded-md hover:bg-orange-600 transition-colors disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:text-gray-500 dark:disabled:text-gray-500 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            className="w-full h-12 bg-orange-500 text-white font-medium rounded-md hover:bg-orange-600 transition-colors disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                         >
                             {isLoading ? (
                                 <>

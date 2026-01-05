@@ -67,9 +67,9 @@ function ProfileContent() {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900 flex flex-col">
+    <div className="min-h-screen bg-white flex flex-col">
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700 shadow-md">
+      <header className="sticky top-0 z-10 bg-white border-b border-gray-300 shadow-md">
         <div className="flex items-center px-4 py-3">
           <button
             onClick={handleBack}
@@ -80,7 +80,7 @@ function ProfileContent() {
               <path d="M19 12H5M12 19l-7-7 7-7" />
             </svg>
           </button>
-          <h1 className="flex-1 text-center font-semibold text-gray-900 dark:text-white text-base pr-10">
+          <h1 className="flex-1 text-center font-semibold text-gray-900 text-base pr-10">
             {t('customer.profile.title')}
           </h1>
         </div>
@@ -91,9 +91,9 @@ function ProfileContent() {
         {/* User Section */}
         <div className="flex items-center gap-4 mb-6">
           {/* Avatar */}
-          <div className="w-18 h-18 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
+          <div className="w-18 h-18 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
             {auth ? (
-              <span className="text-xl font-bold text-gray-600 dark:text-gray-300">
+              <span className="text-xl font-bold text-gray-600">
                 {auth.customer.name.charAt(0).toUpperCase()}
               </span>
             ) : (
@@ -108,16 +108,16 @@ function ProfileContent() {
           <div className="flex-1">
             {auth ? (
               <>
-                <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+                <h2 className="text-base font-semibold text-gray-900">
                   Hi, {auth.customer.name}
                 </h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-sm text-gray-500">
                   {auth.customer.phone || auth.customer.email}
                 </p>
               </>
             ) : (
               <div>
-                <h2 className="text-base font-semibold text-gray-900 dark:text-white mb-2">
+                <h2 className="text-base font-semibold text-gray-900 mb-2">
                   {t('auth.loginAsGuest')}
                 </h2>
                 <button
@@ -146,16 +146,16 @@ function ProfileContent() {
           {/* Order History */}
           <button
             onClick={handleOrderHistory}
-            className="w-full flex items-center gap-3 px-4 py-4 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow"
+            className="w-full flex items-center gap-3 px-4 py-4 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-600 dark:text-gray-400">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-600">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
               <path d="M14 2v6h6" />
               <path d="M16 13H8" />
               <path d="M16 17H8" />
               <path d="M10 9H8" />
             </svg>
-            <span className="flex-1 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
+            <span className="flex-1 text-left text-sm font-medium text-gray-700">
               {t('customer.profile.orderHistory')}
             </span>
           </button>
@@ -163,13 +163,13 @@ function ProfileContent() {
           {/* Language Selector */}
           <button
             onClick={() => setShowLanguageModal(true)}
-            className="w-full flex items-center gap-3 px-4 py-4 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow dark:text-gray-400"
+            className="w-full flex items-center gap-3 px-4 py-4 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow"
           >
             <span className="text-xl">{localeFlag}</span>
-            <span className="flex-1 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
+            <span className="flex-1 text-left text-sm font-medium text-gray-700">
               {t('common.language')}
             </span>
-            <span className="text-sm text-gray-500 dark:text-gray-400">
+            <span className="text-sm text-gray-500">
               {localeName}
             </span>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
@@ -180,12 +180,12 @@ function ProfileContent() {
           {/* Privacy Policy */}
           <button
             onClick={() => router.push(`/${merchantCode}/privacy-policy?mode=${mode}&ref=${encodeURIComponent(`/${merchantCode}/profile?mode=${mode}`)}`)}
-            className="w-full flex items-center gap-3 px-4 py-4 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow"
+            className="w-full flex items-center gap-3 px-4 py-4 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-600 dark:text-gray-400">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-600">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
             </svg>
-            <span className="flex-1 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
+            <span className="flex-1 text-left text-sm font-medium text-gray-700">
               {t('customer.profile.privacyPolicy')}
             </span>
           </button>

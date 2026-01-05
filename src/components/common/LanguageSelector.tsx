@@ -107,7 +107,7 @@ export function LanguageSelector({
   // Don't render actual content until initialized to prevent hydration mismatch
   if (!isInitialized) {
     return (
-      <div className={`inline-flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 ${className}`}>
+      <div className={`inline-flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-gray-100 ${className}`}>
         <span className="text-sm opacity-50">...</span>
       </div>
     );
@@ -121,10 +121,10 @@ export function LanguageSelector({
         onClick={() => setIsOpen(!isOpen)}
         className={`
           inline-flex items-center gap-1.5 px-2 py-1.5 rounded-lg
-          bg-gray-100 dark:bg-gray-800
-          hover:bg-gray-200 dark:hover:bg-gray-700
+          bg-gray-100
+          hover:bg-gray-200
           transition-colors duration-150
-          text-sm font-medium text-gray-700 dark:text-gray-300
+          text-sm font-medium text-gray-700
           ${className}
         `}
         aria-label="Select language"
@@ -153,8 +153,8 @@ export function LanguageSelector({
         <div
           className={`
             absolute z-50 mt-1 py-1 w-40
-            bg-white dark:bg-gray-800
-            border border-gray-200 dark:border-gray-700
+            bg-white
+            border border-gray-200
             rounded-lg shadow-lg
             ${dropdownPosition === 'right' ? 'right-0' : 'left-0'}
           `}
@@ -171,11 +171,11 @@ export function LanguageSelector({
               className={`
                 w-full flex items-center gap-2 px-3 py-2
                 text-left text-sm
-                hover:bg-gray-100 dark:hover:bg-gray-700
+                hover:bg-gray-100
                 transition-colors duration-150
                 ${locale === loc.code 
-                  ? 'bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400 font-medium' 
-                  : 'text-gray-700 dark:text-gray-300'
+                  ? 'bg-brand-50 text-brand-600 font-medium' 
+                  : 'text-gray-700'
                 }
               `}
             >
@@ -221,7 +221,7 @@ export function LanguageToggle({ className = '' }: LanguageToggleProps) {
         disabled
         className={`
           inline-flex items-center gap-1 px-2 py-1 rounded
-          bg-gray-100 dark:bg-gray-800 opacity-50
+          bg-gray-100 opacity-50
           ${className}
         `}
       >
@@ -236,10 +236,10 @@ export function LanguageToggle({ className = '' }: LanguageToggleProps) {
       onClick={toggleLocale}
       className={`
         inline-flex items-center gap-1 px-2 py-1 rounded
-        bg-gray-100 dark:bg-gray-800
-        hover:bg-gray-200 dark:hover:bg-gray-700
+        bg-gray-100
+        hover:bg-gray-200
         transition-colors duration-150
-        text-sm font-medium text-gray-700 dark:text-gray-300
+        text-sm font-medium text-gray-700
         ${className}
       `}
       aria-label={`Switch to ${locale === 'en' ? 'Indonesian' : 'English'}`}
