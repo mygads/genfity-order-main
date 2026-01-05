@@ -10,7 +10,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { FaLightbulb, FaTimes, FaArrowRight, FaArrowLeft, FaPlay } from 'react-icons/fa';
+import { useRouter, usePathname } from 'next/navigation';
 import { useTutorial } from '../TutorialContext';
+import { getTutorialById } from '../tutorials';
 import type { TutorialId } from '../types';
 
 // ============================================
@@ -238,6 +240,8 @@ export function TipsOfTheDay({
   const [tipIndex, setTipIndex] = useState(0);
   const [isExiting, setIsExiting] = useState(false);
   const { startTutorial, isOverlayVisible } = useTutorial();
+  const router = useRouter();
+  const pathname = usePathname();
 
   // Initialize and get today's tip
   useEffect(() => {
@@ -330,12 +334,32 @@ export function TipsOfTheDay({
 
   const handleStartTutorial = useCallback(() => {
     if (currentTip?.relatedTutorial) {
+      const tutorialId = currentTip.relatedTutorial;
+      const tutorial = getTutorialById(tutorialId);
+      
       handleDismiss();
+      
+      // Check if first step has navigateTo and we're not already there
+      if (tutorial?.steps?.[0]?.navigateTo) {
+        const targetPath = tutorial.steps[0].navigateTo;
+        const isAlreadyOnPage = pathname === targetPath || pathname?.startsWith(targetPath);
+        
+        if (!isAlreadyOnPage) {
+          // Navigate first, then start tutorial after page loads
+          router.push(targetPath);
+          setTimeout(() => {
+            startTutorial(tutorialId);
+          }, 600); // Wait for navigation to complete
+          return;
+        }
+      }
+      
+      // Start tutorial immediately if no navigation needed
       setTimeout(() => {
-        startTutorial(currentTip.relatedTutorial!);
+        startTutorial(tutorialId);
       }, 350);
     }
-  }, [currentTip, handleDismiss, startTutorial]);
+  }, [currentTip, handleDismiss, startTutorial, router, pathname]);
 
   if (!mounted || !show || !currentTip || isOverlayVisible) {
     return null;

@@ -8,8 +8,10 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { useTutorial } from '../TutorialContext';
-import type { Tutorial, TutorialId } from '../types';
+import { getTutorialById } from '../tutorials';
+import type { TutorialId } from '../types';
 import {
   FaLightbulb,
   FaChevronDown,
@@ -145,35 +147,40 @@ export function HintPanel() {
     isTutorialCompleted,
   } = useTutorial();
 
+  const router = useRouter();
+  const pathname = usePathname();
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
-  const isClickInsideRef = useRef(false);
 
-  // Close on outside click
+  // Close on outside click - use a simpler approach
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      // If the click was inside the panel (tracked via ref), don't close
-      if (isClickInsideRef.current) {
-        isClickInsideRef.current = false;
-        return;
+      // Check if click is on the toggle button first
+      const button = (e.target as Element).closest('[aria-haspopup="true"]');
+      if (button) {
+        return; // Let the button handle its own click
       }
       
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
-        // Check if click is on the toggle button
-        const button = (e.target as Element).closest('[aria-haspopup="true"]');
-        if (!button) {
-          toggleHintPanel();
-        }
+      // Check if click is inside the panel
+      if (panelRef.current && panelRef.current.contains(e.target as Node)) {
+        return; // Click is inside panel, don't close
       }
+      
+      // Click is outside - close the panel
+      toggleHintPanel();
     };
 
     if (showHintPanel) {
-      document.addEventListener('mousedown', handleClickOutside);
+      // Use setTimeout to avoid capturing the same click that opened the panel
+      const timer = setTimeout(() => {
+        document.addEventListener('click', handleClickOutside);
+      }, 0);
+      
+      return () => {
+        clearTimeout(timer);
+        document.removeEventListener('click', handleClickOutside);
+      };
     }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
   }, [showHintPanel, toggleHintPanel]);
 
   // Close on escape
@@ -189,9 +196,27 @@ export function HintPanel() {
   }, [showHintPanel, toggleHintPanel]);
 
   const handleStartTutorial = useCallback((tutorialId: TutorialId) => {
-    // Start tutorial - it will automatically close the panel via state
+    const tutorial = getTutorialById(tutorialId);
+    
+    // Check if first step has navigateTo and we're not already there
+    if (tutorial?.steps?.[0]?.navigateTo) {
+      const targetPath = tutorial.steps[0].navigateTo;
+      const isAlreadyOnPage = pathname === targetPath || pathname?.startsWith(targetPath);
+      
+      if (!isAlreadyOnPage) {
+        // Navigate first, then start tutorial after page loads
+        toggleHintPanel(); // Close panel
+        router.push(targetPath);
+        setTimeout(() => {
+          startTutorial(tutorialId);
+        }, 500); // Wait for navigation to complete
+        return;
+      }
+    }
+    
+    // Start tutorial immediately if no navigation needed
     startTutorial(tutorialId);
-  }, [startTutorial]);
+  }, [startTutorial, router, pathname, toggleHintPanel]);
 
   const handleReset = useCallback(() => {
     resetTutorials();
@@ -263,10 +288,6 @@ export function HintPanel() {
                 onClick={() => {
                   handleStartTutorial(tutorial.id);
                 }}
-                onMouseDown={() => {
-                  // Mark that click is inside the panel to prevent outside click handler from closing
-                  isClickInsideRef.current = true;
-                }}
                 className={`flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg transition-colors touch-manipulation cursor-pointer ${
                   isCompleted
                     ? 'bg-gray-50 dark:bg-gray-700/30 hover:bg-gray-100 dark:hover:bg-gray-700/50'
@@ -311,9 +332,6 @@ export function HintPanel() {
                     e.stopPropagation();
                     handleStartTutorial(tutorial.id);
                   }}
-                  onMouseDown={() => {
-                    isClickInsideRef.current = true;
-                  }}
                   className={`shrink-0 p-1.5 sm:p-2 rounded-lg transition-colors touch-manipulation ${
                     isCompleted
                       ? 'text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 active:bg-gray-300'
@@ -341,14 +359,12 @@ export function HintPanel() {
             <div className="flex-1" />
             <button
               onClick={() => setShowResetConfirm(false)}
-              onMouseDown={() => { isClickInsideRef.current = true; }}
               className="px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 touch-manipulation"
             >
               Cancel
             </button>
             <button
               onClick={handleReset}
-              onMouseDown={() => { isClickInsideRef.current = true; }}
               className="px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm bg-red-500 hover:bg-red-600 active:bg-red-700 text-white rounded-lg transition-colors touch-manipulation"
             >
               Reset
@@ -357,7 +373,6 @@ export function HintPanel() {
         ) : (
           <button
             onClick={() => setShowResetConfirm(true)}
-            onMouseDown={() => { isClickInsideRef.current = true; }}
             className="w-full flex items-center justify-center gap-2 px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 rounded-lg transition-colors touch-manipulation"
           >
             <FaRedo className="w-3 h-3" />

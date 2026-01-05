@@ -128,7 +128,7 @@ export default function WatermarkSettingsPage() {
       // Combine with watermark
       const combinedSvg = `
         <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
-          <image href="${svgToDataUrl(previewSvg)}" width="100%" height="100%"/>
+          <image href="images/landing/mobile_mockup_iphone.png" width="100%" height="100%"/>
           <image href="${svgToDataUrl(watermarkSvg)}" width="100%" height="100%" opacity="${settings.opacity}"/>
         </svg>
       `;
