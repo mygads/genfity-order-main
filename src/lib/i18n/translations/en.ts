@@ -492,7 +492,6 @@ const en = {
   "admin.nav.financialSettings": "Financial Settings",
   "admin.nav.referralCodes": "Referral Codes",
   "admin.nav.stockPhotos": "Stock Photos",
-  "admin.nav.watermarkSettings": "Watermark Settings",
   "admin.nav.customers": "Customers",
   "admin.nav.influencers": "Influencers",
   "admin.nav.influencerWithdrawals": "Influencer Withdrawals",
@@ -1460,7 +1459,7 @@ const en = {
   "landing.hero.merchantCodePlaceholder": "Enter merchant code",
   "landing.hero.scanQR": "Scan QR Code",
   "landing.hero.scanInstructions": "Point your camera at the merchant's QR code",
-  "landing.hero.badges.trial": "Free Trial 14 Days",
+  "landing.hero.badges.trial": "Free Trial 30 Days",
   "landing.hero.badges.noCard": "No Credit Card",
 
   // Features

@@ -183,12 +183,12 @@ export default function MenuBooksPage() {
 
 
     return (
-        <div>
+        <div data-tutorial="menu-books-page">
             <PageBreadcrumb pageTitle={t("admin.menuBooks.title")} />
 
             <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950">
                 {/* Header */}
-                <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between" data-tutorial="menu-books-header">
                     <div>
                         <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t("admin.menuBooks.title")}</h2>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -198,6 +198,7 @@ export default function MenuBooksPage() {
                     <Link
                         href="/admin/dashboard/menu-books/create"
                         className="inline-flex items-center gap-2 rounded-lg bg-primary-500 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-primary-500/25 transition-all hover:bg-primary-600"
+                        data-tutorial="menu-books-create"
                     >
                         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -207,7 +208,7 @@ export default function MenuBooksPage() {
                 </div>
 
                 {/* Search */}
-                <div className="mb-6">
+                <div className="mb-6" data-tutorial="menu-books-search">
                     <input
                         type="text"
                         placeholder={t("admin.menuBooks.searchPlaceholder")}
@@ -226,7 +227,7 @@ export default function MenuBooksPage() {
 
                 {/* Table */}
                 {filteredBooks.length === 0 ? (
-                    <div className="rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 py-12 text-center dark:border-gray-700 dark:bg-gray-900/50">
+                    <div className="rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 py-12 text-center dark:border-gray-700 dark:bg-gray-900/50" data-tutorial="menu-books-empty">
                         <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                         </svg>
@@ -234,7 +235,7 @@ export default function MenuBooksPage() {
                         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t("admin.menuBooks.noMenuBooksDesc")}</p>
                     </div>
                 ) : (
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto" data-tutorial="menu-books-list">
                         <table className="w-full">
                             <thead>
                                 <tr className="border-b border-gray-200 dark:border-gray-700">

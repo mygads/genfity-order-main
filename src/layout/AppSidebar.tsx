@@ -38,7 +38,6 @@ import {
   FaQrcode,
   FaUserTie,
   FaImages,
-  FaStamp,
   FaHandshake,
   FaMoneyCheckAlt,
   FaUserCog,
@@ -139,12 +138,6 @@ const superAdminNavGroups: NavGroup[] = [
         roles: ["SUPER_ADMIN"],
       },
       {
-        icon: <FaMoneyBillWave />,
-        nameKey: "admin.nav.financialSettings",
-        path: "/admin/dashboard/financial-settings",
-        roles: ["SUPER_ADMIN"],
-      },
-      {
         icon: <FaUserCog />,
         nameKey: "admin.nav.influencerSettings",
         path: "/admin/dashboard/influencer-settings",
@@ -154,12 +147,6 @@ const superAdminNavGroups: NavGroup[] = [
         icon: <FaImages />,
         nameKey: "admin.nav.stockPhotos",
         path: "/admin/dashboard/stock-photos",
-        roles: ["SUPER_ADMIN"],
-      },
-      {
-        icon: <FaStamp />,
-        nameKey: "admin.nav.watermarkSettings",
-        path: "/admin/dashboard/watermark-settings",
         roles: ["SUPER_ADMIN"],
       },
     ],

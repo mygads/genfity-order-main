@@ -224,10 +224,10 @@ export default function EditSpecialPricePage() {
     }
 
     return (
-        <div>
+        <div data-tutorial="special-price-edit-page">
             <PageBreadcrumb pageTitle="Edit Special Price" />
 
-            <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950">
+            <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950" data-tutorial="special-price-edit-form">
                 <form onSubmit={handleSubmit}>
                     {error && (
                         <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
@@ -267,7 +267,7 @@ export default function EditSpecialPricePage() {
                     </div>
 
                     {/* Status Toggle */}
-                    <div className="mb-6 flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800">
+                    <div className="mb-6 flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800" data-tutorial="special-price-status">
                         <label className="relative inline-flex cursor-pointer items-center">
                             <input
                                 type="checkbox"

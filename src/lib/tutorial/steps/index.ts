@@ -40,6 +40,7 @@ export {
   activeOrdersSteps,
   kitchenDisplaySteps,
   orderHistorySteps,
+  ordersQueueSteps,
 } from './order-tutorials';
 
 // Reports & Revenue Tutorials
@@ -47,13 +48,17 @@ export {
   revenueDashboardSteps,
   reportsSteps,
   analyticsSteps,
+  superAdminAnalyticsSteps,
 } from './reports-tutorials';
 
 // Other Tutorials
 export {
   staffManagementSteps,
   specialPricesSteps,
+  specialPriceFormSteps,
   menuBooksSteps,
+  menuBookFormSteps,
+  customersManagementSteps,
   linkMenuToAddonSteps,
 } from './other-tutorials';
 

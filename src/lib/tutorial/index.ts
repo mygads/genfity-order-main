@@ -72,4 +72,10 @@ export {
   getOnboardingTutorial,
   getAvailableTutorials,
   getTutorialsByCategory,
+  // Tutorial Flows (Chained tutorials)
+  TUTORIAL_FLOWS,
+  getTutorialFlowById,
+  getTutorialsInFlow,
+  getAvailableTutorialFlows,
+  type TutorialFlow,
 } from './tutorials';

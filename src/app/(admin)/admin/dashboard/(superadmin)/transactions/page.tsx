@@ -52,8 +52,16 @@ interface Transaction {
 
 interface Summary {
   type: string;
+  currency: string;
   _sum: { amount: number };
   _count: number;
+}
+
+interface Merchant {
+  id: string;
+  name: string;
+  code: string;
+  currency: string;
 }
 
 interface DailyTrend {
@@ -78,6 +86,7 @@ export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [summary, setSummary] = useState<Summary[]>([]);
   const [dailyTrends, setDailyTrends] = useState<DailyTrend[]>([]);
+  const [merchants, setMerchants] = useState<Merchant[]>([]);
   const [showChart, setShowChart] = useState(true);
   const [pagination, setPagination] = useState<Pagination>({
     total: 0,
@@ -91,9 +100,34 @@ export default function TransactionsPage() {
   // Filter states
   const [search, setSearch] = useState('');
   const [selectedType, setSelectedType] = useState('');
+  const [selectedMerchantId, setSelectedMerchantId] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+
+  // Fetch merchants for filter dropdown
+  useEffect(() => {
+    const fetchMerchants = async () => {
+      try {
+        const token = localStorage.getItem('accessToken');
+        if (!token) return;
+
+        const response = await fetch('/api/admin/merchants?limit=1000', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data) {
+            setMerchants(data.data);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch merchants:', err);
+      }
+    };
+    fetchMerchants();
+  }, []);
 
   // Fetch transactions
   const fetchTransactions = useCallback(async (offset = 0) => {
@@ -113,6 +147,7 @@ export default function TransactionsPage() {
 
       if (search) params.set('search', search);
       if (selectedType) params.set('type', selectedType);
+      if (selectedMerchantId) params.set('merchantId', selectedMerchantId);
       if (startDate) params.set('startDate', new Date(startDate).toISOString());
       if (endDate) params.set('endDate', new Date(endDate + 'T23:59:59').toISOString());
 
@@ -137,7 +172,7 @@ export default function TransactionsPage() {
     } finally {
       setLoading(false);
     }
-  }, [pagination.limit, search, selectedType, startDate, endDate, router]);
+  }, [pagination.limit, search, selectedType, selectedMerchantId, startDate, endDate, router]);
 
   // Initial fetch and refetch on filter changes
   useEffect(() => {
@@ -152,12 +187,19 @@ export default function TransactionsPage() {
   const clearFilters = () => {
     setSearch('');
     setSelectedType('');
+    setSelectedMerchantId('');
     setStartDate('');
     setEndDate('');
   };
 
-  // Format currency with merchant's settings
+  // Format currency with proper locale
   const formatCurrency = (amount: number, currency: string) => {
+    if (currency === 'IDR') {
+      return `Rp ${new Intl.NumberFormat('id-ID').format(Math.round(amount))}`;
+    }
+    if (currency === 'AUD') {
+      return `A$${new Intl.NumberFormat('en-AU', { minimumFractionDigits: 0 }).format(amount)}`;
+    }
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: currency,
@@ -206,7 +248,7 @@ export default function TransactionsPage() {
     fetchTransactions(newOffset);
   };
 
-  const hasActiveFilters = search || selectedType || startDate || endDate;
+  const hasActiveFilters = search || selectedType || selectedMerchantId || startDate || endDate;
   const currentPage = Math.floor(pagination.offset / pagination.limit) + 1;
   const totalPages = Math.ceil(pagination.total / pagination.limit);
 
@@ -236,39 +278,52 @@ export default function TransactionsPage() {
           </div>
         </div>
 
-        {/* Summary Cards */}
-        <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-          {TRANSACTION_TYPES.slice(1).map((type) => {
-            const stat = summary.find((s) => s.type === type.value);
-            const amount = stat?._sum?.amount || 0;
-            const count = stat?._count || 0;
-            const isPositive = type.value === 'DEPOSIT' || type.value === 'REFUND';
-            
-            return (
-              <div
-                key={type.value}
-                className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800"
-              >
-                <div className="flex items-center gap-2">
-                  {isPositive ? (
-                    <FaArrowCircleDown className="h-5 w-5 text-green-500" />
-                  ) : (
-                    <FaArrowCircleUp className="h-5 w-5 text-red-500" />
-                  )}
-                  <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                    {type.label}
-                  </span>
-                </div>
-                <p className={`mt-2 text-lg font-semibold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-                  {isPositive ? '+' : '-'}${Math.abs(Number(amount)).toLocaleString()}
-                </p>
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  {count} transactions
-                </p>
+        {/* Summary Cards - Grouped by Currency */}
+        {['AUD', 'IDR'].map((currency) => {
+          const currencySummary = summary.filter((s) => s.currency === currency);
+          if (currencySummary.length === 0) return null;
+
+          return (
+            <div key={currency} className="mb-6">
+              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-2">
+                <FaMoneyBillWave className="h-4 w-4" />
+                {currency === 'AUD' ? 'Australian Dollar (AUD)' : 'Indonesian Rupiah (IDR)'}
+              </h3>
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+                {TRANSACTION_TYPES.slice(1).map((type) => {
+                  const stat = currencySummary.find((s) => s.type === type.value);
+                  const amount = stat?._sum?.amount || 0;
+                  const count = stat?._count || 0;
+                  const isPositive = type.value === 'DEPOSIT' || type.value === 'REFUND';
+                  
+                  return (
+                    <div
+                      key={`${currency}-${type.value}`}
+                      className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800"
+                    >
+                      <div className="flex items-center gap-2">
+                        {isPositive ? (
+                          <FaArrowCircleDown className="h-5 w-5 text-green-500" />
+                        ) : (
+                          <FaArrowCircleUp className="h-5 w-5 text-red-500" />
+                        )}
+                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                          {type.label}
+                        </span>
+                      </div>
+                      <p className={`mt-2 text-lg font-semibold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                        {isPositive ? '+' : '-'}{formatCurrency(Math.abs(Number(amount)), currency)}
+                      </p>
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        {count} transactions
+                      </p>
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
-        </div>
+            </div>
+          );
+        })}
 
         {/* Transaction Trends Chart */}
         {dailyTrends.length > 0 && (
@@ -421,7 +476,26 @@ export default function TransactionsPage() {
 
           {/* Expanded Filters */}
           {showFilters && (
-            <div className="mt-4 grid grid-cols-1 gap-4 border-t border-gray-200 pt-4 dark:border-gray-700 sm:grid-cols-3">
+            <div className="mt-4 grid grid-cols-1 gap-4 border-t border-gray-200 pt-4 dark:border-gray-700 sm:grid-cols-4">
+              {/* Merchant Filter */}
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Merchant
+                </label>
+                <select
+                  value={selectedMerchantId}
+                  onChange={(e) => setSelectedMerchantId(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                >
+                  <option value="">All Merchants</option>
+                  {merchants.map((merchant) => (
+                    <option key={merchant.id} value={merchant.id}>
+                      {merchant.name} ({merchant.code}) - {merchant.currency}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               {/* Type Filter */}
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">

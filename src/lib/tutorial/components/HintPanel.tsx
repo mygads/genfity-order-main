@@ -196,27 +196,12 @@ export function HintPanel() {
   }, [showHintPanel, toggleHintPanel]);
 
   const handleStartTutorial = useCallback((tutorialId: TutorialId) => {
-    const tutorial = getTutorialById(tutorialId);
-    
-    // Check if first step has navigateTo and we're not already there
-    if (tutorial?.steps?.[0]?.navigateTo) {
-      const targetPath = tutorial.steps[0].navigateTo;
-      const isAlreadyOnPage = pathname === targetPath || pathname?.startsWith(targetPath);
-      
-      if (!isAlreadyOnPage) {
-        // Navigate first, then start tutorial after page loads
-        toggleHintPanel(); // Close panel
-        router.push(targetPath);
-        setTimeout(() => {
-          startTutorial(tutorialId);
-        }, 500); // Wait for navigation to complete
-        return;
-      }
-    }
-    
-    // Start tutorial immediately if no navigation needed
+    // Always start the tutorial from step 0
+    // The TutorialSpotlight will show the navigation step first
+    // and handle navigation when user clicks the action button
+    toggleHintPanel(); // Close panel
     startTutorial(tutorialId);
-  }, [startTutorial, router, pathname, toggleHintPanel]);
+  }, [startTutorial, toggleHintPanel]);
 
   const handleReset = useCallback(() => {
     resetTutorials();

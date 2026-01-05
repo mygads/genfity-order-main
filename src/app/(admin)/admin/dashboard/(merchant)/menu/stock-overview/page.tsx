@@ -450,10 +450,10 @@ export default function StockOverviewPage() {
   }
 
   return (
-    <div>
+    <div data-tutorial="stock-overview-page">
       <div className="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-950">
         {/* Header */}
-        <div className="border-b border-gray-200 bg-gray-50/50 px-6 py-5 dark:border-gray-800 dark:bg-gray-900/50">
+        <div className="border-b border-gray-200 bg-gray-50/50 px-6 py-5 dark:border-gray-800 dark:bg-gray-900/50" data-tutorial="stock-overview-header">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-center gap-4">
               <div>
@@ -462,7 +462,7 @@ export default function StockOverviewPage() {
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2" data-tutorial="stock-quick-actions">
               {/* Quick Actions Dropdown */}
               <div className="relative">
                 <button
@@ -548,9 +548,9 @@ export default function StockOverviewPage() {
 
 
           {/* Tabs, Filter, and Search */}
-          <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between" data-tutorial="stock-filters">
             {/* Tabs */}
-            <div className="inline-flex rounded-xl border border-gray-200 bg-gray-100 p-1 dark:border-gray-700 dark:bg-gray-800">
+            <div className="inline-flex rounded-xl border border-gray-200 bg-gray-100 p-1 dark:border-gray-700 dark:bg-gray-800" data-tutorial="stock-tabs">
               <button
                 onClick={() => { setActiveTab('all'); setActiveFilter('all'); }}
                 className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all ${activeTab === 'all'
@@ -584,7 +584,7 @@ export default function StockOverviewPage() {
             </div>
 
             {/* Search and Status Filter */}
-            <div className="flex flex-wrap gap-3 items-center">
+            <div className="flex flex-wrap gap-3 items-center" data-tutorial="stock-search">
               <div className="relative max-w-md flex-1">
                 <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
                   <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -634,7 +634,7 @@ export default function StockOverviewPage() {
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" data-tutorial="stock-items-grid">
               {filteredItems.map((item) => (
                 <StockStatusCard
                   key={`${item.type}-${item.id}`}

@@ -192,9 +192,9 @@ export default function QueueDisplayPage() {
   }
 
   return (
-    <div className={`${displayMode !== 'normal' ? 'fixed inset-0 z-50 overflow-auto bg-gray-950' : ''}`}>
+    <div data-tutorial="queue-page" className={`${displayMode !== 'normal' ? 'fixed inset-0 z-50 overflow-auto bg-gray-950' : ''}`}>
       {/* Header - Sticky when in clean/fullscreen mode */}
-      <div className={`${displayMode !== 'normal' ? 'sticky top-0 z-40 bg-gray-950/95 backdrop-blur-sm px-6 pt-6 pb-4 border-b border-gray-800 shadow-sm' : ''}`}>
+      <div data-tutorial="queue-header" className={`${displayMode !== 'normal' ? 'sticky top-0 z-40 bg-gray-950/95 backdrop-blur-sm px-6 pt-6 pb-4 border-b border-gray-800 shadow-sm' : ''}`}>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h1 className={`font-bold ${displayMode !== 'normal' ? 'text-4xl text-white' : 'text-2xl text-gray-800 dark:text-white/90'}`}>
@@ -208,9 +208,10 @@ export default function QueueDisplayPage() {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div data-tutorial="queue-controls" className="flex flex-wrap items-center gap-3">
             {/* Auto-refresh Toggle */}
             <button
+              data-tutorial="queue-auto-refresh"
               onClick={() => setAutoRefresh(!autoRefresh)}
               className={`flex h-10 items-center gap-2 rounded-lg border px-4 text-sm font-medium transition-colors ${
                 autoRefresh
@@ -233,6 +234,7 @@ export default function QueueDisplayPage() {
 
             {/* Progressive Display Mode: Normal → Clean → Fullscreen */}
             <button
+              data-tutorial="queue-display-mode"
               onClick={async () => {
                 if (displayMode === 'normal') {
                   setDisplayMode('clean');
@@ -289,7 +291,7 @@ export default function QueueDisplayPage() {
 
         {/* Queue Grid - Large order number cards */}
         {orders.length > 0 ? (
-          <div className={`grid gap-6 ${
+          <div data-tutorial="queue-grid" className={`grid gap-6 ${
             displayMode !== 'normal'
               ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
               : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
@@ -297,6 +299,7 @@ export default function QueueDisplayPage() {
             {orders.map((order, index) => (
               <div
                 key={String(order.id)}
+                data-tutorial={index === 0 ? "queue-order-card" : undefined}
                 className={`group relative overflow-hidden rounded-2xl border-2 transition-all duration-300 hover:scale-105 hover:shadow-2xl ${
                   index === 0
                     ? 'border-success-400 bg-linear-to-br from-success-500 to-success-600 text-white shadow-lg shadow-success-500/30 animate-pulse'
@@ -348,6 +351,7 @@ export default function QueueDisplayPage() {
 
                   {/* Mark as Completed button (for staff) */}
                   <button
+                    data-tutorial={index === 0 ? "queue-pickup-btn" : undefined}
                     onClick={() => handleMarkCompleted(String(order.id))}
                     className={`mt-4 flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-semibold transition-all ${
                       index === 0
@@ -364,7 +368,7 @@ export default function QueueDisplayPage() {
           </div>
         ) : (
           /* Empty State */
-          <div className={`flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 dark:border-gray-700 dark:bg-gray-900 ${
+          <div data-tutorial="queue-empty-state" className={`flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 dark:border-gray-700 dark:bg-gray-900 ${
             displayMode !== 'normal' ? 'min-h-[60vh] py-20' : 'py-16'
           }`}>
             <div className={`rounded-full bg-gray-100 dark:bg-gray-800 ${displayMode !== 'normal' ? 'p-8' : 'p-6'}`}>

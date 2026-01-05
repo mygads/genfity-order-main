@@ -485,7 +485,6 @@ const id = {
   "admin.nav.subscriptionSettings": "Pengaturan Langganan",
   "admin.nav.referralCodes": "Kode Referral",
   "admin.nav.stockPhotos": "Foto Stok",
-  "admin.nav.watermarkSettings": "Pengaturan Watermark",
   "admin.nav.customers": "Pelanggan",
   "admin.nav.influencers": "Influencer",
   "admin.nav.influencerWithdrawals": "Penarikan Influencer",
@@ -1454,7 +1453,7 @@ const id = {
   "landing.hero.merchantCodePlaceholder": "Masukkan kode merchant",
   "landing.hero.scanQR": "Scan Kode QR",
   "landing.hero.scanInstructions": "Arahkan kamera ke kode QR merchant",
-  "landing.hero.badges.trial": "Free Trial 14 Hari",
+  "landing.hero.badges.trial": "Free Trial 30 Hari",
   "landing.hero.badges.noCard": "Tanpa Kartu Kredit",
 
   // Features

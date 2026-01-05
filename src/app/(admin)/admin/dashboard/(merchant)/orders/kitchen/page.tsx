@@ -211,7 +211,7 @@ export default function KitchenDisplayPage() {
   }
 
   return (
-    <div className={`${displayMode !== 'normal' ? 'fixed inset-0 z-50 overflow-hidden bg-gray-50 dark:bg-gray-950 flex flex-col' : 'flex flex-col h-[calc(100vh-100px)]'}`}>
+    <div data-tutorial="kitchen-page" className={`${displayMode !== 'normal' ? 'fixed inset-0 z-50 overflow-hidden bg-gray-50 dark:bg-gray-950 flex flex-col' : 'flex flex-col h-[calc(100vh-100px)]'}`}>
       {/* Header - Clean Minimal Design */}
       <div className={`sticky top-0 z-40 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 ${displayMode !== 'normal' ? 'px-6 py-4' : 'pb-4 -mx-6 px-6 pt-0'}`}>
         <div className="flex items-center justify-between gap-4">
@@ -257,6 +257,7 @@ export default function KitchenDisplayPage() {
 
             {/* Display Mode Toggle */}
             <button
+              data-tutorial="fullscreen-btn"
               onClick={async () => {
                 if (displayMode === 'normal') {
                   setDisplayMode('clean');
@@ -299,7 +300,7 @@ export default function KitchenDisplayPage() {
       {/* Content Area */}
       <div className={`flex-1 overflow-hidden ${displayMode !== 'normal' ? 'px-6 py-6' : 'pt-6'}`}>
         {/* Kitchen Grid - 2 columns, full height */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
+        <div data-tutorial="kitchen-grid" className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
           {/* Pending Column */}
           <div className="rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 overflow-hidden flex flex-col">
             <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 shrink-0">
@@ -428,6 +429,7 @@ function KitchenCard({ order, onCardClick, onAction, actionLabel, actionIcon, ac
 
   return (
     <div
+      data-tutorial="kitchen-order-card"
       onClick={() => onCardClick(order)}
       className={`
         rounded-lg border bg-white dark:bg-gray-900 
@@ -474,8 +476,8 @@ function KitchenCard({ order, onCardClick, onAction, actionLabel, actionIcon, ac
         </div>
       </div>
 
-      {/* Order Items - Full Details */}
-      <div className="p-4">
+        {/* Order Items - Full Details */}
+        <div data-tutorial="kitchen-item-list" className="p-4">
         <div className="space-y-3">
           {items.map((item, idx) => (
             <div key={idx} className="flex gap-3">
@@ -527,6 +529,7 @@ function KitchenCard({ order, onCardClick, onAction, actionLabel, actionIcon, ac
 
         {/* Action Button */}
         <button
+          data-tutorial={actionColor === 'success' ? 'kitchen-ready-btn' : 'kitchen-bump-btn'}
           onClick={onAction}
           className={`
             mt-4 w-full flex items-center justify-center gap-2 py-2.5 rounded-lg 

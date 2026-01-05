@@ -417,13 +417,13 @@ export default function CreateMenuPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="p-6 lg:p-8">
+        <form onSubmit={handleSubmit} className="p-6 lg:p-8" data-tutorial="menu-form">
           {/* Main Content Grid */}
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
             {/* Left Column - Basic Info */}
             <div className="space-y-6 lg:col-span-2">
               {/* Name Input */}
-              <div>
+              <div data-tutorial="menu-name">
                 <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                   <svg className="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" />
@@ -442,7 +442,7 @@ export default function CreateMenuPage() {
               </div>
 
               {/* Description */}
-              <div>
+              <div data-tutorial="menu-description">
                 <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                   <svg className="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
@@ -460,7 +460,7 @@ export default function CreateMenuPage() {
               </div>
 
               {/* Price */}
-              <div>
+              <div data-tutorial="menu-price">
                 <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                   <svg className="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -486,7 +486,7 @@ export default function CreateMenuPage() {
               </div>
 
               {/* Status Toggle */}
-              <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/50">
+              <div data-tutorial="menu-status" className="flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/50">
                 <div className="flex items-center gap-3">
                   <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${formData.isActive ? 'bg-success-100 text-success-600 dark:bg-success-900/30 dark:text-success-400' : 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}>
                     <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -506,7 +506,7 @@ export default function CreateMenuPage() {
             </div>
 
             {/* Right Column - Image Upload */}
-            <div className="lg:col-span-1">
+            <div data-tutorial="menu-image" className="lg:col-span-1">
               <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                 <svg className="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -645,7 +645,7 @@ export default function CreateMenuPage() {
           {/* Category & Addon Selection - Collapsible Sections */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 mb-8">
             {/* Category Selection Card */}
-            <div className={`rounded-2xl border-2 p-5 transition-all ${showCategorySection
+            <div data-tutorial="menu-category" className={`rounded-2xl border-2 p-5 transition-all ${showCategorySection
               ? 'border-blue-300 bg-blue-50/50 dark:border-blue-700 dark:bg-blue-900/10'
               : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-800 dark:bg-gray-900/50 dark:hover:border-gray-700'
               }`}>
@@ -739,7 +739,7 @@ export default function CreateMenuPage() {
             </div>
 
             {/* Addon Category Selection Card */}
-            <div className={`rounded-2xl border-2 p-5 transition-all ${showAddonSection
+            <div data-tutorial="menu-addons" className={`rounded-2xl border-2 p-5 transition-all ${showAddonSection
               ? 'border-purple-300 bg-purple-50/50 dark:border-purple-700 dark:bg-purple-900/10'
               : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-800 dark:bg-gray-900/50 dark:hover:border-gray-700'
               }`}>
@@ -864,7 +864,7 @@ export default function CreateMenuPage() {
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
 
             {/* Stock Management Card */}
-            <div className={`rounded-2xl border-2 p-5 transition-all ${formData.trackStock
+            <div data-tutorial="menu-stock" className={`rounded-2xl border-2 p-5 transition-all ${formData.trackStock
               ? 'border-warning-300 bg-warning-50/50 dark:border-warning-700 dark:bg-warning-900/10'
               : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-800 dark:bg-gray-900/50 dark:hover:border-gray-700'
               }`}>
@@ -1014,6 +1014,7 @@ export default function CreateMenuPage() {
             isSubmitting={submitting}
             submitLabel="Create Menu Item"
             submittingLabel="Creating..."
+            submitDataTutorial="menu-save-btn"
           />
         </form>
       </div>

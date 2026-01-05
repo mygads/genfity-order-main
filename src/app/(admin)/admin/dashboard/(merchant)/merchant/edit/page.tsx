@@ -1551,6 +1551,7 @@ export default function EditMerchantPage() {
               isSubmitting={submitting}
               submitLabel={t("admin.merchantEdit.saveChanges")}
               submittingLabel={t("admin.merchantEdit.saving")}
+              submitDataTutorial="settings-save-btn"
           />
         </form>
       </div>

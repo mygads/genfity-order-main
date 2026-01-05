@@ -704,7 +704,7 @@ export default function MerchantCategoriesPage() {
                   />
                 </div>
 
-                <div>
+                <div data-tutorial="category-description-field">
                   <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                     {t("admin.categories.description")}
                   </label>
@@ -728,6 +728,7 @@ export default function MerchantCategoriesPage() {
                   <button
                     type="submit"
                     disabled={submitting}
+                    data-tutorial="category-save-btn"
                     className="flex-1 h-11 rounded-lg bg-primary-500 text-sm font-medium text-white hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {submitting ? t("admin.categories.saving") : editingId ? t("admin.categories.updateCategory") : t("admin.categories.createCategory")}
@@ -924,6 +925,7 @@ export default function MerchantCategoriesPage() {
                               </button>
                               <button
                                 onClick={() => handleEdit(category)}
+                                data-tutorial="category-edit-btn"
                                 className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
                                 title={t("admin.categories.edit")}
                               >

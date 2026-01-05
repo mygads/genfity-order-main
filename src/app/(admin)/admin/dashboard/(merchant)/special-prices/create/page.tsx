@@ -189,10 +189,10 @@ export default function CreateSpecialPricePage() {
     }
 
     return (
-        <div>
+        <div data-tutorial="special-price-create-page">
             <PageBreadcrumb pageTitle="Create Special Price" />
 
-            <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950">
+            <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950" data-tutorial="special-price-form">
                 <form onSubmit={handleSubmit}>
                     {error && (
                         <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
@@ -201,8 +201,8 @@ export default function CreateSpecialPricePage() {
                     )}
 
                     {/* Basic Info */}
-                    <div className="mb-6 grid gap-6 md:grid-cols-2">
-                        <div>
+                    <div className="mb-6 grid gap-6 md:grid-cols-2" data-tutorial="special-price-basic-info">
+                        <div data-tutorial="special-price-name">
                             <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                                 Name <span className="text-red-500">*</span>
                             </label>
@@ -234,7 +234,7 @@ export default function CreateSpecialPricePage() {
                     </div>
 
                     {/* Date Range */}
-                    <div className="mb-6 grid gap-6 md:grid-cols-2">
+                    <div className="mb-6 grid gap-6 md:grid-cols-2" data-tutorial="special-price-dates">
                         <div>
                             <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                                 Start Date <span className="text-red-500">*</span>
@@ -260,7 +260,7 @@ export default function CreateSpecialPricePage() {
                     </div>
 
                     {/* Applicable Days */}
-                    <div className="mb-6">
+                    <div className="mb-6" data-tutorial="special-price-days">
                         <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                             Applicable Days <span className="text-red-500">*</span>
                         </label>
@@ -322,7 +322,7 @@ export default function CreateSpecialPricePage() {
 
                     {/* Promo Price Editor */}
                     {priceItems.length > 0 && (
-                        <div className="mb-6">
+                        <div className="mb-6" data-tutorial="special-price-promo-editor">
                             <label className="mb-3 block text-sm font-medium text-gray-700 dark:text-gray-300">
                                 Set Promo Prices
                             </label>

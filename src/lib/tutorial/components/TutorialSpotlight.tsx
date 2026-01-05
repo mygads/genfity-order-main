@@ -196,17 +196,69 @@ export function TutorialSpotlight() {
 
     // Check if element is in sidebar and scroll sidebar to show it
     const sidebar = document.querySelector('[data-sidebar]');
+    const sidebarScrollContainer = document.querySelector('[data-sidebar-scroll]');
     if (sidebar && sidebar.contains(element)) {
-      // Scroll sidebar to make element visible
-      const sidebarRect = sidebar.getBoundingClientRect();
-      if (rect.top < sidebarRect.top + 50 || rect.bottom > sidebarRect.bottom - 50) {
+      // Scroll sidebar scroll container to make element visible
+      if (sidebarScrollContainer) {
+        const scrollRect = sidebarScrollContainer.getBoundingClientRect();
+        const elementRect = element.getBoundingClientRect();
+        
+        // Check if element is outside visible area of scroll container
+        if (elementRect.top < scrollRect.top || elementRect.bottom > scrollRect.bottom) {
+          // Calculate the scroll position to center the element
+          const htmlElement = element as HTMLElement;
+          const elementOffsetTop = htmlElement.offsetTop || 0;
+          const containerHeight = sidebarScrollContainer.clientHeight;
+          const scrollTo = elementOffsetTop - containerHeight / 2 + htmlElement.offsetHeight / 2;
+          
+          sidebarScrollContainer.scrollTo({
+            top: Math.max(0, scrollTo),
+            behavior: 'smooth'
+          });
+          
+          // Wait for scroll to complete, then recalculate position
+          setTimeout(() => {
+            const newRect = element.getBoundingClientRect();
+            const padding = currentStep?.spotlightPadding ?? 8;
+            setSpotlightRect({
+              top: newRect.top - padding,
+              left: newRect.left - padding,
+              width: newRect.width + padding * 2,
+              height: newRect.height + padding * 2,
+            });
+          }, 350); // Wait for smooth scroll to complete
+        }
+      } else {
+        // Fallback: use scrollIntoView
         element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Wait for scroll animation
+        setTimeout(() => {
+          const newRect = element.getBoundingClientRect();
+          const padding = currentStep?.spotlightPadding ?? 8;
+          setSpotlightRect({
+            top: newRect.top - padding,
+            left: newRect.left - padding,
+            width: newRect.width + padding * 2,
+            height: newRect.height + padding * 2,
+          });
+        }, 350);
       }
     } else {
       // For main content, scroll window if needed
       const viewportHeight = window.innerHeight;
       if (rect.top < 100 || rect.bottom > viewportHeight - 100) {
         element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Wait for scroll animation
+        setTimeout(() => {
+          const newRect = element.getBoundingClientRect();
+          const padding = currentStep?.spotlightPadding ?? 8;
+          setSpotlightRect({
+            top: newRect.top - padding,
+            left: newRect.left - padding,
+            width: newRect.width + padding * 2,
+            height: newRect.height + padding * 2,
+          });
+        }, 350);
       }
     }
   }, [currentStep]);
@@ -314,27 +366,14 @@ export function TutorialSpotlight() {
     }
   }, [isOverlayVisible, currentStep, currentStepIndex]);
 
-  // Auto-skip navigation steps when already on the target page
+  // Handle navigation when user has clicked action button
+  // Do NOT auto-skip navigation steps - let user see the step first
   useEffect(() => {
     if (!isOverlayVisible || !currentStep || !activeTutorial || isNavigating) return;
 
-    // If current step has navigateTo and we're already on that page, auto-advance
-    if (currentStep.navigateTo) {
-      const targetPath = currentStep.navigateTo;
-      const isAlreadyOnPage = pathname === targetPath || pathname?.startsWith(targetPath);
-
-      if (isAlreadyOnPage) {
-        // Wait a bit for UI to be ready, then auto-advance
-        const timer = setTimeout(() => {
-          if (currentStepIndex >= activeTutorial.steps.length - 1) {
-            completeTutorial();
-          } else {
-            nextStep();
-          }
-        }, 300);
-        return () => clearTimeout(timer);
-      }
-    }
+    // Only auto-advance if we navigated via action button (isNavigating was true and now we're on target)
+    // This prevents auto-skipping when tutorial starts
+    // The navigation + advance is handled in handleNext with actionText
   }, [isOverlayVisible, currentStep, activeTutorial, currentStepIndex, pathname, nextStep, completeTutorial, isNavigating]);
 
   // Separate effect for recalculating positions
@@ -361,6 +400,7 @@ export function TutorialSpotlight() {
 
     // Only listen to sidebar scroll, not body/window scroll
     const sidebar = document.querySelector('[data-sidebar]');
+    const sidebarScrollContainer = document.querySelector('[data-sidebar-scroll]');
     const handleSidebarScroll = () => {
       // Only recalculate if target element is inside sidebar
       if (currentStep?.targetSelector) {
@@ -373,15 +413,15 @@ export function TutorialSpotlight() {
 
     window.addEventListener('resize', handleResize);
     
-    // Listen to sidebar scroll specifically
-    if (sidebar) {
-      sidebar.addEventListener('scroll', handleSidebarScroll, { passive: true });
+    // Listen to sidebar scroll container specifically (the actual scrollable element)
+    if (sidebarScrollContainer) {
+      sidebarScrollContainer.addEventListener('scroll', handleSidebarScroll, { passive: true });
     }
 
     return () => {
       window.removeEventListener('resize', handleResize);
-      if (sidebar) {
-        sidebar.removeEventListener('scroll', handleSidebarScroll);
+      if (sidebarScrollContainer) {
+        sidebarScrollContainer.removeEventListener('scroll', handleSidebarScroll);
       }
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);

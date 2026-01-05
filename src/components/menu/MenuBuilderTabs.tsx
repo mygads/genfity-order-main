@@ -307,7 +307,7 @@ export default function MenuBuilderTabs({
   };
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-950">
+    <div className="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-950" data-tutorial="builder-form">
       {/* Step Progress Indicator */}
       <div className="border-b border-gray-200 bg-gray-50/50 px-6 py-4 dark:border-gray-800 dark:bg-gray-900/50">
         <div className="flex items-center justify-between">
@@ -380,7 +380,7 @@ export default function MenuBuilderTabs({
       <form onSubmit={handleSubmit(handleFormSubmit)} className="p-6 lg:p-8">
         {/* Basic Info Tab */}
         {activeTab === 'basic' && (
-          <div className="space-y-6">
+          <div className="space-y-6" data-tutorial="builder-basic">
             {/* Section Header */}
             <div className="mb-6">
               <h3 className="text-xl font-bold text-gray-800 dark:text-white">Basic Information</h3>
@@ -464,7 +464,7 @@ export default function MenuBuilderTabs({
               </div>
 
               {/* Right Column - Image Upload */}
-              <div className="lg:col-span-1">
+              <div className="lg:col-span-1" data-tutorial="builder-image">
                 <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                   <svg className="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -754,7 +754,7 @@ export default function MenuBuilderTabs({
 
         {/* Categories Tab */}
         {activeTab === 'categories' && (
-          <div className="space-y-6">
+          <div className="space-y-6" data-tutorial="builder-categories">
             <div>
               <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">Select Categories</h3>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -806,7 +806,7 @@ export default function MenuBuilderTabs({
 
         {/* Addons Tab */}
         {activeTab === 'addons' && (
-          <div className="space-y-6">
+          <div className="space-y-6" data-tutorial="builder-addons">
             <div>
               <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">Select Add-on Categories</h3>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -880,7 +880,7 @@ export default function MenuBuilderTabs({
 
         {/* Preview Tab */}
         {activeTab === 'preview' && (
-          <div className="space-y-6">
+          <div className="space-y-6" data-tutorial="builder-preview">
             <div>
               <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">Customer Preview</h3>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -1104,6 +1104,7 @@ export default function MenuBuilderTabs({
             ) : (
               <button
                 type="submit"
+                data-tutorial="builder-save"
                 className="inline-flex h-11 items-center gap-2 rounded-lg bg-success-500 px-8 text-sm font-medium text-white transition-colors hover:bg-success-600 disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={isLoading || !watch('name') || !watch('price') || watch('price') <= 0}
               >

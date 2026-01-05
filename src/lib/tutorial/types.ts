@@ -31,15 +31,20 @@ export type TutorialId =
   | 'active-orders'           // Active orders management
   | 'kitchen-display'         // Kitchen display system
   | 'order-history'           // View order history
+  | 'orders-queue'            // Queue/lounge display for ready orders
   // Reports & Analytics
   | 'revenue-dashboard'       // View revenue dashboard
   | 'revenue-reports'         // Revenue reports
   | 'reports'                 // Generate reports
   | 'analytics'               // Analytics insights
+  | 'superadmin-analytics'    // Super admin analytics dashboard
   // Other Features
   | 'staff-management'        // Manage staff accounts
   | 'special-prices'          // Special pricing & discounts
+  | 'special-price-form'      // Special price create/edit form
   | 'menu-books'              // Menu books management
+  | 'menu-book-form'          // Menu book create/edit form
+  | 'customers-management'    // Customer management (super admin)
   | 'link-addon-to-menu'      // Link addon categories to menu items
   | 'getting-started'         // Getting started guide
   | 'dashboard-overview'      // Dashboard overview

@@ -23,6 +23,8 @@ interface AdminFormFooterProps {
   showSubmit?: boolean;
   /** Additional class for the container */
   className?: string;
+  /** data-tutorial attribute for submit button (for tutorial spotlight) */
+  submitDataTutorial?: string;
 }
 
 /**
@@ -49,6 +51,7 @@ export default function AdminFormFooter({
   submitType = "submit",
   showSubmit = true,
   className = "",
+  submitDataTutorial,
 }: AdminFormFooterProps) {
   return (
     <>
@@ -78,6 +81,7 @@ export default function AdminFormFooter({
                 type={submitType}
                 onClick={submitType === "button" ? onSubmit : undefined}
                 disabled={isSubmitting || disabled}
+                data-tutorial={submitDataTutorial}
                 className="h-10 rounded-lg bg-brand-500 px-5 text-sm font-medium text-white transition-colors hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isSubmitting ? submittingLabel : submitLabel}

@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/useToast";
 import { useSWRStatic } from "@/hooks/useSWRWithAuth";
 import { useSWRConfig } from "swr";
 import { useTranslation } from "@/lib/i18n/useTranslation";
-import { FaDollarSign, FaSyncAlt } from "react-icons/fa";
+import { FaDollarSign, FaSyncAlt, FaMoneyBillWave } from "react-icons/fa";
 
 interface SubscriptionPlan {
     id: string;
@@ -18,10 +18,12 @@ interface SubscriptionPlan {
     depositMinimumIdr: number;
     orderFeeIdr: number;
     monthlyPriceIdr: number;
+    minDepositIdr: number;
     // AUD
     depositMinimumAud: number;
     orderFeeAud: number;
     monthlyPriceAud: number;
+    minDepositAud: number;
     // Bank Info
     bankNameIdr: string | null;
     bankAccountIdr: string | null;
@@ -50,7 +52,7 @@ export default function SubscriptionSettingsPage() {
     const { success: showSuccess, error: showError } = useToast();
     const { mutate } = useSWRConfig();
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [activeTab, setActiveTab] = useState<'pricing' | 'bank'>('pricing');
+    const [activeTab, setActiveTab] = useState<'pricing' | 'bank' | 'deposit'>('pricing');
 
     const {
         data: response,
@@ -65,10 +67,12 @@ export default function SubscriptionSettingsPage() {
         depositMinimumIdr: 100000,
         orderFeeIdr: 250,
         monthlyPriceIdr: 100000,
+        minDepositIdr: 50000,
         // AUD
         depositMinimumAud: 15,
         orderFeeAud: 0.04,
         monthlyPriceAud: 15,
+        minDepositAud: 10,
         // Bank IDR
         bankNameIdr: '',
         bankAccountIdr: '',
@@ -87,9 +91,11 @@ export default function SubscriptionSettingsPage() {
                 depositMinimumIdr: plan.depositMinimumIdr,
                 orderFeeIdr: plan.orderFeeIdr,
                 monthlyPriceIdr: plan.monthlyPriceIdr,
+                minDepositIdr: plan.minDepositIdr || 50000,
                 depositMinimumAud: plan.depositMinimumAud,
                 orderFeeAud: plan.orderFeeAud,
                 monthlyPriceAud: plan.monthlyPriceAud,
+                minDepositAud: plan.minDepositAud || 10,
                 bankNameIdr: plan.bankNameIdr || '',
                 bankAccountIdr: plan.bankAccountIdr || '',
                 bankAccountNameIdr: plan.bankAccountNameIdr || '',
@@ -155,28 +161,40 @@ export default function SubscriptionSettingsPage() {
 
             <div className="max-w-3xl">
                 {/* Tabs */}
-                <div className="flex gap-2 mb-6">
+                <div className="flex gap-2 mb-6 flex-wrap">
                     <button
                         onClick={() => setActiveTab('pricing')}
-                        className={`px-4 py-2 rounded-lg font-medium transition-colors
+                        className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2
               ${activeTab === 'pricing'
                                 ? 'bg-orange-500 text-white'
                                 : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200'
                             }`}
                     >
+                        <FaDollarSign className="w-4 h-4" />
                         {t("admin.subscriptionSettings.tabs.pricing")}
                     </button>
                     <button
                         onClick={() => setActiveTab('bank')}
-                        className={`px-4 py-2 rounded-lg font-medium transition-colors
+                        className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2
               ${activeTab === 'bank'
                                 ? 'bg-orange-500 text-white'
                                 : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200'
                             }`}
                     >
+                        <FaSyncAlt className="w-4 h-4" />
                         {t("admin.subscriptionSettings.tabs.bank")}
                     </button>
-
+                    <button
+                        onClick={() => setActiveTab('deposit')}
+                        className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2
+              ${activeTab === 'deposit'
+                                ? 'bg-orange-500 text-white'
+                                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200'
+                            }`}
+                    >
+                        <FaMoneyBillWave className="w-4 h-4" />
+                        Minimum Deposit
+                    </button>
                 </div>
 
                 {/* Pricing Tab */}
@@ -451,6 +469,87 @@ export default function SubscriptionSettingsPage() {
                     </div>
                 )}
 
+                {/* Minimum Deposit Tab */}
+                {activeTab === 'deposit' && (
+                    <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+                        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                            Minimum Deposit Settings
+                        </h2>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                            Configure the minimum deposit amount for merchants in different currencies.
+                        </p>
+
+                        {/* Info Card */}
+                        <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 mb-6">
+                            <div className="flex items-start gap-3">
+                                <FaMoneyBillWave className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                                <div>
+                                    <p className="font-medium text-blue-900 dark:text-blue-200">About Minimum Deposit</p>
+                                    <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                                        This is the minimum amount merchants must deposit to top up their balance.
+                                        Set appropriate amounts based on local currency values.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Deposit Settings */}
+                        <div className="grid gap-6 sm:grid-cols-2 mb-6">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Minimum Deposit (IDR)
+                                </label>
+                                <div className="relative">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">Rp</span>
+                                    <input
+                                        type="number"
+                                        value={formData.minDepositIdr}
+                                        onChange={(e) => handleChange('minDepositIdr', Number(e.target.value))}
+                                        min={0}
+                                        step={1000}
+                                        className="w-full px-4 py-2 pl-12 rounded-lg border border-gray-300 dark:border-gray-600 
+                                            bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                                            focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                    />
+                                </div>
+                                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                    Recommended: Rp 50,000
+                                </p>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Minimum Deposit (AUD)
+                                </label>
+                                <div className="relative">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">A$</span>
+                                    <input
+                                        type="number"
+                                        value={formData.minDepositAud}
+                                        onChange={(e) => handleChange('minDepositAud', Number(e.target.value))}
+                                        min={0}
+                                        step={1}
+                                        className="w-full px-4 py-2 pl-12 rounded-lg border border-gray-300 dark:border-gray-600 
+                                            bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                                            focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                    />
+                                </div>
+                                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                    Recommended: A$ 10
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Save Button */}
+                        <button
+                            onClick={handleSubmit}
+                            disabled={isSubmitting}
+                            className="px-6 py-2 rounded-lg font-medium text-white
+                bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 transition-colors"
+                        >
+                            {isSubmitting ? t("admin.subscriptionSettings.saving") : t("admin.subscriptionSettings.saveChanges")}
+                        </button>
+                    </div>
+                )}
 
             </div>
         </div>

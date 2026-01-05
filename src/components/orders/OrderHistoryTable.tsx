@@ -218,7 +218,7 @@ export const OrderHistoryTable: React.FC<OrderHistoryTableProps> = ({
   }
 
   return (
-    <div className="space-y-4">
+    <div data-tutorial="order-history-list" className="space-y-4">
       {/* Filters & Search */}
       <div className="flex flex-col md:flex-row gap-4">
         {/* Search */}
@@ -262,7 +262,7 @@ export const OrderHistoryTable: React.FC<OrderHistoryTableProps> = ({
         </select>
 
         {/* Export Buttons */}
-        <div className="flex gap-2">
+        <div data-tutorial="export-orders-btn" className="flex gap-2">
           <button
             onClick={handleExportCSV}
             className="h-10 px-4 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-800 dark:text-white/90 font-medium text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-2"

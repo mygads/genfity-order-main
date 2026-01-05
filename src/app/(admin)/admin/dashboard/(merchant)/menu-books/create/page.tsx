@@ -116,10 +116,10 @@ export default function CreateMenuBookPage() {
     }
 
     return (
-        <div>
+        <div data-tutorial="menu-book-create-page">
             <PageBreadcrumb pageTitle="Create Menu Book" />
 
-            <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950">
+            <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950" data-tutorial="menu-book-form">
                 <form onSubmit={handleSubmit}>
                     {error && (
                         <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
@@ -128,8 +128,8 @@ export default function CreateMenuBookPage() {
                     )}
 
                     {/* Basic Info */}
-                    <div className="mb-6 grid gap-6 md:grid-cols-2">
-                        <div>
+                    <div className="mb-6 grid gap-6 md:grid-cols-2" data-tutorial="menu-book-basic-info">
+                        <div data-tutorial="menu-book-name">
                             <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                                 Name <span className="text-red-500">*</span>
                             </label>
@@ -156,7 +156,7 @@ export default function CreateMenuBookPage() {
                     </div>
 
                     {/* Menu Selection */}
-                    <div className="mb-6">
+                    <div className="mb-6" data-tutorial="menu-book-selection">
                         <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                             Select Menus ({selectedMenuIds.length} selected)
                         </label>
@@ -166,6 +166,7 @@ export default function CreateMenuBookPage() {
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Search menus..."
                             className="mb-3 h-10 w-full max-w-md rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-primary-400 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                            data-tutorial="menu-book-search"
                         />
 
                         {selectedMenuIds.length > 0 && (

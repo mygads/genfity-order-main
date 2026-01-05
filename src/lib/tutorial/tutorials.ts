@@ -32,14 +32,19 @@ import {
   activeOrdersSteps,
   kitchenDisplaySteps,
   orderHistorySteps,
+  ordersQueueSteps,
   // Reports
   revenueDashboardSteps,
   reportsSteps,
   analyticsSteps,
+  superAdminAnalyticsSteps,
   // Other
   staffManagementSteps,
   specialPricesSteps,
+  specialPriceFormSteps,
   menuBooksSteps,
+  menuBookFormSteps,
+  customersManagementSteps,
   linkMenuToAddonSteps,
   // Quick Tips
   keyboardShortcutsSteps,
@@ -265,6 +270,17 @@ export const TUTORIALS: Tutorial[] = [
     order: 17,
     estimatedTime: 2,
   },
+  {
+    id: 'orders-queue',
+    name: 'Queue Display',
+    description: 'Customer pickup display for ready orders',
+    icon: 'FaTv',
+    steps: ordersQueueSteps,
+    roles: ['MERCHANT_OWNER', 'MERCHANT_STAFF'],
+    requiredPermissions: ['ORDERS'],
+    order: 18,
+    estimatedTime: 2,
+  },
 
   // --- REPORTS TUTORIALS ---
   {
@@ -275,7 +291,7 @@ export const TUTORIALS: Tutorial[] = [
     steps: revenueDashboardSteps,
     roles: ['MERCHANT_OWNER', 'MERCHANT_STAFF'],
     requiredPermissions: ['REVENUE'],
-    order: 18,
+    order: 19,
     estimatedTime: 2,
   },
   {
@@ -286,7 +302,7 @@ export const TUTORIALS: Tutorial[] = [
     steps: reportsSteps,
     roles: ['MERCHANT_OWNER', 'MERCHANT_STAFF'],
     requiredPermissions: ['REPORTS'],
-    order: 19,
+    order: 20,
     estimatedTime: 3,
   },
   {
@@ -297,7 +313,7 @@ export const TUTORIALS: Tutorial[] = [
     steps: analyticsSteps,
     roles: ['MERCHANT_OWNER', 'MERCHANT_STAFF'],
     requiredPermissions: ['REPORTS'],
-    order: 20,
+    order: 21,
     estimatedTime: 2,
   },
 
@@ -325,6 +341,17 @@ export const TUTORIALS: Tutorial[] = [
     estimatedTime: 3,
   },
   {
+    id: 'special-price-form',
+    name: 'Create Special Price',
+    description: 'Configure discount rules and schedules',
+    icon: 'FaTags',
+    steps: specialPriceFormSteps,
+    roles: ['MERCHANT_OWNER', 'MERCHANT_STAFF'],
+    requiredPermissions: ['SPECIAL_PRICES'],
+    order: 23,
+    estimatedTime: 3,
+  },
+  {
     id: 'menu-books',
     name: 'Menu Books',
     description: 'Create different menus',
@@ -332,7 +359,38 @@ export const TUTORIALS: Tutorial[] = [
     steps: menuBooksSteps,
     roles: ['MERCHANT_OWNER', 'MERCHANT_STAFF'],
     requiredPermissions: ['MENU_BOOKS'],
-    order: 23,
+    order: 24,
+    estimatedTime: 3,
+  },
+  {
+    id: 'menu-book-form',
+    name: 'Create Menu Book',
+    description: 'Build custom menu collections',
+    icon: 'FaBookOpen',
+    steps: menuBookFormSteps,
+    roles: ['MERCHANT_OWNER', 'MERCHANT_STAFF'],
+    requiredPermissions: ['MENU_BOOKS'],
+    order: 25,
+    estimatedTime: 3,
+  },
+  {
+    id: 'customers-management',
+    name: 'Customer Management',
+    description: 'View and manage customer data',
+    icon: 'FaUsers',
+    steps: customersManagementSteps,
+    roles: ['MERCHANT_OWNER'],
+    order: 26,
+    estimatedTime: 2,
+  },
+  {
+    id: 'superadmin-analytics',
+    name: 'Platform Analytics',
+    description: 'Super admin analytics dashboard',
+    icon: 'FaChartArea',
+    steps: superAdminAnalyticsSteps,
+    roles: ['MERCHANT_OWNER'], // Super admin only in practice
+    order: 27,
     estimatedTime: 3,
   },
 
@@ -344,7 +402,7 @@ export const TUTORIALS: Tutorial[] = [
     icon: 'FaKeyboard',
     steps: keyboardShortcutsSteps,
     roles: ['MERCHANT_OWNER', 'MERCHANT_STAFF'],
-    order: 24,
+    order: 28,
     estimatedTime: 1,
   },
   {
@@ -354,7 +412,7 @@ export const TUTORIALS: Tutorial[] = [
     icon: 'FaCheckDouble',
     steps: bulkOperationsSteps,
     roles: ['MERCHANT_OWNER', 'MERCHANT_STAFF'],
-    order: 25,
+    order: 29,
     estimatedTime: 2,
   },
   {
@@ -364,7 +422,7 @@ export const TUTORIALS: Tutorial[] = [
     icon: 'FaSearch',
     steps: searchFilterSteps,
     roles: ['MERCHANT_OWNER', 'MERCHANT_STAFF'],
-    order: 26,
+    order: 30,
     estimatedTime: 1,
   },
   {
@@ -374,7 +432,7 @@ export const TUTORIALS: Tutorial[] = [
     icon: 'FaMoon',
     steps: darkModeSteps,
     roles: ['MERCHANT_OWNER', 'MERCHANT_STAFF'],
-    order: 27,
+    order: 31,
     estimatedTime: 1,
   },
   {
@@ -384,7 +442,7 @@ export const TUTORIALS: Tutorial[] = [
     icon: 'FaMobileAlt',
     steps: mobileUsageSteps,
     roles: ['MERCHANT_OWNER', 'MERCHANT_STAFF'],
-    order: 28,
+    order: 32,
     estimatedTime: 1,
   },
   {
@@ -394,7 +452,7 @@ export const TUTORIALS: Tutorial[] = [
     icon: 'FaTh',
     steps: viewModesSteps,
     roles: ['MERCHANT_OWNER', 'MERCHANT_STAFF'],
-    order: 29,
+    order: 33,
     estimatedTime: 2,
   },
   {
@@ -404,7 +462,7 @@ export const TUTORIALS: Tutorial[] = [
     icon: 'FaCalendarCheck',
     steps: dailyOperationsSteps,
     roles: ['MERCHANT_OWNER', 'MERCHANT_STAFF'],
-    order: 30,
+    order: 34,
     estimatedTime: 2,
   },
 ];
@@ -456,13 +514,137 @@ export function getAvailableTutorials(
 export function getTutorialsByCategory(): Record<string, Tutorial[]> {
   return {
     'Getting Started': TUTORIALS.filter(t => t.isOnboarding),
-    'Categories': TUTORIALS.filter(t => t.id.includes('category')),
-    'Menu Items': TUTORIALS.filter(t => t.id.includes('menu') && !t.id.includes('menu-books')),
+    'Categories': TUTORIALS.filter(t => t.id.includes('category') && !t.id.includes('addon')),
+    'Menu Items': TUTORIALS.filter(t => t.id.includes('menu') && !t.id.includes('menu-books') && !t.id.includes('menu-book')),
     'Addons': TUTORIALS.filter(t => t.id.includes('addon')),
     'Settings': TUTORIALS.filter(t => ['merchant-settings', 'qr-tables', 'stock-management'].includes(t.id)),
-    'Orders': TUTORIALS.filter(t => ['active-orders', 'kitchen-display', 'order-history'].includes(t.id)),
-    'Reports & Analytics': TUTORIALS.filter(t => ['revenue-dashboard', 'reports', 'analytics'].includes(t.id)),
-    'Other Features': TUTORIALS.filter(t => ['staff-management', 'special-prices', 'menu-books'].includes(t.id)),
+    'Orders': TUTORIALS.filter(t => ['active-orders', 'kitchen-display', 'order-history', 'orders-queue'].includes(t.id)),
+    'Reports & Analytics': TUTORIALS.filter(t => ['revenue-dashboard', 'reports', 'analytics', 'superadmin-analytics'].includes(t.id)),
+    'Other Features': TUTORIALS.filter(t => ['staff-management', 'special-prices', 'special-price-form', 'menu-books', 'menu-book-form', 'customers-management'].includes(t.id)),
     'Quick Tips': TUTORIALS.filter(t => ['keyboard-shortcuts', 'bulk-operations', 'search-filter', 'dark-mode', 'mobile-usage', 'view-modes', 'daily-operations'].includes(t.id)),
   };
+}
+
+// ============================================
+// INTERACTIVE TUTORIAL FLOWS (CHAINS)
+// ============================================
+
+/**
+ * Tutorial Flow - A sequence of related tutorials to complete a workflow
+ */
+export interface TutorialFlow {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  tutorialIds: string[];
+  estimatedTime: number;
+  roles: ('MERCHANT_OWNER' | 'MERCHANT_STAFF')[];
+}
+
+/**
+ * Predefined tutorial flows that chain multiple tutorials together
+ * for common workflows
+ */
+export const TUTORIAL_FLOWS: TutorialFlow[] = [
+  {
+    id: 'complete-menu-setup',
+    name: 'Complete Menu Setup',
+    description: 'Set up your full menu from scratch: categories, items, and addons',
+    icon: 'FaUtensils',
+    tutorialIds: ['create-category', 'create-menu', 'create-addon-category', 'create-addon-item', 'link-menu-to-addon'],
+    estimatedTime: 15,
+    roles: ['MERCHANT_OWNER', 'MERCHANT_STAFF'],
+  },
+  {
+    id: 'order-management-flow',
+    name: 'Order Management Mastery',
+    description: 'Learn all order management features: active orders, kitchen display, queue, and history',
+    icon: 'FaClipboardList',
+    tutorialIds: ['active-orders', 'kitchen-display', 'orders-queue', 'order-history'],
+    estimatedTime: 10,
+    roles: ['MERCHANT_OWNER', 'MERCHANT_STAFF'],
+  },
+  {
+    id: 'addon-setup-flow',
+    name: 'Addon Setup Workflow',
+    description: 'Create addon categories, add items, and link them to menu items',
+    icon: 'FaPuzzlePiece',
+    tutorialIds: ['create-addon-category', 'create-addon-item', 'link-menu-to-addon'],
+    estimatedTime: 10,
+    roles: ['MERCHANT_OWNER', 'MERCHANT_STAFF'],
+  },
+  {
+    id: 'pricing-promotions-flow',
+    name: 'Pricing & Promotions',
+    description: 'Set up special prices, happy hours, and different menu books',
+    icon: 'FaPercentage',
+    tutorialIds: ['special-prices', 'special-price-form', 'menu-books', 'menu-book-form'],
+    estimatedTime: 12,
+    roles: ['MERCHANT_OWNER', 'MERCHANT_STAFF'],
+  },
+  {
+    id: 'reports-analytics-flow',
+    name: 'Reports & Analytics Tour',
+    description: 'Explore revenue dashboards, reports, and analytics insights',
+    icon: 'FaChartLine',
+    tutorialIds: ['revenue-dashboard', 'reports', 'analytics'],
+    estimatedTime: 8,
+    roles: ['MERCHANT_OWNER', 'MERCHANT_STAFF'],
+  },
+  {
+    id: 'bulk-import-flow',
+    name: 'Bulk Import Everything',
+    description: 'Speed up setup by importing menus and addons from Excel',
+    icon: 'FaFileExcel',
+    tutorialIds: ['bulk-upload-menu', 'bulk-upload-addon'],
+    estimatedTime: 6,
+    roles: ['MERCHANT_OWNER', 'MERCHANT_STAFF'],
+  },
+  {
+    id: 'store-configuration-flow',
+    name: 'Store Configuration',
+    description: 'Configure merchant settings, QR codes, and stock management',
+    icon: 'FaCogs',
+    tutorialIds: ['merchant-settings', 'qr-tables', 'stock-management'],
+    estimatedTime: 8,
+    roles: ['MERCHANT_OWNER', 'MERCHANT_STAFF'],
+  },
+  {
+    id: 'daily-ops-flow',
+    name: 'Daily Operations Guide',
+    description: 'Learn efficient daily workflows and productivity tips',
+    icon: 'FaCalendarCheck',
+    tutorialIds: ['daily-operations', 'keyboard-shortcuts', 'view-modes'],
+    estimatedTime: 5,
+    roles: ['MERCHANT_OWNER', 'MERCHANT_STAFF'],
+  },
+];
+
+/**
+ * Get a tutorial flow by ID
+ */
+export function getTutorialFlowById(id: string): TutorialFlow | undefined {
+  return TUTORIAL_FLOWS.find(f => f.id === id);
+}
+
+/**
+ * Get tutorials in a specific flow
+ */
+export function getTutorialsInFlow(flowId: string): Tutorial[] {
+  const flow = getTutorialFlowById(flowId);
+  if (!flow) return [];
+  
+  return flow.tutorialIds
+    .map(id => getTutorialById(id))
+    .filter((t): t is Tutorial => t !== undefined);
+}
+
+/**
+ * Get available tutorial flows for a specific role
+ */
+export function getAvailableTutorialFlows(
+  role: 'MERCHANT_OWNER' | 'MERCHANT_STAFF'
+): TutorialFlow[] {
+  return TUTORIAL_FLOWS.filter(flow => flow.roles.includes(role));
 }

@@ -171,7 +171,7 @@ export default function OrderHistoryPage() {
   };
 
   return (
-    <div>
+    <div data-tutorial="order-history-page">
       {/* Title Section */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t("admin.history.title")}</h1>
@@ -181,7 +181,7 @@ export default function OrderHistoryPage() {
       </div>
 
       {/* Date Range Filter */}
-      <div className="mb-6">
+      <div data-tutorial="history-date-filter" className="mb-6">
         <DateRangeFilter value={dateRange} onChange={setDateRange} />
       </div>
 

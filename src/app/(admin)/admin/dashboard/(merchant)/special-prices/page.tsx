@@ -193,12 +193,12 @@ export default function SpecialPricesPage() {
     }
 
     return (
-        <div>
+        <div data-tutorial="special-prices-page">
             <PageBreadcrumb pageTitle={t("admin.specialPrices.title")} />
 
             <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950">
                 {/* Header */}
-                <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between" data-tutorial="special-prices-header">
                     <div>
                         <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t("admin.specialPrices.title")}</h2>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -208,6 +208,7 @@ export default function SpecialPricesPage() {
                     <Link
                         href="/admin/dashboard/special-prices/create"
                         className="inline-flex items-center gap-2 rounded-lg bg-primary-500 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-primary-500/25 transition-all hover:bg-primary-600"
+                        data-tutorial="special-prices-create"
                     >
                         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -217,7 +218,7 @@ export default function SpecialPricesPage() {
                 </div>
 
                 {/* Search */}
-                <div className="mb-6">
+                <div className="mb-6" data-tutorial="special-prices-search">
                     <input
                         type="text"
                         placeholder={t("admin.specialPrices.searchPlaceholder")}
@@ -236,7 +237,7 @@ export default function SpecialPricesPage() {
 
                 {/* Table */}
                 {filteredPrices.length === 0 ? (
-                    <div className="rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 py-12 text-center dark:border-gray-700 dark:bg-gray-900/50">
+                    <div className="rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 py-12 text-center dark:border-gray-700 dark:bg-gray-900/50" data-tutorial="special-prices-empty">
                         <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" />
                         </svg>
@@ -244,7 +245,7 @@ export default function SpecialPricesPage() {
                         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t("admin.specialPrices.noSpecialPricesDesc")}</p>
                     </div>
                 ) : (
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto" data-tutorial="special-prices-list">
                         <table className="w-full">
                             <thead>
                                 <tr className="border-b border-gray-200 dark:border-gray-700">

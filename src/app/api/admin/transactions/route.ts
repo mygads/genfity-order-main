@@ -108,14 +108,57 @@ async function handleGet(req: NextRequest) {
       prisma.balanceTransaction.count({ where }),
     ]);
 
-    // Get summary stats
-    const summary = await prisma.balanceTransaction.groupBy({
-      by: ['type'],
-      _sum: {
-        amount: true,
-      },
-      _count: true,
-    });
+    // Get summary stats grouped by type and currency using Prisma.sql
+    const conditions: string[] = [];
+    const params: unknown[] = [];
+    
+    if (merchantId) {
+      conditions.push(`mb.merchant_id = $${params.length + 1}`);
+      params.push(BigInt(merchantId));
+    }
+    if (startDate) {
+      conditions.push(`bt.created_at >= $${params.length + 1}`);
+      params.push(new Date(startDate));
+    }
+    if (endDate) {
+      conditions.push(`bt.created_at <= $${params.length + 1}`);
+      params.push(new Date(endDate));
+    }
+    if (type) {
+      conditions.push(`bt.type = $${params.length + 1}`);
+      params.push(type);
+    }
+    
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    
+    const summaryQuery = `
+      SELECT 
+        bt.type,
+        m.currency,
+        SUM(bt.amount) as total_amount,
+        COUNT(*) as count
+      FROM balance_transactions bt
+      JOIN merchant_balances mb ON bt.balance_id = mb.id
+      JOIN merchants m ON mb.merchant_id = m.id
+      ${whereClause}
+      GROUP BY bt.type, m.currency
+      ORDER BY m.currency, bt.type
+    `;
+
+    const summaryRaw = await prisma.$queryRawUnsafe<Array<{
+      type: string;
+      currency: string;
+      total_amount: unknown;
+      count: bigint;
+    }>>(summaryQuery, ...params);
+
+    // Transform to the expected format
+    const summary = summaryRaw.map((row) => ({
+      type: row.type,
+      currency: row.currency,
+      _sum: { amount: Number(row.total_amount) },
+      _count: Number(row.count),
+    }));
 
     // Get daily trends for the last 30 days
     const thirtyDaysAgo = new Date();

@@ -648,6 +648,7 @@ function AddonCategoriesPageContent() {
                   <button
                     type="submit"
                     disabled={submitting}
+                    data-tutorial="addon-category-save-btn"
                     className="flex-1 h-11 rounded-lg bg-primary-500 text-sm font-medium text-white hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {submitting ? t("admin.addonCategories.saving") : (editingCategoryId ? t("admin.addonCategories.updateCategory") : t("admin.addonCategories.createCategory"))}

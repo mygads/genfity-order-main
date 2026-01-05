@@ -685,7 +685,7 @@ export default function MenuBulkUploadPage() {
         </div>
 
         {/* Step 1: Download Template */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6">
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6" data-tutorial="template-guide">
           <div className="flex items-start gap-4">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400">
               <span className="text-sm font-bold">1</span>
@@ -698,6 +698,7 @@ export default function MenuBulkUploadPage() {
               <div className="mt-3 flex flex-wrap gap-3">
                 <button
                   onClick={downloadTemplate}
+                  data-tutorial="download-template"
                   className="inline-flex items-center gap-2 rounded-lg bg-green-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-green-600"
                 >
                   <FaDownload className="h-4 w-4" />
@@ -742,6 +743,7 @@ export default function MenuBulkUploadPage() {
 
               {/* Upload Zone */}
               <div
+                data-tutorial="upload-zone"
                 className={`mt-4 relative rounded-xl border-2 border-dashed p-8 text-center transition-colors ${dragActive
                   ? "border-primary-500 bg-primary-50 dark:bg-primary-900/20"
                   : "border-gray-300 dark:border-gray-700"
@@ -795,7 +797,7 @@ export default function MenuBulkUploadPage() {
 
         {/* Step 3: Preview & Edit */}
         {items.length > 0 && (
-          <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6">
+          <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6" data-tutorial="preview-table">
             <div className="flex items-start gap-4 mb-6">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400">
                 <span className="text-sm font-bold">3</span>
@@ -840,6 +842,7 @@ export default function MenuBulkUploadPage() {
                     <button
                       onClick={handleSave}
                       disabled={saving || errorCount > 0}
+                      data-tutorial="confirm-upload"
                       className="inline-flex items-center gap-2 rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {saving ? (

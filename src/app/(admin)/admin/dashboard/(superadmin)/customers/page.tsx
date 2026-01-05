@@ -351,10 +351,10 @@ export default function CustomersPage() {
   }
 
   return (
-    <div>
+    <div data-tutorial="customers-page">
       <PageBreadcrumb pageTitle="Customers Management" />
 
-      <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
+      <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6" data-tutorial="customers-container">
         <div className="mb-5">
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
             All Customers
@@ -368,7 +368,7 @@ export default function CustomersPage() {
         <div className="mb-6 space-y-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             {/* Search Input */}
-            <div className="relative flex-1 max-w-md">
+            <div className="relative flex-1 max-w-md" data-tutorial="customers-search">
               <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                 <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -384,7 +384,7 @@ export default function CustomersPage() {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3" data-tutorial="customers-actions">
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
@@ -426,7 +426,7 @@ export default function CustomersPage() {
 
           {/* Advanced Filters Panel */}
           {showAdvancedFilters && (
-            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50">
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50" data-tutorial="customers-filters">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {/* Date Range */}
                 <div>
@@ -554,7 +554,7 @@ export default function CustomersPage() {
         </div>
 
         {/* Customers Table */}
-        <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-white/[0.05]">
+        <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-white/[0.05]" data-tutorial="customers-table">
           <div className="overflow-x-auto">
             <table className="min-w-[900px] w-full">
               <thead>

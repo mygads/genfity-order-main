@@ -279,7 +279,7 @@ export default function SalesAnalyticsPage() {
   }
 
   return (
-    <div>
+    <div data-tutorial="analytics-overview">
       <PageBreadcrumb pageTitle={t('admin.analytics.sales')} />
 
       {/* Header */}
@@ -312,7 +312,7 @@ export default function SalesAnalyticsPage() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6" data-tutorial="customer-insights">
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
           <div className="text-sm text-gray-500 dark:text-gray-400">Total Revenue</div>
           <div className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
@@ -351,7 +351,7 @@ export default function SalesAnalyticsPage() {
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* Revenue Trend */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5" data-tutorial="trends-chart">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Revenue Trend
           </h3>
@@ -386,7 +386,7 @@ export default function SalesAnalyticsPage() {
       {/* Bottom Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Top Selling Items */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5" data-tutorial="menu-performance">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Top Selling Items
           </h3>

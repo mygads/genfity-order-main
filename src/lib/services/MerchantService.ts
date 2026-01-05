@@ -230,6 +230,7 @@ class MerchantService {
       const { default: balanceRepository } = await import('@/lib/repositories/BalanceRepository');
       const { default: subscriptionService } = await import('@/lib/services/SubscriptionService');
       const { default: userNotificationService } = await import('@/lib/services/UserNotificationService');
+      const { default: merchantTemplateService } = await import('@/lib/services/MerchantTemplateService');
 
       // Get trial days from plan pricing
       const pricing = await subscriptionService.getPlanPricing(input.currency || 'AUD');
@@ -242,6 +243,24 @@ class MerchantService {
       await balanceRepository.getOrCreateBalance(merchant.id);
 
       console.log(`✅ Created ${trialDays}-day trial subscription for merchant ${merchant.code}`);
+
+      // Create template data (sample category, menu, addon, opening hours)
+      try {
+        const templateResult = await merchantTemplateService.createTemplateData(
+          merchant.id,
+          owner.id,
+          input.currency || 'AUD'
+        );
+        console.log(`✅ Created template data for merchant ${merchant.code}:`, {
+          category: templateResult.category.name,
+          menu: templateResult.menu.name,
+          addonCategory: templateResult.addonCategory.name,
+          openingHours: `${templateResult.openingHoursCount} days`,
+        });
+      } catch (templateError) {
+        console.warn('⚠️ Failed to create template data:', templateError);
+        // Don't fail registration if template creation fails
+      }
 
       // Notify super admins about new merchant registration
       userNotificationService.notifyNewMerchantRegistration(

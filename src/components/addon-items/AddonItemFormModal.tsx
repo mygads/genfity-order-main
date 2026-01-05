@@ -69,7 +69,7 @@ export default function AddonItemFormModal({
   const formChanged = hasChanges();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div data-tutorial="addon-item-modal" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl border border-gray-200 bg-white shadow-xl dark:border-gray-800 dark:bg-gray-900">
         {/* Fixed Header */}
         <div className="shrink-0 border-b border-gray-200 px-6 py-4 dark:border-gray-800">
@@ -92,7 +92,7 @@ export default function AddonItemFormModal({
         <form onSubmit={onSubmit} className="flex flex-col flex-1 min-h-0">
           <div className="flex-1 overflow-y-auto p-6 space-y-4">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="md:col-span-2">
+              <div data-tutorial="addon-item-category" className="md:col-span-2">
                 <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Addon Category <span className="text-error-500">*</span>
                 </label>
@@ -112,7 +112,7 @@ export default function AddonItemFormModal({
                 </select>
               </div>
 
-              <div className="md:col-span-2">
+              <div data-tutorial="addon-item-name" className="md:col-span-2">
                 <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Item Name <span className="text-error-500">*</span>
                 </label>
@@ -141,7 +141,7 @@ export default function AddonItemFormModal({
                 />
               </div>
 
-              <div>
+              <div data-tutorial="addon-item-price">
                 <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Price <span className="text-error-500">*</span>
                 </label>
@@ -184,7 +184,7 @@ export default function AddonItemFormModal({
             </div>
 
             {/* Stock Tracking Section */}
-            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
+            <div data-tutorial="addon-item-stock" className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
               <div className="flex items-center gap-3">
                 <input
                   type="checkbox"
@@ -285,6 +285,7 @@ export default function AddonItemFormModal({
                   <button
                     type="submit"
                     disabled={submitting}
+                    data-tutorial="addon-item-save-btn"
                     className="flex-1 h-11 rounded-xl bg-primary-500 text-sm font-medium text-white shadow-lg shadow-primary-500/25 transition-all hover:bg-primary-600 hover:shadow-primary-500/30 focus:outline-none focus:ring-4 focus:ring-primary-500/20 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {submitting ? "Saving..." : "Update Item"}
@@ -298,6 +299,7 @@ export default function AddonItemFormModal({
                 <button
                   type="submit"
                   disabled={submitting}
+                  data-tutorial="addon-item-save-btn"
                   className="flex-1 h-11 rounded-xl bg-primary-500 text-sm font-medium text-white shadow-lg shadow-primary-500/25 transition-all hover:bg-primary-600 hover:shadow-primary-500/30 focus:outline-none focus:ring-4 focus:ring-primary-500/20 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {submitting ? "Saving..." : "Create Item"}

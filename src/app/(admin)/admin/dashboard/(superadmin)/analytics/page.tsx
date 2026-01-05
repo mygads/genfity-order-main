@@ -176,11 +176,11 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div>
+    <div data-tutorial="superadmin-analytics-page">
       <PageBreadcrumb pageTitle="Analytics" />
 
       {/* Date Range Selector */}
-      <div className="mb-6 flex items-center gap-3">
+      <div className="mb-6 flex items-center gap-3" data-tutorial="analytics-period-selector">
         <select
           value={period}
           onChange={(e) => setPeriod(e.target.value)}
@@ -192,7 +192,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Key Metrics Grid */}
-      <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4" data-tutorial="analytics-key-metrics">
         {/* Customer Registrations */}
         <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6">
           <div className="mb-2 text-sm text-gray-500 dark:text-gray-400">New Customers (30 days)</div>
@@ -240,7 +240,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Multi-Currency Revenue Summary */}
-      <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6">
+      <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6" data-tutorial="analytics-revenue-currency">
         <h2 className="mb-5 text-lg font-semibold text-gray-800 dark:text-white/90">
           Revenue by Currency
         </h2>
@@ -265,7 +265,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Order Status Distribution */}
-      <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6">
+      <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6" data-tutorial="analytics-order-status">
         <h2 className="mb-5 text-lg font-semibold text-gray-800 dark:text-white/90">
           Order Status Distribution
         </h2>
@@ -287,7 +287,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Payment Method Breakdown */}
-      <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6">
+      <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6" data-tutorial="analytics-payment-methods">
         <h2 className="mb-5 text-lg font-semibold text-gray-800 dark:text-white/90">
           Payment Method Breakdown
         </h2>
@@ -327,7 +327,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Payment Status Distribution */}
-      <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6">
+      <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6" data-tutorial="analytics-payment-status">
         <h2 className="mb-5 text-lg font-semibold text-gray-800 dark:text-white/90">
           Payment Status Distribution
         </h2>
@@ -352,7 +352,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Order Type Distribution (DINE_IN vs TAKEAWAY) */}
-      <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6">
+      <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6" data-tutorial="analytics-order-types">
         <h2 className="mb-5 text-lg font-semibold text-gray-800 dark:text-white/90">
           Order Type Distribution
         </h2>
@@ -411,7 +411,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Bar Charts Section */}
-      <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2" data-tutorial="analytics-merchant-charts">
         {/* Merchants by Orders */}
         <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6">
           <h2 className="mb-5 text-lg font-semibold text-gray-800 dark:text-white/90">
@@ -442,7 +442,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Revenue by Merchant - Table with Currency */}
-      <div className="mb-6">
+      <div className="mb-6" data-tutorial="analytics-top-merchants">
         <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6">
           <h2 className="mb-5 text-lg font-semibold text-gray-800 dark:text-white/90">
             Top Merchants by Revenue
@@ -484,7 +484,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Line Charts Section */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2" data-tutorial="analytics-growth-charts">
         {/* Merchant Growth */}
         <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6">
           <h2 className="mb-5 text-lg font-semibold text-gray-800 dark:text-white/90">

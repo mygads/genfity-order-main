@@ -6,6 +6,9 @@
  * @description Unified horizontal stepper showing setup progress.
  * Combines the functionality of GettingStartedChecklist and QuickSetupWizard
  * into a compact, professional design.
+ * 
+ * Uses template-aware completion logic - checks if user has customized
+ * beyond the auto-created template data.
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -20,7 +23,6 @@ import {
   FaPlusCircle,
   FaClock,
   FaRocket,
-  FaChevronRight,
   FaSpinner,
 } from 'react-icons/fa';
 
@@ -35,7 +37,6 @@ interface SetupStep {
   description: string;
   icon: React.ComponentType<{ className?: string }>;
   route: string;
-  apiCheck: () => Promise<boolean>;
   isOptional?: boolean;
   order: number;
 }
@@ -52,6 +53,7 @@ interface SetupProgressProps {
 // ============================================
 
 const STORAGE_KEY = 'genfity_setup_progress';
+const COMPLETED_KEY = 'genfity_setup_completed';
 
 interface StoredState {
   dismissed: boolean;
@@ -76,6 +78,22 @@ function saveStoredState(state: StoredState): void {
   }
 }
 
+function markAsCompleted(): void {
+  try {
+    localStorage.setItem(COMPLETED_KEY, 'true');
+  } catch {
+    // Ignore
+  }
+}
+
+function isMarkedCompleted(): boolean {
+  try {
+    return localStorage.getItem(COMPLETED_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
 // ============================================
 // COMPONENT
 // ============================================
@@ -87,8 +105,9 @@ export function SetupProgress({ compact = false, onComplete }: SetupProgressProp
   const [loading, setLoading] = useState(true);
   const [dismissed, setDismissed] = useState(false);
   const [stepStatus, setStepStatus] = useState<Record<string, boolean>>({});
+  const [permanentlyCompleted, setPermanentlyCompleted] = useState(false);
 
-  // Define setup steps
+  // Define setup steps (all 5 steps)
   const steps: SetupStep[] = [
     {
       id: 'merchant_info',
@@ -98,72 +117,24 @@ export function SetupProgress({ compact = false, onComplete }: SetupProgressProp
       icon: FaStore,
       route: '/admin/dashboard/merchant/edit',
       order: 1,
-      apiCheck: async () => {
-        const token = localStorage.getItem('accessToken');
-        if (!token) return false;
-        try {
-          const res = await fetch('/api/merchant/profile', {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (res.ok) {
-            const data = await res.json();
-            return !!data.data?.logoUrl;
-          }
-        } catch {
-          // Ignore
-        }
-        return false;
-      },
     },
     {
       id: 'categories',
       title: t('checklist.categories') || 'Categories',
       shortTitle: 'Categories',
-      description: t('checklist.categoriesDesc') || 'Add at least 1 category',
+      description: t('checklist.categoriesDesc') || 'Customize your categories',
       icon: FaList,
       route: '/admin/dashboard/categories',
       order: 2,
-      apiCheck: async () => {
-        const token = localStorage.getItem('accessToken');
-        if (!token) return false;
-        try {
-          const res = await fetch('/api/merchant/categories', {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (res.ok) {
-            const data = await res.json();
-            return (data.data?.length || 0) >= 1;
-          }
-        } catch {
-          // Ignore
-        }
-        return false;
-      },
     },
     {
       id: 'menu_items',
       title: t('checklist.menuItems') || 'Menu Items',
       shortTitle: 'Menu',
-      description: t('checklist.menuItemsDesc') || 'Add at least 3 items',
+      description: t('checklist.menuItemsDesc') || 'Add at least 3 menu items',
       icon: FaUtensils,
       route: '/admin/dashboard/menu',
       order: 3,
-      apiCheck: async () => {
-        const token = localStorage.getItem('accessToken');
-        if (!token) return false;
-        try {
-          const res = await fetch('/api/merchant/menu', {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (res.ok) {
-            const data = await res.json();
-            return (data.data?.length || 0) >= 3;
-          }
-        } catch {
-          // Ignore
-        }
-        return false;
-      },
     },
     {
       id: 'addons',
@@ -174,24 +145,6 @@ export function SetupProgress({ compact = false, onComplete }: SetupProgressProp
       route: '/admin/dashboard/addon-categories',
       order: 4,
       isOptional: true,
-      apiCheck: async () => {
-        const token = localStorage.getItem('accessToken');
-        if (!token) return false;
-        // Check if skipped
-        if (localStorage.getItem('setup_addons_skipped') === 'true') return true;
-        try {
-          const res = await fetch('/api/merchant/addon-categories', {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (res.ok) {
-            const data = await res.json();
-            return (data.data?.length || 0) >= 1;
-          }
-        } catch {
-          // Ignore
-        }
-        return false;
-      },
     },
     {
       id: 'opening_hours',
@@ -201,53 +154,60 @@ export function SetupProgress({ compact = false, onComplete }: SetupProgressProp
       icon: FaClock,
       route: '/admin/dashboard/merchant/edit',
       order: 5,
-      apiCheck: async () => {
-        const token = localStorage.getItem('accessToken');
-        if (!token) return false;
-        try {
-          const res = await fetch('/api/merchant/profile', {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (res.ok) {
-            const data = await res.json();
-            const hours = data.data?.openingHours || [];
-            return hours.length > 0;
-          }
-        } catch {
-          // Ignore
-        }
-        return false;
-      },
     },
   ];
 
-  // Check all step statuses
+  // Check all step statuses using the new API
   const checkAllSteps = useCallback(async () => {
     setLoading(true);
-    const status: Record<string, boolean> = {};
     
-    await Promise.all(
-      steps.map(async (step) => {
-        status[step.id] = await step.apiCheck();
-      })
-    );
-    
-    setStepStatus(status);
-    setLoading(false);
-    
-    // Check if all required steps are complete
-    const requiredSteps = steps.filter(s => !s.isOptional);
-    const allComplete = requiredSteps.every(s => status[s.id]);
-    
-    if (allComplete) {
-      saveStoredState({ dismissed: false, completedAt: new Date().toISOString() });
-      onComplete?.();
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      const res = await fetch('/api/merchant/setup-progress', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.data) {
+          setStepStatus(data.data.steps);
+          
+          // Check if addons was skipped
+          if (localStorage.getItem('setup_addons_skipped') === 'true') {
+            setStepStatus(prev => ({ ...prev, addons: true }));
+          }
+          
+          // Check if all required steps are complete
+          if (data.data.isComplete) {
+            markAsCompleted();
+            setPermanentlyCompleted(true);
+            onComplete?.();
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to check setup progress:', error);
     }
+    
+    setLoading(false);
   }, [onComplete]);
 
   // Initialize
   useEffect(() => {
     setMounted(true);
+    
+    // Check if already permanently completed
+    if (isMarkedCompleted()) {
+      setPermanentlyCompleted(true);
+      setLoading(false);
+      return;
+    }
+    
     const state = getStoredState();
     setDismissed(state.dismissed);
     
@@ -287,11 +247,24 @@ export function SetupProgress({ compact = false, onComplete }: SetupProgressProp
 
   if (!mounted) return null;
 
+  // If permanently completed, don't render anything
+  if (permanentlyCompleted) {
+    return null;
+  }
+
   // Calculate progress
   const requiredSteps = steps.filter(s => !s.isOptional);
   const completedRequired = requiredSteps.filter(s => stepStatus[s.id]).length;
   const progressPercent = Math.round((completedRequired / requiredSteps.length) * 100);
   const isComplete = progressPercent === 100;
+
+  // If complete, mark as permanently complete and return null
+  if (isComplete && !permanentlyCompleted) {
+    markAsCompleted();
+    setPermanentlyCompleted(true);
+    onComplete?.();
+    return null;
+  }
 
   // Dismissed state - compact show again button
   if (dismissed) {
@@ -316,28 +289,6 @@ export function SetupProgress({ compact = false, onComplete }: SetupProgressProp
       <div className="flex items-center justify-center gap-2 px-4 py-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
         <FaSpinner className="w-4 h-4 text-brand-500 animate-spin" />
         <span className="text-sm text-gray-500 dark:text-gray-400">Loading...</span>
-      </div>
-    );
-  }
-
-  // Complete state
-  if (isComplete) {
-    return (
-      <div className="flex items-center justify-between gap-3 px-4 py-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-            <FaCheck className="w-3 h-3 text-white" />
-          </div>
-          <span className="text-sm font-medium text-green-800 dark:text-green-200">
-            🎉 {t('checklist.complete') || 'Setup Complete!'}
-          </span>
-        </div>
-        <button
-          onClick={handleDismiss}
-          className="p-1.5 text-green-600 hover:bg-green-200 dark:hover:bg-green-800 rounded transition-colors"
-        >
-          <FaTimes className="w-3 h-3" />
-        </button>
       </div>
     );
   }

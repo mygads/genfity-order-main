@@ -472,17 +472,19 @@ function AddonItemsPageContent() {
           </div>
 
           {/* Filters Component */}
-          <AddonItemsFilters
-            searchQuery={searchQuery}
-            filterCategory={filterCategory}
-            filterInputType={filterInputType}
-            filterStatus={filterStatus}
-            categories={categories}
-            onSearchChange={setSearchQuery}
-            onCategoryChange={setFilterCategory}
-            onInputTypeChange={setFilterInputType}
-            onStatusChange={setFilterStatus}
-          />
+          <div data-tutorial="addon-item-filter">
+            <AddonItemsFilters
+              searchQuery={searchQuery}
+              filterCategory={filterCategory}
+              filterInputType={filterInputType}
+              filterStatus={filterStatus}
+              categories={categories}
+              onSearchChange={setSearchQuery}
+              onCategoryChange={setFilterCategory}
+              onInputTypeChange={setFilterInputType}
+              onStatusChange={setFilterStatus}
+            />
+          </div>
 
           {filteredItems.length === 0 ? (
             <div className="py-10 text-center">
