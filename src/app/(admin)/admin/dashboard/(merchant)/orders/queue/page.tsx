@@ -15,12 +15,13 @@ import type { OrderWithDetails } from '@/lib/types/order';
 import { playNotificationSound } from '@/lib/utils/soundNotification';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { useContextualHint, CONTEXTUAL_HINTS } from '@/lib/tutorial/components/ContextualHint';
+import { KitchenDisplaySkeleton } from '@/components/common/SkeletonLoaders';
 
 export default function QueueDisplayPage() {
   const router = useRouter();
   const { t } = useTranslation();
   const { showHint } = useContextualHint();
-  
+
   const [orders, setOrders] = useState<OrderWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +60,7 @@ export default function QueueDisplayPage() {
 
       if (data.success) {
         const readyOrders = data.data as OrderWithDetails[];
-        
+
         // Sort by actualReadyAt (most recent first)
         const sortedOrders = readyOrders.sort((a, b) => {
           const aTime = a.actualReadyAt ? new Date(a.actualReadyAt).getTime() : 0;
@@ -70,7 +71,7 @@ export default function QueueDisplayPage() {
         // Detect new ready orders and play sound
         const currentOrderIds = new Set(sortedOrders.map((o) => String(o.id)));
         const newOrders = sortedOrders.filter((o) => !previousOrderIds.has(String(o.id)));
-        
+
         if (newOrders.length > 0 && previousOrderIds.size > 0) {
           playNotificationSound('orderReady');
         }
@@ -92,7 +93,7 @@ export default function QueueDisplayPage() {
   // Initial fetch
   useEffect(() => {
     fetchOrders();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Auto-refresh
@@ -170,69 +171,54 @@ export default function QueueDisplayPage() {
     const ready = new Date(readyAt);
     const diffMs = now.getTime() - ready.getTime();
     const diffMins = Math.floor(diffMs / 60000);
-    
+
     if (diffMins < 1) return t("admin.queue.justNow");
     if (diffMins === 1) return t("admin.queue.1min");
     if (diffMins < 60) return `${diffMins} ${t("admin.queue.mins")}`;
-    
+
     const hours = Math.floor(diffMins / 60);
     const mins = diffMins % 60;
     return `${hours}h ${mins}m`;
   };
 
   if (loading && orders.length === 0) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="flex items-center gap-3 text-gray-500 dark:text-gray-400">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary-500 border-t-transparent"></div>
-          <span className="text-sm font-medium">{t("admin.queue.loadingQueue")}</span>
-        </div>
-      </div>
-    );
+    return <KitchenDisplaySkeleton />;
   }
 
   return (
-    <div data-tutorial="queue-page" className={`${displayMode !== 'normal' ? 'fixed inset-0 z-50 overflow-auto bg-gray-950' : ''}`}>
-      {/* Header - Sticky when in clean/fullscreen mode */}
-      <div data-tutorial="queue-header" className={`${displayMode !== 'normal' ? 'sticky top-0 z-40 bg-gray-950/95 backdrop-blur-sm px-6 pt-6 pb-4 border-b border-gray-800 shadow-sm' : ''}`}>
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h1 className={`font-bold ${displayMode !== 'normal' ? 'text-4xl text-white' : 'text-2xl text-gray-800 dark:text-white/90'}`}>
-              <span className="flex items-center gap-3">
-                <FaBell className="text-success-500" />
-                {t("admin.queue.title")}
-              </span>
+    <div data-tutorial="queue-page" className={`${displayMode !== 'normal' ? 'fixed inset-0 z-50 overflow-hidden bg-gray-50 dark:bg-gray-950 flex flex-col' : 'flex flex-col h-[calc(100vh-100px)]'}`}>
+      {/* Header - Clean Minimal Design matching Kitchen Display */}
+      <div className={`sticky top-0 z-40 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 ${displayMode !== 'normal' ? 'px-6 py-4' : 'pb-4 -mx-6 px-6 pt-0'}`}>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <FaBell className="text-success-500" />
+              {t("admin.queue.title")}
             </h1>
-            <p className={`mt-1 ${displayMode !== 'normal' ? 'text-lg text-gray-400' : 'text-sm text-gray-500 dark:text-gray-400'}`}>
-              {t("admin.queue.ordersReadyForPickup", { count: orders.length })}
-            </p>
+
+            {/* Status Count - Minimal */}
+            <span className="text-sm text-gray-500 dark:text-gray-400">
+              <span className="font-semibold text-gray-900 dark:text-white">{orders.length}</span> {t("admin.queue.readyForPickup")}
+            </span>
           </div>
 
-          <div data-tutorial="queue-controls" className="flex flex-wrap items-center gap-3">
-            {/* Auto-refresh Toggle */}
-            <button
-              data-tutorial="queue-auto-refresh"
-              onClick={() => setAutoRefresh(!autoRefresh)}
-              className={`flex h-10 items-center gap-2 rounded-lg border px-4 text-sm font-medium transition-colors ${
-                autoRefresh
-                  ? 'border-primary-200 bg-primary-50 text-primary-700 dark:border-primary-800 dark:bg-primary-900/20 dark:text-primary-400'
-                  : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800'
-              }`}
-            >
-              <FaSync className={autoRefresh ? 'animate-spin' : ''} />
+          <div className="flex items-center gap-2">
+            {/* Auto-refresh indicator - always on */}
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-xs text-gray-500 dark:text-gray-400">
+              <FaSync className="h-3 w-3 animate-spin text-success-500" />
               <span className="hidden sm:inline">{t("admin.queue.autoRefresh")}</span>
-            </button>
+            </div>
 
             {/* Manual Refresh */}
             <button
               onClick={fetchOrders}
-              className="flex h-10 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+              title={t("admin.queue.refresh")}
             >
-              <FaSync />
-              <span className="hidden sm:inline">{t("admin.queue.refresh")}</span>
+              <FaSync className="h-3.5 w-3.5" />
             </button>
 
-            {/* Progressive Display Mode: Normal → Clean → Fullscreen */}
+            {/* Display Mode Toggle */}
             <button
               data-tutorial="queue-display-mode"
               onClick={async () => {
@@ -256,32 +242,26 @@ export default function QueueDisplayPage() {
                   }
                 }
               }}
-              className={`flex h-10 items-center gap-2 rounded-lg border px-4 text-sm font-medium transition-colors ${
-                displayMode !== 'normal'
-                  ? 'border-primary-200 bg-primary-50 text-primary-700 dark:border-primary-800 dark:bg-primary-900/20 dark:text-primary-400'
-                  : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800'
-              }`}
+              className={`flex h-9 w-9 items-center justify-center rounded-lg border transition-colors ${displayMode !== 'normal'
+                ? 'border-gray-900 bg-gray-900 text-white dark:border-white dark:bg-white dark:text-gray-900'
+                : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                }`}
               title={
                 displayMode === 'normal' ? t("admin.queue.enterCleanMode") :
-                displayMode === 'clean' ? t("admin.queue.enterFullScreen") :
-                t("admin.queue.exitFullScreen")
+                  displayMode === 'clean' ? t("admin.queue.enterFullScreen") :
+                    t("admin.queue.exitFullScreen")
               }
             >
-              {displayMode === 'normal' ? <FaEye /> :
-               displayMode === 'clean' ? <FaExpand /> :
-               <FaCompress />}
-              <span className="hidden sm:inline">
-                {displayMode === 'normal' ? t("admin.queue.cleanMode") :
-                 displayMode === 'clean' ? t("admin.queue.fullScreen") :
-                 t("admin.queue.exit")}
-              </span>
+              {displayMode === 'normal' ? <FaEye className="h-3.5 w-3.5" /> :
+                displayMode === 'clean' ? <FaExpand className="h-3.5 w-3.5" /> :
+                  <FaCompress className="h-3.5 w-3.5" />}
             </button>
           </div>
         </div>
       </div>
 
       {/* Content Area */}
-      <div className={`${displayMode !== 'normal' ? 'px-6 pb-6' : 'mt-6'}`}>
+      <div className={`flex-1 overflow-y-auto ${displayMode !== 'normal' ? 'px-6 py-6' : 'pt-6'}`}>
         {/* Error Message */}
         {error && (
           <div className="mb-6 rounded-lg border border-error-200 bg-error-50 p-4 dark:border-error-800 dark:bg-error-900/20">
@@ -291,20 +271,18 @@ export default function QueueDisplayPage() {
 
         {/* Queue Grid - Large order number cards */}
         {orders.length > 0 ? (
-          <div data-tutorial="queue-grid" className={`grid gap-6 ${
-            displayMode !== 'normal'
-              ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
-              : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
-          }`}>
+          <div data-tutorial="queue-grid" className={`grid gap-6 ${displayMode !== 'normal'
+            ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
+            : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
+            }`}>
             {orders.map((order, index) => (
               <div
                 key={String(order.id)}
                 data-tutorial={index === 0 ? "queue-order-card" : undefined}
-                className={`group relative overflow-hidden rounded-2xl border-2 transition-all duration-300 hover:scale-105 hover:shadow-2xl ${
-                  index === 0
-                    ? 'border-success-400 bg-linear-to-br from-success-500 to-success-600 text-white shadow-lg shadow-success-500/30 animate-pulse'
-                    : 'border-gray-200 bg-white hover:border-success-300 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-success-600'
-                }`}
+                className={`group relative overflow-hidden rounded-2xl border-2 transition-all duration-300 hover:scale-105 hover:shadow-2xl ${index === 0
+                  ? 'border-success-400 bg-linear-to-br from-success-500 to-success-600 text-white shadow-lg shadow-success-500/30 animate-pulse'
+                  : 'border-gray-200 bg-white hover:border-success-300 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-success-600'
+                  }`}
               >
                 {/* New badge for most recent */}
                 {index === 0 && (
@@ -317,30 +295,27 @@ export default function QueueDisplayPage() {
 
                 <div className={`p-6 text-center ${displayMode !== 'normal' ? 'py-10' : ''}`}>
                   {/* Order Number - Prominently displayed */}
-                  <div className={`font-black ${
-                    displayMode !== 'normal'
-                      ? 'text-7xl'
-                      : 'text-5xl'
-                  } ${index === 0 ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
+                  <div className={`font-black ${displayMode !== 'normal'
+                    ? 'text-7xl'
+                    : 'text-5xl'
+                    } ${index === 0 ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
                     {order.orderNumber}
                   </div>
 
                   {/* Customer Name */}
-                  <div className={`mt-3 font-semibold ${
-                    displayMode !== 'normal' ? 'text-2xl' : 'text-lg'
-                  } ${index === 0 ? 'text-white/90' : 'text-gray-700 dark:text-gray-300'}`}>
+                  <div className={`mt-3 font-semibold ${displayMode !== 'normal' ? 'text-2xl' : 'text-lg'
+                    } ${index === 0 ? 'text-white/90' : 'text-gray-700 dark:text-gray-300'}`}>
                     {order.customer?.name || (order as unknown as { customerName?: string }).customerName || 'Guest'}
                   </div>
 
                   {/* Order Type Badge */}
-                  <div className={`mt-2 inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${
-                    index === 0
-                      ? 'bg-white/20 text-white'
-                      : order.orderType === 'DINE_IN'
-                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                        : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
-                  }`}>
-                  {order.orderType === 'DINE_IN' ? `🍽️ ${t("admin.queue.dineIn")}` : `🥡 ${t("admin.queue.takeaway")}`}
+                  <div className={`mt-2 inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${index === 0
+                    ? 'bg-white/20 text-white'
+                    : order.orderType === 'DINE_IN'
+                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                      : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
+                    }`}>
+                    {order.orderType === 'DINE_IN' ? `🍽️ ${t("admin.queue.dineIn")}` : `🥡 ${t("admin.queue.takeaway")}`}
                     {order.orderType === 'DINE_IN' && (order as unknown as { tableNumber?: string }).tableNumber && ` - ${t("admin.queue.table")} ${(order as unknown as { tableNumber?: string }).tableNumber}`}
                   </div>
 
@@ -353,11 +328,10 @@ export default function QueueDisplayPage() {
                   <button
                     data-tutorial={index === 0 ? "queue-pickup-btn" : undefined}
                     onClick={() => handleMarkCompleted(String(order.id))}
-                    className={`mt-4 flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-semibold transition-all ${
-                      index === 0
-                        ? 'bg-white/20 text-white hover:bg-white/30'
-                        : 'bg-success-50 text-success-700 hover:bg-success-100 dark:bg-success-900/20 dark:text-success-400 dark:hover:bg-success-900/30'
-                    }`}
+                    className={`mt-4 flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-semibold transition-all ${index === 0
+                      ? 'bg-white/20 text-white hover:bg-white/30'
+                      : 'bg-success-50 text-success-700 hover:bg-success-100 dark:bg-success-900/20 dark:text-success-400 dark:hover:bg-success-900/30'
+                      }`}
                   >
                     <FaCheck />
                     {t("admin.queue.pickedUp")}
@@ -368,9 +342,8 @@ export default function QueueDisplayPage() {
           </div>
         ) : (
           /* Empty State */
-          <div data-tutorial="queue-empty-state" className={`flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 dark:border-gray-700 dark:bg-gray-900 ${
-            displayMode !== 'normal' ? 'min-h-[60vh] py-20' : 'py-16'
-          }`}>
+          <div data-tutorial="queue-empty-state" className={`flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 dark:border-gray-700 dark:bg-gray-900 ${displayMode !== 'normal' ? 'min-h-[60vh] py-20' : 'py-16'
+            }`}>
             <div className={`rounded-full bg-gray-100 dark:bg-gray-800 ${displayMode !== 'normal' ? 'p-8' : 'p-6'}`}>
               <FaBell className={`text-gray-400 ${displayMode !== 'normal' ? 'h-16 w-16' : 'h-12 w-12'}`} />
             </div>

@@ -1834,3 +1834,112 @@ export function InfluencerProfileSkeleton() {
     </div>
   );
 }
+
+/**
+ * Profile Page Skeleton
+ * Shows skeleton for profile page with profile picture card and form
+ */
+export function ProfilePageSkeleton() {
+  return (
+    <div>
+      {/* Breadcrumb */}
+      <div className="mb-6">
+        <Skeleton width="w-32" height="h-4" />
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Profile Picture Card */}
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
+          <Skeleton width="w-32" height="h-6" className="mb-4" />
+
+          <div className="flex flex-col items-center">
+            {/* Profile Picture */}
+            <Skeleton width="w-32" height="h-32" className="rounded-full mb-4" />
+
+            {/* Upload Button */}
+            <Skeleton width="w-32" height="h-10" className="rounded-lg" />
+
+            {/* Helper Text */}
+            <Skeleton width="w-36" height="h-3" className="mt-2" />
+          </div>
+
+          {/* Profile Info Section */}
+          <div className="mt-6 space-y-3 border-t border-gray-200 pt-4 dark:border-gray-700">
+            {/* Role */}
+            <div>
+              <Skeleton width="w-12" height="h-3" className="mb-1" />
+              <Skeleton width="w-24" height="h-4" />
+            </div>
+            {/* Status */}
+            <div>
+              <Skeleton width="w-16" height="h-3" className="mb-1" />
+              <Skeleton width="w-20" height="h-6" className="rounded-full" />
+            </div>
+            {/* Member Since */}
+            <div>
+              <Skeleton width="w-24" height="h-3" className="mb-1" />
+              <Skeleton width="w-28" height="h-4" />
+            </div>
+          </div>
+        </div>
+
+        {/* Profile Form */}
+        <div className="lg:col-span-2">
+          <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
+            <Skeleton width="w-40" height="h-6" className="mb-6" />
+
+            <div className="space-y-4">
+              {/* Name Field */}
+              <div>
+                <Skeleton width="w-24" height="h-4" className="mb-2" />
+                <Skeleton width="w-full" height="h-11" className="rounded-lg" />
+              </div>
+
+              {/* Email Field */}
+              <div>
+                <Skeleton width="w-16" height="h-4" className="mb-2" />
+                <Skeleton width="w-full" height="h-11" className="rounded-lg" />
+                <Skeleton width="w-72" height="h-3" className="mt-1" />
+              </div>
+
+              {/* Phone Field */}
+              <div>
+                <Skeleton width="w-28" height="h-4" className="mb-2" />
+                <Skeleton width="w-full" height="h-11" className="rounded-lg" />
+              </div>
+
+              {/* Change Password Section */}
+              <div className="border-t border-gray-200 pt-6 dark:border-gray-700">
+                <Skeleton width="w-36" height="h-5" className="mb-4" />
+
+                {/* Current Password */}
+                <div className="mb-4">
+                  <Skeleton width="w-32" height="h-4" className="mb-2" />
+                  <Skeleton width="w-full" height="h-11" className="rounded-lg" />
+                </div>
+
+                {/* New Password */}
+                <div className="mb-4">
+                  <Skeleton width="w-28" height="h-4" className="mb-2" />
+                  <Skeleton width="w-full" height="h-11" className="rounded-lg" />
+                </div>
+
+                {/* Confirm Password */}
+                <div>
+                  <Skeleton width="w-44" height="h-4" className="mb-2" />
+                  <Skeleton width="w-full" height="h-11" className="rounded-lg" />
+                </div>
+              </div>
+
+              {/* Form Footer */}
+              <div className="flex justify-end gap-3 pt-4">
+                <Skeleton width="w-24" height="h-10" className="rounded-lg" />
+                <Skeleton width="w-32" height="h-10" className="rounded-lg" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

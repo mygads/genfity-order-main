@@ -246,20 +246,20 @@ export function TipsOfTheDay({
   // Initialize and get today's tip
   useEffect(() => {
     setMounted(true);
-    
+
     const state = getTipsState();
     const today = getToday();
-    
+
     // Check if permanently dismissed
     if (state.permanentlyDismissed) {
       return;
     }
-    
+
     // Check if already dismissed today
     if (state.lastShownDate === today && state.dismissedToday) {
       return;
     }
-    
+
     // New day - rotate to next tip
     let newIndex = state.currentTipIndex;
     if (state.lastShownDate !== today) {
@@ -271,17 +271,17 @@ export function TipsOfTheDay({
         dismissedToday: false,
       });
     }
-    
+
     setTipIndex(newIndex);
     setCurrentTip(DAILY_TIPS[newIndex]);
-    
+
     // Delay showing the tip
     const timer = setTimeout(() => {
       if (!isOverlayVisible) {
         setShow(true);
       }
     }, delayMs);
-    
+
     return () => clearTimeout(timer);
   }, [delayMs, isOverlayVisible]);
 
@@ -294,14 +294,14 @@ export function TipsOfTheDay({
 
   const handleDismiss = useCallback((permanent: boolean = false) => {
     setIsExiting(true);
-    
+
     const state = getTipsState();
     saveTipsState({
       ...state,
       dismissedToday: true,
       permanentlyDismissed: permanent,
     });
-    
+
     setTimeout(() => {
       setShow(false);
       setIsExiting(false);
@@ -312,7 +312,7 @@ export function TipsOfTheDay({
     const newIndex = (tipIndex + 1) % DAILY_TIPS.length;
     setTipIndex(newIndex);
     setCurrentTip(DAILY_TIPS[newIndex]);
-    
+
     const state = getTipsState();
     saveTipsState({
       ...state,
@@ -324,7 +324,7 @@ export function TipsOfTheDay({
     const newIndex = tipIndex === 0 ? DAILY_TIPS.length - 1 : tipIndex - 1;
     setTipIndex(newIndex);
     setCurrentTip(DAILY_TIPS[newIndex]);
-    
+
     const state = getTipsState();
     saveTipsState({
       ...state,
@@ -336,28 +336,32 @@ export function TipsOfTheDay({
     if (currentTip?.relatedTutorial) {
       const tutorialId = currentTip.relatedTutorial;
       const tutorial = getTutorialById(tutorialId);
-      
+
       handleDismiss();
-      
+
       // Check if first step has navigateTo and we're not already there
       if (tutorial?.steps?.[0]?.navigateTo) {
         const targetPath = tutorial.steps[0].navigateTo;
-        const isAlreadyOnPage = pathname === targetPath || pathname?.startsWith(targetPath);
-        
+        // Strict equality check ensures we are on the exact target page
+        const isAlreadyOnPage = pathname === targetPath;
+
         if (!isAlreadyOnPage) {
-          // Navigate first, then start tutorial after page loads
+          // Prefetch for smoother navigation
+          router.prefetch(targetPath);
+
+          // Navigate first, then start tutorial after page fully loads
           router.push(targetPath);
           setTimeout(() => {
             startTutorial(tutorialId);
-          }, 600); // Wait for navigation to complete
+          }, 1000); // Increased timeout for page to fully render
           return;
         }
       }
-      
+
       // Start tutorial immediately if no navigation needed
       setTimeout(() => {
         startTutorial(tutorialId);
-      }, 350);
+      }, 400);
     }
   }, [currentTip, handleDismiss, startTutorial, router, pathname]);
 
@@ -390,11 +394,10 @@ export function TipsOfTheDay({
 
   return createPortal(
     <div
-      className={`fixed ${positionClasses[position]} z-50 w-full max-w-md transform transition-all duration-300 ease-out ${
-        isExiting
-          ? 'opacity-0 translate-y-2 scale-95'
-          : 'opacity-100 translate-y-0 scale-100'
-      }`}
+      className={`fixed ${positionClasses[position]} z-50 w-full max-w-md transform transition-all duration-300 ease-out ${isExiting
+        ? 'opacity-0 translate-y-2 scale-95'
+        : 'opacity-100 translate-y-0 scale-100'
+        }`}
       role="dialog"
       aria-label="Tip of the Day"
     >

@@ -10,6 +10,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { FaLightbulb, FaTimes, FaArrowRight, FaInfoCircle } from 'react-icons/fa';
+import { usePathname } from 'next/navigation';
 import { useTutorial } from '../TutorialContext';
 import type { TutorialId } from '../types';
 
@@ -74,14 +75,14 @@ export function ContextualHint({ config, onDismiss, isVisible = true }: Contextu
   // Check if hint was already dismissed
   useEffect(() => {
     setMounted(true);
-    
+
     if (config.showOnce) {
       const dismissed = getDismissedHints();
       if (dismissed.includes(config.id)) {
         return;
       }
     }
-    
+
     // Delay showing hint for smooth entrance
     const timer = setTimeout(() => {
       if (isVisible && !isOverlayVisible) {
@@ -112,7 +113,7 @@ export function ContextualHint({ config, onDismiss, isVisible = true }: Contextu
 
   const handleDismiss = useCallback(() => {
     setIsExiting(true);
-    
+
     if (config.showOnce) {
       saveDismissedHint(config.id);
     }
@@ -180,11 +181,10 @@ export function ContextualHint({ config, onDismiss, isVisible = true }: Contextu
     <div
       className={`fixed ${positionClasses[config.position]} z-50 
         w-[calc(100%-24px)] sm:w-auto sm:max-w-sm 
-        transform transition-all duration-300 ease-out ${
-        isExiting
+        transform transition-all duration-300 ease-out ${isExiting
           ? 'opacity-0 translate-y-2 scale-95'
           : 'opacity-100 translate-y-0 scale-100'
-      }`}
+        }`}
       role="alert"
     >
       <div
@@ -268,6 +268,7 @@ const HintContext = React.createContext<{
 } | null>(null);
 
 export function ContextualHintProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const [state, dispatch] = React.useReducer(
     (state: HintManagerState, action: HintAction): HintManagerState => {
       switch (action.type) {
@@ -293,6 +294,11 @@ export function ContextualHintProvider({ children }: { children: React.ReactNode
     },
     { activeHints: [] }
   );
+
+  // Clear all hints when route changes to prevent stacking
+  React.useEffect(() => {
+    dispatch({ type: 'CLEAR_ALL' });
+  }, [pathname]);
 
   const showHint = useCallback((hint: ContextualHintConfig) => {
     // Check if already dismissed
@@ -333,9 +339,9 @@ export function useContextualHint() {
   if (!context) {
     // Return no-op functions if outside provider
     return {
-      showHint: () => {},
-      dismissHint: () => {},
-      clearAllHints: () => {},
+      showHint: () => { },
+      dismissHint: () => { },
+      clearAllHints: () => { },
     };
   }
   return context;

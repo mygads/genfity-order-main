@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -22,6 +22,25 @@ const countries = [
   { name: 'United States', currency: 'USD', flag: '🇺🇸' },
 ];
 
+// Carousel slides for influencer register
+const carouselSlides = [
+  {
+    image: '/images/carousel/il-influencer-1.png',
+    title: 'Earn Passive Income',
+    description: 'Join our influencer program and earn commission for every merchant you refer to GENFITY.',
+  },
+  {
+    image: '/images/carousel/il-influencer-2.png',
+    title: 'Grow Your Network',
+    description: 'Share your unique referral code and build a network of merchants using GENFITY.',
+  },
+  {
+    image: '/images/carousel/il-influencer-3.png',
+    title: 'Lifetime Earnings',
+    description: 'Get paid for deposits, subscriptions, and recurring payments from your referrals.',
+  },
+];
+
 /**
  * Influencer Register Skeleton
  */
@@ -38,13 +57,11 @@ function InfluencerRegisterSkeleton() {
           <div className="hidden lg:flex flex-col justify-between flex-1 bg-gradient-to-br from-orange-500 to-orange-600 rounded-l-2xl p-10 relative overflow-hidden">
             <div className="h-10 w-40 bg-white/20 rounded-lg animate-pulse" />
             <div className="flex-1 flex flex-col justify-center py-8 space-y-6">
-              <div className="h-6 w-48 bg-white/20 rounded-full animate-pulse" />
-              <div className="h-8 w-3/4 bg-white/20 rounded animate-pulse" />
-              <div className="h-4 w-full bg-white/10 rounded animate-pulse" />
-              <div className="grid grid-cols-2 gap-4 pt-4">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="h-20 bg-white/10 rounded-xl animate-pulse" />
-                ))}
+              <div className="w-full h-[220px] bg-white/10 rounded-2xl animate-pulse" />
+              <div className="space-y-3">
+                <div className="h-6 w-3/4 mx-auto bg-white/20 rounded animate-pulse" />
+                <div className="h-4 w-full bg-white/10 rounded animate-pulse" />
+                <div className="h-4 w-2/3 mx-auto bg-white/10 rounded animate-pulse" />
               </div>
             </div>
           </div>
@@ -92,6 +109,15 @@ function InfluencerRegisterForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  // Auto-rotate carousel every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % carouselSlides.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData((prev) => ({
@@ -158,7 +184,7 @@ function InfluencerRegisterForm() {
       localStorage.setItem('influencerAccessToken', data.data.accessToken);
       localStorage.setItem('influencerRefreshToken', data.data.refreshToken);
       localStorage.setItem('influencerData', JSON.stringify(data.data.influencer));
-      
+
       setSuccess(true);
       setTimeout(() => {
         router.push('/influencer/dashboard');
@@ -200,12 +226,12 @@ function InfluencerRegisterForm() {
 
       <div className="relative z-10 min-h-screen flex items-center justify-center p-4 md:p-8 lg:p-12">
         <div className="w-full max-w-6xl flex flex-col lg:flex-row items-stretch gap-8 lg:gap-0">
-          {/* Left Side - Info Panel */}
+          {/* Left Side - Info Panel with Carousel */}
           <div className="hidden lg:flex flex-col justify-between flex-1 bg-gradient-to-br from-orange-500 to-orange-600 rounded-l-2xl p-10 text-white relative overflow-hidden">
             {/* Decorative elements */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
             <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
-            
+
             {/* Logo */}
             <div className="relative z-10">
               <Link href="/" className="inline-block">
@@ -219,46 +245,56 @@ function InfluencerRegisterForm() {
               </Link>
             </div>
 
-            {/* Content */}
+            {/* Carousel Content */}
             <div className="relative z-10 flex-1 flex flex-col justify-center py-8">
-              <div className="space-y-6">
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 rounded-full text-sm font-medium">
-                  <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-                  Influencer Partnership Program
-                </div>
-                
-                <h2 className="text-3xl font-bold leading-tight">
-                  Earn Passive Income with GENFITY
-                </h2>
-                
-                <p className="text-orange-100 leading-relaxed">
-                  Join our influencer program and earn commission for every merchant you refer. 
-                  Get paid for their deposits, subscriptions, and recurring payments!
-                </p>
+              {/* Carousel Image */}
+              <div className="relative w-full h-[220px] mb-8">
+                {carouselSlides.map((slide, index) => (
+                  <div
+                    key={index}
+                    className={`absolute inset-0 transition-all duration-700 flex items-center justify-center ${currentSlide === index ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+                      }`}
+                  >
+                    <Image
+                      src={slide.image}
+                      alt={slide.title}
+                      width={320}
+                      height={220}
+                      className="object-contain drop-shadow-2xl"
+                      priority={index === 0}
+                    />
+                  </div>
+                ))}
+              </div>
 
-                <div className="grid grid-cols-2 gap-4 pt-4">
-                  <div className="bg-white/10 rounded-xl p-4">
-                    <div className="text-2xl font-bold">10%+</div>
-                    <div className="text-sm text-orange-100">First Commission</div>
-                  </div>
-                  <div className="bg-white/10 rounded-xl p-4">
-                    <div className="text-2xl font-bold">5%+</div>
-                    <div className="text-sm text-orange-100">Recurring</div>
-                  </div>
-                  <div className="bg-white/10 rounded-xl p-4">
-                    <div className="text-2xl font-bold">Lifetime</div>
-                    <div className="text-sm text-orange-100">Earnings</div>
-                  </div>
-                  <div className="bg-white/10 rounded-xl p-4">
-                    <div className="text-2xl font-bold">Multi</div>
-                    <div className="text-sm text-orange-100">Currency</div>
-                  </div>
-                </div>
+              {/* Carousel Text */}
+              <div className="text-center space-y-3">
+                <h2 className="text-xl font-bold transition-all duration-500">
+                  {carouselSlides[currentSlide].title}
+                </h2>
+                <p className="text-orange-100 text-sm leading-relaxed max-w-sm mx-auto transition-all duration-500">
+                  {carouselSlides[currentSlide].description}
+                </p>
+              </div>
+
+              {/* Carousel Dots */}
+              <div className="flex items-center justify-center gap-2 mt-6">
+                {carouselSlides.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentSlide(index)}
+                    className={`transition-all duration-300 rounded-full ${currentSlide === index
+                      ? 'w-6 h-2 bg-white'
+                      : 'w-2 h-2 bg-white/30 hover:bg-white/50'
+                      }`}
+                    aria-label={`Go to slide ${index + 1}`}
+                  />
+                ))}
               </div>
             </div>
 
-            {/* Footer */}
-            <div className="relative z-10 flex items-center gap-6 pt-4 border-t border-white/10">
+            {/* Trust Badges */}
+            <div className="relative z-10 flex items-center justify-center gap-6 pt-4 border-t border-white/10">
               <div className="flex items-center gap-2 text-sm text-orange-100">
                 <FaCheckCircle className="w-4 h-4 text-white" />
                 <span>Easy Withdrawals</span>

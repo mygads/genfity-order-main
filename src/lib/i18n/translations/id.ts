@@ -456,6 +456,7 @@ const id = {
   "admin.nav.orderManagement": "Manajemen Pesanan",
   "admin.nav.ordersKanban": "Pesanan (Kanban)",
   "admin.nav.kitchenDisplay": "Tampilan Dapur",
+  "admin.nav.queueDisplay": "Tampilan Antrian",
   "admin.nav.orderQueue": "Antrian Pesanan",
   "admin.nav.orderHistory": "Riwayat Pesanan",
   "admin.nav.menuManagement": "Manajemen Menu",

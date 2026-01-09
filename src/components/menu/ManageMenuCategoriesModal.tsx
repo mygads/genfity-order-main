@@ -222,6 +222,7 @@ export default function ManageMenuCategoriesModal({
                     placeholder="Search available categories..."
                     value={availableSearch}
                     onChange={(e) => setAvailableSearch(e.target.value)}
+                    data-tutorial="category-search"
                     className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90 dark:placeholder:text-white/40"
                   />
                 </div>
@@ -284,7 +285,7 @@ export default function ManageMenuCategoriesModal({
 
               {/* Selected Categories (Ordered) */}
               <div>
-                <h4 className="mb-3 font-semibold text-gray-800 dark:text-white/90">
+                <h4 className="mb-3 font-semibold text-gray-800 dark:text-white/90" data-tutorial="category-filters">
                   Selected Categories ({selectedCategories.length})
                 </h4>
                 {/* Search Input */}

@@ -99,7 +99,7 @@ export default function AddStaffModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+    <div data-tutorial="add-staff-modal" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
       <div className="w-full max-w-md overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-900">
         {/* Header */}
         <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-800">
@@ -143,6 +143,7 @@ export default function AddStaffModal({
               placeholder="John Doe"
               required
               disabled={loading}
+              data-tutorial="staff-name-input"
               className="mt-2 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 disabled:bg-gray-100 disabled:cursor-not-allowed dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:disabled:bg-gray-900"
             />
           </div>
@@ -158,6 +159,7 @@ export default function AddStaffModal({
               placeholder="staff@example.com"
               required
               disabled={loading}
+              data-tutorial="staff-email-input"
               className="mt-2 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 disabled:bg-gray-100 disabled:cursor-not-allowed dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:disabled:bg-gray-900"
             />
           </div>
@@ -172,6 +174,7 @@ export default function AddStaffModal({
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
               placeholder="+61 400 000 000"
               disabled={loading}
+              data-tutorial="staff-phone-input"
               className="mt-2 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 disabled:bg-gray-100 disabled:cursor-not-allowed dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:disabled:bg-gray-900"
             />
           </div>
@@ -188,6 +191,7 @@ export default function AddStaffModal({
                 placeholder="Minimum 8 characters"
                 required
                 disabled={loading}
+                data-tutorial="staff-password-input"
                 className="w-full rounded-lg border border-gray-300 px-4 py-2.5 pr-10 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 disabled:bg-gray-100 disabled:cursor-not-allowed dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:disabled:bg-gray-900"
               />
               <button
@@ -225,6 +229,7 @@ export default function AddStaffModal({
             <button
               type="submit"
               disabled={loading}
+              data-tutorial="staff-submit-btn"
               className="flex-1 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-600 disabled:opacity-50"
             >
               {loading ? (

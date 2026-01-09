@@ -508,7 +508,7 @@ export default function EditMerchantPage() {
         <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
           {t("admin.merchantEdit.logoDesc")}
         </p>
-        <div className="flex items-center gap-5">
+        <div className="flex items-center gap-5" data-tutorial="store-logo-upload">
           <div className="relative h-20 w-20 overflow-hidden rounded-lg border-2 border-gray-200 dark:border-gray-700">
             {formData.logoUrl ? (
               <Image
@@ -554,7 +554,7 @@ export default function EditMerchantPage() {
         <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
           {t("admin.merchantEdit.bannerDesc")}
         </p>
-        <div className="flex flex-col sm:flex-row gap-4 items-start">
+        <div className="flex flex-col sm:flex-row gap-4 items-start" data-tutorial="store-banner-upload">
           {/* Banner Preview - 2:1 aspect ratio */}
           <div className="relative w-full sm:flex-1 overflow-hidden rounded-lg border-2 border-gray-200 dark:border-gray-700" style={{ aspectRatio: '2/1' }}>
             {formData.bannerUrl ? (
@@ -625,6 +625,7 @@ export default function EditMerchantPage() {
           value={formData.name}
           onChange={handleChange}
           required
+          data-tutorial="store-name-input"
           className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
         />
       </div>
@@ -1064,6 +1065,7 @@ export default function EditMerchantPage() {
             onChange={handleChange}
             required
             rows={2}
+            data-tutorial="store-address-input"
             className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
           />
         </div>
@@ -1148,7 +1150,7 @@ export default function EditMerchantPage() {
         </div>
 
         {/* Map Location Picker */}
-        <div>
+        <div data-tutorial="store-map-picker">
           <h4 className="mb-3 text-sm font-medium text-gray-900 dark:text-white">
             {t("admin.merchantEdit.storeLocation") || "Store Location on Map"}
           </h4>
@@ -1176,15 +1178,16 @@ export default function EditMerchantPage() {
    * Opening Hours Tab - 7-day schedule
    */
   const OpeningHoursTab = () => (
-    <div className="space-y-4">
+    <div className="space-y-4" data-tutorial="opening-hours-tab-content">
       <p className="text-sm text-gray-500 dark:text-gray-400">
         Set your store&apos;s operating hours for each day of the week.
       </p>
-      <div className="space-y-2">
+      <div className="space-y-2" data-tutorial="opening-hours-list">
         {openingHours.map((hour) => (
           <div
             key={hour.dayOfWeek}
             className="flex items-center gap-4 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-900/50"
+            data-tutorial="opening-hours-row"
           >
             <div className="w-24 text-sm font-medium text-gray-900 dark:text-white">
               {DAYS[hour.dayOfWeek]}
@@ -1552,43 +1555,43 @@ export default function EditMerchantPage() {
               submitLabel={t("admin.merchantEdit.saveChanges")}
               submittingLabel={t("admin.merchantEdit.saving")}
               submitDataTutorial="settings-save-btn"
-          />
-        </form>
-      </div>
+            />
+          </form>
+        </div>
 
-      {/* Unsaved Changes Modal */}
-      {showUnsavedModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900">
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-warning-100 dark:bg-warning-900/30">
-              <svg className="h-6 w-6 text-warning-600 dark:text-warning-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-            </div>
-            <h3 className="mb-2 text-lg font-semibold text-gray-900 dark:text-white">Unsaved Changes</h3>
-            <p className="mb-6 text-sm text-gray-600 dark:text-gray-400">
-              You have unsaved changes. Please save your changes before switching tabs, or discard them to continue.
-            </p>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setShowUnsavedModal(false)}
-                className="h-11 flex-1 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={confirmTabChange}
-                className="h-11 flex-1 rounded-lg bg-warning-500 text-sm font-medium text-white hover:bg-warning-600"
-              >
-                Discard & Continue
-              </button>
+        {/* Unsaved Changes Modal */}
+        {showUnsavedModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-warning-100 dark:bg-warning-900/30">
+                <svg className="h-6 w-6 text-warning-600 dark:text-warning-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h3 className="mb-2 text-lg font-semibold text-gray-900 dark:text-white">Unsaved Changes</h3>
+              <p className="mb-6 text-sm text-gray-600 dark:text-gray-400">
+                You have unsaved changes. Please save your changes before switching tabs, or discard them to continue.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowUnsavedModal(false)}
+                  className="h-11 flex-1 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmTabChange}
+                  className="h-11 flex-1 rounded-lg bg-warning-500 text-sm font-medium text-white hover:bg-warning-600"
+                >
+                  Discard & Continue
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
     </SubscriptionRequired>
   );
 }

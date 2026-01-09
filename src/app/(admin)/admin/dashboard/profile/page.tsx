@@ -9,6 +9,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import AdminFormFooter from '@/components/common/AdminFormFooter';
+import { ProfilePageSkeleton } from '@/components/common/SkeletonLoaders';
 import { getAdminToken } from '@/lib/utils/adminAuth';
 import { useToast } from '@/hooks/useToast';
 import Image from 'next/image';
@@ -184,14 +185,7 @@ export default function ProfilePage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="flex items-center gap-3 text-gray-500">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand-500 border-t-transparent"></div>
-          Loading profile...
-        </div>
-      </div>
-    );
+    return <ProfilePageSkeleton />;
   }
 
   if (!profile) {

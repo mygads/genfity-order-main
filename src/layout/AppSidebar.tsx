@@ -41,6 +41,7 @@ import {
   FaHandshake,
   FaMoneyCheckAlt,
   FaUserCog,
+  FaTv,
 } from "react-icons/fa";
 import MerchantBanner from "../components/merchants/MerchantBanner";
 
@@ -194,6 +195,13 @@ const merchantNavGroups: NavGroup[] = [
         path: "/admin/dashboard/orders/kitchen",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
         permission: STAFF_PERMISSIONS.ORDERS_KITCHEN,
+      },
+      {
+        icon: <FaTv />,
+        nameKey: "admin.nav.queueDisplay",
+        path: "/admin/dashboard/orders/queue",
+        roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+        permission: STAFF_PERMISSIONS.ORDERS,
       },
       {
         icon: <FaHistory />,

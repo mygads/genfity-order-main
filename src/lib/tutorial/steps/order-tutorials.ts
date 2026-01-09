@@ -202,12 +202,9 @@ export const ordersQueueSteps: TutorialStep[] = [
   {
     id: 'queue-auto-refresh',
     title: 'Auto-Refresh',
-    description: 'Toggle auto-refresh to automatically update the display every 3 seconds. Great for hands-free operation!',
-    targetSelector: '[data-tutorial="queue-auto-refresh"]',
-    position: 'bottom',
-    spotlightPadding: 8,
-    showPointer: true,
-    pointerDirection: 'up',
+    description: 'The queue display automatically refreshes every 3 seconds to show the latest ready orders. No manual refresh needed!',
+    targetSelector: null,
+    position: 'center',
   },
   {
     id: 'queue-display-modes',

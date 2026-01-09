@@ -462,6 +462,7 @@ const en = {
   "admin.nav.orderManagement": "Order Management",
   "admin.nav.ordersKanban": "Orders (Kanban)",
   "admin.nav.kitchenDisplay": "Kitchen Display",
+  "admin.nav.queueDisplay": "Queue Display",
   "admin.nav.orderQueue": "Order Queue",
   "admin.nav.orderHistory": "Order History",
   "admin.nav.menuManagement": "Menu Management",

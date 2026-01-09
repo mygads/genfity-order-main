@@ -1,18 +1,34 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import {
-  FaBell,
-  FaWallet,
-  FaChartBar,
   FaTimesCircle,
   FaEyeSlash,
   FaEye,
   FaSpinner,
 } from 'react-icons/fa';
+
+// Carousel slides for influencer login
+const carouselSlides = [
+  {
+    image: '/images/carousel/il-influencer-1.png',
+    title: 'Track Your Earnings',
+    description: 'Monitor your referral commissions and earnings in real-time with detailed reports.',
+  },
+  {
+    image: '/images/carousel/il-influencer-2.png',
+    title: 'Grow Your Network',
+    description: 'Share your unique referral code and build a network of merchants using GENFITY.',
+  },
+  {
+    image: '/images/carousel/il-influencer-3.png',
+    title: 'Detailed Analytics',
+    description: 'Access comprehensive analytics to understand your performance and optimize your strategy.',
+  },
+];
 
 /**
  * Influencer Login Skeleton
@@ -25,17 +41,16 @@ function InfluencerLoginSkeleton() {
         <div className="absolute top-1/2 -left-40 w-80 h-80 bg-[#173C82]/5 rounded-full blur-3xl" />
       </div>
       <div className="relative z-10 min-h-screen flex items-center justify-center p-4 md:p-8 lg:p-12">
-        <div className="w-full max-w-5xl flex flex-col lg:flex-row items-stretch gap-8 lg:gap-0">
+        <div className="w-full max-w-6xl flex flex-col lg:flex-row items-stretch gap-8 lg:gap-0">
           {/* Left Panel Skeleton */}
           <div className="hidden lg:flex flex-col justify-between flex-1 bg-gradient-to-br from-orange-500 to-orange-600 rounded-l-2xl p-10 relative overflow-hidden">
             <div className="h-10 w-40 bg-white/20 rounded-lg animate-pulse" />
             <div className="flex-1 flex flex-col justify-center py-8 space-y-6">
-              <div className="h-8 w-3/4 bg-white/20 rounded animate-pulse" />
-              <div className="h-4 w-full bg-white/10 rounded animate-pulse" />
-              <div className="space-y-3 pt-4">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-16 bg-white/10 rounded-lg animate-pulse" />
-                ))}
+              <div className="w-full h-[220px] bg-white/10 rounded-2xl animate-pulse" />
+              <div className="space-y-3">
+                <div className="h-6 w-3/4 mx-auto bg-white/20 rounded animate-pulse" />
+                <div className="h-4 w-full bg-white/10 rounded animate-pulse" />
+                <div className="h-4 w-2/3 mx-auto bg-white/10 rounded animate-pulse" />
               </div>
             </div>
           </div>
@@ -80,6 +95,15 @@ function InfluencerLoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  // Auto-rotate carousel every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % carouselSlides.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({
@@ -124,7 +148,7 @@ function InfluencerLoginForm() {
       localStorage.setItem('influencerAccessToken', data.data.accessToken);
       localStorage.setItem('influencerRefreshToken', data.data.refreshToken);
       localStorage.setItem('influencerData', JSON.stringify(data.data.influencer));
-      
+
       router.push('/influencer/dashboard');
     } catch {
       setError('Network error. Please try again.');
@@ -141,13 +165,13 @@ function InfluencerLoginForm() {
       </div>
 
       <div className="relative z-10 min-h-screen flex items-center justify-center p-4 md:p-8 lg:p-12">
-        <div className="w-full max-w-5xl flex flex-col lg:flex-row items-stretch gap-8 lg:gap-0">
-          {/* Left Side - Info Panel */}
+        <div className="w-full max-w-6xl flex flex-col lg:flex-row items-stretch gap-8 lg:gap-0">
+          {/* Left Side - Info Panel with Carousel */}
           <div className="hidden lg:flex flex-col justify-between flex-1 bg-gradient-to-br from-orange-500 to-orange-600 rounded-l-2xl p-10 text-white relative overflow-hidden">
             {/* Decorative elements */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
             <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
-            
+
             {/* Logo */}
             <div className="relative z-10">
               <Link href="/" className="inline-block">
@@ -161,65 +185,73 @@ function InfluencerLoginForm() {
               </Link>
             </div>
 
-            {/* Content */}
+            {/* Carousel Content */}
             <div className="relative z-10 flex-1 flex flex-col justify-center py-8">
-              <div className="space-y-6">
-                <h2 className="text-3xl font-bold leading-tight">
-                  Welcome Back, Partner!
-                </h2>
-                
-                <p className="text-orange-100 leading-relaxed">
-                  Sign in to your influencer dashboard to track your referrals, 
-                  earnings, and manage your withdrawal requests.
-                </p>
+              {/* Carousel Image */}
+              <div className="relative w-full h-[220px] mb-8">
+                {carouselSlides.map((slide, index) => (
+                  <div
+                    key={index}
+                    className={`absolute inset-0 transition-all duration-700 flex items-center justify-center ${currentSlide === index ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+                      }`}
+                  >
+                    <Image
+                      src={slide.image}
+                      alt={slide.title}
+                      width={320}
+                      height={220}
+                      className="object-contain drop-shadow-2xl"
+                      priority={index === 0}
+                    />
+                  </div>
+                ))}
+              </div>
 
-                <div className="space-y-3 pt-4">
-                  <div className="flex items-center gap-3 bg-white/10 rounded-lg p-3">
-                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                      <FaBell className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="font-medium">Real-time Notifications</div>
-                      <div className="text-sm text-orange-200">Get notified when you earn</div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-3 bg-white/10 rounded-lg p-3">
-                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                      <FaWallet className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="font-medium">Easy Withdrawals</div>
-                      <div className="text-sm text-orange-200">Withdraw your earnings anytime</div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-3 bg-white/10 rounded-lg p-3">
-                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                      <FaChartBar className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="font-medium">Detailed Analytics</div>
-                      <div className="text-sm text-orange-200">Track all your referrals</div>
-                    </div>
-                  </div>
-                </div>
+              {/* Carousel Text */}
+              <div className="text-center space-y-3">
+                <h2 className="text-xl font-bold transition-all duration-500">
+                  {carouselSlides[currentSlide].title}
+                </h2>
+                <p className="text-orange-100 text-sm leading-relaxed max-w-sm mx-auto transition-all duration-500">
+                  {carouselSlides[currentSlide].description}
+                </p>
+              </div>
+
+              {/* Carousel Dots */}
+              <div className="flex items-center justify-center gap-2 mt-6">
+                {carouselSlides.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentSlide(index)}
+                    className={`transition-all duration-300 rounded-full ${currentSlide === index
+                        ? 'w-6 h-2 bg-white'
+                        : 'w-2 h-2 bg-white/30 hover:bg-white/50'
+                      }`}
+                    aria-label={`Go to slide ${index + 1}`}
+                  />
+                ))}
               </div>
             </div>
 
-            {/* Footer */}
-            <div className="relative z-10 pt-4 border-t border-white/10">
-              <p className="text-sm text-orange-200">
-                Not an influencer yet?{' '}
-                <Link href="/influencer/register" className="text-white font-medium hover:underline">
-                  Join our program →
-                </Link>
-              </p>
+            {/* Trust Badges */}
+            <div className="relative z-10 flex items-center justify-center gap-6 pt-4 border-t border-white/10">
+              <div className="flex items-center gap-2 text-sm text-orange-100">
+                <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                <span>Secure Login</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-orange-100">
+                <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                <span>Fast Withdrawals</span>
+              </div>
             </div>
           </div>
 
           {/* Right Side - Login Form */}
-          <div className="w-full lg:w-[420px] bg-white dark:bg-gray-800 lg:rounded-r-2xl lg:rounded-l-none rounded-2xl shadow-2xl shadow-gray-200/50 dark:shadow-none">
+          <div className="w-full lg:w-[480px] bg-white dark:bg-gray-800 lg:rounded-r-2xl lg:rounded-l-none rounded-2xl shadow-2xl shadow-gray-200/50 dark:shadow-none">
             <div className="p-6 sm:p-8 lg:p-10">
               {/* Mobile Logo */}
               <div className="flex justify-center mb-8 lg:hidden">
@@ -246,7 +278,7 @@ function InfluencerLoginForm() {
               {/* Header */}
               <div className="text-center mb-8">
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                  Influencer Sign In
+                  Welcome Back, Partner!
                 </h1>
                 <p className="text-gray-500 dark:text-gray-400 text-sm">
                   Enter your credentials to access your dashboard
@@ -287,8 +319,8 @@ function InfluencerLoginForm() {
                     <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                       Password
                     </label>
-                    <Link 
-                      href="/influencer/forgot-password" 
+                    <Link
+                      href="/influencer/forgot-password"
                       className="text-xs text-orange-500 hover:text-orange-600 font-medium"
                     >
                       Forgot Password?
@@ -340,7 +372,7 @@ function InfluencerLoginForm() {
                 <p className="text-center text-sm text-gray-500 dark:text-gray-400">
                   Don&apos;t have an account?{' '}
                   <Link href="/influencer/register" className="text-orange-500 hover:text-orange-600 font-medium">
-                    Create Account
+                    Join Our Program
                   </Link>
                 </p>
               </form>
@@ -359,3 +391,4 @@ export default function InfluencerLoginPage() {
     </Suspense>
   );
 }
+

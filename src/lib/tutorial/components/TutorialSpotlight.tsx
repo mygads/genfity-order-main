@@ -53,12 +53,12 @@ function useSwipeGesture(
 
   const handleTouchEnd = useCallback((e: TouchEvent) => {
     if (!enabled || !touchStartRef.current) return;
-    
+
     const touch = e.changedTouches[0];
     const deltaX = touch.clientX - touchStartRef.current.x;
     const deltaY = touch.clientY - touchStartRef.current.y;
     const deltaTime = Date.now() - touchStartRef.current.time;
-    
+
     // Only trigger swipe if horizontal movement is greater than vertical
     // and swipe is fast enough (under 500ms)
     if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > threshold && deltaTime < 500) {
@@ -72,14 +72,14 @@ function useSwipeGesture(
         setTimeout(() => setSwipeDirection(null), 300);
       }
     }
-    
+
     touchStartRef.current = null;
   }, [enabled, threshold, onSwipeLeft, onSwipeRight]);
 
   useEffect(() => {
     document.addEventListener('touchstart', handleTouchStart, { passive: true });
     document.addEventListener('touchend', handleTouchEnd, { passive: true });
-    
+
     return () => {
       document.removeEventListener('touchstart', handleTouchStart);
       document.removeEventListener('touchend', handleTouchEnd);
@@ -98,7 +98,7 @@ function useDeviceOrientation() {
     const checkOrientation = () => {
       const isLandscape = window.innerWidth > window.innerHeight;
       setOrientation(isLandscape ? 'landscape' : 'portrait');
-      
+
       // Tablet detection: width between 600-1024px or height between 600-1024px in landscape
       const minDimension = Math.min(window.innerWidth, window.innerHeight);
       const maxDimension = Math.max(window.innerWidth, window.innerHeight);
@@ -181,11 +181,11 @@ export function TutorialSpotlight() {
 
     // Only update if position actually changed (prevents infinite loops)
     setSpotlightRect(prev => {
-      if (prev && 
-          Math.abs(prev.top - newRect.top) < 1 && 
-          Math.abs(prev.left - newRect.left) < 1 && 
-          Math.abs(prev.width - newRect.width) < 1 && 
-          Math.abs(prev.height - newRect.height) < 1) {
+      if (prev &&
+        Math.abs(prev.top - newRect.top) < 1 &&
+        Math.abs(prev.left - newRect.left) < 1 &&
+        Math.abs(prev.width - newRect.width) < 1 &&
+        Math.abs(prev.height - newRect.height) < 1) {
         return prev; // No significant change
       }
       // Save previous position for animation
@@ -202,21 +202,34 @@ export function TutorialSpotlight() {
       if (sidebarScrollContainer) {
         const scrollRect = sidebarScrollContainer.getBoundingClientRect();
         const elementRect = element.getBoundingClientRect();
-        
+
         // Check if element is outside visible area of scroll container
         if (elementRect.top < scrollRect.top || elementRect.bottom > scrollRect.bottom) {
-          // Calculate the scroll position to center the element
+          // Calculate the true offset of element relative to scroll container
+          // by walking up the DOM tree
           const htmlElement = element as HTMLElement;
-          const elementOffsetTop = htmlElement.offsetTop || 0;
+          let offsetTop = 0;
+          let currentElement: HTMLElement | null = htmlElement;
+
+          while (currentElement && currentElement !== sidebarScrollContainer) {
+            offsetTop += currentElement.offsetTop;
+            currentElement = currentElement.offsetParent as HTMLElement | null;
+            // Stop if we've exited the sidebar
+            if (currentElement && !sidebarScrollContainer.contains(currentElement)) {
+              break;
+            }
+          }
+
           const containerHeight = sidebarScrollContainer.clientHeight;
-          const scrollTo = elementOffsetTop - containerHeight / 2 + htmlElement.offsetHeight / 2;
-          
+          const scrollTo = offsetTop - containerHeight / 2 + htmlElement.offsetHeight / 2;
+
           sidebarScrollContainer.scrollTo({
             top: Math.max(0, scrollTo),
             behavior: 'smooth'
           });
-          
+
           // Wait for scroll to complete, then recalculate position
+          // Use longer timeout (500ms) for more reliable positioning
           setTimeout(() => {
             const newRect = element.getBoundingClientRect();
             const padding = currentStep?.spotlightPadding ?? 8;
@@ -226,7 +239,7 @@ export function TutorialSpotlight() {
               width: newRect.width + padding * 2,
               height: newRect.height + padding * 2,
             });
-          }, 350); // Wait for smooth scroll to complete
+          }, 500);
         }
       } else {
         // Fallback: use scrollIntoView
@@ -241,7 +254,7 @@ export function TutorialSpotlight() {
             width: newRect.width + padding * 2,
             height: newRect.height + padding * 2,
           });
-        }, 350);
+        }, 500);
       }
     } else {
       // For main content, scroll window if needed
@@ -258,7 +271,7 @@ export function TutorialSpotlight() {
             width: newRect.width + padding * 2,
             height: newRect.height + padding * 2,
           });
-        }, 350);
+        }, 500);
       }
     }
   }, [currentStep]);
@@ -412,7 +425,7 @@ export function TutorialSpotlight() {
     };
 
     window.addEventListener('resize', handleResize);
-    
+
     // Listen to sidebar scroll container specifically (the actual scrollable element)
     if (sidebarScrollContainer) {
       sidebarScrollContainer.addEventListener('scroll', handleSidebarScroll, { passive: true });
@@ -441,7 +454,7 @@ export function TutorialSpotlight() {
       if (targetElement) {
         // Click the target element to trigger the action (e.g., open modal)
         targetElement.click();
-        
+
         // If there's also a navigateTo, navigate after clicking
         if (currentStep.navigateTo) {
           const targetPath = currentStep.navigateTo;
@@ -637,18 +650,16 @@ export function TutorialSpotlight() {
         ref={tooltipRef}
         className={`fixed bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 
           p-3 sm:p-4 md:p-5 
-          ${isLandscapeTablet 
-            ? 'w-105 max-w-[50vw]' 
+          ${isLandscapeTablet
+            ? 'w-105 max-w-[50vw]'
             : 'w-[calc(100vw-24px)] sm:w-80 md:w-90 lg:w-96 max-w-100'
           }
-          transform transition-all duration-300 ease-out ${
-          isTooltipVisible 
-            ? 'opacity-100 translate-y-0 scale-100' 
+          transform transition-all duration-300 ease-out ${isTooltipVisible
+            ? 'opacity-100 translate-y-0 scale-100'
             : 'opacity-0 translate-y-2 scale-95'
-        } ${
-          swipeDirection === 'left' ? 'animate-swipe-left' : 
-          swipeDirection === 'right' ? 'animate-swipe-right' : ''
-        }`}
+          } ${swipeDirection === 'left' ? 'animate-swipe-left' :
+            swipeDirection === 'right' ? 'animate-swipe-right' : ''
+          }`}
         style={
           tooltipPosition
             ? { top: tooltipPosition.top, left: tooltipPosition.left }
@@ -659,15 +670,14 @@ export function TutorialSpotlight() {
         {/* Arrow - Only show for non-center positions */}
         {!isCenterPosition && tooltipPosition && (
           <div
-            className={`absolute w-3 h-3 sm:w-4 sm:h-4 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 transform rotate-45 ${
-              tooltipPosition.arrowPosition === 'top'
+            className={`absolute w-3 h-3 sm:w-4 sm:h-4 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 transform rotate-45 ${tooltipPosition.arrowPosition === 'top'
                 ? '-top-1.5 sm:-top-2 left-1/2 -translate-x-1/2 border-t border-l'
                 : tooltipPosition.arrowPosition === 'bottom'
-                ? '-bottom-1.5 sm:-bottom-2 left-1/2 -translate-x-1/2 border-b border-r'
-                : tooltipPosition.arrowPosition === 'left'
-                ? '-left-1.5 sm:-left-2 top-1/2 -translate-y-1/2 border-l border-b'
-                : '-right-1.5 sm:-right-2 top-1/2 -translate-y-1/2 border-r border-t'
-            }`}
+                  ? '-bottom-1.5 sm:-bottom-2 left-1/2 -translate-x-1/2 border-b border-r'
+                  : tooltipPosition.arrowPosition === 'left'
+                    ? '-left-1.5 sm:-left-2 top-1/2 -translate-y-1/2 border-l border-b'
+                    : '-right-1.5 sm:-right-2 top-1/2 -translate-y-1/2 border-r border-t'
+              }`}
           />
         )}
 
@@ -714,9 +724,8 @@ export function TutorialSpotlight() {
             <img
               src={currentStep.image}
               alt=""
-              className={`object-contain rounded-lg bg-gray-100 dark:bg-gray-700 ${
-                isLandscapeTablet ? 'w-full h-24' : 'w-full h-24 sm:h-28 md:h-32'
-              }`}
+              className={`object-contain rounded-lg bg-gray-100 dark:bg-gray-700 ${isLandscapeTablet ? 'w-full h-24' : 'w-full h-24 sm:h-28 md:h-32'
+                }`}
             />
           </div>
         )}
@@ -731,11 +740,10 @@ export function TutorialSpotlight() {
           <button
             onClick={previousStep}
             disabled={isFirstStep}
-            className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg transition-colors touch-manipulation ${
-              isFirstStep
+            className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg transition-colors touch-manipulation ${isFirstStep
                 ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
                 : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200'
-            }`}
+              }`}
           >
             <FaArrowLeft className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
             <span className="hidden xs:inline">Back</span>
@@ -758,8 +766,8 @@ export function TutorialSpotlight() {
                 {currentStep.actionText
                   ? currentStep.actionText
                   : isLastStep
-                  ? 'Finish'
-                  : 'Next'}
+                    ? 'Finish'
+                    : 'Next'}
               </span>
               {!isLastStep && <FaArrowRight className="w-2.5 h-2.5 sm:w-3 sm:h-3" />}
             </button>
