@@ -401,6 +401,11 @@ const id = {
   "customer.orderSummary.orderNumber": "Nomor Pesanan",
   "customer.orderSummary.showQRInstruction": "Tunjukkan kode QR atau 7-digit nomor pesanan ke kasir kami.",
 
+  // Push Notifications
+  "customer.push.enableTitle": "Dapatkan Update Pesanan",
+  "customer.push.enableDescription": "Terima notifikasi saat status pesanan berubah, bahkan saat aplikasi tertutup.",
+  "customer.push.enable": "Aktifkan",
+
   // ============================================================================
   // ADMIN - Konten dashboard admin
   // ============================================================================

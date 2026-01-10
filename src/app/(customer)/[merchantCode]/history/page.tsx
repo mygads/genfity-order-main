@@ -76,7 +76,7 @@ export default function OrderHistoryPage() {
   const merchantCode = params.merchantCode as string | undefined;
   const mode = searchParams.get('mode') as 'dinein' | 'takeaway' | null;
   const ref = searchParams.get('ref');
-  
+
   // ✅ Use CustomerData Context for instant merchant info access
   const { merchantInfo: contextMerchantInfo, initializeData, isInitialized } = useCustomerData();
 
@@ -180,9 +180,9 @@ export default function OrderHistoryPage() {
    */
   const handleReorder = async (order: OrderHistoryItem) => {
     if (!auth) return;
-    
+
     setReorderingOrderId(order.id.toString());
-    
+
     try {
       const response = await fetch(`/api/customer/orders/${order.id}/reorder`, {
         headers: {
@@ -282,7 +282,15 @@ export default function OrderHistoryPage() {
   };
 
   const handleOrderClick = (order: OrderHistoryItem) => {
-    router.push(`/${order.merchantCode}/order-summary-cash?orderNumber=${order.orderNumber}&mode=${order.mode}`);
+    const status = order.status.toLowerCase();
+
+    // If order is completed or ready, go to order-detail page (read-only view)
+    if (status === 'completed' || status === 'ready') {
+      router.push(`/${order.merchantCode}/order-detail/${order.orderNumber}?mode=${order.mode}`);
+    } else {
+      // For pending, accepted, in_progress orders, go to order-summary-cash (tracking page)
+      router.push(`/${order.merchantCode}/order-summary-cash?orderNumber=${order.orderNumber}&mode=${order.mode}`);
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -315,7 +323,7 @@ export default function OrderHistoryPage() {
     if (merchantCurrency === 'AUD') {
       return `A$${amount.toFixed(2)}`;
     }
-    
+
     // Special handling for IDR - no decimals
     if (merchantCurrency === 'IDR') {
       const formatted = new Intl.NumberFormat('id-ID', {
@@ -324,7 +332,7 @@ export default function OrderHistoryPage() {
       }).format(Math.round(amount));
       return `Rp ${formatted}`;
     }
-    
+
     return new Intl.NumberFormat('en-AU', {
       style: 'currency',
       currency: merchantCurrency,
@@ -501,10 +509,19 @@ export default function OrderHistoryPage() {
 
                   {/* Order Number */}
                   <div className="mb-3 p-2 bg-gray-50 rounded-lg">
-                    <p className="text-xs text-gray-600">{t('customer.track.orderNumber')}</p>
-                    <p className="text-sm font-bold text-gray-900 font-mono">
-                      #{order.orderNumber}
-                    </p>
+                    <p className="text-xs text-gray-600 mb-1">{t('customer.track.orderNumber')}</p>
+                    <div className="inline-flex items-center rounded overflow-hidden border border-gray-200">
+                      {/* Merchant Code (Left - Gray) */}
+                      <span className="px-2 py-1 bg-gray-100 text-gray-500 font-mono font-medium text-xs">
+                        {order.merchantCode}
+                      </span>
+                      {/* Order Code (Right - White) */}
+                      <span className="px-2 py-1 bg-white text-gray-900 font-mono font-bold text-xs">
+                        {order.orderNumber.includes('-')
+                          ? order.orderNumber.split('-').slice(1).join('-')
+                          : order.orderNumber}
+                      </span>
+                    </div>
                   </div>
 
                   {/* Order Details */}

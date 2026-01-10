@@ -1943,3 +1943,90 @@ export function ProfilePageSkeleton() {
     </div>
   );
 }
+
+/**
+ * Track Order Page Skeleton
+ * Mobile-first skeleton for order tracking page
+ */
+export function TrackOrderSkeleton() {
+  return (
+    <>
+      {/* Header */}
+      <header className="sticky top-0 z-10 bg-white border-b border-gray-300 shadow-md">
+        <div className="flex items-center px-4 py-3">
+          <Skeleton width="w-10" height="h-10" className="rounded-full" />
+          <div className="flex-1 flex justify-center">
+            <Skeleton width="w-24" height="h-5" />
+          </div>
+          <Skeleton width="w-10" height="h-10" className="rounded-full" />
+        </div>
+      </header>
+
+      <div className="flex-1 overflow-y-auto pb-32">
+        {/* Order Number Badge */}
+        <div className="px-6 py-6 text-center border-b border-gray-200">
+          <div className="flex justify-center mb-3">
+            <Skeleton width="w-32" height="h-10" className="rounded-lg" />
+          </div>
+          <Skeleton width="w-28" height="h-4" className="mx-auto mb-1" />
+          <Skeleton width="w-36" height="h-3" className="mx-auto" />
+        </div>
+
+        {/* Status Progress */}
+        <div className="px-6 py-6">
+          {/* Progress Bar */}
+          <div className="relative mb-8">
+            <Skeleton width="w-full" height="h-1" className="rounded-full" />
+            <div className="relative flex justify-between mt-4">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <div key={i} className="flex flex-col items-center">
+                  <Skeleton width="w-8" height="h-8" className="rounded-full" />
+                  <Skeleton width="w-12" height="h-3" className="mt-2" />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Current Status Card */}
+          <div className="p-6 rounded-xl text-center mb-6 bg-white border border-gray-200">
+            <div className="flex justify-center mb-3">
+              <Skeleton width="w-12" height="h-12" className="rounded-full" />
+            </div>
+            <Skeleton width="w-48" height="h-6" className="mx-auto mb-2" />
+            <div className="flex justify-center gap-2">
+              <Skeleton width="w-5" height="h-5" className="rounded" />
+              <Skeleton width="w-24" height="h-4" />
+            </div>
+          </div>
+        </div>
+
+        {/* Order Details */}
+        <div className="px-6 pb-6">
+          <Skeleton width="w-24" height="h-5" className="mb-4" />
+          <div className="space-y-3">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="flex justify-between items-start p-3 bg-gray-50 rounded-lg">
+                <div className="flex-1">
+                  <Skeleton width="w-3/4" height="h-4" className="mb-1" />
+                  <Skeleton width="w-1/2" height="h-3" />
+                </div>
+                <Skeleton width="w-16" height="h-4" />
+              </div>
+            ))}
+          </div>
+
+          {/* Total */}
+          <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200">
+            <Skeleton width="w-12" height="h-5" />
+            <Skeleton width="w-20" height="h-6" />
+          </div>
+        </div>
+      </div>
+
+      {/* Fixed Bottom Button */}
+      <div className="fixed bottom-0 left-0 right-0 max-w-[500px] mx-auto px-6 py-4 bg-white border-t border-gray-200">
+        <Skeleton width="w-full" height="h-12" className="rounded-lg" />
+      </div>
+    </>
+  );
+}

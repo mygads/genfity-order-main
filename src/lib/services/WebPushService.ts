@@ -117,7 +117,7 @@ class WebPushService {
             return true;
         } catch (error) {
             console.error('Push notification failed:', error);
-            
+
             // Check if subscription is expired/invalid
             if (error instanceof Error && 'statusCode' in error) {
                 const statusCode = (error as { statusCode: number }).statusCode;
@@ -126,7 +126,7 @@ class WebPushService {
                     console.log('Subscription expired or invalid:', subscription.endpoint);
                 }
             }
-            
+
             return false;
         }
     }
@@ -141,7 +141,7 @@ class WebPushService {
         locale: string = 'en'
     ): Promise<boolean> {
         const payload: PushNotificationPayload = {
-            title: locale === 'id' 
+            title: locale === 'id'
                 ? `⏰ Trial Berakhir dalam ${daysRemaining} Hari`
                 : `⏰ Trial Ends in ${daysRemaining} Days`,
             body: locale === 'id'
@@ -375,7 +375,89 @@ class WebPushService {
 
         return this.sendPushNotification(subscription, payload);
     }
+
+    /**
+     * Send order status update push notification to customer
+     * Used for customer-facing notifications (order ready, completed, etc.)
+     */
+    async sendOrderStatusNotification(
+        subscription: PushSubscription,
+        orderNumber: string,
+        status: 'PREPARING' | 'READY' | 'COMPLETED' | 'CANCELLED',
+        merchantName: string,
+        merchantCode: string,
+        locale: string = 'en'
+    ): Promise<boolean> {
+        const statusMessages: Record<string, { title: string; body: string; emoji: string }> = {
+            PREPARING: {
+                title: locale === 'id'
+                    ? `🍳 Pesanan #${orderNumber} Diproses`
+                    : `🍳 Order #${orderNumber} Being Prepared`,
+                body: locale === 'id'
+                    ? `${merchantName} sedang menyiapkan pesanan Anda`
+                    : `${merchantName} is preparing your order`,
+                emoji: '🍳',
+            },
+            READY: {
+                title: locale === 'id'
+                    ? `✅ Pesanan #${orderNumber} Siap!`
+                    : `✅ Order #${orderNumber} Ready!`,
+                body: locale === 'id'
+                    ? `Pesanan Anda di ${merchantName} siap diambil`
+                    : `Your order at ${merchantName} is ready for pickup`,
+                emoji: '✅',
+            },
+            COMPLETED: {
+                title: locale === 'id'
+                    ? `🎉 Pesanan #${orderNumber} Selesai`
+                    : `🎉 Order #${orderNumber} Completed`,
+                body: locale === 'id'
+                    ? `Terima kasih telah memesan di ${merchantName}!`
+                    : `Thank you for ordering at ${merchantName}!`,
+                emoji: '🎉',
+            },
+            CANCELLED: {
+                title: locale === 'id'
+                    ? `❌ Pesanan #${orderNumber} Dibatalkan`
+                    : `❌ Order #${orderNumber} Cancelled`,
+                body: locale === 'id'
+                    ? `Pesanan Anda di ${merchantName} telah dibatalkan`
+                    : `Your order at ${merchantName} has been cancelled`,
+                emoji: '❌',
+            },
+        };
+
+        const message = statusMessages[status];
+        if (!message) {
+            console.warn(`Unknown order status: ${status}`);
+            return false;
+        }
+
+        const payload: PushNotificationPayload = {
+            title: message.title,
+            body: message.body,
+            tag: `order-status-${orderNumber}`,
+            data: {
+                type: 'ORDER_STATUS',
+                orderNumber,
+                status,
+                merchantCode,
+                orderUrl: `/${merchantCode}/order-status/${orderNumber}`,
+            },
+            actions: [
+                {
+                    action: 'track',
+                    title: locale === 'id' ? 'Lacak Pesanan' : 'Track Order',
+                },
+            ],
+            requireInteraction: status === 'READY', // Require interaction for READY status
+            vibrate: status === 'READY' ? [300, 100, 300, 100, 300] : [200, 100, 200],
+        };
+
+        return this.sendPushNotification(subscription, payload);
+    }
 }
 
 const webPushService = new WebPushService();
 export default webPushService;
+

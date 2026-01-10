@@ -268,6 +268,7 @@ model Customer {
   sessions            CustomerSession[]
   favorites           CustomerFavorite[]
   groupOrderParticipations GroupOrderParticipant[]
+  pushSubscriptions   CustomerPushSubscription[]
 
   @@index([email])
   @@index([phone])
@@ -1312,6 +1313,27 @@ model PushSubscription {
   @@index([userId, isActive])
   @@index([merchantId])
   @@map("push_subscriptions")
+}
+
+// Customer Push Subscription - for customer-facing order status notifications
+// Supports both logged-in customers and guest users (via orderNumbers)
+model CustomerPushSubscription {
+  id            BigInt    @id @default(autoincrement())
+  customerId    BigInt?   @map("customer_id") // For logged-in customers
+  endpoint      String    @db.Text
+  p256dhKey     String    @map("p256dh_key") @db.Text
+  authKey       String    @map("auth_key") @db.Text
+  orderNumbers  String[]  @map("order_numbers") // For guest users - track specific orders
+  userAgent     String?   @map("user_agent")
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  customer      Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, isActive])
+  @@index([endpoint])
+  @@map("customer_push_subscriptions")
 }
 
 // ============================================

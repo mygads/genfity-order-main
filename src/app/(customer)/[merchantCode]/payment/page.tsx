@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { getCustomerAuth, getTableNumber } from '@/lib/utils/localStorage';
+import { getCustomerAuth, getTableNumber, saveRecentOrder } from '@/lib/utils/localStorage';
 import type { OrderMode } from '@/lib/types/customer';
 import PaymentConfirmationModal from '@/components/modals/PaymentConfirmationModal';
 import { useCart } from '@/context/CartContext';
@@ -59,7 +59,7 @@ export default function PaymentPage() {
     session: _groupSession,
     splitBill: _splitBill
   } = useGroupOrder();
-  
+
   // ✅ Use CustomerData Context for instant merchant info access
   const { merchantInfo: contextMerchantInfo, initializeData, isInitialized } = useCustomerData();
 
@@ -146,7 +146,7 @@ export default function PaymentPage() {
   useEffect(() => {
     if (isInitialized && contextMerchantInfo) {
       console.log('✅ [PAYMENT] Using CustomerData Context - instant load');
-      
+
       if (contextMerchantInfo.enableTax) {
         setMerchantTaxPercentage(Number(contextMerchantInfo.taxPercentage) || 0);
       }
@@ -345,9 +345,11 @@ export default function PaymentPage() {
 
       console.log('✅ Order created:', orderData.data.orderNumber);
 
-      // ✅ REMOVED: Auto-login is no longer needed
-      // Orders can be tracked publicly via orderNumber
-      console.log('📝 Order created - public tracking via orderNumber:', orderData.data.orderNumber);
+      // ========================================
+      // STEP 4: Save order for push notification tracking (24h expiry)
+      // ========================================
+      saveRecentOrder(orderData.data.orderNumber, merchantCode);
+      console.log('📱 Order saved for push notifications:', orderData.data.orderNumber);
 
       // ========================================
       // STEP 5: Clear localStorage ONLY (not cart context yet)

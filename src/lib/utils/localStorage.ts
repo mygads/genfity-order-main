@@ -14,6 +14,8 @@ const STORAGE_KEYS = {
   TABLE_PREFIX: 'genfity_table_',
   AUTH: 'genfity_customer_auth',
   FAVORITES_PREFIX: 'genfity_favorites_',
+  RECENT_ORDERS: 'genfity_recent_orders',
+  PUSH_SUBSCRIPTION: 'genfity_push_subscription',
 } as const;
 
 /**
@@ -379,3 +381,191 @@ export function toggleFavorite(merchantCode: string, menuId: string): boolean {
     return true;
   }
 }
+
+// ============================================================================
+// RECENT ORDERS TRACKING (for push notifications)
+// ============================================================================
+
+interface RecentOrder {
+  orderNumber: string;
+  merchantCode: string;
+  createdAt: string; // ISO string
+  expiresAt: string; // ISO string - 24 hours from creation
+}
+
+const RECENT_ORDER_EXPIRY_HOURS = 24;
+
+/**
+ * Save a recent order for push notification tracking
+ * Orders are stored for 24 hours
+ */
+export function saveRecentOrder(orderNumber: string, merchantCode: string): void {
+  if (typeof window === 'undefined') return;
+
+  try {
+    const orders = getRecentOrders();
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + RECENT_ORDER_EXPIRY_HOURS * 60 * 60 * 1000);
+
+    // Remove if already exists
+    const filteredOrders = orders.filter(o => o.orderNumber !== orderNumber);
+
+    // Add new order
+    filteredOrders.push({
+      orderNumber,
+      merchantCode,
+      createdAt: now.toISOString(),
+      expiresAt: expiresAt.toISOString(),
+    });
+
+    localStorage.setItem(STORAGE_KEYS.RECENT_ORDERS, JSON.stringify(filteredOrders));
+
+    // Clean up expired orders
+    cleanExpiredOrders();
+  } catch (error) {
+    console.error('Error saving recent order:', error);
+  }
+}
+
+/**
+ * Get all recent orders (not expired)
+ */
+export function getRecentOrders(): RecentOrder[] {
+  if (typeof window === 'undefined') return [];
+
+  try {
+    const data = localStorage.getItem(STORAGE_KEYS.RECENT_ORDERS);
+    if (!data) return [];
+
+    const orders = JSON.parse(data) as RecentOrder[];
+    const now = new Date();
+
+    // Filter out expired orders
+    return orders.filter(order => new Date(order.expiresAt) > now);
+  } catch (error) {
+    console.error('Error getting recent orders:', error);
+    return [];
+  }
+}
+
+/**
+ * Check if an order is in recent orders
+ */
+export function isRecentOrder(orderNumber: string): boolean {
+  const orders = getRecentOrders();
+  return orders.some(o => o.orderNumber === orderNumber);
+}
+
+/**
+ * Remove expired orders from localStorage
+ */
+export function cleanExpiredOrders(): void {
+  if (typeof window === 'undefined') return;
+
+  try {
+    const orders = getRecentOrders(); // This already filters expired
+    localStorage.setItem(STORAGE_KEYS.RECENT_ORDERS, JSON.stringify(orders));
+  } catch (error) {
+    console.error('Error cleaning expired orders:', error);
+  }
+}
+
+/**
+ * Remove a specific order from recent orders
+ */
+export function removeRecentOrder(orderNumber: string): void {
+  if (typeof window === 'undefined') return;
+
+  try {
+    const orders = getRecentOrders();
+    const filteredOrders = orders.filter(o => o.orderNumber !== orderNumber);
+    localStorage.setItem(STORAGE_KEYS.RECENT_ORDERS, JSON.stringify(filteredOrders));
+  } catch (error) {
+    console.error('Error removing recent order:', error);
+  }
+}
+
+// ============================================================================
+// PUSH SUBSCRIPTION MANAGEMENT
+// ============================================================================
+
+interface LocalPushSubscription {
+  endpoint: string;
+  keys: {
+    p256dh: string;
+    auth: string;
+  };
+  subscribedAt: string;
+}
+
+/**
+ * Save push subscription to localStorage
+ * Used as backup and for guest users
+ */
+export function savePushSubscription(subscription: PushSubscription): void {
+  if (typeof window === 'undefined') return;
+
+  try {
+    const data: LocalPushSubscription = {
+      endpoint: subscription.endpoint,
+      keys: {
+        p256dh: arrayBufferToBase64(subscription.getKey('p256dh')),
+        auth: arrayBufferToBase64(subscription.getKey('auth')),
+      },
+      subscribedAt: new Date().toISOString(),
+    };
+    localStorage.setItem(STORAGE_KEYS.PUSH_SUBSCRIPTION, JSON.stringify(data));
+  } catch (error) {
+    console.error('Error saving push subscription:', error);
+  }
+}
+
+/**
+ * Get saved push subscription from localStorage
+ */
+export function getSavedPushSubscription(): LocalPushSubscription | null {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    const data = localStorage.getItem(STORAGE_KEYS.PUSH_SUBSCRIPTION);
+    if (!data) return null;
+    return JSON.parse(data) as LocalPushSubscription;
+  } catch (error) {
+    console.error('Error getting push subscription:', error);
+    return null;
+  }
+}
+
+/**
+ * Clear push subscription from localStorage
+ */
+export function clearPushSubscription(): void {
+  if (typeof window === 'undefined') return;
+
+  try {
+    localStorage.removeItem(STORAGE_KEYS.PUSH_SUBSCRIPTION);
+  } catch (error) {
+    console.error('Error clearing push subscription:', error);
+  }
+}
+
+/**
+ * Check if push notification is enabled
+ */
+export function isPushEnabled(): boolean {
+  return getSavedPushSubscription() !== null;
+}
+
+/**
+ * Convert ArrayBuffer to Base64 string
+ */
+function arrayBufferToBase64(buffer: ArrayBuffer | null): string {
+  if (!buffer) return '';
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+

@@ -31,6 +31,7 @@ import { validateStatusTransition } from '@/lib/utils/orderStatusRules';
 import emailService from '@/lib/services/EmailService';
 import balanceService from '@/lib/services/BalanceService';
 import subscriptionHistoryService from '@/lib/services/SubscriptionHistoryService';
+import CustomerPushService from '@/lib/services/CustomerPushService';
 
 export class OrderManagementService {
   /**
@@ -133,7 +134,7 @@ export class OrderManagementService {
         ...(data.status === 'COMPLETED' && { completedAt: new Date() }),
         ...(data.status === 'CANCELLED' && { cancelledAt: new Date() }),
         ...(data.status === 'READY' && { actualReadyAt: new Date() }),
-        ...(data.status === 'ACCEPTED' && { acceptedAt: new Date() }),
+        // Note: acceptedAt field doesn't exist in schema, status change is sufficient
       },
       include: {
         ...ORDER_DETAIL_INCLUDE,
@@ -181,6 +182,32 @@ export class OrderManagementService {
       } catch (emailError) {
         console.error('❌ Failed to send order completed email:', emailError);
         // Don't throw - email failure shouldn't block the status update
+      }
+    }
+
+    // Send push notification for customer order status updates
+    const pushStatuses: ('PREPARING' | 'READY' | 'COMPLETED' | 'CANCELLED')[] = ['READY', 'COMPLETED', 'CANCELLED'];
+    if (pushStatuses.includes(data.status as 'READY' | 'COMPLETED' | 'CANCELLED')) {
+      try {
+        // Get merchant code for notification URL
+        const merchant = await prisma.merchant.findUnique({
+          where: { id: order.merchantId },
+          select: { code: true, name: true },
+        });
+
+        if (merchant) {
+          const sentCount = await CustomerPushService.notifyOrderStatusChange(
+            order.orderNumber,
+            data.status as 'PREPARING' | 'READY' | 'COMPLETED' | 'CANCELLED',
+            merchant.name,
+            merchant.code,
+            updated.customerId
+          );
+          console.log(`📱 [Order ${order.orderNumber}] Push notifications sent: ${sentCount}`);
+        }
+      } catch (pushError) {
+        console.error(`[Order ${order.orderNumber}] Failed to send push notification:`, pushError);
+        // Don't throw - push failure shouldn't block the status update
       }
     }
 
@@ -280,6 +307,23 @@ export class OrderManagementService {
             notes: data.notes,
           },
         });
+      }
+
+      // ✅ Auto-update order status to ACCEPTED if currently PENDING
+      // This ensures paid orders move to the next stage automatically
+      const currentOrder = await tx.order.findUnique({
+        where: { id: orderId },
+        select: { status: true },
+      });
+
+      if (currentOrder?.status === 'PENDING') {
+        await tx.order.update({
+          where: { id: orderId },
+          data: {
+            status: 'ACCEPTED',
+          },
+        });
+        console.log(`[OrderManagementService] Order ${orderId} auto-accepted after payment recorded`);
       }
 
       const order = await tx.order.findUnique({

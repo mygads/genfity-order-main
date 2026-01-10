@@ -82,6 +82,7 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
   const [overId, setOverId] = useState<string | null>(null);
   const [showUnpaidConfirm, setShowUnpaidConfirm] = useState(false);
   const [pendingStatusChange, setPendingStatusChange] = useState<{ orderId: string; newStatus: OrderStatus } | null>(null);
+  const [updatingOrders, setUpdatingOrders] = useState<Set<string>>(new Set()); // Track orders being updated
   const previousOrderCountRef = useRef(0);
   const { showError, showSuccess } = useToast();
 
@@ -286,102 +287,120 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
 
   // Common function to update order status
   const updateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
-    // Save current scroll positions for all columns
-    const scrollPositions = new Map<Element, { scrollTop: number; scrollLeft: number }>();
-
-    // Save scroll position of main container and all column containers
-    const mainContainer = document.querySelector('.grid.grid-cols-1.md\\:grid-cols-2.lg\\:grid-cols-4');
-    if (mainContainer && mainContainer.parentElement) {
-      scrollPositions.set(mainContainer.parentElement, {
-        scrollTop: mainContainer.parentElement.scrollTop,
-        scrollLeft: mainContainer.parentElement.scrollLeft,
-      });
+    // ✅ Prevent double-click / fast-click race conditions
+    if (updatingOrders.has(orderId)) {
+      console.log(`[OrderKanbanBoard] Order ${orderId} is already being updated, skipping...`);
+      return;
     }
 
-    // Save scroll positions of all order list containers within columns
-    const columnContainers = document.querySelectorAll('.space-y-3');
-    columnContainers.forEach(container => {
-      if (container.parentElement) {
-        scrollPositions.set(container.parentElement, {
-          scrollTop: container.parentElement.scrollTop,
-          scrollLeft: container.parentElement.scrollLeft,
+    // Mark order as being updated
+    setUpdatingOrders(prev => new Set(prev).add(orderId));
+
+    try {
+      // Save current scroll positions for all columns
+      const scrollPositions = new Map<Element, { scrollTop: number; scrollLeft: number }>();
+
+      // Save scroll position of main container and all column containers
+      const mainContainer = document.querySelector('.grid.grid-cols-1.md\\:grid-cols-2.lg\\:grid-cols-4');
+      if (mainContainer && mainContainer.parentElement) {
+        scrollPositions.set(mainContainer.parentElement, {
+          scrollTop: mainContainer.parentElement.scrollTop,
+          scrollLeft: mainContainer.parentElement.scrollLeft,
         });
       }
-    });
 
-    // Optimistic update using SWR mutate
-    const currentData = data;
-
-    // Update local data optimistically
-    mutate(
-      {
-        ...currentData,
-        data: orders.map(o =>
-          String(o.id) === orderId ? { ...o, status: newStatus } : o
-        ),
-      },
-      false // Don't revalidate immediately
-    );
-
-    // Update on server
-    try {
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch(`/api/merchant/orders/${orderId}/status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ status: newStatus }),
+      // Save scroll positions of all order list containers within columns
+      const columnContainers = document.querySelectorAll('.space-y-3');
+      columnContainers.forEach(container => {
+        if (container.parentElement) {
+          scrollPositions.set(container.parentElement, {
+            scrollTop: container.parentElement.scrollTop,
+            scrollLeft: container.parentElement.scrollLeft,
+          });
+        }
       });
 
-      const responseData = await response.json();
+      // Optimistic update using SWR mutate
+      const currentData = data;
 
-      if (!response.ok || !responseData.success) {
-        console.error('Order status update failed:', {
-          status: response.status,
-          error: responseData.error,
-          orderId,
-          newStatus,
+      // Update local data optimistically
+      mutate(
+        {
+          ...currentData,
+          data: orders.map(o =>
+            String(o.id) === orderId ? { ...o, status: newStatus } : o
+          ),
+        },
+        false // Don't revalidate immediately
+      );
+
+      // Update on server
+      try {
+        const token = localStorage.getItem('accessToken');
+        const response = await fetch(`/api/merchant/orders/${orderId}/status`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ status: newStatus }),
         });
-        throw new Error(responseData.error || 'Failed to update order status');
+
+        const responseData = await response.json();
+
+        if (!response.ok || !responseData.success) {
+          console.error('Order status update failed:', {
+            status: response.status,
+            error: responseData.error,
+            orderId,
+            newStatus,
+          });
+          throw new Error(responseData.error || 'Failed to update order status');
+        }
+
+        // Refresh to get latest data from server
+        await mutate();
+
+        // Show success toast with status label
+        const statusLabels: Record<OrderStatus, string> = {
+          PENDING: 'Pending',
+          ACCEPTED: 'Accepted',
+          IN_PROGRESS: 'In Progress',
+          READY: 'Ready',
+          COMPLETED: 'Completed',
+          CANCELLED: 'Cancelled',
+        };
+        showSuccess(`Order status updated to ${statusLabels[newStatus]}`, 'Success');
+
+        // Restore scroll positions after DOM updates
+        setTimeout(() => {
+          scrollPositions.forEach((position, container) => {
+            container.scrollTop = position.scrollTop;
+            container.scrollLeft = position.scrollLeft;
+          });
+        }, 0);
+      } catch (err) {
+        console.error('Error updating order status:', err);
+        // Revert optimistic update by refetching
+        await mutate();
+
+        // Restore scroll positions after revert
+        setTimeout(() => {
+          scrollPositions.forEach((position, container) => {
+            container.scrollTop = position.scrollTop;
+            container.scrollLeft = position.scrollLeft;
+          });
+        }, 0);
+
+        showError(err instanceof Error ? err.message : 'Failed to update order', 'Update Failed');
       }
-
-      // Refresh to get latest data from server
-      await mutate();
-
-      // Show success toast with status label
-      const statusLabels: Record<OrderStatus, string> = {
-        PENDING: 'Pending',
-        ACCEPTED: 'Accepted',
-        IN_PROGRESS: 'In Progress',
-        READY: 'Ready',
-        COMPLETED: 'Completed',
-        CANCELLED: 'Cancelled',
-      };
-      showSuccess(`Order status updated to ${statusLabels[newStatus]}`, 'Success');
-
-      // Restore scroll positions after DOM updates
-      setTimeout(() => {
-        scrollPositions.forEach((position, container) => {
-          container.scrollTop = position.scrollTop;
-          container.scrollLeft = position.scrollLeft;
-        });
-      }, 0);
-    } catch (err) {
-      console.error('Error updating order status:', err);
-      // Revert optimistic update by refetching
-      await mutate();
-
-      // Restore scroll positions after revert
-      setTimeout(() => {
-        scrollPositions.forEach((position, container) => {
-          container.scrollTop = position.scrollTop;
-          container.scrollLeft = position.scrollLeft;
-        });
-      }, 0);
-
-      showError(err instanceof Error ? err.message : 'Failed to update order', 'Update Failed');
+    } finally {
+      // ✅ Remove order from updating set
+      setUpdatingOrders(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(orderId);
+        return newSet;
+      });
     }
   };
 

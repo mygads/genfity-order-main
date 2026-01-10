@@ -76,19 +76,44 @@ export async function proxy(request: NextRequest) {
     const merchantCode = segments[0];
 
     // Skip known routes that are not merchant codes
-    const knownRoutes = ['merchant', 'influencer', 'auth', 'error', 'privacy-policy', 'terms', 'contact'];
-    if (!knownRoutes.includes(merchantCode.toLowerCase())) {
-      const uppercaseMerchantCode = merchantCode.toUpperCase();
+    const knownRoutes = [
+      'merchant', 'influencer', 'auth', 'error', 'privacy-policy', 'terms', 'contact',
+      // Customer auth routes (lowercase)
+      'login', 'register', 'forgot-password', 'reset-password', 'verify-email', 'verify-code',
+      // Other system routes
+      'api', 'admin', '_next', 'static', 'images', 'fonts', 'favicon.ico',
+      // Static pages
+      'about', 'terms-of-service'
+    ];
 
-      // If merchant code contains lowercase letters, redirect to uppercase version
-      if (merchantCode !== uppercaseMerchantCode) {
-        const newPathname = '/' + uppercaseMerchantCode + pathname.slice(merchantCode.length + 1);
+    const lowercaseMerchantCode = merchantCode.toLowerCase();
+
+    // Check if this is a known route (should be lowercase)
+    if (knownRoutes.includes(lowercaseMerchantCode)) {
+      // If the path has uppercase letters, redirect to lowercase
+      if (merchantCode !== lowercaseMerchantCode) {
+        const restOfPath = pathname.slice(merchantCode.length + 1);
+        const newPathname = '/' + lowercaseMerchantCode + restOfPath;
         const url = request.nextUrl.clone();
         url.pathname = newPathname;
-
-        // 301 = permanent redirect for SEO
+        // 301 = permanent redirect
         return NextResponse.redirect(url, { status: 301 });
       }
+      // Already lowercase, continue
+      return NextResponse.next();
+    }
+
+    // Not a known route - treat as merchant code (uppercase it)
+    const uppercaseMerchantCode = merchantCode.toUpperCase();
+
+    // If merchant code contains lowercase letters, redirect to uppercase version
+    if (merchantCode !== uppercaseMerchantCode) {
+      const newPathname = '/' + uppercaseMerchantCode + pathname.slice(merchantCode.length + 1);
+      const url = request.nextUrl.clone();
+      url.pathname = newPathname;
+
+      // 301 = permanent redirect for SEO
+      return NextResponse.redirect(url, { status: 301 });
     }
   }
 

@@ -407,6 +407,11 @@ const en = {
   "customer.orderSummary.orderNumber": "Order Number",
   "customer.orderSummary.showQRInstruction": "Show the QR code or 7-digit order number to our cashier.",
 
+  // Push Notifications
+  "customer.push.enableTitle": "Get Order Updates",
+  "customer.push.enableDescription": "Receive notifications when your order status changes, even when the app is closed.",
+  "customer.push.enable": "Enable",
+
   // ============================================================================
   // ADMIN - Dashboard content
   // ============================================================================

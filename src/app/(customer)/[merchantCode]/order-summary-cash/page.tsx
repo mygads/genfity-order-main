@@ -10,6 +10,7 @@ import { OrderSummaryCashSkeleton } from '@/components/common/SkeletonLoaders';
 import NewOrderConfirmationModal from '@/components/modals/NewOrderConfirmationModal';
 import { QRCodeSVG } from 'qrcode.react';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import { useCustomerPushNotifications } from '@/hooks/useCustomerPushNotifications';
 
 // ✅ Order Summary Data Interface
 interface OrderSummaryData {
@@ -86,12 +87,42 @@ export default function OrderSummaryCashPage() {
   const [showFeeDetails, setShowFeeDetails] = useState(false);
   const [showNewOrderModal, setShowNewOrderModal] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [showPushPrompt, setShowPushPrompt] = useState(false);
+
+  // ✅ Push Notification Hook
+  const {
+    isSupported: isPushSupported,
+    isPermissionGranted: isPushPermissionGranted,
+    isSubscribed: isPushSubscribed,
+    isLoading: isPushLoading,
+    subscribe: subscribePush,
+    addOrderToSubscription,
+  } = useCustomerPushNotifications();
 
   // ✅ Check if user is logged in on mount
   useEffect(() => {
     const auth = getCustomerAuth();
     setIsLoggedIn(!!auth?.accessToken);
   }, []);
+
+  // ✅ Show push notification prompt when order loads (only if not already subscribed)
+  useEffect(() => {
+    if (order && isPushSupported && !isPushSubscribed && !isPushPermissionGranted) {
+      // Show prompt after a small delay for better UX
+      const timer = setTimeout(() => {
+        setShowPushPrompt(true);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [order, isPushSupported, isPushSubscribed, isPushPermissionGranted]);
+
+  // ✅ Auto-subscribe to push notifications if already granted permission
+  useEffect(() => {
+    if (order && isPushSupported && isPushPermissionGranted && !isPushSubscribed) {
+      // Auto-add this order to subscription
+      addOrderToSubscription(order.orderNumber);
+    }
+  }, [order, isPushSupported, isPushPermissionGranted, isPushSubscribed, addOrderToSubscription]);
 
   /**
    * ✅ Fetch merchant info and order details
@@ -217,6 +248,13 @@ export default function OrderSummaryCashPage() {
         setOrder(orderData);
         console.log('✅ Order loaded successfully');
 
+        // ✅ Auto-redirect to track page if order is already accepted/progressing
+        if (['ACCEPTED', 'IN_PROGRESS', 'READY'].includes(orderData.status)) {
+          console.log('🔄 Order already accepted, redirecting to track page...');
+          router.push(`/${merchantCode}/track/${orderData.orderNumber}?mode=${mode}`);
+          return;
+        }
+
       } catch (err) {
         console.error('❌ Load order error:', err);
         setError('Failed to load order');
@@ -226,7 +264,35 @@ export default function OrderSummaryCashPage() {
     };
 
     loadData();
-  }, [orderNumber, merchantCode]);
+  }, [orderNumber, merchantCode, mode, router]);
+
+  // ✅ Poll for order status changes (auto-redirect when payment verified)
+  useEffect(() => {
+    if (!orderNumber || !order || order.status !== 'PENDING') return;
+
+    const checkOrderStatus = async () => {
+      try {
+        const response = await fetch(`/api/public/orders/${orderNumber}`);
+        if (!response.ok) return;
+
+        const data = await response.json();
+        const newStatus = data.data?.status;
+
+        // If order is accepted/in-progress/ready, redirect to track page
+        if (['ACCEPTED', 'IN_PROGRESS', 'READY'].includes(newStatus)) {
+          console.log('🎉 Payment verified! Redirecting to track page...');
+          router.push(`/${merchantCode}/track/${orderNumber}?mode=${mode}`);
+        }
+      } catch (err) {
+        console.error('Status check error:', err);
+      }
+    };
+
+    // Poll every 3 seconds while order is pending
+    const intervalId = setInterval(checkOrderStatus, 3000);
+
+    return () => clearInterval(intervalId);
+  }, [orderNumber, order, mode, merchantCode, router]);
 
   /**
    * ✅ Format currency using merchant's currency
@@ -459,7 +525,10 @@ export default function OrderSummaryCashPage() {
                 justifyContent: 'center'
               }}
             >
-              {order.orderNumber.split('-').pop()?.toUpperCase() || order.orderNumber}
+              {/* Extract code after merchant prefix, or show full if no dash */}
+              {order.orderNumber.includes('-')
+                ? order.orderNumber.split('-').slice(1).join('-')
+                : order.orderNumber}
             </div>
           </div>
         </div>
@@ -525,6 +594,64 @@ export default function OrderSummaryCashPage() {
             {t('customer.orderSummary.showQRInstruction')}
           </span>
         </div>
+
+        {/* ✅ Push Notification Prompt Banner */}
+        {showPushPrompt && isPushSupported && !isPushSubscribed && (
+          <div
+            className="flex items-center gap-3 mx-auto animate-fade-in"
+            style={{
+              padding: '12px 16px',
+              width: '64%',
+              minWidth: '343px',
+              margin: '0 auto 12px auto',
+              backgroundColor: '#e0f2fe',
+              borderRadius: '8px',
+              fontSize: '14px',
+            }}
+          >
+            <svg
+              className="flex-shrink-0"
+              style={{
+                width: '24px',
+                height: '24px',
+                color: '#0284c7',
+              }}
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z" />
+            </svg>
+            <div className="flex-1">
+              <p style={{ color: '#0c4a6e', fontWeight: 500, marginBottom: '2px' }}>
+                {t('customer.push.enableTitle')}
+              </p>
+              <p style={{ color: '#0369a1', fontSize: '12px' }}>
+                {t('customer.push.enableDescription')}
+              </p>
+            </div>
+            <button
+              onClick={async () => {
+                const success = await subscribePush(order?.orderNumber);
+                if (success) {
+                  setShowPushPrompt(false);
+                }
+              }}
+              disabled={isPushLoading}
+              className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              {isPushLoading ? '...' : t('customer.push.enable')}
+            </button>
+            <button
+              onClick={() => setShowPushPrompt(false)}
+              className="text-gray-400 hover:text-gray-600"
+              aria-label="Close"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+              </svg>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ========================================

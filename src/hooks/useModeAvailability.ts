@@ -53,6 +53,21 @@ export function useModeAvailability(
             const now = new Date();
             const dayOfWeek = now.getDay();
 
+            // ✅ FIRST: Check if store is manually opened (isOpen flag)
+            // If isOpen is true, store is open regardless of schedule
+            if (merchant.isOpen === true) {
+                console.log('[useModeAvailability] Store is manually open, bypassing schedule check');
+                setResult({
+                    isAvailable: true,
+                    modeClosesAt: null,
+                    minutesUntilClose: null,
+                    estimatedPickupTime: estimatedMinutes,
+                    canOrderForPickup: true,
+                    warningMessage: null,
+                });
+                return;
+            }
+
             // Get mode-specific schedule end time
             let modeScheduleEnd: string | null = null;
 

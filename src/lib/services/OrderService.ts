@@ -408,12 +408,19 @@ export class OrderService {
     let attempt = 0;
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 
+    // Get merchant code for prefix
+    const merchant = await merchantService.getMerchantById(merchantId);
+    const merchantCode = merchant?.code || 'ORD';
+
     while (attempt < maxRetries) {
-      // Generate 4-character alphanumeric order number (A-Z, 0-9)
-      let orderNumber = '';
+      // Generate 4-character alphanumeric code (A-Z, 0-9)
+      let randomCode = '';
       for (let i = 0; i < 4; i++) {
-        orderNumber += characters.charAt(Math.floor(Math.random() * characters.length));
+        randomCode += characters.charAt(Math.floor(Math.random() * characters.length));
       }
+
+      // Format: MERCHANTCODE-XXXX (e.g., WELL-2VB2, KOPI001-A3X9)
+      const orderNumber = `${merchantCode}-${randomCode}`;
 
       // ✅ Check existence via repository
       const exists = await orderRepository.orderNumberExists(
@@ -430,9 +437,9 @@ export class OrderService {
       console.warn(`[ORDER] Order number ${orderNumber} collision, retrying... (attempt ${attempt})`);
     }
 
-    // Fallback: use timestamp-based 4-char code if all retries fail
+    // Fallback: use timestamp-based code if all retries fail
     const timestamp = Date.now().toString(36).toUpperCase().slice(-4);
-    const fallbackNumber = timestamp.padStart(4, '0').slice(0, 4);
+    const fallbackNumber = `${merchantCode}-${timestamp}`;
     console.error(`[ORDER] Failed to generate unique order number after ${maxRetries} attempts, using fallback: ${fallbackNumber}`);
     return fallbackNumber;
   }

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { FaArrowLeft, FaSync, FaClock, FaCheckCircle, FaBolt, FaBell, FaCheck, FaStickyNote } from 'react-icons/fa';
-import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';
+import { TrackOrderSkeleton } from '@/components/common/SkeletonLoaders';
 import { formatCurrency } from '@/lib/utils/format';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { TranslationKeys } from '@/lib/i18n';
@@ -264,7 +264,7 @@ export default function OrderTrackPage() {
 
     // Loading state
     if (isLoading) {
-        return <LoadingState type="page" message={LOADING_MESSAGES.ORDER_DETAILS} />;
+        return <TrackOrderSkeleton />;
     }
 
     // Error state
@@ -327,9 +327,16 @@ export default function OrderTrackPage() {
             <div className="flex-1 overflow-y-auto pb-32">
                 {/* Order Number Badge */}
                 <div className="px-6 py-6 text-center border-b border-gray-200">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg mb-3">
-                        <span className="text-lg font-mono font-bold text-gray-900">
-                            {order.orderNumber}
+                    <div className="inline-flex items-center rounded-lg mb-3 overflow-hidden border border-gray-200">
+                        {/* Merchant Code (Left - Gray) */}
+                        <span className="px-4 py-2 bg-gray-100 text-gray-500 font-mono font-medium text-lg">
+                            {merchantCode.toUpperCase()}
+                        </span>
+                        {/* Order Code (Right - White) */}
+                        <span className="px-4 py-2 bg-white text-gray-900 font-mono font-bold text-lg">
+                            {order.orderNumber.includes('-')
+                                ? order.orderNumber.split('-').slice(1).join('-')
+                                : order.orderNumber}
                         </span>
                     </div>
                     <p className="text-sm text-gray-600">
