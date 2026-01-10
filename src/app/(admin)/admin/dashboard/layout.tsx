@@ -42,7 +42,7 @@ import React from "react";
 function DashboardContent({ children }: { children: React.ReactNode }) {
   const { isExpanded, isHovered, isMobileOpen } = useSidebar();
   const { user } = useAuth();
-  
+
   // Only check subscription status for merchant users
   const isMerchantUser = user?.role === 'MERCHANT_OWNER' || user?.role === 'MERCHANT_STAFF';
   const { isSuspended } = useSubscriptionStatus();
@@ -105,7 +105,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
             </div>
 
             {/* Page Content - Add top padding for fixed header (h-[56px] on mobile, h-[64px] on lg) */}
-            <div className="pt-[70px] lg:pt-[80px] p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6 overflow-x-hidden">
+            <div className="pt-[70px] md:pt-[80px] lg:pt-[80px] p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6 overflow-x-hidden">
               {children}
             </div>
           </div>

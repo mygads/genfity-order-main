@@ -55,7 +55,6 @@ async function handleGet(req: NextRequest, context: AuthContext) {
       total_revenue: number;
       total_tax: number;
       total_service_charge: number;
-      total_packaging_fee: number;
       grand_total: number;
     }>>`
       SELECT 
@@ -64,7 +63,6 @@ async function handleGet(req: NextRequest, context: AuthContext) {
         SUM(subtotal)::numeric as total_revenue,
         SUM(tax_amount)::numeric as total_tax,
         SUM(COALESCE(service_charge_amount, 0))::numeric as total_service_charge,
-        SUM(COALESCE(packaging_fee_amount, 0))::numeric as total_packaging_fee,
         SUM(total_amount)::numeric as grand_total
       FROM orders
       WHERE merchant_id = ${merchantId}
@@ -81,7 +79,6 @@ async function handleGet(req: NextRequest, context: AuthContext) {
       total_subtotal: number;
       total_tax: number;
       total_service_charge: number;
-      total_packaging_fee: number;
       grand_total: number;
       avg_order_value: number;
     }>>`
@@ -90,7 +87,6 @@ async function handleGet(req: NextRequest, context: AuthContext) {
         COALESCE(SUM(subtotal), 0)::numeric as total_subtotal,
         COALESCE(SUM(tax_amount), 0)::numeric as total_tax,
         COALESCE(SUM(service_charge_amount), 0)::numeric as total_service_charge,
-        COALESCE(SUM(packaging_fee_amount), 0)::numeric as total_packaging_fee,
         COALESCE(SUM(total_amount), 0)::numeric as grand_total,
         COALESCE(AVG(total_amount), 0)::numeric as avg_order_value
       FROM orders
@@ -104,7 +100,6 @@ async function handleGet(req: NextRequest, context: AuthContext) {
       total_subtotal: 0,
       total_tax: 0,
       total_service_charge: 0,
-      total_packaging_fee: 0,
       grand_total: 0,
       avg_order_value: 0,
     };
@@ -201,7 +196,6 @@ async function handleGet(req: NextRequest, context: AuthContext) {
           totalRevenue: Number(totalSummary.total_subtotal) || 0,
           totalTax: Number(totalSummary.total_tax) || 0,
           totalServiceCharge: Number(totalSummary.total_service_charge) || 0,
-          totalPackagingFee: Number(totalSummary.total_packaging_fee) || 0,
           grandTotal: Number(totalSummary.grand_total) || 0,
           averageOrderValue: Number(totalSummary.avg_order_value) || 0,
         },
@@ -211,7 +205,6 @@ async function handleGet(req: NextRequest, context: AuthContext) {
           totalRevenue: Number(row.total_revenue),
           totalTax: Number(row.total_tax),
           totalServiceCharge: Number(row.total_service_charge),
-          totalPackagingFee: Number(row.total_packaging_fee),
           grandTotal: Number(row.grand_total),
         })),
         orderStatusBreakdown: orderStatusBreakdown.map(item => ({
@@ -226,11 +219,11 @@ async function handleGet(req: NextRequest, context: AuthContext) {
         topMenuItems: topMenuItems
           .filter(item => item.menuId !== null)
           .map(item => ({
-          menuId: item.menuId!.toString(),
-          menuName: item.menuName,
-          totalQuantity: item._sum.quantity || 0,
-          totalRevenue: Number(item._sum.subtotal) || 0,
-        })),
+            menuId: item.menuId!.toString(),
+            menuName: item.menuName,
+            totalQuantity: item._sum.quantity || 0,
+            totalRevenue: Number(item._sum.subtotal) || 0,
+          })),
         hourlyDistribution: hourlyDistribution.map(row => ({
           hour: row.hour,
           orderCount: Number(row.order_count),

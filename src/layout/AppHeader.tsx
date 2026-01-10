@@ -11,7 +11,7 @@ import { HintPanelButton, HintPanel, useTutorialOptional } from "@/lib/tutorial"
 import Image from "next/image";
 import Link from "next/link";
 import React, { useState, useEffect } from "react";
-import { FaBars, FaTimes, FaEllipsisV } from "react-icons/fa";
+import { FaBars, FaTimes, FaEllipsisV, FaAngleDoubleLeft, FaAngleDoubleRight } from "react-icons/fa";
 
 const AppHeader: React.FC = () => {
   const [isApplicationMenuOpen, setApplicationMenuOpen] = useState(false);
@@ -22,7 +22,7 @@ const AppHeader: React.FC = () => {
   // Check if tutorial context is available (only for merchant users)
   const showTutorialHelp = tutorialContext && (user?.role === 'MERCHANT_OWNER' || user?.role === 'MERCHANT_STAFF');
 
-  const { isMobileOpen, toggleSidebar, toggleMobileSidebar } = useSidebar();
+  const { isMobileOpen, isExpanded, isHovered, toggleSidebar, toggleMobileSidebar } = useSidebar();
 
   // Detect mobile
   useEffect(() => {
@@ -53,13 +53,35 @@ const AppHeader: React.FC = () => {
     setApplicationMenuOpen(!isApplicationMenuOpen);
   };
 
+  // Calculate header content left padding based on sidebar state (desktop only)
+  const headerContentPadding = isMobile
+    ? "px-3 py-2"
+    : isExpanded || isHovered
+      ? "lg:pl-[290px] px-3 py-2 lg:px-6 lg:py-3"
+      : "lg:pl-[100px] px-3 py-2 lg:px-6 lg:py-3";
+
   return (
-    <header data-header className="fixed top-0 left-0 right-0 flex w-full bg-white border-b border-gray-200 z-40 dark:border-gray-800 dark:bg-gray-900 shadow-sm">
-      <div className="flex items-center justify-between w-full px-3 py-2 lg:px-6 lg:py-3">
+    <header data-header className="fixed top-0 left-0 right-0 flex w-full bg-white border-b border-gray-200 z-40 dark:border-gray-800 dark:bg-gray-900 shadow-sm transition-all duration-300">
+      <div className={`flex items-center justify-between w-full ${headerContentPadding}`}>
         {/* Left side - Menu toggle + Logo (mobile) */}
         <div className="flex items-center gap-2">
+          {/* Desktop: Collapse/Expand button */}
           <button
-            className="flex items-center justify-center w-10 h-10 text-gray-600 rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 transition-colors"
+            className="hidden lg:flex items-center justify-center w-10 h-10 text-gray-600 rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 transition-colors"
+            onClick={handleToggle}
+            aria-label={isExpanded ? "Collapse Sidebar" : "Expand Sidebar"}
+            title={isExpanded ? "Collapse Sidebar" : "Expand Sidebar"}
+          >
+            {isExpanded ? (
+              <FaAngleDoubleLeft className="w-4 h-4" />
+            ) : (
+              <FaAngleDoubleRight className="w-4 h-4" />
+            )}
+          </button>
+
+          {/* Mobile: Hamburger menu */}
+          <button
+            className="flex lg:hidden items-center justify-center w-10 h-10 text-gray-600 rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 transition-colors"
             onClick={handleToggle}
             aria-label="Toggle Sidebar"
           >
@@ -91,8 +113,8 @@ const AppHeader: React.FC = () => {
           </Link>
         </div>
 
-        {/* Desktop Search */}
-        <div className="hidden lg:block flex-1 max-w-md mx-4">
+        {/* Desktop & Tablet Search */}
+        <div className="hidden md:block flex-1 max-w-md mx-4">
           <SearchDropdown />
         </div>
 
@@ -115,13 +137,6 @@ const AppHeader: React.FC = () => {
 
           {/* Mobile: show notification + menu toggle */}
           <div className="flex lg:hidden items-center gap-1">
-            {/* Tutorial Help Button - Mobile */}
-            {showTutorialHelp && (
-              <div className="relative">
-                <HintPanelButton />
-                <HintPanel />
-              </div>
-            )}
             <NotificationDropdown />
             <button
               onClick={toggleApplicationMenu}
@@ -154,6 +169,15 @@ const AppHeader: React.FC = () => {
               <span className="text-sm text-gray-600 dark:text-gray-400">Theme</span>
               <ThemeToggleButton />
             </div>
+            {/* Tutorial Help - Mobile */}
+            {showTutorialHelp && (
+              <div className="px-2 py-1 border-t border-gray-200 dark:border-gray-700 mt-1 pt-2">
+                <div className="relative">
+                  <HintPanelButton />
+                  <HintPanel />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

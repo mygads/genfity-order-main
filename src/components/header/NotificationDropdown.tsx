@@ -72,14 +72,14 @@ export default function NotificationDropdown() {
   const authFetcher = async (url: string) => {
     const token = localStorage.getItem('accessToken');
     if (!token) return null;
-    
+
     const res = await fetch(url, {
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
     });
-    
+
     if (!res.ok) return null;
     return res.json();
   };
@@ -136,7 +136,7 @@ export default function NotificationDropdown() {
     mutateUnreadCount(optimisticUnread, false);
 
     // Fire API request in background (don't await)
-    fetch(`/api/notifications/${id}/read`, { 
+    fetch(`/api/notifications/${id}/read`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` }
     })
@@ -171,7 +171,7 @@ export default function NotificationDropdown() {
     mutateUnreadCount(optimisticUnread, false);
 
     // Fire API request in background (don't await)
-    fetch("/api/notifications/mark-all-read", { 
+    fetch("/api/notifications/mark-all-read", {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` }
     })
@@ -199,7 +199,7 @@ export default function NotificationDropdown() {
       <Dropdown
         isOpen={isOpen}
         onClose={closeDropdown}
-        className="absolute -right-[240px] mt-[17px] flex h-auto max-h-[480px] w-[350px] flex-col rounded-2xl border border-gray-200 bg-white p-3 shadow-theme-lg dark:border-gray-800 dark:bg-gray-dark sm:w-[361px] lg:right-0 z-50"
+        className="fixed left-1/2 top-16 -translate-x-1/2 sm:absolute sm:left-auto sm:top-auto sm:-translate-x-0 sm:right-0 mt-[17px] flex h-auto max-h-[480px] w-[calc(100vw-1rem)] max-w-[361px] flex-col rounded-2xl border border-gray-200 bg-white p-3 shadow-theme-lg dark:border-gray-800 dark:bg-gray-dark z-[99]"
       >
         <div className="flex items-center justify-between pb-3 mb-3 border-b border-gray-100 dark:border-gray-700">
           <h5 className="text-lg font-semibold text-gray-800 dark:text-gray-200">

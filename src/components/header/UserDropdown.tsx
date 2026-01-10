@@ -95,7 +95,7 @@ export default function UserDropdown() {
           )}
         </span>
 
-        <span className="block mr-1 font-medium text-theme-sm">{userName.split(' ')[0]}</span>
+        <span className="hidden sm:block mr-1 font-medium text-theme-sm">{userName.split(' ')[0]}</span>
 
         <svg
           className={`stroke-gray-500 dark:stroke-gray-400 transition-transform duration-200 ${isOpen ? "rotate-180" : ""

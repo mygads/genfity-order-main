@@ -211,9 +211,9 @@ export default function KitchenDisplayPage() {
   }
 
   return (
-    <div data-tutorial="kitchen-page" className={`${displayMode !== 'normal' ? 'fixed inset-0 z-50 overflow-hidden bg-gray-50 dark:bg-gray-950 flex flex-col' : 'flex flex-col h-[calc(100vh-100px)]'}`}>
+    <div data-tutorial="kitchen-page" className={`${displayMode !== 'normal' ? 'fixed inset-0 z-40 overflow-hidden bg-gray-50 dark:bg-gray-950 flex flex-col' : 'flex flex-col h-[calc(100vh-100px)]'}`}>
       {/* Header - Clean Minimal Design */}
-      <div className={`sticky top-0 z-40 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 ${displayMode !== 'normal' ? 'px-6 py-4' : 'pb-4 -mx-6 px-6 pt-0'}`}>
+      <div className={`sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 ${displayMode !== 'normal' ? 'px-6 py-4' : 'pb-4 -mx-6 px-6 pt-0'}`}>
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <h1 className="text-xl font-bold text-gray-900 dark:text-white">
@@ -233,23 +233,10 @@ export default function KitchenDisplayPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Auto-refresh Toggle */}
-            <button
-              onClick={() => setAutoRefresh(!autoRefresh)}
-              className={`flex h-9 items-center gap-2 rounded-lg border px-3 text-sm font-medium transition-colors ${autoRefresh
-                ? 'border-gray-900 bg-gray-900 text-white dark:border-white dark:bg-white dark:text-gray-900'
-                : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
-                }`}
-              title={autoRefresh ? t("admin.kitchen.autoRefresh") + ' on' : t("admin.kitchen.autoRefresh") + ' off'}
-            >
-              <FaSync className={`h-3.5 w-3.5 ${autoRefresh ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">{t("admin.kitchen.auto")}</span>
-            </button>
-
             {/* Manual Refresh */}
             <button
               onClick={fetchOrders}
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+              className="flex h-9 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
               title={t("admin.kitchen.refreshNow")}
             >
               <FaSync className="h-3.5 w-3.5" />
@@ -476,8 +463,8 @@ function KitchenCard({ order, onCardClick, onAction, actionLabel, actionIcon, ac
         </div>
       </div>
 
-        {/* Order Items - Full Details */}
-        <div data-tutorial="kitchen-item-list" className="p-4">
+      {/* Order Items - Full Details */}
+      <div data-tutorial="kitchen-item-list" className="p-4">
         <div className="space-y-3">
           {items.map((item, idx) => (
             <div key={idx} className="flex gap-3">

@@ -49,6 +49,11 @@ interface BalanceInfo {
     isLow: boolean;
     orderFee: number;
     estimatedOrders: number;
+    billingSummary: {
+        yesterday: number;
+        lastWeek: number;
+        lastMonth: number;
+    };
 }
 
 interface CanSwitchData {
@@ -76,10 +81,10 @@ export default function SubscriptionPage() {
     const [pendingSwitchType, setPendingSwitchType] = useState<'DEPOSIT' | 'MONTHLY' | null>(null);
 
     // Fetch all data
-    const { data: subscriptionResponse, error: subscriptionError, isLoading: subscriptionLoading } = 
+    const { data: subscriptionResponse, error: subscriptionError, isLoading: subscriptionLoading } =
         useSWRStatic<ApiResponse<SubscriptionData>>('/api/merchant/subscription');
     const { data: balanceResponse } = useSWRStatic<ApiResponse<BalanceInfo>>('/api/merchant/balance');
-    const { data: transactionsResponse, isLoading: transactionsLoading } = 
+    const { data: transactionsResponse, isLoading: transactionsLoading } =
         useSWRStatic<ApiResponse<{ transactions: TransactionData[] }>>('/api/merchant/balance/transactions?limit=5');
     const { data: canSwitchResponse } = useSWRStatic<ApiResponse<CanSwitchData>>('/api/merchant/subscription/can-switch');
 
@@ -93,8 +98,8 @@ export default function SubscriptionPage() {
     useEffect(() => {
         if (!subscriptionLoading) {
             showHint(CONTEXTUAL_HINTS.subscriptionFirstVisit);
-            // Show low balance warning if applicable
-            if (balanceInfo?.isLow) {
+            // Show low balance warning if applicable (only for DEPOSIT mode)
+            if (balanceInfo?.isLow && subscription?.type === 'DEPOSIT') {
                 setTimeout(() => showHint(CONTEXTUAL_HINTS.subscriptionLowBalance), 3000);
             }
         }
@@ -146,7 +151,7 @@ export default function SubscriptionPage() {
 
     const confirmSwitch = async () => {
         if (!pendingSwitchType) return;
-        
+
         setSwitchModalOpen(false);
         setSwitching(true);
         try {
@@ -199,7 +204,7 @@ export default function SubscriptionPage() {
                         {locale === 'id' ? 'Gagal Memuat Data' : 'Failed to Load Data'}
                     </h3>
                     <p className="text-gray-500 dark:text-gray-400 mb-6">
-                        {locale === 'id' 
+                        {locale === 'id'
                             ? 'Terjadi kesalahan saat memuat data langganan. Silakan coba lagi.'
                             : 'An error occurred while loading subscription data. Please try again.'}
                     </p>
@@ -277,9 +282,8 @@ export default function SubscriptionPage() {
                                 </p>
                                 <h2 className="text-xl sm:text-2xl font-bold mb-1">{getTypeLabel()}</h2>
                                 <div className="flex items-center gap-2">
-                                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                                        isActive ? 'bg-white/20' : 'bg-red-400/30'
-                                    }`}>
+                                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${isActive ? 'bg-white/20' : 'bg-red-400/30'
+                                        }`}>
                                         {getStatusLabel()}
                                     </span>
                                     {subscription.daysRemaining !== null && isActive && (
@@ -332,7 +336,7 @@ export default function SubscriptionPage() {
                             className="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-900 rounded-lg text-sm font-medium hover:bg-white/90 transition-colors"
                         >
                             <FaCreditCard className="w-3.5 h-3.5" />
-                            {isTrial 
+                            {isTrial
                                 ? (locale === 'id' ? 'Upgrade Sekarang' : 'Upgrade Now')
                                 : (locale === 'id' ? 'Top Up / Perpanjang' : 'Top Up / Extend')}
                         </Link>
@@ -369,7 +373,7 @@ export default function SubscriptionPage() {
                     <p className="text-xl font-bold text-gray-900 dark:text-white">
                         {formatCurrency(balanceInfo?.balance || 0, currency)}
                     </p>
-                    {balanceInfo?.isLow && (
+                    {balanceInfo?.isLow && isDeposit && (
                         <p className="text-xs text-amber-600 dark:text-amber-400 mt-1 flex items-center gap-1">
                             <FaExclamationTriangle className="w-3 h-3" />
                             {locale === 'id' ? 'Saldo rendah' : 'Low balance'}
@@ -377,64 +381,90 @@ export default function SubscriptionPage() {
                     )}
                 </div>
 
-                {/* Order Fee Card */}
-                <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
-                    <div className="flex items-center gap-2 mb-2">
-                        <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                            <FaCreditCard className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                {/* Estimated Orders Card - Only for Deposit mode */}
+                {isDeposit && (
+                    <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+                        <div className="flex items-center gap-2 mb-2">
+                            <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                                <FaCreditCard className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                            </div>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                                {locale === 'id' ? 'Estimasi Pesanan' : 'Est. Orders'}
+                            </span>
                         </div>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                            {locale === 'id' ? 'Biaya per Pesanan' : 'Fee per Order'}
-                        </span>
+                        <p className="text-xl font-bold text-gray-900 dark:text-white">
+                            ~{balanceInfo?.estimatedOrders || 0}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            {locale === 'id' ? 'Pesanan tersisa' : 'Orders remaining'}
+                        </p>
                     </div>
-                    <p className="text-xl font-bold text-gray-900 dark:text-white">
-                        {formatCurrency(pricing?.orderFee || 0, currency)}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        {locale === 'id' ? 'Mode deposit saja' : 'Deposit mode only'}
-                    </p>
-                </div>
+                )}
 
-                {/* Monthly Price Card */}
-                <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
-                    <div className="flex items-center gap-2 mb-2">
-                        <div className="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                            <FaCalendarAlt className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                {/* Yesterday Billing Card - Only for Deposit mode */}
+                {isDeposit && (
+                    <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+                        <div className="flex items-center gap-2 mb-2">
+                            <div className="w-8 h-8 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+                                <FaHistory className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                            </div>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                                {locale === 'id' ? 'Tagihan Kemarin' : 'Yesterday'}
+                            </span>
                         </div>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                            {locale === 'id' ? 'Harga Bulanan' : 'Monthly Price'}
-                        </span>
+                        <p className="text-xl font-bold text-gray-900 dark:text-white">
+                            {formatCurrency(balanceInfo?.billingSummary?.yesterday || 0, currency)}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            {locale === 'id' ? 'Biaya pesanan' : 'Order fees'}
+                        </p>
                     </div>
-                    <p className="text-xl font-bold text-gray-900 dark:text-white">
-                        {formatCurrency(pricing?.monthlyPrice || 0, currency)}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        {locale === 'id' ? 'Tanpa biaya pesanan' : 'No order fee'}
-                    </p>
-                </div>
+                )}
 
-                {/* Min Deposit Card */}
-                <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
-                    <div className="flex items-center gap-2 mb-2">
-                        <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                            <FaInfoCircle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                {/* Last Week Billing Card - Only for Deposit mode */}
+                {isDeposit && (
+                    <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+                        <div className="flex items-center gap-2 mb-2">
+                            <div className="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                                <FaCalendarAlt className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                            </div>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                                {locale === 'id' ? '7 Hari Terakhir' : 'Last 7 Days'}
+                            </span>
                         </div>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                            {locale === 'id' ? 'Min. Deposit' : 'Min. Deposit'}
-                        </span>
+                        <p className="text-xl font-bold text-gray-900 dark:text-white">
+                            {formatCurrency(balanceInfo?.billingSummary?.lastWeek || 0, currency)}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            {locale === 'id' ? 'Biaya pesanan' : 'Order fees'}
+                        </p>
                     </div>
-                    <p className="text-xl font-bold text-gray-900 dark:text-white">
-                        {formatCurrency(pricing?.depositMinimum || 0, currency)}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        {locale === 'id' ? 'Top up minimum' : 'Minimum top up'}
-                    </p>
-                </div>
+                )}
+
+                {/* Last Month Billing Card - Only for Deposit mode */}
+                {isDeposit && (
+                    <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+                        <div className="flex items-center gap-2 mb-2">
+                            <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                                <FaCalendarAlt className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                            </div>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                                {locale === 'id' ? '30 Hari Terakhir' : 'Last 30 Days'}
+                            </span>
+                        </div>
+                        <p className="text-xl font-bold text-gray-900 dark:text-white">
+                            {formatCurrency(balanceInfo?.billingSummary?.lastMonth || 0, currency)}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            {locale === 'id' ? 'Biaya pesanan' : 'Order fees'}
+                        </p>
+                    </div>
+                )}
             </div>
 
             {/* Main Content Grid */}
             <div className="grid gap-4 lg:grid-cols-3">
-                {/* Left Column - Payment Options & Switch */}
+                {/* Left Column - Payment Options with integrated Switch */}
                 <div className="lg:col-span-2 space-y-4">
                     {/* Payment Options */}
                     <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 overflow-hidden">
@@ -443,21 +473,24 @@ export default function SubscriptionPage() {
                                 {locale === 'id' ? 'Pilihan Pembayaran' : 'Payment Options'}
                             </h3>
                             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                {locale === 'id' 
+                                {locale === 'id'
                                     ? 'Pilih metode pembayaran yang sesuai dengan kebutuhan bisnis Anda'
                                     : 'Choose the payment method that suits your business needs'}
                             </p>
                         </div>
-                        
+
                         <div className="p-4 grid gap-3 sm:grid-cols-2">
                             {/* Deposit Option */}
-                            <Link
-                                href="/admin/dashboard/subscription/topup?type=deposit"
-                                className={`relative p-4 rounded-lg border-2 transition-all hover:shadow-md ${
-                                    isDeposit 
-                                        ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/10' 
-                                        : 'border-gray-200 dark:border-gray-600 hover:border-emerald-300'
-                                }`}
+                            <div
+                                className={`relative p-4 rounded-lg border-2 transition-all ${isDeposit
+                                    ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/10'
+                                    : 'border-gray-200 dark:border-gray-600'
+                                    } ${!isDeposit && !isTrial && canSwitch?.canSwitchToDeposit ? 'hover:shadow-md cursor-pointer hover:border-emerald-300' : ''}`}
+                                onClick={() => {
+                                    if (!isDeposit && !isTrial && canSwitch?.canSwitchToDeposit) {
+                                        handleSwitch('DEPOSIT');
+                                    }
+                                }}
                             >
                                 {isDeposit && (
                                     <div className="absolute top-3 right-3">
@@ -471,94 +504,80 @@ export default function SubscriptionPage() {
                                     {locale === 'id' ? 'Mode Deposit' : 'Deposit Mode'}
                                 </h4>
                                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                                    {locale === 'id' 
+                                    {locale === 'id'
                                         ? 'Bayar sesuai pesanan. Cocok untuk bisnis dengan volume bervariasi.'
                                         : 'Pay per order. Best for businesses with varying volume.'}
                                 </p>
-                                <p className="text-base font-bold text-emerald-600">
-                                    {formatCurrency(pricing?.orderFee || 0, currency)}
-                                    <span className="text-sm font-normal text-gray-500">/{locale === 'id' ? 'pesanan' : 'order'}</span>
+                                <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">
+                                    {locale === 'id' ? 'Bayar sesuai pemakaian' : 'Pay as you go'}
                                 </p>
-                            </Link>
+                                {/* Switch button for non-deposit mode */}
+                                {!isDeposit && !isTrial && canSwitch?.canSwitchToDeposit && (
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleSwitch('DEPOSIT');
+                                        }}
+                                        disabled={switching}
+                                        className="mt-3 flex items-center gap-2 px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs font-medium hover:bg-emerald-600 transition-colors disabled:opacity-50"
+                                    >
+                                        <FaExchangeAlt className="w-3 h-3" />
+                                        {locale === 'id' ? 'Beralih' : 'Switch'}
+                                    </button>
+                                )}
+                            </div>
 
                             {/* Monthly Option */}
-                            <Link
-                                href="/admin/dashboard/subscription/topup?type=monthly"
-                                className={`relative p-4 rounded-lg border-2 transition-all hover:shadow-md ${
-                                    isMonthly 
-                                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/10' 
-                                        : 'border-gray-200 dark:border-gray-600 hover:border-blue-300'
-                                }`}
+                            <div
+                                className={`relative p-4 rounded-lg border-2 transition-all ${isMonthly
+                                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/10'
+                                    : 'border-gray-200 dark:border-gray-600'
+                                    } ${!isMonthly && !isTrial && canSwitch?.canSwitchToMonthly ? 'hover:shadow-md cursor-pointer hover:border-blue-300' : ''}`}
+                                onClick={() => {
+                                    if (!isMonthly && !isTrial && canSwitch?.canSwitchToMonthly) {
+                                        handleSwitch('MONTHLY');
+                                    }
+                                }}
                             >
                                 {isMonthly && (
-                                    <div className="absolute top-2 right-2">
-                                        <FaCheckCircle className="w-4 h-4 text-blue-500" />
+                                    <div className="absolute top-3 right-3">
+                                        <FaCheckCircle className="w-5 h-5 text-blue-500" />
                                     </div>
                                 )}
-                                <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mb-3">
-                                    <FaCalendarAlt className="w-5 h-5 text-blue-600" />
+                                <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mb-4">
+                                    <FaCalendarAlt className="w-6 h-6 text-blue-600" />
                                 </div>
                                 <h4 className="font-medium text-gray-900 dark:text-white mb-1">
                                     {locale === 'id' ? 'Langganan Bulanan' : 'Monthly Subscription'}
                                 </h4>
                                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                                    {locale === 'id' 
+                                    {locale === 'id'
                                         ? 'Biaya tetap, tanpa biaya pesanan. Cocok untuk volume tinggi.'
                                         : 'Fixed fee, no order charges. Best for high volume.'}
                                 </p>
-                                <p className="text-base font-bold text-blue-600">
-                                    {formatCurrency(pricing?.monthlyPrice || 0, currency)}
-                                    <span className="text-sm font-normal text-gray-500">/{locale === 'id' ? 'bulan' : 'month'}</span>
+                                <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">
+                                    {locale === 'id' ? 'Tanpa biaya per pesanan' : 'No per-order fee'}
                                 </p>
-                            </Link>
+                                {/* Switch button for non-monthly mode */}
+                                {!isMonthly && !isTrial && canSwitch?.canSwitchToMonthly && (
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleSwitch('MONTHLY');
+                                        }}
+                                        disabled={switching}
+                                        className="mt-3 flex items-center gap-2 px-3 py-1.5 bg-blue-500 text-white rounded-lg text-xs font-medium hover:bg-blue-600 transition-colors disabled:opacity-50"
+                                    >
+                                        <FaExchangeAlt className="w-3 h-3" />
+                                        {locale === 'id' ? 'Beralih' : 'Switch'}
+                                    </button>
+                                )}
+                            </div>
                         </div>
-                    </div>
 
-                    {/* Switch Mode Section - Only show when both available */}
-                    {!isTrial && canSwitch && (canSwitch.canSwitchToDeposit || canSwitch.canSwitchToMonthly) && (
-                        <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
-                            <div className="flex items-center gap-3 mb-3">
-                                <div className="w-8 h-8 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
-                                    <FaExchangeAlt className="w-4 h-4 text-orange-600" />
-                                </div>
-                                <div>
-                                    <h3 className="text-sm font-medium text-gray-900 dark:text-white">
-                                        {locale === 'id' ? 'Ganti Mode Langganan' : 'Switch Subscription Mode'}
-                                    </h3>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                                        {locale === 'id' 
-                                            ? 'Anda memiliki kedua opsi aktif. Beralih kapan saja.'
-                                            : 'You have both options active. Switch anytime.'}
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div className="flex flex-wrap gap-2">
-                                {isMonthly && canSwitch.canSwitchToDeposit && (
-                                    <button
-                                        onClick={() => handleSwitch('DEPOSIT')}
-                                        disabled={switching}
-                                        className="flex items-center gap-2 px-3 py-2 bg-emerald-50 text-emerald-700 rounded-lg text-sm font-medium hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:hover:bg-emerald-900/30 transition-colors disabled:opacity-50"
-                                    >
-                                        <FaWallet className="w-4 h-4" />
-                                        {locale === 'id' ? 'Beralih ke Deposit' : 'Switch to Deposit'}
-                                        <FaArrowRight className="w-3 h-3" />
-                                    </button>
-                                )}
-                                {isDeposit && canSwitch.canSwitchToMonthly && (
-                                    <button
-                                        onClick={() => handleSwitch('MONTHLY')}
-                                        disabled={switching}
-                                        className="flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30 transition-colors disabled:opacity-50"
-                                    >
-                                        <FaCalendarAlt className="w-4 h-4" />
-                                        {locale === 'id' ? 'Beralih ke Bulanan' : 'Switch to Monthly'}
-                                        <FaArrowRight className="w-3 h-3" />
-                                    </button>
-                                )}
-                            </div>
-
-                            <div className="mt-4 flex flex-wrap gap-4 text-xs text-gray-500 dark:text-gray-400">
+                        {/* Status indicators at bottom */}
+                        {!isTrial && canSwitch && (canSwitch.hasActiveMonthly || canSwitch.hasPositiveBalance) && (
+                            <div className="px-4 pb-4 flex flex-wrap gap-4 text-xs text-gray-500 dark:text-gray-400">
                                 {canSwitch.hasActiveMonthly && (
                                     <span className="flex items-center gap-1">
                                         <FaCheckCircle className="w-3 h-3 text-blue-500" />
@@ -572,8 +591,8 @@ export default function SubscriptionPage() {
                                     </span>
                                 )}
                             </div>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
 
                 {/* Right Column - Recent Transactions */}
@@ -613,11 +632,10 @@ export default function SubscriptionPage() {
                                 transactions.map((tx) => (
                                     <div key={tx.id} className="px-4 py-2.5 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800/50">
                                         <div className="flex items-center gap-2">
-                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                                                tx.amount >= 0
-                                                    ? 'bg-emerald-100 dark:bg-emerald-900/30'
-                                                    : 'bg-red-100 dark:bg-red-900/30'
-                                            }`}>
+                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${tx.amount >= 0
+                                                ? 'bg-emerald-100 dark:bg-emerald-900/30'
+                                                : 'bg-red-100 dark:bg-red-900/30'
+                                                }`}>
                                                 {tx.amount >= 0 ? (
                                                     <span className="text-emerald-600 font-bold text-sm">+</span>
                                                 ) : (
@@ -633,9 +651,8 @@ export default function SubscriptionPage() {
                                                 </p>
                                             </div>
                                         </div>
-                                        <p className={`text-sm font-semibold ${
-                                            tx.amount >= 0 ? 'text-emerald-600' : 'text-red-600'
-                                        }`}>
+                                        <p className={`text-sm font-semibold ${tx.amount >= 0 ? 'text-emerald-600' : 'text-red-600'
+                                            }`}>
                                             {tx.amount >= 0 ? '+' : ''}{formatCurrency(tx.amount, currency)}
                                         </p>
                                     </div>
@@ -644,17 +661,17 @@ export default function SubscriptionPage() {
                         </div>
                     </div>
                 </div>
-            </div>
+            </div >
 
             {/* Switch Mode Confirmation Modal */}
-            <ConfirmDialog
+            < ConfirmDialog
                 isOpen={switchModalOpen}
-                title={pendingSwitchType === 'DEPOSIT' 
+                title={pendingSwitchType === 'DEPOSIT'
                     ? (locale === 'id' ? 'Beralih ke Mode Deposit?' : 'Switch to Deposit Mode?')
                     : (locale === 'id' ? 'Beralih ke Langganan Bulanan?' : 'Switch to Monthly Subscription?')
                 }
                 message={pendingSwitchType === 'DEPOSIT'
-                    ? (locale === 'id' 
+                    ? (locale === 'id'
                         ? 'Langganan bulanan akan dijeda dan Anda akan mulai menggunakan saldo deposit. Biaya per pesanan akan dikenakan untuk setiap order yang diterima.'
                         : 'Monthly subscription will be paused and you\'ll start using your deposit balance. A fee per order will be charged for each accepted order.')
                     : (locale === 'id'
@@ -670,6 +687,6 @@ export default function SubscriptionPage() {
                     setPendingSwitchType(null);
                 }}
             />
-        </div>
+        </div >
     );
 }

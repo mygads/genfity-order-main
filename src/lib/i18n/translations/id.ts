@@ -570,9 +570,9 @@ const id = {
   "admin.header.role.user": "Pengguna",
 
   // Orders page
-  "admin.orders.title": "Manajemen Pesanan",
+  "admin.orders.title": "Pesanan",
   "admin.orders.subtitle": "Kelola dan lacak pesanan secara real-time dengan drag & drop",
-  "admin.orders.searchPlaceholder": "Cari nomor pesanan, nama pelanggan, telepon, atau meja...",
+  "admin.orders.searchPlaceholder": "Cari nomor pesanan, nama pelanggan, telepon, meja...",
   "admin.orders.viewCard": "Kartu",
   "admin.orders.viewList": "Daftar",
   "admin.orders.viewTabs": "Tab",
@@ -663,6 +663,18 @@ const id = {
   "admin.history.subtitle": "Lihat dan kelola semua pesanan sebelumnya",
   "admin.history.noOrders": "Tidak Ada Pesanan",
   "admin.history.tryDifferentDate": "Coba pilih rentang tanggal yang berbeda.",
+
+  // Delete PIN Modal
+  "admin.deletePin.title": "Hapus Pesanan",
+  "admin.deletePin.orderNumber": "Pesanan #{orderNumber}",
+  "admin.deletePin.enterPin": "Masukkan PIN 4-digit untuk mengonfirmasi penghapusan",
+  "admin.deletePin.verifying": "Memverifikasi...",
+  "admin.deletePin.deleteOrder": "Hapus Pesanan",
+  "admin.deletePin.error.enterPin": "Masukkan PIN 4-digit",
+  "admin.deletePin.error.invalidPin": "PIN tidak valid",
+  "admin.deletePin.noPinSet.title": "PIN Hapus Belum Diatur",
+  "admin.deletePin.noPinSet.description": "Anda perlu mengatur PIN hapus di Pengaturan Merchant sebelum dapat menghapus pesanan.",
+  "admin.deletePin.noPinSet.goToSettings": "Ke Pengaturan Merchant",
 
   // Menu management
   "admin.menu.title": "Item Menu",
@@ -2030,6 +2042,9 @@ const id = {
   "register.step1Label": "Bisnis",
   "register.step2": "Informasi Pemilik",
   "register.step2Label": "Akun",
+  "register.step1LabelNew": "Info Toko",
+  "register.step2LabelNew": "Lokasi",
+  "register.step3LabelNew": "Akun",
   "register.merchantName": "Nama Merchant",
   "register.merchantNamePlaceholder": "Cth: Warung Makan Barokah",
   "register.merchantCode": "Kode Merchant",
@@ -2093,6 +2108,8 @@ const id = {
   "validation.passwordMin": "Password minimal 8 karakter",
   "validation.passwordMismatch": "Password tidak cocok",
   "validation.referralCodeInvalid": "Kode referral tidak valid atau sudah kedaluwarsa",
+  "validation.addressMin": "Alamat minimal 5 karakter",
+  "validation.countryRequired": "Pilih negara",
 
   // ============================================================================
   // REFERRAL CODES - Super Admin referral code management

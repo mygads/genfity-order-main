@@ -31,9 +31,15 @@ async function handleGet(req: NextRequest, context: AuthContext) {
         const currency = merchantUser.merchant.currency || 'IDR';
         const balanceInfo = await balanceService.getBalanceInfo(merchantUser.merchantId, currency);
 
+        // Get billing summary for deposit mode
+        const billingSummary = await balanceService.getBillingSummary(merchantUser.merchantId);
+
         return NextResponse.json({
             success: true,
-            data: balanceInfo,
+            data: {
+                ...balanceInfo,
+                billingSummary,
+            },
         });
     } catch (error) {
         console.error('Error getting balance:', error);

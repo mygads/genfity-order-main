@@ -263,6 +263,34 @@ class BalanceRepository {
 
         return { transactions, total };
     }
+
+    /**
+     * Get transactions within a date range (for billing summary)
+     */
+    async getTransactionsByDateRange(
+        merchantId: bigint,
+        startDate: Date,
+        endDate: Date
+    ) {
+        const balance = await prisma.merchantBalance.findUnique({
+            where: { merchantId },
+        });
+
+        if (!balance) {
+            return [];
+        }
+
+        return prisma.balanceTransaction.findMany({
+            where: {
+                balanceId: balance.id,
+                createdAt: {
+                    gte: startDate,
+                    lte: endDate,
+                },
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+    }
 }
 
 const balanceRepository = new BalanceRepository();

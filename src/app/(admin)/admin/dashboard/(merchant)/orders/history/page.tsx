@@ -248,6 +248,7 @@ export default function OrderHistoryPage() {
         onClose={handleCloseDeleteModal}
         onConfirm={handleConfirmDelete}
         orderNumber={deleteOrderNumber || undefined}
+        hasDeletePin={hasDeletePin}
       />
     </div>
   );

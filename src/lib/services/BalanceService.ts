@@ -124,7 +124,7 @@ class BalanceService {
                     console.error(`[Order ${orderNumber}] Failed to send negative balance notification:`, notifyError);
                 }
             }
-            
+
             return {
                 success: true,
                 newBalance: result.newBalance,
@@ -191,6 +191,61 @@ class BalanceService {
         }
 
         return Number(balance.balance) >= pricing.orderFee;
+    }
+
+    /**
+     * Get billing summary for deposit mode (yesterday, last week, last month)
+     */
+    async getBillingSummary(merchantId: bigint): Promise<{
+        yesterday: number;
+        lastWeek: number;
+        lastMonth: number;
+    }> {
+        const now = new Date();
+
+        // Calculate date ranges
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const startOfYesterday = new Date(startOfToday);
+        startOfYesterday.setDate(startOfYesterday.getDate() - 1);
+
+        const startOfWeek = new Date(startOfToday);
+        startOfWeek.setDate(startOfWeek.getDate() - 7);
+
+        const startOfMonth = new Date(startOfToday);
+        startOfMonth.setDate(startOfMonth.getDate() - 30);
+
+        // Get transactions and calculate sums
+        const transactions = await balanceRepository.getTransactionsByDateRange(
+            merchantId,
+            startOfMonth,
+            now
+        );
+
+        let yesterday = 0;
+        let lastWeek = 0;
+        let lastMonth = 0;
+
+        for (const tx of transactions) {
+            // Only count ORDER_FEE transactions (negative amounts)
+            const amount = Number(tx.amount);
+            if (tx.type === 'ORDER_FEE' && amount < 0) {
+                const fee = Math.abs(amount);
+                const txDate = new Date(tx.createdAt);
+
+                // Yesterday
+                if (txDate >= startOfYesterday && txDate < startOfToday) {
+                    yesterday += fee;
+                }
+                // Last week
+                if (txDate >= startOfWeek) {
+                    lastWeek += fee;
+                }
+                // Last month (all transactions in range)
+                lastMonth += fee;
+            }
+        }
+
+        return { yesterday, lastWeek, lastMonth };
     }
 }
 

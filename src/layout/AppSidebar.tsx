@@ -472,8 +472,7 @@ const AppSidebar: React.FC = () => {
       onMouseLeave={() => setIsHovered(false)}
     >
       <div
-        className={`px-4 pt-4 pb-2 flex ${!isExpanded && !isHovered ? "lg:justify-center" : "justify-center"
-          }`}
+        className="px-4 pt-4 pb-2 flex justify-center"
       >
         <Link href="/admin/dashboard" onClick={() => window.innerWidth < 1024 && closeMobileSidebar()}>
           {isExpanded || isHovered || isMobileOpen ? (
@@ -574,8 +573,7 @@ const AppSidebar: React.FC = () => {
                               closeMobileSidebar();
                             }
                           }}
-                          className={`menu-item group ${isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
-                            }`}
+                          className={`menu-item group ${isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"} ${!(isExpanded || isHovered || isMobileOpen) ? "lg:justify-center" : ""}`}
                         >
                           <span
                             className={`${isActive(nav.path)
@@ -620,17 +618,25 @@ const AppSidebar: React.FC = () => {
       )}
 
       <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-        <div className={`flex items-center justify-center ${!(isExpanded || isHovered || isMobileOpen) ? 'lg:flex-col lg:gap-1' : ''}`}>
+        <div className={`flex flex-col items-center justify-center gap-1 ${!(isExpanded || isHovered || isMobileOpen) ? 'lg:gap-0.5' : ''}`}>
           {isExpanded || isHovered || isMobileOpen ? (
-            <div className="text-center">
+            <>
               <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                {t("admin.sidebar.dashboardVersion")} 1.0.0
+                {t("admin.sidebar.dashboardVersion")} v{process.env.pnpm_package_version || '1.0.0'}
               </p>
-            </div>
+              <a
+                href="https://genfity.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[10px] text-gray-400 hover:text-primary dark:text-gray-500 dark:hover:text-primary transition-colors"
+              >
+                Powered by <span className="font-semibold">Genfity</span>
+              </a>
+            </>
           ) : (
             <div className="text-center">
               <div className="w-2 h-2 bg-green-500 rounded-full mx-auto mb-1" title="Version 1.0.0"></div>
-              <p className="text-[10px] font-semibold text-gray-600 dark:text-gray-400 transform rotate-0">
+              <p className="text-[10px] font-semibold text-gray-600 dark:text-gray-400">
                 v1.0
               </p>
             </div>

@@ -1,19 +1,23 @@
 /**
  * Delete PIN Modal
  * 
- * Modal for verifying PIN before deleting an order
+ * Modal for verifying PIN before deleting an order.
+ * Also handles the case when merchant hasn't set up a delete PIN yet.
  */
 
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { FaLock, FaTimes, FaExclamationTriangle } from 'react-icons/fa';
+import { FaLock, FaTimes, FaExclamationTriangle, FaCog } from 'react-icons/fa';
+import Link from 'next/link';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 interface DeletePinModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (pin: string) => Promise<void>;
   orderNumber?: string;
+  hasDeletePin?: boolean;
 }
 
 export const DeletePinModal: React.FC<DeletePinModalProps> = ({
@@ -21,7 +25,9 @@ export const DeletePinModal: React.FC<DeletePinModalProps> = ({
   onClose,
   onConfirm,
   orderNumber,
+  hasDeletePin = true,
 }) => {
+  const { t } = useTranslation();
   const [pin, setPin] = useState(['', '', '', '']);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -29,12 +35,12 @@ export const DeletePinModal: React.FC<DeletePinModalProps> = ({
 
   // Focus first input when modal opens
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && hasDeletePin) {
       setPin(['', '', '', '']);
       setError(null);
       setTimeout(() => inputRefs.current[0]?.focus(), 100);
     }
-  }, [isOpen]);
+  }, [isOpen, hasDeletePin]);
 
   const handleChange = (index: number, value: string) => {
     // Only allow digits
@@ -76,7 +82,7 @@ export const DeletePinModal: React.FC<DeletePinModalProps> = ({
   const handleSubmit = async () => {
     const pinString = pin.join('');
     if (pinString.length !== 4) {
-      setError('Please enter a 4-digit PIN');
+      setError(t('admin.deletePin.error.enterPin'));
       return;
     }
 
@@ -85,13 +91,63 @@ export const DeletePinModal: React.FC<DeletePinModalProps> = ({
       await onConfirm(pinString);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Invalid PIN');
+      setError(err instanceof Error ? err.message : t('admin.deletePin.error.invalidPin'));
     } finally {
       setLoading(false);
     }
   };
 
   if (!isOpen) return null;
+
+  // Show "No PIN Set" message if merchant hasn't configured a delete PIN
+  if (!hasDeletePin) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div className="relative w-full max-w-sm bg-white dark:bg-gray-900 rounded-2xl shadow-2xl">
+          {/* Close button */}
+          <button
+            onClick={onClose}
+            className="absolute right-4 top-4 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+          >
+            <FaTimes />
+          </button>
+
+          <div className="p-6">
+            {/* Header */}
+            <div className="text-center mb-6">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-warning-100 dark:bg-warning-900/30">
+                <FaLock className="h-8 w-8 text-warning-500" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                {t('admin.deletePin.noPinSet.title')}
+              </h2>
+              <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">
+                {t('admin.deletePin.noPinSet.description')}
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="flex flex-col gap-3">
+              <Link
+                href="/admin/dashboard/merchant/edit"
+                onClick={onClose}
+                className="w-full py-3 rounded-xl bg-brand-500 text-white font-medium hover:bg-brand-600 transition-colors flex items-center justify-center gap-2"
+              >
+                <FaCog className="h-4 w-4" />
+                {t('admin.deletePin.noPinSet.goToSettings')}
+              </Link>
+              <button
+                onClick={onClose}
+                className="w-full py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                {t('common.cancel')}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
@@ -111,15 +167,15 @@ export const DeletePinModal: React.FC<DeletePinModalProps> = ({
               <FaExclamationTriangle className="h-8 w-8 text-error-500" />
             </div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-              Delete Order
+              {t('admin.deletePin.title')}
             </h2>
             {orderNumber && (
               <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Order #{orderNumber}
+                {t('admin.deletePin.orderNumber', { orderNumber })}
               </p>
             )}
             <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-              Enter your 4-digit PIN to confirm deletion
+              {t('admin.deletePin.enterPin')}
             </p>
           </div>
 
@@ -158,7 +214,7 @@ export const DeletePinModal: React.FC<DeletePinModalProps> = ({
               disabled={loading}
               className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               onClick={handleSubmit}
@@ -168,12 +224,12 @@ export const DeletePinModal: React.FC<DeletePinModalProps> = ({
               {loading ? (
                 <>
                   <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Verifying...
+                  {t('admin.deletePin.verifying')}
                 </>
               ) : (
                 <>
                   <FaLock className="h-4 w-4" />
-                  Delete Order
+                  {t('admin.deletePin.deleteOrder')}
                 </>
               )}
             </button>

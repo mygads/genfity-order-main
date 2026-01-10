@@ -576,9 +576,9 @@ const en = {
   "admin.header.role.user": "User",
 
   // Orders page
-  "admin.orders.title": "Order Management",
+  "admin.orders.title": "Order",
   "admin.orders.subtitle": "Manage and track orders in real-time with drag & drop",
-  "admin.orders.searchPlaceholder": "Search order #, customer name, phone, or table...",
+  "admin.orders.searchPlaceholder": "Search order, customer name, phone, table...",
   "admin.orders.viewCard": "Card",
   "admin.orders.viewList": "List",
   "admin.orders.viewTabs": "Tabs",
@@ -669,6 +669,18 @@ const en = {
   "admin.history.subtitle": "View and manage all past orders",
   "admin.history.noOrders": "No Orders Found",
   "admin.history.tryDifferentDate": "Try selecting a different date range.",
+
+  // Delete PIN Modal
+  "admin.deletePin.title": "Delete Order",
+  "admin.deletePin.orderNumber": "Order #{orderNumber}",
+  "admin.deletePin.enterPin": "Enter your 4-digit PIN to confirm deletion",
+  "admin.deletePin.verifying": "Verifying...",
+  "admin.deletePin.deleteOrder": "Delete Order",
+  "admin.deletePin.error.enterPin": "Please enter a 4-digit PIN",
+  "admin.deletePin.error.invalidPin": "Invalid PIN",
+  "admin.deletePin.noPinSet.title": "Delete PIN Not Set",
+  "admin.deletePin.noPinSet.description": "You need to set up a delete PIN in Merchant Settings before you can delete orders.",
+  "admin.deletePin.noPinSet.goToSettings": "Go to Merchant Settings",
 
   // Menu management
   "admin.menu.title": "Menu Items",
@@ -2036,6 +2048,9 @@ const en = {
   "register.step1Label": "Business",
   "register.step2": "Owner Information",
   "register.step2Label": "Account",
+  "register.step1LabelNew": "Store Info",
+  "register.step2LabelNew": "Location",
+  "register.step3LabelNew": "Account",
   "register.merchantName": "Merchant Name",
   "register.merchantNamePlaceholder": "e.g. Barokah Restaurant",
   "register.merchantCode": "Merchant Code",
@@ -2099,6 +2114,8 @@ const en = {
   "validation.passwordMin": "Password must be at least 8 characters",
   "validation.passwordMismatch": "Passwords do not match",
   "validation.referralCodeInvalid": "Invalid or expired referral code",
+  "validation.addressMin": "Address must be at least 5 characters",
+  "validation.countryRequired": "Please select a country",
 
   // ============================================================================
   // REFERRAL CODES - Super Admin referral code management
