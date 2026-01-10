@@ -184,6 +184,31 @@ export default function UserDropdown() {
               {t("notifications.title") || "Notifications"}
             </DropdownItem>
           </li>
+          <li>
+            <DropdownItem
+              onItemClick={closeDropdown}
+              tag="a"
+              href="/admin/dashboard/sessions"
+              className="flex items-center gap-3 px-3 py-2 font-medium text-gray-700 rounded-lg group text-theme-sm hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
+            >
+              <svg
+                className="fill-gray-500 group-hover:fill-gray-700 dark:fill-gray-400 dark:group-hover:fill-gray-300"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  fillRule="evenodd"
+                  clipRule="evenodd"
+                  d="M2 5.5C2 4.11929 3.11929 3 4.5 3H9.5C10.8807 3 12 4.11929 12 5.5V9.5C12 10.8807 10.8807 12 9.5 12H4.5C3.11929 12 2 10.8807 2 9.5V5.5ZM4.5 5C4.22386 5 4 5.22386 4 5.5V9.5C4 9.77614 4.22386 10 4.5 10H9.5C9.77614 10 10 9.77614 10 9.5V5.5C10 5.22386 9.77614 5 9.5 5H4.5ZM14 5.5C14 4.11929 15.1193 3 16.5 3H19.5C20.8807 3 22 4.11929 22 5.5V9.5C22 10.8807 20.8807 12 19.5 12H16.5C15.1193 12 14 10.8807 14 9.5V5.5ZM16.5 5C16.2239 5 16 5.22386 16 5.5V9.5C16 9.77614 16.2239 10 16.5 10H19.5C19.7761 10 20 9.77614 20 9.5V5.5C20 5.22386 19.7761 5 19.5 5H16.5ZM2 14.5C2 13.1193 3.11929 12 4.5 12H9.5C10.8807 12 12 13.1193 12 14.5V18.5C12 19.8807 10.8807 21 9.5 21H4.5C3.11929 21 2 19.8807 2 18.5V14.5ZM4.5 14C4.22386 14 4 14.2239 4 14.5V18.5C4 18.7761 4.22386 19 4.5 19H9.5C9.77614 19 10 18.7761 10 18.5V14.5C10 14.2239 9.77614 14 9.5 14H4.5ZM16.5 12C15.1193 12 14 13.1193 14 14.5V18.5C14 19.8807 15.1193 21 16.5 21H19.5C20.8807 21 22 19.8807 22 18.5V14.5C22 13.1193 20.8807 12 19.5 12H16.5ZM16 14.5C16 14.2239 16.2239 14 16.5 14H19.5C19.7761 14 20 14.2239 20 14.5V18.5C20 18.7761 19.7761 19 19.5 19H16.5C16.2239 19 16 18.7761 16 18.5V14.5Z"
+                  fill=""
+                />
+              </svg>
+              {t("admin.header.sessions") || "Active Sessions"}
+            </DropdownItem>
+          </li>
         </ul>
         <button
           onClick={handleLogout}
