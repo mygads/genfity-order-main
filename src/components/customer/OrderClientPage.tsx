@@ -9,6 +9,7 @@ import RestaurantInfoCard from '@/components/customer/RestaurantInfoCard';
 import TableNumberCard from '@/components/customer/TableNumberCard';
 import HorizontalMenuSection from '@/components/customer/HorizontalMenuSection';
 import DetailedMenuSection from '@/components/customer/DetailedMenuSection';
+import ViewModeToggle, { ViewMode, getStoredViewMode } from '@/components/customer/ViewModeToggle';
 import RecentOrdersSection from '@/components/customer/RecentOrdersSection';
 import FavoritesSection from '@/components/customer/FavoritesSection';
 import FloatingCartButton from '@/components/cart/FloatingCartButton';
@@ -189,6 +190,13 @@ export default function OrderClientPage({
   const [isSticky, setIsSticky] = useState(false); // Track if header should be sticky
   const [isCategoryTabsSticky, setIsCategoryTabsSticky] = useState(false); // Track if category tabs should be sticky
   const [showTableBadge, setShowTableBadge] = useState(false); // Track if table badge should be shown in header
+  const [viewMode, setViewMode] = useState<ViewMode>('list'); // Menu view mode: list, grid-2, grid-3
+
+  // Load view mode preference from localStorage
+  useEffect(() => {
+    setViewMode(getStoredViewMode());
+  }, []);
+
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({}); // References to category sections
   const { initializeCart, cart, updateItem, removeItem } = useCart();
 
@@ -801,28 +809,35 @@ export default function OrderClientPage({
                   : 'auto',
               }}
             >
-              <CategoryTabs
-                categories={categories}
-                specialCategories={specialCategories}
-                activeTab={selectedCategory === 'all' ? activeScrollTab : selectedCategory}
-                onTabClick={(categoryId: string) => {
-                  // User clicked a category - scroll to it
-                  setActiveScrollTab(categoryId);
+              <div className="flex items-center justify-between px-4 py-2">
+                <div className="flex-1 overflow-x-auto">
+                  <CategoryTabs
+                    categories={categories}
+                    specialCategories={specialCategories}
+                    activeTab={selectedCategory === 'all' ? activeScrollTab : selectedCategory}
+                    onTabClick={(categoryId: string) => {
+                      // User clicked a category - scroll to it
+                      setActiveScrollTab(categoryId);
 
-                  // Since we're always in 'all' mode now, scroll to the section
-                  const stickyHeaderHeight = mode === 'dinein' && tableNumber ? 95 : 55;
-                  const totalStickyHeight = stickyHeaderHeight + 48; // Header + tabs
-                  const element = sectionRefs.current[categoryId];
+                      // Since we're always in 'all' mode now, scroll to the section
+                      const stickyHeaderHeight = mode === 'dinein' && tableNumber ? 95 : 55;
+                      const totalStickyHeight = stickyHeaderHeight + 48; // Header + tabs
+                      const element = sectionRefs.current[categoryId];
 
-                  if (element) {
-                    const elementTop = element.getBoundingClientRect().top + window.scrollY;
-                    window.scrollTo({
-                      top: elementTop - totalStickyHeight - 10, // 10px extra padding
-                      behavior: 'smooth'
-                    });
-                  }
-                }}
-              />
+                      if (element) {
+                        const elementTop = element.getBoundingClientRect().top + window.scrollY;
+                        window.scrollTo({
+                          top: elementTop - totalStickyHeight - 10, // 10px extra padding
+                          behavior: 'smooth'
+                        });
+                      }
+                    }}
+                  />
+                </div>
+                <div className="flex-shrink-0 ml-2">
+                  <ViewModeToggle value={viewMode} onChange={setViewMode} />
+                </div>
+              </div>
             </div>
 
             {/* Show ALL sections when 'all' is selected */}
@@ -971,6 +986,7 @@ export default function OrderClientPage({
                           onIncreaseQty={handleIncreaseQtyFromCard}
                           onDecreaseQty={handleDecreaseQtyFromCard}
                           storeOpen={storeOpen}
+                          viewMode={viewMode}
                         />
                       </div>
                       {/* Divider between categories */}
@@ -999,6 +1015,7 @@ export default function OrderClientPage({
                     getItemQuantityInCart={getMenuQuantityInCart}
                     onIncreaseQty={handleIncreaseQtyFromCard}
                     onDecreaseQty={handleDecreaseQtyFromCard}
+                    viewMode={viewMode}
                   />
                 </div>
               </>

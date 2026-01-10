@@ -64,6 +64,34 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // ========================================
+  // Case-insensitive merchant code handling
+  // Redirects lowercase merchant codes to uppercase
+  // Example: /well/order → /WELL/order
+  // ========================================
+
+  // Extract first path segment (potential merchant code)
+  const segments = pathname.split('/').filter(Boolean);
+  if (segments.length > 0) {
+    const merchantCode = segments[0];
+
+    // Skip known routes that are not merchant codes
+    const knownRoutes = ['merchant', 'influencer', 'auth', 'error', 'privacy-policy', 'terms', 'contact'];
+    if (!knownRoutes.includes(merchantCode.toLowerCase())) {
+      const uppercaseMerchantCode = merchantCode.toUpperCase();
+
+      // If merchant code contains lowercase letters, redirect to uppercase version
+      if (merchantCode !== uppercaseMerchantCode) {
+        const newPathname = '/' + uppercaseMerchantCode + pathname.slice(merchantCode.length + 1);
+        const url = request.nextUrl.clone();
+        url.pathname = newPathname;
+
+        // 301 = permanent redirect for SEO
+        return NextResponse.redirect(url, { status: 301 });
+      }
+    }
+  }
+
   return NextResponse.next();
 }
 

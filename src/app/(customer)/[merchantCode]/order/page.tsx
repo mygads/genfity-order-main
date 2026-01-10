@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import { notFound } from 'next/navigation';
 import { CustomerOrderSkeleton } from '@/components/common/SkeletonLoaders';
 import OrderClientPage from '../../../../components/customer/OrderClientPage';
 
@@ -139,6 +140,11 @@ export default async function OrderPage({ params, searchParams }: OrderPageProps
 
   // Fetch initial data server-side (ISR cached)
   const initialData = await getInitialData(merchantCode);
+
+  // If merchant doesn't exist, show 404 page
+  if (!initialData.merchant) {
+    notFound();
+  }
 
   return (
     <Suspense fallback={<CustomerOrderSkeleton />}>
