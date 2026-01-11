@@ -268,6 +268,30 @@ async function handlePost(req: NextRequest, context: AuthContext) {
             });
         }
 
+        // Create balance transaction record for subscription days
+        // Get or create merchant balance for transaction record
+        let balanceRecord = currentBalance;
+        if (!balanceRecord) {
+            balanceRecord = await prisma.merchantBalance.create({
+                data: {
+                    merchantId: merchantId,
+                    balance: 0,
+                },
+            });
+        }
+        
+        await prisma.balanceTransaction.create({
+            data: {
+                balanceId: balanceRecord.id,
+                type: 'SUBSCRIPTION',
+                amount: 0, // No monetary value for subscription days voucher
+                balanceBefore: Number(balanceRecord.balance),
+                balanceAfter: Number(balanceRecord.balance),
+                description: `Voucher redemption: ${voucher.code} (+${daysToAdd} days subscription)`,
+                createdByUserId: context.userId,
+            },
+        });
+
         resultMessage = `Successfully added ${daysToAdd} days to your subscription (valid until ${newPeriodEnd.toLocaleDateString()})`;
     }
 

@@ -227,6 +227,22 @@ class PaymentRequestService {
                     currentPeriodEnd: newPeriodEnd,
                 });
             }
+
+            // Create balance transaction record for monthly subscription payment
+            // This makes the subscription payment visible in transaction history
+            const balance = await balanceRepository.getOrCreateBalance(request.merchantId);
+            await prisma.balanceTransaction.create({
+                data: {
+                    balanceId: balance.id,
+                    type: 'SUBSCRIPTION',
+                    amount: Number(request.amount),
+                    balanceBefore: Number(balance.balance),
+                    balanceAfter: Number(balance.balance), // Subscription payment doesn't affect balance
+                    description: `Monthly subscription payment (${months} month${months > 1 ? 's' : ''})`,
+                    paymentRequestId: requestId,
+                    createdByUserId: adminUserId,
+                },
+            });
         }
 
         // Get updated balance and subscription for history recording
