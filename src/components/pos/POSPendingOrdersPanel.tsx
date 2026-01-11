@@ -25,6 +25,7 @@ import {
 } from 'react-icons/fa';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import type { PendingOrder } from '@/hooks/useOfflineSync';
+import { formatCurrency } from '@/lib/utils/format';
 
 // ============================================
 // TYPES
@@ -57,26 +58,10 @@ export const POSPendingOrdersPanel: React.FC<POSPendingOrdersPanelProps> = ({
   onDeleteOrder,
   currency,
 }) => {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // Format currency
-  const formatCurrency = (amount: number): string => {
-    if (currency === 'AUD') {
-      return `A$${amount.toFixed(2)}`;
-    }
-    if (currency === 'IDR') {
-      const formatted = new Intl.NumberFormat('id-ID', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(Math.round(amount));
-      return `Rp${formatted}`;
-    }
-    return new Intl.NumberFormat('en-AU', {
-      style: 'currency',
-      currency: currency,
-    }).format(amount);
-  };
+  const formatMoney = (amount: number): string => formatCurrency(amount, currency, locale);
 
   // Format time ago
   const formatTimeAgo = (dateString: string) => {
@@ -85,11 +70,11 @@ export const POSPendingOrdersPanel: React.FC<POSPendingOrdersPanelProps> = ({
     const diffMs = now.getTime() - date.getTime();
     const diffMins = Math.floor(diffMs / (1000 * 60));
     
-    if (diffMins < 1) return t('pos.justNow') || 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffMins < 1) return t('common.time.justNow') || t('pos.justNow') || 'Just now';
+    if (diffMins < 60) return (t('common.time.minutesAgo', { count: diffMins }) || `${diffMins}m ago`);
     
     const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffHours < 24) return (t('common.time.hoursAgo', { count: diffHours }) || `${diffHours}h ago`);
     
     return date.toLocaleDateString();
   };
@@ -166,7 +151,7 @@ export const POSPendingOrdersPanel: React.FC<POSPendingOrdersPanelProps> = ({
               className="flex items-center gap-1 px-3 py-1 rounded bg-green-600 text-white text-xs font-medium hover:bg-green-700 disabled:opacity-50 transition-colors"
             >
               <FaSync className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
-              {isSyncing ? (t('pos.syncing') || 'Syncing...') : (t('pos.syncNow') || 'Sync Now')}
+              {isSyncing ? (t('pos.syncingOrders') || 'Syncing...') : (t('pos.syncNow') || 'Sync Now')}
             </button>
           )}
         </div>
@@ -177,7 +162,7 @@ export const POSPendingOrdersPanel: React.FC<POSPendingOrdersPanelProps> = ({
             <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500">
               <FaWifi className="w-12 h-12 mb-3 opacity-50" />
               <p className="text-sm">{t('pos.noPendingOrders') || 'No pending orders'}</p>
-              <p className="text-xs mt-1">{t('pos.pendingOrdersHint') || 'Orders created offline will appear here'}</p>
+              <p className="text-xs mt-1">{t('pos.noPendingOrdersDescription') || 'All orders have been synced'}</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -212,7 +197,7 @@ export const POSPendingOrdersPanel: React.FC<POSPendingOrdersPanelProps> = ({
                       {order.tableNumber && (
                         <span className="flex items-center gap-1">
                           <FaChair className="w-3 h-3" />
-                          Table {order.tableNumber}
+                          {t('pos.table')} {order.tableNumber}
                         </span>
                       )}
                       {order.customer?.name && (
@@ -227,9 +212,16 @@ export const POSPendingOrdersPanel: React.FC<POSPendingOrdersPanelProps> = ({
                   {/* Items Summary */}
                   <div className="p-3">
                     <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400 mb-2">
-                      <span>{countItems(order.items)} {t('pos.items') || 'items'}</span>
+                      <span>
+                        {countItems(order.items)}{' '}
+                        {locale === 'id'
+                          ? (t('pos.item') || 'item')
+                          : countItems(order.items) === 1
+                            ? (t('pos.item') || 'item')
+                            : (t('pos.itemsPlural') || 'items')}
+                      </span>
                       <span className="font-semibold text-gray-900 dark:text-white">
-                        {formatCurrency(order.totalAmount)}
+                        {formatMoney(order.totalAmount)}
                       </span>
                     </div>
 
@@ -241,7 +233,12 @@ export const POSPendingOrdersPanel: React.FC<POSPendingOrdersPanelProps> = ({
                           {idx < Math.min(2, order.items.length - 1) && ', '}
                         </span>
                       ))}
-                      {order.items.length > 3 && ` +${order.items.length - 3} more`}
+                      {order.items.length > 3 && (
+                        <>
+                          {' '}
+                          {t('pos.moreItems', { count: order.items.length - 3 }) || `+${order.items.length - 3} more`}
+                        </>
+                      )}
                     </div>
 
                     {/* Actions */}
@@ -251,7 +248,7 @@ export const POSPendingOrdersPanel: React.FC<POSPendingOrdersPanelProps> = ({
                           onClick={() => confirmDelete(order.id)}
                           className="flex-1 py-2 px-3 rounded-lg text-sm font-medium bg-red-500 text-white hover:bg-red-600 transition-colors"
                         >
-                          {t('common.confirmDelete') || 'Confirm Delete'}
+                          {t('common.confirm') || 'Confirm'}
                         </button>
                         <button
                           onClick={() => setDeletingId(null)}
@@ -288,7 +285,7 @@ export const POSPendingOrdersPanel: React.FC<POSPendingOrdersPanelProps> = ({
         {/* Footer */}
         <div className="shrink-0 p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
           <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-            {t('pos.pendingOrdersNote') || 'These orders will sync automatically when online'}
+            {t('pos.pendingOrdersWillSync') || 'These orders will sync when you go online'}
           </p>
         </div>
       </div>

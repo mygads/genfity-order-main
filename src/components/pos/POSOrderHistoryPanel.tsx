@@ -35,7 +35,7 @@ import { DeletePinModal } from '@/components/modals/DeletePinModal';
 import { printReceipt } from '@/lib/utils/unifiedReceipt';
 import { ReceiptSettings, DEFAULT_RECEIPT_SETTINGS } from '@/lib/types/receiptSettings';
 import { useMerchant } from '@/context/MerchantContext';
-import { formatFullOrderNumber } from '@/lib/utils/format';
+import { formatCurrency, formatFullOrderNumber } from '@/lib/utils/format';
 
 // ============================================
 // TYPES
@@ -109,7 +109,7 @@ export const POSOrderHistoryPanel: React.FC<POSOrderHistoryPanelProps> = ({
   onRefundSuccess,
   merchantInfo,
 }) => {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { merchant } = useMerchant();
   
   // State
@@ -146,32 +146,19 @@ export const POSOrderHistoryPanel: React.FC<POSOrderHistoryPanelProps> = ({
     { revalidateOnFocus: true, refreshInterval: 30000 }
   );
 
-  // Format currency - A$ for AUD, Rp for IDR
-  const formatCurrency = (amount: number): string => {
-    if (currency === 'AUD') {
-      return `A$${amount.toFixed(2)}`;
-    }
-    if (currency === 'IDR') {
-      const formatted = new Intl.NumberFormat('id-ID', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(Math.round(amount));
-      return `Rp${formatted}`;
-    }
-    return new Intl.NumberFormat('en-AU', {
-      style: 'currency',
-      currency: currency,
-    }).format(amount);
-  };
-
   // Format time
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleTimeString(currency === 'IDR' ? 'id-ID' : 'en-AU', {
+    return date.toLocaleTimeString(locale === 'id' ? 'id-ID' : 'en-AU', {
       hour: '2-digit',
       minute: '2-digit',
     });
   };
+
+  const formatMoney = useCallback(
+    (amount: number) => formatCurrency(amount, currency, locale),
+    [currency, locale]
+  );
 
   // Filter orders by search
   const filteredOrders = orders?.filter(order => {
@@ -268,7 +255,7 @@ export const POSOrderHistoryPanel: React.FC<POSOrderHistoryPanelProps> = ({
     const language: 'en' | 'id' =
       rawSettings.receiptLanguage === 'id' || rawSettings.receiptLanguage === 'en'
         ? rawSettings.receiptLanguage
-        : currency === 'IDR'
+        : locale === 'id'
           ? 'id'
           : 'en';
 
@@ -422,8 +409,8 @@ export const POSOrderHistoryPanel: React.FC<POSOrderHistoryPanelProps> = ({
                       {getPaymentIcon(selectedOrder.paymentMethod)}
                       <span>
                         {selectedOrder.paymentStatus === 'PAID' 
-                          ? (currency === 'IDR' ? 'Lunas' : 'Paid')
-                          : (currency === 'IDR' ? 'Belum Bayar' : 'Unpaid')
+                          ? (t('admin.payment.paid') || 'Paid')
+                          : (t('admin.payment.unpaid') || 'Unpaid')
                         }
                       </span>
                     </div>
@@ -445,7 +432,7 @@ export const POSOrderHistoryPanel: React.FC<POSOrderHistoryPanelProps> = ({
                             {item.quantity}x {item.menuName}
                           </span>
                           <span className="text-sm text-gray-600 dark:text-gray-400">
-                            {formatCurrency(item.subtotal)}
+                            {formatMoney(item.subtotal)}
                           </span>
                         </div>
                         {item.addons && item.addons.length > 0 && (
@@ -471,35 +458,35 @@ export const POSOrderHistoryPanel: React.FC<POSOrderHistoryPanelProps> = ({
                 <div className="border-t border-gray-200 dark:border-gray-700 pt-3 mb-4 space-y-1.5 text-sm">
                   <div className="flex justify-between text-gray-600 dark:text-gray-400">
                     <span>{t('pos.subtotal')}</span>
-                    <span>{formatCurrency(selectedOrder.subtotal)}</span>
+                    <span>{formatMoney(selectedOrder.subtotal)}</span>
                   </div>
                   {selectedOrder.taxAmount > 0 && (
                     <div className="flex justify-between text-gray-600 dark:text-gray-400">
                       <span>{t('pos.tax')}</span>
-                      <span>{formatCurrency(selectedOrder.taxAmount)}</span>
+                      <span>{formatMoney(selectedOrder.taxAmount)}</span>
                     </div>
                   )}
                   {selectedOrder.serviceChargeAmount > 0 && (
                     <div className="flex justify-between text-gray-600 dark:text-gray-400">
                       <span>{t('pos.serviceCharge')}</span>
-                      <span>{formatCurrency(selectedOrder.serviceChargeAmount)}</span>
+                      <span>{formatMoney(selectedOrder.serviceChargeAmount)}</span>
                     </div>
                   )}
                   {selectedOrder.packagingFeeAmount > 0 && (
                     <div className="flex justify-between text-gray-600 dark:text-gray-400">
                       <span>{t('pos.packagingFee')}</span>
-                      <span>{formatCurrency(selectedOrder.packagingFeeAmount)}</span>
+                      <span>{formatMoney(selectedOrder.packagingFeeAmount)}</span>
                     </div>
                   )}
                   {selectedOrder.discountAmount && selectedOrder.discountAmount > 0 && (
                     <div className="flex justify-between text-green-600 dark:text-green-400">
                       <span>{t('pos.payment.discount') || 'Discount'}</span>
-                      <span>-{formatCurrency(selectedOrder.discountAmount)}</span>
+                      <span>-{formatMoney(selectedOrder.discountAmount)}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-lg font-bold text-gray-900 dark:text-white pt-1 border-t border-gray-200 dark:border-gray-700">
                     <span>{t('pos.total')}</span>
-                    <span>{formatCurrency(selectedOrder.totalAmount)}</span>
+                    <span>{formatMoney(selectedOrder.totalAmount)}</span>
                   </div>
                 </div>
 
@@ -556,7 +543,7 @@ export const POSOrderHistoryPanel: React.FC<POSOrderHistoryPanelProps> = ({
                         ) : (
                           <FaShoppingBag className="w-3 h-3" />
                         )}
-                        {order.tableNumber && <span>T{order.tableNumber}</span>}
+                        {order.tableNumber && <span>{t('pos.table')} {order.tableNumber}</span>}
                         <span>{formatTime(order.createdAt)}</span>
                         {order.customerName && <span>• {order.customerName}</span>}
                       </div>
@@ -564,10 +551,15 @@ export const POSOrderHistoryPanel: React.FC<POSOrderHistoryPanelProps> = ({
                     
                     <div className="text-right">
                       <div className="font-semibold text-gray-900 dark:text-white">
-                        {formatCurrency(order.totalAmount)}
+                        {formatMoney(order.totalAmount)}
                       </div>
                       <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {order.items.length} {order.items.length === 1 ? 'item' : 'items'}
+                        {order.items.length}{' '}
+                        {locale === 'id'
+                          ? (t('pos.item') || 'item')
+                          : order.items.length === 1
+                            ? (t('pos.item') || 'item')
+                            : (t('pos.itemsPlural') || 'items')}
                       </div>
                     </div>
                     
@@ -586,7 +578,7 @@ export const POSOrderHistoryPanel: React.FC<POSOrderHistoryPanelProps> = ({
               </div>
               <div className="text-gray-600 dark:text-gray-400">
                 {t('pos.total')}: <span className="font-medium text-orange-600 dark:text-orange-400">
-                  {formatCurrency(orders?.reduce((sum, o) => sum + (o.status !== 'CANCELLED' && o.status !== 'REFUNDED' ? o.totalAmount : 0), 0) || 0)}
+                  {formatMoney(orders?.reduce((sum, o) => sum + (o.status !== 'CANCELLED' && o.status !== 'REFUNDED' ? o.totalAmount : 0), 0) || 0)}
                 </span>
               </div>
             </div>

@@ -19,6 +19,8 @@ import {
   FaPuzzlePiece,
   FaCheck,
 } from 'react-icons/fa';
+import { useTranslation } from '@/lib/i18n/useTranslation';
+import { formatCurrency } from '@/lib/utils/format';
 import type {
   OfflineOrderSyncConflict,
   OfflineOrderConflictResolution,
@@ -30,6 +32,7 @@ interface OfflineOrderConflictResolutionModalProps {
   onClose: () => void;
   conflicts: OfflineOrderSyncConflict[];
   onApply: (resolutions: OfflineOrderConflictResolution[]) => void;
+  currency: string;
 }
 
 type Choice = OfflineOrderConflictResolutionAction['action'];
@@ -39,7 +42,10 @@ export const OfflineOrderConflictResolutionModal: React.FC<OfflineOrderConflictR
   onClose,
   conflicts,
   onApply,
+  currency,
 }) => {
+  const { t, locale } = useTranslation();
+
   const initialChoices = useMemo(() => {
     const map = new Map<string, Choice>();
     for (const order of conflicts) {
@@ -60,6 +66,8 @@ export const OfflineOrderConflictResolutionModal: React.FC<OfflineOrderConflictR
   const [choices, setChoices] = useState<Map<string, Choice>>(initialChoices);
 
   const totalConflicts = conflicts.reduce((sum, o) => sum + o.conflicts.length, 0);
+
+  const formatMoney = (amount: number): string => formatCurrency(amount, currency, locale);
 
   const setChoice = (key: string, choice: Choice) => {
     setChoices(prev => {
@@ -142,10 +150,10 @@ export const OfflineOrderConflictResolutionModal: React.FC<OfflineOrderConflictR
             </div>
             <div>
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Offline Order Conflicts
+                {t('pos.conflicts.title') || 'Offline Order Conflicts'}
               </h2>
               <p className="text-xs text-gray-600 dark:text-gray-400">
-                {totalConflicts} conflict{totalConflicts !== 1 ? 's' : ''} found • choose how to fix before syncing
+                {t('pos.conflicts.description', { count: totalConflicts }) || `${totalConflicts} conflicts found • choose how to fix before syncing`}
               </p>
             </div>
           </div>
@@ -163,10 +171,13 @@ export const OfflineOrderConflictResolutionModal: React.FC<OfflineOrderConflictR
             <div key={order.orderId} className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
               <div className="px-4 py-2 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
                 <div className="text-sm font-medium text-gray-900 dark:text-white">
-                  Pending Order • {new Date(order.createdAt).toLocaleString()}
+                  {(t('pos.conflicts.pendingOrder') || 'Pending Order')}{' '}
+                  • {new Date(order.createdAt).toLocaleString(locale === 'id' ? 'id-ID' : 'en-AU')}
                 </div>
                 <div className="text-xs text-gray-500 dark:text-gray-400">
-                  {order.orderType === 'DINE_IN' ? 'Dine In' : 'Takeaway'}
+                  {order.orderType === 'DINE_IN'
+                    ? (t('pos.dineIn') || 'Dine In')
+                    : (t('pos.takeaway') || 'Takeaway')}
                 </div>
               </div>
 
@@ -176,10 +187,22 @@ export const OfflineOrderConflictResolutionModal: React.FC<OfflineOrderConflictR
                   const choice = choices.get(key);
 
                   const badge = c.kind === 'PRICE_CHANGED'
-                    ? { icon: <FaTag className="w-3 h-3" />, text: 'Price changed', cls: 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300' }
+                    ? {
+                        icon: <FaTag className="w-3 h-3" />,
+                        text: t('pos.conflicts.priceChanged') || 'Price changed',
+                        cls: 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300',
+                      }
                     : c.kind === 'ADDON_MISSING'
-                      ? { icon: <FaPuzzlePiece className="w-3 h-3" />, text: 'Addon missing', cls: 'bg-warning-100 text-warning-700 dark:bg-warning-900/30 dark:text-warning-300' }
-                      : { icon: <FaTrash className="w-3 h-3" />, text: 'Item unavailable', cls: 'bg-error-100 text-error-700 dark:bg-error-900/30 dark:text-error-300' };
+                      ? {
+                          icon: <FaPuzzlePiece className="w-3 h-3" />,
+                          text: t('pos.conflicts.addonMissing') || 'Addon missing',
+                          cls: 'bg-warning-100 text-warning-700 dark:bg-warning-900/30 dark:text-warning-300',
+                        }
+                      : {
+                          icon: <FaTrash className="w-3 h-3" />,
+                          text: t('pos.conflicts.itemUnavailable') || 'Item unavailable',
+                          cls: 'bg-error-100 text-error-700 dark:bg-error-900/30 dark:text-error-300',
+                        };
 
                   return (
                     <div key={key} className="p-4">
@@ -199,7 +222,7 @@ export const OfflineOrderConflictResolutionModal: React.FC<OfflineOrderConflictR
                           </p>
                           {c.kind === 'PRICE_CHANGED' && (
                             <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                              Local: {c.localPrice?.toFixed(2)} • Server: {c.serverPrice?.toFixed(2)}
+                              {t('pos.conflicts.local') || 'Local'}: {formatMoney(c.localPrice ?? 0)} • {t('pos.conflicts.server') || 'Server'}: {formatMoney(c.serverPrice ?? 0)}
                             </p>
                           )}
                         </div>
@@ -215,7 +238,7 @@ export const OfflineOrderConflictResolutionModal: React.FC<OfflineOrderConflictR
                                   : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                               }`}
                             >
-                              Accept server price
+                              {t('pos.conflicts.acceptServerPrice') || 'Accept server price'}
                             </button>
                           )}
 
@@ -228,7 +251,7 @@ export const OfflineOrderConflictResolutionModal: React.FC<OfflineOrderConflictR
                                   : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                               }`}
                             >
-                              Remove addon
+                              {t('pos.conflicts.removeAddon') || 'Remove addon'}
                             </button>
                           )}
 
@@ -240,7 +263,7 @@ export const OfflineOrderConflictResolutionModal: React.FC<OfflineOrderConflictR
                                 : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                             }`}
                           >
-                            Remove item
+                            {t('pos.conflicts.removeItem') || 'Remove item'}
                           </button>
                         </div>
                       </div>
@@ -258,14 +281,14 @@ export const OfflineOrderConflictResolutionModal: React.FC<OfflineOrderConflictR
             onClick={onClose}
             className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
           >
-            Close
+            {t('pos.conflicts.close') || t('common.close') || 'Close'}
           </button>
           <button
             onClick={handleApply}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-brand-500 hover:bg-brand-600 text-white transition-colors"
           >
             <FaCheck className="w-4 h-4" />
-            Apply fixes
+            {t('pos.conflicts.applyFixes') || 'Apply fixes'}
           </button>
         </div>
       </div>

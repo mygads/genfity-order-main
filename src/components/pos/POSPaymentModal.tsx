@@ -29,7 +29,7 @@ import { useTranslation } from '@/lib/i18n/useTranslation';
 import { printReceipt as printUnifiedReceipt } from '@/lib/utils/unifiedReceipt';
 import { DEFAULT_RECEIPT_SETTINGS, type ReceiptSettings } from '@/lib/types/receiptSettings';
 import { useMerchant } from '@/context/MerchantContext';
-import { formatFullOrderNumber } from '@/lib/utils/format';
+import { formatCurrency, formatFullOrderNumber } from '@/lib/utils/format';
 
 // ============================================
 // TYPES
@@ -107,203 +107,6 @@ export interface POSPaymentData {
 }
 
 // ============================================
-// RECEIPT HTML GENERATOR
-// ============================================
-
-interface ReceiptHTMLData {
-  orderNumber: string;
-  orderType: 'DINE_IN' | 'TAKEAWAY';
-  tableNumber?: string;
-  placedAt: Date;
-  items: Array<{
-    menuName: string;
-    quantity: number;
-    subtotal: number;
-    addons?: Array<{
-      addonName: string;
-      addonPrice: number;
-      quantity: number;
-    }>;
-  }>;
-  subtotal: number;
-  taxAmount?: number;
-  serviceChargeAmount?: number;
-  packagingFeeAmount?: number;
-  discountAmount?: number;
-  totalAmount: number;
-  paymentMethod: string;
-  amountPaid: number;
-  change: number;
-  cashAmount?: number;
-  cardAmount?: number;
-  merchantName: string;
-  merchantAddress?: string;
-  merchantPhone?: string;
-  currency: string;
-}
-
-function formatReceiptCurrency(amount: number, currency: string): string {
-  if (currency === 'AUD') {
-    return `A$${amount.toFixed(2)}`;
-  }
-  if (currency === 'IDR') {
-    const formatted = new Intl.NumberFormat('id-ID', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(Math.round(amount));
-    return `Rp ${formatted}`;
-  }
-  return new Intl.NumberFormat('en-AU', {
-    style: 'currency',
-    currency: currency,
-  }).format(amount);
-}
-
-function generateReceiptHTML(data: ReceiptHTMLData): string {
-  const isIDR = data.currency === 'IDR';
-  const labels = isIDR ? {
-    orderNumber: 'Pesanan #',
-    orderType: 'Tipe Pesanan',
-    table: 'Meja',
-    date: 'Tanggal',
-    subtotal: 'Subtotal',
-    tax: 'Pajak',
-    serviceCharge: 'Biaya Layanan',
-    packagingFee: 'Biaya Kemasan',
-    discount: 'Diskon',
-    total: 'TOTAL',
-    paymentMethod: 'Metode Pembayaran',
-    amountPaid: 'Jumlah Dibayar',
-    change: 'Kembalian',
-    cash: 'Tunai',
-    card: 'Kartu',
-    split: 'Split',
-    dineIn: 'Makan di Tempat',
-    takeaway: 'Bawa Pulang',
-    thankYou: 'Terima kasih atas pesanan Anda!',
-    comeAgain: 'Silakan datang kembali',
-    phone: 'Telepon',
-  } : {
-    orderNumber: 'Order #',
-    orderType: 'Order Type',
-    table: 'Table',
-    date: 'Date',
-    subtotal: 'Subtotal',
-    tax: 'Tax',
-    serviceCharge: 'Service Charge',
-    packagingFee: 'Packaging Fee',
-    discount: 'Discount',
-    total: 'TOTAL',
-    paymentMethod: 'Payment Method',
-    amountPaid: 'Amount Paid',
-    change: 'Change',
-    cash: 'Cash',
-    card: 'Card',
-    split: 'Split',
-    dineIn: 'Dine In',
-    takeaway: 'Takeaway',
-    thankYou: 'Thank you for your order!',
-    comeAgain: 'Please come again',
-    phone: 'Phone',
-  };
-
-  const formatDate = (date: Date) => {
-    const locale = isIDR ? 'id-ID' : 'en-AU';
-    return new Intl.DateTimeFormat(locale, {
-      dateStyle: 'medium',
-      timeStyle: 'short',
-    }).format(new Date(date));
-  };
-
-  const getPaymentMethodLabel = () => {
-    if (data.paymentMethod === 'SPLIT') return labels.split;
-    if (data.paymentMethod === 'CASH') return labels.cash;
-    return labels.card;
-  };
-
-  return `
-<!DOCTYPE html>
-<html lang="${isIDR ? 'id' : 'en'}">
-<head>
-  <meta charset="UTF-8">
-  <title>${labels.orderNumber}${data.orderNumber}</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.4; padding: 20px; max-width: 300px; margin: 0 auto; }
-    .header { text-align: center; border-bottom: 2px dashed #000; padding-bottom: 10px; margin-bottom: 10px; }
-    .header h1 { font-size: 18px; font-weight: bold; margin-bottom: 5px; }
-    .header p { font-size: 10px; margin: 2px 0; }
-    .section { margin: 10px 0; padding: 8px 0; border-bottom: 1px dashed #ccc; }
-    .section:last-child { border-bottom: 2px dashed #000; }
-    .row { display: flex; justify-content: space-between; margin: 3px 0; }
-    .label { font-weight: bold; }
-    .items { margin: 5px 0; }
-    .item { margin: 5px 0; }
-    .item-name { font-weight: bold; }
-    .item-addon { margin-left: 15px; font-size: 10px; }
-    .total { font-size: 16px; font-weight: bold; margin-top: 10px; }
-    .discount { color: #16a34a; }
-    .footer { text-align: center; margin-top: 15px; font-size: 10px; }
-    @media print { body { padding: 0; } @page { margin: 0; size: 80mm auto; } }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <h1>${data.merchantName}</h1>
-    ${data.merchantAddress ? `<p>${data.merchantAddress}</p>` : ''}
-    ${data.merchantPhone ? `<p>${labels.phone}: ${data.merchantPhone}</p>` : ''}
-  </div>
-
-  <div class="section">
-    <div class="row"><span class="label">${labels.orderNumber}:</span><span>${data.orderNumber}</span></div>
-    <div class="row"><span class="label">${labels.orderType}:</span><span>${data.orderType === 'DINE_IN' ? labels.dineIn : labels.takeaway}</span></div>
-    ${data.tableNumber ? `<div class="row"><span class="label">${labels.table}:</span><span>${data.tableNumber}</span></div>` : ''}
-    <div class="row"><span class="label">${labels.date}:</span><span>${formatDate(data.placedAt)}</span></div>
-  </div>
-
-  <div class="section">
-    <div class="items">
-      ${data.items.map(item => `
-        <div class="item">
-          <div class="row">
-            <span class="item-name">${item.quantity}x ${item.menuName}</span>
-            <span>${formatReceiptCurrency(item.subtotal, data.currency)}</span>
-          </div>
-          ${item.addons?.map(addon => `
-            <div class="item-addon">+ ${addon.addonName} ${addon.quantity > 1 ? `(${addon.quantity}x)` : ''} ${formatReceiptCurrency(addon.addonPrice * addon.quantity, data.currency)}</div>
-          `).join('') || ''}
-        </div>
-      `).join('')}
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="row"><span>${labels.subtotal}:</span><span>${formatReceiptCurrency(data.subtotal, data.currency)}</span></div>
-    ${data.taxAmount && data.taxAmount > 0 ? `<div class="row"><span>${labels.tax}:</span><span>${formatReceiptCurrency(data.taxAmount, data.currency)}</span></div>` : ''}
-    ${data.serviceChargeAmount && data.serviceChargeAmount > 0 ? `<div class="row"><span>${labels.serviceCharge}:</span><span>${formatReceiptCurrency(data.serviceChargeAmount, data.currency)}</span></div>` : ''}
-    ${data.packagingFeeAmount && data.packagingFeeAmount > 0 ? `<div class="row"><span>${labels.packagingFee}:</span><span>${formatReceiptCurrency(data.packagingFeeAmount, data.currency)}</span></div>` : ''}
-    ${data.discountAmount && data.discountAmount > 0 ? `<div class="row discount"><span>${labels.discount}:</span><span>-${formatReceiptCurrency(data.discountAmount, data.currency)}</span></div>` : ''}
-    <div class="row total"><span>${labels.total}:</span><span>${formatReceiptCurrency(data.totalAmount, data.currency)}</span></div>
-  </div>
-
-  <div class="section">
-    <div class="row"><span class="label">${labels.paymentMethod}:</span><span>${getPaymentMethodLabel()}</span></div>
-    ${data.paymentMethod === 'SPLIT' && data.cashAmount ? `<div class="row"><span>  ${labels.cash}:</span><span>${formatReceiptCurrency(data.cashAmount, data.currency)}</span></div>` : ''}
-    ${data.paymentMethod === 'SPLIT' && data.cardAmount ? `<div class="row"><span>  ${labels.card}:</span><span>${formatReceiptCurrency(data.cardAmount, data.currency)}</span></div>` : ''}
-    <div class="row"><span class="label">${labels.amountPaid}:</span><span>${formatReceiptCurrency(data.amountPaid, data.currency)}</span></div>
-    ${data.change > 0 ? `<div class="row"><span class="label">${labels.change}:</span><span>${formatReceiptCurrency(data.change, data.currency)}</span></div>` : ''}
-  </div>
-
-  <div class="footer">
-    <p>${labels.thankYou}</p>
-    <p>${labels.comeAgain}</p>
-  </div>
-</body>
-</html>
-  `;
-}
-
-// ============================================
 // COMPONENT
 // ============================================
 
@@ -318,7 +121,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
   merchantInfo,
   receiptSettings,
 }) => {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { merchant } = useMerchant();
 
   // State
@@ -376,25 +179,10 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
     }
   }, [finalTotal, paymentMethod]);
 
-  // Format currency - A$ for AUD, Rp for IDR
-  const formatCurrency = (value: number): string => {
-    if (currency === 'AUD') {
-      return `A$${value.toFixed(2)}`;
-    }
-    if (currency === 'IDR') {
-      const formatted = new Intl.NumberFormat('id-ID', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(Math.round(value));
-      return `Rp${formatted}`;
-    }
-    return new Intl.NumberFormat('en-AU', {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(value);
-  };
+  const formatMoney = useCallback(
+    (value: number) => formatCurrency(value, currency, locale),
+    [currency, locale]
+  );
 
   // Calculate change
   const change = useMemo(() => {
@@ -428,22 +216,22 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
   const paymentMethods: PaymentMethodOption[] = [
     {
       value: 'CASH_ON_COUNTER',
-      label: 'Cash',
-      labelId: 'Tunai',
+      label: t('pos.payment.cash') || 'Cash',
+      labelId: t('pos.payment.cash') || 'Cash',
       icon: <FaMoneyBillWave className="w-6 h-6" />,
       enabled: true,
     },
     {
       value: 'CARD_ON_COUNTER',
-      label: 'Card',
-      labelId: 'Kartu',
+      label: t('pos.payment.card') || 'Card',
+      labelId: t('pos.payment.card') || 'Card',
       icon: <FaCreditCard className="w-6 h-6" />,
       enabled: true,
     },
     {
       value: 'SPLIT',
-      label: 'Split',
-      labelId: 'Split',
+      label: t('pos.payment.split') || 'Split',
+      labelId: t('pos.payment.split') || 'Split',
       icon: <FaExchangeAlt className="w-6 h-6" />,
       enabled: true,
     },
@@ -454,7 +242,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
     if (!orderDetails || !merchantInfo) return;
 
     const rawSettings = (receiptSettings || {}) as Partial<ReceiptSettings>;
-    const inferredLanguage: 'en' | 'id' = currency === 'IDR' ? 'id' : 'en';
+    const inferredLanguage: 'en' | 'id' = locale === 'id' ? 'id' : 'en';
     const language: 'en' | 'id' =
       rawSettings.receiptLanguage === 'id' || rawSettings.receiptLanguage === 'en'
         ? rawSettings.receiptLanguage
@@ -511,7 +299,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
       settings,
       language,
     });
-  }, [orderDetails, merchantInfo, merchant?.code, orderNumber, discountAmount, finalTotal, paymentMethod, amount, change, cashAmount, cardAmount, currency, receiptSettings]);
+  }, [orderDetails, merchantInfo, merchant?.code, orderNumber, discountAmount, finalTotal, paymentMethod, amount, change, cashAmount, cardAmount, currency, receiptSettings, locale]);
 
   // Handle submit
   const handleSubmit = async () => {
@@ -593,7 +381,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
                 {t('pos.payment.totalAmount') || 'Total Amount'}
               </p>
               <p className={`text-3xl font-bold ${discountAmount > 0 ? 'text-gray-400 line-through text-2xl' : 'text-orange-600 dark:text-orange-400'}`}>
-                {formatCurrency(totalAmount)}
+                {formatMoney(totalAmount)}
               </p>
             </div>
 
@@ -605,11 +393,11 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
                     {t('pos.payment.discount') || 'Discount'}
                     {discountType === 'percentage' ? ` (${discountValue}%)` : ''}
                   </span>
-                  <span>-{formatCurrency(discountAmount)}</span>
+                  <span>-{formatMoney(discountAmount)}</span>
                 </div>
                 <div className="flex justify-between text-xl font-bold text-orange-600 dark:text-orange-400 mt-1">
                   <span>{t('pos.payment.finalTotal') || 'Final Total'}</span>
-                  <span>{formatCurrency(finalTotal)}</span>
+                  <span>{formatMoney(finalTotal)}</span>
                 </div>
               </div>
             )}
@@ -659,7 +447,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
                     max={discountType === 'percentage' ? 100 : totalAmount}
                     value={discountValue || ''}
                     onChange={(e) => setDiscountValue(parseFloat(e.target.value) || 0)}
-                    placeholder={discountType === 'percentage' ? '0' : formatCurrency(0)}
+                    placeholder={discountType === 'percentage' ? '0' : formatMoney(0)}
                     className="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 border-none text-sm font-semibold text-gray-900 dark:text-white text-center focus:ring-2 focus:ring-orange-300 dark:focus:ring-orange-600"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
@@ -721,7 +509,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
                   `}>
                     {method.icon}
                     <span className="font-medium text-sm">
-                      {currency === 'IDR' ? method.labelId : method.label}
+                      {method.label}
                     </span>
                   </div>
                   {paymentMethod === method.value && (
@@ -746,7 +534,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
                 <div className="flex items-center gap-2 mb-2">
                   <FaMoneyBillWave className="w-4 h-4 text-green-600" />
                   <span className="text-sm text-gray-600 dark:text-gray-400">
-                    {currency === 'IDR' ? 'Tunai' : 'Cash'}
+                    {t('pos.payment.cash') || 'Cash'}
                   </span>
                 </div>
                 <input
@@ -755,7 +543,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
                   min="0"
                   value={cashAmount || ''}
                   onChange={(e) => setCashAmount(parseFloat(e.target.value) || 0)}
-                  placeholder={formatCurrency(0)}
+                  placeholder={formatMoney(0)}
                   className="w-full px-4 py-3 rounded-lg bg-gray-100 dark:bg-gray-800 border-none text-lg font-semibold text-gray-900 dark:text-white text-center focus:ring-2 focus:ring-orange-300 dark:focus:ring-orange-600"
                 />
               </div>
@@ -765,7 +553,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
                 <div className="flex items-center gap-2 mb-2">
                   <FaCreditCard className="w-4 h-4 text-blue-600" />
                   <span className="text-sm text-gray-600 dark:text-gray-400">
-                    {currency === 'IDR' ? 'Kartu' : 'Card'}
+                    {t('pos.payment.card') || 'Card'}
                   </span>
                 </div>
                 <input
@@ -774,7 +562,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
                   min="0"
                   value={cardAmount || ''}
                   onChange={(e) => setCardAmount(parseFloat(e.target.value) || 0)}
-                  placeholder={formatCurrency(0)}
+                  placeholder={formatMoney(0)}
                   className="w-full px-4 py-3 rounded-lg bg-gray-100 dark:bg-gray-800 border-none text-lg font-semibold text-gray-900 dark:text-white text-center focus:ring-2 focus:ring-orange-300 dark:focus:ring-orange-600"
                 />
               </div>
@@ -783,22 +571,22 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
               <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3">
                 <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-1">
                   <span>{t('pos.payment.totalReceived') || 'Total Received'}</span>
-                  <span className="font-medium">{formatCurrency(cashAmount + cardAmount)}</span>
+                  <span className="font-medium">{formatMoney(cashAmount + cardAmount)}</span>
                 </div>
                 <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-1">
                   <span>{t('pos.payment.amountDue') || 'Amount Due'}</span>
-                  <span className="font-medium">{formatCurrency(finalTotal)}</span>
+                  <span className="font-medium">{formatMoney(finalTotal)}</span>
                 </div>
                 {(cashAmount + cardAmount) >= finalTotal && change > 0 && (
                   <div className="flex justify-between text-sm text-green-600 dark:text-green-400 pt-1 border-t border-gray-200 dark:border-gray-700">
                     <span>{t('pos.payment.change') || 'Change'}</span>
-                    <span className="font-bold">{formatCurrency(change)}</span>
+                    <span className="font-bold">{formatMoney(change)}</span>
                   </div>
                 )}
                 {(cashAmount + cardAmount) < finalTotal && (
                   <div className="flex justify-between text-sm text-red-600 dark:text-red-400 pt-1 border-t border-gray-200 dark:border-gray-700">
                     <span>{t('pos.payment.remaining') || 'Remaining'}</span>
-                    <span className="font-bold">{formatCurrency(finalTotal - cashAmount - cardAmount)}</span>
+                    <span className="font-bold">{formatMoney(finalTotal - cashAmount - cardAmount)}</span>
                   </div>
                 )}
               </div>
@@ -834,7 +622,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
                         : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                       }`}
                   >
-                    {formatCurrency(value)}
+                    {formatMoney(value)}
                   </button>
                 ))}
               </div>
@@ -856,7 +644,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
                     {t('pos.payment.change') || 'Change'}
                   </p>
                   <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                    {formatCurrency(change)}
+                    {formatMoney(change)}
                   </p>
                 </div>
               )}

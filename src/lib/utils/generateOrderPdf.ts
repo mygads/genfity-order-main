@@ -115,7 +115,7 @@ const formatCurrency = (amount: number, currency: string): string => {
         return `A$${amount.toFixed(2)}`;
     }
     if (currency === 'IDR') {
-        return `Rp${new Intl.NumberFormat('id-ID', {
+        return `Rp ${new Intl.NumberFormat('id-ID', {
             minimumFractionDigits: 0,
             maximumFractionDigits: 0,
         }).format(Math.round(amount))}`;

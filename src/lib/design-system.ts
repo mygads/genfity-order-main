@@ -208,7 +208,7 @@ export const utils = {
    * Format currency in Indonesian Rupiah
    */
   formatCurrency: (amount: number): string => {
-    return `Rp${amount.toLocaleString('id-ID')}`;
+    return `Rp ${amount.toLocaleString('id-ID')}`;
   },
   
   /**

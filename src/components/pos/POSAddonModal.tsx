@@ -25,6 +25,7 @@ import {
 } from 'react-icons/fa';
 import Image from 'next/image';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import { formatCurrency } from '@/lib/utils/format';
 
 export interface AddonItem {
   id: number | string;
@@ -74,7 +75,7 @@ export const POSAddonModal: React.FC<POSAddonModalProps> = ({
   addonCategories,
   currency,
 }) => {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const [selectedAddons, setSelectedAddons] = useState<Map<string, number>>(new Map());
   const [notes, setNotes] = useState('');
   const [quantity, setQuantity] = useState(1);
@@ -84,28 +85,13 @@ export const POSAddonModal: React.FC<POSAddonModalProps> = ({
   const categoryRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const contentRef = useRef<HTMLDivElement>(null);
 
-  // Format currency - A$ for AUD, Rp for IDR
-  const formatCurrency = useCallback((amount: number): string => {
-    if (amount === 0) {
-      return t('pos.free') || 'FREE';
-    }
-    if (currency === 'AUD') {
-      return `A$${amount.toFixed(2)}`;
-    }
-    if (currency === 'IDR') {
-      const formatted = new Intl.NumberFormat('id-ID', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(Math.round(amount));
-      return `Rp${formatted}`;
-    }
-    return new Intl.NumberFormat('en-AU', {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  }, [currency, t]);
+  const formatMoney = useCallback(
+    (amount: number): string => {
+      if (amount === 0) return t('pos.free') || 'FREE';
+      return formatCurrency(amount, currency, locale);
+    },
+    [currency, locale, t]
+  );
 
   // Calculate total
   const total = useMemo(() => {
@@ -406,7 +392,7 @@ export const POSAddonModal: React.FC<POSAddonModalProps> = ({
                   {menuItem.name}
                 </h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  {formatCurrency(menuItem.price)}
+                  {formatMoney(menuItem.price)}
                 </p>
               </div>
             </div>
@@ -605,7 +591,7 @@ export const POSAddonModal: React.FC<POSAddonModalProps> = ({
                               ? 'text-green-600 dark:text-green-400 font-medium'
                               : 'text-gray-500 dark:text-gray-400'
                           }`}>
-                            {addon.price === 0 ? (t('pos.free') || 'FREE') : `+${formatCurrency(addon.price)}`}
+                            {addon.price === 0 ? (t('pos.free') || 'FREE') : `+${formatMoney(addon.price)}`}
                           </span>
                         </div>
                       </div>
@@ -643,7 +629,7 @@ export const POSAddonModal: React.FC<POSAddonModalProps> = ({
           >
             <span>{t('pos.addToCart')}</span>
             <span>•</span>
-            <span>{formatCurrency(total)}</span>
+            <span>{formatMoney(total)}</span>
           </button>
         </div>
       </div>

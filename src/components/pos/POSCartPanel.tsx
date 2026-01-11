@@ -27,6 +27,7 @@ import {
   FaSearch,
 } from 'react-icons/fa';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import { formatCurrency } from '@/lib/utils/format';
 
 export interface CartAddon {
   addonItemId: number | string;
@@ -109,28 +110,9 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
   onShowHeldOrders,
   isPlacingOrder = false,
 }) => {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
 
-  // Format currency - A$ for AUD, Rp for IDR
-  const formatCurrency = (amount: number): string => {
-    if (currency === 'AUD') {
-      return `A$${amount.toFixed(2)}`;
-    }
-    if (currency === 'IDR') {
-      const formatted = new Intl.NumberFormat('id-ID', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(Math.round(amount));
-      return `Rp${formatted}`;
-    }
-    // Fallback for other currencies
-    return new Intl.NumberFormat('en-AU', {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  };
+  const formatMoney = (amount: number): string => formatCurrency(amount, currency, locale);
 
   // Calculate totals
   const subtotal = items.reduce((total, item) => {
@@ -275,7 +257,7 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
                         {item.menuName}
                       </h4>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                        {formatCurrency(item.menuPrice)}
+                        {formatMoney(item.menuPrice)}
                       </p>
 
                       {/* Addons */}
@@ -283,7 +265,7 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
                         <div className="mt-1.5 space-y-0.5">
                           {item.addons.map((addon, idx) => (
                             <p key={idx} className="text-xs text-orange-600 dark:text-orange-400">
-                              + {addon.addonName} {addon.addonPrice > 0 && `(${formatCurrency(addon.addonPrice)})`}
+                              + {addon.addonName} {addon.addonPrice > 0 && `(${formatMoney(addon.addonPrice)})`}
                             </p>
                           ))}
                         </div>
@@ -292,7 +274,7 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
                       {/* Notes */}
                       {item.notes && (
                         <p className="text-xs text-orange-600 dark:text-orange-400 mt-1.5 italic">
-                          Note: {item.notes}
+                          {t('pos.note') || 'Note'}: {item.notes}
                         </p>
                       )}
                     </div>
@@ -335,7 +317,7 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
                       </div>
 
                       <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                        {formatCurrency(itemSubtotal)}
+                        {formatMoney(itemSubtotal)}
                       </p>
                     </div>
                   </div>
@@ -358,24 +340,24 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
         <div className="space-y-1.5 text-sm border-t border-gray-200 dark:border-gray-700 pt-2">
           <div className="flex justify-between text-gray-600 dark:text-gray-400">
             <span>{t('pos.subtotal')}</span>
-            <span>{formatCurrency(subtotal)}</span>
+            <span>{formatMoney(subtotal)}</span>
           </div>
           {enableTax && taxAmount > 0 && (
             <div className="flex justify-between text-gray-600 dark:text-gray-400">
               <span>{t('pos.tax')} ({taxPercentage}%)</span>
-              <span>{formatCurrency(taxAmount)}</span>
+              <span>{formatMoney(taxAmount)}</span>
             </div>
           )}
           {enableServiceCharge && serviceChargeAmount > 0 && (
             <div className="flex justify-between text-gray-600 dark:text-gray-400">
               <span>{t('pos.serviceCharge')} ({serviceChargePercent}%)</span>
-              <span>{formatCurrency(serviceChargeAmount)}</span>
+              <span>{formatMoney(serviceChargeAmount)}</span>
             </div>
           )}
           {packagingFee > 0 && (
             <div className="flex justify-between text-gray-600 dark:text-gray-400">
               <span>{t('pos.packagingFee')}</span>
-              <span>{formatCurrency(packagingFee)}</span>
+              <span>{formatMoney(packagingFee)}</span>
             </div>
           )}
         </div>
@@ -399,7 +381,7 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
                 className="flex-1 py-2 px-3 rounded-lg text-sm font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1"
               >
                 <FaStickyNote className="w-3 h-3" />
-                {t('pos.hold') || 'Simpan'}
+                {t('pos.hold') || 'Hold'}
               </button>
             )}
           </div>
@@ -411,7 +393,7 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
               className="w-full py-2 px-3 rounded-lg text-sm font-medium bg-yellow-100 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-200 dark:hover:bg-yellow-900/30 transition-colors flex items-center justify-center gap-2"
             >
               <span>📋</span>
-              {t('pos.heldOrders') || 'Pesanan Tertunda'} ({heldOrdersCount})
+              {t('pos.heldOrders') || 'Held Orders'} ({heldOrdersCount})
             </button>
           )}
 
@@ -430,7 +412,7 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
               <>
                 <span>{t('pos.createOrder') || 'Create Order'}</span>
                 <span>|</span>
-                <span>{formatCurrency(total)}</span>
+                <span>{formatMoney(total)}</span>
               </>
             )}
           </button>

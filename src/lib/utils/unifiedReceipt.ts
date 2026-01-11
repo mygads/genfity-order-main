@@ -158,7 +158,7 @@ function getLabels(language: 'en' | 'id'): ReceiptLabels {
 
 function formatCurrency(amount: number, currency: string): string {
   if (currency === 'IDR') {
-    return `Rp${new Intl.NumberFormat('id-ID', {
+    return `Rp ${new Intl.NumberFormat('id-ID', {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(Math.round(amount))}`;

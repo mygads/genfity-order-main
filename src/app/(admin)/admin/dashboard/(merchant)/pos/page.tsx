@@ -28,6 +28,7 @@ import {
   FaExclamationTriangle,
 } from 'react-icons/fa';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import { formatCurrency as formatCurrencyUtil } from '@/lib/utils/format';
 import { useMerchant } from '@/context/MerchantContext';
 import { useToast } from '@/context/ToastContext';
 import useSWR, { mutate } from 'swr';
@@ -116,7 +117,7 @@ const DEFAULT_GRID_COLUMNS = 5;
 // ============================================
 
 export default function POSPage() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const router = useRouter();
   const { merchant, isLoading: merchantLoading } = useMerchant();
   const { showSuccess, showError, showWarning } = useToast();
@@ -652,26 +653,10 @@ export default function POSPage() {
     setEditingPendingOfflineOrderId(null);
   }, [merchant?.id]);
 
-  // Format currency for display - A$ for AUD, Rp for IDR
-  const formatCurrency = useCallback((amount: number): string => {
-    if (currency === 'AUD') {
-      return `A$${amount.toFixed(2)}`;
-    }
-    if (currency === 'IDR') {
-      const formatted = new Intl.NumberFormat('id-ID', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(Math.round(amount));
-      return `Rp${formatted}`;
-    }
-    // Fallback for other currencies
-    return new Intl.NumberFormat('en-AU', {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  }, [currency]);
+  const formatCurrency = useCallback(
+    (amount: number): string => formatCurrencyUtil(amount, currency, locale),
+    [currency, locale]
+  );
 
   // Calculate order total for display
   const calculateOrderTotal = useCallback(() => {
@@ -1453,6 +1438,7 @@ export default function POSPage() {
           // Keep conflicts in state so user can reopen if needed
         }}
         conflicts={syncConflicts}
+        currency={currency}
         onApply={(resolutions) => {
           applyConflictResolutions(resolutions);
           clearSyncConflicts();

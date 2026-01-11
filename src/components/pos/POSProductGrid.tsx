@@ -18,6 +18,7 @@ import {
   FaTimes,
 } from 'react-icons/fa';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import { formatCurrency } from '@/lib/utils/format';
 
 export interface MenuCategory {
   id: number | string;
@@ -67,30 +68,11 @@ export const POSProductGrid: React.FC<POSProductGridProps> = ({
   gridColumns = 5,
   popularMenuIds = [],
 }) => {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Format currency - A$ for AUD, Rp for IDR
-  const formatCurrency = (amount: number): string => {
-    if (currency === 'AUD') {
-      return `A$${amount.toFixed(2)}`;
-    }
-    if (currency === 'IDR') {
-      const formatted = new Intl.NumberFormat('id-ID', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(Math.round(amount));
-      return `Rp${formatted}`;
-    }
-    // Fallback for other currencies
-    return new Intl.NumberFormat('en-AU', {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  };
+  const formatMoney = (amount: number): string => formatCurrency(amount, currency, locale);
 
   // Filter menu items
   const filteredItems = useMemo(() => {
@@ -407,15 +389,15 @@ export const POSProductGrid: React.FC<POSProductGridProps> = ({
                       {hasPromo ? (
                         <>
                           <span className="text-sm font-bold text-orange-600 dark:text-orange-400">
-                            {formatCurrency(item.promoPrice!)}
+                            {formatMoney(item.promoPrice!)}
                           </span>
                           <span className="text-xs text-gray-400 line-through">
-                            {formatCurrency(item.price)}
+                            {formatMoney(item.price)}
                           </span>
                         </>
                       ) : (
                         <span className="text-sm font-bold text-gray-900 dark:text-white">
-                          {formatCurrency(item.price)}
+                          {formatMoney(item.price)}
                         </span>
                       )}
                     </div>

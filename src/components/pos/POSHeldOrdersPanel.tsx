@@ -22,6 +22,7 @@ import {
   FaShoppingCart,
 } from 'react-icons/fa';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import { formatCurrency } from '@/lib/utils/format';
 
 // ============================================
 // TYPES
@@ -83,25 +84,9 @@ export const POSHeldOrdersPanel: React.FC<POSHeldOrdersPanelProps> = ({
   onDeleteOrder,
   currency,
 }) => {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
 
-  // Format currency
-  const formatCurrency = (amount: number): string => {
-    if (currency === 'AUD') {
-      return `A$${amount.toFixed(2)}`;
-    }
-    if (currency === 'IDR') {
-      const formatted = new Intl.NumberFormat('id-ID', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(Math.round(amount));
-      return `Rp${formatted}`;
-    }
-    return new Intl.NumberFormat('en-AU', {
-      style: 'currency',
-      currency: currency,
-    }).format(amount);
-  };
+  const formatMoney = (amount: number): string => formatCurrency(amount, currency, locale);
 
   // Format time ago
   const formatTimeAgo = (dateString: string) => {
@@ -110,11 +95,11 @@ export const POSHeldOrdersPanel: React.FC<POSHeldOrdersPanelProps> = ({
     const diffMs = now.getTime() - date.getTime();
     const diffMins = Math.floor(diffMs / (1000 * 60));
     
-    if (diffMins < 1) return t('pos.justNow') || 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffMins < 1) return t('common.time.justNow') || t('pos.justNow') || 'Just now';
+    if (diffMins < 60) return (t('common.time.minutesAgo', { count: diffMins }) || `${diffMins}m ago`);
     
     const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffHours < 24) return (t('common.time.hoursAgo', { count: diffHours }) || `${diffHours}h ago`);
     
     return date.toLocaleDateString();
   };
@@ -152,7 +137,7 @@ export const POSHeldOrdersPanel: React.FC<POSHeldOrdersPanelProps> = ({
           <div className="flex items-center gap-3">
             <FaShoppingCart className="w-5 h-5 text-white" />
             <h2 className="text-lg font-semibold text-white">
-              {t('pos.heldOrders') || 'Pesanan Tertunda'}
+              {t('pos.heldOrders') || 'Held Orders'}
             </h2>
             <span className="px-2 py-0.5 rounded-full bg-white/20 text-white text-sm font-medium">
               {heldOrders.length}
@@ -172,7 +157,7 @@ export const POSHeldOrdersPanel: React.FC<POSHeldOrdersPanelProps> = ({
             <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500">
               <FaShoppingCart className="w-12 h-12 mb-3 opacity-50" />
               <p className="text-sm">{t('pos.noHeldOrders') || 'No held orders'}</p>
-              <p className="text-xs mt-1">{t('pos.holdOrderHint') || 'Use "Simpan" to save orders for later'}</p>
+              <p className="text-xs mt-1">{t('pos.holdOrderHint') || 'Use "Hold" to save orders for later'}</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -190,12 +175,14 @@ export const POSHeldOrdersPanel: React.FC<POSHeldOrdersPanelProps> = ({
                             ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
                             : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                         }`}>
-                          {order.orderType === 'DINE_IN' ? '🍽️ Dine In' : '📦 Takeaway'}
+                          {order.orderType === 'DINE_IN'
+                            ? `🍽️ ${t('pos.dineIn') || 'Dine In'}`
+                            : `📦 ${t('pos.takeaway') || 'Takeaway'}`}
                         </span>
                         {order.tableNumber && (
                           <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                             <FaChair className="w-3 h-3" />
-                            Table {order.tableNumber}
+                            {t('pos.table')} {order.tableNumber}
                           </span>
                         )}
                       </div>
@@ -225,9 +212,16 @@ export const POSHeldOrdersPanel: React.FC<POSHeldOrdersPanelProps> = ({
                   {/* Items Summary */}
                   <div className="p-3">
                     <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400 mb-2">
-                      <span>{countItems(order.items)} {t('pos.items') || 'items'}</span>
+                      <span>
+                        {countItems(order.items)}{' '}
+                        {locale === 'id'
+                          ? (t('pos.item') || 'item')
+                          : countItems(order.items) === 1
+                            ? (t('pos.item') || 'item')
+                            : (t('pos.itemsPlural') || 'items')}
+                      </span>
                       <span className="font-semibold text-gray-900 dark:text-white">
-                        {formatCurrency(calculateOrderTotal(order.items))}
+                        {formatMoney(calculateOrderTotal(order.items))}
                       </span>
                     </div>
 
@@ -239,7 +233,12 @@ export const POSHeldOrdersPanel: React.FC<POSHeldOrdersPanelProps> = ({
                           {idx < Math.min(2, order.items.length - 1) && ', '}
                         </span>
                       ))}
-                      {order.items.length > 3 && ` +${order.items.length - 3} more`}
+                      {order.items.length > 3 && (
+                        <>
+                          {' '}
+                          {t('pos.moreItems', { count: order.items.length - 3 }) || `+${order.items.length - 3} more`}
+                        </>
+                      )}
                     </div>
 
                     {/* Actions */}
@@ -253,7 +252,7 @@ export const POSHeldOrdersPanel: React.FC<POSHeldOrdersPanelProps> = ({
                       </button>
                       <button
                         onClick={() => {
-                          if (confirm(t('pos.deleteHeldOrderConfirm') || 'Delete this held order?')) {
+                          if (confirm(t('pos.confirmDeleteHeldOrder') || 'Delete this held order?')) {
                             onDeleteOrder(order.id);
                           }
                         }}
