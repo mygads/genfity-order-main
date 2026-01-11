@@ -599,7 +599,7 @@ class EmailService {
     const emailLocale = params.currency === 'IDR' ? 'id' : 'en';
     const formattedAmount = `${amountSign}${formatCurrency(Math.abs(params.amount), params.currency, emailLocale)}`;
     const formattedBalance = formatCurrency(params.newBalance, params.currency, emailLocale);
-    const formattedDate = new Intl.DateTimeFormat('en-AU', {
+    const formattedDate = new Intl.DateTimeFormat(emailLocale === 'id' ? 'id-ID' : 'en-AU', {
       dateStyle: 'medium',
       timeStyle: 'short',
     }).format(params.adjustedAt);
