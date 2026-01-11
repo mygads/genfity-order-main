@@ -251,7 +251,7 @@ export default function OrderSummaryCashPage() {
         // ✅ Auto-redirect to track page if order is already accepted/progressing
         if (['ACCEPTED', 'IN_PROGRESS', 'READY'].includes(orderData.status)) {
           console.log('🔄 Order already accepted, redirecting to track page...');
-          router.push(`/${merchantCode}/track/${orderData.orderNumber}?mode=${mode}`);
+          router.push(`/${merchantCode}/track/${orderData.orderNumber}`);
           return;
         }
 
@@ -277,11 +277,12 @@ export default function OrderSummaryCashPage() {
 
         const data = await response.json();
         const newStatus = data.data?.status;
+        const resolvedOrderNumber = data.data?.orderNumber || orderNumber;
 
         // If order is accepted/in-progress/ready, redirect to track page
         if (['ACCEPTED', 'IN_PROGRESS', 'READY'].includes(newStatus)) {
           console.log('🎉 Payment verified! Redirecting to track page...');
-          router.push(`/${merchantCode}/track/${orderNumber}?mode=${mode}`);
+          router.push(`/${merchantCode}/track/${resolvedOrderNumber}`);
         }
       } catch (err) {
         console.error('Status check error:', err);
@@ -292,7 +293,7 @@ export default function OrderSummaryCashPage() {
     const intervalId = setInterval(checkOrderStatus, 3000);
 
     return () => clearInterval(intervalId);
-  }, [orderNumber, order, mode, merchantCode, router]);
+  }, [orderNumber, order, merchantCode, router]);
 
   /**
    * ✅ Format currency using merchant's currency

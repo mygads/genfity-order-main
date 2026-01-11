@@ -20,7 +20,7 @@ exports[`emailTemplates > renders merchant email snapshots 1`] = `
                 <tr>
                   <td align="center">
                     <img
-                      src="https://genfity.com/images/logo/logo.png"
+                      src="https://order.genfity.com/images/logo/logo.png"
                       alt="Order"
                       width="220"
                       style="display: block; width: 220px; max-width: 100%; height: auto; margin: 0 auto;"
@@ -99,7 +99,7 @@ exports[`emailTemplates > renders merchant email snapshots 1`] = `
                 <tr>
                   <td align="center">
                     <p style="margin: 0 0 10px 0; font-size: 12px; color: #a3a3a3;">
-                      powered by genfity.com genfity digital solution
+                      powered by genfity.com
                     </p>
                     <p style="margin: 0 0 8px 0; font-size: 13px; color: #737373;">
                       Need assistance? <a href="mailto:support@genfity.com" style="color: #171717; text-decoration: underline;">support@genfity.com</a>
@@ -140,7 +140,7 @@ exports[`emailTemplates > renders merchant email snapshots 2`] = `
                 <tr>
                   <td align="center">
                     <img
-                      src="https://genfity.com/images/logo/logo.png"
+                      src="https://order.genfity.com/images/logo/logo.png"
                       alt="Order"
                       width="220"
                       style="display: block; width: 220px; max-width: 100%; height: auto; margin: 0 auto;"
@@ -219,7 +219,7 @@ exports[`emailTemplates > renders merchant email snapshots 2`] = `
                 <tr>
                   <td align="center">
                     <p style="margin: 0 0 10px 0; font-size: 12px; color: #a3a3a3;">
-                      powered by genfity.com genfity digital solution
+                      powered by genfity.com
                     </p>
                     <p style="margin: 0 0 8px 0; font-size: 13px; color: #737373;">
                       Need assistance? <a href="mailto:support@genfity.com" style="color: #171717; text-decoration: underline;">support@genfity.com</a>
@@ -260,7 +260,7 @@ exports[`emailTemplates > renders merchant email snapshots 3`] = `
                 <tr>
                   <td align="center">
                     <img
-                      src="https://genfity.com/images/logo/logo.png"
+                      src="https://order.genfity.com/images/logo/logo.png"
                       alt="Order"
                       width="220"
                       style="display: block; width: 220px; max-width: 100%; height: auto; margin: 0 auto;"
@@ -324,7 +324,7 @@ exports[`emailTemplates > renders merchant email snapshots 3`] = `
                 <tr>
                   <td align="center">
                     <p style="margin: 0 0 10px 0; font-size: 12px; color: #a3a3a3;">
-                      powered by genfity.com genfity digital solution
+                      powered by genfity.com
                     </p>
                     <p style="margin: 0 0 8px 0; font-size: 13px; color: #737373;">
                       Need assistance? <a href="mailto:support@genfity.com" style="color: #171717; text-decoration: underline;">support@genfity.com</a>
@@ -365,7 +365,7 @@ exports[`emailTemplates > renders order completed (id) snapshot 1`] = `
                 <tr>
                   <td align="center">
                     <img
-                      src="https://genfity.com/images/logo/logo.png"
+                      src="https://order.genfity.com/images/logo/logo.png"
                       alt="Order"
                       width="220"
                       style="display: block; width: 220px; max-width: 100%; height: auto; margin: 0 auto;"
@@ -428,7 +428,7 @@ exports[`emailTemplates > renders order completed (id) snapshot 1`] = `
                 <tr>
                   <td align="center">
                     <p style="margin: 0 0 10px 0; font-size: 12px; color: #a3a3a3;">
-                      powered by genfity.com genfity digital solution
+                      powered by genfity.com
                     </p>
                     <p style="margin: 0 0 8px 0; font-size: 13px; color: #737373;">
                       Butuh bantuan? <a href="mailto:support@genfity.com" style="color: #171717; text-decoration: underline;">support@genfity.com</a>
@@ -469,7 +469,7 @@ exports[`emailTemplates > renders order confirmation (en) snapshot 1`] = `
                 <tr>
                   <td align="center">
                     <img
-                      src="https://genfity.com/images/logo/logo.png"
+                      src="https://order.genfity.com/images/logo/logo.png"
                       alt="Order"
                       width="220"
                       style="display: block; width: 220px; max-width: 100%; height: auto; margin: 0 auto;"
@@ -582,7 +582,7 @@ exports[`emailTemplates > renders order confirmation (en) snapshot 1`] = `
                 <tr>
                   <td align="center">
                     <p style="margin: 0 0 10px 0; font-size: 12px; color: #a3a3a3;">
-                      powered by genfity.com genfity digital solution
+                      powered by genfity.com
                     </p>
                     <p style="margin: 0 0 8px 0; font-size: 13px; color: #737373;">
                       Need assistance? <a href="mailto:support@genfity.com" style="color: #171717; text-decoration: underline;">support@genfity.com</a>
@@ -623,7 +623,7 @@ exports[`emailTemplates > renders staff welcome snapshot 1`] = `
                 <tr>
                   <td align="center">
                     <img
-                      src="https://genfity.com/images/logo/logo.png"
+                      src="https://order.genfity.com/images/logo/logo.png"
                       alt="Order"
                       width="220"
                       style="display: block; width: 220px; max-width: 100%; height: auto; margin: 0 auto;"
@@ -695,7 +695,7 @@ exports[`emailTemplates > renders staff welcome snapshot 1`] = `
                 <tr>
                   <td align="center">
                     <p style="margin: 0 0 10px 0; font-size: 12px; color: #a3a3a3;">
-                      powered by genfity.com genfity digital solution
+                      powered by genfity.com
                     </p>
                     <p style="margin: 0 0 8px 0; font-size: 13px; color: #737373;">
                       Need assistance? <a href="mailto:support@genfity.com" style="color: #171717; text-decoration: underline;">support@genfity.com</a>

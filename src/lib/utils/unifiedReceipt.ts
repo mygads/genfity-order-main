@@ -11,10 +11,11 @@
  * - Genfity branding (always shown)
  */
 
-import { ReceiptSettings, DEFAULT_RECEIPT_SETTINGS } from '@/lib/types/receiptSettings';
+import { ReceiptSettings } from '@/lib/types/receiptSettings';
 import QRCode from 'qrcode';
 import { getPublicAppOrigin } from '@/lib/utils/publicAppOrigin';
 import { formatCurrency, formatFullOrderNumber } from '@/lib/utils/format';
+import { getReceiptLabels, mergeReceiptSettingsWithDefaults, type ReceiptLabels } from '@/lib/utils/receiptShared';
 
 // ============================================
 // TYPES
@@ -73,88 +74,8 @@ export interface GenerateReceiptOptions {
 }
 
 // ============================================
-// LABELS
-// ============================================
-
-interface ReceiptLabels {
-  orderNumber: string;
-  table: string;
-  dineIn: string;
-  takeaway: string;
-  customer: string;
-  phone: string;
-  email: string;
-  each: string;
-  subtotal: string;
-  tax: string;
-  serviceCharge: string;
-  packagingFee: string;
-  discount: string;
-  total: string;
-  paymentMethod: string;
-  amountPaid: string;
-  change: string;
-  cashier: string;
-  thankYou: string;
-  poweredBy: string;
-  scanToTrack: string;
-}
-
-const labelsEN: ReceiptLabels = {
-  orderNumber: 'Order #',
-  table: 'Table',
-  dineIn: 'Dine In',
-  takeaway: 'Takeaway',
-  customer: 'Customer',
-  phone: 'Phone',
-  email: 'Email',
-  each: 'each',
-  subtotal: 'Subtotal',
-  tax: 'Tax',
-  serviceCharge: 'Service Charge',
-  packagingFee: 'Packaging Fee',
-  discount: 'Discount',
-  total: 'TOTAL',
-  paymentMethod: 'Payment',
-  amountPaid: 'Amount Paid',
-  change: 'Change',
-  cashier: 'Cashier',
-  thankYou: 'Thank you for your order!',
-  poweredBy: 'Powered by',
-  scanToTrack: 'Scan to track your order',
-};
-
-const labelsID: ReceiptLabels = {
-  orderNumber: 'Pesanan #',
-  table: 'Meja',
-  dineIn: 'Makan di Tempat',
-  takeaway: 'Bawa Pulang',
-  customer: 'Pelanggan',
-  phone: 'Telepon',
-  email: 'Email',
-  each: 'per item',
-  subtotal: 'Subtotal',
-  tax: 'Pajak',
-  serviceCharge: 'Biaya Layanan',
-  packagingFee: 'Biaya Kemasan',
-  discount: 'Diskon',
-  total: 'TOTAL',
-  paymentMethod: 'Pembayaran',
-  amountPaid: 'Jumlah Dibayar',
-  change: 'Kembalian',
-  cashier: 'Kasir',
-  thankYou: 'Terima kasih atas pesanan Anda!',
-  poweredBy: 'Diberdayakan oleh',
-  scanToTrack: 'Scan untuk lacak pesanan',
-};
-
-// ============================================
 // HELPERS
 // ============================================
-
-function getLabels(language: 'en' | 'id'): ReceiptLabels {
-  return language === 'id' ? labelsID : labelsEN;
-}
 
 function formatDateTime(dateString: string, language: 'en' | 'id'): string {
   const date = new Date(dateString);
@@ -183,25 +104,13 @@ export function generateReceiptHTML(options: GenerateReceiptOptions): string {
 
   const currency = merchant.currency || 'AUD';
 
-  // Merge defaults with merchant settings, but keep smart defaults for new preferences
-  const rawSettings = (options.settings || {}) as Partial<ReceiptSettings>;
-  const inferredLanguage: 'en' | 'id' = currency === 'IDR' ? 'id' : 'en';
-  const receiptLanguage: 'en' | 'id' =
-    options.language ||
-    (rawSettings.receiptLanguage === 'id' || rawSettings.receiptLanguage === 'en'
-      ? rawSettings.receiptLanguage
-      : inferredLanguage);
+  const { settings, receiptLanguage } = mergeReceiptSettingsWithDefaults({
+    rawSettings: options.settings || {},
+    currency,
+    preferredLanguage: options.language,
+  });
 
-  const paperSize: '58mm' | '80mm' = rawSettings.paperSize === '58mm' ? '58mm' : '80mm';
-
-  const settings: ReceiptSettings = {
-    ...DEFAULT_RECEIPT_SETTINGS,
-    ...rawSettings,
-    receiptLanguage,
-    paperSize,
-  };
-
-  const labels = getLabels(receiptLanguage);
+  const labels = getReceiptLabels(receiptLanguage);
   const fmt = (amount: number) => formatCurrency(amount, currency, receiptLanguage);
 
   const paperWidthPx = settings.paperSize === '58mm' ? 200 : 280;

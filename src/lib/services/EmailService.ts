@@ -19,6 +19,7 @@ import {
 } from '@/lib/utils/emailTemplates';
 import { formatCurrency } from '@/lib/utils/format';
 import { generateOrderReceiptPdfBuffer } from '@/lib/utils/orderReceiptPdfEmail';
+import { formatFullOrderNumber } from '@/lib/utils/format';
 
 // Track initialization to prevent duplicate logs
 let isInitialized = false;
@@ -257,9 +258,11 @@ class EmailService {
 
     const currency = params.currency || 'AUD';
 
+    const displayOrderNumber = formatFullOrderNumber(params.orderNumber, params.merchantCode);
+
     const html = getOrderConfirmationTemplate({
       customerName: params.customerName,
-      orderNumber: params.orderNumber,
+      orderNumber: displayOrderNumber,
       merchantName: params.merchantName,
       orderType: params.orderType === 'DINE_IN' ? 'Dine In' : 'Takeaway',
       tableNumber: params.tableNumber,
@@ -274,8 +277,8 @@ class EmailService {
 
     const subject =
       merchantLocale === 'id'
-        ? `Konfirmasi Pesanan - ${params.orderNumber}`
-        : `Order Confirmation - ${params.orderNumber}`;
+        ? `Konfirmasi Pesanan - ${displayOrderNumber}`
+        : `Order Confirmation - ${displayOrderNumber}`;
 
     return this.sendEmail({ to: params.to, subject, html });
   }
@@ -302,26 +305,57 @@ class EmailService {
     orderNumber: string;
     merchantName: string;
     merchantCode: string;
+    merchantLogoUrl?: string | null;
+    merchantAddress?: string | null;
+    merchantPhone?: string | null;
+    merchantEmail?: string | null;
+    receiptSettings?: unknown;
     merchantCountry?: string;
     merchantTimezone?: string;
     currency?: string;
     orderType: 'DINE_IN' | 'TAKEAWAY';
-    items: Array<{ name: string; quantity: number; price: number }>;
-    total: number;
+    tableNumber?: string | null;
+    customerPhone?: string | null;
+    customerEmail?: string | null;
+    items: Array<{
+      menuName: string;
+      quantity: number;
+      unitPrice?: number;
+      subtotal: number;
+      notes?: string | null;
+      addons?: Array<{
+        addonName: string;
+        addonPrice?: number;
+        quantity?: number;
+        subtotal?: number;
+      }>;
+    }>;
+    subtotal: number;
+    taxAmount?: number;
+    serviceChargeAmount?: number;
+    packagingFeeAmount?: number;
+    discountAmount?: number;
+    totalAmount: number;
+    paymentMethod?: string | null;
     completedAt: Date;
   }): Promise<boolean> {
     const merchantLocale = this.getMerchantEmailLocale(params.merchantCountry);
     const intlLocale = merchantLocale === 'id' ? 'id-ID' : 'en-AU';
     const timeZone = this.getMerchantTimeZone(params.merchantTimezone);
     const currency = params.currency || 'AUD';
+    const displayOrderNumber = formatFullOrderNumber(params.orderNumber, params.merchantCode);
 
     const html = getOrderCompletedTemplate({
       customerName: params.customerName,
-      orderNumber: params.orderNumber,
+      orderNumber: displayOrderNumber,
       merchantName: params.merchantName,
       orderType: params.orderType === 'DINE_IN' ? 'Dine In' : 'Takeaway',
-      items: params.items,
-      total: params.total,
+      items: params.items.map((i) => ({
+        name: i.menuName,
+        quantity: i.quantity,
+        price: i.subtotal,
+      })),
+      total: params.totalAmount,
       completedAt: new Intl.DateTimeFormat(intlLocale, {
         dateStyle: 'medium',
         timeStyle: 'short',
@@ -333,8 +367,8 @@ class EmailService {
 
     const subject =
       merchantLocale === 'id'
-        ? `Pesanan Selesai - ${params.orderNumber} | Terima kasih!`
-        : `Order Completed - ${params.orderNumber} | Thank you!`;
+        ? `Pesanan Selesai - ${displayOrderNumber} | Terima kasih!`
+        : `Order Completed - ${displayOrderNumber} | Thank you!`;
 
     let attachments:
       | Array<{ filename: string; content: Buffer; contentType?: string }>
@@ -345,10 +379,24 @@ class EmailService {
         orderNumber: params.orderNumber,
         merchantCode: params.merchantCode,
         merchantName: params.merchantName,
+        merchantLogoUrl: params.merchantLogoUrl,
+        merchantAddress: params.merchantAddress,
+        merchantPhone: params.merchantPhone,
+        merchantEmail: params.merchantEmail,
+        receiptSettings: params.receiptSettings as any,
         customerName: params.customerName,
+        customerPhone: params.customerPhone,
+        customerEmail: params.customerEmail,
         orderType: params.orderType,
+        tableNumber: params.tableNumber,
         items: params.items,
-        total: params.total,
+        subtotal: params.subtotal,
+        taxAmount: params.taxAmount,
+        serviceChargeAmount: params.serviceChargeAmount,
+        packagingFeeAmount: params.packagingFeeAmount,
+        discountAmount: params.discountAmount,
+        totalAmount: params.totalAmount,
+        paymentMethod: params.paymentMethod,
         currency,
         completedAt: params.completedAt,
         locale: merchantLocale,
@@ -357,7 +405,7 @@ class EmailService {
 
       attachments = [
         {
-          filename: `receipt-${params.orderNumber}.pdf`,
+          filename: `receipt-${displayOrderNumber}.pdf`,
           content: pdf,
           contentType: 'application/pdf',
         },

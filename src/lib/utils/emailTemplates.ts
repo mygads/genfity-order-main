@@ -5,12 +5,13 @@
 
 import type { Locale } from '@/lib/i18n';
 import { formatCurrency } from '@/lib/utils/format';
+import { getPublicAppOrigin } from '@/lib/utils/publicAppOrigin';
 
 // Base URL for logo (set in env or fallback)
-const _getLogoUrl = () =>
-  process.env.NEXT_PUBLIC_APP_URL
-    ? `${process.env.NEXT_PUBLIC_APP_URL}/images/logo/logo.png`
-    : 'https://genfity.com/images/logo/logo.png';
+const _getLogoUrl = () => {
+  const origin = getPublicAppOrigin('https://order.genfity.com');
+  return `${origin}/images/logo/logo.png`;
+};
 
 function _t(locale: Locale) {
   const lang = locale === 'id' ? 'id' : 'en';
@@ -19,8 +20,8 @@ function _t(locale: Locale) {
     needHelp: lang === 'id' ? 'Butuh bantuan?' : 'Need assistance?',
     poweredBy:
       lang === 'id'
-        ? 'powered by genfity.com genfity digital solution'
-        : 'powered by genfity.com genfity digital solution',
+        ? 'powered by genfity.com'
+        : 'powered by genfity.com',
     rights: lang === 'id'
       ? `© ${new Date().getFullYear()} Genfity Digital Solution. Semua hak dilindungi.`
       : `© ${new Date().getFullYear()} Genfity Digital Solution. All rights reserved.`,

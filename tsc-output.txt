@@ -1,2 +1,0 @@
-src/app/api/admin/sessions/route.ts(12,24): error TS2307: Cannot find module '@/lib/db' or its corresponding type declarations.
-src/app/api/admin/sessions/route.ts(45,48): error TS7006: Parameter 'session' implicitly has an 'any' type.

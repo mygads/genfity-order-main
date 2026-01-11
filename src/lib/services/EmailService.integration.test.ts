@@ -50,15 +50,21 @@ describe('EmailService (integration-ish)', () => {
       orderNumber: 'A1B2C3',
       merchantName: 'Warung Contoh',
       merchantCode: 'WC',
+      merchantAddress: 'Jl. Contoh No. 1',
+      merchantPhone: '0812-0000',
       merchantCountry: 'Indonesia',
       merchantTimezone: 'Asia/Jakarta',
       currency: 'IDR',
       orderType: 'TAKEAWAY',
       items: [
-        { name: 'Nasi Goreng', quantity: 1, price: 20000 },
-        { name: 'Es Teh', quantity: 1, price: 5000 },
+        { menuName: 'Nasi Goreng', quantity: 1, unitPrice: 20000, subtotal: 20000 },
+        { menuName: 'Es Teh', quantity: 1, unitPrice: 5000, subtotal: 5000 },
       ],
-      total: 25000,
+      subtotal: 25000,
+      taxAmount: 0,
+      serviceChargeAmount: 0,
+      packagingFeeAmount: 0,
+      totalAmount: 25000,
       completedAt: new Date('2026-01-11T00:00:00.000Z'),
     });
 
@@ -69,7 +75,7 @@ describe('EmailService (integration-ish)', () => {
     const args = sendMailMock.mock.calls[0]?.[0];
     expect(args.from).toContain('Genfity Order');
     expect(args.subject).toContain('Pesanan Selesai');
-    expect(args.attachments?.[0]?.filename).toBe('receipt-A1B2C3.pdf');
+    expect(args.attachments?.[0]?.filename).toBe('receipt-WC-A1B2C3.pdf');
     expect(Buffer.isBuffer(args.attachments?.[0]?.content)).toBe(true);
   });
 

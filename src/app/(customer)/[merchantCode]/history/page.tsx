@@ -9,9 +9,7 @@ import { TranslationKeys } from '@/lib/i18n';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/context/ToastContext';
 import { useCustomerData } from '@/context/CustomerDataContext';
-import { FaFileDownload, FaPrint } from 'react-icons/fa';
-import { printReceipt } from '@/lib/utils/unifiedReceipt';
-import { DEFAULT_RECEIPT_SETTINGS, type ReceiptSettings } from '@/lib/types/receiptSettings';
+import { FaFileDownload, FaStickyNote } from 'react-icons/fa';
 
 interface OrderHistoryItem {
   id: bigint;
@@ -90,7 +88,6 @@ export default function OrderHistoryPage() {
   const [merchantCurrency, setMerchantCurrency] = useState('AUD');
   const [reorderingOrderId, setReorderingOrderId] = useState<string | null>(null);
   const [downloadingOrderId, setDownloadingOrderId] = useState<string | null>(null);
-  const [printingOrderId, setPrintingOrderId] = useState<string | null>(null);
 
   // ✅ FIX: Add hydration guard to prevent SSR/CSR mismatch
   const [isMounted, setIsMounted] = useState(false);
@@ -356,98 +353,6 @@ export default function OrderHistoryPage() {
       showError(t('customer.receipt.downloadFailed'));
     } finally {
       setDownloadingOrderId(null);
-    }
-  };
-
-  /**
-   * Print receipt using the merchant's receipt template settings.
-   * Uses the same unified receipt generator as admin/POS.
-   */
-  const handlePrintReceipt = async (order: OrderHistoryItem) => {
-    setPrintingOrderId(order.id.toString());
-
-    try {
-      // Fetch full order details using public endpoint (supports orderNumber lookup)
-      let response = await fetch(`/api/public/orders/${order.orderNumber}`);
-
-      // If public endpoint fails, try constructing full order number with merchant code
-      if (!response.ok) {
-        const fullOrderNumber = order.orderNumber.includes('-')
-          ? order.orderNumber
-          : `${order.merchantCode}-${order.orderNumber}`;
-        response = await fetch(`/api/public/orders/${fullOrderNumber}`);
-      }
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch order details');
-      }
-
-      const data = await response.json();
-      const orderData = data.data;
-
-      const orderMerchantCurrency = orderData.merchant?.currency || merchantCurrency;
-      const rawSettings = (orderData.merchant?.receiptSettings || {}) as Partial<ReceiptSettings>;
-      const inferredLanguage: 'en' | 'id' = orderMerchantCurrency === 'IDR' ? 'id' : 'en';
-      const language: 'en' | 'id' =
-        rawSettings.receiptLanguage === 'id' || rawSettings.receiptLanguage === 'en'
-          ? rawSettings.receiptLanguage
-          : inferredLanguage;
-
-      const settings: ReceiptSettings = {
-        ...DEFAULT_RECEIPT_SETTINGS,
-        ...rawSettings,
-        receiptLanguage: language,
-        paperSize: rawSettings.paperSize === '58mm' ? '58mm' : '80mm',
-      };
-
-      printReceipt({
-        order: {
-          orderNumber: orderData.orderNumber,
-          orderType: orderData.orderType,
-          tableNumber: orderData.tableNumber,
-          customerName: orderData.customer?.name || auth?.customer?.name,
-          customerPhone: orderData.customer?.phone || auth?.customer?.phone,
-          placedAt: orderData.placedAt,
-          paidAt: orderData.payment?.paidAt,
-          items: (orderData.orderItems || []).map((item: any) => ({
-            quantity: item.quantity,
-            menuName: item.menuName,
-            unitPrice: item.menuPrice ? Number(item.menuPrice) : undefined,
-            subtotal: Number(item.subtotal) || Number(item.menuPrice) * Number(item.quantity) || 0,
-            notes: item.notes,
-            addons: (item.addons || []).map((addon: any) => ({
-              addonName: addon.addonName,
-              addonPrice: Number(addon.addonPrice) || 0,
-            })),
-          })),
-          subtotal: Number(orderData.subtotal) || 0,
-          taxAmount: Number(orderData.taxAmount) || 0,
-          serviceChargeAmount: Number(orderData.serviceChargeAmount) || 0,
-          packagingFeeAmount: Number(orderData.packagingFeeAmount) || 0,
-          discountAmount: Number(orderData.discountAmount) || 0,
-          totalAmount: Number(orderData.totalAmount) || 0,
-          amountPaid: orderData.payment?.amountPaid ? Number(orderData.payment.amountPaid) : undefined,
-          changeAmount: orderData.payment?.changeAmount ? Number(orderData.payment.changeAmount) : undefined,
-          paymentMethod: orderData.payment?.paymentMethod,
-          paymentStatus: orderData.payment?.status,
-          cashierName: orderData.payment?.paidBy?.name,
-        },
-        merchant: {
-          name: orderData.merchant?.name || order.merchantName,
-          code: orderData.merchant?.code || order.merchantCode,
-          logoUrl: orderData.merchant?.logoUrl,
-          address: orderData.merchant?.address,
-          phone: orderData.merchant?.phone,
-          currency: orderMerchantCurrency,
-        },
-        settings,
-        language,
-      });
-    } catch (error) {
-      console.error('Print receipt error:', error);
-      showError(t('customer.receipt.printFailed'));
-    } finally {
-      setPrintingOrderId(null);
     }
   };
 
@@ -793,20 +698,12 @@ export default function OrderHistoryPage() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handlePrintReceipt(order);
+                            router.push(`/${order.merchantCode}/track/${order.orderNumber}`);
                           }}
-                          disabled={printingOrderId === order.id.toString()}
-                          className="w-10 h-10 flex items-center justify-center text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                          title={t('customer.receipt.printReceipt')}
+                          className="w-10 h-10 flex items-center justify-center text-orange-500 border border-orange-500 rounded-lg hover:bg-orange-50 transition-all"
+                          title={t('customer.history.trackOrder')}
                         >
-                          {printingOrderId === order.id.toString() ? (
-                            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                            </svg>
-                          ) : (
-                            <FaPrint className="w-4 h-4" />
-                          )}
+                          <FaStickyNote className="w-4 h-4" />
                         </button>
 
                         <button
