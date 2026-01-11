@@ -9,6 +9,9 @@
  */
 
 import { jsPDF } from 'jspdf';
+import QRCode from 'qrcode';
+import { getPublicAppOrigin } from '@/lib/utils/publicAppOrigin';
+import { formatFullOrderNumber } from '@/lib/utils/format';
 
 // Receipt translations
 const receiptTranslations = {
@@ -244,6 +247,8 @@ export const generateOrderReceiptPdf = async (data: OrderReceiptData): Promise<v
     const contentWidth = pageWidth - 2 * margin;
     let yPos = 8;
 
+    const displayOrderNumber = formatFullOrderNumber(data.orderNumber, data.merchantCode);
+
     // Helper function to add centered text
     const centerText = (text: string, y: number, fontSize: number = 10, bold: boolean = false) => {
         doc.setFontSize(fontSize);
@@ -259,6 +264,33 @@ export const generateOrderReceiptPdf = async (data: OrderReceiptData): Promise<v
         doc.line(margin, y, pageWidth - margin, y);
         doc.setLineDashPattern([], 0);
     };
+
+        const addTrackingQrCode = async () => {
+            try {
+                if (!data.merchantCode || !data.orderNumber) return;
+
+                const baseUrl = getPublicAppOrigin('https://order.genfity.com');
+                const trackingUrl = `${baseUrl}/${data.merchantCode}/track/${data.orderNumber}`;
+
+                const qrDataUrl = await QRCode.toDataURL(trackingUrl, {
+                    errorCorrectionLevel: 'M',
+                    margin: 1,
+                    width: 160,
+                });
+
+                // Draw QR in the center
+                const qrSize = 26; // mm
+                const qrX = (pageWidth - qrSize) / 2;
+
+                doc.addImage(qrDataUrl, 'PNG', qrX, yPos, qrSize, qrSize);
+                yPos += qrSize + 4;
+
+                centerText(lang === 'id' ? 'Scan untuk lacak pesanan' : 'Scan to track your order', yPos, 8, false);
+                yPos += 6;
+            } catch {
+                // If QR generation fails, skip silently (PDF still generated)
+            }
+        };
 
     // Helper function to add solid line
     const addLine = (y: number) => {
@@ -329,6 +361,9 @@ export const generateOrderReceiptPdf = async (data: OrderReceiptData): Promise<v
     centerText(orderTypeDisplay, yPos, 10, true);
     yPos += 6;
 
+    // Tracking QR (match POS unified receipt behavior)
+    await addTrackingQrCode();
+
     addDashedLine(yPos);
     yPos += 5;
 
@@ -366,10 +401,7 @@ export const generateOrderReceiptPdf = async (data: OrderReceiptData): Promise<v
 
     doc.setTextColor(0, 0, 0);
     doc.setFont('helvetica', 'bold');
-    const orderCode = data.orderNumber.includes('-')
-        ? data.orderNumber
-        : `${data.merchantCode.toUpperCase()}-${data.orderNumber}`;
-    doc.text(orderCode, margin, yPos);
+    doc.text(displayOrderNumber, margin, yPos);
     const custNameWidth = doc.getTextWidth(data.customerName);
     doc.text(data.customerName, pageWidth - margin - custNameWidth, yPos);
     yPos += 5;

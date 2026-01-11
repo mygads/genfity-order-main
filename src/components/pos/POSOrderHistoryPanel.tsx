@@ -125,8 +125,18 @@ export const POSOrderHistoryPanel: React.FC<POSOrderHistoryPanelProps> = ({
     const res = await fetch(url, {
       headers: { 'Authorization': `Bearer ${token}` },
     });
+
+    // Avoid "Unexpected token '<'" when the server returns an HTML error page.
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      const text = await res.text();
+      throw new Error(`Failed to load order history (${res.status}). ${text.slice(0, 120)}`);
+    }
+
     const data = await res.json();
-    if (!data.success) throw new Error(data.message);
+    if (!res.ok || !data?.success) {
+      throw new Error(data?.message || `Failed to load order history (${res.status})`);
+    }
     return data.data;
   };
 

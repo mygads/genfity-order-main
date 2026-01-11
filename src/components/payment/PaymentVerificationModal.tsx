@@ -23,6 +23,7 @@ interface PaymentVerificationModalProps {
   isLoading?: boolean;
   merchantInfo?: {
     name: string;
+    code?: string;
     address?: string;
     phone?: string;
     currency: string;
@@ -132,6 +133,7 @@ export const PaymentVerificationModal: React.FC<PaymentVerificationModalProps> =
           },
           merchant: {
             name: merchantInfo.name,
+            code: merchantInfo.code,
             address: merchantInfo.address,
             phone: merchantInfo.phone,
             currency: merchantInfo.currency,

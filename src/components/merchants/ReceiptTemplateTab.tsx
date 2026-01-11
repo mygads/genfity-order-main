@@ -179,6 +179,7 @@ export const ReceiptTemplateTab: React.FC<ReceiptTemplateTabProps> = ({
   const handleTestPrint = () => {
     const merchant: ReceiptMerchantInfo = {
       name: merchantInfo.name || 'Your Restaurant',
+      code: merchantInfo.code || 'DEMO',
       logoUrl: merchantInfo.logoUrl,
       address: merchantInfo.address,
       phone: merchantInfo.phone,

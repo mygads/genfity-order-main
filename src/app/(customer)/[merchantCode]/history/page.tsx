@@ -434,6 +434,7 @@ export default function OrderHistoryPage() {
         },
         merchant: {
           name: orderData.merchant?.name || order.merchantName,
+          code: orderData.merchant?.code || order.merchantCode,
           logoUrl: orderData.merchant?.logoUrl,
           address: orderData.merchant?.address,
           phone: orderData.merchant?.phone,

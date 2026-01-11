@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
+import { serializeBigInt } from '@/lib/utils/serializer';
 
 interface FeedbackBody {
     overallRating: number;
@@ -42,7 +43,7 @@ export async function GET(
         return NextResponse.json({
             success: true,
             hasFeedback: !!feedback,
-            data: feedback,
+            data: feedback ? serializeBigInt(feedback) : null,
         });
     } catch (error) {
         console.error('[Feedback GET] Error:', error);

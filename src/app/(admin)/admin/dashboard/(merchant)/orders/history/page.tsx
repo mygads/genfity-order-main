@@ -252,6 +252,7 @@ export default function OrderHistoryPage() {
         },
         merchant: {
           name: merchantData?.name || '',
+          code: merchantData?.code,
           logoUrl: merchantData?.logoUrl,
           address: merchantData?.address,
           phone: merchantData?.phone,

@@ -293,6 +293,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
       },
       merchant: {
         name: merchantProfile?.name || 'Merchant',
+        code: (merchantProfile as any)?.code,
         logoUrl: merchantProfile?.logoUrl,
         address: merchantProfile?.address,
         phone: merchantProfile?.phone,
