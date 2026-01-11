@@ -36,4 +36,5 @@ export {
 export { default as CustomerLookupModal } from './CustomerLookupModal';
 export { default as OfflineSyncIndicator } from './OfflineSyncIndicator';
 export { default as ConflictResolutionModal } from './ConflictResolutionModal';
+export { default as OfflineOrderConflictResolutionModal } from './OfflineOrderConflictResolutionModal';
 

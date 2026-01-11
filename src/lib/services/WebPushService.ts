@@ -377,6 +377,68 @@ class WebPushService {
     }
 
     /**
+     * Send low stock alert push notification (merchant-side)
+     */
+    async sendLowStockNotification(
+        subscription: PushSubscription,
+        merchantName: string,
+        itemName: string,
+        remainingQty: number,
+        threshold: number,
+        locale: string = 'en'
+    ): Promise<boolean> {
+        const payload: PushNotificationPayload = {
+            title: locale === 'id'
+                ? '⚠️ Stok Menipis'
+                : '⚠️ Low Stock Alert',
+            body: locale === 'id'
+                ? `${merchantName}: "${itemName}" tersisa ${remainingQty} (batas ${threshold}).`
+                : `${merchantName}: "${itemName}" is low (${remainingQty} left; threshold ${threshold}).`,
+            tag: `low-stock-${itemName}`,
+            data: {
+                type: 'LOW_STOCK',
+                itemName,
+                remainingQty,
+                threshold,
+                url: '/admin/dashboard/menu',
+            },
+            requireInteraction: false,
+            vibrate: [200, 100, 200],
+        };
+
+        return this.sendPushNotification(subscription, payload);
+    }
+
+    /**
+     * Send out of stock alert push notification (merchant-side)
+     */
+    async sendOutOfStockNotification(
+        subscription: PushSubscription,
+        merchantName: string,
+        itemName: string,
+        locale: string = 'en'
+    ): Promise<boolean> {
+        const payload: PushNotificationPayload = {
+            title: locale === 'id'
+                ? '❌ Stok Habis'
+                : '❌ Out of Stock',
+            body: locale === 'id'
+                ? `${merchantName}: "${itemName}" sekarang habis stok.`
+                : `${merchantName}: "${itemName}" is now out of stock.`,
+            tag: `out-of-stock-${itemName}`,
+            data: {
+                type: 'OUT_OF_STOCK',
+                itemName,
+                url: '/admin/dashboard/menu',
+            },
+            requireInteraction: true,
+            vibrate: [300, 100, 300],
+        };
+
+        return this.sendPushNotification(subscription, payload);
+    }
+
+    /**
      * Send order status update push notification to customer
      * Used for customer-facing notifications (order ready, completed, etc.)
      */

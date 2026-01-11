@@ -38,7 +38,7 @@ export async function GET(
       );
     }
 
-    console.log('📦 [API] Fetching order:', orderNumber);
+    // console.log('📦 [API] Fetching order:', orderNumber);
 
     /**
      * ✅ SCHEMA VERIFIED: Complete Order relations
@@ -112,11 +112,11 @@ export async function GET(
       );
     }
 
-    console.log('✅ [API] Order fetched successfully:', {
-      orderNumber: order.orderNumber,
-      status: order.status,
-      totalAmount: Number(order.totalAmount),
-    });
+    // console.log('✅ [API] Order fetched successfully:', {
+    //   orderNumber: order.orderNumber,
+    //   status: order.status,
+    //   totalAmount: Number(order.totalAmount),
+    // });
 
     // ✅ Return with proper serialization
     return NextResponse.json({

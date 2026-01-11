@@ -15,6 +15,7 @@ import {
   FaTimes,
   FaSync,
   FaTrash,
+  FaEdit,
   FaClock,
   FaExclamationTriangle,
   FaWifi,
@@ -36,6 +37,7 @@ interface POSPendingOrdersPanelProps {
   isOnline: boolean;
   isSyncing: boolean;
   onSyncOrders: () => Promise<void>;
+  onEditOrder: (orderId: string) => void;
   onDeleteOrder: (orderId: string) => void;
   currency: string;
 }
@@ -51,6 +53,7 @@ export const POSPendingOrdersPanel: React.FC<POSPendingOrdersPanelProps> = ({
   isOnline,
   isSyncing,
   onSyncOrders,
+  onEditOrder,
   onDeleteOrder,
   currency,
 }) => {
@@ -259,6 +262,13 @@ export const POSPendingOrdersPanel: React.FC<POSPendingOrdersPanelProps> = ({
                       </div>
                     ) : (
                       <div className="flex gap-2">
+                        <button
+                          onClick={() => onEditOrder(order.id)}
+                          className="flex-1 py-2 px-3 rounded-lg text-sm font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 hover:bg-yellow-200 dark:hover:bg-yellow-900/50 transition-colors flex items-center justify-center gap-2"
+                        >
+                          <FaEdit className="w-3 h-3" />
+                          {t('common.edit') || 'Edit'}
+                        </button>
                         <button
                           onClick={() => handleDelete(order.id)}
                           className="flex-1 py-2 px-3 rounded-lg text-sm font-medium bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors flex items-center justify-center gap-2"

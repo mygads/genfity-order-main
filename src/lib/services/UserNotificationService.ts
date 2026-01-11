@@ -329,7 +329,8 @@ class UserNotificationService {
      * Notify merchant users about stock running out
      */
     async notifyStockOut(merchantId: bigint, menuName: string, menuId: bigint) {
-        return this.createForMerchant(
+        // Create in-app notification
+        await this.createForMerchant(
             merchantId,
             'STOCK',
             'Item Out of Stock',
@@ -339,6 +340,39 @@ class UserNotificationService {
                 metadata: { menuId: menuId.toString(), menuName },
             }
         );
+
+        // Also send push notification to all subscribed merchant users
+        await this.sendPushToMerchant(merchantId, async (pushService, subscription, merchant) => {
+            return pushService.sendOutOfStockNotification(subscription, merchant.name, menuName, 'en');
+        });
+    }
+
+    /**
+     * Notify merchant users about low stock threshold
+     */
+    async notifyLowStock(
+        merchantId: bigint,
+        menuName: string,
+        menuId: bigint,
+        remainingQty: number,
+        threshold: number
+    ) {
+        // Create in-app notification
+        await this.createForMerchant(
+            merchantId,
+            'STOCK',
+            'Low Stock Alert',
+            `"${menuName}" is low on stock (${remainingQty} left; threshold ${threshold}).`,
+            {
+                actionUrl: `/admin/dashboard/menu/edit/${menuId}`,
+                metadata: { menuId: menuId.toString(), menuName, remainingQty, threshold },
+            }
+        );
+
+        // Also send push notification to all subscribed merchant users
+        await this.sendPushToMerchant(merchantId, async (pushService, subscription, merchant) => {
+            return pushService.sendLowStockNotification(subscription, merchant.name, menuName, remainingQty, threshold, 'en');
+        });
     }
 
     /**

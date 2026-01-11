@@ -134,6 +134,8 @@ async function handlePost(req: NextRequest, context: AuthContext) {
         serviceChargePercent: true,
         enablePackagingFee: true,
         packagingFeeAmount: true,
+        stockAlertEnabled: true,
+        defaultLowStockThreshold: true,
       },
     });
 
@@ -483,9 +485,17 @@ async function handlePost(req: NextRequest, context: AuthContext) {
       try {
         const menu = await prisma.menu.findUnique({
           where: { id: BigInt(item.menuId) },
+          select: {
+            id: true,
+            name: true,
+            trackStock: true,
+            stockQty: true,
+            lowStockThreshold: true,
+          },
         });
 
         if (menu && menu.trackStock && menu.stockQty !== null) {
+          const previousQty = menu.stockQty;
           const newQty = menu.stockQty - item.quantity;
           await prisma.menu.update({
             where: { id: menu.id },
@@ -495,11 +505,21 @@ async function handlePost(req: NextRequest, context: AuthContext) {
             },
           });
 
-          // Send stock out notification
-          if (newQty <= 0) {
-            userNotificationService.notifyStockOut(merchant.id, menu.name, menu.id).catch((error: Error) => {
-              console.error('[POS] Stock notification failed:', error);
-            });
+          // Stock alerts
+          if (merchant.stockAlertEnabled) {
+            const threshold = menu.lowStockThreshold ?? merchant.defaultLowStockThreshold;
+
+            // Out of stock
+            if (newQty <= 0) {
+              userNotificationService.notifyStockOut(merchant.id, menu.name, menu.id).catch((error: Error) => {
+                console.error('[POS] Stock notification failed:', error);
+              });
+            } else if (threshold > 0 && previousQty > threshold && newQty <= threshold) {
+              // Low stock (only when crossing from above threshold -> <= threshold)
+              userNotificationService.notifyLowStock(merchant.id, menu.name, menu.id, newQty, threshold).catch((error: Error) => {
+                console.error('[POS] Low stock notification failed:', error);
+              });
+            }
           }
         }
       } catch (stockError) {

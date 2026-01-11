@@ -54,7 +54,7 @@ import {
   ItemNotesModal,
   OrderSuccessModal,
   OfflineSyncIndicator,
-  ConflictResolutionModal,
+  OfflineOrderConflictResolutionModal,
   type CartItem,
   type CartAddon,
   type CustomerInfo as CartCustomerInfo,
@@ -64,7 +64,6 @@ import {
   type SelectedAddon,
   type POSPaymentData,
 } from '@/components/pos';
-import { ConflictResolutionModal as ConflictModalType } from '@/components/pos'; // Workaround for conflict declaration if needed
 
 // ============================================
 // INTERFACES
@@ -133,10 +132,14 @@ export default function POSPage() {
     lastSyncTime,
     syncError,
     addPendingOrder,
+    updatePendingOrder,
     removePendingOrder,
     syncPendingOrders,
     clearSyncError,
-  } = useOfflineSync();
+    syncConflicts,
+    clearSyncConflicts,
+    applyConflictResolutions,
+  } = useOfflineSync({ merchantId: merchant?.id || null });
 
   // ========================================
   // STATE
@@ -188,6 +191,9 @@ export default function POSPage() {
   const [heldOrders, setHeldOrders] = useState<HeldOrder[]>([]);
   const [showHeldOrdersPanel, setShowHeldOrdersPanel] = useState(false);
   const [showPendingOrdersPanel, setShowPendingOrdersPanel] = useState(false);
+
+  // When editing a pending offline order, we update it in-place instead of creating a new pending record.
+  const [editingPendingOfflineOrderId, setEditingPendingOfflineOrderId] = useState<string | null>(null);
 
   // Popular menu IDs for frequently bought category
   const [popularMenuIds, setPopularMenuIds] = useState<(number | string)[]>([]);
@@ -351,18 +357,21 @@ export default function POSPage() {
         tableNumber,
         orderNotes,
         customerInfo,
-      });
+      }, merchant?.id || null);
       return;
     }
 
     // When cart becomes empty, ensure any persisted cart is removed.
-    clearCartFromStorage();
-  }, [cartItems, orderType, tableNumber, orderNotes, customerInfo]);
+    clearCartFromStorage(merchant?.id || null);
+  }, [cartItems, orderType, tableNumber, orderNotes, customerInfo, merchant?.id]);
 
-  // Load cart from localStorage on mount
+  // Load cart from localStorage when merchant is known
   useEffect(() => {
-    const savedCart = loadCartFromStorage();
-    if (savedCart && savedCart.items.length > 0) {
+    if (!merchant?.id) return;
+    if (cartItems.length > 0) return;
+
+    const savedCart = loadCartFromStorage(merchant.id);
+    if (savedCart && Array.isArray(savedCart.items) && savedCart.items.length > 0) {
       // Check if cart is not too old (less than 4 hours)
       const savedAt = new Date(savedCart.savedAt);
       const now = new Date();
@@ -376,11 +385,11 @@ export default function POSPage() {
         setCustomerInfo(savedCart.customerInfo);
       } else {
         // Clear old cart
-        clearCartFromStorage();
+        clearCartFromStorage(merchant.id);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [merchant?.id]);
 
   // Hold current order (Save as draft)
   const handleHoldOrder = useCallback(() => {
@@ -405,9 +414,51 @@ export default function POSPage() {
     setTableNumber('');
     setOrderNotes('');
     setCustomerInfo({});
-    clearCartFromStorage();
+    clearCartFromStorage(merchant?.id || null);
     showSuccess(t('pos.orderHeld') || 'Order saved', t('pos.orderHeldDesc') || 'You can recall it later');
-  }, [cartItems, orderType, tableNumber, orderNotes, customerInfo, heldOrders.length, showSuccess, t]);
+  }, [cartItems, orderType, tableNumber, orderNotes, customerInfo, heldOrders.length, merchant?.id, showSuccess, t]);
+
+  // Auto-open conflict modal if sync detects menu/addon changes
+  useEffect(() => {
+    if (syncConflicts.length > 0) {
+      setShowConflictModal(true);
+    }
+  }, [syncConflicts.length]);
+
+  const handleEditPendingOfflineOrder = useCallback((orderId: string) => {
+    const order = pendingOrders.find(o => o.id === orderId);
+    if (!order) return;
+
+    if (cartItems.length > 0) {
+      if (!confirm(t('pos.recallOrderConfirm') || 'This will replace current cart. Continue?')) {
+        return;
+      }
+    }
+
+    const newCartItems: CartItem[] = order.items.map(item => ({
+      id: `cart-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      menuId: item.menuId,
+      menuName: item.menuName,
+      menuPrice: item.menuPrice,
+      quantity: item.quantity,
+      notes: item.notes,
+      addons: (item.addons || []).map(a => ({
+        addonItemId: a.addonItemId,
+        addonName: a.addonName,
+        addonPrice: a.addonPrice,
+        quantity: a.quantity,
+      })),
+    }));
+
+    setCartItems(newCartItems);
+    setOrderType(order.orderType);
+    setTableNumber(order.tableNumber || '');
+    setOrderNotes(order.notes || '');
+    setCustomerInfo(order.customer || {});
+    setEditingPendingOfflineOrderId(order.id);
+    setShowPendingOrdersPanel(false);
+    showSuccess(t('pos.orderRecalled') || 'Order recalled');
+  }, [pendingOrders, cartItems.length, showSuccess, t]);
 
   // Recall a held order
   const handleRecallOrder = useCallback((orderId: string) => {
@@ -597,8 +648,9 @@ export default function POSPage() {
     setTableNumber('');
     setOrderNotes('');
     setCustomerInfo({});
-    clearCartFromStorage();
-  }, []);
+    clearCartFromStorage(merchant?.id || null);
+    setEditingPendingOfflineOrderId(null);
+  }, [merchant?.id]);
 
   // Format currency for display - A$ for AUD, Rp for IDR
   const formatCurrency = useCallback((amount: number): string => {
@@ -680,7 +732,9 @@ export default function POSPage() {
         totalAmount: calculateOrderTotal(),
       };
 
-      const pendingId = addPendingOrder(pendingOrder);
+      const pendingId = editingPendingOfflineOrderId
+        ? (updatePendingOrder(editingPendingOfflineOrderId, pendingOrder), editingPendingOfflineOrderId)
+        : addPendingOrder(pendingOrder);
 
       // Show offline success
       setLastOrderNumber(`OFFLINE-${pendingId.substring(0, 8).toUpperCase()}`);
@@ -781,6 +835,9 @@ export default function POSPage() {
         setPendingOrderTotal(calculateOrderTotal());
         setShowPaymentModal(true);
 
+        // Done editing any pending offline order
+        setEditingPendingOfflineOrderId(null);
+
         // Clear cart (order is already created)
         handleClearCart();
       } else {
@@ -802,7 +859,9 @@ export default function POSPage() {
           totalAmount: calculateOrderTotal(),
         };
 
-        const pendingId = addPendingOrder(pendingOrder);
+        const pendingId = editingPendingOfflineOrderId
+          ? (updatePendingOrder(editingPendingOfflineOrderId, pendingOrder), editingPendingOfflineOrderId)
+          : addPendingOrder(pendingOrder);
 
         setLastOrderNumber(`OFFLINE-${pendingId.substring(0, 8).toUpperCase()}`);
         setLastOrderTotal(formatCurrency(calculateOrderTotal()));
@@ -833,6 +892,8 @@ export default function POSPage() {
     showWarning,
     isOnline,
     addPendingOrder,
+    updatePendingOrder,
+    editingPendingOfflineOrderId,
     t,
   ]);
 
@@ -1366,6 +1427,7 @@ export default function POSPage() {
         isOnline={isOnline}
         isSyncing={isSyncing}
         onSyncOrders={syncPendingOrders}
+        onEditOrder={handleEditPendingOfflineOrder}
         onDeleteOrder={removePendingOrder}
         currency={currency}
       />
@@ -1384,14 +1446,21 @@ export default function POSPage() {
         }}
       />
 
-      {/* Conflict Modal - Placeholder for integration */}
-      <ConflictResolutionModal
+      <OfflineOrderConflictResolutionModal
         isOpen={showConflictModal}
-        onClose={() => setShowConflictModal(false)}
-        conflicts={[]} // Todo: Connect to sync hook
-        onResolve={(resolutions) => {
-          console.log('Resolutions:', resolutions);
+        onClose={() => {
           setShowConflictModal(false);
+          // Keep conflicts in state so user can reopen if needed
+        }}
+        conflicts={syncConflicts}
+        onApply={(resolutions) => {
+          applyConflictResolutions(resolutions);
+          clearSyncConflicts();
+          showSuccess(t('pos.updated') || 'Updated', 'Pending orders updated to match current menu');
+          // After applying fixes, attempt sync again (if online)
+          if (isOnline) {
+            syncPendingOrders().catch(() => undefined);
+          }
         }}
       />
     </div>
