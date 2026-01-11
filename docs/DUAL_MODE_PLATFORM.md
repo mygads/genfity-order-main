@@ -234,7 +234,7 @@ Pilih Product → Pilih Variant → Cart → Checkout → Bayar → Process → 
 │  ─────────────────────────────────────         │
 │  Total:                         Rp 140.000     │
 ├─────────────────────────────────────────────────┤
-│  Payment: [Cash] [Card] [QRIS]                 │
+│  Payment: [Cash] [Card]                         │
 │                                                 │
 │  [Place Order]                                  │
 └─────────────────────────────────────────────────┘

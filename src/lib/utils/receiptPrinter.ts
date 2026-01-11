@@ -81,8 +81,6 @@ const labelsEN: ReceiptLabels = {
   orderTypeTakeaway: 'Takeaway',
   paymentCash: 'Cash',
   paymentCard: 'Card',
-  paymentQris: 'QRIS',
-  paymentTransfer: 'Transfer',
 };
 
 const labelsID: ReceiptLabels = {
@@ -107,8 +105,6 @@ const labelsID: ReceiptLabels = {
   orderTypeTakeaway: 'Bawa Pulang',
   paymentCash: 'Tunai',
   paymentCard: 'Kartu',
-  paymentQris: 'QRIS',
-  paymentTransfer: 'Transfer',
 };
 
 /**
@@ -137,8 +133,6 @@ function formatPaymentMethod(method: string, labels: ReceiptLabels): string {
   const methodMap: Record<string, string> = {
     'CASH': labels.paymentCash,
     'CARD': labels.paymentCard,
-    'QRIS': labels.paymentQris,
-    'BANK_TRANSFER': labels.paymentTransfer,
   };
   return methodMap[method] || method.replace('_', ' ');
 }

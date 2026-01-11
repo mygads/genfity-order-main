@@ -27,7 +27,7 @@ async function handleGet(req: NextRequest, authContext: AuthContext) {
         const isSuperAdmin = userRole === 'SUPER_ADMIN';
         const allowedCategories = isSuperAdmin ? SUPER_ADMIN_CATEGORIES : undefined;
 
-        console.log('[Notifications] User:', userId.toString(), 'Role:', userRole, 'isSuperAdmin:', isSuperAdmin, 'allowedCategories:', allowedCategories);
+        // console.log('[Notifications] User:', userId.toString(), 'Role:', userRole, 'isSuperAdmin:', isSuperAdmin, 'allowedCategories:', allowedCategories);
 
         const result = await userNotificationService.getNotifications(userId, {
             page,

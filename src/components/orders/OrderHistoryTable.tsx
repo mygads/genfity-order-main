@@ -401,15 +401,13 @@ export const OrderHistoryTable: React.FC<OrderHistoryTableProps> = ({
                           <FaEye />
                           View
                         </button>
-                        {order.status === 'CANCELLED' && (
-                          <button
-                            onClick={() => onDeleteOrder?.(order.id)}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-error-200 dark:border-error-800 bg-error-50 dark:bg-error-900/20 text-error-600 dark:text-error-400 text-sm hover:bg-error-100 dark:hover:bg-error-900/40 transition-colors"
-                            title="Delete Order"
-                          >
-                            <FaTrash />
-                          </button>
-                        )}
+                        <button
+                          onClick={() => onDeleteOrder?.(order.id)}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-error-200 dark:border-error-800 bg-error-50 dark:bg-error-900/20 text-error-600 dark:text-error-400 text-sm hover:bg-error-100 dark:hover:bg-error-900/40 transition-colors"
+                          title="Void Transaction"
+                        >
+                          <FaTrash />
+                        </button>
                       </div>
                     </td>
                   </tr>

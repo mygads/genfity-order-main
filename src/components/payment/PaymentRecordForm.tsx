@@ -8,15 +8,12 @@
 'use client';
 
 import React, { useState } from 'react';
+import { FaMoneyBillWave, FaCreditCard, FaCheck } from 'react-icons/fa';
 
 
 export type PaymentMethod =
   | 'CASH_ON_COUNTER'
-  | 'CARD_ON_COUNTER'
-  | 'BANK_TRANSFER'
-  | 'E_WALLET'
-  | 'QRIS'
-  | 'CREDIT_CARD';
+  | 'CARD_ON_COUNTER';
 
 interface PaymentRecordFormProps {
   orderNumber: string;
@@ -36,38 +33,20 @@ export interface PaymentFormData {
 const PAYMENT_METHOD_OPTIONS: Array<{
   value: PaymentMethod;
   label: string;
-  icon: string;
+  icon: React.ReactNode;
   description: string;
 }> = [
     {
       value: 'CASH_ON_COUNTER',
       label: 'Cash',
-      icon: '💵',
+      icon: <FaMoneyBillWave className="w-7 h-7 text-green-500" />,
       description: 'Pay with cash at counter',
     },
     {
       value: 'CARD_ON_COUNTER',
       label: 'Card',
-      icon: '💳',
+      icon: <FaCreditCard className="w-7 h-7 text-blue-500" />,
       description: 'Pay with debit/credit card',
-    },
-    {
-      value: 'BANK_TRANSFER',
-      label: 'Bank Transfer',
-      icon: '🏦',
-      description: 'Bank transfer (future)',
-    },
-    {
-      value: 'E_WALLET',
-      label: 'E-Wallet',
-      icon: '📱',
-      description: 'GoPay, OVO, etc (future)',
-    },
-    {
-      value: 'QRIS',
-      label: 'QRIS',
-      icon: '🔲',
-      description: 'QRIS payment (future)',
     },
   ];
 
@@ -156,21 +135,17 @@ export const PaymentRecordForm: React.FC<PaymentRecordFormProps> = ({
               onClick={() =>
                 setFormData((prev) => ({ ...prev, paymentMethod: option.value }))
               }
-              disabled={option.value !== 'CASH_ON_COUNTER' && option.value !== 'CARD_ON_COUNTER'}
               className={`
                 relative p-4 rounded-lg border-2 text-left transition-all duration-150
                 ${formData.paymentMethod === option.value
                   ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20'
                   : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900'
                 }
-                ${option.value !== 'CASH_ON_COUNTER' && option.value !== 'CARD_ON_COUNTER'
-                  ? 'opacity-50 cursor-not-allowed'
-                  : 'hover:border-brand-300 dark:hover:border-brand-700 cursor-pointer'
-                }
+                hover:border-brand-300 dark:hover:border-brand-700 cursor-pointer
               `}
             >
               <div className="flex items-start gap-3">
-                <span className="text-3xl">{option.icon}</span>
+                <div className="shrink-0">{option.icon}</div>
                 <div className="flex-1">
                   <p className="font-semibold text-gray-900 dark:text-white">
                     {option.label}
@@ -180,7 +155,7 @@ export const PaymentRecordForm: React.FC<PaymentRecordFormProps> = ({
                   </p>
                 </div>
                 {formData.paymentMethod === option.value && (
-                  <span className="text-brand-500 text-xl">✓</span>
+                  <FaCheck className="w-5 h-5 text-brand-500" />
                 )}
               </div>
             </button>

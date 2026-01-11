@@ -197,16 +197,9 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
         onUpdate?.();
         setShowPaymentModal(false);
 
-        // Show success toast
-        const methodLabels: Record<PaymentMethod, string> = {
-          CASH_ON_COUNTER: 'Cash',
-          CARD_ON_COUNTER: 'Card',
-          BANK_TRANSFER: 'Bank Transfer',
-          E_WALLET: 'E-Wallet',
-          QRIS: 'QRIS',
-          CREDIT_CARD: 'Credit Card',
-        };
-        showSuccess(`Payment recorded successfully (${methodLabels[paymentMethod]})`, 'Payment Recorded');
+        // Show success toast - format method name for display
+        const methodLabel = paymentMethod.replace(/_/g, ' ').replace(/ON COUNTER/g, '').trim();
+        showSuccess(`Payment recorded successfully (${methodLabel})`, 'Payment Recorded');
       } else {
         console.error('[OrderDetailModal] Payment failed:', data.error);
         showError(data.error || 'Failed to record payment', 'Payment Failed');

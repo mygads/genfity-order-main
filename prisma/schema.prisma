@@ -1021,10 +1021,6 @@ enum AddonInputType {
 enum PaymentMethod {
   CASH_ON_COUNTER
   CARD_ON_COUNTER
-  BANK_TRANSFER
-  E_WALLET
-  QRIS
-  CREDIT_CARD
 }
 
 enum PaymentStatus {

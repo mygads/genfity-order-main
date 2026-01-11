@@ -64,7 +64,7 @@ class EmailService {
 
       // Only log once in development to avoid spam
       if (!isInitialized) {
-        console.log('✅ Email service initialized with SMTP');
+        // console.log('✅ Email service initialized with SMTP');
         isInitialized = true;
       }
     } catch (error) {
@@ -98,7 +98,7 @@ class EmailService {
           html: options.html,
         });
 
-        console.log('✅ Email sent:', info.messageId);
+        // console.log('✅ Email sent:', info.messageId);
         return true;
       } catch (error) {
         lastError = error as Error;

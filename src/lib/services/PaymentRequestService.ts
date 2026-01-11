@@ -261,7 +261,7 @@ class PaymentRequestService {
                 updatedSubscription?.currentPeriodEnd ?? null,
                 adminUserId
             );
-            console.log(`✅ Payment history recorded for merchant ${request.merchantId}`);
+            // console.log(`✅ Payment history recorded for merchant ${request.merchantId}`);
         } catch (historyError) {
             console.error('Failed to record payment history:', historyError);
             // Don't fail payment verification if history recording fails
@@ -275,12 +275,12 @@ class PaymentRequestService {
                 Number(request.amount),
                 request.monthsRequested || undefined
             );
-            console.log(`📋 Payment verification auto-switch result:`, {
-                merchant: switchResult.merchantCode,
-                action: switchResult.action,
-                reason: switchResult.reason,
-                storeOpened: switchResult.storeOpened,
-            });
+            // console.log(`📋 Payment verification auto-switch result:`, {
+            //     merchant: switchResult.merchantCode,
+            //     action: switchResult.action,
+            //     reason: switchResult.reason,
+            //     storeOpened: switchResult.storeOpened,
+            // });
         } catch (switchError) {
             console.error('Failed to run auto-switch after payment verification:', switchError);
             // Don't fail payment verification if auto-switch fails

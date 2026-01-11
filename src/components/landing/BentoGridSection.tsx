@@ -31,7 +31,7 @@ export default function BentoGridSection() {
                             <p className="text-sm text-gray-600 dark:text-gray-400 max-w-sm leading-relaxed">{t('landing.bento.payments.desc')}</p>
                         </div>
                         <div className="mt-3 flex gap-2">
-                            {['QRIS', 'E-Wallet', 'Cards'].map(tag => (
+                            {['Cards'].map(tag => (
                                 <span key={tag} className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded-full text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">{tag}</span>
                             ))}
                         </div>

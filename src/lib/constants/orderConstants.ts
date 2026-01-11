@@ -102,10 +102,6 @@ export const PAYMENT_STATUS_COLORS = {
 export const PAYMENT_METHOD_LABELS = {
   CASH_ON_COUNTER: 'Cash',
   CARD_ON_COUNTER: 'Card',
-  BANK_TRANSFER: 'Bank Transfer',
-  E_WALLET: 'E-Wallet',
-  QRIS: 'QRIS',
-  CREDIT_CARD: 'Credit Card',
 } as const satisfies Record<PaymentMethod, string>;
 
 // ===== ORDER CARD STYLES =====

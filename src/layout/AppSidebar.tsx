@@ -189,6 +189,13 @@ const merchantNavGroups: NavGroup[] = [
     titleKey: "admin.nav.orderManagement",
     items: [
       {
+        icon: <FaCreditCard />,
+        nameKey: "admin.nav.pos",
+        path: "/admin/dashboard/pos",
+        roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+        permission: STAFF_PERMISSIONS.ORDERS,
+      },
+      {
         icon: <FaClipboardList />,
         nameKey: "admin.nav.ordersKanban",
         path: "/admin/dashboard/orders",
