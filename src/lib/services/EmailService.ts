@@ -23,6 +23,7 @@ import { formatFullOrderNumber } from '@/lib/utils/format';
 
 // Track initialization to prevent duplicate logs
 let isInitialized = false;
+let hasLoggedTransporterMissingOnSend = false;
 
 function extractEmailFromFromHeader(value: string): string {
   const trimmed = value.trim();
@@ -67,7 +68,15 @@ class EmailService {
     // Skip initialization if SMTP credentials are not configured
     if (!smtpHost || !smtpUser || !smtpPassword) {
       if (!isInitialized) {
-        console.warn('⚠️  SMTP credentials not configured. Email sending will be disabled.');
+        const missing: string[] = [];
+        if (!smtpHost) missing.push('SMTP_HOST');
+        if (!smtpUser) missing.push('SMTP_USER');
+        if (!smtpPassword) missing.push('SMTP_PASS (or SMTP_PASSWORD)');
+
+        console.warn(
+          `⚠️  SMTP credentials not configured (${missing.join(', ')} missing). ` +
+            'Email sending will be disabled.'
+        );
         isInitialized = true;
       }
       return;
@@ -94,9 +103,21 @@ class EmailService {
         rateLimit: 5, // 5 emails per second max
       });
 
+      // Verify SMTP connectivity once so misconfigurations show up in logs.
+      // (Do not block startup; log any issues asynchronously.)
+      this.transporter
+        .verify()
+        .then(() => {
+          if (!isInitialized) {
+            console.log('✅ Email service initialized with SMTP');
+          }
+        })
+        .catch((error) => {
+          console.error('❌ Email service SMTP verify failed:', error);
+        });
+
       // Only log once in development to avoid spam
       if (!isInitialized) {
-        // console.log('✅ Email service initialized with SMTP');
         isInitialized = true;
       }
     } catch (error) {
@@ -156,7 +177,13 @@ class EmailService {
     }>;
   }): Promise<boolean> {
     if (!this.transporter) {
-      console.error('Email transporter not initialized');
+      if (!hasLoggedTransporterMissingOnSend) {
+        console.error(
+          'Email transporter not initialized. ' +
+            'Set SMTP_HOST, SMTP_USER, and SMTP_PASS (or SMTP_PASSWORD) to enable email sending.'
+        );
+        hasLoggedTransporterMissingOnSend = true;
+      }
       return false;
     }
 
@@ -345,6 +372,15 @@ class EmailService {
     const currency = params.currency || 'AUD';
     const displayOrderNumber = formatFullOrderNumber(params.orderNumber, params.merchantCode);
 
+    const safeTotalAmount =
+      typeof params.totalAmount === 'number' && Number.isFinite(params.totalAmount) ? params.totalAmount : 0;
+    if (safeTotalAmount !== params.totalAmount) {
+      console.warn(
+        `[EmailService] Invalid totalAmount for completed email (order ${params.orderNumber}); defaulting to 0`,
+        { totalAmount: params.totalAmount }
+      );
+    }
+
     const html = getOrderCompletedTemplate({
       customerName: params.customerName,
       orderNumber: displayOrderNumber,
@@ -353,9 +389,9 @@ class EmailService {
       items: params.items.map((i) => ({
         name: i.menuName,
         quantity: i.quantity,
-        price: i.subtotal,
+        price: typeof i.subtotal === 'number' && Number.isFinite(i.subtotal) ? i.subtotal : 0,
       })),
-      total: params.totalAmount,
+      total: safeTotalAmount,
       completedAt: new Intl.DateTimeFormat(intlLocale, {
         dateStyle: 'medium',
         timeStyle: 'short',
@@ -395,7 +431,7 @@ class EmailService {
         serviceChargeAmount: params.serviceChargeAmount,
         packagingFeeAmount: params.packagingFeeAmount,
         discountAmount: params.discountAmount,
-        totalAmount: params.totalAmount,
+        totalAmount: safeTotalAmount,
         paymentMethod: params.paymentMethod,
         currency,
         completedAt: params.completedAt,

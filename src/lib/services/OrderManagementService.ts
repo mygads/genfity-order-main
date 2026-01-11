@@ -34,6 +34,16 @@ import subscriptionHistoryService from '@/lib/services/SubscriptionHistoryServic
 import CustomerPushService from '@/lib/services/CustomerPushService';
 import { shouldSendCustomerEmail } from '@/lib/utils/emailGuards';
 
+function redactEmailForLogs(email: string): string {
+  const normalized = email.trim();
+  const at = normalized.indexOf('@');
+  if (at <= 0) return 'redacted';
+  const local = normalized.slice(0, at);
+  const domain = normalized.slice(at + 1);
+  const safeLocal = local.length <= 2 ? `${local[0] ?? ''}*` : `${local[0]}***${local[local.length - 1]}`;
+  return `${safeLocal}@${domain}`;
+}
+
 export class OrderManagementService {
   /**
    * Fetch merchant orders with filters and pagination
@@ -176,9 +186,16 @@ export class OrderManagementService {
     // - POS walk-in orders: customer is null (no email)
     // - POS orders with placeholder/guest email: filtered out here
     const completedCustomerEmail = updated.customer?.email;
-    if (data.status === 'COMPLETED' && shouldSendCustomerEmail(completedCustomerEmail)) {
-      try {
-        await emailService.sendOrderCompleted({
+    if (data.status === 'COMPLETED') {
+      if (!completedCustomerEmail) {
+        console.warn(`[Order ${order.orderNumber}] Completed email skipped: missing customer email`);
+      } else if (!shouldSendCustomerEmail(completedCustomerEmail)) {
+        console.warn(
+          `[Order ${order.orderNumber}] Completed email skipped: guest/placeholder email (${redactEmailForLogs(completedCustomerEmail)})`
+        );
+      } else {
+        try {
+          const sent = await emailService.sendOrderCompleted({
           to: completedCustomerEmail,
           customerName: updated.customer?.name || 'Customer',
           orderNumber: updated.orderNumber,
@@ -218,10 +235,18 @@ export class OrderManagementService {
           paymentMethod: updated.payment?.paymentMethod || null,
           completedAt: updated.completedAt || new Date(),
         });
-        console.log(`✅ Order completed email sent to ${completedCustomerEmail}`);
-      } catch (emailError) {
-        console.error('❌ Failed to send order completed email:', emailError);
-        // Don't throw - email failure shouldn't block the status update
+
+          if (sent) {
+            console.log(`✅ [Order ${order.orderNumber}] Completed email sent to ${redactEmailForLogs(completedCustomerEmail)}`);
+          } else {
+            console.error(
+              `❌ [Order ${order.orderNumber}] Completed email failed (EmailService returned false) for ${redactEmailForLogs(completedCustomerEmail)}`
+            );
+          }
+        } catch (emailError) {
+          console.error(`[Order ${order.orderNumber}] Failed to send order completed email:`, emailError);
+          // Don't throw - email failure shouldn't block the status update
+        }
       }
     }
 

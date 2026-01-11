@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
-import jwt from 'jsonwebtoken';
+import { withCustomer, type CustomerAuthContext } from '@/lib/middleware/auth';
 import { decimalToNumber } from '@/lib/utils/serializer';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'genfity-jwt-secret';
 
 /**
  * GENFITY - Customer Re-order API
@@ -21,52 +19,23 @@ const JWT_SECRET = process.env.JWT_SECRET || 'genfity-jwt-secret';
  * - copilot-instructions.md - Authentication Requirements
  */
 
-interface JWTPayload {
-  userId: string;
-  email: string;
-  type: 'customer';
-  sessionId: string;
-  iat: number;
-  exp: number;
-}
-
 interface RouteContext {
-  params: Promise<{ orderId: string }>;
+  params: Promise<Record<string, string>>;
 }
 
-export async function GET(
-  request: NextRequest,
-  context: RouteContext
-): Promise<NextResponse> {
+export const GET = withCustomer(async (
+  _request: NextRequest,
+  authContext: CustomerAuthContext,
+  routeContext: RouteContext
+): Promise<NextResponse> => {
   try {
-    const { orderId } = await context.params;
+    const params = await routeContext.params;
+    const orderId = params.orderId;
 
-    // Verify authentication
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
+    if (!orderId) {
       return NextResponse.json(
-        { success: false, error: 'UNAUTHORIZED', message: 'Missing or invalid authorization header' },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.substring(7);
-    let decoded: JWTPayload;
-
-    try {
-      decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
-    } catch {
-      return NextResponse.json(
-        { success: false, error: 'INVALID_TOKEN', message: 'Invalid or expired token' },
-        { status: 401 }
-      );
-    }
-
-    // Verify customer type
-    if (decoded.type !== 'customer') {
-      return NextResponse.json(
-        { success: false, error: 'FORBIDDEN', message: 'Customer access required' },
-        { status: 403 }
+        { success: false, error: 'INVALID_ORDER_ID', message: 'Invalid order ID' },
+        { status: 400 }
       );
     }
 
@@ -134,7 +103,7 @@ export async function GET(
     }
 
     // Verify order belongs to customer
-    if (order.customerId?.toString() !== decoded.userId) {
+    if (order.customerId?.toString() !== authContext.customerId.toString()) {
       return NextResponse.json(
         { success: false, error: 'FORBIDDEN', message: 'Access denied to this order' },
         { status: 403 }
@@ -234,4 +203,4 @@ export async function GET(
       { status: 500 }
     );
   }
-}
+});

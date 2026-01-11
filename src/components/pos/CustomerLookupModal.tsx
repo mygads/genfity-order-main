@@ -44,9 +44,9 @@ interface DbCustomerSearchResponse {
     message?: string;
     data?: DbCustomerResult[];
     pagination?: {
-        skip: number;
         take: number;
-        nextSkip: number;
+        cursor: string | null;
+        nextCursor: string | null;
         hasMore: boolean;
     };
 }
@@ -119,7 +119,7 @@ export const CustomerLookupModal: React.FC<CustomerLookupModalProps> = ({
     const [dbResults, setDbResults] = useState<DbCustomerResult[]>([]);
     const [isDbSearching, setIsDbSearching] = useState(false);
     const [dbError, setDbError] = useState<string | null>(null);
-    const [dbNextSkip, setDbNextSkip] = useState(0);
+    const [dbNextCursor, setDbNextCursor] = useState<string | null>(null);
     const [dbHasMore, setDbHasMore] = useState(false);
 
     // Load recent customers on open
@@ -130,7 +130,7 @@ export const CustomerLookupModal: React.FC<CustomerLookupModalProps> = ({
             setDbResults([]);
             setDbError(null);
             setIsDbSearching(false);
-            setDbNextSkip(0);
+            setDbNextCursor(null);
             setDbHasMore(false);
         }
     }, [isOpen]);
@@ -153,13 +153,13 @@ export const CustomerLookupModal: React.FC<CustomerLookupModalProps> = ({
         [receiptLocale]
     );
 
-    const fetchDbCustomers = useCallback(async (params: { query: string; skip: number; append: boolean }) => {
+    const fetchDbCustomers = useCallback(async (params: { query: string; cursor: string | null; append: boolean }) => {
         const token = getAdminToken();
         if (!token) {
             setDbError('Not authenticated');
             setDbResults([]);
             setDbHasMore(false);
-            setDbNextSkip(0);
+            setDbNextCursor(null);
             setIsDbSearching(false);
             return;
         }
@@ -168,8 +168,9 @@ export const CustomerLookupModal: React.FC<CustomerLookupModalProps> = ({
         setDbError(null);
 
         try {
+            const cursorQuery = params.cursor ? `&cursor=${encodeURIComponent(params.cursor)}` : '';
             const res = await fetch(
-                `/api/merchant/customers/search?q=${encodeURIComponent(params.query)}&take=20&skip=${params.skip}`,
+                `/api/merchant/customers/search?q=${encodeURIComponent(params.query)}&take=20${cursorQuery}`,
                 {
                     headers: {
                         Authorization: `Bearer ${token}`,
@@ -199,16 +200,16 @@ export const CustomerLookupModal: React.FC<CustomerLookupModalProps> = ({
                 return merged;
             });
 
-            const nextSkip = json.pagination?.nextSkip ?? (params.skip + newItems.length);
+            const nextCursor = json.pagination?.nextCursor ?? null;
             const hasMore = json.pagination?.hasMore ?? false;
-            setDbNextSkip(nextSkip);
+            setDbNextCursor(nextCursor);
             setDbHasMore(hasMore);
         } catch (err) {
             console.error('[CustomerLookup] DB search error:', err);
             setDbError('Failed to search customers');
             setDbResults([]);
             setDbHasMore(false);
-            setDbNextSkip(0);
+            setDbNextCursor(null);
         } finally {
             setIsDbSearching(false);
         }
@@ -223,16 +224,16 @@ export const CustomerLookupModal: React.FC<CustomerLookupModalProps> = ({
             setDbResults([]);
             setDbError(null);
             setIsDbSearching(false);
-            setDbNextSkip(0);
+            setDbNextCursor(null);
             setDbHasMore(false);
             return;
         }
 
         const timeout = window.setTimeout(() => {
             setDbResults([]);
-            setDbNextSkip(0);
+            setDbNextCursor(null);
             setDbHasMore(false);
-            void fetchDbCustomers({ query, skip: 0, append: false });
+            void fetchDbCustomers({ query, cursor: null, append: false });
         }, 250);
 
         return () => window.clearTimeout(timeout);
@@ -241,8 +242,8 @@ export const CustomerLookupModal: React.FC<CustomerLookupModalProps> = ({
     const handleLoadMoreDb = useCallback(() => {
         const query = searchQuery.trim();
         if (!query || isDbSearching || !dbHasMore) return;
-        void fetchDbCustomers({ query, skip: dbNextSkip, append: true });
-    }, [dbHasMore, dbNextSkip, fetchDbCustomers, isDbSearching, searchQuery]);
+        void fetchDbCustomers({ query, cursor: dbNextCursor, append: true });
+    }, [dbHasMore, dbNextCursor, fetchDbCustomers, isDbSearching, searchQuery]);
 
     // Filter customers by search query
     const filteredCustomers = useMemo(() => {

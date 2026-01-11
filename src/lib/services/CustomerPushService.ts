@@ -50,7 +50,7 @@ export class CustomerPushService {
             // Send push to each subscription
             for (const subscription of subscriptions) {
                 try {
-                    const success = await webPushService.sendOrderStatusNotification(
+                    const result = await webPushService.sendOrderStatusNotificationDetailed(
                         {
                             endpoint: subscription.endpoint,
                             keys: {
@@ -65,11 +65,22 @@ export class CustomerPushService {
                         'id' // Default to Indonesian locale
                     );
 
-                    if (success) {
+                    if (result.success) {
                         sentCount++;
                         console.log(`[CustomerPush] Sent notification to subscription ${subscription.id}`);
                     } else {
                         console.log(`[CustomerPush] Failed to send to subscription ${subscription.id}`);
+
+                        // If subscription is invalid (expired/unsubscribed), mark inactive.
+                        if (result.statusCode === 404 || result.statusCode === 410) {
+                            const updated = await prisma.customerPushSubscription.updateMany({
+                                where: { endpoint: subscription.endpoint },
+                                data: { isActive: false },
+                            });
+                            console.log(
+                                `[CustomerPush] Marked subscription(s) inactive for endpoint (rows: ${updated.count}) - last id ${subscription.id}`
+                            );
+                        }
                     }
                 } catch (pushError) {
                     console.error(`[CustomerPush] Error sending to subscription ${subscription.id}:`, pushError);
@@ -78,11 +89,13 @@ export class CustomerPushService {
                     if (pushError instanceof Error && 'statusCode' in pushError) {
                         const statusCode = (pushError as { statusCode: number }).statusCode;
                         if (statusCode === 404 || statusCode === 410) {
-                            await prisma.customerPushSubscription.update({
-                                where: { id: subscription.id },
+                            const updated = await prisma.customerPushSubscription.updateMany({
+                                where: { endpoint: subscription.endpoint },
                                 data: { isActive: false },
                             });
-                            console.log(`[CustomerPush] Marked subscription ${subscription.id} as inactive`);
+                            console.log(
+                                `[CustomerPush] Marked subscription(s) inactive for endpoint (rows: ${updated.count}) - last id ${subscription.id}`
+                            );
                         }
                     }
                 }

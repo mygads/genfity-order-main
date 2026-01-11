@@ -346,9 +346,6 @@ export const generateOrderReceiptPdf = async (data: OrderReceiptData): Promise<v
     centerText(orderTypeDisplay, yPos, 10, true);
     yPos += 6;
 
-    // Tracking QR (match POS unified receipt behavior)
-    await addTrackingQrCode();
-
     addDashedLine(yPos);
     yPos += 5;
 
@@ -545,7 +542,14 @@ export const generateOrderReceiptPdf = async (data: OrderReceiptData): Promise<v
     // FOOTER
     // ==========================================
     centerText(t.thankYou, yPos, 9, false);
-    yPos += 8;
+    yPos += 6;
+
+    // Tracking QR should be at the bottom (consistent with POS/admin receipts)
+    await addTrackingQrCode();
+
+    yPos += 2;
+    addDashedLine(yPos);
+    yPos += 6;
 
     doc.setTextColor(100, 100, 100);
     centerText('www.order.genfity.com', yPos, 7, false);

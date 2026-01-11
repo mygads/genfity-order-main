@@ -257,7 +257,7 @@ export default function OrderHistoryPage() {
       }
 
       // Navigate to cart
-      router.push(`/${order.merchantCode}/cart?mode=${orderMode}`);
+      router.push(`/${order.merchantCode}/order?mode=${orderMode}`);
 
     } catch (error) {
       console.error('Re-order error:', error);

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { FaArrowLeft, FaSync, FaClock, FaCheckCircle, FaBolt, FaBell, FaCheck, FaStickyNote } from 'react-icons/fa';
 import { TrackOrderSkeleton } from '@/components/common/SkeletonLoaders';
 import { formatCurrency } from '@/lib/utils/format';
@@ -109,6 +109,7 @@ const STATUS_STEPS: StatusStep[] = [
 export default function OrderTrackPage() {
     const params = useParams();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { t } = useTranslation();
 
     const merchantCode = params.merchantCode as string;
@@ -330,6 +331,12 @@ export default function OrderTrackPage() {
 
     // Handle back navigation
     const handleBack = () => {
+        const back = searchParams.get('back');
+        if (back === 'history') {
+            router.push(`/${merchantCode}/history`);
+            return;
+        }
+
         router.back();
     };
 
@@ -356,7 +363,7 @@ export default function OrderTrackPage() {
                     </p>
                     <p className="text-sm text-gray-600 mb-6">{error}</p>
                     <button
-                        onClick={() => router.back()}
+                        onClick={handleBack}
                         className="px-6 py-3 bg-orange-500 text-white text-sm font-semibold rounded-lg hover:bg-orange-600 transition-all active:scale-[0.98]"
                     >
                         {t('customer.track.goBack')}

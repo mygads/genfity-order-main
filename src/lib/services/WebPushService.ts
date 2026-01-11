@@ -51,6 +51,11 @@ export interface PushNotificationPayload {
     vibrate?: number[];
 }
 
+export interface PushSendResult {
+    success: boolean;
+    statusCode?: number;
+}
+
 // Note: StoredSubscription interface is used for reference/documentation
 // The actual Prisma model is used for database operations
 interface _StoredSubscription {
@@ -87,9 +92,21 @@ class WebPushService {
         subscription: PushSubscription,
         payload: PushNotificationPayload
     ): Promise<boolean> {
+        const result = await this.sendPushNotificationDetailed(subscription, payload);
+        return result.success;
+    }
+
+    /**
+     * Send push notification but return statusCode for invalid subscriptions.
+     * This lets callers deactivate 410/404 endpoints in the database.
+     */
+    async sendPushNotificationDetailed(
+        subscription: PushSubscription,
+        payload: PushNotificationPayload
+    ): Promise<PushSendResult> {
         if (!this.isConfigured()) {
             console.warn('Web push is not configured. Set VAPID keys in environment.');
-            return false;
+            return { success: false };
         }
 
         try {
@@ -104,8 +121,8 @@ class WebPushService {
             const notificationPayload = JSON.stringify({
                 title: payload.title,
                 body: payload.body,
-                icon: payload.icon || '/images/logo/genfity-icon-192.png',
-                badge: payload.badge || '/images/logo/genfity-badge-72.png',
+                icon: payload.icon || '/images/logo/icon.png',
+                badge: payload.badge || '/images/logo/icon.png',
                 tag: payload.tag,
                 data: payload.data,
                 actions: payload.actions,
@@ -113,21 +130,24 @@ class WebPushService {
                 vibrate: payload.vibrate || [200, 100, 200],
             });
 
-            await webpush.sendNotification(pushSubscription, notificationPayload);
-            return true;
+            const ttlSeconds = 60 * 60; // 1 hour
+            await webpush.sendNotification(pushSubscription, notificationPayload, {
+                TTL: Math.max(0, Math.floor(ttlSeconds)),
+            });
+            return { success: true };
         } catch (error) {
             console.error('Push notification failed:', error);
 
-            // Check if subscription is expired/invalid
             if (error instanceof Error && 'statusCode' in error) {
                 const statusCode = (error as { statusCode: number }).statusCode;
                 if (statusCode === 404 || statusCode === 410) {
-                    // Subscription no longer valid - should be removed
                     console.log('Subscription expired or invalid:', subscription.endpoint);
+                    return { success: false, statusCode };
                 }
+                return { success: false, statusCode };
             }
 
-            return false;
+            return { success: false };
         }
     }
 
@@ -517,6 +537,83 @@ class WebPushService {
         };
 
         return this.sendPushNotification(subscription, payload);
+    }
+
+    async sendOrderStatusNotificationDetailed(
+        subscription: PushSubscription,
+        orderNumber: string,
+        status: 'PREPARING' | 'READY' | 'COMPLETED' | 'CANCELLED',
+        merchantName: string,
+        merchantCode: string,
+        locale: string = 'en'
+    ): Promise<PushSendResult> {
+        const statusMessages: Record<string, { title: string; body: string; emoji: string }> = {
+            PREPARING: {
+                title: locale === 'id'
+                    ? `🍳 Pesanan #${orderNumber} Diproses`
+                    : `🍳 Order #${orderNumber} Being Prepared`,
+                body: locale === 'id'
+                    ? `${merchantName} sedang menyiapkan pesanan Anda`
+                    : `${merchantName} is preparing your order`,
+                emoji: '🍳',
+            },
+            READY: {
+                title: locale === 'id'
+                    ? `✅ Pesanan #${orderNumber} Siap!`
+                    : `✅ Order #${orderNumber} Ready!`,
+                body: locale === 'id'
+                    ? `Pesanan Anda di ${merchantName} siap diambil`
+                    : `Your order at ${merchantName} is ready for pickup`,
+                emoji: '✅',
+            },
+            COMPLETED: {
+                title: locale === 'id'
+                    ? `🎉 Pesanan #${orderNumber} Selesai`
+                    : `🎉 Order #${orderNumber} Completed`,
+                body: locale === 'id'
+                    ? `Terima kasih telah memesan di ${merchantName}!`
+                    : `Thank you for ordering at ${merchantName}!`,
+                emoji: '🎉',
+            },
+            CANCELLED: {
+                title: locale === 'id'
+                    ? `❌ Pesanan #${orderNumber} Dibatalkan`
+                    : `❌ Order #${orderNumber} Cancelled`,
+                body: locale === 'id'
+                    ? `Pesanan Anda di ${merchantName} telah dibatalkan`
+                    : `Your order at ${merchantName} has been cancelled`,
+                emoji: '❌',
+            },
+        };
+
+        const message = statusMessages[status];
+        if (!message) {
+            console.warn(`Unknown order status: ${status}`);
+            return { success: false };
+        }
+
+        const payload: PushNotificationPayload = {
+            title: message.title,
+            body: message.body,
+            tag: `order-status-${orderNumber}`,
+            data: {
+                type: 'ORDER_STATUS',
+                orderNumber,
+                status,
+                merchantCode,
+                orderUrl: `/${merchantCode}/order-status/${orderNumber}`,
+            },
+            actions: [
+                {
+                    action: 'track',
+                    title: locale === 'id' ? 'Lacak Pesanan' : 'Track Order',
+                },
+            ],
+            requireInteraction: status === 'READY',
+            vibrate: status === 'READY' ? [300, 100, 300, 100, 300] : [200, 100, 200],
+        };
+
+        return this.sendPushNotificationDetailed(subscription, payload);
     }
 }
 

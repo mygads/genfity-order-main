@@ -61,11 +61,13 @@ export function formatCurrency(
   currency: Currency = 'AUD',
   locale?: Locale
 ): string {
+  // Be defensive: some call-sites (emails/serializers) may pass undefined/NaN.
+  const safeAmount = typeof amount === 'number' && Number.isFinite(amount) ? amount : 0;
   const config = getCurrencyConfig(currency);
   
   // Special handling for AUD to show A$ prefix
   if (currency === 'AUD') {
-    return `A$${amount.toFixed(2)}`;
+    return `A$${safeAmount.toFixed(2)}`;
   }
   
   // Special handling for IDR - no decimals, Rp prefix
@@ -73,7 +75,7 @@ export function formatCurrency(
     const formatted = new Intl.NumberFormat('id-ID', {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }).format(Math.round(amount));
+    }).format(Math.round(safeAmount));
     return `Rp ${formatted}`;
   }
 
@@ -87,7 +89,7 @@ export function formatCurrency(
     currency: currency,
     minimumFractionDigits: config?.decimals ?? 2,
     maximumFractionDigits: config?.decimals ?? 2,
-  }).format(amount);
+  }).format(safeAmount);
 }
 
 /**

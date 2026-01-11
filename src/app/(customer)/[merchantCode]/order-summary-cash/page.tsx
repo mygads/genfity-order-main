@@ -248,10 +248,11 @@ export default function OrderSummaryCashPage() {
         setOrder(orderData);
         console.log('✅ Order loaded successfully');
 
-        // ✅ Auto-redirect to track page if order is already accepted/progressing
-        if (['ACCEPTED', 'IN_PROGRESS', 'READY'].includes(orderData.status)) {
+        // ✅ Auto-redirect to track page if order is already accepted/progressing/completed
+        // Use `replace` to avoid browser back-looping into this summary page.
+        if (['ACCEPTED', 'IN_PROGRESS', 'READY', 'COMPLETED'].includes(orderData.status)) {
           console.log('🔄 Order already accepted, redirecting to track page...');
-          router.push(`/${merchantCode}/track/${orderData.orderNumber}`);
+          router.replace(`/${merchantCode}/track/${orderData.orderNumber}?back=history`);
           return;
         }
 

@@ -12,6 +12,32 @@ import { AuthenticationError, AuthorizationError, ERROR_CODES } from '@/lib/cons
 import { handleError } from '@/lib/middleware/errorHandler';
 import type { UserRole } from '@/lib/types/auth';
 
+type NextRouteContext = { params: Promise<unknown> };
+type NormalizedRouteContext = { params: Promise<Record<string, string>> };
+
+function normalizeRouteContext(routeContext: NextRouteContext): NormalizedRouteContext {
+  return {
+    params: (async () => {
+      try {
+        const rawParams = await routeContext.params;
+
+        if (!rawParams || typeof rawParams !== 'object') {
+          return {};
+        }
+
+        const normalized: Record<string, string> = {};
+        for (const [key, value] of Object.entries(rawParams as Record<string, unknown>)) {
+          normalized[key] = typeof value === 'string' ? value : String(value);
+        }
+
+        return normalized;
+      } catch {
+        return {};
+      }
+    })(),
+  };
+}
+
 /**
  * Authenticated user context
  */
@@ -92,11 +118,11 @@ export function withAuth(
   handler: (
     request: NextRequest,
     context: AuthContext,
-    routeContext: { params: Promise<Record<string, string>> }
+    routeContext: NormalizedRouteContext
   ) => Promise<NextResponse>,
   allowedRoles?: UserRole[]
 ) {
-  return async (request: NextRequest, routeContext: { params: Promise<Record<string, string>> }) => {
+  return async (request: NextRequest, routeContext: NextRouteContext) => {
     try {
       // Authenticate user
       const authContext = await authenticate(request);
@@ -107,7 +133,7 @@ export function withAuth(
       }
 
       // Call the actual handler with auth context
-      return await handler(request, authContext, routeContext);
+      return await handler(request, authContext, normalizeRouteContext(routeContext));
     } catch (error) {
       return handleError(error);
     }
@@ -121,7 +147,7 @@ export function withSuperAdmin(
   handler: (
     request: NextRequest,
     context: AuthContext,
-    routeContext: { params: Promise<Record<string, string>> }
+    routeContext: NormalizedRouteContext
   ) => Promise<NextResponse>
 ) {
   return withAuth(handler, ['SUPER_ADMIN']);
@@ -134,7 +160,7 @@ export function withMerchant(
   handler: (
     request: NextRequest,
     context: AuthContext,
-    routeContext: { params: Promise<Record<string, string>> }
+    routeContext: NormalizedRouteContext
   ) => Promise<NextResponse>
 ) {
   return withAuth(handler, ['MERCHANT_OWNER', 'MERCHANT_STAFF']);
@@ -147,7 +173,7 @@ export function withMerchantOwner(
   handler: (
     request: NextRequest,
     context: AuthContext,
-    routeContext: { params: Promise<Record<string, string>> }
+    routeContext: NormalizedRouteContext
   ) => Promise<NextResponse>
 ) {
   return withAuth(handler, ['MERCHANT_OWNER']);
@@ -161,10 +187,10 @@ export function withCustomer(
   handler: (
     request: NextRequest,
     context: CustomerAuthContext,
-    routeContext: { params: Promise<Record<string, string>> }
+    routeContext: NormalizedRouteContext
   ) => Promise<NextResponse>
 ) {
-  return async (request: NextRequest, routeContext: { params: Promise<Record<string, string>> }) => {
+  return async (request: NextRequest, routeContext: NextRouteContext) => {
     try {
       // Extract token from Authorization header
       const authHeader = request.headers.get('authorization');
@@ -188,7 +214,7 @@ export function withCustomer(
       }
 
       // Call the actual handler with customer context
-      return await handler(request, customerContext, routeContext);
+      return await handler(request, customerContext, normalizeRouteContext(routeContext));
     } catch (error) {
       return handleError(error);
     }
@@ -203,11 +229,11 @@ export function withMerchantPermission(
   handler: (
     request: NextRequest,
     context: AuthContext,
-    routeContext: { params: Promise<Record<string, string>> }
+    routeContext: NormalizedRouteContext
   ) => Promise<NextResponse>,
   requiredPermission?: string
 ) {
-  return async (request: NextRequest, routeContext: { params: Promise<Record<string, string>> }) => {
+  return async (request: NextRequest, routeContext: NextRouteContext) => {
     try {
       // Authenticate user
       const authContext = await authenticate(request);
@@ -222,7 +248,7 @@ export function withMerchantPermission(
 
       // If owner, always allow
       if (authContext.role === 'MERCHANT_OWNER') {
-        return await handler(request, authContext, routeContext);
+        return await handler(request, authContext, normalizeRouteContext(routeContext));
       }
 
       // For staff, check permission if specified
@@ -251,7 +277,7 @@ export function withMerchantPermission(
       }
 
       // Call the actual handler
-      return await handler(request, authContext, routeContext);
+      return await handler(request, authContext, normalizeRouteContext(routeContext));
     } catch (error) {
       return handleError(error);
     }

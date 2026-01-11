@@ -355,7 +355,7 @@ export async function generateOrderReceiptPdfBuffer(data: OrderReceiptEmailPdfDa
 
   doc.setFont('courier', 'normal');
   doc.setFontSize(7);
-  centerText(`${labels.poweredBy} genfity.com genfity digital solution`, y, 7, false);
+  centerText(`${labels.poweredBy} genfity.com`, y, 7, false);
 
   return toPdfBuffer(doc);
 }

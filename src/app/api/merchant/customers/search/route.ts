@@ -15,7 +15,7 @@ export const GET = withMerchant(async (request: NextRequest, authContext) => {
   const { searchParams } = new URL(request.url);
   const q = (searchParams.get('q') || '').trim();
   const take = Math.min(Math.max(parseInt(searchParams.get('take') || '20', 10) || 20, 1), 50);
-  const skip = Math.max(parseInt(searchParams.get('skip') || '0', 10) || 0, 0);
+  const cursorParam = (searchParams.get('cursor') || '').trim();
 
   const where = {
     orders: {
@@ -34,6 +34,20 @@ export const GET = withMerchant(async (request: NextRequest, authContext) => {
       : {}),
   };
 
+  // Cursor-based pagination (stable under high write volume)
+  // If cursor is present, it should be the last seen customer id.
+  let cursorId: bigint | null = null;
+  if (cursorParam) {
+    try {
+      cursorId = BigInt(cursorParam);
+    } catch {
+      return NextResponse.json(
+        { success: false, message: 'Invalid cursor' },
+        { status: 400 }
+      );
+    }
+  }
+
   // Fetch one extra record to detect hasMore without running a separate count query.
   const takePlusOne = Math.min(take + 1, 51);
 
@@ -45,8 +59,13 @@ export const GET = withMerchant(async (request: NextRequest, authContext) => {
       email: true,
       phone: true,
     },
-    skip,
     take: takePlusOne,
+    ...(cursorId
+      ? {
+          cursor: { id: cursorId },
+          skip: 1,
+        }
+      : {}),
     orderBy: {
       id: 'desc',
     },
@@ -59,7 +78,7 @@ export const GET = withMerchant(async (request: NextRequest, authContext) => {
     return NextResponse.json({
       success: true,
       data: [],
-      pagination: { skip, take, nextSkip: skip, hasMore: false },
+      pagination: { take, cursor: cursorParam || null, nextCursor: null, hasMore: false },
     });
   }
 
@@ -104,9 +123,9 @@ export const GET = withMerchant(async (request: NextRequest, authContext) => {
     success: true,
     data: serializeBigInt(enriched),
     pagination: {
-      skip,
       take,
-      nextSkip: skip + customers.length,
+      cursor: cursorParam || null,
+      nextCursor: hasMore ? String(customers[customers.length - 1]?.id) : null,
       hasMore,
     },
   });

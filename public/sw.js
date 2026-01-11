@@ -42,8 +42,8 @@ self.addEventListener('push', (event) => {
 
         const options = {
             body: data.body || 'You have a new notification',
-            icon: data.icon || '/images/logo/genfity-icon-192.png',
-            badge: data.badge || '/images/logo/genfity-badge-72.png',
+            icon: data.icon || '/images/logo/icon.png',
+            badge: data.badge || '/images/logo/icon.png',
             tag: data.tag || 'genfity-notification',
             data: data.data || {},
             actions: data.actions || [],

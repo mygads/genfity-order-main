@@ -38,7 +38,7 @@ export const GET = withCustomer(async (
   context: CustomerAuthContext,
 ) => {
   try {
-    console.log('👤 Fetching orders for customer:', context.customerId.toString());
+    // console.log('👤 Fetching orders for customer:', context.customerId.toString());
 
     // ========================================
     // Fetch Orders from Customer table relation
