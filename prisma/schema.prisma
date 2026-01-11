@@ -1453,3 +1453,76 @@ model StockPhoto {
   @@index([uploadedByUserId])
   @@map("stock_photos")
 }
+
+// ============================================
+// VOUCHER SYSTEM
+// ============================================
+
+enum VoucherType {
+  BALANCE           // Add balance to merchant account
+  SUBSCRIPTION_DAYS // Add subscription days (monthly)
+}
+
+model Voucher {
+  id                BigInt              @id @default(autoincrement())
+  code              String              @unique
+  type              VoucherType
+  description       String?
+  // Value: for BALANCE = amount, for SUBSCRIPTION_DAYS = number of days
+  value             Decimal             @db.Decimal(12, 2)
+  // Currency restriction: IDR, AUD, or null for universal
+  currency          String?             // null means applicable to all currencies
+  // Usage limits
+  maxUsage          Int?                @map("max_usage") // null = unlimited
+  currentUsage      Int                 @default(0) @map("current_usage")
+  // Validity period
+  validFrom         DateTime?           @map("valid_from") @db.Timestamptz(6)
+  validUntil        DateTime?           @map("valid_until") @db.Timestamptz(6)
+  // Status
+  isActive          Boolean             @default(true) @map("is_active")
+  // Audit
+  createdByUserId   BigInt              @map("created_by_user_id")
+  createdAt         DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  
+  redemptions       VoucherRedemption[]
+
+  @@index([code])
+  @@index([type])
+  @@index([currency])
+  @@index([isActive])
+  @@index([validFrom, validUntil])
+  @@map("vouchers")
+}
+
+model VoucherRedemption {
+  id              BigInt    @id @default(autoincrement())
+  voucherId       BigInt    @map("voucher_id")
+  merchantId      BigInt    @map("merchant_id")
+  redeemedByUserId BigInt   @map("redeemed_by_user_id")
+  // Snapshot of what was applied
+  voucherCode     String    @map("voucher_code")
+  voucherType     VoucherType @map("voucher_type")
+  valueApplied    Decimal   @map("value_applied") @db.Decimal(12, 2)
+  currency        String    // Merchant's currency at time of redemption
+  // For BALANCE type: balance before/after
+  balanceBefore   Decimal?  @map("balance_before") @db.Decimal(12, 2)
+  balanceAfter    Decimal?  @map("balance_after") @db.Decimal(12, 2)
+  // For SUBSCRIPTION_DAYS type: subscription period before/after
+  subscriptionEndBefore DateTime? @map("subscription_end_before") @db.Timestamptz(6)
+  subscriptionEndAfter  DateTime? @map("subscription_end_after") @db.Timestamptz(6)
+  // Auto-switch tracking
+  triggeredAutoSwitch Boolean @default(false) @map("triggered_auto_switch")
+  previousSubType     String? @map("previous_sub_type") // TRIAL, DEPOSIT, MONTHLY
+  newSubType          String? @map("new_sub_type")
+  // Timestamps
+  redeemedAt      DateTime  @default(now()) @map("redeemed_at") @db.Timestamptz(6)
+
+  voucher         Voucher   @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+
+  @@index([voucherId])
+  @@index([merchantId])
+  @@index([redeemedByUserId])
+  @@index([redeemedAt])
+  @@map("voucher_redemptions")
+}

@@ -127,6 +127,12 @@ const superAdminNavGroups: NavGroup[] = [
         path: "/admin/dashboard/merchant-balance",
         roles: ["SUPER_ADMIN"],
       },
+      {
+        icon: <FaTicketAlt />,
+        nameKey: "admin.nav.vouchers",
+        path: "/admin/dashboard/vouchers",
+        roles: ["SUPER_ADMIN"],
+      },
     ],
   },
   {

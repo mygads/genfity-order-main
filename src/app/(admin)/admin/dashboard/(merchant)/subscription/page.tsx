@@ -8,7 +8,7 @@ import SuspendedAlert from "@/components/subscription/SuspendedAlert";
 import ConfirmDialog from "@/components/modals/ConfirmDialog";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useContextualHint, CONTEXTUAL_HINTS } from "@/lib/tutorial/components/ContextualHint";
-import { FaWallet, FaCalendarAlt, FaClock, FaExchangeAlt, FaArrowRight, FaCheckCircle, FaExclamationTriangle, FaHistory, FaCreditCard, FaInfoCircle } from "react-icons/fa";
+import { FaWallet, FaCalendarAlt, FaClock, FaExchangeAlt, FaArrowRight, FaCheckCircle, FaExclamationTriangle, FaHistory, FaCreditCard, FaInfoCircle, FaTicketAlt } from "react-icons/fa";
 
 interface SubscriptionData {
     subscription: {
@@ -79,6 +79,19 @@ export default function SubscriptionPage() {
     const [switching, setSwitching] = useState(false);
     const [switchModalOpen, setSwitchModalOpen] = useState(false);
     const [pendingSwitchType, setPendingSwitchType] = useState<'DEPOSIT' | 'MONTHLY' | null>(null);
+    
+    // Voucher redeem modal state
+    const [redeemModalOpen, setRedeemModalOpen] = useState(false);
+    const [voucherCode, setVoucherCode] = useState('');
+    const [redeeming, setRedeeming] = useState(false);
+    const [redeemResult, setRedeemResult] = useState<{
+        success: boolean;
+        message: string;
+        voucherType?: 'BALANCE' | 'SUBSCRIPTION_DAYS';
+        valueApplied?: number;
+        autoSwitchTriggered?: boolean;
+        newSubType?: string;
+    } | null>(null);
 
     // Fetch all data
     const { data: subscriptionResponse, error: subscriptionError, isLoading: subscriptionLoading } =
@@ -147,6 +160,55 @@ export default function SubscriptionPage() {
         // Open confirmation modal instead of browser confirm
         setPendingSwitchType(newType);
         setSwitchModalOpen(true);
+    };
+
+    // Handle voucher redemption
+    const handleRedeemVoucher = async () => {
+        if (!voucherCode.trim()) return;
+
+        setRedeeming(true);
+        setRedeemResult(null);
+
+        try {
+            const token = localStorage.getItem('accessToken');
+            const res = await fetch('/api/merchant/vouchers/redeem', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({ code: voucherCode.trim() }),
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                setRedeemResult({
+                    success: true,
+                    message: data.message,
+                    voucherType: data.data.voucherType,
+                    valueApplied: data.data.valueApplied,
+                    autoSwitchTriggered: data.data.autoSwitchTriggered,
+                    newSubType: data.data.newSubType,
+                });
+                setVoucherCode('');
+                // Reload page after 2 seconds to refresh subscription status
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            } else {
+                setRedeemResult({
+                    success: false,
+                    message: data.message || (locale === 'id' ? 'Gagal menukarkan voucher' : 'Failed to redeem voucher'),
+                });
+            }
+        } catch (error) {
+            setRedeemResult({
+                success: false,
+                message: locale === 'id' ? 'Terjadi kesalahan. Silakan coba lagi.' : 'An error occurred. Please try again.',
+            });
+        } finally {
+            setRedeeming(false);
+        }
     };
 
     const confirmSwitch = async () => {
@@ -340,6 +402,13 @@ export default function SubscriptionPage() {
                                 ? (locale === 'id' ? 'Upgrade Sekarang' : 'Upgrade Now')
                                 : (locale === 'id' ? 'Top Up / Perpanjang' : 'Top Up / Extend')}
                         </Link>
+                        <button
+                            onClick={() => setRedeemModalOpen(true)}
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 text-white rounded-lg text-sm font-medium hover:bg-white/30 transition-colors"
+                        >
+                            <FaTicketAlt className="w-3.5 h-3.5" />
+                            {locale === 'id' ? 'Tukar Voucher' : 'Redeem Voucher'}
+                        </button>
                         <Link
                             href="/admin/dashboard/subscription/transactions"
                             className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 text-white rounded-lg text-sm font-medium hover:bg-white/30 transition-colors"
@@ -687,6 +756,141 @@ export default function SubscriptionPage() {
                     setPendingSwitchType(null);
                 }}
             />
+
+            {/* Redeem Voucher Modal */}
+            {redeemModalOpen && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white dark:bg-gray-900 rounded-xl shadow-xl max-w-md w-full overflow-hidden">
+                        <div className="p-6 border-b border-gray-200 dark:border-gray-800">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+                                        <FaTicketAlt className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                                    </div>
+                                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                                        {locale === 'id' ? 'Tukar Voucher' : 'Redeem Voucher'}
+                                    </h2>
+                                </div>
+                                <button 
+                                    onClick={() => {
+                                        setRedeemModalOpen(false);
+                                        setVoucherCode('');
+                                        setRedeemResult(null);
+                                    }} 
+                                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="p-6">
+                            {/* Result display */}
+                            {redeemResult && (
+                                <div className={`mb-4 p-4 rounded-lg ${
+                                    redeemResult.success 
+                                        ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800' 
+                                        : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
+                                }`}>
+                                    <div className="flex items-start gap-3">
+                                        {redeemResult.success ? (
+                                            <FaCheckCircle className="w-5 h-5 text-green-500 mt-0.5" />
+                                        ) : (
+                                            <FaExclamationTriangle className="w-5 h-5 text-red-500 mt-0.5" />
+                                        )}
+                                        <div>
+                                            <p className={`font-medium ${redeemResult.success ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
+                                                {redeemResult.message}
+                                            </p>
+                                            {redeemResult.success && redeemResult.autoSwitchTriggered && (
+                                                <p className="text-sm text-green-600 dark:text-green-500 mt-1">
+                                                    {locale === 'id' 
+                                                        ? `Mode langganan berubah ke ${redeemResult.newSubType}` 
+                                                        : `Subscription mode changed to ${redeemResult.newSubType}`}
+                                                </p>
+                                            )}
+                                            {redeemResult.success && (
+                                                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                                                    {locale === 'id' ? 'Halaman akan dimuat ulang...' : 'Page will reload...'}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Input field */}
+                            {!redeemResult?.success && (
+                                <>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                                        {locale === 'id' 
+                                            ? 'Masukkan kode voucher untuk menambah saldo atau hari langganan.' 
+                                            : 'Enter your voucher code to add balance or subscription days.'}
+                                    </p>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                {locale === 'id' ? 'Kode Voucher' : 'Voucher Code'}
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={voucherCode}
+                                                onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
+                                                placeholder={locale === 'id' ? 'Masukkan kode voucher' : 'Enter voucher code'}
+                                                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent font-mono text-center text-lg tracking-wider"
+                                                disabled={redeeming}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter' && voucherCode.trim()) {
+                                                        handleRedeemVoucher();
+                                                    }
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+
+                        {/* Actions */}
+                        {!redeemResult?.success && (
+                            <div className="p-6 border-t border-gray-200 dark:border-gray-800 flex gap-3">
+                                <button
+                                    onClick={() => {
+                                        setRedeemModalOpen(false);
+                                        setVoucherCode('');
+                                        setRedeemResult(null);
+                                    }}
+                                    className="flex-1 px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors font-medium"
+                                >
+                                    {locale === 'id' ? 'Batal' : 'Cancel'}
+                                </button>
+                                <button
+                                    onClick={handleRedeemVoucher}
+                                    disabled={redeeming || !voucherCode.trim()}
+                                    className="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 font-medium flex items-center justify-center gap-2"
+                                >
+                                    {redeeming ? (
+                                        <>
+                                            <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                            </svg>
+                                            {locale === 'id' ? 'Menukarkan...' : 'Redeeming...'}
+                                        </>
+                                    ) : (
+                                        <>
+                                            <FaTicketAlt className="w-4 h-4" />
+                                            {locale === 'id' ? 'Tukarkan' : 'Redeem'}
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
         </div >
     );
 }
