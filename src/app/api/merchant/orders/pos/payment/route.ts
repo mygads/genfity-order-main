@@ -27,6 +27,10 @@ interface PaymentRequest {
   notes?: string;
   cashAmount?: number;
   cardAmount?: number;
+  discountType?: 'PERCENTAGE' | 'FIXED';
+  discountValue?: number;
+  discountAmount?: number;
+  finalTotal?: number;
 }
 
 /**
@@ -120,24 +124,28 @@ async function handlePost(req: NextRequest, context: AuthContext) {
       );
     }
 
-    // Check if payment already exists
+    // Check if payment already exists (POS create-order currently creates a PENDING payment)
     const existingPayment = await prisma.payment.findUnique({
       where: { orderId: order.id },
+      select: {
+        id: true,
+        status: true,
+        paymentMethod: true,
+        amount: true,
+        paidAt: true,
+        paidByUserId: true,
+      },
     });
 
-    if (existingPayment) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'PAYMENT_EXISTS',
-          message: 'Payment already recorded for this order',
-          statusCode: 400,
-        },
-        { status: 400 }
-      );
-    }
+    const orderTotalAmount = Number(order.totalAmount);
+    const requestedFinalTotal = typeof body.finalTotal === 'number' && Number.isFinite(body.finalTotal)
+      ? body.finalTotal
+      : undefined;
+    const requestedDiscountAmount = typeof body.discountAmount === 'number' && Number.isFinite(body.discountAmount)
+      ? body.discountAmount
+      : undefined;
 
-    const totalAmount = Number(order.totalAmount);
+    const totalAmount = requestedFinalTotal ?? orderTotalAmount;
     const paidAmount = amountPaid !== undefined ? amountPaid : totalAmount;
     const change = changeAmount !== undefined ? changeAmount : Math.max(0, paidAmount - totalAmount);
 
@@ -172,10 +180,42 @@ async function handlePost(req: NextRequest, context: AuthContext) {
         : {}),
     };
 
-    // Create payment record in a transaction
+    // Create or update payment record in a transaction
     const result = await prisma.$transaction(async (tx) => {
-      // Create payment record
-      const payment = await tx.payment.create({
+      // Keep order totals in sync with what was paid (discount applied at payment step)
+      if (requestedFinalTotal !== undefined || requestedDiscountAmount !== undefined) {
+        await tx.order.update({
+          where: { id: order.id },
+          data: {
+            ...(requestedFinalTotal !== undefined ? { totalAmount: new Prisma.Decimal(requestedFinalTotal) } : {}),
+            ...(requestedDiscountAmount !== undefined ? { discountAmount: new Prisma.Decimal(requestedDiscountAmount) } : {}),
+          },
+        });
+      }
+
+      if (existingPayment) {
+        // Idempotent behavior: if already completed, just return it as success.
+        if (existingPayment.status === 'COMPLETED') {
+          return await tx.payment.findUniqueOrThrow({ where: { id: existingPayment.id } });
+        }
+
+        // Upgrade existing PENDING payment to COMPLETED
+        return await tx.payment.update({
+          where: { id: existingPayment.id },
+          data: {
+            amount: new Prisma.Decimal(totalAmount),
+            paymentMethod: prismaPaymentMethod,
+            status: 'COMPLETED',
+            paidByUserId: BigInt(userId),
+            paidAt: new Date(),
+            notes: notes || null,
+            metadata: metadata as Prisma.InputJsonValue,
+          },
+        });
+      }
+
+      // No payment exists yet, create a new record
+      return await tx.payment.create({
         data: {
           orderId: order.id,
           amount: new Prisma.Decimal(totalAmount),
@@ -187,8 +227,6 @@ async function handlePost(req: NextRequest, context: AuthContext) {
           metadata: metadata as Prisma.InputJsonValue,
         },
       });
-
-      return payment;
     });
 
     console.log(`[POS Payment] Payment recorded for order ${order.orderNumber}: ${paymentMethod}, Amount: ${totalAmount}`);

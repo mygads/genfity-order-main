@@ -428,7 +428,7 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
               </>
             ) : (
               <>
-                <span>{t('pos.pay')}</span>
+                <span>{t('pos.createOrder') || 'Create Order'}</span>
                 <span>|</span>
                 <span>{formatCurrency(total)}</span>
               </>

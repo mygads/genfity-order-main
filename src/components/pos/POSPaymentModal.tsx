@@ -79,6 +79,7 @@ interface POSPaymentModalProps {
   };
   merchantInfo?: {
     name: string;
+    code?: string;
     address?: string;
     phone?: string;
     email?: string;
@@ -500,6 +501,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
       },
       merchant: {
         name: merchantInfo.name,
+        code: merchantInfo.code || merchant?.code,
         logoUrl: merchantInfo.logoUrl,
         address: merchantInfo.address,
         phone: merchantInfo.phone,
@@ -509,7 +511,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
       settings,
       language,
     });
-  }, [orderDetails, merchantInfo, orderNumber, discountAmount, finalTotal, paymentMethod, amount, change, cashAmount, cardAmount, currency, receiptSettings]);
+  }, [orderDetails, merchantInfo, merchant?.code, orderNumber, discountAmount, finalTotal, paymentMethod, amount, change, cashAmount, cardAmount, currency, receiptSettings]);
 
   // Handle submit
   const handleSubmit = async () => {
@@ -535,9 +537,6 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
         finalTotal: finalTotal,
         printReceipt: printReceipt,
       });
-
-      // Close the modal before printing (print dialogs can block UI updates)
-      onClose();
 
       // Print receipt after successful payment if option is enabled
       if (printReceipt && orderDetails && merchantInfo) {

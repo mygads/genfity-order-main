@@ -80,6 +80,7 @@ interface Order {
 
 interface MerchantInfo {
   name: string;
+  code?: string;
   logoUrl?: string;
   address?: string;
   phone?: string;
@@ -304,6 +305,7 @@ export const POSOrderHistoryPanel: React.FC<POSOrderHistoryPanelProps> = ({
       },
       merchant: {
         name: merchantInfo?.name || '',
+        code: merchantInfo?.code || merchant?.code,
         logoUrl: merchantInfo?.logoUrl,
         address: merchantInfo?.address,
         phone: merchantInfo?.phone,

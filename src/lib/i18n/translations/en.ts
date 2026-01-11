@@ -2779,6 +2779,7 @@ const en = {
   "pos.required": "Required",
   "pos.soldOut": "SOLD OUT",
   "pos.pay": "Pay",
+  "pos.createOrder": "Create Order",
   "pos.offlineMode": "Offline Mode",
   "pos.offlineOrderQueued": "Order saved and will sync when online",
   "pos.syncingOrders": "Syncing orders...",
@@ -2861,6 +2862,7 @@ const en = {
   // POS Frequently Bought
   "pos.frequentlyBought": "Frequently Bought",
   "pos.bestSellers": "Best Sellers",
+  "pos.justNow": "Just Now",
 };
 
 export default en;

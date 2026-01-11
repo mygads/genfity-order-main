@@ -352,7 +352,11 @@ export default function POSPage() {
         orderNotes,
         customerInfo,
       });
+      return;
     }
+
+    // When cart becomes empty, ensure any persisted cart is removed.
+    clearCartFromStorage();
   }, [cartItems, orderType, tableNumber, orderNotes, customerInfo]);
 
   // Load cart from localStorage on mount
@@ -593,6 +597,7 @@ export default function POSPage() {
     setTableNumber('');
     setOrderNotes('');
     setCustomerInfo({});
+    clearCartFromStorage();
   }, []);
 
   // Format currency for display - A$ for AUD, Rp for IDR
@@ -1308,6 +1313,7 @@ export default function POSPage() {
         orderDetails={pendingOrderDetails || undefined}
         merchantInfo={merchant ? {
           name: merchant.name || merchant.code || 'Merchant',
+          code: merchant.code,
           address: merchant.address,
           phone: merchant.phone,
           email: merchant.email,
@@ -1335,6 +1341,7 @@ export default function POSPage() {
         }}
         merchantInfo={merchant ? {
           name: merchant.name,
+          code: merchant.code,
           logoUrl: merchant.logoUrl,
           address: merchant.address,
           phone: merchant.phone,

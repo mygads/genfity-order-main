@@ -2773,6 +2773,7 @@ const id = {
   "pos.required": "Wajib",
   "pos.soldOut": "HABIS",
   "pos.pay": "Bayar",
+  "pos.createOrder": "Buat Pesanan",
   "pos.offlineMode": "Mode Offline",
   "pos.offlineOrderQueued": "Pesanan disimpan dan akan disinkronkan saat online",
   "pos.syncingOrders": "Menyinkronkan pesanan...",
@@ -2855,6 +2856,7 @@ const id = {
   // POS Frequently Bought
   "pos.frequentlyBought": "Sering Dibeli",
   "pos.bestSellers": "Terlaris",
+  "pos.justNow": "Baru Sekarang",
 };
 
 export default id;
