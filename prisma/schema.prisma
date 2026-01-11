@@ -400,6 +400,9 @@ model Merchant {
   deletePin              String?               @map("delete_pin")
   // Group Order relation
   groupOrderSessions     GroupOrderSession[]
+  
+  // Receipt Template Settings (JSON field with customization options)
+  receiptSettings        Json?                 @map("receipt_settings") @db.JsonB
 
   @@index([code])
   @@index([isActive])

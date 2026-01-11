@@ -143,6 +143,8 @@ async function handlePut(req: NextRequest, authContext: AuthContext) {
         timezone: body.timezone,
         latitude: body.latitude,
         longitude: body.longitude,
+        // Receipt settings
+        receiptSettings: body.receiptSettings,
       }
     );
 

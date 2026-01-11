@@ -18,6 +18,7 @@ import {
   FaChevronLeft,
   FaChevronRight,
   FaTrash,
+  FaPrint,
 } from 'react-icons/fa';
 import { OrderStatus, PaymentStatus, OrderType } from '@prisma/client';
 import { exportOrdersToCSV, exportOrdersToExcel } from '@/lib/utils/exportOrders';
@@ -46,6 +47,7 @@ interface OrderHistoryTableProps {
   orders: Order[];
   onViewOrder?: (orderId: string | number) => void;
   onDeleteOrder?: (orderId: string | number) => void;
+  onPrintReceipt?: (orderId: string | number) => void;
   hasDeletePin?: boolean;
   loading?: boolean;
 }
@@ -98,6 +100,7 @@ export const OrderHistoryTable: React.FC<OrderHistoryTableProps> = ({
   orders,
   onViewOrder,
   onDeleteOrder,
+  onPrintReceipt,
   hasDeletePin = false,
   loading = false,
 }) => {
@@ -401,6 +404,15 @@ export const OrderHistoryTable: React.FC<OrderHistoryTableProps> = ({
                           <FaEye />
                           View
                         </button>
+                        {onPrintReceipt && (
+                          <button
+                            onClick={() => onPrintReceipt(order.id)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400 text-sm hover:bg-brand-100 dark:hover:bg-brand-900/40 transition-colors"
+                            title="Print Receipt"
+                          >
+                            <FaPrint />
+                          </button>
+                        )}
                         <button
                           onClick={() => onDeleteOrder?.(order.id)}
                           className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-error-200 dark:border-error-800 bg-error-50 dark:bg-error-900/20 text-error-600 dark:text-error-400 text-sm hover:bg-error-100 dark:hover:bg-error-900/40 transition-colors"

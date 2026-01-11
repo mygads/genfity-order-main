@@ -17,6 +17,8 @@ import type { OrderStatus, OrderType } from '@prisma/client';
 import { useMerchant } from '@/context/MerchantContext';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { useToast } from '@/context/ToastContext';
+import { printReceipt } from '@/lib/utils/unifiedReceipt';
+import { ReceiptSettings, DEFAULT_RECEIPT_SETTINGS } from '@/lib/types/receiptSettings';
 
 // ===== TYPES =====
 
@@ -170,6 +172,96 @@ export default function OrderHistoryPage() {
     setDeleteOrderNumber(null);
   };
 
+  // Print receipt for an order using unified receipt generator
+  const handlePrintReceipt = async (orderId: string | number) => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) return;
+
+      // Fetch order details
+      const response = await fetch(`/api/merchant/orders/${orderId}`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      
+      if (!response.ok) {
+        showError(t('admin.history.printFailed') || 'Failed to load order');
+        return;
+      }
+
+      const data = await response.json();
+      if (!data.success) {
+        showError(data.message || 'Failed to load order');
+        return;
+      }
+
+      const order = data.data;
+      const language = merchantData?.currency === 'IDR' ? 'id' : 'en';
+
+      // Merge receipt settings with defaults
+      const settings: ReceiptSettings = {
+        ...DEFAULT_RECEIPT_SETTINGS,
+        ...(merchantData?.receiptSettings || {}),
+      };
+
+      // Use unified receipt generator
+      printReceipt({
+        order: {
+          orderNumber: order.orderNumber,
+          orderType: order.orderType,
+          tableNumber: order.tableNumber,
+          customerName: order.customerName,
+          customerPhone: order.customerPhone,
+          placedAt: order.placedAt,
+          paidAt: order.paidAt,
+          items: (order.orderItems || []).map((item: { 
+            quantity: number; 
+            menuName: string; 
+            unitPrice?: number;
+            subtotal: number; 
+            notes?: string; 
+            addons?: Array<{ addonName: string; addonPrice?: number }> 
+          }) => ({
+            quantity: item.quantity,
+            menuName: item.menuName,
+            unitPrice: item.unitPrice,
+            subtotal: Number(item.subtotal) || 0,
+            notes: item.notes,
+            addons: item.addons?.map(addon => ({
+              addonName: addon.addonName,
+              addonPrice: addon.addonPrice,
+            })),
+          })),
+          subtotal: Number(order.subtotal) || 0,
+          taxAmount: Number(order.taxAmount) || 0,
+          serviceChargeAmount: Number(order.serviceChargeAmount) || 0,
+          packagingFeeAmount: Number(order.packagingFeeAmount) || 0,
+          discountAmount: Number(order.discountAmount) || 0,
+          totalAmount: Number(order.totalAmount) || 0,
+          amountPaid: order.payment?.amountPaid ? Number(order.payment.amountPaid) : undefined,
+          changeAmount: order.payment?.changeAmount ? Number(order.payment.changeAmount) : undefined,
+          paymentMethod: order.payment?.method,
+          paymentStatus: order.payment?.status,
+          cashierName: order.cashierName,
+        },
+        merchant: {
+          name: merchantData?.name || '',
+          logoUrl: merchantData?.logoUrl,
+          address: merchantData?.address,
+          phone: merchantData?.phone,
+          email: merchantData?.email,
+          currency: merchantData?.currency || 'AUD',
+        },
+        settings,
+        language,
+      });
+
+      showSuccess(t('admin.history.printSuccess') || 'Receipt printed');
+    } catch (error) {
+      console.error('Print receipt error:', error);
+      showError(t('admin.history.printFailed') || 'Failed to print receipt');
+    }
+  };
+
   return (
     <div data-tutorial="order-history-page">
       {/* Title Section */}
@@ -198,6 +290,7 @@ export default function OrderHistoryPage() {
           orders={orderData.orders}
           onViewOrder={handleViewOrder}
           onDeleteOrder={handleDeleteOrder}
+          onPrintReceipt={handlePrintReceipt}
           hasDeletePin={hasDeletePin}
           loading={loading}
         />

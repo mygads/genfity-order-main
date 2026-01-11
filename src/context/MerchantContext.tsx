@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { formatCurrency as formatCurrencyUtil } from '@/lib/utils/format';
+import { ReceiptSettings } from '@/lib/types/receiptSettings';
 
 /**
  * Merchant Context
@@ -25,7 +26,9 @@ interface Merchant {
   logoUrl?: string;
   address?: string;
   phone?: string;
+  email?: string;
   hasDeletePin?: boolean;
+  receiptSettings?: Partial<ReceiptSettings> | null;
 }
 
 interface MerchantContextType {

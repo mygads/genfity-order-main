@@ -45,6 +45,8 @@ import {
   POSPaymentModal,
   POSSkeleton,
   POSOrderHistoryPanel,
+  POSHeldOrdersPanel,
+  POSPendingOrdersPanel,
   CustomerInfoModal,
   TableNumberModal,
   OrderNotesModal,
@@ -80,7 +82,24 @@ interface POSMenuData {
   merchant: MerchantSettings;
   categories: MenuCategory[];
   menuItems: (ProductMenuItem & { addonCategories: AddonCategory[] })[];
+  popularMenuIds?: (number | string)[]; // IDs of frequently ordered items
 }
+
+// Held order interface
+interface HeldOrder {
+  id: string;
+  createdAt: string;
+  orderType: 'DINE_IN' | 'TAKEAWAY';
+  tableNumber?: string;
+  notes?: string;
+  customerInfo?: CartCustomerInfo;
+  items: CartItem[];
+  name?: string; // Optional name for the held order
+}
+
+// Storage key for held orders
+const HELD_ORDERS_STORAGE_KEY = 'pos_held_orders';
+const HELD_ORDERS_EXPIRY_DAYS = 1; // Auto-expire after 1 day
 
 type DisplayMode = 'normal' | 'clean' | 'fullscreen';
 
@@ -108,6 +127,7 @@ export default function POSPage() {
     isSyncing,
     pendingCount,
     addPendingOrder,
+    removePendingOrder,
     syncPendingOrders,
   } = useOfflineSync();
 
@@ -154,6 +174,14 @@ export default function POSPage() {
   
   // Order history panel state
   const [showOrderHistory, setShowOrderHistory] = useState(false);
+  
+  // Held orders (Save/Hold functionality)
+  const [heldOrders, setHeldOrders] = useState<HeldOrder[]>([]);
+  const [showHeldOrdersPanel, setShowHeldOrdersPanel] = useState(false);
+  const [showPendingOrdersPanel, setShowPendingOrdersPanel] = useState(false);
+  
+  // Popular menu IDs for frequently bought category
+  const [popularMenuIds, setPopularMenuIds] = useState<(number | string)[]>([]);
   
   // Order details for receipt printing
   const [pendingOrderDetails, setPendingOrderDetails] = useState<{
@@ -262,6 +290,171 @@ export default function POSPage() {
       setDisplayMode('normal');
     }
   };
+
+  // ========================================
+  // HELD ORDERS MANAGEMENT
+  // ========================================
+
+  // Load held orders from localStorage on mount
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    try {
+      const stored = localStorage.getItem(HELD_ORDERS_STORAGE_KEY);
+      if (stored) {
+        const parsed: HeldOrder[] = JSON.parse(stored);
+        // Filter out expired orders (older than HELD_ORDERS_EXPIRY_DAYS)
+        const now = new Date();
+        const validOrders = parsed.filter(order => {
+          const createdAt = new Date(order.createdAt);
+          const diffDays = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24);
+          return diffDays < HELD_ORDERS_EXPIRY_DAYS;
+        });
+        setHeldOrders(validOrders);
+        
+        // Save back filtered list
+        if (validOrders.length !== parsed.length) {
+          localStorage.setItem(HELD_ORDERS_STORAGE_KEY, JSON.stringify(validOrders));
+        }
+      }
+    } catch (error) {
+      console.error('[POS] Error loading held orders:', error);
+    }
+  }, []);
+
+  // Save held orders to localStorage when they change
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    try {
+      localStorage.setItem(HELD_ORDERS_STORAGE_KEY, JSON.stringify(heldOrders));
+    } catch (error) {
+      console.error('[POS] Error saving held orders:', error);
+    }
+  }, [heldOrders]);
+
+  // Auto-save cart to localStorage when it changes (cart persistence)
+  useEffect(() => {
+    if (cartItems.length > 0) {
+      saveCartToStorage({
+        items: cartItems,
+        orderType,
+        tableNumber,
+        orderNotes,
+        customerInfo,
+      });
+    }
+  }, [cartItems, orderType, tableNumber, orderNotes, customerInfo]);
+
+  // Load cart from localStorage on mount
+  useEffect(() => {
+    const savedCart = loadCartFromStorage();
+    if (savedCart && savedCart.items.length > 0) {
+      // Check if cart is not too old (less than 4 hours)
+      const savedAt = new Date(savedCart.savedAt);
+      const now = new Date();
+      const diffHours = (now.getTime() - savedAt.getTime()) / (1000 * 60 * 60);
+      
+      if (diffHours < 4) {
+        setCartItems(savedCart.items as CartItem[]);
+        setOrderType(savedCart.orderType);
+        setTableNumber(savedCart.tableNumber);
+        setOrderNotes(savedCart.orderNotes);
+        setCustomerInfo(savedCart.customerInfo);
+      } else {
+        // Clear old cart
+        clearCartFromStorage();
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Hold current order (Save as draft)
+  const handleHoldOrder = useCallback(() => {
+    if (cartItems.length === 0) return;
+    
+    const heldOrder: HeldOrder = {
+      id: `held-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      createdAt: new Date().toISOString(),
+      orderType,
+      tableNumber: tableNumber || undefined,
+      notes: orderNotes || undefined,
+      customerInfo: (customerInfo.name || customerInfo.phone || customerInfo.email)
+        ? customerInfo
+        : undefined,
+      items: [...cartItems],
+      name: tableNumber ? `Table ${tableNumber}` : customerInfo.name || `Order ${heldOrders.length + 1}`,
+    };
+    
+    setHeldOrders(prev => [...prev, heldOrder]);
+    // Clear cart inline to avoid dependency issues
+    setCartItems([]);
+    setTableNumber('');
+    setOrderNotes('');
+    setCustomerInfo({});
+    clearCartFromStorage();
+    showSuccess(t('pos.orderHeld') || 'Order saved', t('pos.orderHeldDesc') || 'You can recall it later');
+  }, [cartItems, orderType, tableNumber, orderNotes, customerInfo, heldOrders.length, showSuccess, t]);
+
+  // Recall a held order
+  const handleRecallOrder = useCallback((orderId: string) => {
+    const order = heldOrders.find(o => o.id === orderId);
+    if (!order) return;
+    
+    // If cart has items, ask for confirmation
+    if (cartItems.length > 0) {
+      if (!confirm(t('pos.recallOrderConfirm') || 'This will replace current cart. Continue?')) {
+        return;
+      }
+    }
+    
+    setCartItems(order.items);
+    setOrderType(order.orderType);
+    setTableNumber(order.tableNumber || '');
+    setOrderNotes(order.notes || '');
+    setCustomerInfo(order.customerInfo || {});
+    
+    // Remove from held orders
+    setHeldOrders(prev => prev.filter(o => o.id !== orderId));
+    setShowHeldOrdersPanel(false);
+    showSuccess(t('pos.orderRecalled') || 'Order recalled');
+  }, [heldOrders, cartItems.length, showSuccess, t]);
+
+  // Delete a held order
+  const handleDeleteHeldOrder = useCallback((orderId: string) => {
+    setHeldOrders(prev => prev.filter(o => o.id !== orderId));
+  }, []);
+
+  // ========================================
+  // FETCH POPULAR MENU IDS
+  // ========================================
+
+  // Fetch popular menu IDs for frequently bought category
+  useEffect(() => {
+    const fetchPopularMenus = async () => {
+      try {
+        const token = localStorage.getItem('accessToken');
+        if (!token) return;
+        
+        // Use analytics endpoint to get top selling items
+        const response = await fetch('/api/merchant/analytics/menu-performance?limit=10', {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data?.topSelling) {
+            const ids = data.data.topSelling.map((item: { menuId: number | string }) => item.menuId);
+            setPopularMenuIds(ids);
+          }
+        }
+      } catch (error) {
+        console.error('[POS] Error fetching popular menus:', error);
+      }
+    };
+    
+    fetchPopularMenus();
+  }, []);
 
   // ========================================
   // DATA FETCHING
@@ -994,6 +1187,26 @@ export default function POSPage() {
             <FaHistory className="w-4 h-4" />
             <span className="hidden sm:inline">{t('pos.orderHistory')}</span>
           </button>
+
+          {/* Pending Orders Button - Only show when offline or has pending orders */}
+          {(pendingCount > 0 || !isOnline) && (
+            <button
+              onClick={() => setShowPendingOrdersPanel(true)}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                isOnline 
+                  ? 'bg-yellow-500/80 text-white hover:bg-yellow-500' 
+                  : 'bg-red-500/80 text-white hover:bg-red-500 animate-pulse'
+              }`}
+              title={isOnline ? t('pos.pendingOrders') : t('pos.offlineMode')}
+            >
+              <FaWifi className={`w-4 h-4 ${!isOnline ? 'opacity-50' : ''}`} />
+              {pendingCount > 0 && (
+                <span className="bg-white text-orange-600 text-xs font-bold px-1.5 py-0.5 rounded-full">
+                  {pendingCount}
+                </span>
+              )}
+            </button>
+          )}
         </div>
       </header>
 
@@ -1023,6 +1236,9 @@ export default function POSPage() {
             onSetCustomerInfo={() => setShowCustomerModal(true)}
             onClearCart={handleClearCart}
             onPlaceOrder={handlePlaceOrder}
+            onHoldOrder={handleHoldOrder}
+            heldOrdersCount={heldOrders.length}
+            onShowHeldOrders={() => setShowHeldOrdersPanel(true)}
             isPlacingOrder={isPlacingOrder}
           />
         </div>
@@ -1036,6 +1252,7 @@ export default function POSPage() {
             isLoading={posLoading}
             onAddItem={handleAddItem}
             gridColumns={gridColumns}
+            popularMenuIds={popularMenuIds}
           />
         </div>
       </div>
@@ -1119,6 +1336,34 @@ export default function POSPage() {
         onRefundSuccess={() => {
           showSuccess(t('pos.refundSuccess') || 'Order refunded successfully');
         }}
+        merchantInfo={merchant ? {
+          name: merchant.name,
+          logoUrl: merchant.logoUrl,
+          address: merchant.address,
+          phone: merchant.phone,
+          email: merchant.email,
+          receiptSettings: merchant.receiptSettings,
+        } : undefined}
+      />
+
+      <POSHeldOrdersPanel
+        isOpen={showHeldOrdersPanel}
+        onClose={() => setShowHeldOrdersPanel(false)}
+        heldOrders={heldOrders}
+        onRecallOrder={handleRecallOrder}
+        onDeleteOrder={handleDeleteHeldOrder}
+        currency={currency}
+      />
+
+      <POSPendingOrdersPanel
+        isOpen={showPendingOrdersPanel}
+        onClose={() => setShowPendingOrdersPanel(false)}
+        pendingOrders={pendingOrders}
+        isOnline={isOnline}
+        isSyncing={isSyncing}
+        onSyncOrders={syncPendingOrders}
+        onDeleteOrder={removePendingOrder}
+        currency={currency}
       />
     </div>
   );

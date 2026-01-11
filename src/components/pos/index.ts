@@ -20,6 +20,11 @@ export { POSSkeleton } from './POSSkeleton';
 
 export { POSOrderHistoryPanel } from './POSOrderHistoryPanel';
 
+export { POSHeldOrdersPanel } from './POSHeldOrdersPanel';
+export type { HeldOrder } from './POSHeldOrdersPanel';
+
+export { POSPendingOrdersPanel } from './POSPendingOrdersPanel';
+
 export {
   CustomerInfoModal,
   TableNumberModal,

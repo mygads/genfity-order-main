@@ -13,6 +13,8 @@ import ToastContainer from "@/components/ui/ToastContainer";
 import { COUNTRIES, CURRENCIES, getCurrencyForCountry, getDefaultTimezoneForCountry, getTimezonesForCountry } from "@/lib/constants/location";
 import PerDayModeSchedule from "@/components/merchants/PerDayModeSchedule";
 import SpecialHoursManager from "@/components/merchants/SpecialHoursManager";
+import { ReceiptTemplateTab } from "@/components/merchants/ReceiptTemplateTab";
+import { ReceiptSettings, DEFAULT_RECEIPT_SETTINGS } from "@/lib/types/receiptSettings";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { TranslationKeys } from "@/lib/i18n";
 import SubscriptionRequired from "@/components/subscription/SubscriptionRequired";
@@ -52,6 +54,8 @@ interface MerchantFormData {
   serviceChargePercent: number;
   enablePackagingFee: boolean;
   packagingFeeAmount: number;
+  // Receipt settings
+  receiptSettings: ReceiptSettings;
 }
 
 interface OpeningHour {
@@ -70,6 +74,7 @@ const TAB_KEYS: Array<{ id: string; key: TranslationKeys }> = [
   { id: "fees", key: "admin.merchant.feesCharges" },
   { id: "location", key: "admin.merchant.location" },
   { id: "hours", key: "admin.merchant.openingHours" },
+  { id: "receipt", key: "admin.merchant.receiptTemplate" },
   { id: "pin", key: "admin.merchant.pin" },
 ];
 
@@ -141,6 +146,8 @@ export default function EditMerchantPage() {
     serviceChargePercent: 0,
     enablePackagingFee: false,
     packagingFeeAmount: 0,
+    // Receipt settings
+    receiptSettings: { ...DEFAULT_RECEIPT_SETTINGS },
   });
 
   const [openingHours, setOpeningHours] = useState<OpeningHour[]>([
@@ -222,6 +229,11 @@ export default function EditMerchantPage() {
         serviceChargePercent: merchant.serviceChargePercent ? parseFloat(merchant.serviceChargePercent) : 0,
         enablePackagingFee: merchant.enablePackagingFee || false,
         packagingFeeAmount: merchant.packagingFeeAmount ? parseFloat(merchant.packagingFeeAmount) : 0,
+        // Receipt settings (merge with defaults)
+        receiptSettings: {
+          ...DEFAULT_RECEIPT_SETTINGS,
+          ...(merchant.receiptSettings || {}),
+        },
       });
 
       // Set PIN status
@@ -282,6 +294,10 @@ export default function EditMerchantPage() {
         serviceChargePercent: merchant.serviceChargePercent ? parseFloat(merchant.serviceChargePercent) : 0,
         enablePackagingFee: merchant.enablePackagingFee || false,
         packagingFeeAmount: merchant.packagingFeeAmount ? parseFloat(merchant.packagingFeeAmount) : 0,
+        receiptSettings: {
+          ...DEFAULT_RECEIPT_SETTINGS,
+          ...(merchant.receiptSettings || {}),
+        },
       };
       setOriginalFormData(originalData);
     } catch (err) {
@@ -1322,6 +1338,21 @@ export default function EditMerchantPage() {
         return <LocationTab />;
       case "hours":
         return <OpeningHoursTab />;
+      case "receipt":
+        return (
+          <ReceiptTemplateTab
+            settings={formData.receiptSettings}
+            onChange={(settings) => setFormData(prev => ({ ...prev, receiptSettings: settings }))}
+            merchantInfo={{
+              name: formData.name,
+              logoUrl: formData.logoUrl,
+              address: formData.address,
+              phone: formData.phoneNumber,
+              email: formData.email,
+              currency: formData.currency,
+            }}
+          />
+        );
       case "pin":
         // PIN tab rendered inline to avoid re-mount on state change
         return (

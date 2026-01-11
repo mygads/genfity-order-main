@@ -73,6 +73,9 @@ interface POSCartPanelProps {
   onSetCustomerInfo: () => void;
   onClearCart: () => void;
   onPlaceOrder: () => void;
+  onHoldOrder?: () => void;
+  heldOrdersCount?: number;
+  onShowHeldOrders?: () => void;
   isPlacingOrder?: boolean;
 }
 
@@ -98,6 +101,9 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
   onSetCustomerInfo,
   onClearCart,
   onPlaceOrder,
+  onHoldOrder,
+  heldOrdersCount = 0,
+  onShowHeldOrders,
   isPlacingOrder = false,
 }) => {
   const { t } = useTranslation();
@@ -366,18 +372,45 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-2 mt-4">
-          <button
-            onClick={onClearCart}
-            disabled={items.length === 0 || isPlacingOrder}
-            className="py-2.5 px-4 rounded-lg text-sm font-medium bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {t('pos.clearCart')}
-          </button>
+        <div className="flex flex-col gap-2 mt-4">
+          {/* Top Row: Clear and Hold */}
+          <div className="flex gap-2">
+            <button
+              onClick={onClearCart}
+              disabled={items.length === 0 || isPlacingOrder}
+              className="flex-1 py-2 px-3 rounded-lg text-sm font-medium bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1"
+            >
+              <FaTimes className="w-3 h-3" />
+              {t('pos.clearCart')}
+            </button>
+            {onHoldOrder && (
+              <button
+                onClick={onHoldOrder}
+                disabled={items.length === 0 || isPlacingOrder}
+                className="flex-1 py-2 px-3 rounded-lg text-sm font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1"
+              >
+                <FaStickyNote className="w-3 h-3" />
+                {t('pos.hold') || 'Simpan'}
+              </button>
+            )}
+          </div>
+          
+          {/* Held Orders Button */}
+          {onShowHeldOrders && heldOrdersCount > 0 && (
+            <button
+              onClick={onShowHeldOrders}
+              className="w-full py-2 px-3 rounded-lg text-sm font-medium bg-yellow-100 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-200 dark:hover:bg-yellow-900/30 transition-colors flex items-center justify-center gap-2"
+            >
+              <span>📋</span>
+              {t('pos.heldOrders') || 'Pesanan Tertunda'} ({heldOrdersCount})
+            </button>
+          )}
+          
+          {/* Pay Button */}
           <button
             onClick={onPlaceOrder}
             disabled={items.length === 0 || isPlacingOrder}
-            className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+            className="w-full py-3 px-4 rounded-lg text-sm font-medium bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
           >
             {isPlacingOrder ? (
               <>

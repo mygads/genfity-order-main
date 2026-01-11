@@ -49,7 +49,14 @@ interface POSProductGridProps {
   isLoading?: boolean;
   onAddItem: (item: MenuItem) => void;
   gridColumns?: number;
+  popularMenuIds?: (number | string)[]; // IDs of frequently ordered items
 }
+
+// Special category IDs for virtual categories
+const SPECIAL_CATEGORIES = {
+  POPULAR: '__popular__',
+  BEST_SELLER: '__bestseller__',
+};
 
 export const POSProductGrid: React.FC<POSProductGridProps> = ({
   categories,
@@ -58,6 +65,7 @@ export const POSProductGrid: React.FC<POSProductGridProps> = ({
   isLoading = false,
   onAddItem,
   gridColumns = 5,
+  popularMenuIds = [],
 }) => {
   const { t } = useTranslation();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -88,8 +96,16 @@ export const POSProductGrid: React.FC<POSProductGridProps> = ({
   const filteredItems = useMemo(() => {
     let items = menuItems.filter(item => item.isActive);
 
-    // Filter by category
-    if (selectedCategory) {
+    // Filter by special category (Popular)
+    if (selectedCategory === SPECIAL_CATEGORIES.POPULAR) {
+      items = items.filter(item => popularMenuIds.includes(item.id) || popularMenuIds.includes(String(item.id)));
+    } 
+    // Filter by special category (Best Sellers)
+    else if (selectedCategory === SPECIAL_CATEGORIES.BEST_SELLER) {
+      items = items.filter(item => item.isBestSeller);
+    }
+    // Filter by regular category
+    else if (selectedCategory) {
       items = items.filter(item => 
         String(item.categoryId) === String(selectedCategory)
       );
@@ -110,6 +126,27 @@ export const POSProductGrid: React.FC<POSProductGridProps> = ({
   // Check if item is out of stock
   const isOutOfStock = (item: MenuItem): boolean => {
     return item.trackStock === true && (item.stockQty === null || item.stockQty === undefined || item.stockQty <= 0);
+  };
+
+  // Check if item has low stock (5 or less)
+  const isLowStock = (item: MenuItem): boolean => {
+    return item.trackStock === true && item.stockQty !== null && item.stockQty !== undefined && item.stockQty > 0 && item.stockQty <= 5;
+  };
+
+  // Get stock status label
+  const getStockLabel = (item: MenuItem): { text: string; className: string } | null => {
+    if (!item.trackStock || item.stockQty === null || item.stockQty === undefined) return null;
+    
+    if (item.stockQty <= 0) {
+      return { text: t('pos.soldOut') || 'SOLD OUT', className: 'bg-red-500 text-white' };
+    }
+    if (item.stockQty <= 3) {
+      return { text: `${t('pos.stock') || 'Stock'}: ${item.stockQty}`, className: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' };
+    }
+    if (item.stockQty <= 5) {
+      return { text: `${t('pos.stock') || 'Stock'}: ${item.stockQty}`, className: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' };
+    }
+    return { text: `${t('pos.stock') || 'Stock'}: ${item.stockQty}`, className: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' };
   };
 
   // Dynamic grid classes based on gridColumns prop (1-12 range)
@@ -167,6 +204,37 @@ export const POSProductGrid: React.FC<POSProductGridProps> = ({
           >
             {t('pos.allItems')}
           </button>
+          
+          {/* Popular Items (Frequently Bought) - Only show if there are popular items */}
+          {popularMenuIds.length > 0 && (
+            <button
+              onClick={() => setSelectedCategory(SPECIAL_CATEGORIES.POPULAR)}
+              className={`shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                selectedCategory === SPECIAL_CATEGORIES.POPULAR
+                  ? 'bg-orange-500 text-white'
+                  : 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/30 border border-orange-200 dark:border-orange-800'
+              }`}
+            >
+              <span>🔥</span>
+              {t('pos.frequentlyBought') || 'Frequently Bought'}
+            </button>
+          )}
+          
+          {/* Best Sellers - Only show if there are best seller items */}
+          {menuItems.some(item => item.isBestSeller && item.isActive) && (
+            <button
+              onClick={() => setSelectedCategory(SPECIAL_CATEGORIES.BEST_SELLER)}
+              className={`shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                selectedCategory === SPECIAL_CATEGORIES.BEST_SELLER
+                  ? 'bg-orange-500 text-white'
+                  : 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-100 dark:hover:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800'
+              }`}
+            >
+              <span>⭐</span>
+              {t('pos.bestSellers') || 'Best Sellers'}
+            </button>
+          )}
+          
           {categories.map((category) => (
             <button
               key={category.id}
@@ -300,8 +368,8 @@ export const POSProductGrid: React.FC<POSProductGridProps> = ({
 
                     {/* Out of Stock Overlay */}
                     {outOfStock && (
-                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                        <span className="px-3 py-1.5 bg-red-500 text-white text-xs font-bold rounded uppercase">
+                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                        <span className="px-3 py-1.5 bg-red-600 text-white text-xs font-bold rounded uppercase shadow-lg">
                           {t('pos.soldOut') || 'HABIS'}
                         </span>
                       </div>
@@ -316,18 +384,18 @@ export const POSProductGrid: React.FC<POSProductGridProps> = ({
                       </div>
                     )}
 
-                    {/* Stock indicator */}
-                    {item.trackStock && item.stockQty !== null && item.stockQty !== undefined && item.stockQty > 0 && (
-                      <div className="absolute bottom-2 left-2">
-                        <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
-                          item.stockQty <= 5
-                            ? 'bg-red-100 text-red-600'
-                            : 'bg-gray-100 text-gray-600'
-                        }`}>
-                          {t('pos.stock')}: {item.stockQty}
-                        </span>
-                      </div>
-                    )}
+                    {/* Stock indicator - Enhanced */}
+                    {(() => {
+                      const stockLabel = getStockLabel(item);
+                      if (!stockLabel || outOfStock) return null;
+                      return (
+                        <div className="absolute bottom-2 left-2">
+                          <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${stockLabel.className}`}>
+                            {stockLabel.text}
+                          </span>
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Info - Fixed size regardless of grid */}

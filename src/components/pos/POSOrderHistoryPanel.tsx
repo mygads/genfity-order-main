@@ -6,6 +6,7 @@
  * - Order status and payment info
  * - Refund/void capability with PIN verification
  * - Orange theme consistent with POS
+ * - Unified receipt printing with customizable settings
  */
 
 'use client';
@@ -31,6 +32,8 @@ import {
 } from 'react-icons/fa';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { DeletePinModal } from '@/components/modals/DeletePinModal';
+import { printReceipt } from '@/lib/utils/unifiedReceipt';
+import { ReceiptSettings, DEFAULT_RECEIPT_SETTINGS } from '@/lib/types/receiptSettings';
 
 // ============================================
 // TYPES
@@ -73,12 +76,22 @@ interface Order {
   items: OrderItem[];
 }
 
+interface MerchantInfo {
+  name: string;
+  logoUrl?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  receiptSettings?: Partial<ReceiptSettings> | null;
+}
+
 interface POSOrderHistoryPanelProps {
   isOpen: boolean;
   onClose: () => void;
   currency: string;
   hasDeletePin?: boolean;
   onRefundSuccess?: () => void;
+  merchantInfo?: MerchantInfo;
 }
 
 // ============================================
@@ -91,6 +104,7 @@ export const POSOrderHistoryPanel: React.FC<POSOrderHistoryPanelProps> = ({
   currency,
   hasDeletePin = true,
   onRefundSuccess,
+  merchantInfo,
 }) => {
   const { t } = useTranslation();
   
@@ -234,111 +248,61 @@ export const POSOrderHistoryPanel: React.FC<POSOrderHistoryPanelProps> = ({
     }
   }, [refundingOrderId, selectedOrder, onRefundSuccess]);
 
-  // Print receipt
+  // Print receipt using unified receipt generator
   const handlePrintReceipt = (order: Order) => {
-    // Generate and print receipt HTML
-    const printWindow = window.open('', '_blank', 'width=300,height=600');
-    if (!printWindow) return;
-
-    const isIDR = currency === 'IDR';
-    const labels = isIDR ? {
-      orderNumber: 'Pesanan #',
-      table: 'Meja',
-      dineIn: 'Makan di Tempat',
-      takeaway: 'Bawa Pulang',
-      subtotal: 'Subtotal',
-      tax: 'Pajak',
-      serviceCharge: 'Biaya Layanan',
-      packagingFee: 'Biaya Kemasan',
-      discount: 'Diskon',
-      total: 'TOTAL',
-      paymentMethod: 'Metode Pembayaran',
-      amountPaid: 'Jumlah Dibayar',
-      change: 'Kembalian',
-      thankYou: 'Terima kasih!',
-    } : {
-      orderNumber: 'Order #',
-      table: 'Table',
-      dineIn: 'Dine In',
-      takeaway: 'Takeaway',
-      subtotal: 'Subtotal',
-      tax: 'Tax',
-      serviceCharge: 'Service Charge',
-      packagingFee: 'Packaging Fee',
-      discount: 'Discount',
-      total: 'TOTAL',
-      paymentMethod: 'Payment Method',
-      amountPaid: 'Amount Paid',
-      change: 'Change',
-      thankYou: 'Thank you!',
+    // Get language based on currency (IDR = Indonesian)
+    const language = currency === 'IDR' ? 'id' : 'en';
+    
+    // Merge receipt settings with defaults
+    const settings: ReceiptSettings = {
+      ...DEFAULT_RECEIPT_SETTINGS,
+      ...(merchantInfo?.receiptSettings || {}),
     };
-
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>${labels.orderNumber}${order.orderNumber}</title>
-        <style>
-          body { font-family: 'Courier New', monospace; font-size: 12px; padding: 10px; max-width: 280px; margin: 0 auto; }
-          .header { text-align: center; border-bottom: 2px dashed #000; padding-bottom: 10px; margin-bottom: 10px; }
-          .row { display: flex; justify-content: space-between; margin: 4px 0; }
-          .item { margin: 6px 0; }
-          .item-addon { margin-left: 12px; font-size: 10px; }
-          .total { font-size: 16px; font-weight: bold; margin-top: 10px; }
-          .footer { text-align: center; margin-top: 15px; border-top: 2px dashed #000; padding-top: 10px; }
-          @media print { @page { margin: 0; size: 80mm auto; } }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <h2>${labels.orderNumber}${order.orderNumber}</h2>
-          <p>${order.orderType === 'DINE_IN' ? labels.dineIn : labels.takeaway}${order.tableNumber ? ` - ${labels.table} ${order.tableNumber}` : ''}</p>
-          <p>${formatTime(order.createdAt)}</p>
-        </div>
-        
-        <div>
-          ${order.items.map(item => `
-            <div class="item">
-              <div class="row">
-                <span>${item.quantity}x ${item.menuName}</span>
-                <span>${formatCurrency(item.subtotal)}</span>
-              </div>
-              ${item.addons?.map(addon => `
-                <div class="item-addon">+ ${addon.addonName}</div>
-              `).join('') || ''}
-            </div>
-          `).join('')}
-        </div>
-        
-        <div style="margin-top: 10px; border-top: 1px dashed #ccc; padding-top: 8px;">
-          <div class="row"><span>${labels.subtotal}</span><span>${formatCurrency(order.subtotal)}</span></div>
-          ${order.taxAmount > 0 ? `<div class="row"><span>${labels.tax}</span><span>${formatCurrency(order.taxAmount)}</span></div>` : ''}
-          ${order.serviceChargeAmount > 0 ? `<div class="row"><span>${labels.serviceCharge}</span><span>${formatCurrency(order.serviceChargeAmount)}</span></div>` : ''}
-          ${order.packagingFeeAmount > 0 ? `<div class="row"><span>${labels.packagingFee}</span><span>${formatCurrency(order.packagingFeeAmount)}</span></div>` : ''}
-          ${order.discountAmount && order.discountAmount > 0 ? `<div class="row" style="color: green;"><span>${labels.discount}</span><span>-${formatCurrency(order.discountAmount)}</span></div>` : ''}
-          <div class="row total"><span>${labels.total}</span><span>${formatCurrency(order.totalAmount)}</span></div>
-        </div>
-        
-        ${order.paymentStatus === 'PAID' ? `
-          <div style="margin-top: 10px;">
-            <div class="row"><span>${labels.amountPaid}</span><span>${formatCurrency(order.amountPaid || order.totalAmount)}</span></div>
-            ${order.changeAmount && order.changeAmount > 0 ? `<div class="row"><span>${labels.change}</span><span>${formatCurrency(order.changeAmount)}</span></div>` : ''}
-          </div>
-        ` : ''}
-        
-        <div class="footer">
-          <p>${labels.thankYou}</p>
-        </div>
-      </body>
-      </html>
-    `;
-
-    printWindow.document.write(html);
-    printWindow.document.close();
-    printWindow.onload = () => {
-      printWindow.print();
-      setTimeout(() => printWindow.close(), 100);
-    };
+    
+    // Print using unified receipt generator
+    printReceipt({
+      order: {
+        orderNumber: order.orderNumber,
+        orderType: order.orderType,
+        tableNumber: order.tableNumber,
+        customerName: order.customerName,
+        customerPhone: order.customerPhone,
+        placedAt: order.createdAt,
+        paidAt: order.paidAt,
+        items: order.items.map(item => ({
+          quantity: item.quantity,
+          menuName: item.menuName,
+          unitPrice: item.unitPrice,
+          subtotal: item.subtotal,
+          notes: item.notes,
+          addons: item.addons?.map(addon => ({
+            addonName: addon.addonName,
+            addonPrice: addon.addonPrice,
+          })),
+        })),
+        subtotal: order.subtotal,
+        taxAmount: order.taxAmount,
+        serviceChargeAmount: order.serviceChargeAmount,
+        packagingFeeAmount: order.packagingFeeAmount,
+        discountAmount: order.discountAmount,
+        totalAmount: order.totalAmount,
+        amountPaid: order.amountPaid,
+        changeAmount: order.changeAmount,
+        paymentMethod: order.paymentMethod,
+        paymentStatus: order.paymentStatus,
+        cashierName: undefined, // Not available in this context
+      },
+      merchant: {
+        name: merchantInfo?.name || '',
+        logoUrl: merchantInfo?.logoUrl,
+        address: merchantInfo?.address,
+        phone: merchantInfo?.phone,
+        email: merchantInfo?.email,
+        currency: currency,
+      },
+      settings,
+      language,
+    });
   };
 
   if (!isOpen) return null;

@@ -86,6 +86,8 @@ export interface UpdateMerchantInput {
   timezone?: string;
   latitude?: number | null;
   longitude?: number | null;
+  // Receipt settings
+  receiptSettings?: Record<string, unknown>;
 }
 
 /**
@@ -369,6 +371,8 @@ class MerchantService {
     if (input.timezone !== undefined) updateData.timezone = input.timezone;
     if (input.latitude !== undefined) updateData.latitude = input.latitude;
     if (input.longitude !== undefined) updateData.longitude = input.longitude;
+    // Receipt settings
+    if (input.receiptSettings !== undefined) updateData.receiptSettings = input.receiptSettings;
 
     // Update merchant
     return await merchantRepository.update(merchantId, updateData);

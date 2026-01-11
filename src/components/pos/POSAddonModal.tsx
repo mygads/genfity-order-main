@@ -127,6 +127,27 @@ export const POSAddonModal: React.FC<POSAddonModalProps> = ({
     return addon.trackStock === true && (addon.stockQty === null || addon.stockQty === undefined || addon.stockQty <= 0);
   };
 
+  // Check if addon has low stock
+  const isAddonLowStock = (addon: AddonItem): boolean => {
+    return addon.trackStock === true && addon.stockQty !== null && addon.stockQty !== undefined && addon.stockQty > 0 && addon.stockQty <= 5;
+  };
+
+  // Get addon stock label
+  const getAddonStockLabel = (addon: AddonItem): { text: string; className: string } | null => {
+    if (!addon.trackStock || addon.stockQty === null || addon.stockQty === undefined) return null;
+    
+    if (addon.stockQty <= 0) {
+      return { text: t('pos.outOfStock') || 'Out of stock', className: 'text-red-500' };
+    }
+    if (addon.stockQty <= 3) {
+      return { text: `${addon.stockQty} ${t('pos.left') || 'left'}`, className: 'text-red-500 font-medium' };
+    }
+    if (addon.stockQty <= 5) {
+      return { text: `${addon.stockQty} ${t('pos.left') || 'left'}`, className: 'text-yellow-600 dark:text-yellow-400' };
+    }
+    return null; // Don't show for normal stock levels
+  };
+
   // Determine if category is single-select (radio button behavior)
   const isSingleSelect = (category: AddonCategory): boolean => {
     return category.maxSelection === 1;
@@ -538,10 +559,19 @@ export const POSAddonModal: React.FC<POSAddonModalProps> = ({
                               {addon.name}
                             </span>
                             {outOfStock && (
-                              <span className="ml-2 text-xs text-red-500">
+                              <span className="ml-2 text-xs text-red-500 font-medium">
                                 ({t('pos.outOfStock')})
                               </span>
                             )}
+                            {!outOfStock && (() => {
+                              const stockLabel = getAddonStockLabel(addon);
+                              if (!stockLabel) return null;
+                              return (
+                                <span className={`ml-2 text-xs ${stockLabel.className}`}>
+                                  ({stockLabel.text})
+                                </span>
+                              );
+                            })()}
                           </div>
                         </div>
 
