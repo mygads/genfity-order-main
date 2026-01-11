@@ -16,6 +16,7 @@ import type { CachedAddonCategory } from '@/lib/utils/addonExtractor';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { TranslationKeys } from '@/lib/i18n';
 import { useStoreStatus } from '@/hooks/useStoreStatus';
+import { customerOrderUrl } from '@/lib/utils/customerRoutes';
 
 interface MenuItem {
   id: string;
@@ -73,7 +74,7 @@ export default function SearchPage() {
 
   const merchantCode = params.merchantCode as string;
   const mode = searchParams.get('mode') || 'takeaway';
-  const refUrl = searchParams.get('ref') || `/${merchantCode}/order?mode=${mode}`;
+  const refUrl = searchParams.get('ref') || customerOrderUrl(merchantCode, { mode });
 
   // ✅ Check store status (open/closed)
   const { storeOpen } = useStoreStatus(merchantCode, { refreshInterval: 30000 });

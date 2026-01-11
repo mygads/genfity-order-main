@@ -10,6 +10,7 @@ import { useCart } from '@/context/CartContext';
 import { useToast } from '@/context/ToastContext';
 import { useCustomerData } from '@/context/CustomerDataContext';
 import { FaFileDownload, FaStickyNote } from 'react-icons/fa';
+import { customerMerchantHomeUrl, customerOrderUrl, customerTrackUrl } from '@/lib/utils/customerRoutes';
 
 interface OrderHistoryItem {
   id: bigint;
@@ -257,7 +258,7 @@ export default function OrderHistoryPage() {
       }
 
       // Navigate to cart
-      router.push(`/${order.merchantCode}/order?mode=${orderMode}`);
+      router.push(customerOrderUrl(order.merchantCode, { mode: orderMode }));
 
     } catch (error) {
       console.error('Re-order error:', error);
@@ -360,12 +361,12 @@ export default function OrderHistoryPage() {
     if (ref) {
       router.push(decodeURIComponent(ref));
     } else if (merchantCode) {
-      router.push(`/${merchantCode}`);
+      router.push(customerMerchantHomeUrl(merchantCode));
     } else {
       // Fallback: get last merchant from localStorage
       const lastMerchant = localStorage.getItem('lastMerchantCode');
       if (lastMerchant) {
-        router.push(`/${lastMerchant}`);
+        router.push(customerMerchantHomeUrl(lastMerchant));
       } else {
         router.push('/');
       }
@@ -655,7 +656,7 @@ export default function OrderHistoryPage() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          router.push(`/${order.merchantCode}/track/${order.orderNumber}`);
+                          router.push(customerTrackUrl(order.merchantCode, order.orderNumber, { mode: order.mode }));
                         }}
                         className="flex-1 py-2 text-sm font-semibold text-white bg-orange-500 rounded-lg hover:bg-orange-600 transition-all"
                       >
@@ -698,7 +699,7 @@ export default function OrderHistoryPage() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            router.push(`/${order.merchantCode}/track/${order.orderNumber}`);
+                            router.push(customerTrackUrl(order.merchantCode, order.orderNumber, { mode: order.mode }));
                           }}
                           className="w-10 h-10 flex items-center justify-center text-orange-500 border border-orange-500 rounded-lg hover:bg-orange-50 transition-all"
                           title={t('customer.history.trackOrder')}

@@ -7,6 +7,7 @@ import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState
 import PoweredByFooter from '@/components/common/PoweredByFooter';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import LanguageSelectorModal from '@/components/customer/LanguageSelectorModal';
+import { customerHistoryUrl, customerOrderUrl, customerProfileUrl } from '@/lib/utils/customerRoutes';
 
 /**
  * Profile Page - Burjo ESB Style
@@ -32,7 +33,7 @@ function ProfileContent() {
 
   const merchantCode = params.merchantCode as string;
   const mode = searchParams.get('mode') || 'dinein';
-  const ref = searchParams.get('ref') || `/${merchantCode}/order?mode=${mode}`;
+  const ref = searchParams.get('ref') || customerOrderUrl(merchantCode, { mode });
 
   const handleBack = () => {
     if (ref) {
@@ -43,7 +44,7 @@ function ProfileContent() {
   };
 
   const handleLogin = () => {
-    router.push(`/login?ref=${encodeURIComponent(`/${merchantCode}/profile?mode=${mode}`)}`);
+    router.push(`/login?ref=${encodeURIComponent(customerProfileUrl(merchantCode, { mode }))}`);
   };
 
   const handleLogout = () => {
@@ -63,7 +64,7 @@ function ProfileContent() {
   };
 
   const handleOrderHistory = () => {
-    router.push(`/${merchantCode}/history?mode=${mode}&ref=${encodeURIComponent(`/${merchantCode}/profile?mode=${mode}`)}`);
+    router.push(customerHistoryUrl(merchantCode, { mode, ref: customerProfileUrl(merchantCode, { mode }) }));
   };
 
   return (

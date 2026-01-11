@@ -14,6 +14,7 @@ import OtherNotesModal from '@/components/modals/OtherNotesModal';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { useModeAvailability } from '@/hooks/useModeAvailability';
 import UpsellSection from '@/components/customer/UpsellSection';
+import { customerOrderUrl } from '@/lib/utils/customerRoutes';
 
 interface MenuItem {
   id: string;
@@ -124,12 +125,12 @@ export default function ViewOrderPage() {
     if (isGroupOrderCheckout) {
       // For group order, check if we have session items
       if (!isLoading && (!session || !isHost)) {
-        router.push(`/${merchantCode}/order?mode=${mode}`);
+        router.push(customerOrderUrl(merchantCode, { mode }));
       }
     } else {
       // Normal checkout - check cart
       if (!isLoading && (!cart || cart.items.length === 0)) {
-        router.push(`/${merchantCode}/order?mode=${mode}`);
+        router.push(customerOrderUrl(merchantCode, { mode }));
       }
     }
   }, [cart, isLoading, merchantCode, mode, router, isGroupOrderCheckout, session, isHost]);
@@ -288,7 +289,7 @@ export default function ViewOrderPage() {
   };
 
   const handleAddItem = () => {
-    router.push(`/${merchantCode}/order?mode=${mode}`);
+    router.push(customerOrderUrl(merchantCode, { mode }));
   };
 
   const handleEditItem = async (item: CartItem) => {
@@ -351,7 +352,7 @@ export default function ViewOrderPage() {
       <header className="sticky top-0 z-10 bg-white border-b border-gray-300 shadow-md">
         <div className="flex items-center px-4 py-3">
           <button
-            onClick={() => router.push(`/${merchantCode}/order?mode=${mode}`)}
+            onClick={() => router.push(customerOrderUrl(merchantCode, { mode }))}
             className="w-10 h-10 flex items-center justify-center -ml-2"
             aria-label="Back"
           >

@@ -54,6 +54,15 @@ notification_retry() {
     echo
 }
 
+# Push subscription cleanup (inactive subscriptions older than N days)
+push_subscription_cleanup() {
+    log "Running push subscription cleanup..."
+    curl -s -X POST "$BASE_URL/api/cron/push-subscription-cleanup" \
+        -H "Authorization: Bearer $CRON_SECRET" \
+        -H "Content-Type: application/json"
+    echo
+}
+
 # Run based on argument
 case "$1" in
     stock-reset) stock_reset ;;
@@ -61,15 +70,17 @@ case "$1" in
     cleanup) cleanup ;;
     subscription-cleanup) subscription_cleanup ;;
     notification-retry) notification_retry ;;
+    push-subscription-cleanup) push_subscription_cleanup ;;
     all)
         stock_reset
         subscriptions
         cleanup
         subscription_cleanup
         notification_retry
+        push_subscription_cleanup
         ;;
     *)
-        echo "Usage: $0 {stock-reset|subscriptions|cleanup|subscription-cleanup|notification-retry|all}"
+        echo "Usage: $0 {stock-reset|subscriptions|cleanup|subscription-cleanup|notification-retry|push-subscription-cleanup|all}"
         exit 1
         ;;
 esac

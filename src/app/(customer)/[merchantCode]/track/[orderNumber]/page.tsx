@@ -8,6 +8,7 @@ import { formatCurrency } from '@/lib/utils/format';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { TranslationKeys } from '@/lib/i18n';
 import FeedbackModal from '@/components/customer/FeedbackModal';
+import { customerHistoryUrl, customerMerchantHomeUrl } from '@/lib/utils/customerRoutes';
 
 // Order status types
 type OrderStatus = 'PENDING' | 'ACCEPTED' | 'IN_PROGRESS' | 'READY' | 'COMPLETED' | 'CANCELLED';
@@ -334,7 +335,7 @@ export default function OrderTrackPage() {
         const back = searchParams.get('back');
         if (back === 'history') {
             const mode = searchParams.get('mode');
-            router.replace(`/${merchantCode}/history${mode ? `?mode=${encodeURIComponent(mode)}` : ''}`);
+            router.replace(customerHistoryUrl(merchantCode, { mode: mode || undefined }));
             return;
         }
 
@@ -343,7 +344,7 @@ export default function OrderTrackPage() {
 
     // Handle new order
     const handleNewOrder = () => {
-        router.push(`/${merchantCode}`);
+        router.push(customerMerchantHomeUrl(merchantCode));
     };
 
     // Loading state
