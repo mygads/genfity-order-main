@@ -84,6 +84,8 @@ async function handlePost(
                     merchantName,
                     amount,
                     currency,
+                    merchantCountry: paymentRequest.merchant.country,
+                    merchantTimezone: paymentRequest.merchant.timezone,
                     paymentType: paymentRequest.type === 'DEPOSIT_TOPUP' ? 'DEPOSIT' : 'MONTHLY_SUBSCRIPTION',
                     newBalance: updatedMerchant?.merchantBalance
                         ? Number(updatedMerchant.merchantBalance.balance)

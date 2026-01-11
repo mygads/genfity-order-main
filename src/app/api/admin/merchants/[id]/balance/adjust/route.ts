@@ -44,6 +44,8 @@ async function handlePost(
                 name: true, 
                 email: true, 
                 currency: true,
+                country: true,
+                timezone: true,
                 merchantBalance: {
                     select: { balance: true }
                 }
@@ -86,6 +88,8 @@ async function handlePost(
                     description: description,
                     newBalance: updatedBalance ? Number(updatedBalance.balance) : 0,
                     currency: merchant.currency || 'AUD',
+                    merchantCountry: merchant.country,
+                    merchantTimezone: merchant.timezone,
                     adjustedBy: admin?.name || 'Administrator',
                     adjustedAt: new Date(),
                 });

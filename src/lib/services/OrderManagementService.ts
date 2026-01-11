@@ -141,6 +141,9 @@ export class OrderManagementService {
         merchant: {
           select: {
             name: true,
+            country: true,
+            timezone: true,
+            currency: true,
           },
         },
       },
@@ -169,6 +172,9 @@ export class OrderManagementService {
           customerName: updated.customer?.name || 'Customer',
           orderNumber: updated.orderNumber,
           merchantName: updated.merchant?.name || 'Restaurant',
+          merchantCountry: updated.merchant?.country,
+          merchantTimezone: updated.merchant?.timezone,
+          currency: updated.merchant?.currency,
           orderType: updated.orderType as 'DINE_IN' | 'TAKEAWAY',
           items: updated.orderItems?.map((item: { menuName: string; quantity: number; menuPrice: { toNumber: () => number } }) => ({
             name: item.menuName,

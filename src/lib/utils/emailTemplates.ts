@@ -3,18 +3,34 @@
  * Inspired by shadcn/ui - minimal, clean, modern
  */
 
+import type { Locale } from '@/lib/i18n';
+import { formatCurrency } from '@/lib/utils/format';
+
 // Base URL for logo (set in env or fallback)
-const _getLogoUrl = () => process.env.NEXT_PUBLIC_APP_URL
-  ? `${process.env.NEXT_PUBLIC_APP_URL}/images/logo/logo.png`
-  : 'https://genfity.com/images/logo/logo.png';
+const _getLogoUrl = () =>
+  process.env.NEXT_PUBLIC_APP_URL
+    ? `${process.env.NEXT_PUBLIC_APP_URL}/images/logo/logo.png`
+    : 'https://genfity.com/images/logo/logo.png';
+
+function _t(locale: Locale) {
+  const lang = locale === 'id' ? 'id' : 'en';
+  return {
+    lang,
+    needHelp: lang === 'id' ? 'Butuh bantuan?' : 'Need assistance?',
+    rights: lang === 'id'
+      ? `© ${new Date().getFullYear()} Genfity Digital Solution. Semua hak dilindungi.`
+      : `© ${new Date().getFullYear()} Genfity Digital Solution. All rights reserved.`,
+  };
+}
 
 /**
- * Shared email base template - Clean shadcn-inspired design
+ * Shared email base template - Clean modern design
  */
-function getBaseTemplate(content: string, _footerEmail: string): string {
+function getBaseTemplate(content: string, footerEmail: string, locale: Locale = 'en'): string {
+  const t = _t(locale);
   return `
 <!DOCTYPE html>
-<html lang="en">
+<html lang="${t.lang}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -31,13 +47,12 @@ function getBaseTemplate(content: string, _footerEmail: string): string {
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td align="center">
-                    <!-- SVG Text Logo (works in all email clients) -->
-                    <div style="font-size: 28px; font-weight: 700; color: #171717; letter-spacing: -0.5px;">
-                      <span style="color: #f97316;">●</span> Genfity
-                    </div>
-                    <p style="margin: 4px 0 0 0; font-size: 12px; color: #a3a3a3; letter-spacing: 0.5px;">
-                      DIGITAL ORDERING SOLUTION
-                    </p>
+                    <img
+                      src="${_getLogoUrl()}"
+                      alt="Order"
+                      width="220"
+                      style="display: block; width: 220px; max-width: 100%; height: auto; margin: 0 auto;"
+                    />
                   </td>
                 </tr>
               </table>
@@ -58,10 +73,10 @@ function getBaseTemplate(content: string, _footerEmail: string): string {
                 <tr>
                   <td align="center">
                     <p style="margin: 0 0 8px 0; font-size: 13px; color: #737373;">
-                      Need assistance? <a href="mailto:genfity@gmail.com" style="color: #171717; text-decoration: underline;">genfity@gmail.com</a>
+                      ${t.needHelp} <a href="mailto:${footerEmail}" style="color: #171717; text-decoration: underline;">${footerEmail}</a>
                     </p>
                     <p style="margin: 0; font-size: 12px; color: #a3a3a3;">
-                      © ${new Date().getFullYear()} Genfity Digital Solution. All rights reserved.
+                      ${t.rights}
                     </p>
                   </td>
                 </tr>
@@ -255,7 +270,25 @@ export function getOrderConfirmationTemplate(params: {
   tax: number;
   total: number;
   trackingUrl: string;
+  currency: string;
+  locale: Locale;
+  supportEmail?: string;
 }): string {
+  const locale = params.locale || 'en';
+  const isID = locale === 'id';
+  const labels = {
+    title: isID ? 'Pesanan Dikonfirmasi' : 'Order Confirmed',
+    thanks: isID ? `Terima kasih, ${params.customerName}!` : `Thank you, ${params.customerName}!`,
+    orderNumber: isID ? 'Nomor Pesanan' : 'Order Number',
+    restaurant: isID ? 'Restoran' : 'Restaurant',
+    orderType: isID ? 'Tipe Pesanan' : 'Order Type',
+    table: isID ? 'Meja' : 'Table',
+    subtotal: isID ? 'Subtotal' : 'Subtotal',
+    tax: isID ? 'Pajak' : 'Tax',
+    total: isID ? 'Total' : 'Total',
+    track: isID ? 'Lacak Pesanan' : 'Track Your Order',
+  };
+
   const itemsHtml = params.items.map(item => `
     <tr>
       <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0;">
@@ -263,7 +296,7 @@ export function getOrderConfirmationTemplate(params: {
         <span style="font-size: 13px; color: #737373;"> × ${item.quantity}</span>
       </td>
       <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; text-align: right;">
-        <span style="font-size: 14px; color: #171717;">$${item.price.toFixed(2)}</span>
+        <span style="font-size: 14px; color: #171717;">${formatCurrency(item.price, params.currency, locale)}</span>
       </td>
     </tr>
   `).join('');
@@ -276,10 +309,10 @@ export function getOrderConfirmationTemplate(params: {
         </svg>
       </div>
       <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #171717;">
-        Order Confirmed
+        ${labels.title}
       </h1>
       <p style="margin: 0; font-size: 14px; color: #737373;">
-        Thank you, ${params.customerName}!
+        ${labels.thanks}
       </p>
     </div>
     
@@ -293,12 +326,12 @@ export function getOrderConfirmationTemplate(params: {
               <td style="font-size: 14px; font-weight: 600; color: #171717; text-align: right;">${params.orderNumber}</td>
             </tr>
             <tr>
-              <td style="font-size: 12px; color: #737373; padding-top: 8px;">Restaurant</td>
+              <td style="font-size: 12px; color: #737373; padding-top: 8px;">${labels.restaurant}</td>
               <td style="font-size: 14px; color: #171717; text-align: right; padding-top: 8px;">${params.merchantName}</td>
             </tr>
             <tr>
-              <td style="font-size: 12px; color: #737373; padding-top: 8px;">Order Type</td>
-              <td style="font-size: 14px; color: #171717; text-align: right; padding-top: 8px;">${params.orderType}${params.tableNumber ? ` - Table ${params.tableNumber}` : ''}</td>
+              <td style="font-size: 12px; color: #737373; padding-top: 8px;">${labels.orderType}</td>
+              <td style="font-size: 14px; color: #171717; text-align: right; padding-top: 8px;">${params.orderType}${params.tableNumber ? ` - ${labels.table} ${params.tableNumber}` : ''}</td>
             </tr>
           </table>
         </td>
@@ -309,16 +342,16 @@ export function getOrderConfirmationTemplate(params: {
     <table width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
       ${itemsHtml}
       <tr>
-        <td style="padding: 8px 0; font-size: 13px; color: #737373;">Subtotal</td>
-        <td style="padding: 8px 0; font-size: 13px; color: #737373; text-align: right;">$${params.subtotal.toFixed(2)}</td>
+        <td style="padding: 8px 0; font-size: 13px; color: #737373;">${labels.subtotal}</td>
+        <td style="padding: 8px 0; font-size: 13px; color: #737373; text-align: right;">${formatCurrency(params.subtotal, params.currency, locale)}</td>
       </tr>
       <tr>
-        <td style="padding: 8px 0; font-size: 13px; color: #737373;">Tax</td>
-        <td style="padding: 8px 0; font-size: 13px; color: #737373; text-align: right;">$${params.tax.toFixed(2)}</td>
+        <td style="padding: 8px 0; font-size: 13px; color: #737373;">${labels.tax}</td>
+        <td style="padding: 8px 0; font-size: 13px; color: #737373; text-align: right;">${formatCurrency(params.tax, params.currency, locale)}</td>
       </tr>
       <tr>
-        <td style="padding: 12px 0; font-size: 16px; font-weight: 600; color: #171717; border-top: 1px solid #e5e5e5;">Total</td>
-        <td style="padding: 12px 0; font-size: 16px; font-weight: 600; color: #171717; text-align: right; border-top: 1px solid #e5e5e5;">$${params.total.toFixed(2)}</td>
+        <td style="padding: 12px 0; font-size: 16px; font-weight: 600; color: #171717; border-top: 1px solid #e5e5e5;">${labels.total}</td>
+        <td style="padding: 12px 0; font-size: 16px; font-weight: 600; color: #171717; text-align: right; border-top: 1px solid #e5e5e5;">${formatCurrency(params.total, params.currency, locale)}</td>
       </tr>
     </table>
     
@@ -327,14 +360,14 @@ export function getOrderConfirmationTemplate(params: {
       <tr>
         <td align="center">
           <a href="${params.trackingUrl}" style="display: inline-block; background-color: #171717; color: #ffffff; font-size: 14px; font-weight: 500; padding: 12px 32px; border-radius: 6px; text-decoration: none;">
-            Track Your Order
+            ${labels.track}
           </a>
         </td>
       </tr>
     </table>
   `;
 
-  return getBaseTemplate(content, 'support@genfity.com');
+  return getBaseTemplate(content, params.supportEmail || 'support@genfity.com', locale);
 }
 
 /**
@@ -348,7 +381,23 @@ export function getOrderCompletedTemplate(params: {
   items: Array<{ name: string; quantity: number; price: number }>;
   total: number;
   completedAt: string;
+  currency: string;
+  locale: Locale;
+  supportEmail?: string;
 }): string {
+  const locale = params.locale || 'en';
+  const isID = locale === 'id';
+  const labels = {
+    title: isID ? 'Pesanan Selesai' : 'Order Complete',
+    subtitle: isID
+      ? `Terima kasih telah memesan di ${params.merchantName}`
+      : `Thanks for dining with ${params.merchantName}`,
+    totalPaid: isID ? 'Total Dibayar' : 'Total Paid',
+    closing: isID
+      ? 'Semoga Anda menikmati pesanan Anda! Sampai jumpa lagi.'
+      : 'We hope you enjoyed your meal! See you again soon.',
+  };
+
   const itemsList = params.items.map(item =>
     `<li style="margin: 4px 0; font-size: 14px; color: #525252;">${item.name} × ${item.quantity}</li>`
   ).join('');
@@ -356,10 +405,10 @@ export function getOrderCompletedTemplate(params: {
   const content = `
     <div style="text-align: center; margin-bottom: 24px;">
       <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #171717;">
-        Order Complete! 🎉
+        ${labels.title} 🎉
       </h1>
       <p style="margin: 0; font-size: 14px; color: #737373;">
-        Thanks for dining with ${params.merchantName}
+        ${labels.subtitle}
       </p>
     </div>
     
@@ -378,8 +427,8 @@ export function getOrderCompletedTemplate(params: {
           
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr>
-              <td style="font-size: 14px; font-weight: 600; color: #171717;">Total Paid</td>
-              <td style="font-size: 16px; font-weight: 600; color: #171717; text-align: right;">$${params.total.toFixed(2)}</td>
+              <td style="font-size: 14px; font-weight: 600; color: #171717;">${labels.totalPaid}</td>
+              <td style="font-size: 16px; font-weight: 600; color: #171717; text-align: right;">${formatCurrency(params.total, params.currency, locale)}</td>
             </tr>
           </table>
         </td>
@@ -387,12 +436,11 @@ export function getOrderCompletedTemplate(params: {
     </table>
     
     <p style="margin: 0; font-size: 13px; color: #737373; text-align: center;">
-      We hope you enjoyed your meal!<br/>
-      See you again soon.
+      ${labels.closing}
     </p>
   `;
 
-  return getBaseTemplate(content, 'support@genfity.com');
+  return getBaseTemplate(content, params.supportEmail || 'support@genfity.com', locale);
 }
 
 /**
@@ -451,4 +499,227 @@ export function getPermissionUpdateTemplate(params: {
   `;
 
   return getBaseTemplate(content, 'support@genfity.com');
+}
+
+// ============================================================================
+// MERCHANT EMAILS (Locale-aware)
+// ============================================================================
+
+export function getPaymentVerifiedTemplate(params: {
+  merchantName: string;
+  paymentTypeLabel: string;
+  amountText: string;
+  balanceText?: string | null;
+  periodEndText?: string | null;
+  dashboardUrl: string;
+  locale: Locale;
+  supportEmail?: string;
+}): string {
+  const locale = params.locale || 'en';
+  const isID = locale === 'id';
+  const title = isID ? 'Pembayaran Terverifikasi' : 'Payment Verified';
+  const subtitle = isID
+    ? 'Pembayaran Anda sudah kami konfirmasi.'
+    : 'Your payment has been confirmed.';
+
+  const rows = [
+    { label: isID ? 'Tipe Pembayaran' : 'Payment Type', value: params.paymentTypeLabel },
+    { label: isID ? 'Jumlah' : 'Amount', value: params.amountText },
+  ] as Array<{ label: string; value: string }>;
+
+  if (params.balanceText) {
+    rows.push({ label: isID ? 'Saldo Baru' : 'New Balance', value: params.balanceText });
+  }
+  if (params.periodEndText) {
+    rows.push({ label: isID ? 'Berlaku Sampai' : 'Valid Until', value: params.periodEndText });
+  }
+
+  const detailsHtml = rows
+    .map(
+      (r) => `
+        <tr>
+          <td style="padding: 10px 0; font-size: 13px; color: #737373;">${r.label}</td>
+          <td style="padding: 10px 0; font-size: 13px; color: #171717; text-align: right; font-weight: 600;">${r.value}</td>
+        </tr>
+      `
+    )
+    .join('');
+
+  const content = `
+    <div style="text-align: center; margin-bottom: 24px;">
+      <div style="display: inline-block; background-color: #f0fdf4; border-radius: 999px; padding: 10px 14px; margin-bottom: 12px;">
+        <span style="font-size: 12px; font-weight: 600; color: #166534;">${isID ? 'BERHASIL' : 'SUCCESS'}</span>
+      </div>
+      <h1 style="margin: 0 0 8px 0; font-size: 22px; font-weight: 650; color: #171717;">
+        ${title}
+      </h1>
+      <p style="margin: 0; font-size: 14px; color: #737373;">
+        ${subtitle}
+      </p>
+    </div>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; border: 1px solid #e5e5e5; border-radius: 10px; margin: 18px 0;">
+      <tr>
+        <td style="padding: 18px;">
+          <p style="margin: 0 0 12px 0; font-size: 14px; color: #171717; font-weight: 600;">
+            ${isID ? 'Ringkasan' : 'Summary'} — ${params.merchantName}
+          </p>
+          <table width="100%" cellpadding="0" cellspacing="0">
+            ${detailsHtml}
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
+      <tr>
+        <td align="center">
+          <a href="${params.dashboardUrl}" style="display: inline-block; background-color: #171717; color: #ffffff; font-size: 14px; font-weight: 600; padding: 12px 32px; border-radius: 8px; text-decoration: none;">
+            ${isID ? 'Buka Dashboard' : 'Open Dashboard'}
+          </a>
+        </td>
+      </tr>
+    </table>
+
+    <p style="margin: 0; font-size: 12px; color: #a3a3a3; text-align: center;">
+      ${isID ? 'Jika ada pertanyaan, balas email ini atau hubungi support.' : 'If you have questions, reply to this email or contact support.'}
+    </p>
+  `;
+
+  return getBaseTemplate(content, params.supportEmail || 'support@genfity.com', locale);
+}
+
+export function getBalanceAdjustmentTemplate(params: {
+  merchantName: string;
+  adjustmentText: string;
+  newBalanceText: string;
+  adjustedAtText: string;
+  reasonText: string;
+  adjustedByText?: string | null;
+  dashboardUrl: string;
+  locale: Locale;
+  supportEmail?: string;
+}): string {
+  const locale = params.locale || 'en';
+  const isID = locale === 'id';
+
+  const content = `
+    <div style="text-align: center; margin-bottom: 22px;">
+      <h1 style="margin: 0 0 8px 0; font-size: 22px; font-weight: 650; color: #171717;">
+        ${isID ? 'Penyesuaian Saldo' : 'Balance Adjustment'}
+      </h1>
+      <p style="margin: 0; font-size: 14px; color: #737373;">
+        ${isID ? `Halo ${params.merchantName}, saldo subscription Anda telah diperbarui.` : `Hello ${params.merchantName}, your subscription balance has been updated.`}
+      </p>
+    </div>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; border: 1px solid #e5e5e5; border-radius: 10px; margin: 18px 0;">
+      <tr>
+        <td style="padding: 18px;">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="padding: 10px 0; font-size: 13px; color: #737373;">${isID ? 'Jumlah Penyesuaian' : 'Adjustment Amount'}</td>
+              <td style="padding: 10px 0; font-size: 13px; color: #171717; text-align: right; font-weight: 700;">${params.adjustmentText}</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px 0; font-size: 13px; color: #737373; border-top: 1px solid #e5e5e5;">${isID ? 'Saldo Baru' : 'New Balance'}</td>
+              <td style="padding: 10px 0; font-size: 13px; color: #171717; text-align: right; font-weight: 600; border-top: 1px solid #e5e5e5;">${params.newBalanceText}</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px 0; font-size: 13px; color: #737373; border-top: 1px solid #e5e5e5;">${isID ? 'Waktu' : 'Date'}</td>
+              <td style="padding: 10px 0; font-size: 13px; color: #171717; text-align: right; border-top: 1px solid #e5e5e5;">${params.adjustedAtText}</td>
+            </tr>
+            ${
+              params.adjustedByText
+                ? `
+            <tr>
+              <td style="padding: 10px 0; font-size: 13px; color: #737373; border-top: 1px solid #e5e5e5;">${isID ? 'Diperbarui Oleh' : 'Adjusted By'}</td>
+              <td style="padding: 10px 0; font-size: 13px; color: #171717; text-align: right; border-top: 1px solid #e5e5e5;">${params.adjustedByText}</td>
+            </tr>
+              `
+                : ''
+            }
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <div style="background-color: #ffffff; border: 1px solid #f0f0f0; border-radius: 10px; padding: 14px 16px; margin: 18px 0;">
+      <p style="margin: 0 0 6px 0; font-size: 12px; color: #737373; text-transform: uppercase; letter-spacing: 0.6px;">${isID ? 'Alasan' : 'Reason'}</p>
+      <p style="margin: 0; font-size: 14px; color: #171717;">${params.reasonText}</p>
+    </div>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
+      <tr>
+        <td align="center">
+          <a href="${params.dashboardUrl}" style="display: inline-block; background-color: #171717; color: #ffffff; font-size: 14px; font-weight: 600; padding: 12px 32px; border-radius: 8px; text-decoration: none;">
+            ${isID ? 'Lihat Dashboard' : 'View Dashboard'}
+          </a>
+        </td>
+      </tr>
+    </table>
+  `;
+
+  return getBaseTemplate(content, params.supportEmail || 'support@genfity.com', locale);
+}
+
+export function getSubscriptionExtendedTemplate(params: {
+  merchantName: string;
+  daysExtended: number;
+  newExpiryText: string;
+  extendedByText?: string | null;
+  dashboardUrl: string;
+  locale: Locale;
+  supportEmail?: string;
+}): string {
+  const locale = params.locale || 'en';
+  const isID = locale === 'id';
+
+  const content = `
+    <div style="text-align: center; margin-bottom: 22px;">
+      <h1 style="margin: 0 0 8px 0; font-size: 22px; font-weight: 650; color: #171717;">
+        ${isID ? 'Subscription Diperpanjang' : 'Subscription Extended'}
+      </h1>
+      <p style="margin: 0; font-size: 14px; color: #737373;">
+        ${isID
+          ? `Halo ${params.merchantName}, subscription Anda diperpanjang ${params.daysExtended} hari.`
+          : `Hello ${params.merchantName}, your subscription has been extended by ${params.daysExtended} days.`}
+      </p>
+    </div>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; border: 1px solid #e5e5e5; border-radius: 10px; margin: 18px 0;">
+      <tr>
+        <td style="padding: 18px;">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="padding: 10px 0; font-size: 13px; color: #737373;">${isID ? 'Berlaku Sampai' : 'Valid Until'}</td>
+              <td style="padding: 10px 0; font-size: 13px; color: #171717; text-align: right; font-weight: 600;">${params.newExpiryText}</td>
+            </tr>
+            ${
+              params.extendedByText
+                ? `
+            <tr>
+              <td style="padding: 10px 0; font-size: 13px; color: #737373; border-top: 1px solid #e5e5e5;">${isID ? 'Diperpanjang Oleh' : 'Extended By'}</td>
+              <td style="padding: 10px 0; font-size: 13px; color: #171717; text-align: right; border-top: 1px solid #e5e5e5;">${params.extendedByText}</td>
+            </tr>
+              `
+                : ''
+            }
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
+      <tr>
+        <td align="center">
+          <a href="${params.dashboardUrl}" style="display: inline-block; background-color: #171717; color: #ffffff; font-size: 14px; font-weight: 600; padding: 12px 32px; border-radius: 8px; text-decoration: none;">
+            ${isID ? 'Kelola Subscription' : 'Manage Subscription'}
+          </a>
+        </td>
+      </tr>
+    </table>
+  `;
+
+  return getBaseTemplate(content, params.supportEmail || 'support@genfity.com', locale);
 }

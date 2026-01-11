@@ -130,7 +130,7 @@ async function handlePut(
                 if (newExpiryDate) {
                     const merchant = await prisma.merchant.findUnique({
                         where: { id: merchantId },
-                        select: { name: true, email: true },
+                        select: { name: true, email: true, country: true, timezone: true },
                     });
 
                     const admin = await prisma.user.findUnique({
@@ -145,6 +145,8 @@ async function handlePut(
                                 merchantName: merchant.name,
                                 daysExtended: extendDays,
                                 newExpiryDate: newExpiryDate,
+                                merchantCountry: merchant.country,
+                                merchantTimezone: merchant.timezone,
                                 extendedBy: admin?.name || 'Administrator',
                             });
                             console.log(`✅ Subscription extension email sent to ${merchant.email}`);
