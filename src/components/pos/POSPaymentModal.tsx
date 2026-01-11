@@ -26,12 +26,16 @@ import {
   FaExchangeAlt,
 } from 'react-icons/fa';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import { printReceipt as printUnifiedReceipt } from '@/lib/utils/unifiedReceipt';
+import { DEFAULT_RECEIPT_SETTINGS, type ReceiptSettings } from '@/lib/types/receiptSettings';
+import { useMerchant } from '@/context/MerchantContext';
+import { formatFullOrderNumber } from '@/lib/utils/format';
 
 // ============================================
 // TYPES
 // ============================================
 
-export type POSPaymentMethod = 
+export type POSPaymentMethod =
   | 'CASH_ON_COUNTER'
   | 'CARD_ON_COUNTER'
   | 'SPLIT';
@@ -77,7 +81,11 @@ interface POSPaymentModalProps {
     name: string;
     address?: string;
     phone?: string;
+    email?: string;
+    logoUrl?: string;
   };
+
+  receiptSettings?: Partial<ReceiptSettings> | null;
 }
 
 export interface POSPaymentData {
@@ -307,24 +315,26 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
   currency,
   orderDetails,
   merchantInfo,
+  receiptSettings,
 }) => {
   const { t } = useTranslation();
+  const { merchant } = useMerchant();
 
   // State
   const [paymentMethod, setPaymentMethod] = useState<POSPaymentMethod>('CASH_ON_COUNTER');
   const [amount, setAmount] = useState<number>(totalAmount);
   const [notes, setNotes] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   // Split payment state
   const [cashAmount, setCashAmount] = useState<number>(0);
   const [cardAmount, setCardAmount] = useState<number>(0);
-  
+
   // Discount state
   const [discountType, setDiscountType] = useState<DiscountType>('percentage');
   const [discountValue, setDiscountValue] = useState<number>(0);
   const [showDiscount, setShowDiscount] = useState(false);
-  
+
   // Print receipt option
   const [printReceipt, setPrintReceipt] = useState(true);
 
@@ -441,46 +451,65 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
   // Print receipt function
   const handlePrintReceipt = useCallback(() => {
     if (!orderDetails || !merchantInfo) return;
-    
-    const receiptHTML = generateReceiptHTML({
-      orderNumber,
-      orderType: orderDetails.orderType,
-      tableNumber: orderDetails.tableNumber,
-      placedAt: orderDetails.placedAt,
-      items: orderDetails.items,
-      subtotal: orderDetails.subtotal,
-      taxAmount: orderDetails.taxAmount,
-      serviceChargeAmount: orderDetails.serviceChargeAmount,
-      packagingFeeAmount: orderDetails.packagingFeeAmount,
-      discountAmount: discountAmount > 0 ? discountAmount : undefined,
-      totalAmount: finalTotal,
-      paymentMethod: paymentMethod === 'SPLIT' ? 'SPLIT' : paymentMethod === 'CASH_ON_COUNTER' ? 'CASH' : 'CARD',
-      amountPaid: paymentMethod === 'SPLIT' ? (cashAmount + cardAmount) : amount,
-      change: change,
-      cashAmount: paymentMethod === 'SPLIT' ? cashAmount : undefined,
-      cardAmount: paymentMethod === 'SPLIT' ? cardAmount : undefined,
-      merchantName: merchantInfo.name,
-      merchantAddress: merchantInfo.address,
-      merchantPhone: merchantInfo.phone,
-      currency: currency,
-    });
-    
-    const printWindow = window.open('', '_blank', 'width=300,height=600');
-    if (!printWindow) {
-      console.error('Failed to open print window');
-      return;
-    }
 
-    printWindow.document.write(receiptHTML);
-    printWindow.document.close();
+    const rawSettings = (receiptSettings || {}) as Partial<ReceiptSettings>;
+    const inferredLanguage: 'en' | 'id' = currency === 'IDR' ? 'id' : 'en';
+    const language: 'en' | 'id' =
+      rawSettings.receiptLanguage === 'id' || rawSettings.receiptLanguage === 'en'
+        ? rawSettings.receiptLanguage
+        : inferredLanguage;
 
-    printWindow.onload = () => {
-      printWindow.print();
-      setTimeout(() => {
-        printWindow.close();
-      }, 100);
+    const settings: ReceiptSettings = {
+      ...DEFAULT_RECEIPT_SETTINGS,
+      ...rawSettings,
+      receiptLanguage: language,
+      paperSize: rawSettings.paperSize === '58mm' ? '58mm' : '80mm',
     };
-  }, [orderDetails, merchantInfo, orderNumber, discountAmount, finalTotal, paymentMethod, amount, change, cashAmount, cardAmount, currency]);
+
+    printUnifiedReceipt({
+      order: {
+        orderNumber,
+        orderType: orderDetails.orderType,
+        tableNumber: orderDetails.tableNumber,
+        placedAt: orderDetails.placedAt.toISOString(),
+        items: orderDetails.items.map((item) => ({
+          quantity: item.quantity,
+          menuName: item.menuName,
+          subtotal: item.subtotal,
+          addons: (item.addons || []).map((addon) => ({
+            addonName: addon.quantity && addon.quantity > 1 ? `${addon.quantity}x ${addon.addonName}` : addon.addonName,
+            addonPrice: addon.addonPrice * (addon.quantity || 1),
+          })),
+        })),
+        subtotal: orderDetails.subtotal,
+        taxAmount: orderDetails.taxAmount,
+        serviceChargeAmount: orderDetails.serviceChargeAmount,
+        packagingFeeAmount: orderDetails.packagingFeeAmount,
+        discountAmount: discountAmount > 0 ? discountAmount : undefined,
+        totalAmount: finalTotal,
+        amountPaid: paymentMethod === 'SPLIT' ? cashAmount + cardAmount : amount,
+        changeAmount: change,
+        paymentMethod:
+          paymentMethod === 'SPLIT'
+            ? 'SPLIT'
+            : paymentMethod === 'CASH_ON_COUNTER'
+              ? 'CASH'
+              : 'CARD',
+        paymentStatus: 'COMPLETED',
+        cashierName: undefined,
+      },
+      merchant: {
+        name: merchantInfo.name,
+        logoUrl: merchantInfo.logoUrl,
+        address: merchantInfo.address,
+        phone: merchantInfo.phone,
+        email: merchantInfo.email,
+        currency: currency,
+      },
+      settings,
+      language,
+    });
+  }, [orderDetails, merchantInfo, orderNumber, discountAmount, finalTotal, paymentMethod, amount, change, cashAmount, cardAmount, currency, receiptSettings]);
 
   // Handle submit
   const handleSubmit = async () => {
@@ -490,7 +519,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
     } else if (amount < finalTotal) {
       return;
     }
-    
+
     setIsSubmitting(true);
     try {
       await onConfirm({
@@ -506,10 +535,15 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
         finalTotal: finalTotal,
         printReceipt: printReceipt,
       });
-      
+
+      // Close the modal before printing (print dialogs can block UI updates)
+      onClose();
+
       // Print receipt after successful payment if option is enabled
       if (printReceipt && orderDetails && merchantInfo) {
-        handlePrintReceipt();
+        setTimeout(() => {
+          handlePrintReceipt();
+        }, 50);
       }
     } finally {
       setIsSubmitting(false);
@@ -549,7 +583,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
               {t('pos.payment.orderNumber') || 'Order #'}
             </p>
             <p className="text-2xl font-bold text-gray-900 dark:text-white font-mono">
-              {orderNumber}
+              {formatFullOrderNumber(orderNumber, merchant?.code)}
             </p>
           </div>
 
@@ -563,13 +597,13 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
                 {formatCurrency(totalAmount)}
               </p>
             </div>
-            
+
             {/* Discount Section */}
             {discountAmount > 0 && (
               <div className="mt-2 pt-2 border-t border-orange-200 dark:border-orange-700">
                 <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
                   <span>
-                    {t('pos.payment.discount') || 'Discount'} 
+                    {t('pos.payment.discount') || 'Discount'}
                     {discountType === 'percentage' ? ` (${discountValue}%)` : ''}
                   </span>
                   <span>-{formatCurrency(discountAmount)}</span>
@@ -580,7 +614,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
                 </div>
               </div>
             )}
-            
+
             {/* Add Discount Toggle */}
             <button
               type="button"
@@ -590,7 +624,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
               <FaPercent className="w-3 h-3" />
               {showDiscount ? (t('pos.payment.hideDiscount') || 'Hide Discount') : (t('pos.payment.addDiscount') || 'Add Discount')}
             </button>
-            
+
             {/* Discount Input */}
             {showDiscount && (
               <div className="mt-3 pt-3 border-t border-orange-200 dark:border-orange-700">
@@ -598,11 +632,10 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setDiscountType('percentage')}
-                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-                      discountType === 'percentage'
+                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${discountType === 'percentage'
                         ? 'bg-orange-500 text-white'
                         : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
-                    }`}
+                      }`}
                   >
                     <FaPercent className="w-3 h-3" />
                     {t('pos.payment.percentage') || 'Percentage'}
@@ -610,11 +643,10 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setDiscountType('fixed')}
-                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-                      discountType === 'fixed'
+                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${discountType === 'fixed'
                         ? 'bg-orange-500 text-white'
                         : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
-                    }`}
+                      }`}
                   >
                     <FaDollarSign className="w-3 h-3" />
                     {t('pos.payment.fixed') || 'Fixed'}
@@ -643,11 +675,10 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
                         key={pct}
                         type="button"
                         onClick={() => setDiscountValue(pct)}
-                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-                          discountValue === pct
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${discountValue === pct
                             ? 'bg-orange-500 text-white'
                             : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
-                        }`}
+                          }`}
                       >
                         {pct}%
                       </button>
@@ -710,7 +741,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 {t('pos.payment.splitPayment') || 'Split Payment'}
               </label>
-              
+
               {/* Cash Amount */}
               <div>
                 <div className="flex items-center gap-2 mb-2">
@@ -729,7 +760,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
                   className="w-full px-4 py-3 rounded-lg bg-gray-100 dark:bg-gray-800 border-none text-lg font-semibold text-gray-900 dark:text-white text-center focus:ring-2 focus:ring-orange-300 dark:focus:ring-orange-600"
                 />
               </div>
-              
+
               {/* Card Amount */}
               <div>
                 <div className="flex items-center gap-2 mb-2">
@@ -748,7 +779,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
                   className="w-full px-4 py-3 rounded-lg bg-gray-100 dark:bg-gray-800 border-none text-lg font-semibold text-gray-900 dark:text-white text-center focus:ring-2 focus:ring-orange-300 dark:focus:ring-orange-600"
                 />
               </div>
-              
+
               {/* Split Summary */}
               <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3">
                 <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-1">
@@ -781,17 +812,16 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 {t('pos.payment.amountReceived') || 'Amount Received'}
               </label>
-              
+
               {/* Quick Cash Buttons */}
               <div className="flex flex-wrap gap-2 mb-3">
                 <button
                   type="button"
                   onClick={() => setAmount(finalTotal)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    amount === finalTotal
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${amount === finalTotal
                       ? 'bg-orange-500 text-white'
                       : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                  }`}
+                    }`}
                 >
                   {t('pos.payment.exact') || 'Exact'}
                 </button>
@@ -800,11 +830,10 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
                     key={value}
                     type="button"
                     onClick={() => setAmount(value)}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                      amount === value
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${amount === value
                         ? 'bg-orange-500 text-white'
                         : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                    }`}
+                      }`}
                   >
                     {formatCurrency(value)}
                   </button>
@@ -864,7 +893,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
               <FaPrint className="w-4 h-4" />
               <span>{t('pos.payment.printReceipt') || 'Print Receipt'}</span>
             </label>
-            
+
             {/* Manual Print Button */}
             {orderDetails && merchantInfo && (
               <button
@@ -877,7 +906,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
               </button>
             )}
           </div>
-          
+
           <div className="flex gap-2">
             <button
               onClick={onClose}

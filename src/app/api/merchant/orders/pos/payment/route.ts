@@ -21,10 +21,12 @@ import { Prisma } from '@prisma/client';
  */
 interface PaymentRequest {
   orderId: number | string;
-  paymentMethod: 'CASH_ON_COUNTER' | 'CARD_ON_COUNTER' ;
+  paymentMethod: 'CASH_ON_COUNTER' | 'CARD_ON_COUNTER' | 'SPLIT';
   amountPaid?: number;
   changeAmount?: number;
   notes?: string;
+  cashAmount?: number;
+  cardAmount?: number;
 }
 
 /**
@@ -77,7 +79,7 @@ async function handlePost(req: NextRequest, context: AuthContext) {
     }
 
     // Validate payment method
-    const validMethods = ['CASH_ON_COUNTER', 'CARD_ON_COUNTER'];
+    const validMethods = ['CASH_ON_COUNTER', 'CARD_ON_COUNTER', 'SPLIT'];
     if (!validMethods.includes(paymentMethod)) {
       return NextResponse.json(
         {
@@ -139,12 +141,35 @@ async function handlePost(req: NextRequest, context: AuthContext) {
     const paidAmount = amountPaid !== undefined ? amountPaid : totalAmount;
     const change = changeAmount !== undefined ? changeAmount : Math.max(0, paidAmount - totalAmount);
 
+    // Map SPLIT into a valid Prisma PaymentMethod (schema does not have SPLIT).
+    // Store the split breakdown in metadata.
+    const cashAmount = typeof body.cashAmount === 'number' ? body.cashAmount : undefined;
+    const cardAmount = typeof body.cardAmount === 'number' ? body.cardAmount : undefined;
+
+    const prismaPaymentMethod: 'CASH_ON_COUNTER' | 'CARD_ON_COUNTER' =
+      paymentMethod === 'SPLIT'
+        ? (cashAmount && !cardAmount
+          ? 'CASH_ON_COUNTER'
+          : !cashAmount && cardAmount
+            ? 'CARD_ON_COUNTER'
+            : 'CASH_ON_COUNTER')
+        : paymentMethod;
+
     // Build payment metadata
     const metadata = {
       source: 'POS',
       paidAmount,
       changeAmount: change,
       notes: notes || '',
+      requestedPaymentMethod: paymentMethod,
+      ...(paymentMethod === 'SPLIT'
+        ? {
+          split: {
+            cashAmount: cashAmount ?? 0,
+            cardAmount: cardAmount ?? 0,
+          },
+        }
+        : {}),
     };
 
     // Create payment record in a transaction
@@ -154,7 +179,7 @@ async function handlePost(req: NextRequest, context: AuthContext) {
         data: {
           orderId: order.id,
           amount: new Prisma.Decimal(totalAmount),
-          paymentMethod: paymentMethod as 'CASH_ON_COUNTER' | 'CARD_ON_COUNTER' ,
+          paymentMethod: prismaPaymentMethod,
           status: 'COMPLETED',
           paidByUserId: BigInt(userId),
           paidAt: new Date(),

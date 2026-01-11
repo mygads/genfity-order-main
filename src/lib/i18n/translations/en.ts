@@ -358,9 +358,11 @@ const en = {
 
   // Receipt/Invoice PDF
   "customer.receipt.downloadReceipt": "Download Receipt",
+  "customer.receipt.printReceipt": "Print Receipt",
   "customer.receipt.downloading": "Downloading...",
   "customer.receipt.downloadSuccess": "Receipt downloaded successfully",
   "customer.receipt.downloadFailed": "Failed to download receipt",
+  "customer.receipt.printFailed": "Failed to print receipt",
 
   // Profile
   "customer.profile.title": "Profile",
@@ -515,6 +517,7 @@ const en = {
   "admin.nav.influencers": "Influencers",
   "admin.nav.influencerWithdrawals": "Influencer Withdrawals",
   "admin.nav.influencerSettings": "Influencer Settings",
+  "admin.nav.customerFeedback": "Customer Feedback",
 
   // Subscription Settings Page (Super Admin)
   "admin.subscriptionSettings.title": "Subscription Settings",
@@ -826,6 +829,7 @@ const en = {
   "admin.receipt.showCustomerPhone": "Show Customer Phone",
   "admin.receipt.showItemNotes": "Show Item Notes",
   "admin.receipt.showAddons": "Show Add-ons",
+  "admin.receipt.showAddonPrices": "Show Add-on Prices",
   "admin.receipt.showUnitPrice": "Show Unit Price",
   "admin.receipt.showSubtotal": "Show Subtotal",
   "admin.receipt.showTax": "Show Tax",
@@ -840,7 +844,10 @@ const en = {
   "admin.receipt.showThankYouMessage": "Show Thank You Message",
   "admin.receipt.showCustomFooterText": "Show Custom Footer Text",
   "admin.receipt.showFooterPhone": "Show Phone in Footer",
+  "admin.receipt.showTrackingQRCode": "Show Order Tracking QR Code",
   "admin.receipt.testPrint": "Test Print",
+  "admin.receipt.languageIndonesian": "Indonesian",
+  "admin.receipt.languageEnglish": "English",
   "admin.receipt.customFooterText": "Custom Footer Text",
   "admin.receipt.customFooterPlaceholder": "e.g., WiFi: MyRestaurant / Password: welcome123",
   "admin.receipt.customFooterHelp": "Add extra info like WiFi password, social media, promo codes, etc.",
@@ -2851,10 +2858,6 @@ const en = {
   "pos.confirmDeletePendingOrder": "Are you sure you want to delete this pending order?",
   "pos.pendingOrderDeleted": "Pending order deleted",
   "pos.pendingOrdersWillSync": "These orders will sync when you go online",
-  // POS Stock Warnings
-  "pos.lowStock": "Low Stock",
-  "pos.stockLeft": "{count} left",
-  "pos.outOfStock": "Out of Stock",
   // POS Frequently Bought
   "pos.frequentlyBought": "Frequently Bought",
   "pos.bestSellers": "Best Sellers",

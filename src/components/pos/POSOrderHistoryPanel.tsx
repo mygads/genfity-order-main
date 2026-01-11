@@ -34,6 +34,8 @@ import { useTranslation } from '@/lib/i18n/useTranslation';
 import { DeletePinModal } from '@/components/modals/DeletePinModal';
 import { printReceipt } from '@/lib/utils/unifiedReceipt';
 import { ReceiptSettings, DEFAULT_RECEIPT_SETTINGS } from '@/lib/types/receiptSettings';
+import { useMerchant } from '@/context/MerchantContext';
+import { formatFullOrderNumber } from '@/lib/utils/format';
 
 // ============================================
 // TYPES
@@ -107,6 +109,7 @@ export const POSOrderHistoryPanel: React.FC<POSOrderHistoryPanelProps> = ({
   merchantInfo,
 }) => {
   const { t } = useTranslation();
+  const { merchant } = useMerchant();
   
   // State
   const [searchQuery, setSearchQuery] = useState('');
@@ -250,13 +253,20 @@ export const POSOrderHistoryPanel: React.FC<POSOrderHistoryPanelProps> = ({
 
   // Print receipt using unified receipt generator
   const handlePrintReceipt = (order: Order) => {
-    // Get language based on currency (IDR = Indonesian)
-    const language = currency === 'IDR' ? 'id' : 'en';
-    
-    // Merge receipt settings with defaults
+    const rawSettings = (merchantInfo?.receiptSettings || {}) as Partial<ReceiptSettings>;
+    const language: 'en' | 'id' =
+      rawSettings.receiptLanguage === 'id' || rawSettings.receiptLanguage === 'en'
+        ? rawSettings.receiptLanguage
+        : currency === 'IDR'
+          ? 'id'
+          : 'en';
+
+    // Merge receipt settings with defaults (avoid missing new fields)
     const settings: ReceiptSettings = {
       ...DEFAULT_RECEIPT_SETTINGS,
-      ...(merchantInfo?.receiptSettings || {}),
+      ...rawSettings,
+      receiptLanguage: language,
+      paperSize: rawSettings.paperSize === '58mm' ? '58mm' : '80mm',
     };
     
     // Print using unified receipt generator
@@ -370,7 +380,7 @@ export const POSOrderHistoryPanel: React.FC<POSOrderHistoryPanelProps> = ({
                 <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 mb-4">
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-xl font-bold text-gray-900 dark:text-white font-mono">
-                      #{selectedOrder.orderNumber}
+                      #{formatFullOrderNumber(selectedOrder.orderNumber, merchant?.code)}
                     </span>
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedOrder.status)}`}>
                       {selectedOrder.status}
@@ -518,7 +528,7 @@ export const POSOrderHistoryPanel: React.FC<POSOrderHistoryPanelProps> = ({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-medium text-gray-900 dark:text-white font-mono">
-                          #{order.orderNumber}
+                          #{formatFullOrderNumber(order.orderNumber, merchant?.code)}
                         </span>
                         <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${getStatusColor(order.status)}`}>
                           {order.status === 'COMPLETED' ? (

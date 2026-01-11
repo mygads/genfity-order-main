@@ -5,13 +5,17 @@
  */
 
 export interface ReceiptSettings {
+  // Global Preferences
+  paperSize: '58mm' | '80mm';
+  receiptLanguage: 'en' | 'id';
+
   // Header Section
   showLogo: boolean;
   showMerchantName: boolean;
   showAddress: boolean;
   showPhone: boolean;
   showEmail: boolean;
-  
+
   // Order Section
   showOrderNumber: boolean;
   showOrderType: boolean;
@@ -19,12 +23,13 @@ export interface ReceiptSettings {
   showDateTime: boolean;
   showCustomerName: boolean;
   showCustomerPhone: boolean;
-  
+
   // Items Section
   showItemNotes: boolean;
   showAddons: boolean;
+  showAddonPrices: boolean;
   showUnitPrice: boolean;
-  
+
   // Payment Section
   showSubtotal: boolean;
   showTax: boolean;
@@ -36,14 +41,17 @@ export interface ReceiptSettings {
   showChange: boolean;
   showPaymentMethod: boolean;
   showCashierName: boolean;
-  
+
   // Footer Section
   showThankYouMessage: boolean;
   customThankYouMessage?: string;
   showCustomFooterText: boolean;
   customFooterText?: string; // For WiFi password, promo info, etc.
   showFooterPhone: boolean;
-  
+
+  // QR Code Section
+  showTrackingQRCode: boolean; // QR code linking to order tracking page
+
   // Genfity Branding (always shown, cannot be disabled)
   // showGenfityBranding: true (hardcoded, not configurable)
 }
@@ -52,13 +60,17 @@ export interface ReceiptSettings {
  * Default receipt settings used when merchant hasn't configured
  */
 export const DEFAULT_RECEIPT_SETTINGS: ReceiptSettings = {
+  // Global Preferences
+  paperSize: '80mm',
+  receiptLanguage: 'en',
+
   // Header Section - Default ON
   showLogo: true,
   showMerchantName: true,
   showAddress: true,
   showPhone: true,
   showEmail: false,
-  
+
   // Order Section - Default ON
   showOrderNumber: true,
   showOrderType: true,
@@ -66,12 +78,13 @@ export const DEFAULT_RECEIPT_SETTINGS: ReceiptSettings = {
   showDateTime: true,
   showCustomerName: true,
   showCustomerPhone: false,
-  
+
   // Items Section - Default ON
   showItemNotes: true,
   showAddons: true,
+  showAddonPrices: false,
   showUnitPrice: false,
-  
+
   // Payment Section - Default ON for important fields
   showSubtotal: true,
   showTax: true,
@@ -83,13 +96,16 @@ export const DEFAULT_RECEIPT_SETTINGS: ReceiptSettings = {
   showChange: true,
   showPaymentMethod: true,
   showCashierName: true,
-  
+
   // Footer Section - Default ON
   showThankYouMessage: true,
   customThankYouMessage: undefined,
   showCustomFooterText: false,
   customFooterText: undefined,
   showFooterPhone: true,
+
+  // QR Code Section - Default ON
+  showTrackingQRCode: true,
 };
 
 /**
@@ -122,6 +138,7 @@ export const RECEIPT_SETTINGS_GROUPS = {
     fields: [
       { key: 'showItemNotes', labelKey: 'admin.receipt.showItemNotes' },
       { key: 'showAddons', labelKey: 'admin.receipt.showAddons' },
+      { key: 'showAddonPrices', labelKey: 'admin.receipt.showAddonPrices' },
       { key: 'showUnitPrice', labelKey: 'admin.receipt.showUnitPrice' },
     ],
   },
@@ -146,6 +163,7 @@ export const RECEIPT_SETTINGS_GROUPS = {
       { key: 'showThankYouMessage', labelKey: 'admin.receipt.showThankYouMessage' },
       { key: 'showCustomFooterText', labelKey: 'admin.receipt.showCustomFooterText' },
       { key: 'showFooterPhone', labelKey: 'admin.receipt.showFooterPhone' },
+      { key: 'showTrackingQRCode', labelKey: 'admin.receipt.showTrackingQRCode' },
     ],
   },
 } as const;

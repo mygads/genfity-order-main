@@ -30,11 +30,11 @@ import {
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { useMerchant } from '@/context/MerchantContext';
 import { useToast } from '@/context/ToastContext';
-import useSWR from 'swr';
-import { 
-  useOfflineSync, 
-  saveCartToStorage, 
-  loadCartFromStorage, 
+import useSWR, { mutate } from 'swr';
+import {
+  useOfflineSync,
+  saveCartToStorage,
+  loadCartFromStorage,
   clearCartFromStorage,
   type PendingOrder,
 } from '@/hooks/useOfflineSync';
@@ -48,10 +48,13 @@ import {
   POSHeldOrdersPanel,
   POSPendingOrdersPanel,
   CustomerInfoModal,
+  CustomerLookupModal,
   TableNumberModal,
   OrderNotesModal,
   ItemNotesModal,
   OrderSuccessModal,
+  OfflineSyncIndicator,
+  ConflictResolutionModal,
   type CartItem,
   type CartAddon,
   type CustomerInfo as CartCustomerInfo,
@@ -61,6 +64,7 @@ import {
   type SelectedAddon,
   type POSPaymentData,
 } from '@/components/pos';
+import { ConflictResolutionModal as ConflictModalType } from '@/components/pos'; // Workaround for conflict declaration if needed
 
 // ============================================
 // INTERFACES
@@ -126,9 +130,12 @@ export default function POSPage() {
     pendingOrders,
     isSyncing,
     pendingCount,
+    lastSyncTime,
+    syncError,
     addPendingOrder,
     removePendingOrder,
     syncPendingOrders,
+    clearSyncError,
   } = useOfflineSync();
 
   // ========================================
@@ -147,7 +154,7 @@ export default function POSPage() {
   const [tableNumber, setTableNumber] = useState<string>('');
   const [orderNotes, setOrderNotes] = useState<string>('');
   const [customerInfo, setCustomerInfo] = useState<CartCustomerInfo>({});
-  
+
   // Discount state
   const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage');
   const [discountValue, setDiscountValue] = useState<number>(0);
@@ -156,13 +163,15 @@ export default function POSPage() {
   const [showAddonModal, setShowAddonModal] = useState(false);
   const [selectedMenuItem, setSelectedMenuItem] = useState<ProductMenuItem | null>(null);
   const [selectedMenuItemAddons, setSelectedMenuItemAddons] = useState<AddonCategory[]>([]);
-  
+
   const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [showCustomerLookup, setShowCustomerLookup] = useState(false);
   const [showTableModal, setShowTableModal] = useState(false);
+  const [showConflictModal, setShowConflictModal] = useState(false); // Placeholder for future conflict integration
   const [showOrderNotesModal, setShowOrderNotesModal] = useState(false);
   const [showItemNotesModal, setShowItemNotesModal] = useState(false);
   const [editingCartItemId, setEditingCartItemId] = useState<string | null>(null);
-  
+
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [lastOrderNumber, setLastOrderNumber] = useState('');
   const [lastOrderTotal, setLastOrderTotal] = useState('');
@@ -171,18 +180,18 @@ export default function POSPage() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [pendingOrderId, setPendingOrderId] = useState<string | number>('');
   const [pendingOrderTotal, setPendingOrderTotal] = useState<number>(0);
-  
+
   // Order history panel state
   const [showOrderHistory, setShowOrderHistory] = useState(false);
-  
+
   // Held orders (Save/Hold functionality)
   const [heldOrders, setHeldOrders] = useState<HeldOrder[]>([]);
   const [showHeldOrdersPanel, setShowHeldOrdersPanel] = useState(false);
   const [showPendingOrdersPanel, setShowPendingOrdersPanel] = useState(false);
-  
+
   // Popular menu IDs for frequently bought category
   const [popularMenuIds, setPopularMenuIds] = useState<(number | string)[]>([]);
-  
+
   // Order details for receipt printing
   const [pendingOrderDetails, setPendingOrderDetails] = useState<{
     orderType: 'DINE_IN' | 'TAKEAWAY';
@@ -216,11 +225,11 @@ export default function POSPage() {
     // Store original overflow values
     const originalOverflowX = document.body.style.overflowX;
     const originalOverflow = document.documentElement.style.overflow;
-    
+
     // Prevent horizontal scroll on body and html
     document.body.style.overflowX = 'hidden';
     document.documentElement.style.overflowX = 'hidden';
-    
+
     return () => {
       // Restore original values on unmount
       document.body.style.overflowX = originalOverflowX;
@@ -298,7 +307,7 @@ export default function POSPage() {
   // Load held orders from localStorage on mount
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    
+
     try {
       const stored = localStorage.getItem(HELD_ORDERS_STORAGE_KEY);
       if (stored) {
@@ -311,7 +320,7 @@ export default function POSPage() {
           return diffDays < HELD_ORDERS_EXPIRY_DAYS;
         });
         setHeldOrders(validOrders);
-        
+
         // Save back filtered list
         if (validOrders.length !== parsed.length) {
           localStorage.setItem(HELD_ORDERS_STORAGE_KEY, JSON.stringify(validOrders));
@@ -325,7 +334,7 @@ export default function POSPage() {
   // Save held orders to localStorage when they change
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    
+
     try {
       localStorage.setItem(HELD_ORDERS_STORAGE_KEY, JSON.stringify(heldOrders));
     } catch (error) {
@@ -354,7 +363,7 @@ export default function POSPage() {
       const savedAt = new Date(savedCart.savedAt);
       const now = new Date();
       const diffHours = (now.getTime() - savedAt.getTime()) / (1000 * 60 * 60);
-      
+
       if (diffHours < 4) {
         setCartItems(savedCart.items as CartItem[]);
         setOrderType(savedCart.orderType);
@@ -366,13 +375,13 @@ export default function POSPage() {
         clearCartFromStorage();
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Hold current order (Save as draft)
   const handleHoldOrder = useCallback(() => {
     if (cartItems.length === 0) return;
-    
+
     const heldOrder: HeldOrder = {
       id: `held-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       createdAt: new Date().toISOString(),
@@ -385,7 +394,7 @@ export default function POSPage() {
       items: [...cartItems],
       name: tableNumber ? `Table ${tableNumber}` : customerInfo.name || `Order ${heldOrders.length + 1}`,
     };
-    
+
     setHeldOrders(prev => [...prev, heldOrder]);
     // Clear cart inline to avoid dependency issues
     setCartItems([]);
@@ -400,20 +409,20 @@ export default function POSPage() {
   const handleRecallOrder = useCallback((orderId: string) => {
     const order = heldOrders.find(o => o.id === orderId);
     if (!order) return;
-    
+
     // If cart has items, ask for confirmation
     if (cartItems.length > 0) {
       if (!confirm(t('pos.recallOrderConfirm') || 'This will replace current cart. Continue?')) {
         return;
       }
     }
-    
+
     setCartItems(order.items);
     setOrderType(order.orderType);
     setTableNumber(order.tableNumber || '');
     setOrderNotes(order.notes || '');
     setCustomerInfo(order.customerInfo || {});
-    
+
     // Remove from held orders
     setHeldOrders(prev => prev.filter(o => o.id !== orderId));
     setShowHeldOrdersPanel(false);
@@ -435,12 +444,12 @@ export default function POSPage() {
       try {
         const token = localStorage.getItem('accessToken');
         if (!token) return;
-        
+
         // Use analytics endpoint to get top selling items
         const response = await fetch('/api/merchant/analytics/menu-performance?limit=10', {
           headers: { 'Authorization': `Bearer ${token}` },
         });
-        
+
         if (response.ok) {
           const data = await response.json();
           if (data.success && data.data?.topSelling) {
@@ -452,7 +461,7 @@ export default function POSPage() {
         console.error('[POS] Error fetching popular menus:', error);
       }
     };
-    
+
     fetchPopularMenus();
   }, []);
 
@@ -626,7 +635,7 @@ export default function POSPage() {
     const packagingFee = (orderType === 'TAKEAWAY' && merchantSettings?.enablePackagingFee)
       ? (merchantSettings.packagingFeeAmount || 0)
       : 0;
-    
+
     return subtotal + taxAmount + serviceCharge + packagingFee;
   }, [cartItems, merchantSettings, orderType]);
 
@@ -645,11 +654,11 @@ export default function POSPage() {
       notes: item.notes || undefined,
       addons: item.addons.length > 0
         ? item.addons.map((a: CartAddon) => ({
-            addonItemId: a.addonItemId,
-            addonName: a.addonName,
-            addonPrice: a.addonPrice,
-            quantity: a.quantity,
-          }))
+          addonItemId: a.addonItemId,
+          addonName: a.addonName,
+          addonPrice: a.addonPrice,
+          quantity: a.quantity,
+        }))
         : undefined,
     }));
 
@@ -667,12 +676,12 @@ export default function POSPage() {
       };
 
       const pendingId = addPendingOrder(pendingOrder);
-      
+
       // Show offline success
       setLastOrderNumber(`OFFLINE-${pendingId.substring(0, 8).toUpperCase()}`);
       setLastOrderTotal(formatCurrency(calculateOrderTotal()));
       setShowSuccessModal(true);
-      
+
       showWarning(
         t('pos.offlineOrderQueued') || 'Order queued for sync when online',
         t('pos.offlineMode') || 'Offline Mode'
@@ -686,7 +695,7 @@ export default function POSPage() {
 
     try {
       const token = localStorage.getItem('accessToken');
-      
+
       // Build request body
       const requestBody = {
         orderType,
@@ -701,9 +710,9 @@ export default function POSPage() {
           notes: item.notes || undefined,
           addons: item.addons.length > 0
             ? item.addons.map((a: CartAddon) => ({
-                addonItemId: a.addonItemId,
-                quantity: a.quantity,
-              }))
+              addonItemId: a.addonItemId,
+              quantity: a.quantity,
+            }))
             : undefined,
         })),
       };
@@ -728,7 +737,7 @@ export default function POSPage() {
           );
           return total + itemTotal + addonsTotal;
         }, 0);
-        
+
         const taxAmount = merchantSettings?.enableTax
           ? subtotal * ((merchantSettings.taxPercentage || 0) / 100)
           : 0;
@@ -738,7 +747,7 @@ export default function POSPage() {
         const packagingFeeAmount = (orderType === 'TAKEAWAY' && merchantSettings?.enablePackagingFee)
           ? (merchantSettings.packagingFeeAmount || 0)
           : 0;
-        
+
         // Store order details for receipt printing
         setPendingOrderDetails({
           orderType,
@@ -747,7 +756,7 @@ export default function POSPage() {
           items: cartItems.map(item => ({
             menuName: item.menuName,
             quantity: item.quantity,
-            subtotal: (item.menuPrice * item.quantity) + 
+            subtotal: (item.menuPrice * item.quantity) +
               item.addons.reduce((sum: number, addon: CartAddon) => sum + (addon.addonPrice * addon.quantity), 0),
             addons: item.addons.length > 0 ? item.addons.map((a: CartAddon) => ({
               addonName: a.addonName,
@@ -760,7 +769,7 @@ export default function POSPage() {
           serviceChargeAmount: serviceChargeAmount > 0 ? serviceChargeAmount : undefined,
           packagingFeeAmount: packagingFeeAmount > 0 ? packagingFeeAmount : undefined,
         });
-        
+
         // Store order info and show payment modal
         setPendingOrderId(data.data.id);
         setLastOrderNumber(data.data.orderNumber);
@@ -774,7 +783,7 @@ export default function POSPage() {
       }
     } catch (error) {
       console.error('[POS] Place order error:', error);
-      
+
       // If network error, offer to queue offline
       if (!navigator.onLine) {
         const pendingOrder: Omit<PendingOrder, 'id' | 'createdAt'> = {
@@ -789,11 +798,11 @@ export default function POSPage() {
         };
 
         const pendingId = addPendingOrder(pendingOrder);
-        
+
         setLastOrderNumber(`OFFLINE-${pendingId.substring(0, 8).toUpperCase()}`);
         setLastOrderTotal(formatCurrency(calculateOrderTotal()));
         setShowSuccessModal(true);
-        
+
         showWarning(
           t('pos.offlineOrderQueued') || 'Order queued for sync when online',
           t('pos.offlineMode') || 'Offline Mode'
@@ -839,7 +848,7 @@ export default function POSPage() {
   const handlePaymentConfirm = useCallback(async (paymentData: POSPaymentData) => {
     try {
       const token = localStorage.getItem('accessToken');
-      
+
       const response = await fetch('/api/merchant/orders/pos/payment', {
         method: 'POST',
         headers: {
@@ -870,7 +879,11 @@ export default function POSPage() {
         setShowPaymentModal(false);
         setLastOrderTotal(formatCurrency(paymentData.finalTotal || pendingOrderTotal));
         setShowSuccessModal(true);
-        
+
+        // Refresh POS history + active orders so payment status updates everywhere
+        mutate('/api/merchant/orders/pos/history?today=true');
+        mutate('/api/merchant/orders/active');
+
         // Clear payment state
         setPendingOrderId('');
         setPendingOrderTotal(0);
@@ -902,7 +915,7 @@ export default function POSPage() {
   // ========================================
   // KEYBOARD SHORTCUTS
   // ========================================
-  
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Don't trigger shortcuts when typing in input/textarea
@@ -912,8 +925,8 @@ export default function POSPage() {
       }
 
       // Prevent shortcuts when modals are open
-      if (showPaymentModal || showAddonModal || showCustomerModal || showTableModal || 
-          showOrderNotesModal || showItemNotesModal || showSuccessModal || showOrderHistory) {
+      if (showPaymentModal || showAddonModal || showCustomerModal || showTableModal ||
+        showOrderNotesModal || showItemNotesModal || showSuccessModal || showOrderHistory) {
         // Only allow ESC to close modals
         if (e.key === 'Escape') {
           if (showOrderHistory) setShowOrderHistory(false);
@@ -927,31 +940,31 @@ export default function POSPage() {
           e.preventDefault();
           setShowOrderHistory(true);
           break;
-          
+
         // F2 - Toggle order type (Dine In / Takeaway)
         case 'F2':
           e.preventDefault();
           setOrderType(prev => prev === 'DINE_IN' ? 'TAKEAWAY' : 'DINE_IN');
           break;
-          
+
         // F3 - Set table number
         case 'F3':
           e.preventDefault();
           setShowTableModal(true);
           break;
-          
+
         // F4 - Add customer info
         case 'F4':
           e.preventDefault();
           setShowCustomerModal(true);
           break;
-          
+
         // F5 - Add order notes
         case 'F5':
           e.preventDefault();
           setShowOrderNotesModal(true);
           break;
-          
+
         // F8 - Clear cart
         case 'F8':
           e.preventDefault();
@@ -959,7 +972,7 @@ export default function POSPage() {
             handleClearCart();
           }
           break;
-          
+
         // F10 - Place order / Proceed to payment
         case 'F10':
           e.preventDefault();
@@ -967,13 +980,13 @@ export default function POSPage() {
             handlePlaceOrder();
           }
           break;
-          
+
         // F11 - Toggle display mode
         case 'F11':
           e.preventDefault();
           cycleDisplayMode();
           break;
-          
+
         // Shift+Delete - Remove last item from cart
         case 'Delete':
           if (e.shiftKey && cartItems.length > 0) {
@@ -982,7 +995,7 @@ export default function POSPage() {
             handleRemoveItem(lastItem.id);
           }
           break;
-          
+
         // + or = - Increase last item quantity
         case '+':
         case '=':
@@ -992,7 +1005,7 @@ export default function POSPage() {
             handleUpdateQuantity(lastItem.id, lastItem.quantity + 1);
           }
           break;
-          
+
         // - - Decrease last item quantity
         case '-':
           if (cartItems.length > 0) {
@@ -1009,15 +1022,15 @@ export default function POSPage() {
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [
-    cartItems, 
-    isPlacingOrder, 
-    showPaymentModal, 
-    showAddonModal, 
-    showCustomerModal, 
-    showTableModal, 
-    showOrderNotesModal, 
-    showItemNotesModal, 
-    showSuccessModal, 
+    cartItems,
+    isPlacingOrder,
+    showPaymentModal,
+    showAddonModal,
+    showCustomerModal,
+    showTableModal,
+    showOrderNotesModal,
+    showItemNotesModal,
+    showSuccessModal,
     showOrderHistory,
     handleClearCart,
     handlePlaceOrder,
@@ -1060,16 +1073,16 @@ export default function POSPage() {
   const isNormalMode = displayMode === 'normal';
 
   return (
-    <div 
-      className={isNormalMode 
+    <div
+      className={isNormalMode
         ? 'flex flex-col overflow-hidden -mb-6'
         : 'fixed inset-0 z-50 flex flex-col bg-gray-100 dark:bg-gray-800'
       }
-      style={isNormalMode 
-        ? { 
-            height: 'calc(100vh - 90px)', 
-            contain: 'inline-size',
-          }
+      style={isNormalMode
+        ? {
+          height: 'calc(100vh - 90px)',
+          contain: 'inline-size',
+        }
         : { height: '100dvh' }
       }
     >
@@ -1089,38 +1102,19 @@ export default function POSPage() {
               {t('pos.title')}
             </h1>
           </div>
-          
+
           {/* Online/Offline indicator with sync status */}
-          {isSyncing ? (
-            <div className="hidden sm:flex items-center gap-2 ml-4 px-3 py-1 bg-white/20 rounded-full">
-              <FaSync className="w-3 h-3 text-white animate-spin" />
-              <span className="text-xs text-white font-medium">Syncing...</span>
-            </div>
-          ) : isOnline ? (
-            <div 
-              className="hidden sm:flex items-center gap-2 ml-4 px-3 py-1 bg-white/20 rounded-full cursor-pointer hover:bg-white/30 transition-colors"
-              onClick={pendingCount > 0 ? syncPendingOrders : undefined}
-              title={pendingCount > 0 ? `${pendingCount} pending orders - Click to sync` : 'Connected'}
-            >
-              <FaWifi className="w-3 h-3 text-green-400" />
-              <span className="text-xs text-white font-medium">Online</span>
-              {pendingCount > 0 && (
-                <span className="ml-1 px-1.5 py-0.5 text-xs font-bold bg-yellow-400 text-yellow-900 rounded-full">
-                  {pendingCount}
-                </span>
-              )}
-            </div>
-          ) : (
-            <div className="hidden sm:flex items-center gap-2 ml-4 px-3 py-1 bg-red-500/50 rounded-full">
-              <FaExclamationTriangle className="w-3 h-3 text-yellow-300" />
-              <span className="text-xs text-white font-medium">Offline</span>
-              {pendingCount > 0 && (
-                <span className="ml-1 px-1.5 py-0.5 text-xs font-bold bg-yellow-400 text-yellow-900 rounded-full">
-                  {pendingCount}
-                </span>
-              )}
-            </div>
-          )}
+          <div className="ml-4">
+            <OfflineSyncIndicator
+              isOnline={isOnline}
+              isSyncing={isSyncing}
+              pendingCount={pendingCount}
+              syncError={syncError}
+              lastSyncTime={lastSyncTime}
+              onSync={syncPendingOrders}
+              onClearError={clearSyncError}
+            />
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
@@ -1151,8 +1145,8 @@ export default function POSPage() {
             className="w-9 h-9 rounded-lg bg-white/20 text-white hover:bg-white/30 flex items-center justify-center transition-colors"
             title={
               displayMode === 'normal' ? t('admin.orders.enterCleanMode') :
-              displayMode === 'clean' ? t('admin.orders.enterFullScreen') :
-              t('admin.orders.exitFullScreen')
+                displayMode === 'clean' ? t('admin.orders.enterFullScreen') :
+                  t('admin.orders.exitFullScreen')
             }
           >
             {displayMode === 'normal' ? (
@@ -1163,7 +1157,7 @@ export default function POSPage() {
               <FaCompress className="w-4 h-4" />
             )}
           </button>
-          
+
           {/* Exit clean/fullscreen mode button */}
           {displayMode !== 'normal' && (
             <button
@@ -1192,11 +1186,10 @@ export default function POSPage() {
           {(pendingCount > 0 || !isOnline) && (
             <button
               onClick={() => setShowPendingOrdersPanel(true)}
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
-                isOnline 
-                  ? 'bg-yellow-500/80 text-white hover:bg-yellow-500' 
-                  : 'bg-red-500/80 text-white hover:bg-red-500 animate-pulse'
-              }`}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${isOnline
+                ? 'bg-yellow-500/80 text-white hover:bg-yellow-500'
+                : 'bg-red-500/80 text-white hover:bg-red-500 animate-pulse'
+                }`}
               title={isOnline ? t('pos.pendingOrders') : t('pos.offlineMode')}
             >
               <FaWifi className={`w-4 h-4 ${!isOnline ? 'opacity-50' : ''}`} />
@@ -1234,6 +1227,7 @@ export default function POSPage() {
             onSetTableNumber={() => setShowTableModal(true)}
             onSetOrderNotes={() => setShowOrderNotesModal(true)}
             onSetCustomerInfo={() => setShowCustomerModal(true)}
+            onLookupCustomer={() => setShowCustomerLookup(true)}
             onClearCart={handleClearCart}
             onPlaceOrder={handlePlaceOrder}
             onHoldOrder={handleHoldOrder}
@@ -1316,7 +1310,10 @@ export default function POSPage() {
           name: merchant.name || merchant.code || 'Merchant',
           address: merchant.address,
           phone: merchant.phone,
+          email: merchant.email,
+          logoUrl: merchant.logoUrl,
         } : undefined}
+        receiptSettings={merchant?.receiptSettings}
       />
 
       <OrderSuccessModal
@@ -1364,6 +1361,31 @@ export default function POSPage() {
         onSyncOrders={syncPendingOrders}
         onDeleteOrder={removePendingOrder}
         currency={currency}
+      />
+
+      <CustomerLookupModal
+        isOpen={showCustomerLookup}
+        onClose={() => setShowCustomerLookup(false)}
+        onSelect={(customer) => {
+          setCustomerInfo({
+            name: customer.name,
+            phone: customer.phone,
+            email: customer.email,
+          });
+          setShowCustomerLookup(false);
+          showSuccess(t('pos.customerSelected') || 'Customer selected');
+        }}
+      />
+
+      {/* Conflict Modal - Placeholder for integration */}
+      <ConflictResolutionModal
+        isOpen={showConflictModal}
+        onClose={() => setShowConflictModal(false)}
+        conflicts={[]} // Todo: Connect to sync hook
+        onResolve={(resolutions) => {
+          console.log('Resolutions:', resolutions);
+          setShowConflictModal(false);
+        }}
       />
     </div>
   );

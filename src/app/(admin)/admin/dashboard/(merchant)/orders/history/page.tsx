@@ -195,12 +195,19 @@ export default function OrderHistoryPage() {
       }
 
       const order = data.data;
-      const language = merchantData?.currency === 'IDR' ? 'id' : 'en';
+      const rawSettings = (merchantData?.receiptSettings || {}) as Partial<ReceiptSettings>;
+      const inferredLanguage: 'en' | 'id' = merchantData?.currency === 'IDR' ? 'id' : 'en';
+      const language: 'en' | 'id' =
+        rawSettings.receiptLanguage === 'id' || rawSettings.receiptLanguage === 'en'
+          ? rawSettings.receiptLanguage
+          : inferredLanguage;
 
-      // Merge receipt settings with defaults
+      // Merge receipt settings with defaults (avoid missing new fields)
       const settings: ReceiptSettings = {
         ...DEFAULT_RECEIPT_SETTINGS,
-        ...(merchantData?.receiptSettings || {}),
+        ...rawSettings,
+        receiptLanguage: language,
+        paperSize: rawSettings.paperSize === '58mm' ? '58mm' : '80mm',
       };
 
       // Use unified receipt generator

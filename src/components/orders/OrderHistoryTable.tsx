@@ -24,6 +24,7 @@ import { OrderStatus, PaymentStatus, OrderType } from '@prisma/client';
 import { exportOrdersToCSV, exportOrdersToExcel } from '@/lib/utils/exportOrders';
 import { useMerchant } from '@/context/MerchantContext';
 import { getCurrencySymbol } from '@/lib/utils/format';
+import { formatFullOrderNumber } from '@/lib/utils/format';
 
 // ===== TYPES =====
 
@@ -104,7 +105,7 @@ export const OrderHistoryTable: React.FC<OrderHistoryTableProps> = ({
   hasDeletePin = false,
   loading = false,
 }) => {
-  const { currency } = useMerchant();
+  const { currency, merchant } = useMerchant();
   const currencySymbol = getCurrencySymbol(currency);
   // Derive timezone from currency until timezone is added to merchant settings
   const timezone = currency === 'IDR' ? 'Asia/Jakarta' : 'Australia/Sydney';
@@ -284,7 +285,7 @@ export const OrderHistoryTable: React.FC<OrderHistoryTableProps> = ({
       </div>
 
       {/* Table */}
-      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03] overflow-hidden">
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/3 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 dark:bg-gray-900/50">
@@ -349,7 +350,7 @@ export const OrderHistoryTable: React.FC<OrderHistoryTableProps> = ({
                     className="hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors"
                   >
                     <td className="px-4 py-3 text-sm font-medium text-gray-800 dark:text-white/90">
-                      {order.orderNumber}
+                      {formatFullOrderNumber(order.orderNumber, merchant?.code)}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
                       {order.orderType === 'DINE_IN' ? '🍽️ Dine In' : '🥡 Takeaway'}

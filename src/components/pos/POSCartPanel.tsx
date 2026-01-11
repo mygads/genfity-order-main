@@ -24,6 +24,7 @@ import {
   FaShoppingBag,
   FaUtensils,
   FaTimes,
+  FaSearch,
 } from 'react-icons/fa';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 
@@ -71,6 +72,7 @@ interface POSCartPanelProps {
   onSetTableNumber: () => void;
   onSetOrderNotes: () => void;
   onSetCustomerInfo: () => void;
+  onLookupCustomer?: () => void;
   onClearCart: () => void;
   onPlaceOrder: () => void;
   onHoldOrder?: () => void;
@@ -99,6 +101,7 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
   onSetTableNumber,
   onSetOrderNotes,
   onSetCustomerInfo,
+  onLookupCustomer,
   onClearCart,
   onPlaceOrder,
   onHoldOrder,
@@ -132,7 +135,7 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
   // Calculate totals
   const subtotal = items.reduce((total, item) => {
     const itemTotal = item.menuPrice * item.quantity;
-    const addonsTotal = item.addons.reduce((sum, addon) => 
+    const addonsTotal = item.addons.reduce((sum, addon) =>
       sum + (addon.addonPrice * addon.quantity), 0
     );
     return total + itemTotal + addonsTotal;
@@ -154,11 +157,10 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
           </h2>
           {/* Order type badge */}
           <div className="flex items-center gap-2">
-            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-              orderType === 'DINE_IN'
-                ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
-                : 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'
-            }`}>
+            <span className={`px-2 py-1 rounded-full text-xs font-medium ${orderType === 'DINE_IN'
+              ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
+              : 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'
+              }`}>
               {orderType === 'DINE_IN' ? t('pos.dineIn') : t('pos.takeaway')}
             </span>
             {tableNumber && (
@@ -168,66 +170,73 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
             )}
           </div>
         </div>
-        
+
         {/* Order Type Toggle */}
         <div className="flex gap-2">
           <button
             onClick={() => onSetOrderType('DINE_IN')}
-            className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-              orderType === 'DINE_IN'
-                ? 'bg-orange-500 text-white'
-                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-            }`}
+            className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${orderType === 'DINE_IN'
+              ? 'bg-orange-500 text-white'
+              : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+              }`}
           >
             <FaUtensils className="w-4 h-4" />
             {t('pos.dineIn')}
           </button>
           <button
             onClick={() => onSetOrderType('TAKEAWAY')}
-            className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-              orderType === 'TAKEAWAY'
-                ? 'bg-orange-500 text-white'
-                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-            }`}
+            className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${orderType === 'TAKEAWAY'
+              ? 'bg-orange-500 text-white'
+              : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+              }`}
           >
             <FaShoppingBag className="w-4 h-4" />
             {t('pos.takeaway')}
           </button>
         </div>
 
-        {/* Quick Actions */}
         <div className="flex gap-2 mt-3">
           <button
             onClick={onSetTableNumber}
-            className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5 ${
-              tableNumber
-                ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-800'
-                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-            }`}
+            className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5 ${tableNumber
+              ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-800'
+              : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+              }`}
           >
             <FaChair className="w-3 h-3" />
             {tableNumber ? `${t('pos.table')} ${tableNumber}` : t('pos.addTable')}
           </button>
-          <button
-            onClick={onSetCustomerInfo}
-            className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5 truncate ${
-              customerInfo?.name || customerInfo?.phone
+
+          <div className={`flex-1 flex ${onLookupCustomer ? 'gap-1' : ''}`}>
+            <button
+              onClick={onSetCustomerInfo}
+              className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5 truncate ${customerInfo?.name || customerInfo?.phone
                 ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-800'
                 : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-            }`}
-          >
-            <FaUser className="w-3 h-3 shrink-0" />
-            <span className="truncate">
-              {customerInfo?.name || customerInfo?.phone || t('pos.addCustomer')}
-            </span>
-          </button>
+                }`}
+            >
+              <FaUser className="w-3 h-3 shrink-0" />
+              <span className="truncate">
+                {customerInfo?.name || customerInfo?.phone || t('pos.addCustomer')}
+              </span>
+            </button>
+            {onLookupCustomer && (
+              <button
+                onClick={onLookupCustomer}
+                className="w-8 py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                title={t('pos.searchCustomer') || 'Search Customer'}
+              >
+                <FaSearch className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+
           <button
             onClick={onSetOrderNotes}
-            className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5 ${
-              orderNotes
-                ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-800'
-                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-            }`}
+            className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5 ${orderNotes
+              ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-800'
+              : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+              }`}
           >
             <FaStickyNote className="w-3 h-3" />
             {orderNotes ? t('pos.hasNotes') : t('pos.addNotes')}
@@ -246,9 +255,9 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
         ) : (
           <div className="space-y-3">
             {items.map((item, index) => {
-              const itemSubtotal = (item.menuPrice * item.quantity) + 
+              const itemSubtotal = (item.menuPrice * item.quantity) +
                 item.addons.reduce((sum, addon) => sum + (addon.addonPrice * addon.quantity), 0);
-              
+
               return (
                 <div
                   key={item.id}
@@ -268,7 +277,7 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                         {formatCurrency(item.menuPrice)}
                       </p>
-                      
+
                       {/* Addons */}
                       {item.addons.length > 0 && (
                         <div className="mt-1.5 space-y-0.5">
@@ -279,7 +288,7 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
                           ))}
                         </div>
                       )}
-                      
+
                       {/* Notes */}
                       {item.notes && (
                         <p className="text-xs text-orange-600 dark:text-orange-400 mt-1.5 italic">
@@ -307,7 +316,7 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
                           <FaPlus className="w-3 h-3" />
                         </button>
                       </div>
-                      
+
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => onEditItemNotes(item.id)}
@@ -394,7 +403,7 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
               </button>
             )}
           </div>
-          
+
           {/* Held Orders Button */}
           {onShowHeldOrders && heldOrdersCount > 0 && (
             <button
@@ -405,7 +414,7 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
               {t('pos.heldOrders') || 'Pesanan Tertunda'} ({heldOrdersCount})
             </button>
           )}
-          
+
           {/* Pay Button */}
           <button
             onClick={onPlaceOrder}

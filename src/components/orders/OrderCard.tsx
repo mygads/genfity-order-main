@@ -14,11 +14,16 @@ import { ORDER_STATUS_COLORS, PAYMENT_STATUS_COLORS } from '@/lib/constants/orde
 import { formatDistanceToNow } from 'date-fns';
 import { ConfirmationModal } from '@/components/common/ConfirmationModal';
 import type { OrderListItem, OrderWithDetails } from '@/lib/types/order';
+import { useMerchant } from '@/context/MerchantContext';
+import { formatFullOrderNumber, formatOrderNumberSuffix } from '@/lib/utils/format';
+
+type OrderNumberDisplayMode = 'full' | 'suffix' | 'raw';
 
 interface OrderCardProps {
   order: OrderListItem | OrderWithDetails;
   draggable?: boolean;
   showQuickActions?: boolean;
+  orderNumberDisplayMode?: OrderNumberDisplayMode;
   onClick?: () => void;
   onStatusChange?: (newStatus: string) => void;
   onViewDetails?: () => void;
@@ -30,6 +35,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
   order,
   draggable = false,
   showQuickActions = true,
+  orderNumberDisplayMode = 'full',
   onClick,
   onStatusChange,
   // Props unused in this component but kept for interface consistency
@@ -38,6 +44,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
   currency: _currency = 'AUD',
 }) => {
   const [showUnpaidConfirm, setShowUnpaidConfirm] = useState(false);
+  const { merchant } = useMerchant();
 
   const statusConfig = ORDER_STATUS_COLORS[order.status as keyof typeof ORDER_STATUS_COLORS];
   const paymentConfig = order.payment
@@ -74,6 +81,13 @@ export const OrderCard: React.FC<OrderCardProps> = ({
   };
 
   const timeAgo = formatDistanceToNow(new Date(order.placedAt), { addSuffix: true });
+  const fullOrderNumber = formatFullOrderNumber(order.orderNumber, merchant?.code);
+  const displayOrderNumber =
+    orderNumberDisplayMode === 'suffix'
+      ? formatOrderNumberSuffix(fullOrderNumber)
+      : orderNumberDisplayMode === 'raw'
+        ? (order.orderNumber ?? '')
+        : fullOrderNumber;
 
   return (
     <div
@@ -100,11 +114,11 @@ export const OrderCard: React.FC<OrderCardProps> = ({
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <h3 className="text-base font-bold text-gray-800 dark:text-white/90 truncate">
-              #{order.orderNumber}
+              #{displayOrderNumber}
             </h3>
             <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 mt-1 min-w-0">
               <FaClock className="h-3 w-3 shrink-0" />
-              <span className="truncate max-w-[120px]" title={timeAgo}>{timeAgo}</span>
+              <span className="truncate max-w-30" title={timeAgo}>{timeAgo}</span>
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">

@@ -3,6 +3,7 @@ import StoreToggleButton from './StoreToggleButton';
 import Link from 'next/link';
 import Image from 'next/image';
 import { isStoreEffectivelyOpen, type OpeningHour } from '@/lib/utils/storeStatus';
+import { formatFullOrderNumber } from '@/lib/utils/format';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { SetupProgress } from '@/lib/tutorial';
 import {
@@ -395,7 +396,7 @@ export default function MerchantOwnerDashboard({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="font-medium text-gray-900 dark:text-white text-sm">
-                      #{order.orderNumber}
+                      #{formatFullOrderNumber(order.orderNumber, merchant.code)}
                     </p>
                     <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${getStatusColor(order.status)}`}>
                       {order.status.replace(/_/g, ' ')}

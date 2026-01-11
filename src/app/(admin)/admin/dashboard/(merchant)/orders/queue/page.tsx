@@ -16,11 +16,14 @@ import { playNotificationSound } from '@/lib/utils/soundNotification';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { useContextualHint, CONTEXTUAL_HINTS } from '@/lib/tutorial/components/ContextualHint';
 import { KitchenDisplaySkeleton } from '@/components/common/SkeletonLoaders';
+import { useMerchant } from '@/context/MerchantContext';
+import { formatFullOrderNumber } from '@/lib/utils/format';
 
 export default function QueueDisplayPage() {
   const router = useRouter();
   const { t } = useTranslation();
   const { showHint } = useContextualHint();
+  const { merchant } = useMerchant();
 
   const [orders, setOrders] = useState<OrderWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
@@ -293,7 +296,7 @@ export default function QueueDisplayPage() {
                     ? 'text-7xl'
                     : 'text-5xl'
                     } ${index === 0 ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
-                    {order.orderNumber}
+                    {formatFullOrderNumber(order.orderNumber, merchant?.code)}
                   </div>
 
                   {/* Customer Name */}

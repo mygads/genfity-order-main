@@ -81,6 +81,8 @@ const labelsEN: ReceiptLabels = {
   orderTypeTakeaway: 'Takeaway',
   paymentCash: 'Cash',
   paymentCard: 'Card',
+  paymentQris: 'QRIS',
+  paymentTransfer: 'Bank Transfer',
 };
 
 const labelsID: ReceiptLabels = {
@@ -105,6 +107,8 @@ const labelsID: ReceiptLabels = {
   orderTypeTakeaway: 'Bawa Pulang',
   paymentCash: 'Tunai',
   paymentCard: 'Kartu',
+  paymentQris: 'QRIS',
+  paymentTransfer: 'Transfer Bank',
 };
 
 /**
@@ -151,7 +155,7 @@ function formatCurrency(amount: number, currency: string): string {
   if (currency === 'AUD') {
     return `A$${amount.toFixed(2)}`;
   }
-  
+
   // Special handling for IDR - no decimals
   if (currency === 'IDR') {
     const formatted = new Intl.NumberFormat('id-ID', {
@@ -457,7 +461,7 @@ export function printReceipt(data: ReceiptData): void {
  */
 export function generateThermalPrinterData(data: ReceiptData): Uint8Array {
   const labels = getLabels(data.merchant.currency);
-  
+
   // ESC/POS commands
   const ESC = 0x1b;
   const GS = 0x1d;

@@ -83,6 +83,7 @@ export async function GET(
             address: true,
             currency: true,
             logoUrl: true,
+            receiptSettings: true,
           },
         },
         payment: {

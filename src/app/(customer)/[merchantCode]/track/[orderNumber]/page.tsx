@@ -7,6 +7,7 @@ import { TrackOrderSkeleton } from '@/components/common/SkeletonLoaders';
 import { formatCurrency } from '@/lib/utils/format';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { TranslationKeys } from '@/lib/i18n';
+import FeedbackModal from '@/components/customer/FeedbackModal';
 
 // Order status types
 type OrderStatus = 'PENDING' | 'ACCEPTED' | 'IN_PROGRESS' | 'READY' | 'COMPLETED' | 'CANCELLED';
@@ -36,6 +37,8 @@ interface OrderData {
         name: string;
         currency: string;
     };
+    completedAt?: string | null;
+    placedAt?: string | null;
 }
 
 // Group Order Data
@@ -119,6 +122,12 @@ export default function OrderTrackPage() {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [showSplitBill, setShowSplitBill] = useState(false);
 
+    // Feedback modal state
+    const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+    const [hasFeedback, setHasFeedback] = useState(false);
+    const [feedbackChecked, setFeedbackChecked] = useState(false);
+    const [completionTimeMinutes, setCompletionTimeMinutes] = useState<number | null>(null);
+
     // Fetch order data
     const fetchOrder = useCallback(async (showLoadingSpinner = false) => {
         if (showLoadingSpinner) setIsRefreshing(true);
@@ -158,6 +167,8 @@ export default function OrderTrackPage() {
                 totalAmount: convertDecimal(data.data.totalAmount),
                 createdAt: data.data.createdAt,
                 updatedAt: data.data.updatedAt,
+                completedAt: data.data.completedAt,
+                placedAt: data.data.placedAt,
                 orderItems: data.data.orderItems?.map((item: {
                     menuName: string;
                     quantity: number;
@@ -221,6 +232,71 @@ export default function OrderTrackPage() {
 
         return () => clearInterval(interval);
     }, [order, fetchOrder]);
+
+    // Check if feedback exists for this order
+    useEffect(() => {
+        if (!orderNumber || feedbackChecked) return;
+
+        const checkFeedback = async () => {
+            try {
+                const response = await fetch(`/api/public/orders/${orderNumber}/feedback`);
+                const data = await response.json();
+                if (data.success) {
+                    setHasFeedback(data.hasFeedback);
+                }
+            } catch (error) {
+                console.error('Failed to check feedback:', error);
+            } finally {
+                setFeedbackChecked(true);
+            }
+        };
+
+        checkFeedback();
+    }, [orderNumber, feedbackChecked]);
+
+    // Auto-show feedback modal when order is completed and no feedback yet
+    useEffect(() => {
+        if (!order || !feedbackChecked) return;
+
+        if (order.status === 'COMPLETED' && !hasFeedback) {
+            // Calculate completion time if available
+            if (order.completedAt && order.placedAt) {
+                const completedTime = new Date(order.completedAt).getTime();
+                const placedTime = new Date(order.placedAt).getTime();
+                const minutes = Math.round((completedTime - placedTime) / (1000 * 60));
+                setCompletionTimeMinutes(minutes);
+            }
+            // Small delay for smooth UX
+            const timer = setTimeout(() => {
+                setShowFeedbackModal(true);
+            }, 1000);
+            return () => clearTimeout(timer);
+        }
+    }, [order, feedbackChecked, hasFeedback]);
+
+    // Handle feedback submission
+    const handleFeedbackSubmit = async (feedback: {
+        overallRating: number;
+        serviceRating?: number;
+        foodRating?: number;
+        comment?: string;
+    }) => {
+        const response = await fetch(`/api/public/orders/${orderNumber}/feedback`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(feedback),
+        });
+
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.message || 'Failed to submit feedback');
+        }
+
+        setHasFeedback(true);
+    };
+
+    // Determine receipt language based on currency
+    const feedbackLanguage: 'en' | 'id' = order?.merchant?.currency === 'IDR' ? 'id' : 'en';
 
     // Get current step index
     const getCurrentStepIndex = (status: OrderStatus): number => {
@@ -660,6 +736,16 @@ export default function OrderTrackPage() {
                     {t('customer.orderSummary.newOrder')}
                 </button>
             </div>
+
+            {/* Feedback Modal */}
+            <FeedbackModal
+                isOpen={showFeedbackModal}
+                onClose={() => setShowFeedbackModal(false)}
+                onSubmit={handleFeedbackSubmit}
+                orderNumber={order.orderNumber}
+                completionTimeMinutes={completionTimeMinutes}
+                language={feedbackLanguage}
+            />
         </>
     );
 }

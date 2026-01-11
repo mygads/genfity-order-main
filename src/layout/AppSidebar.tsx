@@ -42,6 +42,7 @@ import {
   FaMoneyCheckAlt,
   FaUserCog,
   FaTv,
+  FaSmile,
 } from "react-icons/fa";
 import MerchantBanner from "../components/merchants/MerchantBanner";
 
@@ -303,6 +304,13 @@ const merchantNavGroups: NavGroup[] = [
         path: "/admin/dashboard/revenue",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
         permission: STAFF_PERMISSIONS.REVENUE,
+      },
+      {
+        icon: <FaSmile />,
+        nameKey: "admin.nav.customerFeedback",
+        path: "/admin/dashboard/customer-feedback",
+        roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+        permission: STAFF_PERMISSIONS.REPORTS, // Same permission as reports
       },
     ],
   },

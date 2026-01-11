@@ -23,6 +23,7 @@ import { OrderStatus } from '@prisma/client';
 import { playNotificationSound } from '@/lib/utils/soundNotification';
 import { useMerchant } from '@/context/MerchantContext';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import { formatFullOrderNumber } from '@/lib/utils/format';
 
 const KITCHEN_STATUSES: OrderStatus[] = ['ACCEPTED', 'IN_PROGRESS'];
 
@@ -313,6 +314,7 @@ export default function KitchenDisplayPage() {
                   actionLabel={t("admin.kitchen.startCooking")}
                   actionIcon={<FaPlay className="h-3 w-3" />}
                   actionColor="primary"
+                  merchantCode={merchant?.code}
                   translations={{
                     table: t("admin.kitchen.table"),
                     takeaway: t("admin.kitchen.takeaway"),
@@ -354,6 +356,7 @@ export default function KitchenDisplayPage() {
                   actionLabel={t("admin.kitchen.markReady")}
                   actionIcon={<FaCheck className="h-3 w-3" />}
                   actionColor="success"
+                  merchantCode={merchant?.code}
                   translations={{
                     table: t("admin.kitchen.table"),
                     takeaway: t("admin.kitchen.takeaway"),
@@ -381,6 +384,7 @@ export default function KitchenDisplayPage() {
           onUpdate={handleOrderUpdate}
           initialOrder={selectedOrder}
           currency={merchantCurrency}
+          allowPaymentRecording={false}
         />
       )}
     </div>
@@ -400,6 +404,7 @@ interface KitchenCardProps {
   actionLabel: string;
   actionIcon: React.ReactNode;
   actionColor: 'primary' | 'success';
+  merchantCode?: string;
   translations: {
     table: string;
     takeaway: string;
@@ -407,7 +412,7 @@ interface KitchenCardProps {
   };
 }
 
-function KitchenCard({ order, onCardClick, onAction, actionLabel, actionIcon, actionColor, translations }: KitchenCardProps) {
+function KitchenCard({ order, onCardClick, onAction, actionLabel, actionIcon, actionColor, merchantCode, translations }: KitchenCardProps) {
   const items = 'orderItems' in order ? order.orderItems : [];
   const isUrgent = (() => {
     const elapsed = Date.now() - new Date(order.placedAt).getTime();
@@ -439,7 +444,7 @@ function KitchenCard({ order, onCardClick, onAction, actionLabel, actionIcon, ac
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="text-lg font-bold text-gray-900 dark:text-white">
-              #{order.orderNumber}
+              #{formatFullOrderNumber(order.orderNumber, merchantCode)}
             </span>
             {order.tableNumber && (
               <span className="text-sm text-gray-600 dark:text-gray-400">

@@ -16,11 +16,14 @@ import { OrderStatus, OrderType, PaymentStatus } from '@prisma/client';
 import { playNotificationSound } from '@/lib/utils/soundNotification';
 import { ORDER_STATUS_COLORS } from '@/lib/constants/orderConstants';
 
+type OrderNumberDisplayMode = 'full' | 'suffix' | 'raw';
+
 interface OrderTabListViewProps {
   merchantId: bigint;
   autoRefresh?: boolean;
   refreshInterval?: number;
   onOrderClick?: (order: OrderListItem) => void;
+  orderNumberDisplayMode?: OrderNumberDisplayMode;
   filters?: {
     orderType?: OrderType | 'ALL';
     paymentStatus?: PaymentStatus | 'ALL';
@@ -47,6 +50,7 @@ export const OrderTabListView: React.FC<OrderTabListViewProps> = ({
   autoRefresh = true,
   refreshInterval = 10000,
   onOrderClick,
+  orderNumberDisplayMode = 'full',
   filters = {},
   searchQuery = '',
   selectedOrders = new Set(),
@@ -255,7 +259,7 @@ export const OrderTabListView: React.FC<OrderTabListViewProps> = ({
       </div>
 
       {/* List Content with Container */}
-      <div className="bg-white rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 p-4">
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 p-4">
         <div className="space-y-3">
           {filteredOrders.length === 0 ? (
             <div className="rounded-xl bg-white dark:bg-gray-900 border border-dashed border-gray-300 dark:border-gray-700 px-6 py-16 text-center">
@@ -282,6 +286,7 @@ export const OrderTabListView: React.FC<OrderTabListViewProps> = ({
                 isSelected={selectedOrders.has(String(order.id))}
                 onToggleSelection={onToggleSelection}
                 showQuickActions={true}
+                orderNumberDisplayMode={orderNumberDisplayMode}
               />
             ))
           )}

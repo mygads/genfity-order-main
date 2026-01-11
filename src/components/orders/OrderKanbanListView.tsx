@@ -31,12 +31,15 @@ import { playNotificationSound } from '@/lib/utils/soundNotification';
 import { ORDER_STATUS_COLORS } from '@/lib/constants/orderConstants';
 import { canTransitionStatus } from '@/lib/utils/orderStatusRules';
 
+type OrderNumberDisplayMode = 'full' | 'suffix' | 'raw';
+
 interface OrderKanbanListViewProps {
   merchantId: bigint;
   autoRefresh?: boolean;
   refreshInterval?: number;
   enableDragDrop?: boolean;
   onOrderClick?: (order: OrderListItem) => void;
+  orderNumberDisplayMode?: OrderNumberDisplayMode;
   filters?: {
     orderType?: OrderType | 'ALL';
     paymentStatus?: PaymentStatus | 'ALL';
@@ -64,6 +67,7 @@ export const OrderKanbanListView: React.FC<OrderKanbanListViewProps> = ({
   refreshInterval = 10000,
   enableDragDrop: _enableDragDrop = true,
   onOrderClick,
+  orderNumberDisplayMode = 'full',
   filters = {},
   searchQuery = '',
   selectedOrders = new Set(),
@@ -282,7 +286,7 @@ export const OrderKanbanListView: React.FC<OrderKanbanListViewProps> = ({
       <div
         ref={setNodeRef}
         className={`
-          flex flex-col gap-2 min-h-[400px] rounded-lg p-3 bg-white dark:bg-gray-900
+          flex flex-col gap-2 min-h-100 rounded-lg p-3 bg-white dark:bg-gray-900
           transition-all duration-200 border
           ${isInvalid
             ? 'border-2 border-dashed border-error-400 bg-error-50/50 dark:border-error-600 dark:bg-error-900/20'
@@ -353,6 +357,7 @@ export const OrderKanbanListView: React.FC<OrderKanbanListViewProps> = ({
                         selectedOrders={selectedOrders}
                         onToggleSelection={onToggleSelection}
                         showQuickActions={true}
+                        orderNumberDisplayMode={orderNumberDisplayMode}
                       />
                     ))
                   )}
@@ -368,6 +373,7 @@ export const OrderKanbanListView: React.FC<OrderKanbanListViewProps> = ({
         {activeOrder ? (
           <OrderTabListCard
             order={activeOrder}
+            orderNumberDisplayMode={orderNumberDisplayMode}
           />
         ) : null}
       </DragOverlay>

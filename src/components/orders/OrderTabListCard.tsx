@@ -13,6 +13,10 @@ import { ORDER_STATUS_COLORS, PAYMENT_STATUS_COLORS } from '@/lib/constants/orde
 import { formatDistanceToNow } from 'date-fns';
 import type { OrderListItem } from '@/lib/types/order';
 import { OrderStatus } from '@prisma/client';
+import { useMerchant } from '@/context/MerchantContext';
+import { formatFullOrderNumber, formatOrderNumberSuffix } from '@/lib/utils/format';
+
+type OrderNumberDisplayMode = 'full' | 'suffix' | 'raw';
 
 interface OrderTabListCardProps {
   order: OrderListItem;
@@ -22,6 +26,7 @@ interface OrderTabListCardProps {
   onToggleSelection?: (orderId: string) => void;
   onStatusChange?: (orderId: string, newStatus: OrderStatus) => void;
   showQuickActions?: boolean;
+  orderNumberDisplayMode?: OrderNumberDisplayMode;
 }
 
 export const OrderTabListCard: React.FC<OrderTabListCardProps> = ({
@@ -32,7 +37,9 @@ export const OrderTabListCard: React.FC<OrderTabListCardProps> = ({
   onToggleSelection,
   onStatusChange,
   showQuickActions = false,
+  orderNumberDisplayMode = 'full',
 }) => {
+  const { merchant } = useMerchant();
   const statusConfig = ORDER_STATUS_COLORS[order.status as keyof typeof ORDER_STATUS_COLORS];
   const paymentConfig = order.payment
     ? PAYMENT_STATUS_COLORS[order.payment.status as keyof typeof PAYMENT_STATUS_COLORS]
@@ -50,6 +57,13 @@ export const OrderTabListCard: React.FC<OrderTabListCardProps> = ({
   };
 
   const timeAgo = formatDistanceToNow(new Date(order.placedAt), { addSuffix: true });
+  const fullOrderNumber = formatFullOrderNumber(order.orderNumber, merchant?.code);
+  const displayOrderNumber =
+    orderNumberDisplayMode === 'suffix'
+      ? formatOrderNumberSuffix(fullOrderNumber)
+      : orderNumberDisplayMode === 'raw'
+        ? (order.orderNumber ?? '')
+        : fullOrderNumber;
 
   const handleCheckboxClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -117,7 +131,7 @@ export const OrderTabListCard: React.FC<OrderTabListCardProps> = ({
             {/* Order Number with Status */}
             <div className="flex items-center gap-2">
               <div className={`px-2 py-1 rounded text-xs font-bold whitespace-nowrap ${statusConfig.bg} ${statusConfig.text}`}>
-                #{order.orderNumber}
+                #{displayOrderNumber}
               </div>
             </div>
 

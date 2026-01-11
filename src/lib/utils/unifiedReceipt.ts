@@ -12,6 +12,9 @@
  */
 
 import { ReceiptSettings, DEFAULT_RECEIPT_SETTINGS } from '@/lib/types/receiptSettings';
+import QRCode from 'qrcode';
+import { getPublicAppOrigin } from '@/lib/utils/publicAppOrigin';
+import { formatFullOrderNumber } from '@/lib/utils/format';
 
 // ============================================
 // TYPES
@@ -54,6 +57,7 @@ export interface ReceiptOrderData {
 
 export interface ReceiptMerchantInfo {
   name: string;
+  code?: string; // Merchant code for tracking URL
   logoUrl?: string | null;
   address?: string | null;
   phone?: string | null;
@@ -80,6 +84,7 @@ interface ReceiptLabels {
   customer: string;
   phone: string;
   email: string;
+  each: string;
   subtotal: string;
   tax: string;
   serviceCharge: string;
@@ -92,6 +97,7 @@ interface ReceiptLabels {
   cashier: string;
   thankYou: string;
   poweredBy: string;
+  scanToTrack: string;
 }
 
 const labelsEN: ReceiptLabels = {
@@ -102,6 +108,7 @@ const labelsEN: ReceiptLabels = {
   customer: 'Customer',
   phone: 'Phone',
   email: 'Email',
+  each: 'each',
   subtotal: 'Subtotal',
   tax: 'Tax',
   serviceCharge: 'Service Charge',
@@ -114,6 +121,7 @@ const labelsEN: ReceiptLabels = {
   cashier: 'Cashier',
   thankYou: 'Thank you for your order!',
   poweredBy: 'Powered by',
+  scanToTrack: 'Scan to track your order',
 };
 
 const labelsID: ReceiptLabels = {
@@ -124,6 +132,7 @@ const labelsID: ReceiptLabels = {
   customer: 'Pelanggan',
   phone: 'Telepon',
   email: 'Email',
+  each: 'per item',
   subtotal: 'Subtotal',
   tax: 'Pajak',
   serviceCharge: 'Biaya Layanan',
@@ -136,6 +145,7 @@ const labelsID: ReceiptLabels = {
   cashier: 'Kasir',
   thankYou: 'Terima kasih atas pesanan Anda!',
   poweredBy: 'Diberdayakan oleh',
+  scanToTrack: 'Scan untuk lacak pesanan',
 };
 
 // ============================================
@@ -183,39 +193,58 @@ function formatDateTime(dateString: string, language: 'en' | 'id'): string {
  * Generate receipt HTML with merchant customization
  */
 export function generateReceiptHTML(options: GenerateReceiptOptions): string {
-  const { order, merchant, language = 'en' } = options;
-  
-  // Merge default settings with merchant custom settings
+  const { order, merchant } = options;
+
+  const displayOrderNumber = formatFullOrderNumber(order.orderNumber, merchant.code);
+
+  const currency = merchant.currency || 'AUD';
+
+  // Merge defaults with merchant settings, but keep smart defaults for new preferences
+  const rawSettings = (options.settings || {}) as Partial<ReceiptSettings>;
+  const inferredLanguage: 'en' | 'id' = currency === 'IDR' ? 'id' : 'en';
+  const receiptLanguage: 'en' | 'id' =
+    options.language ||
+    (rawSettings.receiptLanguage === 'id' || rawSettings.receiptLanguage === 'en'
+      ? rawSettings.receiptLanguage
+      : inferredLanguage);
+
+  const paperSize: '58mm' | '80mm' = rawSettings.paperSize === '58mm' ? '58mm' : '80mm';
+
   const settings: ReceiptSettings = {
     ...DEFAULT_RECEIPT_SETTINGS,
-    ...(options.settings || {}),
+    ...rawSettings,
+    receiptLanguage,
+    paperSize,
   };
-  
-  const labels = getLabels(language);
-  const currency = merchant.currency || 'AUD';
+
+  const labels = getLabels(receiptLanguage);
   const fmt = (amount: number) => formatCurrency(amount, currency);
-  
+
+  const paperWidthPx = settings.paperSize === '58mm' ? 200 : 280;
+  const basePaddingPx = settings.paperSize === '58mm' ? 8 : 10;
+  const printPaddingPx = settings.paperSize === '58mm' ? 4 : 5;
+
   // Build receipt sections
   const headerHtml = buildHeaderSection(merchant, settings, labels);
-  const orderInfoHtml = buildOrderInfoSection(order, settings, labels, language);
-  const itemsHtml = buildItemsSection(order.items, settings, fmt);
+  const orderInfoHtml = buildOrderInfoSection(order, settings, labels, receiptLanguage, displayOrderNumber);
+  const itemsHtml = buildItemsSection(order.items, settings, labels, fmt);
   const paymentHtml = buildPaymentSection(order, settings, labels, fmt);
   const footerHtml = buildFooterSection(order, settings, labels, merchant);
 
   return `
 <!DOCTYPE html>
-<html lang="${language}">
+<html lang="${receiptLanguage}">
 <head>
   <meta charset="UTF-8">
-  <title>${labels.orderNumber}${order.orderNumber}</title>
+  <title>${labels.orderNumber}${displayOrderNumber}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { 
       font-family: 'Courier New', 'Lucida Console', monospace; 
       font-size: 12px; 
       line-height: 1.4;
-      padding: 10px; 
-      max-width: 280px; 
+      padding: ${basePaddingPx}px; 
+      max-width: ${paperWidthPx}px; 
       margin: 0 auto; 
       color: #000;
     }
@@ -269,6 +298,17 @@ export function generateReceiptHTML(options: GenerateReceiptOptions): string {
       font-size: 10px; 
       color: #555; 
     }
+    .item-addon-row {
+      display: flex;
+      justify-content: space-between;
+      margin: 2px 0;
+      margin-left: 12px;
+      font-size: 10px;
+      color: #555;
+      gap: 8px;
+    }
+    .item-addon-row .addon-name { flex: 1; }
+    .item-addon-row .addon-price { white-space: nowrap; }
     .item-notes { 
       margin-left: 12px; 
       font-size: 10px; 
@@ -317,6 +357,20 @@ export function generateReceiptHTML(options: GenerateReceiptOptions): string {
       border-radius: 4px;
       text-align: center;
     }
+    .qr-section {
+      margin: 12px 0;
+      padding: 10px 0;
+      border-top: 1px dashed #999;
+    }
+    .qr-label {
+      font-size: 10px;
+      color: #555;
+      margin-bottom: 8px;
+    }
+    .qr-code {
+      display: flex;
+      justify-content: center;
+    }
     .branding { 
       margin-top: 12px; 
       padding-top: 8px; 
@@ -329,8 +383,8 @@ export function generateReceiptHTML(options: GenerateReceiptOptions): string {
       text-decoration: none; 
     }
     @media print { 
-      @page { margin: 0; size: 80mm auto; } 
-      body { padding: 5px; }
+      @page { margin: 0; size: ${settings.paperSize} auto; } 
+      body { padding: ${printPaddingPx}px; }
     }
   </style>
 </head>
@@ -355,29 +409,29 @@ function buildHeaderSection(
   labels: ReceiptLabels
 ): string {
   const parts: string[] = [];
-  
+
   if (settings.showLogo && merchant.logoUrl) {
     parts.push(`<img src="${merchant.logoUrl}" alt="${merchant.name}" class="logo" crossorigin="anonymous" />`);
   }
-  
+
   if (settings.showMerchantName) {
     parts.push(`<h1 class="merchant-name">${merchant.name}</h1>`);
   }
-  
+
   if (settings.showAddress && merchant.address) {
     parts.push(`<p class="merchant-info">${merchant.address}</p>`);
   }
-  
+
   if (settings.showPhone && merchant.phone) {
     parts.push(`<p class="merchant-info">📞 ${merchant.phone}</p>`);
   }
-  
+
   if (settings.showEmail && merchant.email) {
     parts.push(`<p class="merchant-info">✉️ ${merchant.email}</p>`);
   }
-  
+
   if (parts.length === 0) return '';
-  
+
   return `<div class="header">${parts.join('\n')}</div>`;
 }
 
@@ -385,49 +439,51 @@ function buildOrderInfoSection(
   order: ReceiptOrderData,
   settings: ReceiptSettings,
   labels: ReceiptLabels,
-  language: 'en' | 'id'
+  language: 'en' | 'id',
+  displayOrderNumber?: string
 ): string {
   const parts: string[] = [];
-  
+
   if (settings.showOrderNumber) {
-    parts.push(`<h2 class="order-number">${labels.orderNumber}${order.orderNumber}</h2>`);
+    parts.push(`<h2 class="order-number">${labels.orderNumber}${displayOrderNumber || order.orderNumber}</h2>`);
   }
-  
+
   if (settings.showOrderType) {
     const typeLabel = order.orderType === 'DINE_IN' ? labels.dineIn : labels.takeaway;
-    const tableInfo = settings.showTableNumber && order.tableNumber 
-      ? ` - ${labels.table} ${order.tableNumber}` 
+    const tableInfo = settings.showTableNumber && order.tableNumber
+      ? ` - ${labels.table} ${order.tableNumber}`
       : '';
     parts.push(`<p class="order-meta">${typeLabel}${tableInfo}</p>`);
   } else if (settings.showTableNumber && order.tableNumber) {
     parts.push(`<p class="order-meta">${labels.table} ${order.tableNumber}</p>`);
   }
-  
+
   if (settings.showDateTime) {
     parts.push(`<p class="order-meta">${formatDateTime(order.placedAt, language)}</p>`);
   }
-  
+
   if (settings.showCustomerName && order.customerName) {
     parts.push(`<p class="order-meta">👤 ${order.customerName}</p>`);
   }
-  
+
   if (settings.showCustomerPhone && order.customerPhone) {
     parts.push(`<p class="order-meta">📱 ${order.customerPhone}</p>`);
   }
-  
+
   if (parts.length === 0) return '';
-  
+
   return `<div class="order-info">${parts.join('\n')}</div>`;
 }
 
 function buildItemsSection(
   items: ReceiptOrderItem[],
   settings: ReceiptSettings,
+  labels: ReceiptLabels,
   fmt: (n: number) => string
 ): string {
   const itemsHtml = items.map(item => {
     const parts: string[] = [];
-    
+
     // Main item row
     parts.push(`
       <div class="item-row">
@@ -435,27 +491,33 @@ function buildItemsSection(
         <span>${fmt(item.subtotal)}</span>
       </div>
     `);
-    
+
     // Unit price if enabled
     if (settings.showUnitPrice && item.unitPrice) {
-      parts.push(`<div class="item-addon">@ ${fmt(item.unitPrice)} each</div>`);
+      parts.push(`<div class="item-addon">@ ${fmt(item.unitPrice)} ${labels.each}</div>`);
     }
-    
+
     // Addons
     if (settings.showAddons && item.addons && item.addons.length > 0) {
       item.addons.forEach(addon => {
-        parts.push(`<div class="item-addon">+ ${addon.addonName}</div>`);
+        if (settings.showAddonPrices && typeof addon.addonPrice === 'number') {
+          parts.push(
+            `<div class="item-addon-row"><span class="addon-name">+ ${addon.addonName}</span><span class="addon-price">${fmt(addon.addonPrice)}</span></div>`
+          );
+        } else {
+          parts.push(`<div class="item-addon">+ ${addon.addonName}</div>`);
+        }
       });
     }
-    
+
     // Notes
     if (settings.showItemNotes && item.notes) {
       parts.push(`<div class="item-notes">📝 ${item.notes}</div>`);
     }
-    
+
     return `<div class="item">${parts.join('\n')}</div>`;
   }).join('\n');
-  
+
   return `<div class="items">${itemsHtml}</div>`;
 }
 
@@ -466,50 +528,50 @@ function buildPaymentSection(
   fmt: (n: number) => string
 ): string {
   const rows: string[] = [];
-  
+
   if (settings.showSubtotal) {
     rows.push(`<div class="payment-row"><span>${labels.subtotal}</span><span>${fmt(order.subtotal)}</span></div>`);
   }
-  
+
   if (settings.showTax && order.taxAmount && order.taxAmount > 0) {
     rows.push(`<div class="payment-row"><span>${labels.tax}</span><span>${fmt(order.taxAmount)}</span></div>`);
   }
-  
+
   if (settings.showServiceCharge && order.serviceChargeAmount && order.serviceChargeAmount > 0) {
     rows.push(`<div class="payment-row"><span>${labels.serviceCharge}</span><span>${fmt(order.serviceChargeAmount)}</span></div>`);
   }
-  
+
   if (settings.showPackagingFee && order.packagingFeeAmount && order.packagingFeeAmount > 0) {
     rows.push(`<div class="payment-row"><span>${labels.packagingFee}</span><span>${fmt(order.packagingFeeAmount)}</span></div>`);
   }
-  
+
   if (settings.showDiscount && order.discountAmount && order.discountAmount > 0) {
     rows.push(`<div class="payment-row discount"><span>${labels.discount}</span><span>-${fmt(order.discountAmount)}</span></div>`);
   }
-  
+
   if (settings.showTotal) {
     rows.push(`<div class="payment-row total-row"><span>${labels.total}</span><span>${fmt(order.totalAmount)}</span></div>`);
   }
-  
+
   // Payment details for paid orders
   const isPaid = order.paymentStatus === 'COMPLETED' || order.paymentStatus === 'PAID';
-  
+
   if (isPaid) {
     if (settings.showPaymentMethod && order.paymentMethod) {
       rows.push(`<div class="payment-row"><span>${labels.paymentMethod}</span><span>${order.paymentMethod}</span></div>`);
     }
-    
+
     if (settings.showAmountPaid && order.amountPaid) {
       rows.push(`<div class="payment-row"><span>${labels.amountPaid}</span><span>${fmt(order.amountPaid)}</span></div>`);
     }
-    
+
     if (settings.showChange && order.changeAmount && order.changeAmount > 0) {
       rows.push(`<div class="payment-row"><span>${labels.change}</span><span>${fmt(order.changeAmount)}</span></div>`);
     }
   }
-  
+
   if (rows.length === 0) return '';
-  
+
   return `<div class="payment-section">${rows.join('\n')}</div>`;
 }
 
@@ -520,31 +582,87 @@ function buildFooterSection(
   merchant: ReceiptMerchantInfo
 ): string {
   const parts: string[] = [];
-  
+
+  const buildQrSvgDataUri = (text: string, sizePx: number): string | null => {
+    try {
+      const qr = QRCode.create(text, { errorCorrectionLevel: 'M' });
+      const moduleCount: number = qr.modules.size;
+      const modules: ArrayLike<number> = qr.modules.data;
+
+      const path: string[] = [];
+      for (let row = 0; row < moduleCount; row++) {
+        for (let col = 0; col < moduleCount; col++) {
+          const index = row * moduleCount + col;
+          if (modules[index]) {
+            path.push(`M${col} ${row}h1v1H${col}z`);
+          }
+        }
+      }
+
+      const svg = `<?xml version="1.0" encoding="UTF-8"?>\n` +
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${sizePx}" height="${sizePx}" viewBox="0 0 ${moduleCount} ${moduleCount}" shape-rendering="crispEdges">` +
+        `<rect width="100%" height="100%" fill="#fff"/>` +
+        `<path d="${path.join('')}" fill="#000"/>` +
+        `</svg>`;
+
+      return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+    } catch (error) {
+      console.error('Failed to generate QR SVG:', error);
+      return null;
+    }
+  };
+
   if (settings.showCashierName && order.cashierName) {
     parts.push(`<p class="cashier">${labels.cashier}: ${order.cashierName}</p>`);
   }
-  
+
   if (settings.showThankYouMessage) {
     const message = settings.customThankYouMessage || labels.thankYou;
     parts.push(`<p class="thank-you">${message}</p>`);
   }
-  
+
   if (settings.showCustomFooterText && settings.customFooterText) {
     parts.push(`<p class="custom-footer">${settings.customFooterText.replace(/\n/g, '<br/>')}</p>`);
   }
-  
+
   if (settings.showFooterPhone && merchant.phone) {
     parts.push(`<p class="merchant-info">📞 ${merchant.phone}</p>`);
   }
-  
+
+  // QR Code for order tracking
+  if (settings.showTrackingQRCode && order.orderNumber) {
+    const inferredMerchantCode = order.orderNumber.includes('-')
+      ? order.orderNumber.split('-')[0]
+      : undefined;
+    const merchantCode = merchant.code || inferredMerchantCode;
+
+    if (merchantCode) {
+      const baseUrl = getPublicAppOrigin('https://order.genfity.com');
+      const trackingUrl = `${baseUrl}/${merchantCode}/track/${order.orderNumber}`;
+      const qrSizePx = settings.paperSize === '58mm' ? 90 : 110;
+      const qrDataUri = buildQrSvgDataUri(trackingUrl, qrSizePx);
+      parts.push(`
+        <div class="qr-section">
+          <p class="qr-label">${labels.scanToTrack}</p>
+          <div class="qr-code">
+            <img src="${qrDataUri || `https://api.qrserver.com/v1/create-qr-code/?size=${qrSizePx}x${qrSizePx}&data=${encodeURIComponent(trackingUrl)}`}"
+                 alt="Track Order"
+                 width="${qrSizePx}"
+                 height="${qrSizePx}"
+                 style="display: block; margin: 0 auto;" />
+          </div>
+        </div>
+      `);
+    }
+  }
+
   // Genfity branding - ALWAYS SHOWN, cannot be disabled
   parts.push(`
     <div class="branding">
       ${labels.poweredBy} <a href="https://genfity.com" target="_blank">genfity.com</a>
     </div>
   `);
-  
+
   return `<div class="footer">${parts.join('\n')}</div>`;
 }
 
@@ -558,21 +676,21 @@ function buildFooterSection(
 export function printReceipt(options: GenerateReceiptOptions): boolean {
   try {
     const html = generateReceiptHTML(options);
-    
+
     const printWindow = window.open('', '_blank', 'width=300,height=600');
     if (!printWindow) {
       console.error('Failed to open print window - please allow popups');
       return false;
     }
-    
+
     printWindow.document.write(html);
     printWindow.document.close();
-    
+
     printWindow.onload = () => {
       printWindow.print();
       setTimeout(() => printWindow.close(), 100);
     };
-    
+
     return true;
   } catch (error) {
     console.error('Print receipt error:', error);

@@ -295,7 +295,7 @@ function MerchantOrdersPageContent() {
           </div>
 
           {/* Search Bar */}
-          <div data-tutorial="order-search" className="relative w-full lg:w-auto lg:min-w-[300px]">
+          <div data-tutorial="order-search" className="relative w-full lg:w-auto lg:min-w-75">
             <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
               <FaSearch className="h-4 w-4 text-gray-400" />
             </div>
@@ -495,6 +495,7 @@ function MerchantOrdersPageContent() {
                 refreshInterval={1000}
                 enableDragDrop={!bulkMode}
                 onOrderClick={handleOrderClick}
+                orderNumberDisplayMode="suffix"
                 filters={filters}
                 searchQuery={searchQuery}
                 selectedOrders={selectedOrders}
@@ -516,6 +517,7 @@ function MerchantOrdersPageContent() {
                 refreshInterval={1000}
                 enableDragDrop={!bulkMode}
                 onOrderClick={handleOrderClick}
+                orderNumberDisplayMode="suffix"
                 filters={filters}
                 searchQuery={searchQuery}
                 selectedOrders={selectedOrders}
@@ -534,6 +536,7 @@ function MerchantOrdersPageContent() {
                 autoRefresh={true}
                 refreshInterval={1000}
                 onOrderClick={handleOrderClick}
+                orderNumberDisplayMode="suffix"
                 filters={filters}
                 searchQuery={searchQuery}
                 selectedOrders={selectedOrders}

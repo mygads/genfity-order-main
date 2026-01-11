@@ -29,9 +29,12 @@ import Image from 'next/image';
 import { ORDER_STATUS_COLORS } from '@/lib/constants/orderConstants';
 import { getNextPossibleStatuses } from '@/lib/utils/orderStatusRules';
 import { useToast } from '@/context/ToastContext';
+import { useMerchant } from '@/context/MerchantContext';
 import type { OrderWithDetails } from '@/lib/types/order';
 import { OrderStatus, PaymentMethod } from '@prisma/client';
-import { printReceipt, type ReceiptData } from '@/lib/utils/receiptPrinter';
+import { printReceipt } from '@/lib/utils/unifiedReceipt';
+import { DEFAULT_RECEIPT_SETTINGS, type ReceiptSettings } from '@/lib/types/receiptSettings';
+import { formatFullOrderNumber } from '@/lib/utils/format';
 
 interface OrderDetailModalProps {
   orderId: string;
@@ -40,6 +43,7 @@ interface OrderDetailModalProps {
   onUpdate?: () => void;
   initialOrder?: OrderWithDetails | null;
   currency?: string;
+  allowPaymentRecording?: boolean;
 }
 
 export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
@@ -49,14 +53,25 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   onUpdate,
   initialOrder = null,
   currency,
+  allowPaymentRecording = true,
 }) => {
   const [order, setOrder] = useState<OrderWithDetails | null>(initialOrder);
   const [loading, setLoading] = useState(!initialOrder);
   const [updating, setUpdating] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [merchantCurrency, setMerchantCurrency] = useState<string>('AUD');
+  const [merchantProfile, setMerchantProfile] = useState<{
+    name: string;
+    logoUrl?: string | null;
+    address?: string | null;
+    phone?: string | null;
+    email?: string | null;
+    currency: string;
+    receiptSettings?: Partial<ReceiptSettings> | null;
+  } | null>(null);
   const [showCustomerDetails, setShowCustomerDetails] = useState(false);
   const { showSuccess, showError } = useToast();
+  const { merchant } = useMerchant();
 
   const fetchOrderDetails = useCallback(async () => {
     try {
@@ -78,6 +93,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
       }
       if (merchantData.success && merchantData.data?.currency) {
         setMerchantCurrency(merchantData.data.currency);
+        setMerchantProfile(merchantData.data);
       }
     } catch (error) {
       console.error('Error fetching order details:', error);
@@ -105,6 +121,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
             .then(data => {
               if (data.success && data.data?.currency) {
                 setMerchantCurrency(data.data.currency);
+                setMerchantProfile(data.data);
               }
             })
             .catch(console.error);
@@ -116,6 +133,12 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
       }
     }
   }, [isOpen, orderId, initialOrder, currency, fetchOrderDetails]);
+
+  useEffect(() => {
+    if (!allowPaymentRecording) {
+      setShowPaymentModal(false);
+    }
+  }, [allowPaymentRecording]);
 
   const handleStatusUpdate = async (newStatus: OrderStatus) => {
     if (!order) return;
@@ -213,23 +236,72 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   };
 
   const handlePrintReceipt = () => {
-    if (!order || !order.payment) return;
+    if (!order) return;
 
-    const receiptData: ReceiptData = {
-      order,
-      payment: {
-        method: order.payment.paymentMethod,
-        amount: Number(order.payment.amount),
-        paidAt: order.payment.paidAt || new Date(),
-        paidByName: order.payment.paidByUser?.name,
-      },
-      merchant: {
-        name: 'Restaurant', // Merchant name from order
-        currency: merchantCurrency,
-      },
+    const rawSettings = (merchantProfile?.receiptSettings || {}) as Partial<ReceiptSettings>;
+    const inferredLanguage: 'en' | 'id' = merchantCurrency === 'IDR' ? 'id' : 'en';
+    const language: 'en' | 'id' =
+      rawSettings.receiptLanguage === 'id' || rawSettings.receiptLanguage === 'en'
+        ? rawSettings.receiptLanguage
+        : inferredLanguage;
+
+    const settings: ReceiptSettings = {
+      ...DEFAULT_RECEIPT_SETTINGS,
+      ...rawSettings,
+      receiptLanguage: language,
+      paperSize: rawSettings.paperSize === '58mm' ? '58mm' : '80mm',
     };
 
-    printReceipt(receiptData);
+    const placedAt =
+      (order as unknown as { placedAt?: string }).placedAt ||
+      (order as unknown as { createdAt?: string }).createdAt ||
+      new Date().toISOString();
+
+    const payment = (order as unknown as { payment?: any }).payment;
+
+    printReceipt({
+      order: {
+        orderNumber: (order as any).orderNumber,
+        orderType: (order as any).orderType,
+        tableNumber: (order as any).tableNumber,
+        customerName: (order as any).customerName,
+        customerPhone: (order as any).customerPhone,
+        placedAt,
+        paidAt: payment?.paidAt || payment?.paidAt?.toString?.(),
+        items: ((order as any).orderItems || []).map((item: any) => ({
+          quantity: item.quantity,
+          menuName: item.menuName,
+          unitPrice: typeof item.unitPrice === 'number' ? item.unitPrice : undefined,
+          subtotal: Number(item.subtotal) || 0,
+          notes: item.notes,
+          addons: (item.addons || []).map((addon: any) => ({
+            addonName: addon.addonName,
+            addonPrice: typeof addon.addonPrice === 'number' ? addon.addonPrice : Number(addon.addonPrice),
+          })),
+        })),
+        subtotal: Number((order as any).subtotal) || 0,
+        taxAmount: Number((order as any).taxAmount) || 0,
+        serviceChargeAmount: Number((order as any).serviceChargeAmount) || 0,
+        packagingFeeAmount: Number((order as any).packagingFeeAmount) || 0,
+        discountAmount: Number((order as any).discountAmount) || 0,
+        totalAmount: Number((order as any).totalAmount) || 0,
+        amountPaid: payment?.amountPaid ? Number(payment.amountPaid) : undefined,
+        changeAmount: payment?.changeAmount ? Number(payment.changeAmount) : undefined,
+        paymentMethod: payment?.paymentMethod || payment?.method,
+        paymentStatus: payment?.status,
+        cashierName: payment?.paidByUser?.name || payment?.paidBy?.name,
+      },
+      merchant: {
+        name: merchantProfile?.name || 'Merchant',
+        logoUrl: merchantProfile?.logoUrl,
+        address: merchantProfile?.address,
+        phone: merchantProfile?.phone,
+        email: merchantProfile?.email,
+        currency: merchantCurrency,
+      },
+      settings,
+      language,
+    });
   };
 
   if (!isOpen) return null;
@@ -284,7 +356,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                 <div>
                   <div className="flex items-center gap-3">
                     <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-                      #{order.orderNumber}
+                      #{formatFullOrderNumber(order.orderNumber, merchant?.code)}
                     </h2>
                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${ORDER_STATUS_COLORS[order.status as keyof typeof ORDER_STATUS_COLORS].bg} ${ORDER_STATUS_COLORS[order.status as keyof typeof ORDER_STATUS_COLORS].text}`}>
                       {ORDER_STATUS_COLORS[order.status as keyof typeof ORDER_STATUS_COLORS].label}
@@ -374,7 +446,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                     <div key={idx} className="rounded-lg border border-gray-100 dark:border-gray-800 p-3">
                       <div className="flex gap-3">
                         {/* Menu Image with Qty Badge */}
-                        <div className="relative flex-shrink-0">
+                        <div className="relative shrink-0">
                           <div className="h-16 w-16 overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800">
                             {item.menu?.imageUrl ? (
                               <Image
@@ -510,23 +582,36 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
               {/* Actions */}
               <div className="space-y-2">
                 {/* Payment Actions */}
-                {(!order.payment || order.payment.status === 'PENDING') ? (
-                  <button
-                    onClick={() => setShowPaymentModal(true)}
-                    disabled={updating}
-                    className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-success-500 text-sm font-medium text-white hover:bg-success-600 disabled:opacity-50"
-                  >
-                    <FaMoneyBillWave className="h-4 w-4" />
-                    Record Payment
-                  </button>
+                {allowPaymentRecording ? (
+                  (!order.payment || order.payment.status === 'PENDING') ? (
+                    <button
+                      onClick={() => setShowPaymentModal(true)}
+                      disabled={updating}
+                      className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-success-500 text-sm font-medium text-white hover:bg-success-600 disabled:opacity-50"
+                    >
+                      <FaMoneyBillWave className="h-4 w-4" />
+                      Record Payment
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handlePrintReceipt}
+                      className="flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                    >
+                      <FaPrint className="h-4 w-4" />
+                      Print Receipt
+                    </button>
+                  )
                 ) : (
-                  <button
-                    onClick={handlePrintReceipt}
-                    className="flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-                  >
-                    <FaPrint className="h-4 w-4" />
-                    Print Receipt
-                  </button>
+                  // Kitchen view: no payment recording. Still allow receipt printing when already paid.
+                  (order.payment && order.payment.status !== 'PENDING') ? (
+                    <button
+                      onClick={handlePrintReceipt}
+                      className="flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                    >
+                      <FaPrint className="h-4 w-4" />
+                      Print Receipt
+                    </button>
+                  ) : null
                 )}
 
                 {/* Status Actions */}
@@ -579,56 +664,54 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
             </div>
 
             {/* Payment Modal */}
-            {
-              showPaymentModal && (
+            {allowPaymentRecording && showPaymentModal && (
+              <div
+                className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 p-4"
+                onClick={() => setShowPaymentModal(false)}
+              >
                 <div
-                  className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 p-4"
-                  onClick={() => setShowPaymentModal(false)}
+                  className="w-full max-w-sm rounded-xl border border-gray-200 bg-white p-5 shadow-xl dark:border-gray-800 dark:bg-gray-900"
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  <div
-                    className="w-full max-w-sm rounded-xl border border-gray-200 bg-white p-5 shadow-xl dark:border-gray-800 dark:bg-gray-900"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <h3 className="mb-4 text-lg font-bold text-gray-900 dark:text-white">
-                      Record Payment
-                    </h3>
+                  <h3 className="mb-4 text-lg font-bold text-gray-900 dark:text-white">
+                    Record Payment
+                  </h3>
 
-                    <div className="space-y-2">
-                      <button
-                        onClick={() => handleRecordPayment('CASH_ON_COUNTER', Number(order.totalAmount))}
-                        disabled={updating}
-                        className="flex h-14 w-full items-center justify-center gap-3 rounded-lg bg-success-500 px-4 text-white hover:bg-success-600 disabled:opacity-50"
-                      >
-                        <FaMoneyBillWave className="h-5 w-5" />
-                        <div className="text-left">
-                          <p className="text-sm font-bold">Cash Payment</p>
-                          <p className="text-xs opacity-90">{formatCurrency(Number(order.totalAmount))}</p>
-                        </div>
-                      </button>
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => handleRecordPayment('CASH_ON_COUNTER', Number(order.totalAmount))}
+                      disabled={updating}
+                      className="flex h-14 w-full items-center justify-center gap-3 rounded-lg bg-success-500 px-4 text-white hover:bg-success-600 disabled:opacity-50"
+                    >
+                      <FaMoneyBillWave className="h-5 w-5" />
+                      <div className="text-left">
+                        <p className="text-sm font-bold">Cash Payment</p>
+                        <p className="text-xs opacity-90">{formatCurrency(Number(order.totalAmount))}</p>
+                      </div>
+                    </button>
 
-                      <button
-                        onClick={() => handleRecordPayment('CARD_ON_COUNTER', Number(order.totalAmount))}
-                        disabled={updating}
-                        className="flex h-14 w-full items-center justify-center gap-3 rounded-lg bg-primary-500 px-4 text-white hover:bg-primary-600 disabled:opacity-50"
-                      >
-                        <FaCreditCard className="h-5 w-5" />
-                        <div className="text-left">
-                          <p className="text-sm font-bold">Card Payment</p>
-                          <p className="text-xs opacity-90">{formatCurrency(Number(order.totalAmount))}</p>
-                        </div>
-                      </button>
+                    <button
+                      onClick={() => handleRecordPayment('CARD_ON_COUNTER', Number(order.totalAmount))}
+                      disabled={updating}
+                      className="flex h-14 w-full items-center justify-center gap-3 rounded-lg bg-primary-500 px-4 text-white hover:bg-primary-600 disabled:opacity-50"
+                    >
+                      <FaCreditCard className="h-5 w-5" />
+                      <div className="text-left">
+                        <p className="text-sm font-bold">Card Payment</p>
+                        <p className="text-xs opacity-90">{formatCurrency(Number(order.totalAmount))}</p>
+                      </div>
+                    </button>
 
-                      <button
-                        onClick={() => setShowPaymentModal(false)}
-                        className="h-10 w-full rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
-                      >
-                        Cancel
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => setShowPaymentModal(false)}
+                      className="h-10 w-full rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
+                    >
+                      Cancel
+                    </button>
                   </div>
                 </div>
-              )
-            }
+              </div>
+            )}
           </>
         ) : (
           <div className="flex items-center justify-center p-16">

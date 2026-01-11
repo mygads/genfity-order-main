@@ -30,12 +30,15 @@ import { OrderStatus, OrderType, PaymentStatus } from '@prisma/client';
 import { playNotificationSound } from '@/lib/utils/soundNotification';
 import { canTransitionStatus } from '@/lib/utils/orderStatusRules';
 
+type OrderNumberDisplayMode = 'full' | 'suffix' | 'raw';
+
 interface OrderKanbanBoardProps {
   merchantId: bigint;
   autoRefresh?: boolean;
   refreshInterval?: number;
   enableDragDrop?: boolean;
   onOrderClick?: (order: OrderListItem) => void;
+  orderNumberDisplayMode?: OrderNumberDisplayMode;
   filters?: {
     orderType?: OrderType | 'ALL';
     paymentStatus?: PaymentStatus | 'ALL';
@@ -65,6 +68,7 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
   refreshInterval = 10000, // 10 seconds
   enableDragDrop = true,
   onOrderClick,
+  orderNumberDisplayMode = 'full',
   filters = {},
   searchQuery = '',
   selectedOrders = new Set(),
@@ -443,6 +447,7 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
                 orders={ordersByStatus[status] || []}
                 onOrderClick={(order) => onOrderClick?.(order)}
                 onStatusChange={handleStatusChange}
+                orderNumberDisplayMode={orderNumberDisplayMode}
                 isInvalidDropZone={isInvalid}
                 isOver={overId === status}
                 selectedOrders={selectedOrders}
@@ -475,6 +480,7 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
                 <OrderCard
                   order={activeOrder}
                   draggable
+                  orderNumberDisplayMode={orderNumberDisplayMode}
                   className={isCurrentlyOverInvalid ? 'ring-4 ring-error-400 dark:ring-error-600' : ''}
                   currency={currency}
                 />

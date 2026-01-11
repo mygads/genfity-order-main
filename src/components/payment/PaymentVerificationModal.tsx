@@ -10,8 +10,9 @@
 import React, { useState } from 'react';
 import { OrderNumberDisplay } from './OrderNumberDisplay';
 import { PaymentRecordForm, type PaymentFormData } from './PaymentRecordForm';
-import { printReceipt, type ReceiptData } from '@/lib/utils/receiptPrinter';
+import { printReceipt } from '@/lib/utils/unifiedReceipt';
 import type { OrderWithDetails } from '@/lib/types/order';
+import { DEFAULT_RECEIPT_SETTINGS, type ReceiptSettings } from '@/lib/types/receiptSettings';
 
 interface PaymentVerificationModalProps {
   isOpen: boolean;
@@ -26,6 +27,8 @@ interface PaymentVerificationModalProps {
     phone?: string;
     currency: string;
   };
+
+  receiptSettings?: Partial<ReceiptSettings> | null;
 }
 
 export const PaymentVerificationModal: React.FC<PaymentVerificationModalProps> = ({
@@ -39,6 +42,7 @@ export const PaymentVerificationModal: React.FC<PaymentVerificationModalProps> =
     name: 'GENFITY',
     currency: 'AUD',
   },
+  receiptSettings = null,
 }) => {
   const [orderNumber, setOrderNumber] = useState('');
   const [step, setStep] = useState<'input' | 'verify' | 'payment'>('input');
@@ -81,16 +85,60 @@ export const PaymentVerificationModal: React.FC<PaymentVerificationModalProps> =
       
       // Print receipt after successful payment
       if (verifiedOrder) {
-        const receiptData: ReceiptData = {
-          order: verifiedOrder,
-          payment: {
-            method: data.paymentMethod,
-            amount: data.amount,
-            paidAt: new Date(),
-          },
-          merchant: merchantInfo,
+        const rawSettings = (receiptSettings || {}) as Partial<ReceiptSettings>;
+        const inferredLanguage: 'en' | 'id' = merchantInfo.currency === 'IDR' ? 'id' : 'en';
+        const language: 'en' | 'id' =
+          rawSettings.receiptLanguage === 'id' || rawSettings.receiptLanguage === 'en'
+            ? rawSettings.receiptLanguage
+            : inferredLanguage;
+
+        const settings: ReceiptSettings = {
+          ...DEFAULT_RECEIPT_SETTINGS,
+          ...rawSettings,
+          receiptLanguage: language,
+          paperSize: rawSettings.paperSize === '58mm' ? '58mm' : '80mm',
         };
-        printReceipt(receiptData);
+
+        printReceipt({
+          order: {
+            orderNumber: (verifiedOrder as any).orderNumber,
+            orderType: (verifiedOrder as any).orderType,
+            tableNumber: (verifiedOrder as any).tableNumber,
+            customerName: (verifiedOrder as any).customerName,
+            customerPhone: (verifiedOrder as any).customerPhone,
+            placedAt: ((verifiedOrder as any).placedAt || (verifiedOrder as any).createdAt || new Date().toISOString()) as string,
+            items: ((verifiedOrder as any).orderItems || []).map((item: any) => ({
+              quantity: item.quantity,
+              menuName: item.menuName,
+              unitPrice: item.unitPrice,
+              subtotal: Number(item.subtotal) || 0,
+              notes: item.notes,
+              addons: (item.addons || []).map((addon: any) => ({
+                addonName: addon.addonName,
+                addonPrice: Number(addon.addonPrice) || 0,
+              })),
+            })),
+            subtotal: Number((verifiedOrder as any).subtotal) || 0,
+            taxAmount: Number((verifiedOrder as any).taxAmount) || 0,
+            serviceChargeAmount: Number((verifiedOrder as any).serviceChargeAmount) || 0,
+            packagingFeeAmount: Number((verifiedOrder as any).packagingFeeAmount) || 0,
+            discountAmount: Number((verifiedOrder as any).discountAmount) || 0,
+            totalAmount: Number((verifiedOrder as any).totalAmount) || 0,
+            amountPaid: data.amount,
+            changeAmount: 0,
+            paymentMethod: data.paymentMethod,
+            paymentStatus: 'COMPLETED',
+            cashierName: undefined,
+          },
+          merchant: {
+            name: merchantInfo.name,
+            address: merchantInfo.address,
+            phone: merchantInfo.phone,
+            currency: merchantInfo.currency,
+          },
+          settings,
+          language,
+        });
       }
       
       // Close modal and reset

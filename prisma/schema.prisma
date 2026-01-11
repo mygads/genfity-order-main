@@ -404,6 +404,11 @@ model Merchant {
   // Receipt Template Settings (JSON field with customization options)
   receiptSettings        Json?                 @map("receipt_settings") @db.JsonB
 
+  // Stock Alert Settings
+  stockAlertEnabled         Boolean              @default(true) @map("stock_alert_enabled")
+  defaultLowStockThreshold  Int                  @default(5) @map("default_low_stock_threshold")
+  orderFeedbacks         OrderFeedback[]
+
   @@index([code])
   @@index([isActive])
   @@index([referredByInfluencerId])
@@ -555,6 +560,8 @@ model Menu {
   scheduleDays       Int[]               @default([]) @map("schedule_days") // 0=Sun, 1=Mon, ... 6=Sat
   // Cost for profit calculation
   costPrice          Decimal?            @map("cost_price") @db.Decimal(10, 2)
+  // Stock alert threshold (if null, use merchant default)
+  lowStockThreshold  Int?                @map("low_stock_threshold")
   addonCategories    MenuAddonCategory[]
   categories         MenuCategoryItem[]
   category           MenuCategory?       @relation(fields: [categoryId], references: [id])
@@ -761,6 +768,36 @@ model Payment {
   @@index([gatewayTransactionId])
   @@index([paidAt])
   @@map("payments")
+}
+
+// ============================================
+// ORDER FEEDBACK (Customer Reviews)
+// ============================================
+
+model OrderFeedback {
+  id                     BigInt   @id @default(autoincrement())
+  orderNumber            String   @unique @map("order_number")
+  merchantId             BigInt   @map("merchant_id")
+  
+  // Ratings (1-5 stars)
+  overallRating          Int      @map("overall_rating")    // Required
+  serviceRating          Int?     @map("service_rating")    // Optional
+  foodRating             Int?     @map("food_rating")       // Optional
+  
+  // Additional feedback
+  comment                String?  @db.Text
+  
+  // Order completion time in minutes (calculated from order data)
+  orderCompletionMinutes Int?     @map("order_completion_minutes")
+  
+  createdAt              DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  
+  merchant               Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  
+  @@index([merchantId])
+  @@index([createdAt])
+  @@index([overallRating])
+  @@map("order_feedbacks")
 }
 
 // ============================================

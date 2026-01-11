@@ -14,6 +14,8 @@ import { OrderTabListCard } from './OrderTabListCard';
 import type { OrderListItem } from '@/lib/types/order';
 import { OrderStatus } from '@prisma/client';
 
+type OrderNumberDisplayMode = 'full' | 'suffix' | 'raw';
+
 interface DraggableOrderTabListCardProps {
   order: OrderListItem;
   onOrderClick: (order: OrderListItem) => void;
@@ -22,6 +24,7 @@ interface DraggableOrderTabListCardProps {
   bulkMode?: boolean;
   onToggleSelection?: (orderId: string) => void;
   showQuickActions?: boolean;
+  orderNumberDisplayMode?: OrderNumberDisplayMode;
 }
 
 export const DraggableOrderTabListCard: React.FC<DraggableOrderTabListCardProps> = ({
@@ -32,6 +35,7 @@ export const DraggableOrderTabListCard: React.FC<DraggableOrderTabListCardProps>
   bulkMode = false,
   onToggleSelection,
   showQuickActions = true,
+  orderNumberDisplayMode = 'full',
 }) => {
   const {
     attributes,
@@ -68,6 +72,7 @@ export const DraggableOrderTabListCard: React.FC<DraggableOrderTabListCardProps>
         isSelected={isSelected}
         onToggleSelection={onToggleSelection}
         showQuickActions={showQuickActions}
+        orderNumberDisplayMode={orderNumberDisplayMode}
       />
     </div>
   );

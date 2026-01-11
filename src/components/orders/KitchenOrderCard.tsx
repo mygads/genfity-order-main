@@ -12,6 +12,8 @@ import { FaUtensils, FaShoppingBag, FaChair, FaStickyNote, FaExclamationTriangle
 import { ORDER_STATUS_COLORS } from '@/lib/constants/orderConstants';
 import { OrderTimer } from './OrderTimer';
 import type { OrderListItem, OrderWithDetails } from '@/lib/types/order';
+import { useMerchant } from '@/context/MerchantContext';
+import { formatFullOrderNumber } from '@/lib/utils/format';
 
 interface KitchenOrderCardProps {
   order: OrderListItem | OrderWithDetails;
@@ -27,6 +29,8 @@ export const KitchenOrderCard: React.FC<KitchenOrderCardProps> = ({
   showActions = true,
 }) => {
   const statusConfig = ORDER_STATUS_COLORS[order.status as keyof typeof ORDER_STATUS_COLORS];
+  const { merchant } = useMerchant();
+  const displayOrderNumber = formatFullOrderNumber(order.orderNumber, merchant?.code);
   
   // Check if order has orderItems (OrderWithDetails) or just _count (OrderListItem)
   const hasOrderItems = 'orderItems' in order && Array.isArray(order.orderItems);
@@ -47,7 +51,7 @@ export const KitchenOrderCard: React.FC<KitchenOrderCardProps> = ({
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                #{order.orderNumber}
+                #{displayOrderNumber}
               </h2>
               {order.orderType === 'DINE_IN' ? (
                 <FaUtensils className="h-4 w-4 text-brand-500" title="Dine In" />

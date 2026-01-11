@@ -15,11 +15,14 @@ import { ORDER_STATUS_COLORS } from '@/lib/constants/orderConstants';
 import { DraggableOrderCard } from './DraggableOrderCard';
 import type { OrderListItem } from '@/lib/types/order';
 
+type OrderNumberDisplayMode = 'full' | 'suffix' | 'raw';
+
 interface OrderColumnProps {
   status: string;
   orders: OrderListItem[];
   onOrderClick: (order: OrderListItem) => void;
   onStatusChange?: (orderId: string, newStatus: string) => void;
+  orderNumberDisplayMode?: OrderNumberDisplayMode;
   isInvalidDropZone?: boolean;
   isOver?: boolean;
   selectedOrders?: Set<string>;
@@ -35,6 +38,7 @@ export const OrderColumn: React.FC<OrderColumnProps> = ({
   orders,
   onOrderClick,
   onStatusChange,
+  orderNumberDisplayMode = 'full',
   isInvalidDropZone = false,
   isOver = false,
   selectedOrders = new Set(),
@@ -160,6 +164,7 @@ export const OrderColumn: React.FC<OrderColumnProps> = ({
                 order={order}
                 onClick={() => onOrderClick(order)}
                 onStatusChange={(newStatus: string) => onStatusChange?.(String(order.id), newStatus)}
+                orderNumberDisplayMode={orderNumberDisplayMode}
                 currency={currency}
               />
             </div>

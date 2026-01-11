@@ -4,6 +4,7 @@
  */
 
 import QRCode from 'qrcode';
+import { getPublicAppOrigin } from '@/lib/utils/publicAppOrigin';
 
 /**
  * Generate QR code as Data URL (base64)
@@ -41,6 +42,7 @@ export async function generateOrderQRCode(
   merchantCode: string
 ): Promise<string> {
   // QR code will contain order tracking URL
-  const trackingUrl = `${process.env.NEXT_PUBLIC_APP_URL}/${merchantCode}/order-summary?orderNumber=${orderNumber}`;
+  const baseUrl = getPublicAppOrigin('http://localhost:3000');
+  const trackingUrl = `${baseUrl}/${merchantCode}/track/${orderNumber}`;
   return generateQRCode(trackingUrl);
 }

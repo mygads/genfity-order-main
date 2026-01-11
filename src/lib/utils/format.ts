@@ -292,6 +292,50 @@ export function parseMerchantCodeFromOrderNumber(orderNumber: string): string {
   return orderNumber.slice(0, 7);
 }
 
+/**
+ * Format order number for display in admin/POS.
+ *
+ * Current DB `orderNumber` can be a short code (e.g. 4 chars). For merchant-facing
+ * surfaces we want to show the full reference including merchant code.
+ *
+ * Examples:
+ * - formatFullOrderNumber('A1BC', 'BRJOBNG') => 'BRJOBNG-A1BC'
+ * - formatFullOrderNumber('BRJOBNG-A1BC', 'BRJOBNG') => 'BRJOBNG-A1BC'
+ */
+export function formatFullOrderNumber(
+  orderNumber: string | null | undefined,
+  merchantCode?: string | null
+): string {
+  if (!orderNumber) return '';
+
+  const normalizedMerchantCode = (merchantCode ?? '').trim();
+  if (!normalizedMerchantCode) return orderNumber;
+
+  const upperMerchantCode = normalizedMerchantCode.toUpperCase();
+  const upperOrderNumber = orderNumber.toUpperCase();
+
+  // If the stored value already starts with merchant code, don't prefix again.
+  if (upperOrderNumber.startsWith(upperMerchantCode)) return orderNumber;
+
+  return `${upperMerchantCode}-${orderNumber}`;
+}
+
+/**
+ * Show only the suffix part of an order number after the first dash.
+ *
+ * Examples:
+ * - formatOrderNumberSuffix('BRJOBNG-A1BC') => 'A1BC'
+ * - formatOrderNumberSuffix('BRJOBNG-OFFLINE-123') => 'OFFLINE-123'
+ * - formatOrderNumberSuffix('A1BC') => 'A1BC'
+ */
+export function formatOrderNumberSuffix(orderNumber: string | null | undefined): string {
+  if (!orderNumber) return '';
+
+  const idx = orderNumber.indexOf('-');
+  if (idx === -1) return orderNumber;
+  return orderNumber.slice(idx + 1);
+}
+
 // ============================================================================
 // TEXT FORMATTING
 // ============================================================================

@@ -1345,6 +1345,7 @@ export default function EditMerchantPage() {
             onChange={(settings) => setFormData(prev => ({ ...prev, receiptSettings: settings }))}
             merchantInfo={{
               name: formData.name,
+              code: formData.code,
               logoUrl: formData.logoUrl,
               address: formData.address,
               phone: formData.phoneNumber,

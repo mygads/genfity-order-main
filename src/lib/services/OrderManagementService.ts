@@ -211,6 +211,22 @@ export class OrderManagementService {
       }
     }
 
+    // Check for low stock items when order is COMPLETED
+    if (data.status === 'COMPLETED' && updated.orderItems && updated.orderItems.length > 0) {
+      try {
+        const StockAlertService = (await import('@/lib/services/StockAlertService')).default;
+        const menuIds = updated.orderItems
+          .map((item: { menuId: bigint | null }) => item.menuId)
+          .filter((id: bigint | null): id is bigint => id !== null);
+
+        if (menuIds.length > 0) {
+          await StockAlertService.checkAfterOrder(updated.merchantId, menuIds);
+        }
+      } catch (stockError) {
+        console.error(`[Order ${order.orderNumber}] Failed to check stock alerts:`, stockError);
+      }
+    }
+
     return updated as unknown as OrderWithDetails;
   }
 

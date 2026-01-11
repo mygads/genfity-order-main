@@ -13,10 +13,13 @@ import { CSS } from '@dnd-kit/utilities';
 import { OrderCard } from './OrderCard';
 import type { OrderListItem } from '@/lib/types/order';
 
+type OrderNumberDisplayMode = 'full' | 'suffix' | 'raw';
+
 interface DraggableOrderCardProps {
   order: OrderListItem;
   onClick?: () => void;
   onStatusChange?: (newStatus: string) => void;
+  orderNumberDisplayMode?: OrderNumberDisplayMode;
   isFirst?: boolean;
   isLast?: boolean;
   currency?: string;
@@ -26,6 +29,7 @@ export const DraggableOrderCard: React.FC<DraggableOrderCardProps> = ({
   order,
   onClick,
   onStatusChange,
+  orderNumberDisplayMode = 'full',
   // isFirst and isLast are currently unused/kept for drag styling if needed
   isFirst: _isFirst = false,
   isLast: _isLast = false,
@@ -60,6 +64,7 @@ export const DraggableOrderCard: React.FC<DraggableOrderCardProps> = ({
       <OrderCard
         order={order}
         draggable={!dragDisabled}
+        orderNumberDisplayMode={orderNumberDisplayMode}
         onClick={onClick}
         onStatusChange={onStatusChange}
         onViewDetails={onClick}

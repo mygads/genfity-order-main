@@ -352,9 +352,11 @@ const id = {
 
   // Receipt/Invoice PDF
   "customer.receipt.downloadReceipt": "Unduh Struk",
+  "customer.receipt.printReceipt": "Cetak Struk",
   "customer.receipt.downloading": "Mengunduh...",
   "customer.receipt.downloadSuccess": "Struk berhasil diunduh",
   "customer.receipt.downloadFailed": "Gagal mengunduh struk",
+  "customer.receipt.printFailed": "Gagal mencetak struk",
 
   // Profile
   "customer.profile.title": "Profil",
@@ -509,6 +511,7 @@ const id = {
   "admin.nav.influencerWithdrawals": "Penarikan Influencer",
   "admin.nav.influencerSettings": "Pengaturan Influencer",
   "admin.nav.financialSettings": "Pengaturan Keuangan",
+  "admin.nav.customerFeedback": "Feedback Pelanggan",
 
   // Subscription Settings Page (Super Admin)
   "admin.subscriptionSettings.title": "Pengaturan Langganan",
@@ -820,6 +823,7 @@ const id = {
   "admin.receipt.showCustomerPhone": "Tampilkan Telepon Pelanggan",
   "admin.receipt.showItemNotes": "Tampilkan Catatan Item",
   "admin.receipt.showAddons": "Tampilkan Add-ons",
+  "admin.receipt.showAddonPrices": "Tampilkan Harga Add-on",
   "admin.receipt.showUnitPrice": "Tampilkan Harga Satuan",
   "admin.receipt.showSubtotal": "Tampilkan Subtotal",
   "admin.receipt.showTax": "Tampilkan Pajak",
@@ -834,7 +838,10 @@ const id = {
   "admin.receipt.showThankYouMessage": "Tampilkan Pesan Terima Kasih",
   "admin.receipt.showCustomFooterText": "Tampilkan Teks Footer Kustom",
   "admin.receipt.showFooterPhone": "Tampilkan Telepon di Footer",
+  "admin.receipt.showTrackingQRCode": "Tampilkan QR Lacak Pesanan",
   "admin.receipt.testPrint": "Cetak Tes",
+  "admin.receipt.languageIndonesian": "Bahasa Indonesia",
+  "admin.receipt.languageEnglish": "English",
   "admin.receipt.customFooterText": "Teks Footer Kustom",
   "admin.receipt.customFooterPlaceholder": "cth: WiFi: RestoranKu / Password: selamatdatang123",
   "admin.receipt.customFooterHelp": "Tambahkan info lain seperti password WiFi, sosial media, kode promo, dll.",
@@ -2845,10 +2852,6 @@ const id = {
   "pos.confirmDeletePendingOrder": "Apakah Anda yakin ingin menghapus pesanan tertunda ini?",
   "pos.pendingOrderDeleted": "Pesanan tertunda dihapus",
   "pos.pendingOrdersWillSync": "Pesanan ini akan disinkronkan saat Anda online",
-  // POS Stock Warnings
-  "pos.lowStock": "Stok Rendah",
-  "pos.stockLeft": "{count} tersisa",
-  "pos.outOfStock": "Stok Habis",
   // POS Frequently Bought
   "pos.frequentlyBought": "Sering Dibeli",
   "pos.bestSellers": "Terlaris",

@@ -14,6 +14,10 @@ import { ORDER_STATUS_COLORS, PAYMENT_STATUS_COLORS } from '@/lib/constants/orde
 import { formatDistanceToNow } from 'date-fns';
 import type { OrderListItem } from '@/lib/types/order';
 import { OrderStatus } from '@prisma/client';
+import { useMerchant } from '@/context/MerchantContext';
+import { formatFullOrderNumber, formatOrderNumberSuffix } from '@/lib/utils/format';
+
+type OrderNumberDisplayMode = 'full' | 'suffix' | 'raw';
 
 interface OrderListCardProps {
   order: OrderListItem;
@@ -23,6 +27,7 @@ interface OrderListCardProps {
   onToggleSelection?: (orderId: string) => void;
   onStatusChange?: (orderId: string, newStatus: OrderStatus) => void;
   showQuickActions?: boolean;
+  orderNumberDisplayMode?: OrderNumberDisplayMode;
   draggable?: boolean;
   className?: string;
 }
@@ -35,6 +40,7 @@ export const OrderListCard: React.FC<OrderListCardProps> = ({
   onToggleSelection,
   onStatusChange,
   showQuickActions = false,
+  orderNumberDisplayMode = 'full',
   draggable = false,
   className = '',
 }) => {
@@ -43,6 +49,7 @@ export const OrderListCard: React.FC<OrderListCardProps> = ({
     ? PAYMENT_STATUS_COLORS[order.payment.status as keyof typeof PAYMENT_STATUS_COLORS]
     : PAYMENT_STATUS_COLORS.PENDING;
 
+  const { merchant } = useMerchant();
   const itemCount = order._count?.orderItems || 0;
 
   const formatCurrency = (amount: number | string) => {
@@ -55,6 +62,13 @@ export const OrderListCard: React.FC<OrderListCardProps> = ({
   };
 
   const timeAgo = formatDistanceToNow(new Date(order.placedAt), { addSuffix: true });
+  const fullOrderNumber = formatFullOrderNumber(order.orderNumber, merchant?.code);
+  const displayOrderNumber =
+    orderNumberDisplayMode === 'suffix'
+      ? formatOrderNumberSuffix(fullOrderNumber)
+      : orderNumberDisplayMode === 'raw'
+        ? (order.orderNumber ?? '')
+        : fullOrderNumber;
 
   const handleCheckboxClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -122,7 +136,7 @@ export const OrderListCard: React.FC<OrderListCardProps> = ({
 
           {/* Order Number with Status Color */}
           <div className={`shrink-0 px-2 py-1 rounded text-xs font-bold ${statusConfig.bg} ${statusConfig.text}`}>
-            #{order.orderNumber}
+            #{displayOrderNumber}
           </div>
 
           {/* Order Type */}

@@ -1,3 +1,5 @@
+import { formatFullOrderNumber } from '@/lib/utils/format';
+
 // Custom types based on Prisma schema
 type Merchant = {
   id: bigint;
@@ -268,7 +270,7 @@ export default function MerchantStaffDashboard({
                 <div className="flex-1">
                   <div className="flex items-center gap-3">
                     <p className="font-medium text-gray-900 dark:text-white">
-                      #{order.orderNumber}
+                      #{formatFullOrderNumber(order.orderNumber, merchant.code)}
                     </p>
                     <span
                       className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${order.status === 'COMPLETED'
