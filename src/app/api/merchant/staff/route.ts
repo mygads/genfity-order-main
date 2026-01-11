@@ -117,7 +117,7 @@ async function createStaffHandler(
   // Get merchant info for email
   const merchant = await prisma.merchant.findUnique({
     where: { id: BigInt(merchantId) },
-    select: { name: true, code: true },
+    select: { name: true, code: true, country: true },
   });
 
   if (!merchant) {
@@ -150,6 +150,7 @@ async function createStaffHandler(
       password: body.password, // Send plain password in email
       merchantName: merchant.name,
       merchantCode: merchant.code,
+      merchantCountry: merchant.country,
     });
     console.log('✅ Staff welcome email sent to:', body.email);
   } catch (emailError) {

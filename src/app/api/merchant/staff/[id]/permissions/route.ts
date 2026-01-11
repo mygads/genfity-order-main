@@ -80,6 +80,7 @@ async function updatePermissionsHandler(
         merchant: {
           select: {
             name: true,
+            country: true,
           },
         },
       },
@@ -101,6 +102,7 @@ async function updatePermissionsHandler(
         merchantName: updatedStaff.merchant?.name || 'Store',
         permissions: permissionNames,
         updatedBy: updater?.name || 'Owner',
+        merchantCountry: updatedStaff.merchant?.country,
       }).catch((err) => {
         // Don't block the response if email fails
         console.error('Failed to send permission update email:', err);

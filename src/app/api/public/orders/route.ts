@@ -86,6 +86,7 @@ interface MerchantWithConfig {
   id: bigint;
   code: string;
   name: string;
+  country?: string | null;
   isActive: boolean;
   isOpen: boolean;
   timezone?: string;
@@ -345,6 +346,7 @@ export async function POST(req: NextRequest) {
           email: body.customerEmail.toLowerCase(),
           phone: body.customerPhone || '',
           tempPassword: tempPassword,
+          merchantCountry: merchant.country,
         }).then(sent => {
           if (sent) {
             console.log('✅ [ORDER] Welcome email sent to:', body.customerEmail);

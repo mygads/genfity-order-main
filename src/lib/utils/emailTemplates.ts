@@ -17,10 +17,35 @@ function _t(locale: Locale) {
   return {
     lang,
     needHelp: lang === 'id' ? 'Butuh bantuan?' : 'Need assistance?',
+    poweredBy:
+      lang === 'id'
+        ? 'powered by genfity.com genfity digital solution'
+        : 'powered by genfity.com genfity digital solution',
     rights: lang === 'id'
       ? `© ${new Date().getFullYear()} Genfity Digital Solution. Semua hak dilindungi.`
       : `© ${new Date().getFullYear()} Genfity Digital Solution. All rights reserved.`,
   };
+}
+
+type DetailsRow = {
+  label: string;
+  value: string;
+  emphasizeValue?: boolean;
+};
+
+function renderDetailsRows(rows: DetailsRow[]): string {
+  return rows
+    .map((row, index) => {
+      const borderTop = index === 0 ? '' : 'border-top: 1px solid #e5e5e5;';
+      const valueWeight = row.emphasizeValue ? 700 : 600;
+      return `
+        <tr>
+          <td style="padding: 10px 0; font-size: 13px; color: #737373; ${borderTop}">${row.label}</td>
+          <td style="padding: 10px 0; font-size: 13px; color: #171717; text-align: right; font-weight: ${valueWeight}; ${borderTop}">${row.value}</td>
+        </tr>
+      `;
+    })
+    .join('');
 }
 
 /**
@@ -72,6 +97,9 @@ function getBaseTemplate(content: string, footerEmail: string, locale: Locale = 
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td align="center">
+                    <p style="margin: 0 0 10px 0; font-size: 12px; color: #a3a3a3;">
+                      ${t.poweredBy}
+                    </p>
                     <p style="margin: 0 0 8px 0; font-size: 13px; color: #737373;">
                       ${t.needHelp} <a href="mailto:${footerEmail}" style="color: #171717; text-decoration: underline;">${footerEmail}</a>
                     </p>
@@ -100,13 +128,18 @@ export function getPasswordResetOTPTemplate(params: {
   code: string;
   expiresInMinutes: number;
   supportEmail: string;
+  locale?: Locale;
 }): string {
+  const locale = params.locale || 'en';
+  const isID = locale === 'id';
   const content = `
     <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #171717; text-align: center;">
-      Reset Your Password
+      ${isID ? 'Atur Ulang Password' : 'Reset Your Password'}
     </h1>
     <p style="margin: 0 0 24px 0; font-size: 14px; color: #737373; text-align: center;">
-      Hi ${params.name}, use the code below to reset your password.
+      ${isID
+        ? `Halo ${params.name}, gunakan kode berikut untuk mengatur ulang password Anda.`
+        : `Hi ${params.name}, use the code below to reset your password.`}
     </p>
     
     <!-- OTP Code -->
@@ -123,17 +156,21 @@ export function getPasswordResetOTPTemplate(params: {
     </table>
     
     <p style="margin: 24px 0 0 0; font-size: 13px; color: #a3a3a3; text-align: center;">
-      This code expires in <strong style="color: #737373;">${params.expiresInMinutes} minutes</strong>
+      ${isID
+        ? `Kode ini akan kedaluwarsa dalam <strong style="color: #737373;">${params.expiresInMinutes} menit</strong>`
+        : `This code expires in <strong style="color: #737373;">${params.expiresInMinutes} minutes</strong>`}
     </p>
     
     <hr style="border: none; border-top: 1px solid #f0f0f0; margin: 24px 0;" />
     
     <p style="margin: 0; font-size: 12px; color: #a3a3a3; text-align: center;">
-      If you didn't request this, you can safely ignore this email.
+      ${isID
+        ? 'Jika Anda tidak meminta ini, Anda dapat mengabaikan email ini.'
+        : "If you didn't request this, you can safely ignore this email."}
     </p>
   `;
 
-  return getBaseTemplate(content, params.supportEmail);
+  return getBaseTemplate(content, params.supportEmail, locale);
 }
 
 /**
@@ -147,13 +184,16 @@ export function getCustomerWelcomeTemplate(params: {
   tempPassword: string;
   loginUrl: string;
   supportEmail: string;
+  locale?: Locale;
 }): string {
+  const locale = params.locale || 'en';
+  const isID = locale === 'id';
   const content = `
     <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #171717; text-align: center;">
-      Welcome to Genfity
+      ${isID ? 'Selamat Datang di Genfity' : 'Welcome to Genfity'}
     </h1>
     <p style="margin: 0 0 24px 0; font-size: 14px; color: #737373; text-align: center;">
-      Your account has been created successfully.
+      ${isID ? 'Akun Anda berhasil dibuat.' : 'Your account has been created successfully.'}
     </p>
     
     <!-- Credentials Box -->
@@ -169,7 +209,7 @@ export function getCustomerWelcomeTemplate(params: {
             </tr>
             <tr>
               <td style="padding: 8px 0; border-top: 1px solid #e5e5e5;">
-                <span style="font-size: 12px; color: #737373; text-transform: uppercase; letter-spacing: 0.5px;">Temporary Password</span>
+                <span style="font-size: 12px; color: #737373; text-transform: uppercase; letter-spacing: 0.5px;">${isID ? 'Password Sementara' : 'Temporary Password'}</span>
                 <p style="margin: 4px 0 0 0; font-family: 'SF Mono', 'Roboto Mono', monospace; font-size: 16px; font-weight: 600; color: #171717; letter-spacing: 1px;">${params.tempPassword}</p>
               </td>
             </tr>
@@ -183,18 +223,104 @@ export function getCustomerWelcomeTemplate(params: {
       <tr>
         <td align="center">
           <a href="${params.loginUrl}" style="display: inline-block; background-color: #171717; color: #ffffff; font-size: 14px; font-weight: 500; padding: 12px 32px; border-radius: 6px; text-decoration: none;">
-            Sign In to Your Account
+            ${isID ? 'Masuk ke Akun Anda' : 'Sign In to Your Account'}
           </a>
         </td>
       </tr>
     </table>
     
     <p style="margin: 0; font-size: 12px; color: #a3a3a3; text-align: center;">
-      Please change your password after signing in.
+      ${isID
+        ? 'Silakan ganti password setelah Anda masuk.'
+        : 'Please change your password after signing in.'}
     </p>
   `;
 
-  return getBaseTemplate(content, params.supportEmail);
+  return getBaseTemplate(content, params.supportEmail, locale);
+}
+
+/**
+ * Staff Welcome Email Template
+ * Sent when a staff member is invited/created
+ */
+export function getStaffWelcomeTemplate(params: {
+  name: string;
+  email: string;
+  password: string;
+  merchantName: string;
+  merchantCode: string;
+  loginUrl: string;
+  locale?: Locale;
+  supportEmail: string;
+}): string {
+  const locale = params.locale || 'en';
+  const isID = locale === 'id';
+  const content = `
+    <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #171717; text-align: center;">
+      ${isID ? `Selamat Datang di ${params.merchantName}` : `Welcome to ${params.merchantName}`}
+    </h1>
+    <p style="margin: 0 0 24px 0; font-size: 14px; color: #737373; text-align: center;">
+      ${isID
+        ? `Halo ${params.name}, Anda telah ditambahkan sebagai staff.`
+        : `Hi ${params.name}, you have been added as a staff member.`}
+    </p>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; border: 1px solid #e5e5e5; border-radius: 10px; margin: 18px 0;">
+      <tr>
+        <td style="padding: 18px;">
+          <p style="margin: 0 0 12px 0; font-size: 14px; color: #171717; font-weight: 600;">${isID ? 'Kredensial Login' : 'Login Credentials'}</p>
+          <table width="100%" cellpadding="0" cellspacing="0">
+            ${renderDetailsRows([
+              { label: 'Email', value: params.email, emphasizeValue: true },
+              {
+                label: isID ? 'Password Sementara' : 'Temporary Password',
+                value: params.password,
+                emphasizeValue: true,
+              },
+              {
+                label: isID ? 'Merchant' : 'Merchant',
+                value: `${params.merchantName} (${params.merchantCode})`,
+              },
+            ])}
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
+      <tr>
+        <td align="center">
+          <a href="${params.loginUrl}" style="display: inline-block; background-color: #171717; color: #ffffff; font-size: 14px; font-weight: 600; padding: 12px 32px; border-radius: 8px; text-decoration: none;">
+            ${isID ? 'Masuk ke Dashboard' : 'Login to Dashboard'}
+          </a>
+        </td>
+      </tr>
+    </table>
+
+    <p style="margin: 0; font-size: 12px; color: #a3a3a3; text-align: center;">
+      ${isID
+        ? 'Untuk keamanan, silakan ganti password setelah login pertama.'
+        : 'For security, please change your password after your first login.'}
+    </p>
+  `;
+
+  return getBaseTemplate(content, params.supportEmail, locale);
+}
+
+export function getTestEmailTemplate(params: {
+  locale?: Locale;
+  supportEmail: string;
+}): string {
+  const locale = params.locale || 'en';
+  const content = `
+    <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #171717; text-align: center;">
+      GENFITY Test Email
+    </h1>
+    <p style="margin: 0; font-size: 14px; color: #737373; text-align: center;">
+      This email confirms your SMTP configuration is working.
+    </p>
+  `;
+  return getBaseTemplate(content, params.supportEmail, locale);
 }
 
 /**
@@ -206,13 +332,18 @@ export function getPasswordNotificationTemplate(params: {
   tempPassword: string;
   dashboardUrl: string;
   supportEmail: string;
+  locale?: Locale;
 }): string {
+  const locale = params.locale || 'en';
+  const isID = locale === 'id';
   const content = `
     <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #171717; text-align: center;">
-      Your Account is Ready
+      ${isID ? 'Akun Anda Siap' : 'Your Account is Ready'}
     </h1>
     <p style="margin: 0 0 24px 0; font-size: 14px; color: #737373; text-align: center;">
-      Hi ${params.name}, your merchant account has been created.
+      ${isID
+        ? `Halo ${params.name}, akun merchant Anda telah dibuat.`
+        : `Hi ${params.name}, your merchant account has been created.`}
     </p>
     
     <!-- Credentials Box -->
@@ -228,7 +359,7 @@ export function getPasswordNotificationTemplate(params: {
             </tr>
             <tr>
               <td style="padding: 8px 0; border-top: 1px solid #e5e5e5;">
-                <span style="font-size: 12px; color: #737373; text-transform: uppercase; letter-spacing: 0.5px;">Temporary Password</span>
+                <span style="font-size: 12px; color: #737373; text-transform: uppercase; letter-spacing: 0.5px;">${isID ? 'Password Sementara' : 'Temporary Password'}</span>
                 <p style="margin: 4px 0 0 0; font-family: 'SF Mono', 'Roboto Mono', monospace; font-size: 16px; font-weight: 600; color: #171717; letter-spacing: 1px;">${params.tempPassword}</p>
               </td>
             </tr>
@@ -242,18 +373,20 @@ export function getPasswordNotificationTemplate(params: {
       <tr>
         <td align="center">
           <a href="${params.dashboardUrl}" style="display: inline-block; background-color: #171717; color: #ffffff; font-size: 14px; font-weight: 500; padding: 12px 32px; border-radius: 6px; text-decoration: none;">
-            Open Dashboard
+            ${isID ? 'Buka Dashboard' : 'Open Dashboard'}
           </a>
         </td>
       </tr>
     </table>
     
     <p style="margin: 0; font-size: 12px; color: #a3a3a3; text-align: center;">
-      For security, please change your password after your first login.
+      ${isID
+        ? 'Untuk keamanan, silakan ganti password setelah login pertama.'
+        : 'For security, please change your password after your first login.'}
     </p>
   `;
 
-  return getBaseTemplate(content, params.supportEmail);
+  return getBaseTemplate(content, params.supportEmail, locale);
 }
 
 /**
@@ -321,18 +454,14 @@ export function getOrderConfirmationTemplate(params: {
       <tr>
         <td style="padding: 16px;">
           <table width="100%" cellpadding="0" cellspacing="0">
-            <tr>
-              <td style="font-size: 12px; color: #737373;">Order Number</td>
-              <td style="font-size: 14px; font-weight: 600; color: #171717; text-align: right;">${params.orderNumber}</td>
-            </tr>
-            <tr>
-              <td style="font-size: 12px; color: #737373; padding-top: 8px;">${labels.restaurant}</td>
-              <td style="font-size: 14px; color: #171717; text-align: right; padding-top: 8px;">${params.merchantName}</td>
-            </tr>
-            <tr>
-              <td style="font-size: 12px; color: #737373; padding-top: 8px;">${labels.orderType}</td>
-              <td style="font-size: 14px; color: #171717; text-align: right; padding-top: 8px;">${params.orderType}${params.tableNumber ? ` - ${labels.table} ${params.tableNumber}` : ''}</td>
-            </tr>
+            ${renderDetailsRows([
+              { label: labels.orderNumber, value: params.orderNumber, emphasizeValue: true },
+              { label: labels.restaurant, value: params.merchantName },
+              {
+                label: labels.orderType,
+                value: `${params.orderType}${params.tableNumber ? ` - ${labels.table} ${params.tableNumber}` : ''}`,
+              },
+            ])}
           </table>
         </td>
       </tr>
@@ -426,10 +555,13 @@ export function getOrderCompletedTemplate(params: {
           <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 16px 0;" />
           
           <table width="100%" cellpadding="0" cellspacing="0">
-            <tr>
-              <td style="font-size: 14px; font-weight: 600; color: #171717;">${labels.totalPaid}</td>
-              <td style="font-size: 16px; font-weight: 600; color: #171717; text-align: right;">${formatCurrency(params.total, params.currency, locale)}</td>
-            </tr>
+            ${renderDetailsRows([
+              {
+                label: labels.totalPaid,
+                value: formatCurrency(params.total, params.currency, locale),
+                emphasizeValue: true,
+              },
+            ])}
           </table>
         </td>
       </tr>
@@ -453,24 +585,30 @@ export function getPermissionUpdateTemplate(params: {
   permissions: string[];
   updatedBy: string;
   dashboardUrl: string;
+  locale?: Locale;
+  supportEmail?: string;
 }): string {
+  const locale = params.locale || 'en';
+  const isID = locale === 'id';
   const permissionsList = params.permissions.length > 0
     ? params.permissions.map(p => `<li style="margin: 4px 0; font-size: 14px; color: #525252;">${p}</li>`).join('')
-    : '<li style="margin: 4px 0; font-size: 14px; color: #a3a3a3;">No permissions assigned</li>';
+    : `<li style="margin: 4px 0; font-size: 14px; color: #a3a3a3;">${isID ? 'Tidak ada izin yang diberikan' : 'No permissions assigned'}</li>`;
 
   const content = `
     <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #171717; text-align: center;">
-      Your Permissions Updated
+      ${isID ? 'Izin Anda Diperbarui' : 'Your Permissions Updated'}
     </h1>
     <p style="margin: 0 0 24px 0; font-size: 14px; color: #737373; text-align: center;">
-      Hi ${params.name}, your access permissions at ${params.merchantName} have been updated.
+      ${isID
+        ? `Halo ${params.name}, izin akses Anda di ${params.merchantName} telah diperbarui.`
+        : `Hi ${params.name}, your access permissions at ${params.merchantName} have been updated.`}
     </p>
     
     <!-- Permissions Box -->
     <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; border: 1px solid #e5e5e5; border-radius: 8px; margin: 24px 0;">
       <tr>
         <td style="padding: 20px;">
-          <p style="margin: 0 0 12px 0; font-size: 12px; color: #737373; text-transform: uppercase; letter-spacing: 0.5px;">Your Current Permissions</p>
+          <p style="margin: 0 0 12px 0; font-size: 12px; color: #737373; text-transform: uppercase; letter-spacing: 0.5px;">${isID ? 'Izin Saat Ini' : 'Your Current Permissions'}</p>
           <ul style="margin: 0; padding: 0 0 0 16px; list-style-type: disc;">
             ${permissionsList}
           </ul>
@@ -479,7 +617,7 @@ export function getPermissionUpdateTemplate(params: {
     </table>
     
     <p style="margin: 0 0 24px 0; font-size: 13px; color: #737373; text-align: center;">
-      Updated by: <strong style="color: #171717;">${params.updatedBy}</strong>
+      ${isID ? 'Diperbarui oleh' : 'Updated by'}: <strong style="color: #171717;">${params.updatedBy}</strong>
     </p>
     
     <!-- CTA Button -->
@@ -487,18 +625,20 @@ export function getPermissionUpdateTemplate(params: {
       <tr>
         <td align="center">
           <a href="${params.dashboardUrl}" style="display: inline-block; background-color: #171717; color: #ffffff; font-size: 14px; font-weight: 500; padding: 12px 32px; border-radius: 6px; text-decoration: none;">
-            Go to Dashboard
+            ${isID ? 'Buka Dashboard' : 'Go to Dashboard'}
           </a>
         </td>
       </tr>
     </table>
     
     <p style="margin: 0; font-size: 12px; color: #a3a3a3; text-align: center;">
-      If you have any questions about your permissions, please contact your store owner.
+      ${isID
+        ? 'Jika ada pertanyaan terkait izin akses, silakan hubungi pemilik merchant.'
+        : 'If you have any questions about your permissions, please contact your store owner.'}
     </p>
   `;
 
-  return getBaseTemplate(content, 'support@genfity.com');
+  return getBaseTemplate(content, params.supportEmail || 'support@genfity.com', locale);
 }
 
 // ============================================================================
@@ -534,17 +674,6 @@ export function getPaymentVerifiedTemplate(params: {
     rows.push({ label: isID ? 'Berlaku Sampai' : 'Valid Until', value: params.periodEndText });
   }
 
-  const detailsHtml = rows
-    .map(
-      (r) => `
-        <tr>
-          <td style="padding: 10px 0; font-size: 13px; color: #737373;">${r.label}</td>
-          <td style="padding: 10px 0; font-size: 13px; color: #171717; text-align: right; font-weight: 600;">${r.value}</td>
-        </tr>
-      `
-    )
-    .join('');
-
   const content = `
     <div style="text-align: center; margin-bottom: 24px;">
       <div style="display: inline-block; background-color: #f0fdf4; border-radius: 999px; padding: 10px 14px; margin-bottom: 12px;">
@@ -565,7 +694,13 @@ export function getPaymentVerifiedTemplate(params: {
             ${isID ? 'Ringkasan' : 'Summary'} — ${params.merchantName}
           </p>
           <table width="100%" cellpadding="0" cellspacing="0">
-            ${detailsHtml}
+            ${renderDetailsRows(
+              rows.map((r, idx) => ({
+                label: r.label,
+                value: r.value,
+                emphasizeValue: idx === 1,
+              }))
+            )}
           </table>
         </td>
       </tr>
@@ -617,28 +752,20 @@ export function getBalanceAdjustmentTemplate(params: {
       <tr>
         <td style="padding: 18px;">
           <table width="100%" cellpadding="0" cellspacing="0">
-            <tr>
-              <td style="padding: 10px 0; font-size: 13px; color: #737373;">${isID ? 'Jumlah Penyesuaian' : 'Adjustment Amount'}</td>
-              <td style="padding: 10px 0; font-size: 13px; color: #171717; text-align: right; font-weight: 700;">${params.adjustmentText}</td>
-            </tr>
-            <tr>
-              <td style="padding: 10px 0; font-size: 13px; color: #737373; border-top: 1px solid #e5e5e5;">${isID ? 'Saldo Baru' : 'New Balance'}</td>
-              <td style="padding: 10px 0; font-size: 13px; color: #171717; text-align: right; font-weight: 600; border-top: 1px solid #e5e5e5;">${params.newBalanceText}</td>
-            </tr>
-            <tr>
-              <td style="padding: 10px 0; font-size: 13px; color: #737373; border-top: 1px solid #e5e5e5;">${isID ? 'Waktu' : 'Date'}</td>
-              <td style="padding: 10px 0; font-size: 13px; color: #171717; text-align: right; border-top: 1px solid #e5e5e5;">${params.adjustedAtText}</td>
-            </tr>
-            ${
-              params.adjustedByText
-                ? `
-            <tr>
-              <td style="padding: 10px 0; font-size: 13px; color: #737373; border-top: 1px solid #e5e5e5;">${isID ? 'Diperbarui Oleh' : 'Adjusted By'}</td>
-              <td style="padding: 10px 0; font-size: 13px; color: #171717; text-align: right; border-top: 1px solid #e5e5e5;">${params.adjustedByText}</td>
-            </tr>
-              `
-                : ''
-            }
+            ${renderDetailsRows(
+              [
+                {
+                  label: isID ? 'Jumlah Penyesuaian' : 'Adjustment Amount',
+                  value: params.adjustmentText,
+                  emphasizeValue: true,
+                },
+                { label: isID ? 'Saldo Baru' : 'New Balance', value: params.newBalanceText },
+                { label: isID ? 'Waktu' : 'Date', value: params.adjustedAtText },
+                ...(params.adjustedByText
+                  ? [{ label: isID ? 'Diperbarui Oleh' : 'Adjusted By', value: params.adjustedByText }]
+                  : []),
+              ]
+            )}
           </table>
         </td>
       </tr>
@@ -691,20 +818,18 @@ export function getSubscriptionExtendedTemplate(params: {
       <tr>
         <td style="padding: 18px;">
           <table width="100%" cellpadding="0" cellspacing="0">
-            <tr>
-              <td style="padding: 10px 0; font-size: 13px; color: #737373;">${isID ? 'Berlaku Sampai' : 'Valid Until'}</td>
-              <td style="padding: 10px 0; font-size: 13px; color: #171717; text-align: right; font-weight: 600;">${params.newExpiryText}</td>
-            </tr>
-            ${
-              params.extendedByText
-                ? `
-            <tr>
-              <td style="padding: 10px 0; font-size: 13px; color: #737373; border-top: 1px solid #e5e5e5;">${isID ? 'Diperpanjang Oleh' : 'Extended By'}</td>
-              <td style="padding: 10px 0; font-size: 13px; color: #171717; text-align: right; border-top: 1px solid #e5e5e5;">${params.extendedByText}</td>
-            </tr>
-              `
-                : ''
-            }
+            ${renderDetailsRows(
+              [
+                {
+                  label: isID ? 'Berlaku Sampai' : 'Valid Until',
+                  value: params.newExpiryText,
+                  emphasizeValue: true,
+                },
+                ...(params.extendedByText
+                  ? [{ label: isID ? 'Diperpanjang Oleh' : 'Extended By', value: params.extendedByText }]
+                  : []),
+              ]
+            )}
           </table>
         </td>
       </tr>

@@ -120,11 +120,14 @@ export async function POST(request: NextRequest) {
         console.log('🔐 [FORGOT-PASSWORD] Code (DEV ONLY):', verificationCode);
 
         // ✅ Send email with verification code
+        const acceptLanguage = request.headers.get('accept-language') || '';
+        const locale = acceptLanguage.toLowerCase().startsWith('id') ? 'id' : 'en';
         const emailSent = await emailService.sendPasswordResetOTP({
             to: customer.email,
             name: customer.name || 'Customer',
             code: verificationCode,
             expiresInMinutes: CODE_EXPIRY_MINUTES,
+            locale,
         });
 
         if (emailSent) {

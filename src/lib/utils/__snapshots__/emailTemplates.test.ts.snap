@@ -1,0 +1,717 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`emailTemplates > renders merchant email snapshots 1`] = `
+"<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Genfity</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #fafafa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #fafafa; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 480px; background-color: #ffffff; border-radius: 12px; border: 1px solid #e5e5e5; overflow: hidden;">
+          <!-- Header with Logo -->
+          <tr>
+            <td style="padding: 32px 32px 24px 32px; border-bottom: 1px solid #f0f0f0;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center">
+                    <img
+                      src="https://genfity.com/images/logo/logo.png"
+                      alt="Order"
+                      width="220"
+                      style="display: block; width: 220px; max-width: 100%; height: auto; margin: 0 auto;"
+                    />
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Content -->
+          <tr>
+            <td style="padding: 32px;">
+              
+    <div style="text-align: center; margin-bottom: 24px;">
+      <div style="display: inline-block; background-color: #f0fdf4; border-radius: 999px; padding: 10px 14px; margin-bottom: 12px;">
+        <span style="font-size: 12px; font-weight: 600; color: #166534;">SUCCESS</span>
+      </div>
+      <h1 style="margin: 0 0 8px 0; font-size: 22px; font-weight: 650; color: #171717;">
+        Payment Verified
+      </h1>
+      <p style="margin: 0; font-size: 14px; color: #737373;">
+        Your payment has been confirmed.
+      </p>
+    </div>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; border: 1px solid #e5e5e5; border-radius: 10px; margin: 18px 0;">
+      <tr>
+        <td style="padding: 18px;">
+          <p style="margin: 0 0 12px 0; font-size: 14px; color: #171717; font-weight: 600;">
+            Summary — Wellard Kebab House
+          </p>
+          <table width="100%" cellpadding="0" cellspacing="0">
+            
+        <tr>
+          <td style="padding: 10px 0; font-size: 13px; color: #737373; ">Payment Type</td>
+          <td style="padding: 10px 0; font-size: 13px; color: #171717; text-align: right; font-weight: 600; ">Deposit Top-up</td>
+        </tr>
+      
+        <tr>
+          <td style="padding: 10px 0; font-size: 13px; color: #737373; border-top: 1px solid #e5e5e5;">Amount</td>
+          <td style="padding: 10px 0; font-size: 13px; color: #171717; text-align: right; font-weight: 700; border-top: 1px solid #e5e5e5;">A$ 100.00</td>
+        </tr>
+      
+        <tr>
+          <td style="padding: 10px 0; font-size: 13px; color: #737373; border-top: 1px solid #e5e5e5;">New Balance</td>
+          <td style="padding: 10px 0; font-size: 13px; color: #171717; text-align: right; font-weight: 600; border-top: 1px solid #e5e5e5;">A$ 150.00</td>
+        </tr>
+      
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
+      <tr>
+        <td align="center">
+          <a href="https://order.genfity.com/admin/dashboard/subscription" style="display: inline-block; background-color: #171717; color: #ffffff; font-size: 14px; font-weight: 600; padding: 12px 32px; border-radius: 8px; text-decoration: none;">
+            Open Dashboard
+          </a>
+        </td>
+      </tr>
+    </table>
+
+    <p style="margin: 0; font-size: 12px; color: #a3a3a3; text-align: center;">
+      If you have questions, reply to this email or contact support.
+    </p>
+  
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 24px 32px; background-color: #fafafa; border-top: 1px solid #f0f0f0;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center">
+                    <p style="margin: 0 0 10px 0; font-size: 12px; color: #a3a3a3;">
+                      powered by genfity.com genfity digital solution
+                    </p>
+                    <p style="margin: 0 0 8px 0; font-size: 13px; color: #737373;">
+                      Need assistance? <a href="mailto:support@genfity.com" style="color: #171717; text-decoration: underline;">support@genfity.com</a>
+                    </p>
+                    <p style="margin: 0; font-size: 12px; color: #a3a3a3;">
+                      © 2026 Genfity Digital Solution. All rights reserved.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"
+`;
+
+exports[`emailTemplates > renders merchant email snapshots 2`] = `
+"<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Genfity</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #fafafa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #fafafa; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 480px; background-color: #ffffff; border-radius: 12px; border: 1px solid #e5e5e5; overflow: hidden;">
+          <!-- Header with Logo -->
+          <tr>
+            <td style="padding: 32px 32px 24px 32px; border-bottom: 1px solid #f0f0f0;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center">
+                    <img
+                      src="https://genfity.com/images/logo/logo.png"
+                      alt="Order"
+                      width="220"
+                      style="display: block; width: 220px; max-width: 100%; height: auto; margin: 0 auto;"
+                    />
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Content -->
+          <tr>
+            <td style="padding: 32px;">
+              
+    <div style="text-align: center; margin-bottom: 22px;">
+      <h1 style="margin: 0 0 8px 0; font-size: 22px; font-weight: 650; color: #171717;">
+        Balance Adjustment
+      </h1>
+      <p style="margin: 0; font-size: 14px; color: #737373;">
+        Hello Wellard Kebab House, your subscription balance has been updated.
+      </p>
+    </div>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; border: 1px solid #e5e5e5; border-radius: 10px; margin: 18px 0;">
+      <tr>
+        <td style="padding: 18px;">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            
+        <tr>
+          <td style="padding: 10px 0; font-size: 13px; color: #737373; ">Adjustment Amount</td>
+          <td style="padding: 10px 0; font-size: 13px; color: #171717; text-align: right; font-weight: 700; ">+A$ 10.00</td>
+        </tr>
+      
+        <tr>
+          <td style="padding: 10px 0; font-size: 13px; color: #737373; border-top: 1px solid #e5e5e5;">New Balance</td>
+          <td style="padding: 10px 0; font-size: 13px; color: #171717; text-align: right; font-weight: 600; border-top: 1px solid #e5e5e5;">A$ 60.00</td>
+        </tr>
+      
+        <tr>
+          <td style="padding: 10px 0; font-size: 13px; color: #737373; border-top: 1px solid #e5e5e5;">Date</td>
+          <td style="padding: 10px 0; font-size: 13px; color: #171717; text-align: right; font-weight: 600; border-top: 1px solid #e5e5e5;">Jan 11, 2026 08:00</td>
+        </tr>
+      
+        <tr>
+          <td style="padding: 10px 0; font-size: 13px; color: #737373; border-top: 1px solid #e5e5e5;">Adjusted By</td>
+          <td style="padding: 10px 0; font-size: 13px; color: #171717; text-align: right; font-weight: 600; border-top: 1px solid #e5e5e5;">Administrator</td>
+        </tr>
+      
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <div style="background-color: #ffffff; border: 1px solid #f0f0f0; border-radius: 10px; padding: 14px 16px; margin: 18px 0;">
+      <p style="margin: 0 0 6px 0; font-size: 12px; color: #737373; text-transform: uppercase; letter-spacing: 0.6px;">Reason</p>
+      <p style="margin: 0; font-size: 14px; color: #171717;">Manual correction</p>
+    </div>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
+      <tr>
+        <td align="center">
+          <a href="https://order.genfity.com/admin/dashboard/subscription" style="display: inline-block; background-color: #171717; color: #ffffff; font-size: 14px; font-weight: 600; padding: 12px 32px; border-radius: 8px; text-decoration: none;">
+            View Dashboard
+          </a>
+        </td>
+      </tr>
+    </table>
+  
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 24px 32px; background-color: #fafafa; border-top: 1px solid #f0f0f0;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center">
+                    <p style="margin: 0 0 10px 0; font-size: 12px; color: #a3a3a3;">
+                      powered by genfity.com genfity digital solution
+                    </p>
+                    <p style="margin: 0 0 8px 0; font-size: 13px; color: #737373;">
+                      Need assistance? <a href="mailto:support@genfity.com" style="color: #171717; text-decoration: underline;">support@genfity.com</a>
+                    </p>
+                    <p style="margin: 0; font-size: 12px; color: #a3a3a3;">
+                      © 2026 Genfity Digital Solution. All rights reserved.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"
+`;
+
+exports[`emailTemplates > renders merchant email snapshots 3`] = `
+"<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Genfity</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #fafafa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #fafafa; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 480px; background-color: #ffffff; border-radius: 12px; border: 1px solid #e5e5e5; overflow: hidden;">
+          <!-- Header with Logo -->
+          <tr>
+            <td style="padding: 32px 32px 24px 32px; border-bottom: 1px solid #f0f0f0;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center">
+                    <img
+                      src="https://genfity.com/images/logo/logo.png"
+                      alt="Order"
+                      width="220"
+                      style="display: block; width: 220px; max-width: 100%; height: auto; margin: 0 auto;"
+                    />
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Content -->
+          <tr>
+            <td style="padding: 32px;">
+              
+    <div style="text-align: center; margin-bottom: 22px;">
+      <h1 style="margin: 0 0 8px 0; font-size: 22px; font-weight: 650; color: #171717;">
+        Subscription Extended
+      </h1>
+      <p style="margin: 0; font-size: 14px; color: #737373;">
+        Hello Wellard Kebab House, your subscription has been extended by 7 days.
+      </p>
+    </div>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; border: 1px solid #e5e5e5; border-radius: 10px; margin: 18px 0;">
+      <tr>
+        <td style="padding: 18px;">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            
+        <tr>
+          <td style="padding: 10px 0; font-size: 13px; color: #737373; ">Valid Until</td>
+          <td style="padding: 10px 0; font-size: 13px; color: #171717; text-align: right; font-weight: 700; ">Jan 18, 2026</td>
+        </tr>
+      
+        <tr>
+          <td style="padding: 10px 0; font-size: 13px; color: #737373; border-top: 1px solid #e5e5e5;">Extended By</td>
+          <td style="padding: 10px 0; font-size: 13px; color: #171717; text-align: right; font-weight: 600; border-top: 1px solid #e5e5e5;">Administrator</td>
+        </tr>
+      
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
+      <tr>
+        <td align="center">
+          <a href="https://order.genfity.com/admin/dashboard/subscription" style="display: inline-block; background-color: #171717; color: #ffffff; font-size: 14px; font-weight: 600; padding: 12px 32px; border-radius: 8px; text-decoration: none;">
+            Manage Subscription
+          </a>
+        </td>
+      </tr>
+    </table>
+  
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 24px 32px; background-color: #fafafa; border-top: 1px solid #f0f0f0;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center">
+                    <p style="margin: 0 0 10px 0; font-size: 12px; color: #a3a3a3;">
+                      powered by genfity.com genfity digital solution
+                    </p>
+                    <p style="margin: 0 0 8px 0; font-size: 13px; color: #737373;">
+                      Need assistance? <a href="mailto:support@genfity.com" style="color: #171717; text-decoration: underline;">support@genfity.com</a>
+                    </p>
+                    <p style="margin: 0; font-size: 12px; color: #a3a3a3;">
+                      © 2026 Genfity Digital Solution. All rights reserved.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"
+`;
+
+exports[`emailTemplates > renders order completed (id) snapshot 1`] = `
+"<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Genfity</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #fafafa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #fafafa; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 480px; background-color: #ffffff; border-radius: 12px; border: 1px solid #e5e5e5; overflow: hidden;">
+          <!-- Header with Logo -->
+          <tr>
+            <td style="padding: 32px 32px 24px 32px; border-bottom: 1px solid #f0f0f0;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center">
+                    <img
+                      src="https://genfity.com/images/logo/logo.png"
+                      alt="Order"
+                      width="220"
+                      style="display: block; width: 220px; max-width: 100%; height: auto; margin: 0 auto;"
+                    />
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Content -->
+          <tr>
+            <td style="padding: 32px;">
+              
+    <div style="text-align: center; margin-bottom: 24px;">
+      <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #171717;">
+        Pesanan Selesai 🎉
+      </h1>
+      <p style="margin: 0; font-size: 14px; color: #737373;">
+        Terima kasih telah memesan di Warung Contoh
+      </p>
+    </div>
+    
+    <!-- Order Summary -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; border-radius: 8px; margin: 24px 0;">
+      <tr>
+        <td style="padding: 20px;">
+          <p style="margin: 0 0 4px 0; font-size: 12px; color: #737373; text-transform: uppercase; letter-spacing: 0.5px;">Order #999</p>
+          <p style="margin: 0 0 16px 0; font-size: 12px; color: #a3a3a3;">11 Jan 2026 07:00</p>
+          
+          <ul style="margin: 0; padding: 0 0 0 16px; list-style-type: disc;">
+            <li style="margin: 4px 0; font-size: 14px; color: #525252;">Nasi Goreng × 1</li><li style="margin: 4px 0; font-size: 14px; color: #525252;">Es Teh × 1</li>
+          </ul>
+          
+          <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 16px 0;" />
+          
+          <table width="100%" cellpadding="0" cellspacing="0">
+            
+        <tr>
+          <td style="padding: 10px 0; font-size: 13px; color: #737373; ">Total Dibayar</td>
+          <td style="padding: 10px 0; font-size: 13px; color: #171717; text-align: right; font-weight: 700; ">Rp 25.000</td>
+        </tr>
+      
+          </table>
+        </td>
+      </tr>
+    </table>
+    
+    <p style="margin: 0; font-size: 13px; color: #737373; text-align: center;">
+      Semoga Anda menikmati pesanan Anda! Sampai jumpa lagi.
+    </p>
+  
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 24px 32px; background-color: #fafafa; border-top: 1px solid #f0f0f0;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center">
+                    <p style="margin: 0 0 10px 0; font-size: 12px; color: #a3a3a3;">
+                      powered by genfity.com genfity digital solution
+                    </p>
+                    <p style="margin: 0 0 8px 0; font-size: 13px; color: #737373;">
+                      Butuh bantuan? <a href="mailto:support@genfity.com" style="color: #171717; text-decoration: underline;">support@genfity.com</a>
+                    </p>
+                    <p style="margin: 0; font-size: 12px; color: #a3a3a3;">
+                      © 2026 Genfity Digital Solution. Semua hak dilindungi.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"
+`;
+
+exports[`emailTemplates > renders order confirmation (en) snapshot 1`] = `
+"<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Genfity</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #fafafa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #fafafa; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 480px; background-color: #ffffff; border-radius: 12px; border: 1px solid #e5e5e5; overflow: hidden;">
+          <!-- Header with Logo -->
+          <tr>
+            <td style="padding: 32px 32px 24px 32px; border-bottom: 1px solid #f0f0f0;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center">
+                    <img
+                      src="https://genfity.com/images/logo/logo.png"
+                      alt="Order"
+                      width="220"
+                      style="display: block; width: 220px; max-width: 100%; height: auto; margin: 0 auto;"
+                    />
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Content -->
+          <tr>
+            <td style="padding: 32px;">
+              
+    <div style="text-align: center; margin-bottom: 24px;">
+      <div style="display: inline-block; background-color: #f0fdf4; border-radius: 50%; padding: 16px; margin-bottom: 16px;">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2">
+          <polyline points="20,6 9,17 4,12"></polyline>
+        </svg>
+      </div>
+      <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #171717;">
+        Order Confirmed
+      </h1>
+      <p style="margin: 0; font-size: 14px; color: #737373;">
+        Thank you, Alex!
+      </p>
+    </div>
+    
+    <!-- Order Info -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; border-radius: 8px; margin: 24px 0;">
+      <tr>
+        <td style="padding: 16px;">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            
+        <tr>
+          <td style="padding: 10px 0; font-size: 13px; color: #737373; ">Order Number</td>
+          <td style="padding: 10px 0; font-size: 13px; color: #171717; text-align: right; font-weight: 700; ">12345</td>
+        </tr>
+      
+        <tr>
+          <td style="padding: 10px 0; font-size: 13px; color: #737373; border-top: 1px solid #e5e5e5;">Restaurant</td>
+          <td style="padding: 10px 0; font-size: 13px; color: #171717; text-align: right; font-weight: 600; border-top: 1px solid #e5e5e5;">Wellard Kebab House</td>
+        </tr>
+      
+        <tr>
+          <td style="padding: 10px 0; font-size: 13px; color: #737373; border-top: 1px solid #e5e5e5;">Order Type</td>
+          <td style="padding: 10px 0; font-size: 13px; color: #171717; text-align: right; font-weight: 600; border-top: 1px solid #e5e5e5;">Dine In - Table 7</td>
+        </tr>
+      
+          </table>
+        </td>
+      </tr>
+    </table>
+    
+    <!-- Items -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
+      
+    <tr>
+      <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0;">
+        <span style="font-size: 14px; color: #171717;">Chicken Kebab</span>
+        <span style="font-size: 13px; color: #737373;"> × 1</span>
+      </td>
+      <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; text-align: right;">
+        <span style="font-size: 14px; color: #171717;">A$14.50</span>
+      </td>
+    </tr>
+  
+    <tr>
+      <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0;">
+        <span style="font-size: 14px; color: #171717;">Soft Drink</span>
+        <span style="font-size: 13px; color: #737373;"> × 2</span>
+      </td>
+      <td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; text-align: right;">
+        <span style="font-size: 14px; color: #171717;">A$4.00</span>
+      </td>
+    </tr>
+  
+      <tr>
+        <td style="padding: 8px 0; font-size: 13px; color: #737373;">Subtotal</td>
+        <td style="padding: 8px 0; font-size: 13px; color: #737373; text-align: right;">A$22.50</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px 0; font-size: 13px; color: #737373;">Tax</td>
+        <td style="padding: 8px 0; font-size: 13px; color: #737373; text-align: right;">A$2.25</td>
+      </tr>
+      <tr>
+        <td style="padding: 12px 0; font-size: 16px; font-weight: 600; color: #171717; border-top: 1px solid #e5e5e5;">Total</td>
+        <td style="padding: 12px 0; font-size: 16px; font-weight: 600; color: #171717; text-align: right; border-top: 1px solid #e5e5e5;">A$24.75</td>
+      </tr>
+    </table>
+    
+    <!-- Track Button -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
+      <tr>
+        <td align="center">
+          <a href="https://order.genfity.com/WKH/order-summary?orderNumber=12345" style="display: inline-block; background-color: #171717; color: #ffffff; font-size: 14px; font-weight: 500; padding: 12px 32px; border-radius: 6px; text-decoration: none;">
+            Track Your Order
+          </a>
+        </td>
+      </tr>
+    </table>
+  
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 24px 32px; background-color: #fafafa; border-top: 1px solid #f0f0f0;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center">
+                    <p style="margin: 0 0 10px 0; font-size: 12px; color: #a3a3a3;">
+                      powered by genfity.com genfity digital solution
+                    </p>
+                    <p style="margin: 0 0 8px 0; font-size: 13px; color: #737373;">
+                      Need assistance? <a href="mailto:support@genfity.com" style="color: #171717; text-decoration: underline;">support@genfity.com</a>
+                    </p>
+                    <p style="margin: 0; font-size: 12px; color: #a3a3a3;">
+                      © 2026 Genfity Digital Solution. All rights reserved.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"
+`;
+
+exports[`emailTemplates > renders staff welcome snapshot 1`] = `
+"<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Genfity</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #fafafa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #fafafa; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 480px; background-color: #ffffff; border-radius: 12px; border: 1px solid #e5e5e5; overflow: hidden;">
+          <!-- Header with Logo -->
+          <tr>
+            <td style="padding: 32px 32px 24px 32px; border-bottom: 1px solid #f0f0f0;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center">
+                    <img
+                      src="https://genfity.com/images/logo/logo.png"
+                      alt="Order"
+                      width="220"
+                      style="display: block; width: 220px; max-width: 100%; height: auto; margin: 0 auto;"
+                    />
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Content -->
+          <tr>
+            <td style="padding: 32px;">
+              
+    <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #171717; text-align: center;">
+      Welcome to Wellard Kebab House
+    </h1>
+    <p style="margin: 0 0 24px 0; font-size: 14px; color: #737373; text-align: center;">
+      Hi Sam, you have been added as a staff member.
+    </p>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; border: 1px solid #e5e5e5; border-radius: 10px; margin: 18px 0;">
+      <tr>
+        <td style="padding: 18px;">
+          <p style="margin: 0 0 12px 0; font-size: 14px; color: #171717; font-weight: 600;">Login Credentials</p>
+          <table width="100%" cellpadding="0" cellspacing="0">
+            
+        <tr>
+          <td style="padding: 10px 0; font-size: 13px; color: #737373; ">Email</td>
+          <td style="padding: 10px 0; font-size: 13px; color: #171717; text-align: right; font-weight: 700; ">sam@example.com</td>
+        </tr>
+      
+        <tr>
+          <td style="padding: 10px 0; font-size: 13px; color: #737373; border-top: 1px solid #e5e5e5;">Temporary Password</td>
+          <td style="padding: 10px 0; font-size: 13px; color: #171717; text-align: right; font-weight: 700; border-top: 1px solid #e5e5e5;">TempPass123</td>
+        </tr>
+      
+        <tr>
+          <td style="padding: 10px 0; font-size: 13px; color: #737373; border-top: 1px solid #e5e5e5;">Merchant</td>
+          <td style="padding: 10px 0; font-size: 13px; color: #171717; text-align: right; font-weight: 600; border-top: 1px solid #e5e5e5;">Wellard Kebab House (WKH)</td>
+        </tr>
+      
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
+      <tr>
+        <td align="center">
+          <a href="https://order.genfity.com/admin/login" style="display: inline-block; background-color: #171717; color: #ffffff; font-size: 14px; font-weight: 600; padding: 12px 32px; border-radius: 8px; text-decoration: none;">
+            Login to Dashboard
+          </a>
+        </td>
+      </tr>
+    </table>
+
+    <p style="margin: 0; font-size: 12px; color: #a3a3a3; text-align: center;">
+      For security, please change your password after your first login.
+    </p>
+  
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 24px 32px; background-color: #fafafa; border-top: 1px solid #f0f0f0;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center">
+                    <p style="margin: 0 0 10px 0; font-size: 12px; color: #a3a3a3;">
+                      powered by genfity.com genfity digital solution
+                    </p>
+                    <p style="margin: 0 0 8px 0; font-size: 13px; color: #737373;">
+                      Need assistance? <a href="mailto:support@genfity.com" style="color: #171717; text-decoration: underline;">support@genfity.com</a>
+                    </p>
+                    <p style="margin: 0; font-size: 12px; color: #a3a3a3;">
+                      © 2026 Genfity Digital Solution. All rights reserved.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"
+`;

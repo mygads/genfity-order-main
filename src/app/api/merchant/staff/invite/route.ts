@@ -81,6 +81,7 @@ async function inviteStaffHandler(
       name: existingUser.name,
       email: existingUser.email,
       tempPassword: `You've been invited to join ${merchant.name} team on GENFITY`,
+      merchantCountry: merchant.country,
     });
   } catch (emailError) {
     console.error('Failed to send notification email:', emailError);

@@ -32,6 +32,7 @@ import emailService from '@/lib/services/EmailService';
 import balanceService from '@/lib/services/BalanceService';
 import subscriptionHistoryService from '@/lib/services/SubscriptionHistoryService';
 import CustomerPushService from '@/lib/services/CustomerPushService';
+import { shouldSendCustomerEmail } from '@/lib/utils/emailGuards';
 
 export class OrderManagementService {
   /**
@@ -141,6 +142,7 @@ export class OrderManagementService {
         merchant: {
           select: {
             name: true,
+            code: true,
             country: true,
             timezone: true,
             currency: true,
@@ -165,13 +167,18 @@ export class OrderManagementService {
     }
 
     // Send email notification when order is completed
-    if (data.status === 'COMPLETED' && updated.customer?.email) {
+    // - Online customer orders: have a real customer email
+    // - POS walk-in orders: customer is null (no email)
+    // - POS orders with placeholder/guest email: filtered out here
+    const completedCustomerEmail = updated.customer?.email;
+    if (data.status === 'COMPLETED' && shouldSendCustomerEmail(completedCustomerEmail)) {
       try {
         await emailService.sendOrderCompleted({
-          to: updated.customer.email,
+          to: completedCustomerEmail,
           customerName: updated.customer?.name || 'Customer',
           orderNumber: updated.orderNumber,
           merchantName: updated.merchant?.name || 'Restaurant',
+          merchantCode: updated.merchant?.code || '',
           merchantCountry: updated.merchant?.country,
           merchantTimezone: updated.merchant?.timezone,
           currency: updated.merchant?.currency,
@@ -184,7 +191,7 @@ export class OrderManagementService {
           total: Number(updated.totalAmount),
           completedAt: updated.completedAt || new Date(),
         });
-        console.log(`✅ Order completed email sent to ${updated.customer.email}`);
+        console.log(`✅ Order completed email sent to ${completedCustomerEmail}`);
       } catch (emailError) {
         console.error('❌ Failed to send order completed email:', emailError);
         // Don't throw - email failure shouldn't block the status update

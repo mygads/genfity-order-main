@@ -10,15 +10,34 @@ import {
   getOrderConfirmationTemplate,
   getOrderCompletedTemplate,
   getCustomerWelcomeTemplate,
+  getStaffWelcomeTemplate,
+  getTestEmailTemplate,
   getPermissionUpdateTemplate,
   getPaymentVerifiedTemplate,
   getBalanceAdjustmentTemplate,
   getSubscriptionExtendedTemplate,
 } from '@/lib/utils/emailTemplates';
 import { formatCurrency } from '@/lib/utils/format';
+import { generateOrderReceiptPdfBuffer } from '@/lib/utils/orderReceiptPdfEmail';
 
 // Track initialization to prevent duplicate logs
 let isInitialized = false;
+
+function extractEmailFromFromHeader(value: string): string {
+  const trimmed = value.trim();
+  const lt = trimmed.lastIndexOf('<');
+  const gt = trimmed.lastIndexOf('>');
+  if (lt !== -1 && gt !== -1 && gt > lt) {
+    return trimmed.slice(lt + 1, gt).trim();
+  }
+  return trimmed;
+}
+
+function isValidEmailAddress(value: string): boolean {
+  const email = extractEmailFromFromHeader(value);
+  // Basic sanity check (intentionally conservative)
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
 
 class EmailService {
   private transporter: Transporter | null = null;
@@ -35,6 +54,14 @@ class EmailService {
     const smtpPort = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 587;
     const smtpUser = process.env.SMTP_USER;
     const smtpPassword = process.env.SMTP_PASS || process.env.SMTP_PASSWORD; // Support both SMTP_PASS and SMTP_PASSWORD
+
+    const configuredFromEmail = process.env.SMTP_FROM_EMAIL;
+    if (configuredFromEmail && !isValidEmailAddress(configuredFromEmail)) {
+      console.warn(
+        `⚠️  SMTP_FROM_EMAIL looks invalid: "${configuredFromEmail}". ` +
+          `Set SMTP_FROM_EMAIL to an address like "noreply@genfity.com" and SMTP_FROM_NAME to "Genfity Order".`
+      );
+    }
 
     // Skip initialization if SMTP credentials are not configured
     if (!smtpHost || !smtpUser || !smtpPassword) {
@@ -121,6 +148,11 @@ class EmailService {
     subject: string;
     html: string;
     from?: string;
+    attachments?: Array<{
+      filename: string;
+      content: Buffer;
+      contentType?: string;
+    }>;
   }): Promise<boolean> {
     if (!this.transporter) {
       console.error('Email transporter not initialized');
@@ -132,11 +164,18 @@ class EmailService {
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
+        const fromName = process.env.SMTP_FROM_NAME || 'Genfity Order';
+        const fromEmail = options.from || process.env.SMTP_FROM_EMAIL || 'noreply@genfity.com';
+        const from = fromEmail.includes('<') ? fromEmail : `${fromName} <${fromEmail}>`;
+
         const info = await this.transporter.sendMail({
-          from: options.from || process.env.SMTP_FROM_EMAIL || 'noreply@genfity.com',
+          from,
           to: options.to,
           subject: options.subject,
           html: options.html,
+          ...(options.attachments && options.attachments.length > 0
+            ? { attachments: options.attachments }
+            : {}),
         });
 
         // console.log('✅ Email sent:', info.messageId);
@@ -169,7 +208,9 @@ class EmailService {
     name: string;
     email: string;
     tempPassword: string;
+    merchantCountry?: string | null;
   }): Promise<boolean> {
+    const locale = this.getMerchantEmailLocale(params.merchantCountry);
     const dashboardUrl = `${process.env.NEXT_PUBLIC_APP_URL}/admin/login`;
     const supportEmail = process.env.EMAIL_FROM || 'support@genfity.com';
 
@@ -179,11 +220,15 @@ class EmailService {
       tempPassword: params.tempPassword,
       dashboardUrl,
       supportEmail,
+      locale,
     });
 
     return this.sendEmail({
       to: params.to,
-      subject: 'GENFITY - Your New Account Credentials',
+      subject:
+        locale === 'id'
+          ? 'GENFITY - Kredensial Akun Baru Anda'
+          : 'GENFITY - Your New Account Credentials',
       html,
     });
   }
@@ -227,31 +272,24 @@ class EmailService {
       locale: merchantLocale,
     });
 
-    return this.sendEmail({
-      to: params.to,
-      subject: `Order Confirmation - ${params.orderNumber}`,
-      html,
-    });
+    const subject =
+      merchantLocale === 'id'
+        ? `Konfirmasi Pesanan - ${params.orderNumber}`
+        : `Order Confirmation - ${params.orderNumber}`;
+
+    return this.sendEmail({ to: params.to, subject, html });
   }
 
   /**
    * Send test email (for testing SMTP configuration)
    */
   async sendTestEmail(to: string): Promise<boolean> {
+    const supportEmail = process.env.EMAIL_FROM || process.env.SMTP_FROM_EMAIL || 'support@genfity.com';
+
     return this.sendEmail({
       to,
       subject: 'GENFITY - Test Email',
-      html: `
-        <div style="font-family: Arial, sans-serif; padding: 20px;">
-          <h2>Test Email from GENFITY</h2>
-          <p>This is a test email to verify your SMTP configuration.</p>
-          <p>If you received this email, your email service is working correctly! ✅</p>
-          <hr>
-          <p style="color: #666; font-size: 12px;">
-            Sent from GENFITY Online Ordering System
-          </p>
-        </div>
-      `,
+      html: getTestEmailTemplate({ supportEmail }),
     });
   }
 
@@ -263,6 +301,7 @@ class EmailService {
     customerName: string;
     orderNumber: string;
     merchantName: string;
+    merchantCode: string;
     merchantCountry?: string;
     merchantTimezone?: string;
     currency?: string;
@@ -292,11 +331,42 @@ class EmailService {
       locale: merchantLocale,
     });
 
-    return this.sendEmail({
-      to: params.to,
-      subject: `Order Completed - ${params.orderNumber} | Thank you!`,
-      html,
-    });
+    const subject =
+      merchantLocale === 'id'
+        ? `Pesanan Selesai - ${params.orderNumber} | Terima kasih!`
+        : `Order Completed - ${params.orderNumber} | Thank you!`;
+
+    let attachments:
+      | Array<{ filename: string; content: Buffer; contentType?: string }>
+      | undefined;
+
+    try {
+      const pdf = await generateOrderReceiptPdfBuffer({
+        orderNumber: params.orderNumber,
+        merchantCode: params.merchantCode,
+        merchantName: params.merchantName,
+        customerName: params.customerName,
+        orderType: params.orderType,
+        items: params.items,
+        total: params.total,
+        currency,
+        completedAt: params.completedAt,
+        locale: merchantLocale,
+        timeZone,
+      });
+
+      attachments = [
+        {
+          filename: `receipt-${params.orderNumber}.pdf`,
+          content: pdf,
+          contentType: 'application/pdf',
+        },
+      ];
+    } catch (error) {
+      console.error('[EmailService] Failed generating PDF receipt attachment:', error);
+    }
+
+    return this.sendEmail({ to: params.to, subject, html, attachments });
   }
 
   /**
@@ -308,7 +378,9 @@ class EmailService {
     email: string;
     phone: string;
     tempPassword: string;
+    merchantCountry?: string | null;
   }): Promise<boolean> {
+    const locale = this.getMerchantEmailLocale(params.merchantCountry);
     const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL}/login`;
     const supportEmail = process.env.EMAIL_FROM || 'support@genfity.com';
 
@@ -319,11 +391,15 @@ class EmailService {
       tempPassword: params.tempPassword,
       loginUrl,
       supportEmail,
+      locale,
     });
 
     return this.sendEmail({
       to: params.to,
-      subject: 'Welcome to GENFITY - Your Account Credentials',
+      subject:
+        locale === 'id'
+          ? 'Selamat Datang di GENFITY - Kredensial Akun Anda'
+          : 'Welcome to GENFITY - Your Account Credentials',
       html,
     });
   }
@@ -336,20 +412,27 @@ class EmailService {
     name: string;
     code: string;
     expiresInMinutes: number;
+    locale?: 'en' | 'id';
   }): Promise<boolean> {
     const { getPasswordResetOTPTemplate } = await import('@/lib/utils/emailTemplates');
     const supportEmail = process.env.EMAIL_FROM || process.env.SMTP_FROM_EMAIL || 'support@genfity.com';
+
+    const locale = params.locale || 'en';
 
     const html = getPasswordResetOTPTemplate({
       name: params.name,
       code: params.code,
       expiresInMinutes: params.expiresInMinutes,
       supportEmail,
+      locale,
     });
 
     return this.sendEmail({
       to: params.to,
-      subject: `${params.code} - Your Password Reset Code`,
+      subject:
+        locale === 'id'
+          ? `${params.code} - Kode Reset Password Anda`
+          : `${params.code} - Your Password Reset Code`,
       html,
     });
   }
@@ -364,140 +447,29 @@ class EmailService {
     password: string;
     merchantName: string;
     merchantCode: string;
+    merchantCountry?: string | null;
   }): Promise<boolean> {
+    const locale = this.getMerchantEmailLocale(params.merchantCountry);
     const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL}/admin/login`;
-    const supportEmail = process.env.EMAIL_FROM || 'support@genfity.com';
+    const supportEmail = process.env.EMAIL_FROM || process.env.SMTP_FROM_EMAIL || 'support@genfity.com';
 
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Welcome to ${params.merchantName}</title>
-      </head>
-      <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
-        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 20px;">
-          <tr>
-            <td align="center">
-              <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                
-                <!-- Header -->
-                <tr>
-                  <td style="background: linear-gradient(135deg, #f97316 0%, #fb923c 100%); padding: 40px 30px; text-align: center;">
-                    <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">
-                      Welcome to ${params.merchantName}!
-                    </h1>
-                    <p style="margin: 10px 0 0 0; color: #ffffff; font-size: 16px; opacity: 0.95;">
-                      You've been added as a staff member
-                    </p>
-                  </td>
-                </tr>
-
-                <!-- Content -->
-                <tr>
-                  <td style="padding: 40px 30px;">
-                    <p style="margin: 0 0 20px 0; color: #333333; font-size: 16px; line-height: 1.6;">
-                      Hi <strong>${params.name}</strong>,
-                    </p>
-                    
-                    <p style="margin: 0 0 20px 0; color: #333333; font-size: 16px; line-height: 1.6;">
-                      You have been added as a staff member at <strong>${params.merchantName}</strong>. 
-                      You can now access the admin dashboard to manage orders, menu items, and more.
-                    </p>
-
-                    <!-- Credentials Box -->
-                    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; border: 2px solid #e2e8f0; border-radius: 8px; margin: 30px 0;">
-                      <tr>
-                        <td style="padding: 25px;">
-                          <h3 style="margin: 0 0 15px 0; color: #1e293b; font-size: 18px;">
-                            Your Login Credentials
-                          </h3>
-                          
-                          <table width="100%" cellpadding="8" cellspacing="0">
-                            <tr>
-                              <td style="color: #64748b; font-size: 14px; padding: 8px 0;">
-                                <strong>Email:</strong>
-                              </td>
-                              <td style="color: #1e293b; font-size: 14px; font-family: 'Courier New', monospace; padding: 8px 0;">
-                                ${params.email}
-                              </td>
-                            </tr>
-                            <tr>
-                              <td style="color: #64748b; font-size: 14px; padding: 8px 0;">
-                                <strong>Password:</strong>
-                              </td>
-                              <td style="color: #1e293b; font-size: 14px; font-family: 'Courier New', monospace; padding: 8px 0;">
-                                ${params.password}
-                              </td>
-                            </tr>
-                            <tr>
-                              <td style="color: #64748b; font-size: 14px; padding: 8px 0;">
-                                <strong>Merchant:</strong>
-                              </td>
-                              <td style="color: #1e293b; font-size: 14px; padding: 8px 0;">
-                                ${params.merchantName} (${params.merchantCode})
-                              </td>
-                            </tr>
-                          </table>
-                        </td>
-                      </tr>
-                    </table>
-
-                    <!-- Login Button -->
-                    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0;">
-                      <tr>
-                        <td align="center">
-                          <a href="${loginUrl}" style="display: inline-block; background-color: #f97316; color: #ffffff; text-decoration: none; padding: 14px 40px; border-radius: 8px; font-size: 16px; font-weight: bold; box-shadow: 0 2px 4px rgba(249, 115, 22, 0.3);">
-                            Login to Dashboard
-                          </a>
-                        </td>
-                      </tr>
-                    </table>
-
-                    <!-- Security Notice -->
-                    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px; margin: 30px 0;">
-                      <tr>
-                        <td style="padding: 15px 20px;">
-                          <p style="margin: 0; color: #92400e; font-size: 14px; line-height: 1.5;">
-                            <strong>⚠️ Security Reminder:</strong><br>
-                            Please keep your password secure and do not share it with anyone. 
-                            We recommend changing your password after your first login.
-                          </p>
-                        </td>
-                      </tr>
-                    </table>
-
-                    <p style="margin: 20px 0 0 0; color: #666666; font-size: 14px; line-height: 1.6;">
-                      If you have any questions or need assistance, please contact support at 
-                      <a href="mailto:${supportEmail}" style="color: #f97316; text-decoration: none;">${supportEmail}</a>
-                    </p>
-                  </td>
-                </tr>
-
-                <!-- Footer -->
-                <tr>
-                  <td style="background-color: #f8fafc; padding: 30px; text-align: center; border-top: 1px solid #e2e8f0;">
-                    <p style="margin: 0 0 10px 0; color: #64748b; font-size: 14px;">
-                      <strong>GENFITY</strong> - Online Ordering System
-                    </p>
-                    <p style="margin: 0; color: #94a3b8; font-size: 12px;">
-                      This is an automated email. Please do not reply to this message.
-                    </p>
-                  </td>
-                </tr>
-
-              </table>
-            </td>
-          </tr>
-        </table>
-      </body>
-      </html>
-    `;
+    const html = getStaffWelcomeTemplate({
+      name: params.name,
+      email: params.email,
+      password: params.password,
+      merchantName: params.merchantName,
+      merchantCode: params.merchantCode,
+      loginUrl,
+      supportEmail,
+      locale,
+    });
 
     return this.sendEmail({
       to: params.to,
-      subject: `Welcome to ${params.merchantName} - Your Staff Account`,
+      subject:
+        locale === 'id'
+          ? `Selamat datang di ${params.merchantName} - Akun Staff Anda`
+          : `Welcome to ${params.merchantName} - Your Staff Account`,
       html,
     });
   }
@@ -511,10 +483,14 @@ class EmailService {
     merchantName: string;
     permissions: string[];
     updatedBy: string;
+    merchantCountry?: string | null;
   }): Promise<boolean> {
+    const locale = this.getMerchantEmailLocale(params.merchantCountry);
     const dashboardUrl = process.env.NEXT_PUBLIC_APP_URL
       ? `${process.env.NEXT_PUBLIC_APP_URL}/admin/dashboard`
       : 'https://genfity.com/admin/dashboard';
+
+    const supportEmail = process.env.EMAIL_FROM || process.env.SMTP_FROM_EMAIL || 'support@genfity.com';
 
     const html = getPermissionUpdateTemplate({
       name: params.name,
@@ -522,11 +498,16 @@ class EmailService {
       permissions: params.permissions,
       updatedBy: params.updatedBy,
       dashboardUrl,
+      locale,
+      supportEmail,
     });
 
     return this.sendEmail({
       to: params.to,
-      subject: `[${params.merchantName}] Your Permissions Have Been Updated`,
+      subject:
+        locale === 'id'
+          ? `[${params.merchantName}] Izin Anda Telah Diperbarui`
+          : `[${params.merchantName}] Your Permissions Have Been Updated`,
       html,
     });
   }
