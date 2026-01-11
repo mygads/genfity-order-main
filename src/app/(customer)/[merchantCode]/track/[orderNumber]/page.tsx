@@ -333,7 +333,8 @@ export default function OrderTrackPage() {
     const handleBack = () => {
         const back = searchParams.get('back');
         if (back === 'history') {
-            router.push(`/${merchantCode}/history`);
+            const mode = searchParams.get('mode');
+            router.replace(`/${merchantCode}/history${mode ? `?mode=${encodeURIComponent(mode)}` : ''}`);
             return;
         }
 

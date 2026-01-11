@@ -130,13 +130,10 @@ export default function OrderSummaryCashPage() {
   useEffect(() => {
     const loadData = async () => {
       if (!orderNumber) {
-        console.error('❌ Missing order number');
         setError('Order number not found');
         setIsLoading(false);
         return;
       }
-
-      console.log('📦 Fetching merchant info and order:', orderNumber);
 
       try {
         // Fetch merchant info for currency
@@ -144,7 +141,6 @@ export default function OrderSummaryCashPage() {
         const merchantData = await merchantResponse.json();
 
         if (merchantData.success) {
-          console.log('✅ Merchant info loaded:', merchantData.data);
           setMerchantInfo({
             id: merchantData.data.id,
             code: merchantData.data.code,
@@ -160,7 +156,6 @@ export default function OrderSummaryCashPage() {
         const data = await response.json();
 
         if (!response.ok) {
-          console.error('❌ API Error:', data);
           setError(data.message || 'Failed to load order');
           setIsLoading(false);
           return;
@@ -181,22 +176,10 @@ export default function OrderSummaryCashPage() {
             const digits = decimalObj.d[0] || 0;
             const digitsLength = digits.toString().length;
             const result = sign * digits * Math.pow(10, exponent - digitsLength + 1);
-
-            console.log(`✅ [DECIMAL] {s:${sign}, e:${exponent}, d:[${digits}]} → ${result}`);
             return result;
           }
-
-          console.warn('⚠️ [DECIMAL] Unknown type:', typeof value, value);
           return 0;
         };
-
-        console.log('💰 [ORDER SUMMARY] Raw API response:', {
-          subtotal: data.data.subtotal,
-          serviceFee: data.data.serviceFeeAmount,
-          tax: data.data.taxAmount,
-          total: data.data.totalAmount,
-          orderItems: data.data.orderItems,
-        });
 
         // ✅ FIX: Convert Decimal di order items
         const convertedOrderItems = data.data.orderItems.map((item: {
@@ -219,8 +202,6 @@ export default function OrderSummaryCashPage() {
           })),
         }));
 
-        console.log('💰 [ORDER ITEMS] Converted items:', convertedOrderItems);
-
         const orderData: OrderSummaryData = {
           id: data.data.id,
           orderNumber: data.data.orderNumber,
@@ -238,21 +219,12 @@ export default function OrderSummaryCashPage() {
           createdAt: data.data.createdAt,
         };
 
-        console.log('💰 [ORDER SUMMARY] Final order data:', {
-          subtotal: orderData.subtotalAmount,
-          tax: orderData.taxAmount,
-          total: orderData.totalAmount,
-          items: orderData.orderItems,
-        });
-
         setOrder(orderData);
-        console.log('✅ Order loaded successfully');
 
         // ✅ Auto-redirect to track page if order is already accepted/progressing/completed
         // Use `replace` to avoid browser back-looping into this summary page.
         if (['ACCEPTED', 'IN_PROGRESS', 'READY', 'COMPLETED'].includes(orderData.status)) {
-          console.log('🔄 Order already accepted, redirecting to track page...');
-          router.replace(`/${merchantCode}/track/${orderData.orderNumber}?back=history`);
+          router.replace(`/${merchantCode}/track/${orderData.orderNumber}?back=history&mode=${mode}`);
           return;
         }
 
@@ -281,9 +253,8 @@ export default function OrderSummaryCashPage() {
         const resolvedOrderNumber = data.data?.orderNumber || orderNumber;
 
         // If order is accepted/in-progress/ready, redirect to track page
-        if (['ACCEPTED', 'IN_PROGRESS', 'READY'].includes(newStatus)) {
-          console.log('🎉 Payment verified! Redirecting to track page...');
-          router.push(`/${merchantCode}/track/${resolvedOrderNumber}`);
+        if (['ACCEPTED', 'IN_PROGRESS', 'READY', 'COMPLETED'].includes(newStatus)) {
+          router.replace(`/${merchantCode}/track/${resolvedOrderNumber}?back=history&mode=${mode}`);
         }
       } catch (err) {
         console.error('Status check error:', err);
@@ -337,7 +308,6 @@ export default function OrderSummaryCashPage() {
    * ✅ Handle confirm new order from modal
    */
   const handleConfirmNewOrder = () => {
-    console.log('🔄 Starting new order');
     clearCart(merchantCode, mode);
     localStorage.removeItem(`mode_${merchantCode}`);
     setShowNewOrderModal(false);
@@ -348,7 +318,6 @@ export default function OrderSummaryCashPage() {
    * ✅ Handle "View History" button click
    */
   const _handleViewHistory = () => {
-    console.log('📜 Viewing order history');
     router.push(`/${merchantCode}/history?mode=${mode}`);
   };
 

@@ -48,6 +48,9 @@ export function usePushNotifications(): UsePushNotificationsReturn {
 
             // Check if already subscribed
             try {
+                // Ensure SW is registered (shared SW used for push handling)
+                // This does not prompt for notification permission.
+                await navigator.serviceWorker.register('/sw.js');
                 const registration = await navigator.serviceWorker.ready;
                 const subscription = await registration.pushManager.getSubscription();
                 setIsSubscribed(!!subscription);
@@ -109,6 +112,7 @@ export function usePushNotifications(): UsePushNotificationsReturn {
             }
 
             // Register service worker if not already registered
+            await navigator.serviceWorker.register('/sw.js');
             const registration = await navigator.serviceWorker.ready;
 
             // Convert VAPID key to Uint8Array
@@ -160,6 +164,7 @@ export function usePushNotifications(): UsePushNotificationsReturn {
         setError(null);
 
         try {
+            await navigator.serviceWorker.register('/sw.js');
             const registration = await navigator.serviceWorker.ready;
             const subscription = await registration.pushManager.getSubscription();
 

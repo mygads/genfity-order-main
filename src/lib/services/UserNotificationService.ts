@@ -113,6 +113,52 @@ class UserNotificationService {
     }
 
     /**
+     * Compute which merchant users are eligible for a category based on permissions.
+     * Mirrors the filtering rules used by createForMerchant.
+     */
+    private async getEligibleMerchantUserIds(
+        merchantId: bigint,
+        category: UserNotificationCategory,
+        options: { targetRole?: UserRole } = {}
+    ): Promise<bigint[]> {
+        const categoryPermissionMap: Record<UserNotificationCategory, string | null> = {
+            'ORDER': 'notif_new_order',
+            'STOCK': 'notif_stock_out',
+            'STAFF': null,
+            'PAYMENT': 'notif_payment',
+            'SUBSCRIPTION': 'notif_subscription',
+            'SYSTEM': null,
+        };
+
+        const requiredPermission = categoryPermissionMap[category];
+
+        const merchantUsers = await prisma.merchantUser.findMany({
+            where: {
+                merchantId,
+                isActive: true,
+            },
+            select: { userId: true, role: true, permissions: true },
+        });
+
+        const eligibleUsers = merchantUsers.filter(mu => {
+            if (options.targetRole) {
+                if (options.targetRole === 'MERCHANT_OWNER' && mu.role !== 'OWNER') return false;
+                if (options.targetRole === 'MERCHANT_STAFF' && mu.role !== 'STAFF') return false;
+            }
+
+            // Owners always receive notifications
+            if (mu.role === 'OWNER') return true;
+
+            // If no permission required, all users receive
+            if (!requiredPermission) return true;
+
+            return mu.permissions?.includes(requiredPermission) ?? false;
+        });
+
+        return eligibleUsers.map(u => u.userId);
+    }
+
+    /**
      * Create notifications for all super admins
      */
     async createForSuperAdmins(
@@ -313,7 +359,7 @@ class UserNotificationService {
      * Notify all merchant users about new order
      */
     async notifyNewOrder(merchantId: bigint, orderId: bigint, orderNumber: string, totalAmount: number) {
-        return this.createForMerchant(
+        const created = await this.createForMerchant(
             merchantId,
             'ORDER',
             'New Order Received! 🎉',
@@ -323,6 +369,43 @@ class UserNotificationService {
                 metadata: { orderId: orderId.toString(), orderNumber, totalAmount },
             }
         );
+
+        // Also send web push to subscribed merchant users
+        // Note: browser/system controls whether a sound is played for push notifications.
+        try {
+            const order = await prisma.order.findUnique({
+                where: { id: orderId },
+                select: {
+                    status: true,
+                    customer: {
+                        select: { name: true },
+                    },
+                },
+            });
+
+            // Only send web push for PENDING orders (online/customer orders).
+            // POS/admin-created orders are typically already ACCEPTED, so they won't trigger push.
+            if (order?.status !== 'PENDING') {
+                return created;
+            }
+
+            const customerName = order?.customer?.name || 'Customer';
+
+            await this.sendPushToMerchant(merchantId, { category: 'ORDER' }, async (pushService, subscription, merchant) => {
+                return pushService.sendNewOrderNotification(
+                    subscription,
+                    orderNumber,
+                    customerName,
+                    totalAmount,
+                    merchant.currency,
+                    merchant.currency === 'IDR' ? 'id' : 'en'
+                );
+            });
+        } catch (err) {
+            console.error('Failed to send new order push notifications:', err);
+        }
+
+        return created;
     }
 
     /**
@@ -342,7 +425,7 @@ class UserNotificationService {
         );
 
         // Also send push notification to all subscribed merchant users
-        await this.sendPushToMerchant(merchantId, async (pushService, subscription, merchant) => {
+        await this.sendPushToMerchant(merchantId, { category: 'STOCK' }, async (pushService, subscription, merchant) => {
             return pushService.sendOutOfStockNotification(subscription, merchant.name, menuName, 'en');
         });
     }
@@ -370,7 +453,7 @@ class UserNotificationService {
         );
 
         // Also send push notification to all subscribed merchant users
-        await this.sendPushToMerchant(merchantId, async (pushService, subscription, merchant) => {
+        await this.sendPushToMerchant(merchantId, { category: 'STOCK' }, async (pushService, subscription, merchant) => {
             return pushService.sendLowStockNotification(subscription, merchant.name, menuName, remainingQty, threshold, 'en');
         });
     }
@@ -453,7 +536,7 @@ class UserNotificationService {
         );
 
         // Also send push notification to all subscribed merchant users
-        await this.sendPushToMerchant(merchantId, async (pushService, subscription, merchant) => {
+        await this.sendPushToMerchant(merchantId, { category: 'SUBSCRIPTION', targetRole: 'MERCHANT_OWNER' }, async (pushService, subscription, merchant) => {
             return pushService.sendNegativeBalanceNotification(
                 subscription,
                 merchant.name,
@@ -470,6 +553,7 @@ class UserNotificationService {
      */
     private async sendPushToMerchant(
         merchantId: bigint,
+        options: { category: UserNotificationCategory; targetRole?: UserRole },
         sendFn: (
             pushService: typeof import('./WebPushService').default,
             subscription: { endpoint: string; keys: { p256dh: string; auth: string } },
@@ -488,13 +572,21 @@ class UserNotificationService {
 
             if (!merchant) return;
 
+            const eligibleUserIds = await this.getEligibleMerchantUserIds(merchantId, options.category, {
+                targetRole: options.targetRole,
+            });
+
+            if (eligibleUserIds.length === 0) return;
+
             // Get all active push subscriptions for this merchant's users
             const pushSubscriptions = await prisma.pushSubscription.findMany({
                 where: {
                     merchantId,
                     isActive: true,
+                    userId: { in: eligibleUserIds },
                 },
                 select: {
+                    userId: true,
                     endpoint: true,
                     p256dhKey: true,
                     authKey: true,

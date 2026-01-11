@@ -10,6 +10,14 @@
  */
 export type NotificationSoundType = 'newOrder' | 'orderReady' | 'payment';
 
+const DEBUG_SOUND = process.env.NEXT_PUBLIC_DEBUG_SOUND === 'true';
+const soundLog = (...args: unknown[]) => {
+  if (DEBUG_SOUND) {
+    // eslint-disable-next-line no-console
+    console.log(...args);
+  }
+};
+
 /**
  * Sound file paths
  */
@@ -99,7 +107,7 @@ export function playNotificationSound(
   const shouldPlay = options?.forcePlay || preferences.enabled;
 
   if (!shouldPlay) {
-    console.log(`[Sound] Skipped ${type} - notifications disabled`);
+    soundLog(`[Sound] Skipped ${type} - notifications disabled`);
     return;
   }
 
@@ -112,10 +120,10 @@ export function playNotificationSound(
     audio.play().catch((error) => {
       // Autoplay policy might block sound
       // This is expected behavior and not a critical error
-      console.log(`[Sound] Could not play ${type}:`, error.message);
+      soundLog(`[Sound] Could not play ${type}:`, error.message);
     });
 
-    console.log(`[Sound] Playing ${type} at ${Math.round(volume * 100)}% volume`);
+    soundLog(`[Sound] Playing ${type} at ${Math.round(volume * 100)}% volume`);
   } catch (error) {
     console.error(`[Sound] Error playing ${type}:`, error);
   }

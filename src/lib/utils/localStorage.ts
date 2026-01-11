@@ -18,6 +18,14 @@ const STORAGE_KEYS = {
   PUSH_SUBSCRIPTION: 'genfity_push_subscription',
 } as const;
 
+const DEBUG_AUTH = process.env.NEXT_PUBLIC_DEBUG_AUTH === 'true';
+const authLog = (...args: unknown[]) => {
+  if (DEBUG_AUTH) {
+    // eslint-disable-next-line no-console
+    console.log(...args);
+  }
+};
+
 /**
  * Get cart key for specific merchant and mode
  */
@@ -185,7 +193,7 @@ export function getCustomerAuth(): CustomerAuth | null {
   try {
     const data = localStorage.getItem(STORAGE_KEYS.AUTH);
     if (!data) {
-      console.log('🔐 [AUTH] No auth data in localStorage');
+      authLog('🔐 [AUTH] No auth data in localStorage');
       return null;
     }
 
@@ -193,7 +201,7 @@ export function getCustomerAuth(): CustomerAuth | null {
 
     // Check if customer object exists and has required data
     if (!auth.customer || !auth.customer.id) {
-      console.log('🔐 [AUTH] Invalid auth data (missing customer), clearing auth');
+      authLog('🔐 [AUTH] Invalid auth data (missing customer), clearing auth');
       clearCustomerAuth();
       return null;
     }
@@ -203,12 +211,12 @@ export function getCustomerAuth(): CustomerAuth | null {
 
     // Check if token expired
     if (new Date(auth.expiresAt) < new Date()) {
-      console.log('🔐 [AUTH] Token expired, clearing auth');
+      authLog('🔐 [AUTH] Token expired, clearing auth');
       clearCustomerAuth();
       return null;
     }
 
-    console.log('🔐 [AUTH] Valid auth found:', {
+    authLog('🔐 [AUTH] Valid auth found:', {
       customerId: auth.customer.id.toString(),
       email: auth.customer.email,
       expiresAt: new Date(auth.expiresAt).toISOString(),
@@ -239,7 +247,7 @@ export function saveCustomerAuth(auth: CustomerAuth): void {
 
     localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(serializable));
 
-    console.log('🔐 [AUTH] Auth saved to localStorage:', {
+    authLog('🔐 [AUTH] Auth saved to localStorage:', {
       customerId: auth.customer.id.toString(),
       email: auth.customer.email,
       expiresAt: new Date(auth.expiresAt).toISOString(),
@@ -259,12 +267,12 @@ export function clearCustomerAuth(): void {
   if (typeof window === 'undefined') return;
 
   try {
-    console.log('🔐 [AUTH] Clearing customer auth from localStorage');
+    authLog('🔐 [AUTH] Clearing customer auth from localStorage');
     localStorage.removeItem(STORAGE_KEYS.AUTH);
 
     // Dispatch custom event for auth change (logout)
     window.dispatchEvent(new Event('customerAuthChange'));
-    console.log('🔐 [AUTH] Auth cleared and event dispatched');
+    authLog('🔐 [AUTH] Auth cleared and event dispatched');
   } catch (error) {
     console.error('🔐 [AUTH ERROR] Error clearing customer auth:', error);
   }

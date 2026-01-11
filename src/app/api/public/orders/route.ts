@@ -38,6 +38,14 @@ import crypto from 'crypto';
 import { Decimal } from '@prisma/client/runtime/library';
 import { SpecialPriceService } from '@/lib/services/SpecialPriceService';
 
+const DEBUG_ORDERS = process.env.DEBUG_ORDERS === 'true';
+const orderLog = (...args: unknown[]) => {
+  if (DEBUG_ORDERS) {
+    // eslint-disable-next-line no-console
+    console.log(...args);
+  }
+};
+
 // ===== TYPE DEFINITIONS =====
 
 interface OrderItemAddonInput {
@@ -306,7 +314,7 @@ export async function POST(req: NextRequest) {
         });
 
         if (phoneOwner) {
-          console.log('⚠️ [ORDER] Phone already used by another email:', phoneOwner.email);
+          orderLog('⚠️ [ORDER] Phone already used by another email:', phoneOwner.email);
           return NextResponse.json(
             {
               success: false,
@@ -320,7 +328,7 @@ export async function POST(req: NextRequest) {
       }
 
       // Email doesn't exist - create new customer with temp password
-      console.log('👤 [ORDER] Registering new customer:', body.customerEmail);
+      orderLog('👤 [ORDER] Registering new customer:', body.customerEmail);
 
       // ✅ Generate temporary password for new customer
       const tempPassword = crypto.randomBytes(4).toString('hex'); // 8-char random password
@@ -337,7 +345,7 @@ export async function POST(req: NextRequest) {
             mustChangePassword: true, // ✅ Force password change on first login
           },
         });
-        console.log('✅ [ORDER] Customer registered:', customer.id.toString());
+        orderLog('✅ [ORDER] Customer registered:', customer.id.toString());
 
         // ✅ Send welcome email with temp password (async, don't wait)
         emailService.sendCustomerWelcome({
@@ -349,7 +357,7 @@ export async function POST(req: NextRequest) {
           merchantCountry: merchant.country,
         }).then(sent => {
           if (sent) {
-            console.log('✅ [ORDER] Welcome email sent to:', body.customerEmail);
+            orderLog('✅ [ORDER] Welcome email sent to:', body.customerEmail);
           } else {
             console.warn('⚠️ [ORDER] Welcome email failed for:', body.customerEmail);
           }
@@ -360,7 +368,7 @@ export async function POST(req: NextRequest) {
         // Handle race condition - email was created between check and create
         const prismaError = createError as PrismaError;
         if (prismaError.code === 'P2002') {
-          console.log('⚠️ [ORDER] Race condition - fetching existing customer');
+          orderLog('⚠️ [ORDER] Race condition - fetching existing customer');
           customer = await prisma.customer.findUnique({
             where: {
               email: body.customerEmail.toLowerCase(),
@@ -371,7 +379,7 @@ export async function POST(req: NextRequest) {
         }
       }
     } else {
-      console.log('👤 [ORDER] Using existing customer:', customer.id.toString());
+      orderLog('👤 [ORDER] Using existing customer:', customer.id.toString());
 
       // ✅ Update name/phone if different (keep customer data fresh)
       // Phone can be changed because email is the primary identifier
@@ -383,7 +391,7 @@ export async function POST(req: NextRequest) {
             phone: body.customerPhone || null,
           },
         });
-        console.log('✅ [ORDER] Updated customer info (name/phone)');
+        orderLog('✅ [ORDER] Updated customer info (name/phone)');
       }
     }
 
@@ -470,7 +478,7 @@ export async function POST(req: NextRequest) {
       const menuPrice = round2(effectivePrice);
       let itemTotal = round2(menuPrice * item.quantity);
 
-      console.log(`💰 [MENU PRICE] ${menu.name}: ${promoPrice !== undefined ? `PROMO ${menuPrice} (was ${originalPrice})` : menuPrice}`);
+      orderLog(`💰 [MENU PRICE] ${menu.name}: ${promoPrice !== undefined ? `PROMO ${menuPrice} (was ${originalPrice})` : menuPrice}`);
 
       // ✅ Process addons using pre-fetched map
       const addonData: AddonData[] = [];
@@ -484,7 +492,7 @@ export async function POST(req: NextRequest) {
             const addonSubtotal = round2(addonPrice * addonQty);
             itemTotal = round2(itemTotal + addonSubtotal);
 
-            console.log(`💰 [ADDON] ${addon.name}: ${addonPrice} x ${addonQty} = ${addonSubtotal}`);
+            orderLog(`💰 [ADDON] ${addon.name}: ${addonPrice} x ${addonQty} = ${addonSubtotal}`);
 
             addonData.push({
               addonItemId: addon.id,
@@ -499,7 +507,7 @@ export async function POST(req: NextRequest) {
 
       subtotal = round2(subtotal + itemTotal);
 
-      console.log(`📊 [ITEM] ${menu.name} x${item.quantity}: base=${round2(menuPrice * item.quantity)}, addons=${round2(itemTotal - (menuPrice * item.quantity))}, total=${itemTotal}`);
+      orderLog(`📊 [ITEM] ${menu.name} x${item.quantity}: base=${round2(menuPrice * item.quantity)}, addons=${round2(itemTotal - (menuPrice * item.quantity))}, total=${itemTotal}`);
 
       orderItemsData.push({
         menuId: menu.id,
@@ -512,7 +520,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    console.log(`💰 [ORDER CALC] Subtotal (items + addons): ${subtotal}`);
+    orderLog(`💰 [ORDER CALC] Subtotal (items + addons): ${subtotal}`);
 
     // ========================================
     // STEP 3: Calculate fees and total
@@ -523,24 +531,24 @@ export async function POST(req: NextRequest) {
       ? Number(merchant.taxPercentage)
       : 0;
     const taxAmount = round2(subtotal * (taxPercentage / 100));
-    console.log(`💰 [ORDER CALC] Tax (${taxPercentage}% on ${subtotal}): ${taxAmount}`);
+    orderLog(`💰 [ORDER CALC] Tax (${taxPercentage}% on ${subtotal}): ${taxAmount}`);
 
     // Service charge calculation
     const serviceChargePercent = merchant.enableServiceCharge && merchant.serviceChargePercent
       ? Number(merchant.serviceChargePercent)
       : 0;
     const serviceChargeAmount = round2(subtotal * (serviceChargePercent / 100));
-    console.log(`💰 [ORDER CALC] Service Charge (${serviceChargePercent}% on ${subtotal}): ${serviceChargeAmount}`);
+    orderLog(`💰 [ORDER CALC] Service Charge (${serviceChargePercent}% on ${subtotal}): ${serviceChargeAmount}`);
 
     // Packaging fee (only for TAKEAWAY orders)
     const packagingFeeAmount = (body.orderType === 'TAKEAWAY' && merchant.enablePackagingFee && merchant.packagingFeeAmount)
       ? round2(Number(merchant.packagingFeeAmount))
       : 0;
-    console.log(`💰 [ORDER CALC] Packaging Fee: ${packagingFeeAmount} (orderType: ${body.orderType})`);
+    orderLog(`💰 [ORDER CALC] Packaging Fee: ${packagingFeeAmount} (orderType: ${body.orderType})`);
 
     // Total calculation
     const totalAmount = round2(subtotal + taxAmount + serviceChargeAmount + packagingFeeAmount);
-    console.log(`💰 [ORDER CALC] Total: ${totalAmount} (subtotal: ${subtotal} + tax: ${taxAmount} + service: ${serviceChargeAmount} + packaging: ${packagingFeeAmount})`);
+    orderLog(`💰 [ORDER CALC] Total: ${totalAmount} (subtotal: ${subtotal} + tax: ${taxAmount} + service: ${serviceChargeAmount} + packaging: ${packagingFeeAmount})`);
 
     // ========================================
     // STEP 4: Generate unique order number
@@ -582,7 +590,7 @@ export async function POST(req: NextRequest) {
         });
 
         if (!existingOrder) {
-          console.log(`📝 [ORDER] Generated unique order number: ${orderNumber} (attempt ${attempt + 1})`);
+          orderLog(`📝 [ORDER] Generated unique order number: ${orderNumber} (attempt ${attempt + 1})`);
           return orderNumber;
         }
 
@@ -597,7 +605,7 @@ export async function POST(req: NextRequest) {
     };
 
     const orderNumber = await generateOrderNumber(merchant.id);
-    console.log(`📝 [ORDER] Generated order number: ${orderNumber}`);
+    orderLog(`📝 [ORDER] Generated order number: ${orderNumber}`);
 
     // ========================================
     // STEP 5: Create order with items and addons (using transaction)
@@ -764,7 +772,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    console.log('[ORDER] Order created successfully:', orderNumber);
+    orderLog('[ORDER] Order created successfully:', orderNumber);
 
     // Send new order notification to merchant users (async, non-blocking)
     if (order) {

@@ -98,33 +98,16 @@ export default function OrderDetailPage() {
             }
 
             try {
-                // Try authenticated endpoint first
-                const response = await fetch(`/api/customer/orders/${orderNumber}`, {
-                    headers: {
-                        'Authorization': `Bearer ${auth.accessToken}`,
-                    },
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.success) {
-                        setOrder(data.data);
+                const publicResponse = await fetch(`/api/public/orders/${orderNumber}`);
+                if (publicResponse.ok) {
+                    const publicData = await publicResponse.json();
+                    if (publicData.success) {
+                        setOrder(publicData.data);
                     } else {
-                        setError(data.error || 'Failed to fetch order');
+                        setError(publicData.error || 'Order not found');
                     }
                 } else {
-                    // Fallback to public endpoint
-                    const publicResponse = await fetch(`/api/public/orders/${orderNumber}`);
-                    if (publicResponse.ok) {
-                        const publicData = await publicResponse.json();
-                        if (publicData.success) {
-                            setOrder(publicData.data);
-                        } else {
-                            setError(publicData.error || 'Order not found');
-                        }
-                    } else {
-                        setError('Order not found');
-                    }
+                    setError('Order not found');
                 }
             } catch (err) {
                 console.error('Failed to fetch order:', err);

@@ -38,6 +38,14 @@
 
 import Decimal from 'decimal.js';
 
+const DEBUG_PRICE = process.env.NEXT_PUBLIC_DEBUG_PRICE === 'true';
+const priceLog = (...args: unknown[]) => {
+  if (DEBUG_PRICE) {
+    // eslint-disable-next-line no-console
+    console.log(...args);
+  }
+};
+
 export interface PriceBreakdown {
   subtotal: string;
   tax: string;
@@ -78,7 +86,7 @@ export function calculatePriceBreakdown(
   // 2. Total Amount
   const total = subtotalDecimal.plus(tax);
 
-  console.log('💰 [PRICE CALC] Breakdown:', {
+  priceLog('💰 [PRICE CALC] Breakdown:', {
     subtotal: subtotalDecimal.toFixed(2),
     taxPercentage: `${merchantTaxPercentage}%`,
     tax: tax.toFixed(2),
@@ -118,7 +126,7 @@ export function calculateCartSubtotal(
     return sum + itemSubtotal + (addonTotal * item.quantity);
   }, 0);
 
-  console.log('📊 [CART CALC] Subtotal from items:', {
+  priceLog('📊 [CART CALC] Subtotal from items:', {
     itemCount: items.length,
     subtotal: subtotal.toFixed(2),
   });

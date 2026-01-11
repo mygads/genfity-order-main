@@ -12,6 +12,14 @@
 
 import webpush from 'web-push';
 
+const DEBUG_PUSH = process.env.DEBUG_PUSH === 'true';
+const pushLog = (...args: unknown[]) => {
+    if (DEBUG_PUSH) {
+        // eslint-disable-next-line no-console
+        console.log(...args);
+    }
+};
+
 // Configure VAPID keys - these should be set in environment variables
 // Generate keys using: npx web-push generate-vapid-keys
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
@@ -141,7 +149,7 @@ class WebPushService {
             if (error instanceof Error && 'statusCode' in error) {
                 const statusCode = (error as { statusCode: number }).statusCode;
                 if (statusCode === 404 || statusCode === 410) {
-                    console.log('Subscription expired or invalid:', subscription.endpoint);
+                    pushLog('Subscription expired or invalid:', subscription.endpoint);
                     return { success: false, statusCode };
                 }
                 return { success: false, statusCode };
