@@ -5,7 +5,9 @@ import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { getCustomerAuth } from '@/lib/utils/localStorage';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { useCustomerData } from '@/context/CustomerDataContext';
+import { useToast } from '@/context/ToastContext';
 import { Skeleton } from '@/components/common/SkeletonLoaders';
+import { FaFileDownload } from 'react-icons/fa';
 
 interface OrderDetail {
     id: string;
@@ -23,6 +25,10 @@ interface OrderDetail {
     payment: {
         paymentMethod: string;  // actual field name
         status: string;
+        paidBy?: {
+            name: string;
+            email: string;
+        } | null;
     } | null;
     orderItems: Array<{
         id: string;
@@ -39,6 +45,8 @@ interface OrderDetail {
     merchant: {
         name: string;
         currency: string;
+        address?: string;
+        phone?: string;
     };
 }
 
@@ -52,7 +60,7 @@ export default function OrderDetailPage() {
     const router = useRouter();
     const params = useParams();
     const searchParams = useSearchParams();
-    const { t } = useTranslation();
+    const { t, locale } = useTranslation();
 
     const merchantCode = params.merchantCode as string;
     const orderNumber = params.orderNumber as string;
@@ -64,6 +72,9 @@ export default function OrderDetailPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [merchantCurrency, setMerchantCurrency] = useState('AUD');
+    const [downloadingReceipt, setDownloadingReceipt] = useState(false);
+
+    const { showSuccess, showError } = useToast();
 
     // Initialize context for this merchant
     useEffect(() => {
@@ -186,6 +197,74 @@ export default function OrderDetailPage() {
 
     const handleBack = () => {
         router.push(`/${merchantCode}/history?mode=${mode}`);
+    };
+
+    /**
+     * Handle download receipt functionality
+     */
+    const handleDownloadReceipt = async () => {
+        if (!order) return;
+
+        const auth = getCustomerAuth();
+        if (!auth) return;
+
+        setDownloadingReceipt(true);
+
+        try {
+            // Dynamic import for PDF generator (client-side only)
+            const { generateOrderReceiptPdf } = await import('@/lib/utils/generateOrderPdf');
+
+            // Prepare data for PDF generation
+            const receiptData = {
+                orderNumber: order.orderNumber,
+                merchantName: order.merchant?.name || 'Merchant',
+                merchantCode: merchantCode,
+                merchantAddress: order.merchant?.address,
+                merchantPhone: order.merchant?.phone,
+                merchantLogo: (order.merchant as { logoUrl?: string })?.logoUrl,
+                orderType: order.orderType as 'DINE_IN' | 'TAKEAWAY',
+                tableNumber: order.tableNumber,
+                customerName: auth.customer.name,
+                customerEmail: auth.customer.email,
+                customerPhone: auth.customer.phone,
+                placedAt: order.placedAt,
+                items: (order.orderItems || []).map((item) => ({
+                    menuName: item.menuName,
+                    quantity: item.quantity,
+                    price: Number(item.menuPrice) || 0,
+                    addons: (item.addons || []).map((addon) => ({
+                        name: addon.addonName,
+                        price: Number(addon.addonPrice) || 0,
+                    })),
+                    notes: item.notes,
+                })),
+                subtotal: Number(order.subtotal) || 0,
+                taxAmount: Number(order.taxAmount) || 0,
+                serviceChargeAmount: Number(order.serviceChargeAmount) || 0,
+                packagingFeeAmount: Number(order.packagingFeeAmount) || 0,
+                totalAmount: Number(order.totalAmount) || 0,
+                paymentMethod: order.payment?.paymentMethod,
+                paymentStatus: order.payment?.status,
+                currency: order.merchant?.currency || merchantCurrency,
+                // Staff who recorded the payment
+                recordedBy: order.payment?.paidBy ? {
+                    name: order.payment.paidBy.name,
+                    email: order.payment.paidBy.email,
+                } : null,
+                // Language for receipt
+                language: locale as 'en' | 'id',
+            };
+
+            // Generate and download PDF
+            await generateOrderReceiptPdf(receiptData);
+            showSuccess(t('customer.receipt.downloadSuccess'));
+
+        } catch (error) {
+            console.error('Download receipt error:', error);
+            showError(t('customer.receipt.downloadFailed'));
+        } finally {
+            setDownloadingReceipt(false);
+        }
     };
 
     // Loading skeleton
@@ -371,6 +450,28 @@ export default function OrderDetailPage() {
                         </div>
                     )}
                 </div>
+
+                {/* Download Receipt Button */}
+                <button
+                    onClick={handleDownloadReceipt}
+                    disabled={downloadingReceipt}
+                    className="w-full py-2 text-white bg-orange-500 font-semibold rounded-xl text-sm hover:bg-orange-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                    {downloadingReceipt ? (
+                        <>
+                            <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                            <span>{t('customer.receipt.downloading')}</span>
+                        </>
+                    ) : (
+                        <>
+                            <FaFileDownload className="w-5 h-5" />
+                            <span>{t('customer.receipt.downloadReceipt')}</span>
+                        </>
+                    )}
+                </button>
             </main>
         </div>
     );

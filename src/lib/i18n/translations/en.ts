@@ -356,6 +356,12 @@ const en = {
   "customer.reorder.partialSuccess": "{added} item(s) added, {skipped} unavailable",
   "customer.reorder.noAvailableItems": "No items available for re-order",
 
+  // Receipt/Invoice PDF
+  "customer.receipt.downloadReceipt": "Download Receipt",
+  "customer.receipt.downloading": "Downloading...",
+  "customer.receipt.downloadSuccess": "Receipt downloaded successfully",
+  "customer.receipt.downloadFailed": "Failed to download receipt",
+
   // Profile
   "customer.profile.title": "Profile",
   "customer.profile.editProfile": "Edit Profile",
@@ -407,10 +413,16 @@ const en = {
   "customer.orderSummary.orderNumber": "Order Number",
   "customer.orderSummary.showQRInstruction": "Show the QR code or 7-digit order number to our cashier.",
 
-  // Push Notifications
   "customer.push.enableTitle": "Get Order Updates",
   "customer.push.enableDescription": "Receive notifications when your order status changes, even when the app is closed.",
   "customer.push.enable": "Enable",
+
+  // Upselling & Cross-selling
+  "customer.upsell.addDrink": "Add a drink?",
+  "customer.upsell.pairsWith": "Pairs well with this",
+  "customer.upsell.othersAlsoBought": "Others also bought",
+  "customer.upsell.completeYourOrder": "Complete your order",
+  "customer.upsell.add": "+ Add",
 
   // ============================================================================
   // ADMIN - Dashboard content

@@ -69,8 +69,6 @@ export const GET = withCustomer(async (
       },
     });
 
-    console.log(`📦 Found ${orders.length} orders for customer ${context.customerId.toString()}`);
-
     // ========================================
     // Format Response
     // ========================================

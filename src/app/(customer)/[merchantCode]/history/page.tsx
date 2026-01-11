@@ -9,6 +9,7 @@ import { TranslationKeys } from '@/lib/i18n';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/context/ToastContext';
 import { useCustomerData } from '@/context/CustomerDataContext';
+import { FaFileDownload } from 'react-icons/fa';
 
 interface OrderHistoryItem {
   id: bigint;
@@ -69,7 +70,7 @@ export default function OrderHistoryPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const params = useParams();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { addItem, initializeCart, cart } = useCart();
   const { showSuccess, showError, showWarning } = useToast();
 
@@ -86,6 +87,7 @@ export default function OrderHistoryPage() {
   const [filter, setFilter] = useState<'all' | 'pending' | 'completed' | 'cancelled'>('all');
   const [merchantCurrency, setMerchantCurrency] = useState('AUD');
   const [reorderingOrderId, setReorderingOrderId] = useState<string | null>(null);
+  const [downloadingOrderId, setDownloadingOrderId] = useState<string | null>(null);
 
   // ✅ FIX: Add hydration guard to prevent SSR/CSR mismatch
   const [isMounted, setIsMounted] = useState(false);
@@ -262,6 +264,95 @@ export default function OrderHistoryPage() {
       showError(t('common.error'));
     } finally {
       setReorderingOrderId(null);
+    }
+  };
+
+  /**
+   * Handle download receipt functionality
+   * 
+   * @description
+   * Fetches full order details from API and generates PDF receipt.
+   * Uses dynamic import for jsPDF to keep bundle size small.
+   * 
+   * @param order - Order to download receipt for
+   */
+  const handleDownloadReceipt = async (order: OrderHistoryItem) => {
+    if (!auth) return;
+
+    setDownloadingOrderId(order.id.toString());
+
+    try {
+      // Fetch full order details using public endpoint (supports orderNumber lookup)
+      let response = await fetch(`/api/public/orders/${order.orderNumber}`);
+
+      // If public endpoint fails, try constructing full order number with merchant code
+      if (!response.ok) {
+        const fullOrderNumber = order.orderNumber.includes('-')
+          ? order.orderNumber
+          : `${order.merchantCode}-${order.orderNumber}`;
+        response = await fetch(`/api/public/orders/${fullOrderNumber}`);
+      }
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch order details');
+      }
+
+      const data = await response.json();
+      const orderData = data.data;
+
+      // Dynamic import for PDF generator (client-side only)
+      const { generateOrderReceiptPdf } = await import('@/lib/utils/generateOrderPdf');
+
+      // Prepare data for PDF generation
+      const receiptData = {
+        orderNumber: orderData.orderNumber,
+        merchantName: orderData.merchant?.name || order.merchantName,
+        merchantCode: order.merchantCode,
+        merchantAddress: orderData.merchant?.address,
+        merchantPhone: orderData.merchant?.phone,
+        merchantLogo: orderData.merchant?.logoUrl,
+        orderType: orderData.orderType as 'DINE_IN' | 'TAKEAWAY',
+        tableNumber: orderData.tableNumber,
+        customerName: auth.customer.name,
+        customerEmail: auth.customer.email,
+        customerPhone: auth.customer.phone,
+        placedAt: orderData.placedAt,
+        items: (orderData.orderItems || []).map((item: { menuName: string; quantity: number; menuPrice: number; addons?: Array<{ addonName: string; addonPrice: number }>; notes?: string | null }) => ({
+          menuName: item.menuName,
+          quantity: item.quantity,
+          price: Number(item.menuPrice) || 0,
+          addons: (item.addons || []).map((addon: { addonName: string; addonPrice: number }) => ({
+            name: addon.addonName,
+            price: Number(addon.addonPrice) || 0,
+          })),
+          notes: item.notes,
+        })),
+        subtotal: Number(orderData.subtotal) || 0,
+        taxAmount: Number(orderData.taxAmount) || 0,
+        serviceChargeAmount: Number(orderData.serviceChargeAmount) || 0,
+        packagingFeeAmount: Number(orderData.packagingFeeAmount) || 0,
+        totalAmount: Number(orderData.totalAmount) || order.totalAmount,
+        paymentMethod: orderData.payment?.paymentMethod,
+        paymentStatus: orderData.payment?.status,
+        currency: orderData.merchant?.currency || merchantCurrency,
+        // Staff who recorded the payment
+        recordedBy: orderData.payment?.paidBy ? {
+          name: orderData.payment.paidBy.name,
+          email: orderData.payment.paidBy.email,
+        } : null,
+        // Language for receipt (id or en)
+        language: locale as 'en' | 'id',
+      };
+
+      // Generate and download PDF
+      await generateOrderReceiptPdf(receiptData);
+      showSuccess(t('customer.receipt.downloadSuccess'));
+
+    } catch (error) {
+      console.error('Download receipt error:', error);
+      showError(t('customer.receipt.downloadFailed'));
+    } finally {
+      setDownloadingOrderId(null);
     }
   };
 
@@ -597,6 +688,28 @@ export default function OrderHistoryPage() {
                             </svg>
                             <span>{t('customer.history.reorder')}</span>
                           </>
+                        )}
+                      </button>
+                    )}
+
+                    {/* Download Receipt Button - Only for completed orders */}
+                    {!isOrderActive && order.status.toLowerCase() === 'completed' && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDownloadReceipt(order);
+                        }}
+                        disabled={downloadingOrderId === order.id.toString()}
+                        className="w-10 h-10 flex items-center justify-center text-blue-500 border border-blue-500 rounded-lg hover:bg-blue-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={t('customer.receipt.downloadReceipt')}
+                      >
+                        {downloadingOrderId === order.id.toString() ? (
+                          <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                        ) : (
+                          <FaFileDownload className="w-4 h-4" />
                         )}
                       </button>
                     )}

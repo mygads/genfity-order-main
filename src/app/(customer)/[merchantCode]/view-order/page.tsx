@@ -13,6 +13,7 @@ import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState
 import OtherNotesModal from '@/components/modals/OtherNotesModal';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { useModeAvailability } from '@/hooks/useModeAvailability';
+import UpsellSection from '@/components/customer/UpsellSection';
 
 interface MenuItem {
   id: string;
@@ -55,7 +56,7 @@ export default function ViewOrderPage() {
 
   const { cart, updateItem, removeItem, initializeCart, addItem } = useCart();
   const { isInGroupOrder: _isInGroupOrder, isHost, session } = useGroupOrder();
-  
+
   // ✅ Use CustomerData Context for instant merchant info access
   const { merchantInfo: contextMerchantInfo, menus: contextMenus, initializeData, isInitialized } = useCustomerData();
 
@@ -91,7 +92,7 @@ export default function ViewOrderPage() {
   useEffect(() => {
     if (isInitialized && contextMerchantInfo) {
       console.log('✅ [VIEW-ORDER] Using CustomerData Context - instant load');
-      
+
       if (contextMerchantInfo.enableTax) {
         setMerchantTaxPercentage(Number(contextMerchantInfo.taxPercentage) || 0);
       }
@@ -205,6 +206,74 @@ export default function ViewOrderPage() {
   const packagingFeeAmount = merchantPackagingFee;
   const otherFees = taxAmount + serviceChargeAmount + packagingFeeAmount;
   const total = subtotal + otherFees;
+
+  // Co-purchase recommendations state
+  const [upsellSuggestions, setUpsellSuggestions] = useState<Array<{
+    id: string;
+    name: string;
+    price: number;
+    imageUrl: string | null;
+  }>>([]);
+
+  // Fetch co-purchase recommendations from API
+  useEffect(() => {
+    const fetchRecommendations = async () => {
+      if (!cart || cart.items.length === 0 || !merchantCode) {
+        setUpsellSuggestions([]);
+        return;
+      }
+
+      const cartMenuIds = cart.items.map(item => item.menuId).join(',');
+
+      try {
+        const response = await fetch(
+          `/api/public/merchants/${merchantCode}/recommendations?menuIds=${cartMenuIds}`
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data.length >= 3) {
+            // Use API-based co-purchase recommendations
+            setUpsellSuggestions(data.data);
+            return;
+          }
+        }
+      } catch (error) {
+        console.log('Recommendations API unavailable, using fallback');
+      }
+
+      // Fallback: Category-based suggestions if API returns < 3 items
+      if (contextMenus && contextMenus.length > 0) {
+        const cartItemIds = cart.items.map(item => item.menuId);
+        const cartCategoryNames = cart.items
+          .map(item => {
+            const menu = contextMenus.find(m => m.id === item.menuId);
+            return menu?.categories?.[0]?.name?.toLowerCase() || '';
+          })
+          .filter(Boolean);
+
+        const fallbackSuggestions = contextMenus
+          .filter((menu) => {
+            if (cartItemIds.includes(menu.id)) return false;
+            if (!menu.isActive) return false;
+            if (menu.trackStock && (menu.stockQty === null || menu.stockQty <= 0)) return false;
+            const menuCategoryLower = (menu.categories?.[0]?.name || '').toLowerCase();
+            return !cartCategoryNames.includes(menuCategoryLower);
+          })
+          .slice(0, 5)
+          .map((menu) => ({
+            id: menu.id,
+            name: menu.name,
+            price: typeof menu.price === 'string' ? parseFloat(menu.price) : menu.price,
+            imageUrl: menu.imageUrl,
+          }));
+
+        setUpsellSuggestions(fallbackSuggestions);
+      }
+    };
+
+    fetchRecommendations();
+  }, [cart, merchantCode, contextMenus]);
 
   const handleProceedToPayment = () => {
     if (cart && generalNotes.trim()) {
@@ -678,6 +747,36 @@ export default function ViewOrderPage() {
             </span>
           </div>
         </section>
+
+        {/* Smart Upselling - Pair with items */}
+        {upsellSuggestions.length > 0 && (
+          <section className="px-3 mt-4">
+            <UpsellSection
+              title={t('customer.upsell.pairsWith')}
+              subtitle={t('customer.upsell.completeYourOrder')}
+              items={upsellSuggestions}
+              currency={merchantCurrency}
+              onAddItem={async (menuId) => {
+                // Add item directly to cart
+                try {
+                  const menu = contextMenus.find((m: { id: string }) => m.id === menuId);
+                  if (menu) {
+                    addItem({
+                      menuId: menu.id,
+                      menuName: menu.name,
+                      price: typeof menu.price === 'string' ? parseFloat(menu.price) : menu.price,
+                      quantity: 1,
+                      addons: [],
+                      notes: ''
+                    });
+                  }
+                } catch (error) {
+                  console.error('Failed to add upsell item:', error);
+                }
+              }}
+            />
+          </section>
+        )}
 
         {/* ===== PAYMENT DETAILS (ESB Exact Match) ===== */}
         <section

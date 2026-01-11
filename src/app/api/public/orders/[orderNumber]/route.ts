@@ -21,10 +21,10 @@ export async function GET(
   context: { params: Promise<Record<string, string>> }
 ) {
   const params = await context.params;
-  
+
   try {
     const { orderNumber } = params;
-    
+
     // Validate order number
     if (!orderNumber) {
       return NextResponse.json(
@@ -82,9 +82,20 @@ export async function GET(
             phone: true,
             address: true,
             currency: true,
+            logoUrl: true,
           },
         },
-        payment: true, // ✅ Include Payment relation (1:1)
+        payment: {
+          include: {
+            paidBy: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        }, // ✅ Include Payment relation with staff who recorded
       },
     });
 

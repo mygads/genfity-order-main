@@ -350,6 +350,12 @@ const id = {
   "customer.reorder.partialSuccess": "{added} item ditambahkan, {skipped} tidak tersedia",
   "customer.reorder.noAvailableItems": "Tidak ada item yang tersedia untuk dipesan ulang",
 
+  // Receipt/Invoice PDF
+  "customer.receipt.downloadReceipt": "Unduh Struk",
+  "customer.receipt.downloading": "Mengunduh...",
+  "customer.receipt.downloadSuccess": "Struk berhasil diunduh",
+  "customer.receipt.downloadFailed": "Gagal mengunduh struk",
+
   // Profile
   "customer.profile.title": "Profil",
   "customer.profile.editProfile": "Ubah Profil",
@@ -401,10 +407,16 @@ const id = {
   "customer.orderSummary.orderNumber": "Nomor Pesanan",
   "customer.orderSummary.showQRInstruction": "Tunjukkan kode QR atau 7-digit nomor pesanan ke kasir kami.",
 
-  // Push Notifications
   "customer.push.enableTitle": "Dapatkan Update Pesanan",
   "customer.push.enableDescription": "Terima notifikasi saat status pesanan berubah, bahkan saat aplikasi tertutup.",
   "customer.push.enable": "Aktifkan",
+
+  // Upselling & Cross-selling
+  "customer.upsell.addDrink": "Tambah minuman?",
+  "customer.upsell.pairsWith": "Cocok dipadukan dengan ini",
+  "customer.upsell.othersAlsoBought": "Yang lain juga beli",
+  "customer.upsell.completeYourOrder": "Lengkapi pesanan Anda",
+  "customer.upsell.add": "+ Tambah",
 
   // ============================================================================
   // ADMIN - Konten dashboard admin

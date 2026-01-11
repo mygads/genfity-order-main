@@ -74,8 +74,6 @@ export async function GET(req: NextRequest) {
             );
         }
 
-        console.log('🔍 Fetching recent orders for customer:', decoded.customerId, 'merchant:', merchantCode);
-
         // ========================================
         // STEP 3: Find Merchant
         // ========================================
@@ -129,7 +127,6 @@ export async function GET(req: NextRequest) {
             },
         });
 
-        console.log(`📦 Found ${completedOrders.length} completed orders`);
 
         // ========================================
         // STEP 5: Extract Unique Menu Items
@@ -196,7 +193,7 @@ export async function GET(req: NextRequest) {
                 // Note: Promo will be computed client-side from current SpecialPrice
             }));
 
-        console.log(`✅ Returning ${recentItems.length} unique recent menu items`);
+        // console.log(`✅ Returning ${recentItems.length} unique recent menu items`);
 
         // ========================================
         // STEP 6: Return Response
