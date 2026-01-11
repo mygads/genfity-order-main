@@ -10,6 +10,7 @@
  */
 
 import type { OrderWithDetails } from '@/lib/types/order';
+import { formatCurrency as formatCurrencyShared } from '@/lib/utils/format';
 
 export interface ReceiptData {
   order: OrderWithDetails;
@@ -151,25 +152,8 @@ function formatPaymentMethod(method: string, labels: ReceiptLabels): string {
  * - AUD: A$10.00 (2 decimals)
  */
 function formatCurrency(amount: number, currency: string): string {
-  // Special handling for AUD to show A$ prefix
-  if (currency === 'AUD') {
-    return `A$${amount.toFixed(2)}`;
-  }
-
-  // Special handling for IDR - no decimals
-  if (currency === 'IDR') {
-    const formatted = new Intl.NumberFormat('id-ID', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(Math.round(amount));
-    return `Rp ${formatted}`;
-  }
-
-  // Fallback for other currencies
-  return new Intl.NumberFormat('en-AU', {
-    style: 'currency',
-    currency: currency,
-  }).format(amount);
+  const locale = currency === 'IDR' ? 'id' : 'en';
+  return formatCurrencyShared(amount, currency, locale);
 }
 
 /**

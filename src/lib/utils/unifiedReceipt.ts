@@ -14,7 +14,7 @@
 import { ReceiptSettings, DEFAULT_RECEIPT_SETTINGS } from '@/lib/types/receiptSettings';
 import QRCode from 'qrcode';
 import { getPublicAppOrigin } from '@/lib/utils/publicAppOrigin';
-import { formatFullOrderNumber } from '@/lib/utils/format';
+import { formatCurrency, formatFullOrderNumber } from '@/lib/utils/format';
 
 // ============================================
 // TYPES
@@ -156,22 +156,6 @@ function getLabels(language: 'en' | 'id'): ReceiptLabels {
   return language === 'id' ? labelsID : labelsEN;
 }
 
-function formatCurrency(amount: number, currency: string): string {
-  if (currency === 'IDR') {
-    return `Rp ${new Intl.NumberFormat('id-ID', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(Math.round(amount))}`;
-  }
-  if (currency === 'AUD') {
-    return `A$${amount.toFixed(2)}`;
-  }
-  return new Intl.NumberFormat('en-AU', {
-    style: 'currency',
-    currency: currency,
-  }).format(amount);
-}
-
 function formatDateTime(dateString: string, language: 'en' | 'id'): string {
   const date = new Date(dateString);
   const locale = language === 'id' ? 'id-ID' : 'en-AU';
@@ -218,7 +202,7 @@ export function generateReceiptHTML(options: GenerateReceiptOptions): string {
   };
 
   const labels = getLabels(receiptLanguage);
-  const fmt = (amount: number) => formatCurrency(amount, currency);
+  const fmt = (amount: number) => formatCurrency(amount, currency, receiptLanguage);
 
   const paperWidthPx = settings.paperSize === '58mm' ? 200 : 280;
   const basePaddingPx = settings.paperSize === '58mm' ? 8 : 10;

@@ -11,7 +11,7 @@
 import { jsPDF } from 'jspdf';
 import QRCode from 'qrcode';
 import { getPublicAppOrigin } from '@/lib/utils/publicAppOrigin';
-import { formatFullOrderNumber } from '@/lib/utils/format';
+import { formatCurrency, formatFullOrderNumber } from '@/lib/utils/format';
 
 // Receipt translations
 const receiptTranslations = {
@@ -107,23 +107,8 @@ export interface OrderReceiptData {
     language?: ReceiptLanguage;
 }
 
-/**
- * Format currency based on currency code
- */
-const formatCurrency = (amount: number, currency: string): string => {
-    if (currency === 'AUD') {
-        return `A$${amount.toFixed(2)}`;
-    }
-    if (currency === 'IDR') {
-        return `Rp ${new Intl.NumberFormat('id-ID', {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
-        }).format(Math.round(amount))}`;
-    }
-    return new Intl.NumberFormat('en-AU', {
-        style: 'currency',
-        currency: currency,
-    }).format(amount);
+const formatMoney = (amount: number, currency: string, lang: ReceiptLanguage): string => {
+    return formatCurrency(amount, currency, lang);
 };
 
 /**
@@ -424,7 +409,7 @@ export const generateOrderReceiptPdf = async (data: OrderReceiptData): Promise<v
 
         // Item name with quantity
         const itemText = `${item.menuName} x${item.quantity}`;
-        const priceText = formatCurrency(itemTotal, data.currency);
+        const priceText = formatMoney(itemTotal, data.currency, lang);
 
         // Handle long item names with wrapping
         doc.setFont('helvetica', 'normal');
@@ -448,7 +433,7 @@ export const generateOrderReceiptPdf = async (data: OrderReceiptData): Promise<v
                 doc.setFontSize(7);
                 doc.setTextColor(100, 100, 100);
                 const addonText = `  ${addon.name}`;
-                const addonPrice = formatCurrency(addon.price * item.quantity, data.currency);
+                const addonPrice = formatMoney(addon.price * item.quantity, data.currency, lang);
                 addLeftRight(addonText, addonPrice, yPos, 7);
                 yPos += 3.5;
             }
@@ -485,21 +470,21 @@ export const generateOrderReceiptPdf = async (data: OrderReceiptData): Promise<v
 
     doc.setFont('helvetica', 'normal');
 
-    addLeftRight(t.subtotal, formatCurrency(data.subtotal, data.currency), yPos);
+    addLeftRight(t.subtotal, formatMoney(data.subtotal, data.currency, lang), yPos);
     yPos += 4;
 
     if (data.taxAmount && data.taxAmount > 0) {
-        addLeftRight(t.tax, formatCurrency(data.taxAmount, data.currency), yPos);
+        addLeftRight(t.tax, formatMoney(data.taxAmount, data.currency, lang), yPos);
         yPos += 4;
     }
 
     if (data.serviceChargeAmount && data.serviceChargeAmount > 0) {
-        addLeftRight(t.serviceCharge, formatCurrency(data.serviceChargeAmount, data.currency), yPos);
+        addLeftRight(t.serviceCharge, formatMoney(data.serviceChargeAmount, data.currency, lang), yPos);
         yPos += 4;
     }
 
     if (data.packagingFeeAmount && data.packagingFeeAmount > 0) {
-        addLeftRight(t.packagingFee, formatCurrency(data.packagingFeeAmount, data.currency), yPos);
+        addLeftRight(t.packagingFee, formatMoney(data.packagingFeeAmount, data.currency, lang), yPos);
         yPos += 4;
     }
 
@@ -507,7 +492,7 @@ export const generateOrderReceiptPdf = async (data: OrderReceiptData): Promise<v
 
     // Total (Bold and prominent)
     doc.setFont('helvetica', 'bold');
-    addLeftRight(t.total, formatCurrency(data.totalAmount, data.currency), yPos, 10, true);
+    addLeftRight(t.total, formatMoney(data.totalAmount, data.currency, lang), yPos, 10, true);
     yPos += 6;
 
     addDashedLine(yPos);
@@ -524,7 +509,7 @@ export const generateOrderReceiptPdf = async (data: OrderReceiptData): Promise<v
 
         doc.setFont('helvetica', 'normal');
         const methodLabel = data.paymentMethod.replace(/_/g, ' ').toUpperCase();
-        addLeftRight(methodLabel, formatCurrency(data.totalAmount, data.currency), yPos);
+        addLeftRight(methodLabel, formatMoney(data.totalAmount, data.currency, lang), yPos);
         yPos += 5;
     }
 

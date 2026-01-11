@@ -5,6 +5,8 @@
  * Use these constants for consistent styling across all pages
  */
 
+import { formatCurrency } from '@/lib/utils/format';
+
 // ========== COLORS ==========
 export const COLORS = {
   // Primary
@@ -206,9 +208,11 @@ export const ANIMATIONS = {
 export const utils = {
   /**
    * Format currency in Indonesian Rupiah
+   *
+   * @deprecated Use formatCurrency from src/lib/utils/format.ts instead.
    */
   formatCurrency: (amount: number): string => {
-    return `Rp ${amount.toLocaleString('id-ID')}`;
+    return formatCurrency(amount, 'IDR', 'id');
   },
   
   /**
