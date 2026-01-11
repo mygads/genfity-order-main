@@ -12,6 +12,7 @@ import {
   getCustomerWelcomeTemplate,
   getPermissionUpdateTemplate,
 } from '@/lib/utils/emailTemplates';
+import { formatCurrency } from '@/lib/utils/format';
 
 // Track initialization to prevent duplicate logs
 let isInitialized = false;
@@ -483,15 +484,14 @@ class EmailService {
     newBalance?: number;
     newPeriodEnd?: Date;
   }): Promise<boolean> {
-    const formattedAmount = params.currency === 'AUD'
-      ? `A$${params.amount.toFixed(2)}`
-      : `Rp ${params.amount.toLocaleString('id-ID')}`;
+    const emailLocale = params.currency === 'IDR' ? 'id' : 'en';
 
-    const formattedBalance = params.newBalance !== undefined
-      ? (params.currency === 'AUD'
-        ? `A$${params.newBalance.toFixed(2)}`
-        : `Rp ${params.newBalance.toLocaleString('id-ID')}`)
-      : null;
+    const formattedAmount = formatCurrency(params.amount, params.currency, emailLocale);
+
+    const formattedBalance =
+      params.newBalance !== undefined
+        ? formatCurrency(params.newBalance, params.currency, emailLocale)
+        : null;
 
     const formattedPeriodEnd = params.newPeriodEnd
       ? params.newPeriodEnd.toLocaleDateString('id-ID', {
@@ -596,16 +596,9 @@ class EmailService {
     const isPositive = params.amount >= 0;
     const amountSign = isPositive ? '+' : '';
     
-    // Format currency
-    const formatCurrency = (amount: number) => {
-      if (params.currency === 'AUD') {
-        return `A$${Math.abs(amount).toLocaleString('en-AU', { minimumFractionDigits: 2 })}`;
-      }
-      return `Rp ${Math.abs(amount).toLocaleString('id-ID')}`;
-    };
-
-    const formattedAmount = `${amountSign}${formatCurrency(params.amount)}`;
-    const formattedBalance = formatCurrency(params.newBalance);
+    const emailLocale = params.currency === 'IDR' ? 'id' : 'en';
+    const formattedAmount = `${amountSign}${formatCurrency(Math.abs(params.amount), params.currency, emailLocale)}`;
+    const formattedBalance = formatCurrency(params.newBalance, params.currency, emailLocale);
     const formattedDate = new Intl.DateTimeFormat('en-AU', {
       dateStyle: 'medium',
       timeStyle: 'short',

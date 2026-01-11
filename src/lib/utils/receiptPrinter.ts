@@ -5,11 +5,12 @@
  * Supports both browser print and thermal printer format
  * 
  * Multi-language support:
- * - IDR currency → Indonesian labels
- * - AUD currency → English labels
+ * - Uses app locale when provided (en/id)
+ * - Falls back to currency mapping for legacy call sites
  */
 
 import type { OrderWithDetails } from '@/lib/types/order';
+import type { Locale } from '@/lib/i18n';
 import { formatCurrency as formatCurrencyShared } from '@/lib/utils/format';
 
 export interface ReceiptData {
@@ -26,6 +27,11 @@ export interface ReceiptData {
     phone?: string;
     currency: string;
   };
+  /**
+   * App locale used for receipt labels/date formatting.
+   * If omitted, falls back to currency mapping (legacy behavior).
+   */
+  locale?: Locale;
 }
 
 // ============================================================================
@@ -112,12 +118,12 @@ const labelsID: ReceiptLabels = {
   paymentTransfer: 'Transfer Bank',
 };
 
-/**
- * Get receipt labels based on currency
- * IDR → Indonesian, AUD → English
- */
-function getLabels(currency: string): ReceiptLabels {
-  return currency === 'IDR' ? labelsID : labelsEN;
+function getLabels(locale: Locale): ReceiptLabels {
+  return locale === 'id' ? labelsID : labelsEN;
+}
+
+function inferLocaleFromCurrency(currency: string): Locale {
+  return currency === 'IDR' ? 'id' : 'en';
 }
 
 /**
@@ -151,18 +157,13 @@ function formatPaymentMethod(method: string, labels: ReceiptLabels): string {
  * - IDR: Rp 10.000 (no decimals)
  * - AUD: A$10.00 (2 decimals)
  */
-function formatCurrency(amount: number, currency: string): string {
-  const locale = currency === 'IDR' ? 'id' : 'en';
+function formatCurrency(amount: number, currency: string, locale: Locale): string {
   return formatCurrencyShared(amount, currency, locale);
 }
 
-/**
- * Format date for display based on currency/locale
- * IDR → Indonesian format, AUD → Australian format
- */
-function formatDateTime(date: Date, currency: string): string {
-  const locale = currency === 'IDR' ? 'id-ID' : 'en-AU';
-  return new Intl.DateTimeFormat(locale, {
+function formatDateTime(date: Date, locale: Locale): string {
+  const intlLocale = locale === 'id' ? 'id-ID' : 'en-AU';
+  return new Intl.DateTimeFormat(intlLocale, {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(date));
@@ -172,19 +173,14 @@ function formatDateTime(date: Date, currency: string): string {
 // RECEIPT HTML GENERATION
 // ============================================================================
 
-/**
- * Generate HTML receipt content with multi-language support
- * Language is determined by merchant currency:
- * - IDR → Indonesian
- * - AUD → English
- */
 export function generateReceiptHTML(data: ReceiptData): string {
   const { order, payment, merchant } = data;
-  const labels = getLabels(merchant.currency);
+  const receiptLocale = data.locale ?? inferLocaleFromCurrency(merchant.currency);
+  const labels = getLabels(receiptLocale);
 
   return `
 <!DOCTYPE html>
-<html lang="${merchant.currency === 'IDR' ? 'id' : 'en'}">
+<html lang="${receiptLocale}">
 <head>
   <meta charset="UTF-8">
   <title>${labels.orderNumber}${order.orderNumber}</title>
@@ -310,7 +306,7 @@ export function generateReceiptHTML(data: ReceiptData): string {
     }
     <div class="row">
       <span class="label">${labels.date}:</span>
-      <span>${formatDateTime(order.placedAt, merchant.currency)}</span>
+      <span>${formatDateTime(order.placedAt, receiptLocale)}</span>
     </div>
   </div>
 
@@ -323,7 +319,7 @@ export function generateReceiptHTML(data: ReceiptData): string {
         <div class="item">
           <div class="row">
             <span class="item-name">${item.quantity}x ${item.menuName}</span>
-            <span>${formatCurrency(Number(item.subtotal), merchant.currency)}</span>
+            <span>${formatCurrency(Number(item.subtotal), merchant.currency, receiptLocale)}</span>
           </div>
           ${item.addons && item.addons.length > 0
             ? item.addons
@@ -331,7 +327,7 @@ export function generateReceiptHTML(data: ReceiptData): string {
                 (addon) => `
             <div class="item-addon">
               + ${addon.addonName} ${addon.quantity > 1 ? `(${addon.quantity}x)` : ''}
-              ${formatCurrency(Number(addon.addonPrice) * addon.quantity, merchant.currency)}
+              ${formatCurrency(Number(addon.addonPrice) * addon.quantity, merchant.currency, receiptLocale)}
             </div>
           `
               )
@@ -350,23 +346,23 @@ export function generateReceiptHTML(data: ReceiptData): string {
   <div class="section">
     <div class="row">
       <span>${labels.subtotal}:</span>
-      <span>${formatCurrency(Number(order.subtotal), merchant.currency)}</span>
+      <span>${formatCurrency(Number(order.subtotal), merchant.currency, receiptLocale)}</span>
     </div>
     ${Number((order as unknown as { taxAmount?: number }).taxAmount) > 0 ? `<div class="row">
       <span>${labels.tax}:</span>
-      <span>${formatCurrency(Number((order as unknown as { taxAmount?: number }).taxAmount), merchant.currency)}</span>
+      <span>${formatCurrency(Number((order as unknown as { taxAmount?: number }).taxAmount), merchant.currency, receiptLocale)}</span>
     </div>` : ''}
     ${Number((order as unknown as { serviceChargeAmount?: number }).serviceChargeAmount) > 0 ? `<div class="row">
       <span>${labels.serviceCharge}:</span>
-      <span>${formatCurrency(Number((order as unknown as { serviceChargeAmount?: number }).serviceChargeAmount), merchant.currency)}</span>
+      <span>${formatCurrency(Number((order as unknown as { serviceChargeAmount?: number }).serviceChargeAmount), merchant.currency, receiptLocale)}</span>
     </div>` : ''}
     ${Number((order as unknown as { packagingFeeAmount?: number }).packagingFeeAmount) > 0 ? `<div class="row">
       <span>${labels.packagingFee}:</span>
-      <span>${formatCurrency(Number((order as unknown as { packagingFeeAmount?: number }).packagingFeeAmount), merchant.currency)}</span>
+      <span>${formatCurrency(Number((order as unknown as { packagingFeeAmount?: number }).packagingFeeAmount), merchant.currency, receiptLocale)}</span>
     </div>` : ''}
     <div class="row total">
       <span>${labels.total}:</span>
-      <span>${formatCurrency(Number(order.totalAmount), merchant.currency)}</span>
+      <span>${formatCurrency(Number(order.totalAmount), merchant.currency, receiptLocale)}</span>
     </div>
   </div>
 
@@ -378,18 +374,18 @@ export function generateReceiptHTML(data: ReceiptData): string {
     </div>
     <div class="row">
       <span class="label">${labels.amountPaid}:</span>
-      <span>${formatCurrency(payment.amount, merchant.currency)}</span>
+      <span>${formatCurrency(payment.amount, merchant.currency, receiptLocale)}</span>
     </div>
     ${payment.amount > Number(order.totalAmount)
       ? `<div class="row">
       <span class="label">${labels.change}:</span>
-      <span>${formatCurrency(payment.amount - Number(order.totalAmount), merchant.currency)}</span>
+      <span>${formatCurrency(payment.amount - Number(order.totalAmount), merchant.currency, receiptLocale)}</span>
     </div>`
       : ''
     }
     <div class="row">
       <span class="label">${labels.paidAt}:</span>
-      <span>${formatDateTime(payment.paidAt, merchant.currency)}</span>
+      <span>${formatDateTime(payment.paidAt, receiptLocale)}</span>
     </div>
     ${payment.paidByName
       ? `<div class="row">
@@ -444,7 +440,8 @@ export function printReceipt(data: ReceiptData): void {
  * For future integration with thermal printers like Epson TM-T88, Star Micronics
  */
 export function generateThermalPrinterData(data: ReceiptData): Uint8Array {
-  const labels = getLabels(data.merchant.currency);
+  const receiptLocale = data.locale ?? inferLocaleFromCurrency(data.merchant.currency);
+  const labels = getLabels(receiptLocale);
 
   // ESC/POS commands
   const ESC = 0x1b;
@@ -479,7 +476,7 @@ export function generateThermalPrinterData(data: ReceiptData): Uint8Array {
 
   // Order details
   commands.push(...stringToBytes(`${labels.orderNumber}: ${data.order.orderNumber}\n`));
-  commands.push(...stringToBytes(`${labels.date}: ${formatDateTime(data.order.placedAt, data.merchant.currency)}\n`));
+  commands.push(...stringToBytes(`${labels.date}: ${formatDateTime(data.order.placedAt, receiptLocale)}\n`));
 
   // Items (implement remaining ESC/POS commands as needed)
   // ... (truncated for brevity, full implementation would include all items, totals, etc.)
