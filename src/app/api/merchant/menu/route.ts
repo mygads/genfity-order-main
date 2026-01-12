@@ -98,6 +98,7 @@ async function handlePost(req: NextRequest, context: AuthContext) {
       description: body.description,
       price: body.price,
       imageUrl: body.imageUrl,
+      imageThumbUrl: body.imageThumbUrl,
       isActive: body.isActive !== undefined ? body.isActive : true,
       isSpicy: body.isSpicy || false,
       isBestSeller: body.isBestSeller || false,

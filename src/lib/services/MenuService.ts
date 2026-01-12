@@ -41,6 +41,7 @@ export interface MenuInput {
   description?: string;
   price: number;
   imageUrl?: string;
+  imageThumbUrl?: string;
   isActive?: boolean;
   // Promo fields removed - use SpecialPrice table instead
   isSpicy?: boolean;
@@ -248,6 +249,7 @@ class MenuService {
       description: input.description?.trim(),
       price: input.price,
       imageUrl: input.imageUrl,
+      imageThumbUrl: input.imageThumbUrl,
       isActive: input.isActive ?? true,
       // Promo fields removed - use SpecialPrice table
       isSpicy: input.isSpicy ?? false,
@@ -306,6 +308,7 @@ class MenuService {
       description: input.description?.trim(),
       price: input.price,
       imageUrl: input.imageUrl,
+      imageThumbUrl: input.imageThumbUrl,
       isActive: input.isActive,
       // Promo fields removed - use SpecialPrice table
       isSpicy: input.isSpicy,

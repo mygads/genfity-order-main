@@ -35,7 +35,7 @@ interface StockPhotosApiResponse {
 interface StockPhotoPickerProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (imageUrl: string) => void;
+  onSelect: (selection: { imageUrl: string; thumbnailUrl?: string }) => void;
   currentImageUrl?: string;
 }
 
@@ -109,7 +109,10 @@ export default function StockPhotoPicker({
       // Silently fail usage tracking
     }
 
-    onSelect(selectedPhoto.imageUrl);
+    onSelect({
+      imageUrl: selectedPhoto.imageUrl,
+      thumbnailUrl: selectedPhoto.thumbnailUrl,
+    });
     setSelectedPhoto(null);
     onClose();
   };
@@ -365,8 +368,8 @@ export function ImageSourceSelector({
   const [isStockPickerOpen, setIsStockPickerOpen] = useState(false);
   const [imageSource, setImageSource] = useState<"upload" | "stock">("upload");
 
-  const handleStockSelect = (url: string) => {
-    onImageChange(url);
+  const handleStockSelect = (selection: { imageUrl: string; thumbnailUrl?: string }) => {
+    onImageChange(selection.imageUrl);
     setImageSource("stock");
   };
 

@@ -39,6 +39,7 @@ interface MenuFormData {
   description: string;
   price: string;
   imageUrl: string;
+  imageThumbUrl: string;
   isActive: boolean;
   isSpicy: boolean;
   isBestSeller: boolean;
@@ -61,6 +62,7 @@ export default function CreateMenuPage() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
+  const [uploadedImageThumbUrl, setUploadedImageThumbUrl] = useState<string | null>(null);
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [authToken, setAuthToken] = useState<string>("");
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
@@ -74,6 +76,7 @@ export default function CreateMenuPage() {
     description: "",
     price: "",
     imageUrl: "",
+    imageThumbUrl: "",
     isActive: true,
     isSpicy: false,
     isBestSeller: false,
@@ -170,7 +173,7 @@ export default function CreateMenuPage() {
 
 
   // Cleanup function to delete orphaned uploaded image
-  const deleteUploadedImage = async (imageUrl: string) => {
+  const deleteUploadedImage = async (imageUrl: string, imageThumbUrl?: string | null) => {
     try {
       const token = localStorage.getItem('accessToken');
       if (!token || !imageUrl) return;
@@ -181,7 +184,7 @@ export default function CreateMenuPage() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ imageUrl }),
+        body: JSON.stringify({ imageUrl, imageThumbUrl: imageThumbUrl || undefined }),
       });
     } catch (error) {
       console.error('Failed to delete orphaned image:', error);
@@ -192,10 +195,10 @@ export default function CreateMenuPage() {
   useEffect(() => {
     return () => {
       if (uploadedImageUrl && !formSubmitted) {
-        deleteUploadedImage(uploadedImageUrl);
+        deleteUploadedImage(uploadedImageUrl, uploadedImageThumbUrl);
       }
     };
-  }, [uploadedImageUrl, formSubmitted]);
+  }, [uploadedImageUrl, uploadedImageThumbUrl, formSubmitted]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -238,8 +241,10 @@ export default function CreateMenuPage() {
           if (xhr.status >= 200 && xhr.status < 300) {
             const data = JSON.parse(xhr.responseText);
             const imageUrl = data.data.url;
-            setFormData(prev => ({ ...prev, imageUrl }));
+            const imageThumbUrl = data.data.thumbUrl;
+            setFormData(prev => ({ ...prev, imageUrl, imageThumbUrl: imageThumbUrl || '' }));
             setUploadedImageUrl(imageUrl);
+            setUploadedImageThumbUrl(imageThumbUrl || null);
             resolve();
           } else {
             try {
@@ -300,6 +305,7 @@ export default function CreateMenuPage() {
         description: formData.description || undefined,
         price: parseFloat(formData.price),
         imageUrl: formData.imageUrl || undefined,
+        imageThumbUrl: formData.imageThumbUrl || undefined,
         isActive: formData.isActive,
         isSpicy: formData.isSpicy,
         isBestSeller: formData.isBestSeller,
@@ -556,7 +562,7 @@ export default function CreateMenuPage() {
                     />
                     <button
                       type="button"
-                      onClick={() => setFormData(prev => ({ ...prev, imageUrl: '' }))}
+                      onClick={() => setFormData(prev => ({ ...prev, imageUrl: '', imageThumbUrl: '' }))}
                       className="absolute right-2 top-2 rounded-full bg-white/90 p-2 text-gray-600 shadow-lg transition-all hover:bg-error-100 hover:text-error-600 dark:bg-gray-800/90 dark:text-gray-300"
                     >
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -632,8 +638,12 @@ export default function CreateMenuPage() {
           <StockPhotoPicker
             isOpen={showStockPhotoPicker}
             onClose={() => setShowStockPhotoPicker(false)}
-            onSelect={(imageUrl: string) => {
-              setFormData(prev => ({ ...prev, imageUrl }));
+            onSelect={(selection) => {
+              setFormData(prev => ({
+                ...prev,
+                imageUrl: selection.imageUrl,
+                imageThumbUrl: selection.thumbnailUrl || '',
+              }));
               setShowStockPhotoPicker(false);
             }}
             currentImageUrl={formData.imageUrl}
@@ -1030,6 +1040,7 @@ export default function CreateMenuPage() {
             description: menu.description || "",
             price: typeof menu.price === "number" ? menu.price.toString() : menu.price,
             imageUrl: menu.imageUrl || "",
+            imageThumbUrl: menu.imageThumbUrl || "",
             isActive: menu.isActive,
             isSpicy: menu.isSpicy,
             isBestSeller: menu.isBestSeller,
@@ -1043,6 +1054,10 @@ export default function CreateMenuPage() {
           // Set uploaded image URL for cleanup tracking
           if (menu.imageUrl) {
             setUploadedImageUrl(null); // Don't cleanup the duplicated image
+          }
+
+          if (menu.imageThumbUrl) {
+            setUploadedImageThumbUrl(null); // Don't cleanup the duplicated thumbnail
           }
           // Set categories if available
           if (menu.categories && menu.categories.length > 0) {

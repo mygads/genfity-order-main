@@ -19,6 +19,7 @@ interface MenuItem {
     description?: string;
     price: number;
     imageUrl: string | null;
+    imageThumbUrl?: string | null;
     stockQty: number | null;
     isActive: boolean;
     trackStock: boolean;
@@ -139,7 +140,7 @@ export default function HorizontalMenuSection({
                                     }}
                                 >
                                     <LazyMenuImage
-                                        src={item.imageUrl}
+                                        src={item.imageThumbUrl ?? item.imageUrl}
                                         alt={item.name}
                                         className="object-cover"
                                         sizes="178px"

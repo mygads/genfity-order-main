@@ -32,6 +32,7 @@ export interface MenuItem {
   description: string;
   price: number;
   imageUrl: string | null;
+  imageThumbUrl?: string | null;
   stockQty: number | null;
   categoryId: string | null;
   categories: Array<{ id: string; name: string }>;

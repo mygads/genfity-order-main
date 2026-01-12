@@ -159,6 +159,7 @@ export class MenuRepository {
     description?: string;
     price: number;
     imageUrl?: string;
+    imageThumbUrl?: string;
     isActive?: boolean;
     // Note: Promo fields removed - use SpecialPrice table
     isSpicy?: boolean;
@@ -187,6 +188,7 @@ export class MenuRepository {
     description?: string;
     price?: number;
     imageUrl?: string;
+    imageThumbUrl?: string;
     isActive?: boolean;
     // Note: Promo fields removed - use SpecialPrice table
     isSpicy?: boolean;

@@ -21,6 +21,7 @@ interface MenuItem {
     description: string;
     price: number;
     imageUrl: string | null;
+        imageThumbUrl?: string | null;
     stockQty: number | null;
     isActive: boolean;
     trackStock: boolean;
@@ -126,8 +127,8 @@ export default function DetailedMenuSection({
                                 opacity: isAvailable ? 1 : 0.6,
                             }}
                         >
-                            <LazyMenuImage
-                                src={item.imageUrl}
+                                <LazyMenuImage
+                                    src={item.imageThumbUrl ?? item.imageUrl}
                                 alt={item.name}
                                 className="object-cover"
                                 sizes="70px"
@@ -392,8 +393,8 @@ export default function DetailedMenuSection({
                                     marginBottom: '10px',
                                 }}
                             >
-                                <LazyMenuImage
-                                    src={item.imageUrl}
+                                    <LazyMenuImage
+                                        src={item.imageThumbUrl ?? item.imageUrl}
                                     alt={item.name}
                                     className="object-cover"
                                     sizes={`${imageSize}px`}

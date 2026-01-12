@@ -15,6 +15,7 @@ interface UpsellCardProps {
     name: string;
     price: number;
     imageUrl: string | null;
+    imageThumbUrl?: string | null;
     currency?: string;
     onAdd: (id: string) => void;
     addLabel?: string;
@@ -25,6 +26,7 @@ export default function UpsellCard({
     name,
     price,
     imageUrl,
+    imageThumbUrl,
     currency = 'AUD',
     onAdd,
     addLabel = '+ Add',
@@ -66,7 +68,7 @@ export default function UpsellCard({
                 }}
             >
                 <LazyMenuImage
-                    src={imageUrl}
+                    src={imageThumbUrl ?? imageUrl}
                     alt={name}
                     className="object-cover"
                     sizes="140px"

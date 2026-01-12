@@ -320,11 +320,17 @@ class DataCleanupService {
             { deletedAt: { gte: threshold } }, // Keep images for recently deleted menus
           ],
         },
-        select: { imageUrl: true },
+        select: {
+          imageUrl: true,
+          // Prisma client type may lag behind schema changes until regenerate
+          ...({ imageThumbUrl: true } as Record<string, true>),
+        },
       });
 
       const activeImageUrls = new Set(
-        activeMenuImages.map(m => m.imageUrl).filter(Boolean)
+        activeMenuImages
+          .flatMap((m) => [m.imageUrl, (m as unknown as { imageThumbUrl?: string | null }).imageThumbUrl])
+          .filter(Boolean)
       );
 
       // Find and delete orphaned images

@@ -118,6 +118,8 @@ export async function GET(
             description: menu.description,
             price: decimalToNumber(menu.price),
             imageUrl: menu.imageUrl,
+            imageThumbUrl: (menu as unknown as { imageThumbUrl?: string | null }).imageThumbUrl ?? null,
+            imageThumbMeta: (menu as unknown as { imageThumbMeta?: unknown | null }).imageThumbMeta ?? null,
             isActive: menu.isActive,
             isPromo, // Computed from SpecialPrice
             isSpicy: menu.isSpicy,

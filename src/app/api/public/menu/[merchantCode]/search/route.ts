@@ -235,6 +235,8 @@ export async function GET(
         description: menu.description,
         price: basePrice,
         imageUrl: menu.imageUrl,
+        imageThumbUrl: (menu as unknown as { imageThumbUrl?: string | null }).imageThumbUrl ?? null,
+        imageThumbMeta: (menu as unknown as { imageThumbMeta?: unknown | null }).imageThumbMeta ?? null,
         isActive: menu.isActive,
         isSpicy: menu.isSpicy,
         isBestSeller: menu.isBestSeller,

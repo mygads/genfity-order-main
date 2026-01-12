@@ -79,6 +79,7 @@ async function handlePut(
       description: body.description,
       price: body.price,
       imageUrl: body.imageUrl,
+      imageThumbUrl: body.imageThumbUrl,
       isActive: body.isActive,
       isSpicy: body.isSpicy,
       isBestSeller: body.isBestSeller,

@@ -7,7 +7,7 @@ import ToastContainer from "@/components/ui/ToastContainer";
 import ConfirmDialog from "@/components/modals/ConfirmDialog";
 import { useSWRWithAuth } from "@/hooks/useSWRWithAuth";
 import Image from "next/image";
-import { FaSearch, FaPlus, FaTrash, FaEdit, FaTimes, FaUpload, FaImages } from "react-icons/fa";
+import { FaSearch, FaPlus, FaTrash, FaEdit, FaTimes, FaUpload, FaImages, FaSyncAlt } from "react-icons/fa";
 
 interface StockPhoto {
   id: string;
@@ -46,6 +46,18 @@ interface StockPhotosApiResponse {
   };
 }
 
+type MaintenanceJob = {
+  id: string;
+  jobKey: string;
+  status: "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
+  progressCurrent: number;
+  progressTotal: number;
+  message?: string | null;
+  lastError?: string | null;
+  startedAt?: string | null;
+  completedAt?: string | null;
+};
+
 export default function StockPhotosPage() {
   const { toasts, success: showSuccess, error: showError } = useToast();
 
@@ -65,6 +77,12 @@ export default function StockPhotosPage() {
     photoName: "",
   });
 
+  // Global thumbnail rebuild (one-time) UI state
+  const [rebuildDialogOpen, setRebuildDialogOpen] = useState(false);
+  const [rebuildJob, setRebuildJob] = useState<MaintenanceJob | null>(null);
+  const [isRebuildWorking, setIsRebuildWorking] = useState(false);
+  const rebuildLoopCancelledRef = React.useRef(false);
+
   // Upload form state
   const [uploadForm, setUploadForm] = useState({
     category: "",
@@ -75,6 +93,117 @@ export default function StockPhotosPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  const loadRebuildStatus = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) return;
+
+      const res = await fetch("/api/superadmin/thumbnails/rebuild", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const json = await res.json();
+      if (json?.success) {
+        setRebuildJob(json.data?.job || null);
+      }
+    } catch {
+      // Non-blocking
+    }
+  }, []);
+
+  const startRebuildJob = useCallback(async () => {
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      showError("Missing access token", "Authentication Required");
+      return null;
+    }
+
+    const res = await fetch("/api/superadmin/thumbnails/rebuild", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ action: "start" }),
+    });
+
+    const json = await res.json();
+
+    if (!json?.success) {
+      showError(json?.message || "Failed to start rebuild", "Rebuild Failed");
+      if (json?.data?.job) setRebuildJob(json.data.job);
+      return null;
+    }
+
+    setRebuildJob(json.data?.job || null);
+    return json.data?.job as MaintenanceJob | null;
+  }, [showError]);
+
+  const tickRebuildJob = useCallback(async () => {
+    const token = localStorage.getItem("accessToken");
+    if (!token) return null;
+
+    const res = await fetch("/api/superadmin/thumbnails/rebuild", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ action: "tick" }),
+    });
+
+    const json = await res.json();
+    if (json?.success) {
+      setRebuildJob(json.data?.job || null);
+      return json.data?.job as MaintenanceJob | null;
+    }
+
+    showError(json?.message || "Failed to continue rebuild", "Rebuild Failed");
+    return null;
+  }, [showError]);
+
+  const runRebuildLoop = useCallback(async () => {
+    if (isRebuildWorking) return;
+
+    rebuildLoopCancelledRef.current = false;
+    setIsRebuildWorking(true);
+
+    try {
+      let job = await startRebuildJob();
+      if (!job) return;
+
+      showSuccess("Global thumbnail rebuild started", "Running");
+
+      while (!rebuildLoopCancelledRef.current && job?.status === "RUNNING") {
+        // Process one batch per loop to keep requests short and allow progress UI.
+        job = await tickRebuildJob();
+        if (!job) break;
+        if (job.status !== "RUNNING") break;
+
+        await new Promise((r) => setTimeout(r, 500));
+      }
+
+      if (job?.status === "COMPLETED") {
+        showSuccess("Global thumbnail rebuild completed", "Done");
+      }
+
+      if (job?.status === "FAILED") {
+        showError(job.lastError || "Job failed", "Rebuild Failed");
+      }
+    } finally {
+      setIsRebuildWorking(false);
+    }
+  }, [isRebuildWorking, showError, showSuccess, startRebuildJob, tickRebuildJob]);
+
+  React.useEffect(() => {
+    loadRebuildStatus();
+    return () => {
+      rebuildLoopCancelledRef.current = true;
+    };
+  }, [loadRebuildStatus]);
 
   // Build API URL with filters
   const apiUrl = useMemo(() => {
@@ -323,6 +452,21 @@ export default function StockPhotosPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setRebuildDialogOpen(true)}
+              disabled={rebuildJob?.status === "RUNNING" || rebuildJob?.status === "COMPLETED"}
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+              title={
+                rebuildJob?.status === "COMPLETED"
+                  ? "Already completed"
+                  : rebuildJob?.status === "RUNNING"
+                    ? "Currently running"
+                    : "Rebuild thumbnails (one-time)"
+              }
+            >
+              <FaSyncAlt className="h-4 w-4" />
+              Rebuild Thumbnails
+            </button>
             <a
               href="/admin/dashboard/stock-photos/bulk-upload"
               className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
@@ -340,6 +484,47 @@ export default function StockPhotosPage() {
           </div>
         </div>
       </div>
+
+      {/* Global rebuild status */}
+      {rebuildJob && (
+        <div className="mb-6 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                Global thumbnail rebuild: {rebuildJob.status}
+              </p>
+              {rebuildJob.message && (
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{rebuildJob.message}</p>
+              )}
+              {rebuildJob.status === "FAILED" && rebuildJob.lastError && (
+                <p className="mt-1 text-xs text-red-600 dark:text-red-400">{rebuildJob.lastError}</p>
+              )}
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              {typeof rebuildJob.progressTotal === "number" && rebuildJob.progressTotal > 0
+                ? `${rebuildJob.progressCurrent}/${rebuildJob.progressTotal}`
+                : rebuildJob.status === "COMPLETED"
+                  ? "Done"
+                  : "Preparing"}
+            </div>
+          </div>
+
+          <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+            {(() => {
+              const total = rebuildJob.progressTotal || 0;
+              const current = rebuildJob.progressCurrent || 0;
+              const percent = total > 0 ? Math.min(100, Math.round((current / total) * 100)) : 0;
+
+              return (
+                <div
+                  className="h-full rounded-full bg-brand-500 transition-all"
+                  style={{ width: `${rebuildJob.status === "COMPLETED" ? 100 : percent}%` }}
+                />
+              );
+            })()}
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="mb-6 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
@@ -359,7 +544,7 @@ export default function StockPhotosPage() {
           </div>
 
           {/* Category Filter - Searchable Dropdown */}
-          <div className="relative min-w-[200px]">
+          <div className="relative min-w-50">
             <select
               value={selectedCategory}
               onChange={(e) => handleCategoryChange(e.target.value)}
@@ -758,6 +943,23 @@ export default function StockPhotosPage() {
         onConfirm={handleDelete}
         onCancel={() => setDeleteDialog({ isOpen: false, photoId: "", photoName: "" })}
         variant="danger"
+      />
+
+      {/* Global rebuild confirmation */}
+      <ConfirmDialog
+        isOpen={rebuildDialogOpen}
+        title="Rebuild thumbnails (one-time)"
+        message={
+          "This will rebuild thumbnails for ALL merchants' menu photos and the stock photo library. It should only be run once and may take several minutes. Continue?"
+        }
+        confirmText={isRebuildWorking ? "Running..." : "Run Now"}
+        cancelText="Cancel"
+        onConfirm={() => {
+          setRebuildDialogOpen(false);
+          runRebuildLoop();
+        }}
+        onCancel={() => setRebuildDialogOpen(false)}
+        variant="warning"
       />
     </div>
   );

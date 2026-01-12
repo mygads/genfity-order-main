@@ -18,7 +18,7 @@ import prisma from '@/lib/db/client';
 async function handlePost(req: NextRequest, context: AuthContext) {
     try {
         const body = await req.json();
-        const { imageUrl } = body;
+        const { imageUrl, imageThumbUrl } = body;
 
         if (!imageUrl) {
             return NextResponse.json(
@@ -50,11 +50,14 @@ async function handlePost(req: NextRequest, context: AuthContext) {
             );
         }
 
-        // Check if the image is used by any menu item (to prevent deleting active images)
+        // Check if the image/thumbnail is used by any menu item (to prevent deleting active images)
         const menuWithImage = await prisma.menu.findFirst({
             where: {
-                imageUrl: imageUrl,
                 merchantId: merchantUser.merchantId,
+                OR: [
+                    { imageUrl: imageUrl },
+                    ...(imageThumbUrl ? [{ imageThumbUrl: imageThumbUrl }] : []),
+                ],
             },
         });
 
@@ -67,27 +70,32 @@ async function handlePost(req: NextRequest, context: AuthContext) {
             });
         }
 
-        // Verify the URL belongs to this merchant's blob storage
-        // Check if URL contains the merchant ID pattern for safety
+        // Verify the URL(s) belong to this merchant's blob storage
         const merchantIdStr = String(merchantUser.merchantId);
-        if (!imageUrl.includes(merchantIdStr) && !imageUrl.includes('menu-images')) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    error: 'UNAUTHORIZED',
-                    message: 'Cannot delete this image',
-                    statusCode: 403,
-                },
-                { status: 403 }
-            );
+        const urlsToDelete = [imageUrl, imageThumbUrl].filter(Boolean) as string[];
+
+        for (const url of urlsToDelete) {
+            if (!url.includes(merchantIdStr) && !url.includes('menu-images')) {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        error: 'UNAUTHORIZED',
+                        message: 'Cannot delete this image',
+                        statusCode: 403,
+                    },
+                    { status: 403 }
+                );
+            }
         }
 
         // Delete from Vercel Blob
-        try {
-            await del(imageUrl);
-        } catch (deleteError) {
-            console.error('Blob deletion error:', deleteError);
-            // Don't fail the request if blob deletion fails (might already be deleted)
+        for (const url of urlsToDelete) {
+            try {
+                await del(url);
+            } catch (deleteError) {
+                console.error('Blob deletion error:', deleteError);
+                // Don't fail the request if blob deletion fails (might already be deleted)
+            }
         }
 
         return NextResponse.json({

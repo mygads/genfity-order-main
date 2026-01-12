@@ -29,6 +29,7 @@ const menuBuilderSchema = z.object({
   description: z.string().optional(),
   price: z.number().positive('Harga harus lebih dari 0'),
   imageUrl: z.string().url().optional().or(z.literal('')),
+  imageThumbUrl: z.string().url().optional().or(z.literal('')),
   isActive: z.boolean(),
   // Note: Promo is now managed via Special Prices page, not on individual menu items
   trackStock: z.boolean(),
@@ -87,7 +88,7 @@ export default function MenuBuilderTabs({
   isLoading = false,
 }: MenuBuilderTabsProps) {
   const { currency } = useMerchant();
-  const { showError } = useToast();
+  const { showError, showWarning } = useToast();
   const currencySymbol = getCurrencySymbol(currency);
   const [activeTab, setActiveTab] = useState<TabKey>('basic');
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -117,6 +118,7 @@ export default function MenuBuilderTabs({
       description: initialData?.description || '',
       price: initialData?.price || 0,
       imageUrl: initialData?.imageUrl || '',
+      imageThumbUrl: (initialData as Partial<MenuBuilderFormData> | undefined)?.imageThumbUrl || '',
       isActive: initialData?.isActive ?? true,
       // Note: Promo is now managed via Special Prices page
       trackStock: initialData?.trackStock || false,
@@ -142,6 +144,7 @@ export default function MenuBuilderTabs({
 
   // Track the uploaded image URL (only for newly uploaded images, not initial data)
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
+  const [uploadedImageThumbUrl, setUploadedImageThumbUrl] = useState<string | null>(null);
 
   // Update form values when selections change
   useEffect(() => {
@@ -153,7 +156,7 @@ export default function MenuBuilderTabs({
   }, [selectedAddonCategories, setValue]);
 
   // Cleanup function to delete orphaned uploaded image
-  const deleteUploadedImage = async (imageUrl: string) => {
+  const deleteUploadedImage = async (imageUrl: string, imageThumbUrl?: string | null) => {
     try {
       const token = localStorage.getItem('accessToken');
       if (!token || !imageUrl) return;
@@ -165,7 +168,7 @@ export default function MenuBuilderTabs({
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ imageUrl }),
+        body: JSON.stringify({ imageUrl, imageThumbUrl: imageThumbUrl || undefined }),
       });
     } catch (error) {
       console.error('Failed to delete orphaned image:', error);
@@ -177,10 +180,10 @@ export default function MenuBuilderTabs({
     return () => {
       // Only cleanup if a new image was uploaded and form is dirty (not saved)
       if (uploadedImageUrl && isDirty) {
-        deleteUploadedImage(uploadedImageUrl);
+        deleteUploadedImage(uploadedImageUrl, uploadedImageThumbUrl);
       }
     };
-  }, [uploadedImageUrl, isDirty]);
+  }, [uploadedImageUrl, uploadedImageThumbUrl, isDirty]);
 
   const handleFormSubmit = async (data: MenuBuilderFormData) => {
     // Manually set categoryIds and addonCategoryIds from state, convert to numbers
@@ -194,6 +197,7 @@ export default function MenuBuilderTabs({
       await onSubmit(submissionData);
       // Clear the uploaded image tracking since it's now saved with the menu
       setUploadedImageUrl(null);
+      setUploadedImageThumbUrl(null);
     } catch (error) {
       console.error('Error submitting form:', error);
     }
@@ -238,9 +242,17 @@ export default function MenuBuilderTabs({
           if (xhr.status >= 200 && xhr.status < 300) {
             const data = JSON.parse(xhr.responseText);
             const imageUrl = data.data.url;
+            const imageThumbUrl = data.data.thumbUrl;
+            const warnings = Array.isArray(data?.data?.warnings) ? data.data.warnings : [];
             setValue('imageUrl', imageUrl);
+            setValue('imageThumbUrl', imageThumbUrl || '');
             // Track the uploaded image for cleanup if user cancels
             setUploadedImageUrl(imageUrl);
+            setUploadedImageThumbUrl(imageThumbUrl || null);
+
+            if (warnings.length > 0) {
+              showWarning(warnings[0], 'Small image warning');
+            }
             resolve();
           } else {
             try {
@@ -491,7 +503,10 @@ export default function MenuBuilderTabs({
                       ) : null}
                       <button
                         type="button"
-                        onClick={() => setValue('imageUrl', '')}
+                        onClick={() => {
+                          setValue('imageUrl', '');
+                          setValue('imageThumbUrl', '');
+                        }}
                         className="absolute right-2 top-2 rounded-full bg-white/90 p-2 text-gray-600 shadow-lg transition-all hover:bg-error-100 hover:text-error-600 dark:bg-gray-800/90 dark:text-gray-300"
                       >
                         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1134,8 +1149,9 @@ export default function MenuBuilderTabs({
       <StockPhotoPicker
         isOpen={showStockPhotoPicker}
         onClose={() => setShowStockPhotoPicker(false)}
-        onSelect={(url) => {
-          setValue('imageUrl', url);
+        onSelect={(selection) => {
+          setValue('imageUrl', selection.imageUrl);
+          setValue('imageThumbUrl', selection.thumbnailUrl || '');
           setShowStockPhotoPicker(false);
         }}
       />

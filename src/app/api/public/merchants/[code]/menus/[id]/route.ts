@@ -77,6 +77,8 @@ export async function GET(
         description: true,
         price: true,
         imageUrl: true,
+        imageThumbUrl: true,
+        imageThumbMeta: true,
         stockQty: true,
         isActive: true,
         trackStock: true,

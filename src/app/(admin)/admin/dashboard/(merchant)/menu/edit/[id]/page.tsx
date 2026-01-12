@@ -43,6 +43,7 @@ interface MenuFormData {
   description: string;
   price: string;
   imageUrl: string;
+  imageThumbUrl: string;
   isActive: boolean;
   isSpicy: boolean;
   isBestSeller: boolean;
@@ -108,6 +109,7 @@ export default function EditMenuPage() {
     description: "",
     price: "",
     imageUrl: "",
+    imageThumbUrl: "",
     isActive: true,
     isSpicy: false,
     isBestSeller: false,
@@ -196,6 +198,7 @@ export default function EditMenuPage() {
             description: menu.description || "",
             price: menu.price ? menu.price.toString() : "",
             imageUrl: menu.imageUrl || "",
+            imageThumbUrl: menu.imageThumbUrl || "",
             isActive: menu.isActive !== undefined ? menu.isActive : true,
             isSpicy: menu.isSpicy !== undefined ? menu.isSpicy : false,
             isBestSeller: menu.isBestSeller !== undefined ? menu.isBestSeller : false,
@@ -298,8 +301,17 @@ export default function EditMenuPage() {
         xhr.addEventListener('load', () => {
           if (xhr.status >= 200 && xhr.status < 300) {
             const data = JSON.parse(xhr.responseText);
-            setFormData(prev => ({ ...prev, imageUrl: data.data.url }));
-            setSuccess('Image uploaded successfully!');
+            const warnings = Array.isArray(data?.data?.warnings) ? data.data.warnings : [];
+            setFormData(prev => ({
+              ...prev,
+              imageUrl: data.data.url,
+              imageThumbUrl: data.data.thumbUrl || '',
+            }));
+            setSuccess(
+              warnings.length > 0
+                ? `Image uploaded with warning: ${warnings[0]}`
+                : 'Image uploaded successfully!'
+            );
             setTimeout(() => setSuccess(null), 2000);
             resolve();
           } else {
@@ -362,6 +374,7 @@ export default function EditMenuPage() {
         description: formData.description || undefined,
         price: parseFloat(formData.price),
         imageUrl: formData.imageUrl || undefined,
+        imageThumbUrl: formData.imageThumbUrl || undefined,
         isActive: formData.isActive,
         isSpicy: formData.isSpicy,
         isBestSeller: formData.isBestSeller,
@@ -595,7 +608,7 @@ export default function EditMenuPage() {
                     />
                     <button
                       type="button"
-                      onClick={() => setFormData(prev => ({ ...prev, imageUrl: '' }))}
+                      onClick={() => setFormData(prev => ({ ...prev, imageUrl: '', imageThumbUrl: '' }))}
                       className="absolute right-2 top-2 rounded-full bg-white/90 p-2 text-gray-600 shadow-lg transition-all hover:bg-error-100 hover:text-error-600 dark:bg-gray-800/90 dark:text-gray-300"
                     >
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -667,8 +680,12 @@ export default function EditMenuPage() {
           <StockPhotoPicker
             isOpen={showStockPhotoPicker}
             onClose={() => setShowStockPhotoPicker(false)}
-            onSelect={(imageUrl: string) => {
-              setFormData(prev => ({ ...prev, imageUrl }));
+            onSelect={(selection) => {
+              setFormData(prev => ({
+                ...prev,
+                imageUrl: selection.imageUrl,
+                imageThumbUrl: selection.thumbnailUrl || '',
+              }));
               setShowStockPhotoPicker(false);
             }}
             currentImageUrl={formData.imageUrl}

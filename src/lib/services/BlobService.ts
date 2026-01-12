@@ -136,6 +136,48 @@ export class BlobService {
   }
 
   /**
+   * Upload menu item thumbnail image
+   * @param merchantId Merchant ID
+   * @param menuId Menu ID (same id used for the full image)
+   * @param file Image buffer
+   */
+  static async uploadMenuImageThumbnail(
+    merchantId: string | number,
+    menuId: string | number,
+    file: File | Buffer
+  ): Promise<UploadResult> {
+    const pathname = `merchants/menus/merchant-${merchantId}/menu-${menuId}-thumb.jpg`;
+
+    return this.uploadFile(file, pathname, {
+      access: 'public',
+      addRandomSuffix: true,
+      cacheControlMaxAge: 86400, // 24 hours
+      contentType: 'image/jpeg',
+    });
+  }
+
+  /**
+   * Upload menu item 2x thumbnail image (for high-DPI displays)
+   * @param merchantId Merchant ID
+   * @param menuId Menu ID (same id used for the full image)
+   * @param file Image buffer
+   */
+  static async uploadMenuImageThumbnail2x(
+    merchantId: string | number,
+    menuId: string | number,
+    file: File | Buffer
+  ): Promise<UploadResult> {
+    const pathname = `merchants/menus/merchant-${merchantId}/menu-${menuId}-thumb-2x.jpg`;
+
+    return this.uploadFile(file, pathname, {
+      access: 'public',
+      addRandomSuffix: true,
+      cacheControlMaxAge: 86400, // 24 hours
+      contentType: 'image/jpeg',
+    });
+  }
+
+  /**
    * Delete a blob by URL
    * @param url Blob URL to delete
    */

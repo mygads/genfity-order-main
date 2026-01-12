@@ -10,6 +10,7 @@ interface MenuItem {
   description: string | null;
   price: number | string;
   imageUrl: string | null;
+  imageThumbUrl?: string | null;
   isActive: boolean;
   isSpicy: boolean;
   isBestSeller: boolean;
