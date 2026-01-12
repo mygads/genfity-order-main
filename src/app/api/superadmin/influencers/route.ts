@@ -29,6 +29,19 @@ export const GET = withSuperAdmin(async (req) => {
         where,
         include: {
           balances: true,
+          approvalLogs: {
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+            include: {
+              actedByUser: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
+            },
+          },
           _count: {
             select: {
               referredMerchants: true,
@@ -57,6 +70,7 @@ export const GET = withSuperAdmin(async (req) => {
     const formattedInfluencers = influencers.map((inf) => ({
       ...inf,
       passwordHash: undefined, // Remove password hash
+      approvalLogs: inf.approvalLogs?.length ? inf.approvalLogs : [],
       pendingWithdrawals: pendingWithdrawalsMap.get(inf.id.toString()) || 0,
     }));
 

@@ -35,9 +35,10 @@ async function handler(
     select: {
       id: true,
       name: true,
-      email: true,
+      code: true,
+      country: true,
       currency: true,
-      isActive: true,
+      isOpen: true,
       hasGivenFirstCommission: true,
       createdAt: true,
       subscription: {
@@ -86,16 +87,6 @@ async function handler(
     merchantName: t.merchantId ? merchantMap.get(t.merchantId.toString()) : null,
   }));
 
-  // Calculate stats
-  const totalMerchants = referredMerchants.length;
-  const activeMerchants = referredMerchants.filter(m => m.isActive).length;
-  
-  // Total earnings by currency
-  const earningsByCurrency: Record<string, number> = {};
-  for (const balance of influencer.balances) {
-    earningsByCurrency[balance.currency] = Number(balance.totalEarned);
-  }
-
   // Pending withdrawals
   const pendingWithdrawals = await prisma.influencerWithdrawal.findMany({
     where: {
@@ -108,6 +99,38 @@ async function handler(
   for (const w of pendingWithdrawals) {
     pendingWithdrawalsByCurrency[w.currency] = 
       (pendingWithdrawalsByCurrency[w.currency] || 0) + Number(w.amount);
+  }
+
+  // Calculate stats
+  const totalReferrals = referredMerchants.length;
+  const activeReferrals = referredMerchants.filter(m => m.isOpen).length;
+
+  // All-time earnings by currency (from balances)
+  const allTimeEarnings: Record<string, number> = {};
+  for (const balance of influencer.balances) {
+    allTimeEarnings[balance.currency] = Number(balance.totalEarned);
+  }
+
+  // This month earnings by currency (from commission transactions)
+  const startOfMonth = new Date();
+  startOfMonth.setUTCDate(1);
+  startOfMonth.setUTCHours(0, 0, 0, 0);
+
+  const monthTransactions = await prisma.influencerTransaction.findMany({
+    where: {
+      influencerId,
+      createdAt: { gte: startOfMonth },
+      type: { in: ['COMMISSION_FIRST', 'COMMISSION_RECURRING'] },
+    },
+    select: {
+      currency: true,
+      amount: true,
+    },
+  });
+
+  const thisMonthEarnings: Record<string, number> = {};
+  for (const t of monthTransactions) {
+    thisMonthEarnings[t.currency] = (thisMonthEarnings[t.currency] || 0) + Number(t.amount);
   }
 
   return NextResponse.json({
@@ -130,17 +153,20 @@ async function handler(
         totalWithdrawn: Number(b.totalWithdrawn),
       })),
       stats: {
-        totalMerchants,
-        activeMerchants,
-        earningsByCurrency,
-        pendingWithdrawalsByCurrency,
+        totalReferrals,
+        activeReferrals,
+        pendingWithdrawals: pendingWithdrawals.length,
+        pendingWithdrawalAmount: pendingWithdrawalsByCurrency,
+        thisMonthEarnings,
+        allTimeEarnings,
       },
       referredMerchants: referredMerchants.map(m => ({
         id: m.id,
-        name: m.name,
-        email: m.email,
+        businessName: m.name,
+        merchantCode: m.code,
+        country: m.country,
         currency: m.currency,
-        isActive: m.isActive,
+        isOpen: m.isOpen,
         hasGivenFirstCommission: m.hasGivenFirstCommission,
         subscriptionType: m.subscription?.type || 'TRIAL',
         subscriptionStatus: m.subscription?.status || 'ACTIVE',

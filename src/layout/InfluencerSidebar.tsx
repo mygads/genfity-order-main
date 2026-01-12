@@ -6,6 +6,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
   FaTachometerAlt,
+  FaStore,
   FaWallet,
   FaHistory,
   FaCog,
@@ -34,6 +35,11 @@ const navItems: NavItem[] = [
     icon: <FaTachometerAlt />,
     name: "Dashboard",
     path: "/influencer/dashboard",
+  },
+  {
+    icon: <FaStore />,
+    name: "Merchants",
+    path: "/influencer/merchants",
   },
   {
     icon: <FaWallet />,

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 interface Balance {
   currency: string;
@@ -24,6 +25,13 @@ interface Influencer {
   createdAt: string;
   balances: Balance[];
   pendingWithdrawals: number;
+  approvalLogs?: Array<{
+    id: string;
+    action: 'APPROVE' | 'REJECT';
+    reason?: string | null;
+    createdAt: string;
+    actedByUser: { id: string; name: string; email: string };
+  }>;
   _count: {
     referredMerchants: number;
     transactions: number;
@@ -50,6 +58,8 @@ export default function SuperAdminInfluencersPage() {
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved'>('all');
   const [selectedInfluencer, setSelectedInfluencer] = useState<Influencer | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [rejectInfluencer, setRejectInfluencer] = useState<Influencer | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
 
   const fetchInfluencers = useCallback(async () => {
     const token = localStorage.getItem('accessToken');
@@ -109,6 +119,37 @@ export default function SuperAdminInfluencersPage() {
     }
   };
 
+  const handleReject = async () => {
+    if (!rejectInfluencer) return;
+
+    const reason = rejectReason.trim();
+    if (reason.length < 3) return;
+
+    setActionLoading(rejectInfluencer.id);
+    const token = localStorage.getItem('accessToken');
+
+    try {
+      const response = await fetch(`/api/superadmin/influencers/${rejectInfluencer.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ isApproved: false, rejectionReason: reason }),
+      });
+
+      if (response.ok) {
+        setRejectInfluencer(null);
+        setRejectReason('');
+        fetchInfluencers();
+      }
+    } catch {
+      // Ignore
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleToggleActive = async (influencerId: string, currentActive: boolean) => {
     setActionLoading(influencerId);
     const token = localStorage.getItem('accessToken');
@@ -135,7 +176,7 @@ export default function SuperAdminInfluencersPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-[400px] flex items-center justify-center">
+      <div className="min-h-100 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
       </div>
     );
@@ -304,6 +345,18 @@ export default function SuperAdminInfluencersPage() {
                             {actionLoading === influencer.id ? '...' : 'Approve'}
                           </button>
                         )}
+                        {!influencer.isApproved && (
+                          <button
+                            onClick={() => {
+                              setRejectInfluencer(influencer);
+                              setRejectReason('');
+                            }}
+                            disabled={actionLoading === influencer.id}
+                            className="px-3 py-1.5 text-sm font-medium bg-yellow-100 text-yellow-800 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 rounded-lg disabled:opacity-50"
+                          >
+                            Reject
+                          </button>
+                        )}
                         <button
                           onClick={() => handleToggleActive(influencer.id, influencer.isActive)}
                           disabled={actionLoading === influencer.id}
@@ -315,6 +368,12 @@ export default function SuperAdminInfluencersPage() {
                         >
                           {influencer.isActive ? 'Deactivate' : 'Activate'}
                         </button>
+                        <Link
+                          href={`/admin/dashboard/influencers/${influencer.id}`}
+                          className="px-3 py-1.5 text-sm font-medium bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg"
+                        >
+                          Audit
+                        </Link>
                         <button
                           onClick={() => setSelectedInfluencer(influencer)}
                           className="px-3 py-1.5 text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg"
@@ -404,6 +463,67 @@ export default function SuperAdminInfluencersPage() {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reject Modal */}
+      {rejectInfluencer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-lg w-full">
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Reject Influencer</h3>
+              <button
+                onClick={() => {
+                  setRejectInfluencer(null);
+                  setRejectReason('');
+                }}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              >
+                <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="p-4 bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-100 dark:border-yellow-900/30 rounded-xl">
+                <p className="text-sm text-yellow-800 dark:text-yellow-300">
+                  Rejecting will keep the influencer unapproved. A reason is required and will be recorded in the audit trail.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Reason</label>
+                <textarea
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  rows={4}
+                  placeholder="e.g., Missing required documents / invalid details"
+                  className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Minimum 3 characters</p>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  onClick={() => {
+                    setRejectInfluencer(null);
+                    setRejectReason('');
+                  }}
+                  className="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleReject}
+                  disabled={rejectReason.trim().length < 3 || actionLoading === rejectInfluencer.id}
+                  className="px-4 py-2 rounded-lg bg-yellow-600 text-white hover:bg-yellow-700 disabled:opacity-50"
+                >
+                  {actionLoading === rejectInfluencer.id ? '...' : 'Reject'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

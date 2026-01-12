@@ -46,6 +46,7 @@ model User {
   pushSubscriptions   PushSubscription[]
   stockPhotosUploaded StockPhoto[]       @relation("StockPhotoUploadedBy")
   deliveryOrdersAssigned Order[]          @relation("DeliveryDriver")
+  influencerApprovalLogs InfluencerApprovalLog[] @relation("InfluencerApprovalActedBy")
 
   @@index([email])
   @@index([role])
@@ -131,6 +132,7 @@ model Influencer {
   balances            InfluencerBalance[]
   transactions        InfluencerTransaction[]
   withdrawals         InfluencerWithdrawal[]
+  approvalLogs        InfluencerApprovalLog[]
   referredMerchants   Merchant[]          @relation("MerchantReferredBy")
 
   @@index([email])
@@ -138,6 +140,28 @@ model Influencer {
   @@index([isActive])
   @@index([isApproved])
   @@map("influencers")
+}
+
+model InfluencerApprovalLog {
+  id            BigInt                    @id @default(autoincrement())
+  influencerId  BigInt                    @map("influencer_id")
+  action        InfluencerApprovalAction
+  reason        String?
+  actedByUserId BigInt                    @map("acted_by_user_id")
+  createdAt     DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  influencer    Influencer                @relation(fields: [influencerId], references: [id], onDelete: Cascade)
+  actedByUser   User                      @relation("InfluencerApprovalActedBy", fields: [actedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([influencerId])
+  @@index([actedByUserId])
+  @@index([createdAt])
+  @@map("influencer_approval_logs")
+}
+
+enum InfluencerApprovalAction {
+  APPROVE
+  REJECT
 }
 
 model InfluencerSession {

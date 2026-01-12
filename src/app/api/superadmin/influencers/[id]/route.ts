@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
 import { withSuperAdmin } from '@/lib/middleware/auth';
 import { serializeBigInt } from '@/lib/utils/serializer';
+import { z } from 'zod';
 
 /**
  * GET /api/superadmin/influencers/[id]
@@ -16,6 +17,18 @@ export const GET = withSuperAdmin(async (req: NextRequest, authContext, routeCon
       where: { id: influencerId },
       include: {
         balances: true,
+        approvalLogs: {
+          orderBy: { createdAt: 'desc' },
+          include: {
+            actedByUser: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
         referredMerchants: {
           select: {
             id: true,
@@ -72,7 +85,22 @@ export const PUT = withSuperAdmin(async (req: NextRequest, authContext, routeCon
     const { id } = await routeContext.params;
     const influencerId = BigInt(id);
     const body = await req.json();
-    const { isApproved, isActive } = body;
+
+    const schema = z.object({
+      isApproved: z.boolean().optional(),
+      isActive: z.boolean().optional(),
+      rejectionReason: z.string().min(3).max(500).optional(),
+    });
+
+    const parsed = schema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid request body' },
+        { status: 400 }
+      );
+    }
+
+    const { isApproved, isActive, rejectionReason } = parsed.data;
 
     // Validate influencer exists
     const influencer = await prisma.influencer.findUnique({
@@ -86,24 +114,65 @@ export const PUT = withSuperAdmin(async (req: NextRequest, authContext, routeCon
       );
     }
 
-    // Update influencer
-    const updateData: { isApproved?: boolean; isActive?: boolean; approvedAt?: Date } = {};
-    if (typeof isApproved === 'boolean') {
-      updateData.isApproved = isApproved;
-      if (isApproved && !influencer.approvedAt) {
-        updateData.approvedAt = new Date();
-      }
-    }
-    if (typeof isActive === 'boolean') {
-      updateData.isActive = isActive;
-    }
+    const now = new Date();
 
-    const updated = await prisma.influencer.update({
-      where: { id: influencerId },
-      data: updateData,
-      include: {
-        balances: true,
-      },
+    const updated = await prisma.$transaction(async (tx) => {
+      // Update influencer
+      const updateData: { isApproved?: boolean; isActive?: boolean; approvedAt?: Date | null; approvedByUserId?: bigint | null } = {};
+
+      if (typeof isApproved === 'boolean') {
+        updateData.isApproved = isApproved;
+
+        if (isApproved) {
+          updateData.approvedAt = now;
+          updateData.approvedByUserId = authContext.userId;
+
+          await tx.influencerApprovalLog.create({
+            data: {
+              influencerId,
+              action: 'APPROVE',
+              actedByUserId: authContext.userId,
+              reason: null,
+            },
+          });
+        } else {
+          if (!rejectionReason) {
+            throw new Error('Rejection reason is required');
+          }
+
+          updateData.approvedAt = null;
+          updateData.approvedByUserId = null;
+
+          await tx.influencerApprovalLog.create({
+            data: {
+              influencerId,
+              action: 'REJECT',
+              actedByUserId: authContext.userId,
+              reason: rejectionReason,
+            },
+          });
+        }
+      }
+
+      if (typeof isActive === 'boolean') {
+        updateData.isActive = isActive;
+      }
+
+      return tx.influencer.update({
+        where: { id: influencerId },
+        data: updateData,
+        include: {
+          balances: true,
+          approvalLogs: {
+            orderBy: { createdAt: 'desc' },
+            include: {
+              actedByUser: {
+                select: { id: true, name: true, email: true },
+              },
+            },
+          },
+        },
+      });
     });
 
     return NextResponse.json({
@@ -117,8 +186,13 @@ export const PUT = withSuperAdmin(async (req: NextRequest, authContext, routeCon
   } catch (error) {
     console.error('Error updating influencer:', error);
     return NextResponse.json(
-      { success: false, message: 'Failed to update influencer' },
-      { status: 500 }
+      {
+        success: false,
+        message: error instanceof Error && error.message === 'Rejection reason is required'
+          ? error.message
+          : 'Failed to update influencer',
+      },
+      { status: error instanceof Error && error.message === 'Rejection reason is required' ? 400 : 500 }
     );
   }
 });

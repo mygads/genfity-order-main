@@ -298,6 +298,55 @@ export default function InfluencerDashboardPage() {
           </div>
         </div>
 
+        {/* Earnings & Pending Withdrawals */}
+        <div className="grid gap-4 sm:grid-cols-2 mb-8">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                  <FaMoneyBillWave className="w-5 h-5 text-green-600 dark:text-green-400" />
+                </div>
+                <h3 className="text-base font-semibold text-gray-900 dark:text-white">All-time Earnings</h3>
+              </div>
+            </div>
+            {Object.keys(stats.allTimeEarnings || {}).length > 0 ? (
+              <div className="space-y-2">
+                {Object.entries(stats.allTimeEarnings).map(([currency, amount]) => (
+                  <div key={currency} className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">{currency}</span>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">{formatCurrency(amount, currency)}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500 dark:text-gray-400">No earnings yet</p>
+            )}
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
+                  <FaClock className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                </div>
+                <h3 className="text-base font-semibold text-gray-900 dark:text-white">Pending Withdrawal Amount</h3>
+              </div>
+            </div>
+            {Object.keys(stats.pendingWithdrawalAmount || {}).length > 0 ? (
+              <div className="space-y-2">
+                {Object.entries(stats.pendingWithdrawalAmount).map(([currency, amount]) => (
+                  <div key={currency} className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">{currency}</span>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">{formatCurrency(amount, currency)}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500 dark:text-gray-400">No pending withdrawals</p>
+            )}
+          </div>
+        </div>
+
         {/* Balance Cards */}
         {balances.length > 0 && (
           <div className="mb-8">
