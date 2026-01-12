@@ -229,6 +229,68 @@ export function AdminLanguageProvider({
 }
 
 // ============================================================================
+// Driver Language Provider
+// ============================================================================
+
+interface DriverLanguageProviderProps {
+  children: React.ReactNode;
+  /**
+   * Default locale for driver interface
+   */
+  defaultLocale?: Locale;
+}
+
+/**
+ * Language Provider for Driver Pages
+ *
+ * - Uses its own localStorage key (genfity_driver_locale)
+ * - No database sync (driver UI is lightweight)
+ */
+export function DriverLanguageProvider({
+  children,
+  defaultLocale: defaultDriverLocale = 'en',
+}: DriverLanguageProviderProps) {
+  const [locale, setLocaleState] = useState<Locale>(defaultDriverLocale);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  useEffect(() => {
+    const saved = getSavedLocale('driver');
+    if (saved) {
+      setLocaleState(saved);
+    } else {
+      setLocaleState(defaultDriverLocale);
+    }
+
+    setIsInitialized(true);
+  }, [defaultDriverLocale]);
+
+  const setLocale = useCallback((newLocale: Locale) => {
+    if (isValidLocale(newLocale)) {
+      setLocaleState(newLocale);
+      saveLocale('driver', newLocale);
+    }
+  }, []);
+
+  const toggleLocale = useCallback(() => {
+    const newLocale = locale === 'en' ? 'id' : 'en';
+    setLocale(newLocale);
+  }, [locale, setLocale]);
+
+  const value = useMemo<LanguageContextValue>(() => ({
+    locale,
+    isInitialized,
+    setLocale,
+    toggleLocale,
+  }), [locale, isInitialized, setLocale, toggleLocale]);
+
+  return (
+    <LanguageContext.Provider value={value}>
+      {children}
+    </LanguageContext.Provider>
+  );
+}
+
+// ============================================================================
 // Hook
 // ============================================================================
 

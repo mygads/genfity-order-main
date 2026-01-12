@@ -152,6 +152,21 @@ const DELIVERY_STATUS_STEPS: DeliveryStatusStep[] = [
     },
 ];
 
+type DeliveryTimelineStepKey = 'PENDING' | 'ACCEPTED' | 'IN_PROGRESS' | 'READY' | 'PICKED_UP' | 'DELIVERED';
+
+const DELIVERY_TIMELINE_STEPS: Array<{
+    key: DeliveryTimelineStepKey;
+    labelKey: TranslationKeys;
+    descriptionKey: TranslationKeys;
+}> = [
+    { key: 'PENDING', labelKey: 'customer.status.pending', descriptionKey: 'customer.status.pendingDesc' },
+    { key: 'ACCEPTED', labelKey: 'customer.status.accepted', descriptionKey: 'customer.status.acceptedDesc' },
+    { key: 'IN_PROGRESS', labelKey: 'customer.status.preparing', descriptionKey: 'customer.status.preparingDesc' },
+    { key: 'READY', labelKey: 'customer.status.ready', descriptionKey: 'customer.status.readyDesc' },
+    { key: 'PICKED_UP', labelKey: 'customer.deliveryStatus.pickedUp', descriptionKey: 'customer.deliveryStatus.pickedUpDesc' },
+    { key: 'DELIVERED', labelKey: 'customer.deliveryStatus.delivered', descriptionKey: 'customer.deliveryStatus.deliveredDesc' },
+];
+
 /**
  * GENFITY - Real-time Order Tracking Page
  * 
@@ -385,6 +400,20 @@ export default function OrderTrackPage() {
         return idx >= 0 ? idx : 0;
     };
 
+    const getCurrentDeliveryTimelineIndex = (o: OrderData): number => {
+        if (o.deliveryStatus === 'DELIVERED') return 5;
+        if (o.deliveryStatus === 'PICKED_UP') return 4;
+
+        if (o.status === 'COMPLETED' && o.orderType === 'DELIVERY') {
+            return 5;
+        }
+
+        if (o.status === 'READY') return 3;
+        if (o.status === 'IN_PROGRESS') return 2;
+        if (o.status === 'ACCEPTED') return 1;
+        return 0;
+    };
+
     // Calculate estimated wait time based on status
     const getEstimatedWaitTime = (status: OrderStatus): string => {
         switch (status) {
@@ -456,6 +485,8 @@ export default function OrderTrackPage() {
     const isCancelled = order.status === 'CANCELLED';
     const isCompleted = order.status === 'COMPLETED';
     const isReady = order.status === 'READY';
+    const isDeliveryTimelineMode = searchParams.get('mode') === 'delivery' && order.orderType === 'DELIVERY';
+    const currentDeliveryTimelineIndex = isDeliveryTimelineMode ? getCurrentDeliveryTimelineIndex(order) : 0;
 
     return (
         <>
@@ -526,94 +557,190 @@ export default function OrderTrackPage() {
                         </div>
                     ) : (
                         <>
-                            {/* Progress Bar */}
-                            <div className="relative mb-8">
-                                {/* Background Bar */}
-                                <div className="absolute top-4 left-0 right-0 h-1 bg-gray-200 rounded-full" />
+                            {isDeliveryTimelineMode ? (
+                                <>
+                                    {/* Combined Delivery Timeline Progress */}
+                                    <div className="relative mb-8">
+                                        <div className="absolute top-4 left-0 right-0 h-1 bg-gray-200 rounded-full" />
+                                        <div
+                                            className="absolute top-4 left-0 h-1 bg-orange-500 rounded-full transition-all duration-500"
+                                            style={{ width: `${(currentDeliveryTimelineIndex / (DELIVERY_TIMELINE_STEPS.length - 1)) * 100}%` }}
+                                        />
 
-                                {/* Active Bar */}
-                                <div
-                                    className="absolute top-4 left-0 h-1 bg-orange-500 rounded-full transition-all duration-500"
-                                    style={{ width: `${(currentStepIndex / (STATUS_STEPS.length - 1)) * 100}%` }}
-                                />
+                                        <div className="relative flex justify-between">
+                                            {DELIVERY_TIMELINE_STEPS.map((step, index) => {
+                                                const isActive = index <= currentDeliveryTimelineIndex;
+                                                const isCurrent = index === currentDeliveryTimelineIndex;
 
-                                {/* Steps */}
-                                <div className="relative flex justify-between">
-                                    {STATUS_STEPS.map((step, index) => {
-                                        const isActive = index <= currentStepIndex;
-                                        const isCurrent = index === currentStepIndex;
+                                                return (
+                                                    <div key={step.key} className="flex flex-col items-center">
+                                                        <div
+                                                            className={`
+                              w-8 h-8 rounded-full flex items-center justify-center text-sm
+                              transition-all duration-300
+                              ${isCurrent
+                                                                    ? 'bg-orange-500 text-white ring-4 ring-orange-200 scale-110'
+                                                                    : isActive
+                                                                        ? 'bg-orange-500 text-white'
+                                                                        : 'bg-gray-200 text-gray-500'}
+                            `}
+                                                        >
+                                                            {step.key === 'PENDING' && <FaClock className="w-4 h-4" />}
+                                                            {step.key === 'ACCEPTED' && <FaCheckCircle className="w-4 h-4" />}
+                                                            {step.key === 'IN_PROGRESS' && <FaBolt className="w-4 h-4" />}
+                                                            {step.key === 'READY' && <FaBell className="w-4 h-4" />}
+                                                            {step.key === 'PICKED_UP' && <FaTruck className="w-4 h-4" />}
+                                                            {step.key === 'DELIVERED' && <FaCheck className="w-4 h-4" />}
+                                                        </div>
 
-                                        return (
-                                            <div key={step.status} className="flex flex-col items-center">
-                                                {/* Circle */}
-                                                <div
-                                                    className={`
-                            w-8 h-8 rounded-full flex items-center justify-center text-sm
-                            transition-all duration-300
-                            ${isCurrent ? 'bg-orange-500 text-white ring-4 ring-orange-200 scale-110' :
-                                                            isActive ? 'bg-orange-500 text-white' :
-                                                                'bg-gray-200 text-gray-500'}
+                                                        <span
+                                                            className={`
+                            mt-2 text-xs font-medium text-center
+                            ${isCurrent ? 'text-orange-600' : isActive ? 'text-gray-900' : 'text-gray-400'}
                           `}
-                                                >
-                                                    {/* FA Icons for each step */}
-                                                    {step.status === 'PENDING' && <FaClock className="w-4 h-4" />}
-                                                    {step.status === 'ACCEPTED' && <FaCheckCircle className="w-4 h-4" />}
-                                                    {step.status === 'IN_PROGRESS' && <FaBolt className="w-4 h-4" />}
-                                                    {step.status === 'READY' && <FaBell className="w-4 h-4" />}
-                                                    {step.status === 'COMPLETED' && <FaCheck className="w-4 h-4" />}
-                                                </div>
+                                                        >
+                                                            {t(step.labelKey)}
+                                                        </span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
 
-                                                {/* Label */}
-                                                <span className={`
-                          mt-2 text-xs font-medium text-center
-                          ${isCurrent ? 'text-orange-600' :
-                                                        isActive ? 'text-gray-900' :
-                                                            'text-gray-400'}
-                        `}>
-                                                    {t(step.labelKey)}
+                                    {/* Current Delivery Timeline Card */}
+                                    <div className="p-6 rounded-xl text-center mb-6 bg-white border border-gray-200">
+                                        <div className="w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center bg-orange-100 text-orange-600">
+                                            {currentDeliveryTimelineIndex === 0 && <FaClock className="w-6 h-6" />}
+                                            {currentDeliveryTimelineIndex === 1 && <FaCheckCircle className="w-6 h-6" />}
+                                            {currentDeliveryTimelineIndex === 2 && <FaBolt className="w-6 h-6" />}
+                                            {currentDeliveryTimelineIndex === 3 && <FaBell className="w-6 h-6" />}
+                                            {currentDeliveryTimelineIndex === 4 && <FaTruck className="w-6 h-6" />}
+                                            {currentDeliveryTimelineIndex === 5 && <FaCheck className="w-6 h-6" />}
+                                        </div>
+
+                                        <h2 className="text-xl font-bold mb-2 text-gray-900">
+                                            {order.deliveryStatus === 'DELIVERED' || currentDeliveryTimelineIndex >= 5
+                                                ? t('customer.deliveryStatus.deliveredDesc')
+                                                : t(DELIVERY_TIMELINE_STEPS[currentDeliveryTimelineIndex]?.descriptionKey) ||
+                                                t('customer.loading.processingOrder')}
+                                        </h2>
+
+                                        {currentDeliveryTimelineIndex < 4 && (
+                                            <div className="flex items-center justify-center gap-2 text-gray-600">
+                                                <FaClock className="w-5 h-5" />
+                                                <span className="text-sm font-medium">
+                                                    {t('customer.track.estimated')} {getEstimatedWaitTime(order.status)}
                                                 </span>
                                             </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
+                                        )}
 
-                            {/* Current Status Card */}
-                            <div className={`
-                p-6 rounded-xl text-center mb-6 bg-white
-                ${isReady ? 'border-2 border-green-500' : 'border border-gray-200'}
-              `}>
-                                {/* Status Icon - FA Icons */}
-                                <div className={`w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center ${isReady ? 'bg-green-100 text-green-600' : 'bg-orange-100 text-orange-600'}`}>
-                                    {currentStepIndex === 0 && <FaClock className="w-6 h-6" />}
-                                    {currentStepIndex === 1 && <FaCheckCircle className="w-6 h-6" />}
-                                    {currentStepIndex === 2 && <FaBolt className="w-6 h-6" />}
-                                    {currentStepIndex === 3 && <FaBell className="w-6 h-6" />}
-                                    {currentStepIndex === 4 && <FaCheck className="w-6 h-6" />}
-                                </div>
-                                <h2 className={`text-xl font-bold mb-2 ${isReady ? 'text-green-600' : 'text-gray-900'}`}>
-                                    {isCompleted ? t('customer.track.orderCompleted') :
-                                        isReady ? t('customer.track.orderReady') :
-                                            t(STATUS_STEPS[currentStepIndex]?.descriptionKey) || t('customer.loading.processingOrder')}
-                                </h2>
-
-                                {!isCompleted && (
-                                    <div className="flex items-center justify-center gap-2 text-gray-600">
-                                        <FaClock className="w-5 h-5" />
-                                        <span className="text-sm font-medium">
-                                            {t('customer.track.estimated')} {getEstimatedWaitTime(order.status)}
-                                        </span>
+                                        {currentDeliveryTimelineIndex === 3 && (
+                                            <p className="mt-3 text-sm text-green-600 font-medium">
+                                                {t('customer.track.deliveryReadyMessage')}
+                                            </p>
+                                        )}
                                     </div>
-                                )}
+                                </>
+                            ) : (
+                                <>
+                                    {/* Progress Bar */}
+                                    <div className="relative mb-8">
+                                        {/* Background Bar */}
+                                        <div className="absolute top-4 left-0 right-0 h-1 bg-gray-200 rounded-full" />
 
-                                {isReady && (
-                                    <p className="mt-3 text-sm text-green-600 font-medium">
-                                        {order.orderType === 'DELIVERY'
-                                            ? t('customer.track.deliveryReadyMessage')
-                                            : t('customer.track.pickupMessage')}
-                                    </p>
-                                )}
-                            </div>
+                                        {/* Active Bar */}
+                                        <div
+                                            className="absolute top-4 left-0 h-1 bg-orange-500 rounded-full transition-all duration-500"
+                                            style={{ width: `${(currentStepIndex / (STATUS_STEPS.length - 1)) * 100}%` }}
+                                        />
+
+                                        {/* Steps */}
+                                        <div className="relative flex justify-between">
+                                            {STATUS_STEPS.map((step, index) => {
+                                                const isActive = index <= currentStepIndex;
+                                                const isCurrent = index === currentStepIndex;
+
+                                                return (
+                                                    <div key={step.status} className="flex flex-col items-center">
+                                                        {/* Circle */}
+                                                        <div
+                                                            className={`
+                              w-8 h-8 rounded-full flex items-center justify-center text-sm
+                              transition-all duration-300
+                              ${isCurrent
+                                                                    ? 'bg-orange-500 text-white ring-4 ring-orange-200 scale-110'
+                                                                    : isActive
+                                                                        ? 'bg-orange-500 text-white'
+                                                                        : 'bg-gray-200 text-gray-500'}
+                            `}
+                                                        >
+                                                            {/* FA Icons for each step */}
+                                                            {step.status === 'PENDING' && <FaClock className="w-4 h-4" />}
+                                                            {step.status === 'ACCEPTED' && <FaCheckCircle className="w-4 h-4" />}
+                                                            {step.status === 'IN_PROGRESS' && <FaBolt className="w-4 h-4" />}
+                                                            {step.status === 'READY' && <FaBell className="w-4 h-4" />}
+                                                            {step.status === 'COMPLETED' && <FaCheck className="w-4 h-4" />}
+                                                        </div>
+
+                                                        {/* Label */}
+                                                        <span
+                                                            className={`
+                            mt-2 text-xs font-medium text-center
+                            ${isCurrent ? 'text-orange-600' : isActive ? 'text-gray-900' : 'text-gray-400'}
+                          `}
+                                                        >
+                                                            {t(step.labelKey)}
+                                                        </span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    {/* Current Status Card */}
+                                    <div
+                                        className={`
+                  p-6 rounded-xl text-center mb-6 bg-white
+                  ${isReady ? 'border-2 border-green-500' : 'border border-gray-200'}
+                `}
+                                    >
+                                        {/* Status Icon - FA Icons */}
+                                        <div
+                                            className={`w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center ${isReady ? 'bg-green-100 text-green-600' : 'bg-orange-100 text-orange-600'}`}
+                                        >
+                                            {currentStepIndex === 0 && <FaClock className="w-6 h-6" />}
+                                            {currentStepIndex === 1 && <FaCheckCircle className="w-6 h-6" />}
+                                            {currentStepIndex === 2 && <FaBolt className="w-6 h-6" />}
+                                            {currentStepIndex === 3 && <FaBell className="w-6 h-6" />}
+                                            {currentStepIndex === 4 && <FaCheck className="w-6 h-6" />}
+                                        </div>
+                                        <h2 className={`text-xl font-bold mb-2 ${isReady ? 'text-green-600' : 'text-gray-900'}`}>
+                                            {isCompleted
+                                                ? t('customer.track.orderCompleted')
+                                                : isReady
+                                                    ? t('customer.track.orderReady')
+                                                    : t(STATUS_STEPS[currentStepIndex]?.descriptionKey) || t('customer.loading.processingOrder')}
+                                        </h2>
+
+                                        {!isCompleted && (
+                                            <div className="flex items-center justify-center gap-2 text-gray-600">
+                                                <FaClock className="w-5 h-5" />
+                                                <span className="text-sm font-medium">
+                                                    {t('customer.track.estimated')} {getEstimatedWaitTime(order.status)}
+                                                </span>
+                                            </div>
+                                        )}
+
+                                        {isReady && (
+                                            <p className="mt-3 text-sm text-green-600 font-medium">
+                                                {order.orderType === 'DELIVERY'
+                                                    ? t('customer.track.deliveryReadyMessage')
+                                                    : t('customer.track.pickupMessage')}
+                                            </p>
+                                        )}
+                                    </div>
+                                </>
+                            )}
 
                             {/* Payment Summary */}
                             {order.payment && (
@@ -662,8 +789,59 @@ export default function OrderTrackPage() {
                                 </div>
                             )}
 
-                            {/* Delivery Status Progress (Delivery orders only) */}
-                            {order.orderType === 'DELIVERY' && (
+                            {/* Delivery Details / Progress (Delivery orders only) */}
+                            {order.orderType === 'DELIVERY' && isDeliveryTimelineMode ? (
+                                <div className="border border-gray-200 rounded-xl p-6 bg-white">
+                                    <p className="text-sm font-semibold text-gray-900">{t('customer.track.deliverySectionTitle')}</p>
+
+                                    <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                        <div className="rounded-lg border border-gray-200 p-4">
+                                            <p className="text-xs text-gray-500">{t('customer.track.deliveryAddress')}</p>
+                                            <p className="mt-1 text-sm font-medium text-gray-900">
+                                                {order.deliveryAddress
+                                                    ? (order.deliveryUnit
+                                                        ? `${order.deliveryUnit}, ${order.deliveryAddress}`
+                                                        : order.deliveryAddress)
+                                                    : t('customer.track.deliveryNoAddress')}
+                                            </p>
+                                        </div>
+
+                                        <div className="rounded-lg border border-gray-200 p-4">
+                                            <p className="text-xs text-gray-500">{t('customer.track.deliveryFee')}</p>
+                                            <p className="mt-1 text-sm font-semibold text-gray-900">
+                                                {formatPrice(order.deliveryFeeAmount || 0, order.merchant.currency)}
+                                            </p>
+                                        </div>
+
+                                        <div className="rounded-lg border border-gray-200 p-4">
+                                            <p className="text-xs text-gray-500">{t('customer.track.deliveryDistance')}</p>
+                                            <p className="mt-1 text-sm font-semibold text-gray-900">
+                                                {order.deliveryDistanceKm !== null && order.deliveryDistanceKm !== undefined
+                                                    ? `${Number(order.deliveryDistanceKm).toFixed(2)} km`
+                                                    : '—'}
+                                            </p>
+                                        </div>
+
+                                        <div className="rounded-lg border border-gray-200 p-4">
+                                            <p className="text-xs text-gray-500">{t('customer.track.deliveryStatus')}</p>
+                                            <p className="mt-1 text-sm font-semibold text-gray-900">
+                                                {order.deliveryStatus === 'FAILED'
+                                                    ? t('customer.deliveryStatus.failed')
+                                                    : order.deliveryStatus === 'DELIVERED'
+                                                        ? t('customer.deliveryStatus.delivered')
+                                                        : order.deliveryStatus === 'PICKED_UP'
+                                                            ? t('customer.deliveryStatus.pickedUp')
+                                                            : order.deliveryStatus === 'ASSIGNED'
+                                                                ? t('customer.deliveryStatus.assigned')
+                                                                : t('customer.deliveryStatus.pendingAssignment')}
+                                            </p>
+                                            {order.deliveryDeliveredAt ? (
+                                                <p className="mt-1 text-xs text-gray-500">{new Date(order.deliveryDeliveredAt).toLocaleString()}</p>
+                                            ) : null}
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : order.orderType === 'DELIVERY' ? (
                                 <div className="border border-gray-200 rounded-xl p-6 bg-white">
                                     <div className="flex items-start justify-between gap-4 mb-4">
                                         <div>
@@ -759,7 +937,7 @@ export default function OrderTrackPage() {
                                         </>
                                     )}
                                 </div>
-                            )}
+                            ) : null}
                         </>
                     )}
                 </div>
@@ -959,7 +1137,7 @@ export default function OrderTrackPage() {
             </div>
 
             {/* Fixed Bottom Actions */}
-            <div className="fixed bottom-0 left-0 right-0 max-w-[500px] mx-auto px-6 py-4 bg-white border-t border-gray-200 space-y-3">
+            <div className="fixed bottom-0 left-0 right-0 max-w-125 mx-auto px-6 py-4 bg-white border-t border-gray-200 space-y-3">
 
                 <button
                     onClick={handleNewOrder}

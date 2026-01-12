@@ -133,9 +133,22 @@ export class OrderManagementService {
       throw new Error('Order not found');
     }
 
-    const validationError = validateStatusTransition(order.status, data.status);
-    if (validationError) {
-      throw new Error(validationError);
+    // Delivery completion guard:
+    // A delivery order should only be marked COMPLETED after it is actually DELIVERED.
+    // This prevents inconsistent states like COMPLETED but not delivered.
+    const isDelivery = order.orderType === 'DELIVERY';
+    if (data.status === 'COMPLETED' && isDelivery) {
+      if (order.deliveryStatus !== 'DELIVERED') {
+        throw new Error('Cannot transition order to COMPLETED before delivery status is DELIVERED');
+      }
+      // If driver marks delivery as DELIVERED, we auto-complete the order.
+      // In that flow, the order might still be READY/IN_PROGRESS depending on merchant actions.
+      // We intentionally allow completion here when the delivery is delivered.
+    } else {
+      const validationError = validateStatusTransition(order.status, data.status);
+      if (validationError) {
+        throw new Error(validationError);
+      }
     }
 
     const updated = await prisma.order.update({
@@ -266,7 +279,8 @@ export class OrderManagementService {
             data.status as 'PREPARING' | 'READY' | 'COMPLETED' | 'CANCELLED',
             merchant.name,
             merchant.code,
-            updated.customerId
+            updated.customerId,
+            updated.orderType as 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY'
           );
           console.log(`📱 [Order ${order.orderNumber}] Push notifications sent: ${sentCount}`);
         }

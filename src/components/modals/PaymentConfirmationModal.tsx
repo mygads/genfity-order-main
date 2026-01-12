@@ -2,11 +2,14 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import type { OrderMode } from '@/lib/types/customer';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 interface PaymentConfirmationModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
+  mode?: OrderMode;
 }
 
 /**
@@ -19,8 +22,11 @@ export default function PaymentConfirmationModal({
   isOpen,
   onClose,
   onConfirm,
+  mode,
 }: PaymentConfirmationModalProps) {
   const [isClosing, setIsClosing] = useState(false);
+  const { t } = useTranslation();
+  const isDelivery = mode === 'delivery';
 
   // Handle smooth close
   const handleClose = () => {
@@ -60,13 +66,13 @@ export default function PaymentConfirmationModal({
 
       {/* Overlay */}
       <div
-        className={`fixed inset-0 bg-black/50 z-[300] ${isClosing ? 'animate-fade-out' : 'animate-fade-in'}`}
+        className={`fixed inset-0 bg-black/50 z-300 ${isClosing ? 'animate-fade-out' : 'animate-fade-in'}`}
         onClick={handleClose}
       />
 
       {/* Bottom Sheet Modal - ESB Style */}
       <div
-        className={`fixed bottom-0 left-0 right-0 z-[301] ${isClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
+        className={`fixed bottom-0 left-0 right-0 z-301 ${isClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
         style={{
           maxWidth: '500px',
           margin: '0 auto',
@@ -105,7 +111,7 @@ export default function PaymentConfirmationModal({
               lineHeight: '24px'
             }}
           >
-            Process payment now?
+            {isDelivery ? t('customer.payment.confirmModal.title.delivery') : t('customer.payment.confirmModal.title.payment')}
           </h3>
 
           {/* Buttons Row - ESB Style */}
@@ -129,7 +135,7 @@ export default function PaymentConfirmationModal({
                 transition: 'all 0.2s ease'
               }}
             >
-              Check Again
+              {t('customer.payment.confirmModal.checkAgain')}
             </button>
 
             {/* Payment Now Button - Primary Style */}
@@ -148,7 +154,7 @@ export default function PaymentConfirmationModal({
                 transition: 'all 0.2s ease'
               }}
             >
-              Payment Now
+              {isDelivery ? t('customer.payment.confirmModal.confirmOrder') : t('customer.payment.confirmModal.confirmPayment')}
             </button>
           </div>
         </div>

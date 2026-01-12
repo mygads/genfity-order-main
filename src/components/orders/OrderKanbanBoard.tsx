@@ -29,6 +29,7 @@ import type { OrderListItem } from '@/lib/types/order';
 import { OrderStatus, OrderType, PaymentStatus } from '@prisma/client';
 import { playNotificationSound } from '@/lib/utils/soundNotification';
 import { canTransitionStatus } from '@/lib/utils/orderStatusRules';
+import { shouldConfirmUnpaidBeforeInProgress } from '@/lib/utils/orderPaymentRules';
 
 type OrderNumberDisplayMode = 'full' | 'suffix' | 'raw';
 
@@ -275,7 +276,11 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
     }
 
     // Check if dragging from ACCEPTED to IN_PROGRESS with unpaid order
-    if (order.status === 'ACCEPTED' && newStatus === 'IN_PROGRESS' && order.payment?.status !== PaymentStatus.COMPLETED) {
+    if (
+      order.status === 'ACCEPTED' &&
+      newStatus === 'IN_PROGRESS' &&
+      shouldConfirmUnpaidBeforeInProgress(order)
+    ) {
       setPendingStatusChange({ orderId, newStatus });
       setShowUnpaidConfirm(true);
       return;

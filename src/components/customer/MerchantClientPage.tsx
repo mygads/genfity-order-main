@@ -11,7 +11,7 @@ import PoweredByFooter from '@/components/common/PoweredByFooter';
 import { useStoreStatus } from '@/hooks/useStoreStatus';
 import { useToast } from '@/hooks/useToast';
 import { useTranslation } from '@/lib/i18n/useTranslation';
-import { FaMotorcycle } from 'react-icons/fa';
+import { FaMotorcycle, FaShoppingBag, FaUtensils } from 'react-icons/fa';
 
 interface OpeningHour {
     id: string;
@@ -264,6 +264,7 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                                         : 'border-gray-200 text-gray-400 bg-gray-100'
                                         }`}
                                 >
+                                    {/* <FaUtensils className="h-4 w-4" /> */}
                                     <span>{dineInLabel}</span>
                                     {(!storeOpen || !isDineInAvailable) && (
                                         <span className="text-xs bg-gray-300 text-gray-600 px-2 py-0.5 rounded">
@@ -283,6 +284,7 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                                         : 'border-gray-200 text-gray-400 bg-gray-100'
                                         }`}
                                 >
+                                    {/* <FaShoppingBag className="h-4 w-4" /> */}
                                     <span>{takeawayLabel}</span>
                                     {(!storeOpen || !isTakeawayAvailable) && (
                                         <span className="text-xs bg-gray-300 text-gray-600 px-2 py-0.5 rounded">
@@ -302,7 +304,7 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                                         : 'border-gray-200 text-gray-400 bg-gray-100'
                                         }`}
                                 >
-                                    <FaMotorcycle className="h-4 w-4" />
+                                    {/* <FaMotorcycle className="h-4 w-4" /> */}
                                     <span>{resolvedDeliveryLabel}</span>
                                     {(!storeOpen || !isDeliveryAvailable) && (
                                         <span className="text-xs bg-gray-300 text-gray-600 px-2 py-0.5 rounded">

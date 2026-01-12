@@ -64,6 +64,9 @@ export interface PushSendResult {
     statusCode?: number;
 }
 
+type OrderStatusForPush = 'PREPARING' | 'READY' | 'COMPLETED' | 'CANCELLED';
+type OrderTypeForPush = 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY';
+
 // Note: StoredSubscription interface is used for reference/documentation
 // The actual Prisma model is used for database operations
 interface _StoredSubscription {
@@ -550,10 +553,11 @@ class WebPushService {
     async sendOrderStatusNotificationDetailed(
         subscription: PushSubscription,
         orderNumber: string,
-        status: 'PREPARING' | 'READY' | 'COMPLETED' | 'CANCELLED',
+        status: OrderStatusForPush,
         merchantName: string,
         merchantCode: string,
-        locale: string = 'en'
+        locale: string = 'en',
+        orderType?: OrderTypeForPush
     ): Promise<PushSendResult> {
         const statusMessages: Record<string, { title: string; body: string; emoji: string }> = {
             PREPARING: {
@@ -570,8 +574,12 @@ class WebPushService {
                     ? `✅ Pesanan #${orderNumber} Siap!`
                     : `✅ Order #${orderNumber} Ready!`,
                 body: locale === 'id'
-                    ? `Pesanan Anda di ${merchantName} siap diambil`
-                    : `Your order at ${merchantName} is ready for pickup`,
+                    ? (orderType === 'DELIVERY'
+                        ? `Pesanan Anda di ${merchantName} sudah siap dan akan segera dijemput driver.`
+                        : `Pesanan Anda di ${merchantName} siap diambil`)
+                    : (orderType === 'DELIVERY'
+                        ? `Your order at ${merchantName} is ready and will be picked up by the driver.`
+                        : `Your order at ${merchantName} is ready for pickup`),
                 emoji: '✅',
             },
             COMPLETED: {
@@ -619,6 +627,40 @@ class WebPushService {
             ],
             requireInteraction: status === 'READY',
             vibrate: status === 'READY' ? [300, 100, 300, 100, 300] : [200, 100, 200],
+        };
+
+        return this.sendPushNotificationDetailed(subscription, payload);
+    }
+
+    async sendDeliveryPickedUpNotificationDetailed(
+        subscription: PushSubscription,
+        orderNumber: string,
+        merchantName: string,
+        merchantCode: string,
+        locale: string = 'en'
+    ): Promise<PushSendResult> {
+        const payload: PushNotificationPayload = {
+            title: locale === 'id'
+                ? `🛵 Pesanan #${orderNumber} Dijemput Driver`
+                : `🛵 Order #${orderNumber} Picked Up`,
+            body: locale === 'id'
+                ? `Driver sudah menjemput pesanan Anda dari ${merchantName} dan sedang menuju lokasi Anda.`
+                : `The driver has picked up your order from ${merchantName} and is on the way to you.`,
+            tag: `delivery-picked-up-${orderNumber}`,
+            data: {
+                type: 'DELIVERY_PICKED_UP',
+                orderNumber,
+                merchantCode,
+                orderUrl: `/${merchantCode}/order-status/${orderNumber}`,
+            },
+            actions: [
+                {
+                    action: 'track',
+                    title: locale === 'id' ? 'Lacak Pesanan' : 'Track Order',
+                },
+            ],
+            requireInteraction: true,
+            vibrate: [300, 100, 300, 100, 300],
         };
 
         return this.sendPushNotificationDetailed(subscription, payload);

@@ -947,6 +947,7 @@ export default function PaymentPage() {
         isOpen={showConfirmModal}
         onClose={() => setShowConfirmModal(false)}
         onConfirm={handleConfirmPayment}
+        mode={mode}
       />
     </>
   );

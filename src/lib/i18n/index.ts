@@ -63,6 +63,7 @@ export function getLocaleFromCurrency(currency: string | null | undefined): Loca
 export const LOCALE_STORAGE_KEYS = {
   customer: 'genfity_customer_locale',
   admin: 'genfity_admin_locale',
+  driver: 'genfity_driver_locale',
 } as const;
 
 /**
@@ -107,7 +108,7 @@ export function isValidLocale(locale: string | null | undefined): locale is Loca
  * @param type - 'customer' or 'admin'
  * @returns The saved locale or null if not found
  */
-export function getSavedLocale(type: 'customer' | 'admin'): Locale | null {
+export function getSavedLocale(type: 'customer' | 'admin' | 'driver'): Locale | null {
   if (typeof window === 'undefined') {
     return null;
   }
@@ -130,7 +131,7 @@ export function getSavedLocale(type: 'customer' | 'admin'): Locale | null {
  * @param type - 'customer' or 'admin'
  * @param locale - The locale to save
  */
-export function saveLocale(type: 'customer' | 'admin', locale: Locale): void {
+export function saveLocale(type: 'customer' | 'admin' | 'driver', locale: Locale): void {
   if (typeof window === 'undefined') {
     return;
   }

@@ -13,6 +13,7 @@ import { useTranslation } from '@/lib/i18n/useTranslation';
 import { formatCurrency as formatCurrencyUtil } from '@/lib/utils/format';
 import { useCustomerPushNotifications } from '@/hooks/useCustomerPushNotifications';
 import { customerTrackUrl } from '@/lib/utils/customerRoutes';
+import { getPublicAppOrigin } from '@/lib/utils/publicAppOrigin';
 import { FaBell, FaCheck, FaCheckCircle, FaChevronDown, FaCopy, FaInfoCircle, FaMoneyBillWave, FaMotorcycle, FaQrcode, FaStickyNote, FaTimes } from 'react-icons/fa';
 
 // ✅ Order Summary Data Interface
@@ -87,6 +88,11 @@ export default function OrderSummaryCashPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t, locale } = useTranslation();
+
+  const tOr = (key: string, fallback: string) => {
+    const value = t(key);
+    return value === key ? fallback : value;
+  };
 
   const merchantCode = params.merchantCode as string;
   const orderNumber = searchParams.get('orderNumber') || '';
@@ -546,11 +552,12 @@ export default function OrderSummaryCashPage() {
               type="button"
               onClick={async () => {
                 try {
-                  const url = customerTrackUrl(merchantCode, order.orderNumber, {
+                  const path = customerTrackUrl(merchantCode, order.orderNumber, {
                     token: trackingToken,
                     back: 'history',
                     mode,
                   });
+                  const url = `${getPublicAppOrigin('http://localhost:3000')}${path}`;
                   await navigator.clipboard.writeText(url);
                   setIsTrackingLinkCopied(true);
                   window.setTimeout(() => setIsTrackingLinkCopied(false), 2000);
@@ -564,12 +571,12 @@ export default function OrderSummaryCashPage() {
               {isTrackingLinkCopied ? (
                 <>
                   <FaCheck className="w-4 h-4 text-green-600" />
-                  <span>{t('customer.orderSummary.copied') || 'Copied'}</span>
+                  <span>{tOr('customer.orderSummary.copied', 'Copied')}</span>
                 </>
               ) : (
                 <>
                   <FaCopy className="w-4 h-4 text-gray-600" />
-                  <span>{t('customer.orderSummary.copyTrackingLink') || 'Copy tracking link'}</span>
+                  <span>{tOr('customer.orderSummary.copyTrackingLink', 'Copy tracking link')}</span>
                 </>
               )}
             </button>
@@ -577,99 +584,72 @@ export default function OrderSummaryCashPage() {
         ) : null}
 
         {/* Payment & Delivery Summary */}
-        <div
-          className="mx-auto mb-3"
-          style={{
-            padding: '12px 16px',
-            width: '64%',
-            minWidth: '343px',
-            margin: '0 auto 12px auto',
-            backgroundColor: 'white',
-            borderRadius: '12px',
-            border: '1px solid #e5e7eb',
-          }}
-        >
+        <div className="mx-auto mb-3 w-full max-w-[420px] rounded-xl border border-gray-200 bg-white px-4 py-3">
           <div className="flex items-start gap-3">
-            <div className="mt-1" style={{ color: '#f05a28' }}>
-              {mode === 'delivery' ? <FaMotorcycle className="w-5 h-5" /> : <FaMoneyBillWave className="w-5 h-5" />}
+            <div className="mt-0.5 text-[#f05a28]">
+              {mode === 'delivery' ? <FaMotorcycle className="h-5 w-5" /> : <FaMoneyBillWave className="h-5 w-5" />}
             </div>
-            <div className="flex-1">
-              <p className="text-sm" style={{ color: '#111827', fontWeight: 600, marginBottom: '2px' }}>
-                {mode === 'delivery' ? (t('customer.orderSummary.deliveryTitle') || 'Delivery order') : (t('customer.orderSummary.paymentTitle') || 'Payment')}
-              </p>
-              {mode === 'delivery' ? (
-                <p className="text-xs" style={{ color: '#4b5563', lineHeight: '18px' }}>
-                  {(order?.payment?.paymentMethod === 'CASH_ON_DELIVERY' || !order?.payment?.paymentMethod)
-                    ? (t('customer.orderSummary.deliveryPayToDriver') || 'Payment: Cash on delivery (pay the driver when your order arrives).')
-                    : (t('customer.orderSummary.deliveryPaymentMethod') || `Payment: ${order?.payment?.paymentMethod || '-'}`)}
-                  {order?.payment?.status ? ` • ${t('customer.orderSummary.paymentStatus') || 'Status'}: ${order.payment.status}` : ''}
+
+            <div className="min-w-0 flex-1">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-sm font-semibold text-gray-900">
+                  {mode === 'delivery'
+                    ? tOr('customer.orderSummary.deliveryTitle', 'Delivery order')
+                    : tOr('customer.orderSummary.paymentTitle', 'Payment')}
                 </p>
+
+                {mode === 'delivery' ? (
+                  <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-700">
+                    {tOr('customer.orderSummary.paymentStatus', 'Status')}: {order?.payment?.status || order?.status || '-'}
+                  </span>
+                ) : null}
+              </div>
+
+              {mode === 'delivery' ? (
+                <div className="mt-1 space-y-2">
+                  <p className="text-xs leading-5 text-gray-600">
+                    {(order?.payment?.paymentMethod === 'CASH_ON_DELIVERY' || !order?.payment?.paymentMethod)
+                      ? tOr('customer.orderSummary.deliveryPayToDriver', 'Payment: Cash on delivery.')
+                      : tOr('customer.orderSummary.deliveryPaymentMethod', `Payment: ${order?.payment?.paymentMethod || '-'}`).replace(
+                          '{method}',
+                          String(order?.payment?.paymentMethod || '-')
+                        )}
+                  </p>
+
+                  {order?.deliveryAddress ? (
+                    <div className="rounded-lg bg-gray-50 px-3 py-2">
+                      <div className="flex items-center gap-2 text-xs font-medium text-gray-600">
+                        <FaInfoCircle className="h-4 w-4" />
+                        <span>{t('customer.delivery.address') || 'Delivery Address'}</span>
+                      </div>
+                      <p className="mt-1 break-words text-xs leading-5 text-gray-800">
+                        {order.deliveryUnit ? `${order.deliveryUnit}, ${order.deliveryAddress}` : order.deliveryAddress}
+                      </p>
+                    </div>
+                  ) : null}
+                </div>
               ) : (
-                <p className="text-xs" style={{ color: '#4b5563', lineHeight: '18px' }}>
-                  {t('customer.orderSummary.payAtCashierHint') || 'Show this QR to the cashier/staff to process your order.'}
+                <p className="mt-1 text-xs leading-5 text-gray-600">
+                  {tOr('customer.orderSummary.payAtCashierHint', 'Show this QR to the cashier/staff to process your order.')}
                 </p>
               )}
-
-              {mode === 'delivery' && order?.deliveryAddress ? (
-                <div className="mt-2 text-xs" style={{ color: '#374151' }}>
-                  <div className="flex items-center gap-2" style={{ color: '#6b7280' }}>
-                    <FaInfoCircle className="w-4 h-4" />
-                    <span>{t('customer.delivery.address') || 'Delivery Address'}</span>
-                  </div>
-                  <div style={{ marginTop: '4px' }}>
-                    {order.deliveryUnit ? `${order.deliveryUnit}, ${order.deliveryAddress}` : order.deliveryAddress}
-                  </div>
-                </div>
-              ) : null}
             </div>
           </div>
         </div>
 
         {/* Notification Message - ESB Style with 2-line layout */}
-        <div
-          className="flex justify-center items-center mb-3 mt-2"
-          style={{
-            padding: '12px 16px',
-            width: '64%',
-            minWidth: '343px',
-            margin: '0 auto 12px auto',
-            backgroundColor: '#fef0c7',
-            borderRadius: '8px',
-            fontSize: '14px',
-            letterSpacing: '0'
-          }}
-        >
-          <FaQrcode className="shrink-0" style={{ width: '20px', height: '20px', marginRight: '8px', color: '#dc6803' }} />
-          <span
-            style={{
-              color: '#1d2939',
-              fontFamily: 'Inter, sans-serif',
-              fontSize: '14px',
-              fontWeight: 400,
-              lineHeight: '20px',
-              textAlign: 'start'
-            }}
-          >
+        <div className="mx-auto mb-3 mt-2 flex w-full max-w-[420px] items-start gap-2 rounded-lg bg-[#fef0c7] px-4 py-3">
+          <FaQrcode className="shrink-0" style={{ width: '20px', height: '20px', marginTop: '2px', color: '#dc6803' }} />
+          <p className="text-sm leading-5 text-[#1d2939]">
             {mode === 'delivery'
-              ? (t('customer.orderSummary.deliveryQrInstruction') || 'Save this QR to track your delivery status and driver updates.')
-              : t('customer.orderSummary.showQRInstruction')}
-          </span>
+              ? tOr('customer.orderSummary.deliveryQrInstruction', 'Save this QR to track your delivery status and driver updates.')
+              : tOr('customer.orderSummary.showQRInstruction', 'Show the QR code or 7-digit order number to our cashier.')}
+          </p>
         </div>
 
         {/* ✅ Push Notification Prompt Banner */}
         {showPushPrompt && isPushSupported && !isPushSubscribed && (
-          <div
-            className="flex items-center gap-3 mx-auto animate-fade-in"
-            style={{
-              padding: '12px 16px',
-              width: '64%',
-              minWidth: '343px',
-              margin: '0 auto 12px auto',
-              backgroundColor: '#e0f2fe',
-              borderRadius: '8px',
-              fontSize: '14px',
-            }}
-          >
+          <div className="mx-auto flex w-full max-w-[420px] animate-fade-in items-center gap-3 rounded-lg bg-[#e0f2fe] px-4 py-3">
             <FaBell className="shrink-0" style={{ width: '24px', height: '24px', color: '#0284c7' }} />
             <div className="flex-1">
               <p style={{ color: '#0c4a6e', fontWeight: 500, marginBottom: '2px' }}>

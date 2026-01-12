@@ -17,6 +17,7 @@ import type { OrderListItem, OrderWithDetails } from '@/lib/types/order';
 import { useMerchant } from '@/context/MerchantContext';
 import { formatFullOrderNumber, formatOrderNumberSuffix } from '@/lib/utils/format';
 import DriverQuickAssign from '@/components/orders/DriverQuickAssign';
+import { shouldConfirmUnpaidBeforeInProgress } from '@/lib/utils/orderPaymentRules';
 
 type OrderNumberDisplayMode = 'full' | 'suffix' | 'raw';
 
@@ -273,7 +274,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
               onClick={(e) => {
                 e.stopPropagation();
                 // Check if order is unpaid
-                if (order.payment?.status !== 'COMPLETED') {
+                if (shouldConfirmUnpaidBeforeInProgress(order)) {
                   setShowUnpaidConfirm(true);
                 } else {
                   onStatusChange('IN_PROGRESS');

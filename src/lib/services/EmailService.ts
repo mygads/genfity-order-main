@@ -578,7 +578,7 @@ class EmailService {
     merchantCountry?: string | null;
   }): Promise<boolean> {
     const locale = this.getMerchantEmailLocale(params.merchantCountry);
-    const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL}/admin/login`;
+    const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL}/driver/login`;
     const supportEmail = process.env.EMAIL_FROM || process.env.SMTP_FROM_EMAIL || 'support@genfity.com';
 
     const html = getDriverWelcomeTemplate({
@@ -614,7 +614,7 @@ class EmailService {
     merchantCountry?: string | null;
   }): Promise<boolean> {
     const locale = this.getMerchantEmailLocale(params.merchantCountry);
-    const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL}/admin/login`;
+    const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL}/driver/login`;
     const supportEmail = process.env.EMAIL_FROM || process.env.SMTP_FROM_EMAIL || 'support@genfity.com';
 
     const html = getDriverInviteTemplate({

@@ -8,6 +8,8 @@ import prisma from '@/lib/db/client';
 import { withDelivery } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/middleware/auth';
 import { serializeBigInt } from '@/lib/utils/serializer';
+import CustomerPushService from '@/lib/services/CustomerPushService';
+import { OrderManagementService } from '@/lib/services/OrderManagementService';
 
 const ALLOWED_STATUS = ['PICKED_UP', 'DELIVERED', 'FAILED'] as const;
 
@@ -17,6 +19,8 @@ export const PUT = withDelivery(async (request: NextRequest, context: AuthContex
   try {
     const { orderId } = await routeContext.params;
     const body = await request.json();
+
+    const confirmCodReceived = Boolean(body?.confirmCodReceived);
 
     const nextStatus = body?.deliveryStatus as AllowedStatus | undefined;
     if (!nextStatus || !ALLOWED_STATUS.includes(nextStatus)) {
@@ -37,8 +41,26 @@ export const PUT = withDelivery(async (request: NextRequest, context: AuthContex
         id: true,
         merchantId: true,
         orderType: true,
+        status: true,
+        orderNumber: true,
+        customerId: true,
+        totalAmount: true,
         deliveryDriverUserId: true,
         deliveryStatus: true,
+        payment: {
+          select: {
+            id: true,
+            status: true,
+            paymentMethod: true,
+            amount: true,
+          },
+        },
+        merchant: {
+          select: {
+            code: true,
+            name: true,
+          },
+        },
       },
     });
 
@@ -78,6 +100,69 @@ export const PUT = withDelivery(async (request: NextRequest, context: AuthContex
       );
     }
 
+    // Enforce valid transition sequence.
+    // Expected flow: ASSIGNED -> PICKED_UP -> DELIVERED (or FAILED).
+    const current = order.deliveryStatus;
+    const isAllowedTransition = (() => {
+      if (nextStatus === 'PICKED_UP') return current === 'ASSIGNED';
+      if (nextStatus === 'DELIVERED') return current === 'PICKED_UP';
+      if (nextStatus === 'FAILED') return current === 'ASSIGNED' || current === 'PICKED_UP';
+      return false;
+    })();
+
+    if (!isAllowedTransition) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'INVALID_TRANSITION',
+          message: `Cannot transition deliveryStatus from ${current ?? 'null'} to ${nextStatus}`,
+          statusCode: 409,
+        },
+        { status: 409 }
+      );
+    }
+
+    if (order.status === 'CANCELLED') {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'INVALID_STATE',
+          message: 'Cannot update delivery status for a cancelled order',
+          statusCode: 409,
+        },
+        { status: 409 }
+      );
+    }
+
+    const isCod = order.payment?.paymentMethod === 'CASH_ON_DELIVERY';
+    const paymentCompleted = order.payment?.status === 'COMPLETED';
+
+    if (nextStatus === 'DELIVERED' && isCod && !paymentCompleted && !confirmCodReceived) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'PAYMENT_CONFIRMATION_REQUIRED',
+          message: 'COD payment confirmation is required before marking as delivered',
+          statusCode: 400,
+        },
+        { status: 400 }
+      );
+    }
+
+    // If driver picks up but merchant hasn't marked READY yet, auto-advance
+    // from IN_PROGRESS -> READY (valid transition) to keep customer tracking consistent.
+    if (nextStatus === 'PICKED_UP' && order.status === 'IN_PROGRESS') {
+      try {
+        await OrderManagementService.updateStatus(order.id, {
+          status: 'READY',
+          userId: context.userId,
+          note: 'Auto-marked READY when driver picked up',
+        });
+      } catch (statusError) {
+        console.error(`[Order ${order.orderNumber}] Failed to auto-mark READY on pickup:`, statusError);
+      }
+    }
+
     const updateData: Record<string, unknown> = {
       deliveryStatus: nextStatus,
     };
@@ -86,10 +171,70 @@ export const PUT = withDelivery(async (request: NextRequest, context: AuthContex
       updateData.deliveryDeliveredAt = new Date();
     }
 
-    const updated = await prisma.order.update({
-      where: { id: order.id },
-      data: updateData,
+    const updated = await prisma.$transaction(async (tx) => {
+      const updatedOrder = await tx.order.update({
+        where: { id: order.id },
+        data: updateData,
+      });
+
+      if (nextStatus === 'DELIVERED') {
+        const amount = order.payment?.amount ?? order.totalAmount;
+
+        if (order.payment?.id) {
+          await tx.payment.update({
+            where: { id: order.payment.id },
+            data: {
+              status: 'COMPLETED',
+              paidAt: new Date(),
+              paidByUserId: context.userId,
+              amount,
+            },
+          });
+        } else {
+          await tx.payment.create({
+            data: {
+              orderId: order.id,
+              amount,
+              paymentMethod: isCod ? 'CASH_ON_DELIVERY' : 'CASH_ON_DELIVERY',
+              status: 'COMPLETED',
+              paidAt: new Date(),
+              paidByUserId: context.userId,
+            },
+          });
+        }
+      }
+
+      return updatedOrder;
     });
+
+    // Side effects
+    if (nextStatus === 'PICKED_UP' && order.merchant) {
+      try {
+        const sentCount = await CustomerPushService.notifyDeliveryPickedUp(
+          order.orderNumber,
+          order.merchant.name,
+          order.merchant.code,
+          order.customerId
+        );
+        console.log(`📱 [Order ${order.orderNumber}] Delivery picked-up push sent: ${sentCount}`);
+      } catch (pushError) {
+        console.error(`[Order ${order.orderNumber}] Failed to send delivery picked-up push:`, pushError);
+      }
+    }
+
+    // Auto-complete the order when delivered
+    if (nextStatus === 'DELIVERED') {
+      try {
+        await OrderManagementService.updateStatus(order.id, {
+          status: 'COMPLETED',
+          userId: context.userId,
+          note: 'Auto-completed when driver marked DELIVERED',
+        });
+      } catch (completeError) {
+        console.error(`[Order ${order.orderNumber}] Failed to auto-complete order:`, completeError);
+        // Do not fail the delivery status update if completion side-effect fails.
+      }
+    }
 
     return NextResponse.json({
       success: true,

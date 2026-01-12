@@ -64,6 +64,37 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Driver routes protection
+  if (pathname.startsWith('/driver')) {
+    // Allow public driver auth pages
+    if (
+      pathname === '/driver/login' ||
+      pathname === '/driver/forgot-password' ||
+      pathname === '/driver/reset-password'
+    ) {
+      // If already logged in, redirect to driver dashboard
+      const token = request.cookies.get('driver_auth_token')?.value;
+      if (token && pathname === '/driver/login') {
+        const url = request.nextUrl.clone();
+        url.pathname = '/driver/dashboard';
+        return NextResponse.redirect(url);
+      }
+      return NextResponse.next();
+    }
+
+    // Check authentication for all other driver routes
+    const token = request.cookies.get('driver_auth_token')?.value;
+
+    if (!token) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/driver/login';
+      url.searchParams.set('redirect', pathname);
+      return NextResponse.redirect(url);
+    }
+
+    return NextResponse.next();
+  }
+
   // ========================================
   // Case-insensitive merchant code handling
   // Redirects lowercase merchant codes to uppercase
@@ -78,6 +109,8 @@ export async function proxy(request: NextRequest) {
     // Skip known routes that are not merchant codes
     const knownRoutes = [
       'merchant', 'influencer', 'auth', 'error', 'privacy-policy', 'terms', 'contact',
+      // Driver routes
+      'driver',
       // Customer auth routes (lowercase)
       'login', 'register', 'forgot-password', 'reset-password', 'verify-email', 'verify-code',
       // Other system routes

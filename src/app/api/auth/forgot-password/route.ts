@@ -24,7 +24,7 @@ import { handleError } from '@/lib/middleware/errorHandler';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email } = body;
+    const { email, client } = body as { email?: string; client?: 'admin' | 'driver' };
 
     if (!email) {
       return NextResponse.json(
@@ -40,7 +40,10 @@ export async function POST(request: NextRequest) {
     const { resetToken, expiresAt } = await authService.requestPasswordReset(email);
 
     // Generate reset URL
-    const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/admin/reset-password?token=${resetToken}`;
+    // Only allow known reset pages to avoid open-redirect style abuse.
+    const appBaseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const resetPath = client === 'driver' ? '/driver/reset-password' : '/admin/reset-password';
+    const resetUrl = `${appBaseUrl}${resetPath}?token=${resetToken}`;
 
     // Send email with reset link
     await sendPasswordResetEmail({
