@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { Suspense, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslation } from '@/lib/i18n/useTranslation';
@@ -9,6 +9,20 @@ import Image from 'next/image';
 import { LanguageToggle } from '@/components/common/LanguageSelector';
 
 export default function DriverLoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-linear-to-br from-slate-50 via-blue-50/30 to-slate-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center">
+          <div className="text-sm text-gray-600 dark:text-gray-300">Loading...</div>
+        </div>
+      }
+    >
+      <DriverLoginInner />
+    </Suspense>
+  );
+}
+
+function DriverLoginInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useTranslation();
