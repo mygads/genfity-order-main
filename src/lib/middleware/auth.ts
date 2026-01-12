@@ -180,6 +180,19 @@ export function withMerchantOwner(
 }
 
 /**
+ * Middleware for Delivery Driver routes
+ */
+export function withDelivery(
+  handler: (
+    request: NextRequest,
+    context: AuthContext,
+    routeContext: NormalizedRouteContext
+  ) => Promise<NextResponse>
+) {
+  return withAuth(handler, ['DELIVERY']);
+}
+
+/**
  * Middleware for Customer routes
  * Uses separate customer authentication system
  */
@@ -252,7 +265,7 @@ export function withMerchantPermission(
       }
 
       // For staff, check permission if specified
-      if (requiredPermission && authContext.merchantId) {
+      if (authContext.role === 'MERCHANT_STAFF' && authContext.merchantId) {
         // Dynamically import to avoid circular dependency
         const { default: staffPermissionService } = await import('@/lib/services/StaffPermissionService');
         const { getPermissionForApi } = await import('@/lib/constants/permissions');

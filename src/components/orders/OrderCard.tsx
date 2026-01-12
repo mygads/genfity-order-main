@@ -9,13 +9,14 @@
 'use client';
 
 import React, { useState } from 'react';
-import { FaUser, FaUtensils, FaShoppingBag, FaClock, FaCheck } from 'react-icons/fa';
+import { FaUser, FaUtensils, FaShoppingBag, FaTruck, FaClock, FaCheck } from 'react-icons/fa';
 import { ORDER_STATUS_COLORS, PAYMENT_STATUS_COLORS } from '@/lib/constants/orderConstants';
 import { formatDistanceToNow } from 'date-fns';
 import { ConfirmationModal } from '@/components/common/ConfirmationModal';
 import type { OrderListItem, OrderWithDetails } from '@/lib/types/order';
 import { useMerchant } from '@/context/MerchantContext';
 import { formatFullOrderNumber, formatOrderNumberSuffix } from '@/lib/utils/format';
+import DriverQuickAssign from '@/components/orders/DriverQuickAssign';
 
 type OrderNumberDisplayMode = 'full' | 'suffix' | 'raw';
 
@@ -124,6 +125,8 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           <div className="flex items-center gap-2 shrink-0">
             {order.orderType === 'DINE_IN' ? (
               <FaUtensils className="h-4 w-4 text-primary-500" title="Dine In" />
+            ) : order.orderType === 'DELIVERY' ? (
+              <FaTruck className="h-4 w-4 text-blue-500" title="Delivery" />
             ) : (
               <FaShoppingBag className="h-4 w-4 text-success-500" title="Takeaway" />
             )}
@@ -227,6 +230,25 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           {formatCurrency(Number(order.totalAmount))}
         </span>
       </div>
+
+      {showQuickActions && order.orderType === 'DELIVERY' ? (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800"
+        >
+          <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+            Driver
+          </div>
+          <DriverQuickAssign
+            orderId={String(order.id)}
+            currentDriverId={
+              'deliveryDriver' in order && order.deliveryDriver?.id
+                ? String(order.deliveryDriver.id)
+                : ''
+            }
+          />
+        </div>
+      ) : null}
 
       {/* Quick Actions - Different buttons based on status */}
       {showQuickActions && onStatusChange && (

@@ -4,10 +4,11 @@ import { useEffect, useState } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { getCustomerAuth } from '@/lib/utils/localStorage';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import { formatCurrency as formatCurrencyUtil } from '@/lib/utils/format';
 import { useCustomerData } from '@/context/CustomerDataContext';
 import { useToast } from '@/context/ToastContext';
 import { Skeleton } from '@/components/common/SkeletonLoaders';
-import { FaFileDownload } from 'react-icons/fa';
+import { FaArrowLeft, FaBoxOpen, FaFileDownload, FaSpinner } from 'react-icons/fa';
 
 interface OrderDetail {
     id: string;
@@ -15,6 +16,11 @@ interface OrderDetail {
     status: string;
     orderType: string;
     tableNumber: string | null;
+    deliveryStatus?: string | null;
+    deliveryUnit?: string | null;
+    deliveryAddress?: string | null;
+    deliveryFeeAmount?: number;
+    deliveryDistanceKm?: number | null;
     totalAmount: number;
     subtotal: number;  // from Order model
     taxAmount: number;
@@ -59,7 +65,7 @@ interface OrderDetail {
 export default function OrderDetailPage() {
     const router = useRouter();
     const params = useParams();
-    const searchParams = useSearchParams();
+    const searchParams = useSearchParams(); // Added to read token from query params
     const { t, locale } = useTranslation();
 
     const merchantCode = params.merchantCode as string;
@@ -97,8 +103,15 @@ export default function OrderDetailPage() {
                 return;
             }
 
+            const token = searchParams.get('token') || '';
+            if (!token) {
+                setError('Tracking token missing');
+                setIsLoading(false);
+                return;
+            }
+
             try {
-                const publicResponse = await fetch(`/api/public/orders/${orderNumber}`);
+                const publicResponse = await fetch(`/api/public/orders/${orderNumber}?token=${encodeURIComponent(token)}`);
                 if (publicResponse.ok) {
                     const publicData = await publicResponse.json();
                     if (publicData.success) {
@@ -120,7 +133,7 @@ export default function OrderDetailPage() {
         if (orderNumber) {
             fetchOrder();
         }
-    }, [orderNumber, router]);
+    }, [orderNumber, router, searchParams]);
 
     const formatCurrency = (amount: number): string => {
         // Handle undefined/null amount
@@ -129,23 +142,7 @@ export default function OrderDetailPage() {
         }
 
         const currency = order?.merchant?.currency || merchantCurrency;
-
-        if (currency === 'AUD') {
-            return `A$${amount.toFixed(2)}`;
-        }
-
-        if (currency === 'IDR') {
-            const formatted = new Intl.NumberFormat('id-ID', {
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 0,
-            }).format(Math.round(amount));
-            return `Rp ${formatted}`;
-        }
-
-        return new Intl.NumberFormat('en-AU', {
-            style: 'currency',
-            currency: currency,
-        }).format(amount);
+        return formatCurrencyUtil(amount, currency, locale);
     };
 
     const formatDate = (dateString: string) => {
@@ -205,8 +202,10 @@ export default function OrderDetailPage() {
                 merchantAddress: order.merchant?.address,
                 merchantPhone: order.merchant?.phone,
                 merchantLogo: (order.merchant as { logoUrl?: string })?.logoUrl,
-                orderType: order.orderType as 'DINE_IN' | 'TAKEAWAY',
+                orderType: order.orderType as 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY',
                 tableNumber: order.tableNumber,
+                deliveryUnit: order.deliveryUnit,
+                deliveryAddress: order.deliveryAddress,
                 customerName: auth.customer.name,
                 customerEmail: auth.customer.email,
                 customerPhone: auth.customer.phone,
@@ -225,6 +224,7 @@ export default function OrderDetailPage() {
                 taxAmount: Number(order.taxAmount) || 0,
                 serviceChargeAmount: Number(order.serviceChargeAmount) || 0,
                 packagingFeeAmount: Number(order.packagingFeeAmount) || 0,
+                deliveryFeeAmount: Number(order.deliveryFeeAmount) || 0,
                 totalAmount: Number(order.totalAmount) || 0,
                 paymentMethod: order.payment?.paymentMethod,
                 paymentStatus: order.payment?.status,
@@ -276,9 +276,7 @@ export default function OrderDetailPage() {
     if (error || !order) {
         return (
             <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-                <svg className="w-16 h-16 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
+                <FaBoxOpen className="w-16 h-16 text-gray-300 mb-4" />
                 <p className="text-gray-600 font-medium mb-2">{error || t('customer.track.orderNotFound')}</p>
                 <button
                     onClick={handleBack}
@@ -300,9 +298,7 @@ export default function OrderDetailPage() {
                         className="w-10 h-10 flex items-center justify-center -ml-2"
                         aria-label="Go back"
                     >
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M19 12H5M12 19l-7-7 7-7" />
-                        </svg>
+                        <FaArrowLeft className="w-5 h-5 text-gray-700" />
                     </button>
                     <h1 className="flex-1 text-center font-semibold text-gray-900 text-base pr-10">
                         {t('customer.history.viewOrder')}
@@ -342,9 +338,18 @@ export default function OrderDetailPage() {
                     <div className="text-xs text-gray-500">
                         <p>{formatDate(order.placedAt)}</p>
                         <p className="mt-1">
-                            {order.orderType === 'DINE_IN' ? t('customer.track.dineInOrder') : t('customer.track.takeawayOrder')}
+                            {order.orderType === 'DINE_IN'
+                                ? t('customer.track.dineInOrder')
+                                : order.orderType === 'DELIVERY'
+                                    ? t('customer.track.deliveryOrder')
+                                    : t('customer.track.takeawayOrder')}
                             {order.tableNumber && ` • Table ${order.tableNumber}`}
                         </p>
+                        {order.orderType === 'DELIVERY' && order.deliveryAddress && (
+                            <p className="mt-1">
+                                {t('customer.track.deliveryAddress')}: {order.deliveryUnit ? `${order.deliveryUnit}, ${order.deliveryAddress}` : order.deliveryAddress}
+                            </p>
+                        )}
                     </div>
                 </div>
 
@@ -407,6 +412,12 @@ export default function OrderDetailPage() {
                                 <span>{formatCurrency(Number(order.packagingFeeAmount))}</span>
                             </div>
                         )}
+                        {order.orderType === 'DELIVERY' && Number(order.deliveryFeeAmount) > 0 && (
+                            <div className="flex justify-between text-gray-600">
+                                <span>{t('customer.track.deliveryFee')}</span>
+                                <span>{formatCurrency(Number(order.deliveryFeeAmount))}</span>
+                            </div>
+                        )}
                         <div className="border-t border-gray-200 pt-2 mt-2">
                             <div className="flex justify-between font-bold text-gray-900">
                                 <span>Total</span>
@@ -442,10 +453,7 @@ export default function OrderDetailPage() {
                 >
                     {downloadingReceipt ? (
                         <>
-                            <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                            </svg>
+                            <FaSpinner className="h-5 w-5 animate-spin" />
                             <span>{t('customer.receipt.downloading')}</span>
                         </>
                     ) : (

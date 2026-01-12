@@ -85,7 +85,7 @@ export default function MenuDetailModal({
   // Initialize cart if not exists
   useEffect(() => {
     if (!cart || cart.merchantCode !== merchantCode || cart.mode !== mode) {
-      initializeCart(merchantCode, mode as 'dinein' | 'takeaway');
+      initializeCart(merchantCode, mode as 'dinein' | 'takeaway' | 'delivery');
     }
   }, [cart, merchantCode, mode, initializeCart]);
 

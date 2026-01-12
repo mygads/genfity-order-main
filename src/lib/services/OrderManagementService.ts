@@ -419,6 +419,89 @@ export class OrderManagementService {
   }
 
   /**
+   * Confirm CASH_ON_DELIVERY payment was received.
+   *
+   * Sets Payment.status=COMPLETED and paidAt/paidByUserId.
+   */
+  static async confirmCashOnDeliveryPayment(
+    orderId: bigint,
+    userId: bigint,
+    notes?: string
+  ): Promise<{ order: OrderWithDetails; payment: Payment }> {
+    const result = await prisma.$transaction(async (tx) => {
+      const order = await tx.order.findUnique({
+        where: { id: orderId },
+        select: {
+          id: true,
+          totalAmount: true,
+        },
+      });
+
+      if (!order) {
+        throw new Error(`Order with ID ${orderId} not found`);
+      }
+
+      const existingPayment = await tx.payment.findUnique({
+        where: { orderId },
+      });
+
+      if (existingPayment && existingPayment.paymentMethod !== 'CASH_ON_DELIVERY') {
+        throw new Error('This order is not Cash on Delivery');
+      }
+
+      let payment: Payment;
+
+      if (existingPayment) {
+        payment = await tx.payment.update({
+          where: { orderId },
+          data: {
+            status: 'COMPLETED',
+            paidAt: new Date(),
+            paidByUserId: userId,
+            notes: notes ?? existingPayment.notes,
+          },
+        });
+      } else {
+        payment = await tx.payment.create({
+          data: {
+            orderId,
+            amount: order.totalAmount,
+            paymentMethod: 'CASH_ON_DELIVERY',
+            status: 'COMPLETED',
+            paidAt: new Date(),
+            paidByUserId: userId,
+            notes,
+          },
+        });
+      }
+
+      // If the order is still pending, accept it after payment.
+      const currentOrder = await tx.order.findUnique({
+        where: { id: orderId },
+        select: { status: true },
+      });
+
+      if (currentOrder?.status === 'PENDING') {
+        await tx.order.update({
+          where: { id: orderId },
+          data: {
+            status: 'ACCEPTED',
+          },
+        });
+      }
+
+      const fullOrder = await tx.order.findUnique({
+        where: { id: orderId },
+        include: ORDER_DETAIL_INCLUDE,
+      });
+
+      return { order: fullOrder!, payment };
+    });
+
+    return result as unknown as { order: OrderWithDetails; payment: Payment };
+  }
+
+  /**
    * Get order statistics
    */
   static async getOrderStats(

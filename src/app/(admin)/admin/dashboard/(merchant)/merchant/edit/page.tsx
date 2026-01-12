@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import dynamic from "next/dynamic";
-import { FaKey, FaEye, FaEyeSlash } from "react-icons/fa";
+import { FaKey, FaEye, FaEyeSlash, FaChevronDown, FaInfoCircle, FaCheckCircle, FaExclamationTriangle, FaImage } from "react-icons/fa";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import AdminFormFooter from "@/components/common/AdminFormFooter";
 import TabsNavigation from "@/components/common/TabsNavigation";
@@ -14,6 +14,7 @@ import { COUNTRIES, CURRENCIES, getCurrencyForCountry, getDefaultTimezoneForCoun
 import PerDayModeSchedule from "@/components/merchants/PerDayModeSchedule";
 import SpecialHoursManager from "@/components/merchants/SpecialHoursManager";
 import { ReceiptTemplateTab } from "@/components/merchants/ReceiptTemplateTab";
+import DeliverySettingsTab from "@/components/merchants/DeliverySettingsTab";
 import { ReceiptSettings, DEFAULT_RECEIPT_SETTINGS } from "@/lib/types/receiptSettings";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { TranslationKeys } from "@/lib/i18n";
@@ -37,15 +38,26 @@ interface MerchantFormData {
   timezone: string;
   latitude?: number | null;
   longitude?: number | null;
+  // Delivery settings
+  isDeliveryEnabled: boolean;
+  enforceDeliveryZones: boolean;
+  deliveryMaxDistanceKm: number | null;
+  deliveryFeeBase: number;
+  deliveryFeePerKm: number;
+  deliveryFeeMin: number | null;
+  deliveryFeeMax: number | null;
   // Sale mode settings
   isDineInEnabled: boolean;
   isTakeawayEnabled: boolean;
   dineInLabel: string;
   takeawayLabel: string;
+  deliveryLabel: string;
   dineInScheduleStart: string;
   dineInScheduleEnd: string;
   takeawayScheduleStart: string;
   takeawayScheduleEnd: string;
+  deliveryScheduleStart: string;
+  deliveryScheduleEnd: string;
   totalTables: number | null;
   // Fee settings
   enableTax: boolean;
@@ -70,11 +82,13 @@ const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", 
 // Tab configuration - keys for translation
 const TAB_KEYS: Array<{ id: string; key: TranslationKeys }> = [
   { id: "basic", key: "admin.merchant.basicInfo" },
-  { id: "sale-modes", key: "admin.merchant.saleModes" },
-  { id: "fees", key: "admin.merchant.feesCharges" },
   { id: "location", key: "admin.merchant.location" },
+  { id: "sale-modes", key: "admin.merchant.saleModes" },
+  { id: "table-settings", key: "admin.merchant.tableSetting" },
+  { id: "delivery", key: "admin.merchant.delivery" },
+  { id: "fees", key: "admin.merchant.feesCharges" },
   { id: "hours", key: "admin.merchant.openingHours" },
-  { id: "receipt", key: "admin.merchant.receiptTemplate" },
+  { id: "receipt", key: "admin.merchant.customReceipt" },
   { id: "pin", key: "admin.merchant.pin" },
 ];
 
@@ -107,6 +121,8 @@ export default function EditMerchantPage() {
   // Collapsible sections
   const [showCustomLabels, setShowCustomLabels] = useState(false);
   const [showModeSchedules, setShowModeSchedules] = useState(false);
+  const [showPerDayModeSchedules, setShowPerDayModeSchedules] = useState(false);
+  const [showSpecialHours, setShowSpecialHours] = useState(false);
 
   // PIN state
   const [deletePin, setDeletePin] = useState("");
@@ -129,15 +145,26 @@ export default function EditMerchantPage() {
     timezone: "Australia/Sydney",
     latitude: null,
     longitude: null,
+    // Delivery settings
+    isDeliveryEnabled: false,
+    enforceDeliveryZones: true,
+    deliveryMaxDistanceKm: null,
+    deliveryFeeBase: 0,
+    deliveryFeePerKm: 0,
+    deliveryFeeMin: null,
+    deliveryFeeMax: null,
     // Sale mode settings
     isDineInEnabled: true,
     isTakeawayEnabled: true,
     dineInLabel: "",
     takeawayLabel: "",
+    deliveryLabel: "",
     dineInScheduleStart: "",
     dineInScheduleEnd: "",
     takeawayScheduleStart: "",
     takeawayScheduleEnd: "",
+    deliveryScheduleStart: "",
+    deliveryScheduleEnd: "",
     totalTables: null,
     // Fee settings
     enableTax: false,
@@ -212,15 +239,26 @@ export default function EditMerchantPage() {
         timezone: merchant.timezone || "Australia/Sydney",
         latitude: merchant.latitude ? parseFloat(merchant.latitude) : null,
         longitude: merchant.longitude ? parseFloat(merchant.longitude) : null,
+        // Delivery settings
+        isDeliveryEnabled: merchant.isDeliveryEnabled ?? false,
+        enforceDeliveryZones: merchant.enforceDeliveryZones ?? true,
+        deliveryMaxDistanceKm: merchant.deliveryMaxDistanceKm ? parseFloat(merchant.deliveryMaxDistanceKm) : null,
+        deliveryFeeBase: merchant.deliveryFeeBase ? parseFloat(merchant.deliveryFeeBase) : 0,
+        deliveryFeePerKm: merchant.deliveryFeePerKm ? parseFloat(merchant.deliveryFeePerKm) : 0,
+        deliveryFeeMin: merchant.deliveryFeeMin ? parseFloat(merchant.deliveryFeeMin) : null,
+        deliveryFeeMax: merchant.deliveryFeeMax ? parseFloat(merchant.deliveryFeeMax) : null,
         // Sale mode settings
         isDineInEnabled: merchant.isDineInEnabled ?? true,
         isTakeawayEnabled: merchant.isTakeawayEnabled ?? true,
         dineInLabel: merchant.dineInLabel || "",
         takeawayLabel: merchant.takeawayLabel || "",
+        deliveryLabel: merchant.deliveryLabel || "",
         dineInScheduleStart: merchant.dineInScheduleStart || "",
         dineInScheduleEnd: merchant.dineInScheduleEnd || "",
         takeawayScheduleStart: merchant.takeawayScheduleStart || "",
         takeawayScheduleEnd: merchant.takeawayScheduleEnd || "",
+        deliveryScheduleStart: merchant.deliveryScheduleStart || "",
+        deliveryScheduleEnd: merchant.deliveryScheduleEnd || "",
         totalTables: merchant.totalTables ?? null,
         // Fee settings
         enableTax: merchant.enableTax || false,
@@ -279,14 +317,24 @@ export default function EditMerchantPage() {
         timezone: merchant.timezone || "Australia/Sydney",
         latitude: merchant.latitude ? parseFloat(merchant.latitude) : null,
         longitude: merchant.longitude ? parseFloat(merchant.longitude) : null,
+        isDeliveryEnabled: merchant.isDeliveryEnabled ?? false,
+        enforceDeliveryZones: merchant.enforceDeliveryZones ?? true,
+        deliveryMaxDistanceKm: merchant.deliveryMaxDistanceKm ? parseFloat(merchant.deliveryMaxDistanceKm) : null,
+        deliveryFeeBase: merchant.deliveryFeeBase ? parseFloat(merchant.deliveryFeeBase) : 0,
+        deliveryFeePerKm: merchant.deliveryFeePerKm ? parseFloat(merchant.deliveryFeePerKm) : 0,
+        deliveryFeeMin: merchant.deliveryFeeMin ? parseFloat(merchant.deliveryFeeMin) : null,
+        deliveryFeeMax: merchant.deliveryFeeMax ? parseFloat(merchant.deliveryFeeMax) : null,
         isDineInEnabled: merchant.isDineInEnabled ?? true,
         isTakeawayEnabled: merchant.isTakeawayEnabled ?? true,
         dineInLabel: merchant.dineInLabel || "",
         takeawayLabel: merchant.takeawayLabel || "",
+        deliveryLabel: merchant.deliveryLabel || "",
         dineInScheduleStart: merchant.dineInScheduleStart || "",
         dineInScheduleEnd: merchant.dineInScheduleEnd || "",
         takeawayScheduleStart: merchant.takeawayScheduleStart || "",
         takeawayScheduleEnd: merchant.takeawayScheduleEnd || "",
+        deliveryScheduleStart: merchant.deliveryScheduleStart || "",
+        deliveryScheduleEnd: merchant.deliveryScheduleEnd || "",
         totalTables: merchant.totalTables ?? null,
         enableTax: merchant.enableTax || false,
         taxPercentage: merchant.taxPercentage ? parseFloat(merchant.taxPercentage) : 0,
@@ -465,13 +513,24 @@ export default function EditMerchantPage() {
       }
 
       // Update merchant basic info
+      // Normalize optional schedule fields to preserve null defaults
+      const merchantPayload = {
+        ...formData,
+        dineInScheduleStart: formData.dineInScheduleStart || null,
+        dineInScheduleEnd: formData.dineInScheduleEnd || null,
+        takeawayScheduleStart: formData.takeawayScheduleStart || null,
+        takeawayScheduleEnd: formData.takeawayScheduleEnd || null,
+        deliveryScheduleStart: formData.deliveryScheduleStart || null,
+        deliveryScheduleEnd: formData.deliveryScheduleEnd || null,
+      };
+
       const merchantResponse = await fetch("/api/merchant/profile", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(merchantPayload),
       });
 
       const merchantData = await merchantResponse.json();
@@ -583,9 +642,7 @@ export default function EditMerchantPage() {
             ) : (
               <div className="flex h-full w-full items-center justify-center bg-gray-100 dark:bg-gray-800">
                 <div className="text-center">
-                  <svg className="mx-auto h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
+                  <FaImage className="mx-auto h-8 w-8 text-gray-400" />
                   <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t("admin.merchantEdit.noBanner")}</p>
                 </div>
               </div>
@@ -693,14 +750,51 @@ export default function EditMerchantPage() {
     </div>
   );
 
+  const DeliveryTab = () => (
+    <DeliverySettingsTab
+      authToken={authToken}
+      formData={formData as unknown as Record<string, unknown> & {
+        code: string;
+        currency: string;
+        latitude: number | null;
+        longitude: number | null;
+        isDeliveryEnabled: boolean;
+        enforceDeliveryZones: boolean;
+        deliveryMaxDistanceKm: number | null;
+        deliveryFeeBase: number;
+        deliveryFeePerKm: number;
+        deliveryFeeMin: number | null;
+        deliveryFeeMax: number | null;
+      }}
+      setFormData={(updater) =>
+        setFormData((prev) => updater(prev as unknown as any) as unknown as MerchantFormData)
+      }
+      showSuccess={showSuccess}
+      showError={showError}
+    />
+  );
+
   /**
    * Sale Modes Tab - Dine in, Takeaway toggles, labels, schedules, tables
    */
   const SaleModesTab = () => (
     <div className="space-y-6">
       <p className="text-sm text-gray-500 dark:text-gray-400">
-        Configure which ordering modes are available for customers. At least one mode must be enabled.
+        Configure which ordering modes are available for customers, plus the schedule rules that control when each mode is active.
       </p>
+
+      {formData.latitude === null || formData.longitude === null ? (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700 dark:border-amber-900/40 dark:bg-amber-900/10 dark:text-amber-300">
+          Delivery requires merchant coordinates. Set merchant location in the Location tab.
+        </div>
+      ) : null}
+
+      <div>
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Choose modes</h3>
+        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+          At least one mode must be enabled.
+        </p>
+      </div>
 
       {/* Mode Toggles */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -716,7 +810,7 @@ export default function EditMerchantPage() {
                 type="checkbox"
                 checked={formData.isDineInEnabled}
                 onChange={(e) => {
-                  if (!e.target.checked && !formData.isTakeawayEnabled) {
+                  if (!e.target.checked && !formData.isTakeawayEnabled && !formData.isDeliveryEnabled) {
                     showError("Error", "At least one sale mode must be enabled");
                     return;
                   }
@@ -741,7 +835,7 @@ export default function EditMerchantPage() {
                 type="checkbox"
                 checked={formData.isTakeawayEnabled}
                 onChange={(e) => {
-                  if (!e.target.checked && !formData.isDineInEnabled) {
+                  if (!e.target.checked && !formData.isDineInEnabled && !formData.isDeliveryEnabled) {
                     showError("Error", "At least one sale mode must be enabled");
                     return;
                   }
@@ -753,6 +847,44 @@ export default function EditMerchantPage() {
             </label>
           </div>
         </div>
+
+        {/* Delivery Toggle */}
+        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50 sm:col-span-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">Delivery</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Allow customers to order for delivery</p>
+            </div>
+            <label className="relative inline-flex cursor-pointer items-center">
+              <input
+                type="checkbox"
+                checked={formData.isDeliveryEnabled}
+                disabled={(formData.latitude === null || formData.longitude === null) && !formData.isDeliveryEnabled}
+                onChange={(e) => {
+                  const next = e.target.checked;
+                  if (next && (formData.latitude === null || formData.longitude === null)) {
+                    showError('Error', 'Set merchant location first (Location tab) to enable delivery');
+                    return;
+                  }
+                  if (!next && !formData.isDineInEnabled && !formData.isTakeawayEnabled) {
+                    showError('Error', 'At least one sale mode must be enabled');
+                    return;
+                  }
+                  setFormData((prev) => ({ ...prev, isDeliveryEnabled: next }));
+                }}
+                className="peer sr-only"
+              />
+              <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-disabled:cursor-not-allowed peer-disabled:opacity-50 dark:bg-gray-700" />
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Schedules</h3>
+        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+          Global schedules are the default. Use per-day schedules and special hours for overrides.
+        </p>
       </div>
 
       {/* Custom Labels - Collapsible */}
@@ -777,9 +909,7 @@ export default function EditMerchantPage() {
               <p className="text-xs text-gray-500 dark:text-gray-400">Customize the labels for ordering mode buttons</p>
             </div>
           </div>
-          <svg className={`h-5 w-5 text-gray-500 transition-transform ${showCustomLabels ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
+          <FaChevronDown className={`h-5 w-5 text-gray-500 transition-transform ${showCustomLabels ? 'rotate-180' : ''}`} />
         </button>
         {showCustomLabels && (
           <div className="border-t border-gray-200 p-4 dark:border-gray-800">
@@ -806,6 +936,20 @@ export default function EditMerchantPage() {
                   value={formData.takeawayLabel}
                   onChange={(e) => setFormData(prev => ({ ...prev, takeawayLabel: e.target.value }))}
                   placeholder="Takeaway"
+                  className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                />
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Leave empty to use default</p>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Delivery Button Label
+                </label>
+                <input
+                  type="text"
+                  value={formData.deliveryLabel}
+                  onChange={(e) => setFormData(prev => ({ ...prev, deliveryLabel: e.target.value }))}
+                  placeholder="Delivery"
                   className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
                 />
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Leave empty to use default</p>
@@ -837,12 +981,65 @@ export default function EditMerchantPage() {
               <p className="text-xs text-gray-500 dark:text-gray-400">Set time ranges when each mode is available</p>
             </div>
           </div>
-          <svg className={`h-5 w-5 text-gray-500 transition-transform ${showModeSchedules ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
+          <FaChevronDown className={`h-5 w-5 text-gray-500 transition-transform ${showModeSchedules ? 'rotate-180' : ''}`} />
         </button>
         {showModeSchedules && (
           <div className="space-y-4 border-t border-gray-200 p-4 dark:border-gray-800">
+            {/* Quick Presets */}
+            <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900/50">
+              <p className="text-sm font-medium text-gray-900 dark:text-white">Quick presets</p>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Apply common schedule patterns to all modes (Dine In, Takeaway, Delivery).
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setFormData((prev) => ({
+                    ...prev,
+                    dineInScheduleStart: '',
+                    dineInScheduleEnd: '',
+                    takeawayScheduleStart: '',
+                    takeawayScheduleEnd: '',
+                    deliveryScheduleStart: '',
+                    deliveryScheduleEnd: '',
+                  }))}
+                  className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-200"
+                >
+                  Always available
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData((prev) => ({
+                    ...prev,
+                    dineInScheduleStart: '11:00',
+                    dineInScheduleEnd: '21:00',
+                    takeawayScheduleStart: '11:00',
+                    takeawayScheduleEnd: '21:00',
+                    deliveryScheduleStart: '11:00',
+                    deliveryScheduleEnd: '21:00',
+                  }))}
+                  className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-200"
+                >
+                  Standard (11:00–21:00)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData((prev) => ({
+                    ...prev,
+                    dineInScheduleStart: '17:00',
+                    dineInScheduleEnd: '22:00',
+                    takeawayScheduleStart: '17:00',
+                    takeawayScheduleEnd: '22:00',
+                    deliveryScheduleStart: '17:00',
+                    deliveryScheduleEnd: '22:00',
+                  }))}
+                  className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-200"
+                >
+                  Dinner only (17:00–22:00)
+                </button>
+              </div>
+            </div>
+
             {/* Dine In Schedule */}
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
               <p className="mb-3 text-sm font-medium text-gray-700 dark:text-gray-300">Dine In Available Hours</p>
@@ -892,21 +1089,64 @@ export default function EditMerchantPage() {
                 </div>
               </div>
             </div>
+
+            {/* Delivery Schedule */}
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Delivery Available Hours</p>
+                {!formData.isDeliveryEnabled && (
+                  <span className="text-xs text-gray-500 dark:text-gray-400">Enable Delivery above to use this</span>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1 block text-xs text-gray-500 dark:text-gray-400">From</label>
+                  <input
+                    type="time"
+                    value={formData.deliveryScheduleStart}
+                    onChange={(e) => setFormData(prev => ({ ...prev, deliveryScheduleStart: e.target.value }))}
+                    disabled={!formData.isDeliveryEnabled}
+                    className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-gray-500 dark:text-gray-400">To</label>
+                  <input
+                    type="time"
+                    value={formData.deliveryScheduleEnd}
+                    onChange={(e) => setFormData(prev => ({ ...prev, deliveryScheduleEnd: e.target.value }))}
+                    disabled={!formData.isDeliveryEnabled}
+                    className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                  />
+                </div>
+              </div>
+              <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                Leave empty to follow opening hours. Special Hours and Per-Day Mode Schedules override this.
+              </p>
+            </div>
           </div>
         )}
       </div>
+    </div>
+  );
 
-      {/* Per-Day Mode Schedules */}
-      {authToken && (
-        <PerDayModeSchedule token={authToken} />
-      )}
+  /**
+   * Table Settings Tab - Total tables used for QR generation
+   */
+  const TableSettingsTab = () => (
+    <div className="space-y-6">
+      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-100 dark:bg-brand-900/20">
+            <FaInfoCircle className="h-5 w-5 text-brand-600 dark:text-brand-400" />
+          </div>
+          <div>
+            <h4 className="text-sm font-medium text-gray-900 dark:text-white">Table settings</h4>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Configure table count for QR code ordering.</p>
+          </div>
+        </div>
+      </div>
 
-      {/* Special Hours / Holidays */}
-      {authToken && (
-        <SpecialHoursManager token={authToken} />
-      )}
-
-      {/* Total Tables */}
       <div>
         <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
           Total Tables
@@ -1089,9 +1329,7 @@ export default function EditMerchantPage() {
         {/* Regional Settings Info */}
         <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
           <div className="flex items-start gap-3">
-            <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+            <FaInfoCircle className="w-5 h-5 text-blue-500 mt-0.5" />
             <div>
               <p className="text-sm font-medium text-blue-800 dark:text-blue-300">
                 {t("admin.merchantEdit.regionInfo") || "Regional Settings"}
@@ -1194,10 +1432,11 @@ export default function EditMerchantPage() {
    * Opening Hours Tab - 7-day schedule
    */
   const OpeningHoursTab = () => (
-    <div className="space-y-4" data-tutorial="opening-hours-tab-content">
+    <div className="space-y-6" data-tutorial="opening-hours-tab-content">
       <p className="text-sm text-gray-500 dark:text-gray-400">
-        Set your store&apos;s operating hours for each day of the week.
+        Set your store&apos;s operating hours and schedule overrides.
       </p>
+
       <div className="space-y-2" data-tutorial="opening-hours-list">
         {openingHours.map((hour) => (
           <div
@@ -1239,6 +1478,54 @@ export default function EditMerchantPage() {
           </div>
         ))}
       </div>
+
+      {/* Per-Day Mode Schedules (advanced) */}
+      {authToken && (
+        <div className="rounded-lg border border-gray-200 dark:border-gray-800">
+          <button
+            type="button"
+            onClick={() => setShowPerDayModeSchedules((v) => !v)}
+            className="flex w-full items-center justify-between p-4 text-left"
+          >
+            <div>
+              <h4 className="text-sm font-medium text-gray-900 dark:text-white">Per-Day Mode Schedules</h4>
+              <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                Optional. Override mode availability by day (e.g. delivery only on weekends).
+              </p>
+            </div>
+            <FaChevronDown className={`h-5 w-5 text-gray-500 transition-transform ${showPerDayModeSchedules ? 'rotate-180' : ''}`} />
+          </button>
+          {showPerDayModeSchedules && (
+            <div className="border-t border-gray-200 p-4 dark:border-gray-800">
+              <PerDayModeSchedule token={authToken} embedded />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Special Hours / Holidays (advanced) */}
+      {authToken && (
+        <div className="rounded-lg border border-gray-200 dark:border-gray-800">
+          <button
+            type="button"
+            onClick={() => setShowSpecialHours((v) => !v)}
+            className="flex w-full items-center justify-between p-4 text-left"
+          >
+            <div>
+              <h4 className="text-sm font-medium text-gray-900 dark:text-white">Special Hours / Holidays</h4>
+              <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                Optional. Add one-off hours (holidays, events) and delivery overrides.
+              </p>
+            </div>
+            <FaChevronDown className={`h-5 w-5 text-gray-500 transition-transform ${showSpecialHours ? 'rotate-180' : ''}`} />
+          </button>
+          {showSpecialHours && (
+            <div className="border-t border-gray-200 p-4 dark:border-gray-800">
+              <SpecialHoursManager token={authToken} embedded />
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 
@@ -1332,8 +1619,12 @@ export default function EditMerchantPage() {
         return <BasicInfoTab />;
       case "sale-modes":
         return <SaleModesTab />;
+      case "table-settings":
+        return <TableSettingsTab />;
       case "fees":
         return <FeesTab />;
+      case "delivery":
+        return <DeliveryTab />;
       case "location":
         return <LocationTab />;
       case "hours":
@@ -1377,9 +1668,7 @@ export default function EditMerchantPage() {
             {hasExistingPin && (
               <div className="rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-900/20">
                 <div className="flex items-center gap-2">
-                  <svg className="h-5 w-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
+                  <FaCheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
                   <span className="text-sm font-medium text-green-700 dark:text-green-400">
                     Delete PIN is currently enabled
                   </span>
@@ -1596,9 +1885,7 @@ export default function EditMerchantPage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
             <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900">
               <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-warning-100 dark:bg-warning-900/30">
-                <svg className="h-6 w-6 text-warning-600 dark:text-warning-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
+                <FaExclamationTriangle className="h-6 w-6 text-warning-600 dark:text-warning-400" />
               </div>
               <h3 className="mb-2 text-lg font-semibold text-gray-900 dark:text-white">Unsaved Changes</h3>
               <p className="mb-6 text-sm text-gray-600 dark:text-gray-400">

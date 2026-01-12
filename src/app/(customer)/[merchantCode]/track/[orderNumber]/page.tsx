@@ -2,7 +2,20 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { FaArrowLeft, FaSync, FaClock, FaCheckCircle, FaBolt, FaBell, FaCheck, FaStickyNote } from 'react-icons/fa';
+import {
+    FaArrowLeft,
+    FaSync,
+    FaClock,
+    FaCheckCircle,
+    FaBolt,
+    FaBell,
+    FaCheck,
+    FaStickyNote,
+    FaTruck,
+    FaExclamationTriangle,
+    FaUsers,
+    FaCalculator,
+} from 'react-icons/fa';
 import { TrackOrderSkeleton } from '@/components/common/SkeletonLoaders';
 import { formatCurrency } from '@/lib/utils/format';
 import { useTranslation } from '@/lib/i18n/useTranslation';
@@ -12,17 +25,24 @@ import { customerHistoryUrl, customerMerchantHomeUrl } from '@/lib/utils/custome
 
 // Order status types
 type OrderStatus = 'PENDING' | 'ACCEPTED' | 'IN_PROGRESS' | 'READY' | 'COMPLETED' | 'CANCELLED';
+type DeliveryStatus = 'PENDING_ASSIGNMENT' | 'ASSIGNED' | 'PICKED_UP' | 'DELIVERED' | 'FAILED';
 
 interface OrderData {
     id: string;
     orderNumber: string;
     status: OrderStatus;
-    orderType: 'DINE_IN' | 'TAKEAWAY';
+    orderType: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY';
     tableNumber: string | null;
     customerName: string;
     totalAmount: number;
     createdAt: string;
     updatedAt: string;
+    deliveryStatus?: DeliveryStatus | null;
+    deliveryUnit?: string | null;
+    deliveryAddress?: string | null;
+    deliveryFeeAmount?: number;
+    deliveryDistanceKm?: number | null;
+    deliveryDeliveredAt?: string | null;
     orderItems: Array<{
         menuName: string;
         quantity: number;
@@ -38,6 +58,12 @@ interface OrderData {
         name: string;
         currency: string;
     };
+    payment?: {
+        status?: string;
+        paymentMethod?: string;
+        amount?: number;
+        paidAt?: string | null;
+    } | null;
     completedAt?: string | null;
     placedAt?: string | null;
 }
@@ -89,12 +115,41 @@ interface StatusStep {
     descriptionKey: TranslationKeys;
 }
 
+interface DeliveryStatusStep {
+    status: DeliveryStatus;
+    labelKey: TranslationKeys;
+    descriptionKey: TranslationKeys;
+}
+
 const STATUS_STEPS: StatusStep[] = [
     { status: 'PENDING', labelKey: 'customer.status.pending', icon: '1', descriptionKey: 'customer.status.pendingDesc' },
     { status: 'ACCEPTED', labelKey: 'customer.status.accepted', icon: '2', descriptionKey: 'customer.status.acceptedDesc' },
     { status: 'IN_PROGRESS', labelKey: 'customer.status.preparing', icon: '3', descriptionKey: 'customer.status.preparingDesc' },
     { status: 'READY', labelKey: 'customer.status.ready', icon: '4', descriptionKey: 'customer.status.readyDesc' },
     { status: 'COMPLETED', labelKey: 'customer.status.completed', icon: '✓', descriptionKey: 'customer.status.completedDesc' },
+];
+
+const DELIVERY_STATUS_STEPS: DeliveryStatusStep[] = [
+    {
+        status: 'PENDING_ASSIGNMENT',
+        labelKey: 'customer.deliveryStatus.pendingAssignment',
+        descriptionKey: 'customer.deliveryStatus.pendingAssignmentDesc',
+    },
+    {
+        status: 'ASSIGNED',
+        labelKey: 'customer.deliveryStatus.assigned',
+        descriptionKey: 'customer.deliveryStatus.assignedDesc',
+    },
+    {
+        status: 'PICKED_UP',
+        labelKey: 'customer.deliveryStatus.pickedUp',
+        descriptionKey: 'customer.deliveryStatus.pickedUpDesc',
+    },
+    {
+        status: 'DELIVERED',
+        labelKey: 'customer.deliveryStatus.delivered',
+        descriptionKey: 'customer.deliveryStatus.deliveredDesc',
+    },
 ];
 
 /**
@@ -115,6 +170,7 @@ export default function OrderTrackPage() {
 
     const merchantCode = params.merchantCode as string;
     const orderNumber = params.orderNumber as string;
+    const token = searchParams.get('token') || '';
 
     const [order, setOrder] = useState<OrderData | null>(null);
     const [groupOrderData, setGroupOrderData] = useState<GroupOrderData | null>(null);
@@ -135,7 +191,8 @@ export default function OrderTrackPage() {
         if (showLoadingSpinner) setIsRefreshing(true);
 
         try {
-            const response = await fetch(`/api/public/orders/${orderNumber}`);
+            const query = `?token=${encodeURIComponent(token)}`;
+            const response = await fetch(`/api/public/orders/${orderNumber}${query}`);
             const data = await response.json();
 
             if (!response.ok) {
@@ -171,6 +228,12 @@ export default function OrderTrackPage() {
                 updatedAt: data.data.updatedAt,
                 completedAt: data.data.completedAt,
                 placedAt: data.data.placedAt,
+                deliveryStatus: data.data.deliveryStatus,
+                deliveryUnit: data.data.deliveryUnit ?? null,
+                deliveryAddress: data.data.deliveryAddress,
+                deliveryFeeAmount: convertDecimal(data.data.deliveryFeeAmount),
+                deliveryDistanceKm: data.data.deliveryDistanceKm ? convertDecimal(data.data.deliveryDistanceKm) : null,
+                deliveryDeliveredAt: data.data.deliveryDeliveredAt ?? null,
                 orderItems: data.data.orderItems?.map((item: {
                     menuName: string;
                     quantity: number;
@@ -192,11 +255,19 @@ export default function OrderTrackPage() {
                     name: data.data.merchant?.name || '',
                     currency: data.data.merchant?.currency || 'AUD',
                 },
+                                payment: data.data.payment
+                                    ? {
+                                            status: data.data.payment.status,
+                                            paymentMethod: data.data.payment.paymentMethod,
+                                            amount: convertDecimal(data.data.payment.amount),
+                                            paidAt: data.data.payment.paidAt || null,
+                                        }
+                                    : null,
             });
 
             // Fetch group order details (if any)
             try {
-                const groupResponse = await fetch(`/api/public/orders/${orderNumber}/group-details`);
+                const groupResponse = await fetch(`/api/public/orders/${orderNumber}/group-details?token=${encodeURIComponent(token)}`);
                 const groupData = await groupResponse.json();
                 if (groupResponse.ok && groupData.success) {
                     setGroupOrderData(groupData.data);
@@ -215,7 +286,7 @@ export default function OrderTrackPage() {
             setIsLoading(false);
             setIsRefreshing(false);
         }
-    }, [orderNumber]);
+    }, [orderNumber, token]);
 
     // Initial fetch
     useEffect(() => {
@@ -241,7 +312,7 @@ export default function OrderTrackPage() {
 
         const checkFeedback = async () => {
             try {
-                const response = await fetch(`/api/public/orders/${orderNumber}/feedback`);
+                const response = await fetch(`/api/public/orders/${orderNumber}/feedback?token=${encodeURIComponent(token)}`);
                 const data = await response.json();
                 if (data.success) {
                     setHasFeedback(data.hasFeedback);
@@ -260,15 +331,17 @@ export default function OrderTrackPage() {
     useEffect(() => {
         if (!order || !feedbackChecked) return;
 
-        if (order.status === 'COMPLETED' && !hasFeedback) {
-            // Calculate completion time if available
-            if (order.completedAt && order.placedAt) {
-                const completedTime = new Date(order.completedAt).getTime();
+        const isDelivery = order.orderType === 'DELIVERY';
+        const isDelivered = order.deliveryStatus === 'DELIVERED' || !!order.deliveryDeliveredAt;
+
+        if (isDelivery && isDelivered && !hasFeedback) {
+            const completedAt = order.deliveryDeliveredAt || order.completedAt;
+            if (completedAt && order.placedAt) {
+                const completedTime = new Date(completedAt).getTime();
                 const placedTime = new Date(order.placedAt).getTime();
                 const minutes = Math.round((completedTime - placedTime) / (1000 * 60));
                 setCompletionTimeMinutes(minutes);
             }
-            // Small delay for smooth UX
             const timer = setTimeout(() => {
                 setShowFeedbackModal(true);
             }, 1000);
@@ -283,7 +356,7 @@ export default function OrderTrackPage() {
         foodRating?: number;
         comment?: string;
     }) => {
-        const response = await fetch(`/api/public/orders/${orderNumber}/feedback`, {
+        const response = await fetch(`/api/public/orders/${orderNumber}/feedback?token=${encodeURIComponent(token)}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(feedback),
@@ -304,6 +377,12 @@ export default function OrderTrackPage() {
     const getCurrentStepIndex = (status: OrderStatus): number => {
         if (status === 'CANCELLED') return -1;
         return STATUS_STEPS.findIndex(step => step.status === status);
+    };
+
+    const getCurrentDeliveryStepIndex = (status: DeliveryStatus | null | undefined): number => {
+        if (!status) return 0;
+        const idx = DELIVERY_STATUS_STEPS.findIndex(step => step.status === status);
+        return idx >= 0 ? idx : 0;
     };
 
     // Calculate estimated wait time based on status
@@ -357,9 +436,7 @@ export default function OrderTrackPage() {
         return (
             <div className="flex-1 flex items-center justify-center px-4">
                 <div className="text-center max-w-sm">
-                    <svg className="w-16 h-16 mx-auto mb-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+                    <FaExclamationTriangle className="w-16 h-16 mx-auto mb-4 text-red-400" />
                     <p className="text-base text-gray-900 font-semibold mb-2">
                         {t('customer.track.orderNotFound')}
                     </p>
@@ -425,7 +502,11 @@ export default function OrderTrackPage() {
                         </span>
                     </div>
                     <p className="text-sm text-gray-600">
-                        {order.orderType === 'DINE_IN' ? `${t('admin.orders.table')} #${order.tableNumber}` : t('customer.track.takeawayOrder')}
+                        {order.orderType === 'DINE_IN'
+                            ? `${t('admin.orders.table')} #${order.tableNumber}`
+                            : order.orderType === 'DELIVERY'
+                                ? t('customer.track.deliveryOrder')
+                                : t('customer.track.takeawayOrder')}
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
                         {t('customer.track.lastUpdated')} {lastUpdated.toLocaleTimeString()}
@@ -437,9 +518,7 @@ export default function OrderTrackPage() {
                     {isCancelled ? (
                         /* Cancelled State */
                         <div className="text-center py-8">
-                            <svg className="w-16 h-16 mx-auto mb-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
+                            <FaExclamationTriangle className="w-16 h-16 mx-auto mb-4 text-red-400" />
                             <h2 className="text-xl font-bold text-red-600 mb-2">{t('customer.track.orderCancelled')}</h2>
                             <p className="text-sm text-gray-600">
                                 {t('customer.status.cancelledDesc')}
@@ -529,10 +608,158 @@ export default function OrderTrackPage() {
 
                                 {isReady && (
                                     <p className="mt-3 text-sm text-green-600 font-medium">
-                                        {t('customer.track.pickupMessage')}
+                                        {order.orderType === 'DELIVERY'
+                                            ? t('customer.track.deliveryReadyMessage')
+                                            : t('customer.track.pickupMessage')}
                                     </p>
                                 )}
                             </div>
+
+                            {/* Payment Summary */}
+                            {order.payment && (
+                                <div className="border border-gray-200 rounded-xl p-6 bg-white mb-6">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-sm font-semibold text-gray-900">Payment</p>
+                                        <span
+                                            className={`rounded-full px-2.5 py-1 text-xs font-medium ${order.payment.status === 'COMPLETED'
+                                                    ? 'bg-green-100 text-green-700'
+                                                    : 'bg-yellow-100 text-yellow-800'
+                                                }`}
+                                        >
+                                            {order.payment.status || '—'}
+                                        </span>
+                                    </div>
+
+                                    <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                        <div>
+                                            <p className="text-xs text-gray-500">Method</p>
+                                            <p className="text-sm font-medium text-gray-900">
+                                                {order.payment.paymentMethod === 'CASH_ON_DELIVERY'
+                                                    ? 'Cash on Delivery'
+                                                    : (order.payment.paymentMethod || '—')}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-gray-500">Amount</p>
+                                            <p className="text-sm font-medium text-gray-900">
+                                                {typeof order.payment.amount === 'number'
+                                                    ? formatPrice(order.payment.amount, order.merchant.currency)
+                                                    : '—'}
+                                            </p>
+                                        </div>
+                                        <div className="sm:col-span-2">
+                                            <p className="text-xs text-gray-500">Paid at</p>
+                                            <p className="text-sm font-medium text-gray-900">
+                                                {order.payment.paidAt ? new Date(order.payment.paidAt).toLocaleString() : '—'}
+                                            </p>
+                                            {order.payment.paymentMethod === 'CASH_ON_DELIVERY' && order.payment.status === 'PENDING' && (
+                                                <p className="mt-1 text-xs text-gray-500">
+                                                    Pay the driver when the order arrives.
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Delivery Status Progress (Delivery orders only) */}
+                            {order.orderType === 'DELIVERY' && (
+                                <div className="border border-gray-200 rounded-xl p-6 bg-white">
+                                    <div className="flex items-start justify-between gap-4 mb-4">
+                                        <div>
+                                            <p className="text-sm font-semibold text-gray-900">{t('customer.track.deliverySectionTitle')}</p>
+                                            <p className="text-xs text-gray-500 mt-1">
+                                                {order.deliveryAddress
+                                                    ? (order.deliveryUnit
+                                                        ? `${order.deliveryUnit}, ${order.deliveryAddress}`
+                                                        : order.deliveryAddress)
+                                                    : t('customer.track.deliveryNoAddress')}
+                                            </p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-xs text-gray-500">{t('customer.track.deliveryFee')}</p>
+                                            <p className="text-sm font-semibold text-gray-900">
+                                                {formatPrice(order.deliveryFeeAmount || 0, order.merchant.currency)}
+                                            </p>
+                                            {order.deliveryDistanceKm !== null && order.deliveryDistanceKm !== undefined && (
+                                                <p className="text-xs text-gray-500 mt-1">
+                                                    {t('customer.track.deliveryDistance')} {Number(order.deliveryDistanceKm).toFixed(2)} km
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {order.deliveryStatus === 'FAILED' ? (
+                                        <div className="text-center py-6">
+                                            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-red-100 text-red-600 flex items-center justify-center">
+                                                <FaExclamationTriangle className="w-6 h-6" />
+                                            </div>
+                                            <p className="text-base font-semibold text-red-600">{t('customer.deliveryStatus.failed')}</p>
+                                            <p className="text-sm text-gray-600 mt-1">{t('customer.deliveryStatus.failedDesc')}</p>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            {/* Delivery Progress Bar */}
+                                            <div className="relative mb-6">
+                                                <div className="absolute top-4 left-0 right-0 h-1 bg-gray-200 rounded-full" />
+
+                                                <div
+                                                    className="absolute top-4 left-0 h-1 bg-orange-500 rounded-full transition-all duration-500"
+                                                    style={{
+                                                        width: `${(getCurrentDeliveryStepIndex(order.deliveryStatus || 'PENDING_ASSIGNMENT') / (DELIVERY_STATUS_STEPS.length - 1)) * 100}%`,
+                                                    }}
+                                                />
+
+                                                <div className="relative flex justify-between">
+                                                    {DELIVERY_STATUS_STEPS.map((step, index) => {
+                                                        const currentDeliveryIndex = getCurrentDeliveryStepIndex(order.deliveryStatus || 'PENDING_ASSIGNMENT');
+                                                        const isActive = index <= currentDeliveryIndex;
+                                                        const isCurrent = index === currentDeliveryIndex;
+
+                                                        return (
+                                                            <div key={step.status} className="flex flex-col items-center">
+                                                                <div
+                                                                    className={`
+                                      w-8 h-8 rounded-full flex items-center justify-center text-sm
+                                      transition-all duration-300
+                                      ${isCurrent
+                                                                            ? 'bg-orange-500 text-white ring-4 ring-orange-200 scale-110'
+                                                                            : isActive
+                                                                                ? 'bg-orange-500 text-white'
+                                                                                : 'bg-gray-200 text-gray-500'}
+                                    `}
+                                                                >
+                                                                    {step.status === 'PENDING_ASSIGNMENT' && <FaClock className="w-4 h-4" />}
+                                                                    {step.status === 'ASSIGNED' && <FaCheckCircle className="w-4 h-4" />}
+                                                                    {step.status === 'PICKED_UP' && <FaTruck className="w-4 h-4" />}
+                                                                    {step.status === 'DELIVERED' && <FaCheck className="w-4 h-4" />}
+                                                                </div>
+
+                                                                <span className={`
+                                      mt-2 text-xs font-medium text-center
+                                      ${isCurrent ? 'text-orange-600' : isActive ? 'text-gray-900' : 'text-gray-400'}
+                                    `}>
+                                                                    {t(step.labelKey)}
+                                                                </span>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+
+                                            <div className="text-center">
+                                                <p className="text-base font-semibold text-gray-900">
+                                                    {t(
+                                                        DELIVERY_STATUS_STEPS[
+                                                            getCurrentDeliveryStepIndex(order.deliveryStatus || 'PENDING_ASSIGNMENT')
+                                                        ]?.descriptionKey
+                                                    )}
+                                                </p>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            )}
                         </>
                     )}
                 </div>
@@ -543,9 +770,7 @@ export default function OrderTrackPage() {
                         <div className="flex items-center justify-between p-4 bg-purple-50 border border-purple-200 rounded-xl">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center">
-                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                                    </svg>
+                                    <FaUsers className="w-5 h-5 text-white" />
                                 </div>
                                 <div>
                                     <p className="text-sm font-semibold text-purple-700">
@@ -572,9 +797,7 @@ export default function OrderTrackPage() {
                         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
                             <div className="p-4 bg-gray-50 border-b border-gray-200">
                                 <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                                    </svg>
+                                    <FaCalculator className="w-4 h-4" />
                                     Bill Split by Participant
                                 </h3>
                             </div>

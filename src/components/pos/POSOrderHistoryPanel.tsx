@@ -250,7 +250,7 @@ export const POSOrderHistoryPanel: React.FC<POSOrderHistoryPanelProps> = ({
   }, [refundingOrderId, selectedOrder, onRefundSuccess]);
 
   // Print receipt using unified receipt generator
-  const handlePrintReceipt = (order: Order) => {
+  const handlePrintReceipt = async (order: Order) => {
     const rawSettings = (merchantInfo?.receiptSettings || {}) as Partial<ReceiptSettings>;
     const language: 'en' | 'id' =
       rawSettings.receiptLanguage === 'id' || rawSettings.receiptLanguage === 'en'
@@ -266,15 +266,42 @@ export const POSOrderHistoryPanel: React.FC<POSOrderHistoryPanelProps> = ({
       receiptLanguage: language,
       paperSize: rawSettings.paperSize === '58mm' ? '58mm' : '80mm',
     };
+
+    let trackingToken: string | null = null;
+    if (settings.showTrackingQRCode) {
+      try {
+        const token = localStorage.getItem('accessToken');
+        if (token) {
+          const mintRes = await fetch(`/api/merchant/orders/${order.id}/tracking-token`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const mintJson = await mintRes.json();
+          if (mintRes.ok && mintJson?.success) {
+            trackingToken = mintJson?.data?.trackingToken || null;
+          }
+        }
+      } catch {
+        trackingToken = null;
+      }
+    }
     
     // Print using unified receipt generator
     printReceipt({
       order: {
+        orderId: order.id,
         orderNumber: order.orderNumber,
         orderType: order.orderType,
         tableNumber: order.tableNumber,
+        deliveryUnit: (order as any).deliveryUnit,
+        deliveryBuildingName: (order as any).deliveryBuildingName,
+        deliveryBuildingNumber: (order as any).deliveryBuildingNumber,
+        deliveryFloor: (order as any).deliveryFloor,
+        deliveryInstructions: (order as any).deliveryInstructions,
+        deliveryAddress: (order as any).deliveryAddress,
         customerName: order.customerName,
         customerPhone: order.customerPhone,
+        customerEmail: (order as any).customerEmail,
+        trackingToken,
         placedAt: order.createdAt,
         paidAt: order.paidAt,
         items: order.items.map(item => ({

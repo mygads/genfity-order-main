@@ -22,7 +22,10 @@ const receiptTranslations = {
         type: 'Type',
         dineIn: 'Dine-in',
         takeaway: 'Takeaway',
+        delivery: 'Delivery',
         table: 'Table',
+        deliveryAddress: 'Delivery address',
+        deliveryFee: 'Delivery fee',
         customer: 'CUSTOMER',
         itemsOrdered: 'ITEMS ORDERED',
         note: 'Note',
@@ -46,7 +49,10 @@ const receiptTranslations = {
         type: 'Tipe',
         dineIn: 'Makan di Tempat',
         takeaway: 'Bawa Pulang',
+        delivery: 'Pengantaran',
         table: 'Meja',
+        deliveryAddress: 'Alamat pengantaran',
+        deliveryFee: 'Biaya pengantaran',
         customer: 'PELANGGAN',
         itemsOrdered: 'ITEM PESANAN',
         note: 'Catatan',
@@ -74,8 +80,10 @@ export interface OrderReceiptData {
     merchantAddress?: string;
     merchantPhone?: string;
     merchantLogo?: string | null;
-    orderType: 'DINE_IN' | 'TAKEAWAY';
+    orderType: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY';
     tableNumber?: string | null;
+    deliveryUnit?: string | null;
+    deliveryAddress?: string | null;
     customerName: string;
     customerEmail?: string;
     customerPhone?: string;
@@ -94,10 +102,12 @@ export interface OrderReceiptData {
     taxAmount?: number;
     serviceChargeAmount?: number;
     packagingFeeAmount?: number;
+    deliveryFeeAmount?: number;
     totalAmount: number;
     paymentMethod?: string;
     paymentStatus?: string;
     currency: string;
+    trackingToken?: string | null;
     // Staff who recorded the payment
     recordedBy?: {
         name: string;
@@ -255,7 +265,11 @@ export const generateOrderReceiptPdf = async (data: OrderReceiptData): Promise<v
                 if (!data.merchantCode || !data.orderNumber) return;
 
                 const baseUrl = getPublicAppOrigin('https://order.genfity.com');
-                const trackingUrl = `${baseUrl}/${data.merchantCode}/track/${data.orderNumber}`;
+                const orderNumberEncoded = encodeURIComponent(data.orderNumber);
+                if (!data.trackingToken) {
+                    throw new Error('trackingToken is required to generate tracking QR code');
+                }
+                const trackingUrl = `${baseUrl}/${data.merchantCode}/track/${orderNumberEncoded}?token=${encodeURIComponent(data.trackingToken)}`;
 
                 const qrDataUrl = await QRCode.toDataURL(trackingUrl, {
                     errorCorrectionLevel: 'M',
@@ -338,13 +352,44 @@ export const generateOrderReceiptPdf = async (data: OrderReceiptData): Promise<v
     // ==========================================
     // ORDER TYPE & TABLE (Prominent)
     // ==========================================
-    const orderTypeLabel = data.orderType === 'DINE_IN' ? t.dineIn : t.takeaway;
+    const orderTypeLabel =
+        data.orderType === 'DINE_IN'
+            ? t.dineIn
+            : data.orderType === 'DELIVERY'
+                ? t.delivery
+                : t.takeaway;
     let orderTypeDisplay = orderTypeLabel;
-    if (data.tableNumber) {
+    if (data.orderType === 'DINE_IN' && data.tableNumber) {
         orderTypeDisplay = `${orderTypeLabel} / ${t.table} ${data.tableNumber}`;
     }
     centerText(orderTypeDisplay, yPos, 10, true);
     yPos += 6;
+
+    const fullDeliveryAddress =
+        data.deliveryAddress
+            ? (data.deliveryUnit ? `${data.deliveryUnit}, ${data.deliveryAddress}` : data.deliveryAddress)
+            : null;
+
+    if (data.orderType === 'DELIVERY' && fullDeliveryAddress) {
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(80, 80, 80);
+
+        const addrLabel = `${t.deliveryAddress}:`;
+        const addrLabelWidth = doc.getTextWidth(addrLabel);
+        doc.text(addrLabel, (pageWidth - addrLabelWidth) / 2, yPos);
+        yPos += 4;
+
+        const addressLines = doc.splitTextToSize(fullDeliveryAddress, contentWidth);
+        for (const line of addressLines) {
+            const lineWidth = doc.getTextWidth(line);
+            doc.text(line, (pageWidth - lineWidth) / 2, yPos);
+            yPos += 3.5;
+        }
+
+        doc.setTextColor(0, 0, 0);
+        yPos += 1;
+    }
 
     addDashedLine(yPos);
     yPos += 5;
@@ -482,6 +527,11 @@ export const generateOrderReceiptPdf = async (data: OrderReceiptData): Promise<v
 
     if (data.packagingFeeAmount && data.packagingFeeAmount > 0) {
         addLeftRight(t.packagingFee, formatMoney(data.packagingFeeAmount, data.currency, lang), yPos);
+        yPos += 4;
+    }
+
+    if (data.deliveryFeeAmount && data.deliveryFeeAmount > 0) {
+        addLeftRight(t.deliveryFee, formatMoney(data.deliveryFeeAmount, data.currency, lang), yPos);
         yPos += 4;
     }
 

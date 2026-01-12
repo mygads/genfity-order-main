@@ -28,7 +28,7 @@ interface MerchantInfo {
 
 interface CustomerHeaderProps {
   merchantCode?: string;
-  mode?: 'dinein' | 'takeaway';
+  mode?: 'dinein' | 'takeaway' | 'delivery';
   title?: string;
   showBackButton?: boolean;
   onBack?: () => void;

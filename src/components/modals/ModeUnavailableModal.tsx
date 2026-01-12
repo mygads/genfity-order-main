@@ -18,10 +18,11 @@ import React from "react";
 
 interface ModeUnavailableModalProps {
   isOpen: boolean;
-  currentMode: 'dinein' | 'takeaway';
-  alternativeMode: 'dinein' | 'takeaway' | null;
+  currentMode: 'dinein' | 'takeaway' | 'delivery';
+  alternativeMode: 'dinein' | 'takeaway' | 'delivery' | null;
   dineInLabel?: string;
   takeawayLabel?: string;
+  deliveryLabel?: string;
   onSwitchMode: () => void;
   onGoBack: () => void;
 }
@@ -32,13 +33,20 @@ const ModeUnavailableModal: React.FC<ModeUnavailableModalProps> = ({
   alternativeMode,
   dineInLabel = 'Dine In',
   takeawayLabel = 'Takeaway',
+  deliveryLabel = 'Delivery',
   onSwitchMode,
   onGoBack,
 }) => {
   if (!isOpen) return null;
 
-  const currentModeLabel = currentMode === 'dinein' ? dineInLabel : takeawayLabel;
-  const alternativeModeLabel = alternativeMode === 'dinein' ? dineInLabel : takeawayLabel;
+  const getLabel = (m: 'dinein' | 'takeaway' | 'delivery') => {
+    if (m === 'dinein') return dineInLabel;
+    if (m === 'takeaway') return takeawayLabel;
+    return deliveryLabel;
+  };
+
+  const currentModeLabel = getLabel(currentMode);
+  const alternativeModeLabel = alternativeMode ? getLabel(alternativeMode) : '';
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center">
@@ -72,7 +80,7 @@ const ModeUnavailableModal: React.FC<ModeUnavailableModalProps> = ({
         {/* Header */}
         <div className="mb-2 text-center">
           <h3 className="text-lg font-semibold text-gray-900">
-            {currentModeLabel} No Longer Available
+                    {currentModeLabel} Not Available
           </h3>
         </div>
 

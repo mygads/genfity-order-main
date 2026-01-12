@@ -43,6 +43,7 @@ import {
   FaUserCog,
   FaTv,
   FaSmile,
+  FaTruck,
 } from "react-icons/fa";
 import MerchantBanner from "../components/merchants/MerchantBanner";
 
@@ -343,10 +344,37 @@ const merchantNavGroups: NavGroup[] = [
     titleKey: "admin.nav.team",
     items: [
       {
+        icon: <FaTruck />,
+        nameKey: "admin.nav.drivers",
+        path: "/admin/dashboard/drivers",
+        roles: ["MERCHANT_OWNER"],
+      },
+      {
         icon: <FaUserTie />,
         nameKey: "admin.nav.staff",
         path: "/admin/dashboard/staff",
         roles: ["MERCHANT_OWNER"], // Staff management is OWNER-ONLY
+      },
+    ],
+  },
+];
+
+// Delivery Driver Menu Groups
+const deliveryNavGroups: NavGroup[] = [
+  {
+    titleKey: "admin.nav.main",
+    items: [
+      {
+        icon: <FaTruck />,
+        nameKey: "admin.nav.dashboard",
+        path: "/admin/dashboard/delivery",
+        roles: ["DELIVERY"],
+      },
+      {
+        icon: <FaClipboardList />,
+        nameKey: "admin.nav.ordersKanban",
+        path: "/admin/dashboard/delivery/orders",
+        roles: ["DELIVERY"],
       },
     ],
   },
@@ -435,6 +463,8 @@ const AppSidebar: React.FC = () => {
           })
         }))
         .filter(group => group.items.length > 0); // Remove empty groups
+    } else if (user.role === "DELIVERY") {
+      return deliveryNavGroups;
     }
 
     return [];

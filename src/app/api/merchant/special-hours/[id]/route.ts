@@ -88,10 +88,13 @@ export const PUT = withMerchant(async (
         closeTime: body.closeTime !== undefined ? body.closeTime : existing.closeTime,
         isDineInEnabled: body.isDineInEnabled !== undefined ? body.isDineInEnabled : existing.isDineInEnabled,
         isTakeawayEnabled: body.isTakeawayEnabled !== undefined ? body.isTakeawayEnabled : existing.isTakeawayEnabled,
+        isDeliveryEnabled: body.isDeliveryEnabled !== undefined ? body.isDeliveryEnabled : existing.isDeliveryEnabled,
         dineInStartTime: body.dineInStartTime !== undefined ? body.dineInStartTime : existing.dineInStartTime,
         dineInEndTime: body.dineInEndTime !== undefined ? body.dineInEndTime : existing.dineInEndTime,
         takeawayStartTime: body.takeawayStartTime !== undefined ? body.takeawayStartTime : existing.takeawayStartTime,
         takeawayEndTime: body.takeawayEndTime !== undefined ? body.takeawayEndTime : existing.takeawayEndTime,
+        deliveryStartTime: body.deliveryStartTime !== undefined ? body.deliveryStartTime : existing.deliveryStartTime,
+        deliveryEndTime: body.deliveryEndTime !== undefined ? body.deliveryEndTime : existing.deliveryEndTime,
       },
     });
 

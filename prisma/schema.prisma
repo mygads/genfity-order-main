@@ -45,6 +45,7 @@ model User {
   notifications       UserNotification[]
   pushSubscriptions   PushSubscription[]
   stockPhotosUploaded StockPhoto[]       @relation("StockPhotoUploadedBy")
+  deliveryOrdersAssigned Order[]          @relation("DeliveryDriver")
 
   @@index([email])
   @@index([role])
@@ -366,14 +367,28 @@ model Merchant {
   isTakeawayEnabled      Boolean               @default(true) @map("is_takeaway_enabled")
   dineInLabel            String?               @map("dine_in_label")
   takeawayLabel          String?               @map("takeaway_label")
+  deliveryLabel          String?               @map("delivery_label")
   dineInScheduleStart    String?               @map("dine_in_schedule_start")
   dineInScheduleEnd      String?               @map("dine_in_schedule_end")
   takeawayScheduleStart  String?               @map("takeaway_schedule_start")
   takeawayScheduleEnd    String?               @map("takeaway_schedule_end")
+
+  // Optional global delivery schedule (HH:MM)
+  deliveryScheduleStart  String?               @map("delivery_schedule_start")
+  deliveryScheduleEnd    String?               @map("delivery_schedule_end")
   totalTables            Int?                  @map("total_tables")
   latitude               Decimal?              @db.Decimal(10, 8)
   longitude              Decimal?              @db.Decimal(11, 8)
   timezone               String                @default("Australia/Sydney")
+
+  // Delivery settings (default OFF)
+  isDeliveryEnabled          Boolean              @default(false) @map("is_delivery_enabled")
+  enforceDeliveryZones       Boolean              @default(true) @map("enforce_delivery_zones")
+  deliveryMaxDistanceKm      Decimal?             @map("delivery_max_distance_km") @db.Decimal(10, 3)
+  deliveryFeeBase            Decimal?             @map("delivery_fee_base") @db.Decimal(10, 2)
+  deliveryFeePerKm           Decimal?             @map("delivery_fee_per_km") @db.Decimal(10, 2)
+  deliveryFeeMin             Decimal?             @map("delivery_fee_min") @db.Decimal(10, 2)
+  deliveryFeeMax             Decimal?             @map("delivery_fee_max") @db.Decimal(10, 2)
   addonCategories        AddonCategory[]
   menuCategories         MenuCategory[]
   menus                  Menu[]
@@ -382,6 +397,7 @@ model Merchant {
   specialHours           MerchantSpecialHour[]
   merchantUsers          MerchantUser[]
   orders                 Order[]
+  deliveryZones          MerchantDeliveryZone[]
   menuBooks              MenuBook[]
   specialPrices          SpecialPrice[]
   // Subscription system relations
@@ -413,6 +429,26 @@ model Merchant {
   @@index([isActive])
   @@index([referredByInfluencerId])
   @@map("merchants")
+}
+
+model MerchantDeliveryZone {
+  id         BigInt           @id @default(autoincrement())
+  merchantId BigInt           @map("merchant_id")
+  name       String
+  type       DeliveryZoneType
+  // Radius zone
+  radiusKm   Decimal?         @map("radius_km") @db.Decimal(10, 3)
+  // Polygon zone (array of {lat,lng} points) stored as JSON
+  polygon    Json?            @db.JsonB
+  isActive   Boolean          @default(true) @map("is_active")
+  createdAt  DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  merchant   Merchant         @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@index([merchantId])
+  @@index([isActive])
+  @@map("merchant_delivery_zones")
 }
 
 model MerchantOpeningHour {
@@ -469,10 +505,13 @@ model MerchantSpecialHour {
   // Mode overrides for this day
   isDineInEnabled    Boolean?  @map("is_dine_in_enabled")
   isTakeawayEnabled  Boolean?  @map("is_takeaway_enabled")
+  isDeliveryEnabled  Boolean?  @map("is_delivery_enabled")
   dineInStartTime    String?   @map("dine_in_start_time")
   dineInEndTime      String?   @map("dine_in_end_time")
   takeawayStartTime  String?   @map("takeaway_start_time")
   takeawayEndTime    String?   @map("takeaway_end_time")
+  deliveryStartTime  String?   @map("delivery_start_time")
+  deliveryEndTime    String?   @map("delivery_end_time")
   createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
   merchant           Merchant  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
@@ -673,6 +712,28 @@ model Order {
   orderType            OrderType   @map("order_type")
   tableNumber          String?     @map("table_number")
   status               OrderStatus @default(PENDING)
+
+  // Delivery-specific fields (only used when orderType = DELIVERY)
+  deliveryStatus        DeliveryStatus? @map("delivery_status")
+  deliveryUnit          String?         @map("delivery_unit")
+  deliveryBuildingName  String?         @map("delivery_building_name")
+  deliveryBuildingNumber String?        @map("delivery_building_number")
+  deliveryFloor         String?         @map("delivery_floor")
+  deliveryInstructions  String?         @map("delivery_instructions") @db.Text
+  deliveryAddress       String?         @map("delivery_address") @db.Text
+  deliveryStreetLine    String?         @map("delivery_street_line")
+  deliverySuburb        String?         @map("delivery_suburb")
+  deliveryCity          String?         @map("delivery_city")
+  deliveryState         String?         @map("delivery_state")
+  deliveryPostcode      String?         @map("delivery_postcode")
+  deliveryCountry       String?         @map("delivery_country")
+  deliveryLatitude      Decimal?        @map("delivery_latitude") @db.Decimal(10, 8)
+  deliveryLongitude     Decimal?        @map("delivery_longitude") @db.Decimal(11, 8)
+  deliveryDistanceKm    Decimal?        @map("delivery_distance_km") @db.Decimal(10, 3)
+  deliveryFeeAmount     Decimal         @default(0) @map("delivery_fee_amount") @db.Decimal(10, 2)
+  deliveryDriverUserId  BigInt?         @map("delivery_driver_user_id")
+  deliveryAssignedAt    DateTime?       @map("delivery_assigned_at") @db.Timestamptz(6)
+  deliveryDeliveredAt   DateTime?       @map("delivery_delivered_at") @db.Timestamptz(6)
   subtotal             Decimal     @db.Decimal(10, 2)
   taxAmount            Decimal     @default(0) @map("tax_amount") @db.Decimal(10, 2)
   serviceChargeAmount  Decimal     @default(0) @map("service_charge_amount") @db.Decimal(10, 2)
@@ -692,6 +753,7 @@ model Order {
   merchant             Merchant    @relation(fields: [merchantId], references: [id], onDelete: Cascade)
   payment              Payment?
   groupOrderSession    GroupOrderSession?
+  deliveryDriver        User?       @relation("DeliveryDriver", fields: [deliveryDriverUserId], references: [id])
 
   @@unique([merchantId, orderNumber])
   @@index([merchantId])
@@ -700,6 +762,8 @@ model Order {
   @@index([status])
   @@index([placedAt])
   @@index([estimatedReadyAt])
+  @@index([deliveryDriverUserId])
+  @@index([deliveryStatus])
   @@map("orders")
 }
 
@@ -1026,11 +1090,13 @@ enum UserRole {
   SUPER_ADMIN
   MERCHANT_OWNER
   MERCHANT_STAFF
+  DELIVERY
 }
 
 enum MerchantRole {
   OWNER
   STAFF
+  DRIVER
 }
 
 enum SessionStatus {
@@ -1042,6 +1108,20 @@ enum SessionStatus {
 enum OrderType {
   DINE_IN
   TAKEAWAY
+  DELIVERY
+}
+
+enum DeliveryZoneType {
+  RADIUS
+  POLYGON
+}
+
+enum DeliveryStatus {
+  PENDING_ASSIGNMENT
+  ASSIGNED
+  PICKED_UP
+  DELIVERED
+  FAILED
 }
 
 enum OrderStatus {
@@ -1061,6 +1141,8 @@ enum AddonInputType {
 enum PaymentMethod {
   CASH_ON_COUNTER
   CARD_ON_COUNTER
+  CASH_ON_DELIVERY
+  ONLINE
 }
 
 enum PaymentStatus {

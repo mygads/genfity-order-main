@@ -7,6 +7,7 @@ import { saveCustomerAuth } from '@/lib/utils/localStorage';
 import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';
 import PoweredByFooter from '@/components/common/PoweredByFooter';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import { FaArrowLeft, FaEye, FaEyeSlash } from 'react-icons/fa';
 
 /**
  * Customer Login Page - Burjo ESB Style
@@ -227,9 +228,7 @@ function LoginForm() {
             className="w-10 h-10 flex items-center justify-center -ml-2"
             aria-label="Back"
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 12H5M12 19l-7-7 7-7" />
-            </svg>
+            <FaArrowLeft className="w-5 h-5 text-gray-700 dark:text-gray-200" />
           </button>
           <h1 className="flex-1 text-center font-semibold text-gray-900 dark:text-white text-base pr-10">
             {showAuthChoice ? t('auth.welcome') : t('auth.signIn')}
@@ -404,15 +403,9 @@ function LoginForm() {
                       className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-gray-600"
                     >
                       {showPassword ? (
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                          <line x1="1" y1="1" x2="23" y2="23" />
-                        </svg>
+                        <FaEyeSlash className="w-5 h-5" />
                       ) : (
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                          <circle cx="12" cy="12" r="3" />
-                        </svg>
+                        <FaEye className="w-5 h-5" />
                       )}
                     </button>
                   </div>

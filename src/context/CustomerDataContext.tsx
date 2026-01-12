@@ -93,6 +93,7 @@ export interface MerchantInfo {
   isTakeawayEnabled?: boolean;
   dineInLabel?: string | null;
   takeawayLabel?: string | null;
+  deliveryLabel?: string | null;
   dineInScheduleStart?: string | null;
   dineInScheduleEnd?: string | null;
   takeawayScheduleStart?: string | null;

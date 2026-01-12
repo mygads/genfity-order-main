@@ -6,6 +6,7 @@ import useSWR from 'swr';
 import SuperAdminDashboard from '@/components/dashboard/SuperAdminDashboard';
 import MerchantOwnerDashboard from '@/components/dashboard/MerchantOwnerDashboard';
 import MerchantStaffDashboard from '@/components/dashboard/MerchantStaffDashboard';
+import DeliveryDriverDashboard from '@/components/dashboard/DeliveryDriverDashboard';
 import { DashboardSkeleton } from '@/components/common/SkeletonLoaders';
 import { useToast } from '@/context/ToastContext';
 import { useTranslation } from '@/lib/i18n/useTranslation';
@@ -153,6 +154,16 @@ export default function AdminDashboardPage() {
         merchant={dashboardData.merchant}
         stats={dashboardData.stats}
         recentOrders={dashboardData.recentOrders}
+      />
+    );
+  }
+
+  if (dashboardData.role === 'DELIVERY') {
+    return (
+      <DeliveryDriverDashboard
+        merchant={dashboardData.merchant}
+        stats={dashboardData.stats}
+        activeDeliveries={dashboardData.activeDeliveries}
       />
     );
   }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
 import { serializeBigInt } from '@/lib/utils/serializer';
+import { verifyOrderTrackingToken } from '@/lib/utils/orderTrackingToken';
 
 interface FeedbackBody {
     overallRating: number;
@@ -20,10 +21,43 @@ export async function GET(
     try {
         const { orderNumber } = await context.params;
 
+        const token = request.nextUrl.searchParams.get('token') || '';
+
         if (!orderNumber) {
             return NextResponse.json(
                 { success: false, message: 'Order number is required' },
                 { status: 400 }
+            );
+        }
+
+        // Token is required (public endpoint)
+        const orderForToken = await prisma.order.findFirst({
+            where: { orderNumber },
+            select: {
+                orderNumber: true,
+                merchant: { select: { code: true } },
+            },
+        });
+
+        if (!orderForToken) {
+            return NextResponse.json(
+                { success: false, message: 'Order not found' },
+                { status: 404 }
+            );
+        }
+
+        const ok = token
+            ? verifyOrderTrackingToken({
+                token,
+                merchantCode: orderForToken.merchant?.code || '',
+                orderNumber: orderForToken.orderNumber,
+            })
+            : false;
+
+        if (!ok) {
+            return NextResponse.json(
+                { success: false, message: 'Order not found' },
+                { status: 404 }
             );
         }
 
@@ -64,6 +98,8 @@ export async function POST(
 ) {
     try {
         const { orderNumber } = await context.params;
+
+        const token = request.nextUrl.searchParams.get('token') || '';
 
         if (!orderNumber) {
             return NextResponse.json(
@@ -109,15 +145,20 @@ export async function POST(
             );
         }
 
-        // Find the order to get merchantId and calculate completion time
+        // Find the order to get merchantId and validate token
         const order = await prisma.order.findFirst({
             where: { orderNumber },
             select: {
                 id: true,
+                orderNumber: true,
                 merchantId: true,
+                orderType: true,
                 status: true,
+                deliveryStatus: true,
                 placedAt: true,
                 completedAt: true,
+                deliveryDeliveredAt: true,
+                merchant: { select: { code: true } },
             },
         });
 
@@ -128,18 +169,42 @@ export async function POST(
             );
         }
 
-        // Check if order is completed
-        if (order.status !== 'COMPLETED') {
+        const ok = token
+            ? verifyOrderTrackingToken({
+                token,
+                merchantCode: order.merchant?.code || '',
+                orderNumber: order.orderNumber,
+            })
+            : false;
+
+        if (!ok) {
             return NextResponse.json(
-                { success: false, message: 'Feedback can only be submitted for completed orders' },
+                { success: false, message: 'Order not found' },
+                { status: 404 }
+            );
+        }
+
+        // Delivery-only feedback (Grab/Gojek style)
+        if (order.orderType !== 'DELIVERY') {
+            return NextResponse.json(
+                { success: false, message: 'Feedback is only available for delivery orders' },
+                { status: 400 }
+            );
+        }
+
+        // Require delivered
+        if (order.deliveryStatus !== 'DELIVERED' && !order.deliveryDeliveredAt) {
+            return NextResponse.json(
+                { success: false, message: 'Feedback can only be submitted after delivery is completed' },
                 { status: 400 }
             );
         }
 
         // Calculate order completion time in minutes
         let orderCompletionMinutes: number | null = null;
-        if (order.completedAt && order.placedAt) {
-            const completionTime = new Date(order.completedAt).getTime() - new Date(order.placedAt).getTime();
+        const completedAt = order.deliveryDeliveredAt || order.completedAt;
+        if (completedAt && order.placedAt) {
+            const completionTime = new Date(completedAt).getTime() - new Date(order.placedAt).getTime();
             orderCompletionMinutes = Math.round(completionTime / (1000 * 60));
         }
 

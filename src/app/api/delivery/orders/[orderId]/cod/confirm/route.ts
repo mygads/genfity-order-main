@@ -1,0 +1,121 @@
+import { NextRequest, NextResponse } from 'next/server';
+import prisma from '@/lib/db/client';
+import { withDelivery } from '@/lib/middleware/auth';
+import type { AuthContext } from '@/lib/middleware/auth';
+import { OrderManagementService } from '@/lib/services/OrderManagementService';
+import { serializeBigInt } from '@/lib/utils/serializer';
+
+export const POST = withDelivery(async (
+  req: NextRequest,
+  context: AuthContext,
+  routeContext: { params: Promise<Record<string, string>> }
+) => {
+  try {
+    const { orderId } = await routeContext.params;
+    const body = await req.json().catch(() => ({} as any));
+
+    let id: bigint;
+    try {
+      id = BigInt(orderId);
+    } catch {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'VALIDATION_ERROR',
+          message: 'Invalid orderId',
+          statusCode: 400,
+        },
+        { status: 400 }
+      );
+    }
+
+    const order = await prisma.order.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        merchantId: true,
+        orderType: true,
+        deliveryDriverUserId: true,
+        payment: {
+          select: { paymentMethod: true, status: true },
+        },
+      },
+    });
+
+    if (!order || order.orderType !== 'DELIVERY') {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'NOT_FOUND',
+          message: 'Delivery order not found',
+          statusCode: 404,
+        },
+        { status: 404 }
+      );
+    }
+
+    if (order.deliveryDriverUserId !== context.userId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'FORBIDDEN',
+          message: 'Order is not assigned to you',
+          statusCode: 403,
+        },
+        { status: 403 }
+      );
+    }
+
+    if (order.payment?.paymentMethod && order.payment.paymentMethod !== 'CASH_ON_DELIVERY') {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'VALIDATION_ERROR',
+          message: 'This order is not Cash on Delivery',
+          statusCode: 400,
+        },
+        { status: 400 }
+      );
+    }
+
+    if (order.payment?.status === 'COMPLETED') {
+      return NextResponse.json(
+        {
+          success: true,
+          data: serializeBigInt({ order, payment: order.payment }),
+          message: 'Payment already completed',
+          statusCode: 200,
+        },
+        { status: 200 }
+      );
+    }
+
+    const result = await OrderManagementService.confirmCashOnDeliveryPayment(
+      id,
+      context.userId,
+      body?.notes
+    );
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: serializeBigInt(result),
+        message: 'Cash on Delivery payment confirmed',
+        statusCode: 200,
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error('Error confirming COD payment (driver):', error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'INTERNAL_ERROR',
+        message: error instanceof Error ? error.message : 'Failed to confirm cash payment',
+        statusCode: 500,
+      },
+      { status: 500 }
+    );
+  }
+});

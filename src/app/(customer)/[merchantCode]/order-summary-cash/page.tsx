@@ -10,7 +10,10 @@ import { OrderSummaryCashSkeleton } from '@/components/common/SkeletonLoaders';
 import NewOrderConfirmationModal from '@/components/modals/NewOrderConfirmationModal';
 import { QRCodeSVG } from 'qrcode.react';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import { formatCurrency as formatCurrencyUtil } from '@/lib/utils/format';
 import { useCustomerPushNotifications } from '@/hooks/useCustomerPushNotifications';
+import { customerTrackUrl } from '@/lib/utils/customerRoutes';
+import { FaBell, FaCheck, FaCheckCircle, FaChevronDown, FaCopy, FaInfoCircle, FaMoneyBillWave, FaMotorcycle, FaQrcode, FaStickyNote, FaTimes } from 'react-icons/fa';
 
 // ✅ Order Summary Data Interface
 interface OrderSummaryData {
@@ -21,6 +24,15 @@ interface OrderSummaryData {
   mode: OrderMode;
   tableNumber: string | null;
   status: string;
+  deliveryUnit?: string | null;
+  deliveryAddress?: string | null;
+  deliveryFeeAmount?: number;
+  payment?: {
+    paymentMethod?: string;
+    status?: string;
+    amount?: number;
+    paidAt?: string | null;
+  } | null;
   orderItems: Array<{
     menuName: string;
     quantity: number;
@@ -74,11 +86,12 @@ export default function OrderSummaryCashPage() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
 
   const merchantCode = params.merchantCode as string;
   const orderNumber = searchParams.get('orderNumber') || '';
   const mode = (searchParams.get('mode') || 'takeaway') as OrderMode;
+  const trackingToken = searchParams.get('token') || '';
 
   const [order, setOrder] = useState<OrderSummaryData | null>(null);
   const [merchantInfo, setMerchantInfo] = useState<MerchantInfo | null>(null);
@@ -88,6 +101,7 @@ export default function OrderSummaryCashPage() {
   const [showNewOrderModal, setShowNewOrderModal] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showPushPrompt, setShowPushPrompt] = useState(false);
+  const [isTrackingLinkCopied, setIsTrackingLinkCopied] = useState(false);
 
   // ✅ Push Notification Hook
   const {
@@ -135,6 +149,12 @@ export default function OrderSummaryCashPage() {
         return;
       }
 
+      if (!trackingToken) {
+        setError('Tracking token missing. Please open the link from checkout/receipt/email.');
+        setIsLoading(false);
+        return;
+      }
+
       try {
         // Fetch merchant info for currency
         const merchantResponse = await fetch(`/api/public/merchants/${merchantCode}`);
@@ -152,7 +172,7 @@ export default function OrderSummaryCashPage() {
         }
 
         // Fetch order details
-        const response = await fetch(`/api/public/orders/${orderNumber}`);
+        const response = await fetch(`/api/public/orders/${orderNumber}?token=${encodeURIComponent(trackingToken)}`);
         const data = await response.json();
 
         if (!response.ok) {
@@ -207,9 +227,20 @@ export default function OrderSummaryCashPage() {
           orderNumber: data.data.orderNumber,
           merchantName: data.data.merchant?.name || data.data.merchantName,
           customerName: data.data.customerName,
-          mode: data.data.orderType === 'DINE_IN' ? 'dinein' : 'takeaway',
+          mode: data.data.orderType === 'DINE_IN' ? 'dinein' : data.data.orderType === 'TAKEAWAY' ? 'takeaway' : 'delivery',
           tableNumber: data.data.tableNumber,
           status: data.data.status,
+          deliveryUnit: data.data.deliveryUnit ?? null,
+          deliveryAddress: data.data.deliveryAddress ?? null,
+          deliveryFeeAmount: convertDecimal(data.data.deliveryFeeAmount),
+          payment: data.data.payment
+            ? {
+                paymentMethod: data.data.payment.paymentMethod,
+                status: data.data.payment.status,
+                amount: convertDecimal(data.data.payment.amount),
+                paidAt: data.data.payment.paidAt ?? null,
+              }
+            : null,
           orderItems: convertedOrderItems,
           subtotalAmount: convertDecimal(data.data.subtotal || data.data.subtotalAmount),
           taxAmount: convertDecimal(data.data.taxAmount),
@@ -224,7 +255,13 @@ export default function OrderSummaryCashPage() {
         // ✅ Auto-redirect to track page if order is already accepted/progressing/completed
         // Use `replace` to avoid browser back-looping into this summary page.
         if (['ACCEPTED', 'IN_PROGRESS', 'READY', 'COMPLETED'].includes(orderData.status)) {
-          router.replace(`/${merchantCode}/track/${orderData.orderNumber}?back=history&mode=${mode}`);
+          router.replace(
+            customerTrackUrl(merchantCode, orderData.orderNumber, {
+              back: 'history',
+              mode: orderData.mode,
+              token: trackingToken,
+            })
+          );
           return;
         }
 
@@ -245,7 +282,7 @@ export default function OrderSummaryCashPage() {
 
     const checkOrderStatus = async () => {
       try {
-        const response = await fetch(`/api/public/orders/${orderNumber}`);
+        const response = await fetch(`/api/public/orders/${orderNumber}?token=${encodeURIComponent(trackingToken)}`);
         if (!response.ok) return;
 
         const data = await response.json();
@@ -254,7 +291,13 @@ export default function OrderSummaryCashPage() {
 
         // If order is accepted/in-progress/ready, redirect to track page
         if (['ACCEPTED', 'IN_PROGRESS', 'READY', 'COMPLETED'].includes(newStatus)) {
-          router.replace(`/${merchantCode}/track/${resolvedOrderNumber}?back=history&mode=${mode}`);
+          router.replace(
+            customerTrackUrl(merchantCode, resolvedOrderNumber, {
+              back: 'history',
+              mode,
+              token: trackingToken,
+            })
+          );
         }
       } catch (err) {
         console.error('Status check error:', err);
@@ -265,7 +308,7 @@ export default function OrderSummaryCashPage() {
     const intervalId = setInterval(checkOrderStatus, 3000);
 
     return () => clearInterval(intervalId);
-  }, [orderNumber, order, merchantCode, router]);
+  }, [orderNumber, order, merchantCode, router, trackingToken, mode]);
 
   /**
    * ✅ Format currency using merchant's currency
@@ -275,26 +318,8 @@ export default function OrderSummaryCashPage() {
    * @returns Formatted string (e.g., "A$45.00")
    */
   const formatCurrency = (amount: number) => {
-    if (!merchantInfo) return amount.toFixed(2);
-
-    // Special handling for AUD to show A$ prefix
-    if (merchantInfo.currency === 'AUD') {
-      return `A$${amount.toFixed(2)}`;
-    }
-
-    // Special handling for IDR - no decimals
-    if (merchantInfo.currency === 'IDR') {
-      const formatted = new Intl.NumberFormat('id-ID', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(Math.round(amount));
-      return `Rp ${formatted}`;
-    }
-
-    return new Intl.NumberFormat('en-AU', {
-      style: 'currency',
-      currency: merchantInfo.currency,
-    }).format(amount);
+    const currency = merchantInfo?.currency || 'AUD';
+    return formatCurrencyUtil(amount, currency, locale);
   };
 
   /**
@@ -382,20 +407,7 @@ export default function OrderSummaryCashPage() {
               className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
               aria-label="Close"
             >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="text-gray-600"
-              >
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
+              <FaTimes className="w-5 h-5 text-gray-600" />
             </button>
           ) : (
             <div className="w-8" />
@@ -421,15 +433,13 @@ export default function OrderSummaryCashPage() {
           <span className="text-gray-700">{t('customer.orderSummary.orderType')}</span>
           <div className="flex items-center gap-2">
             <span className="font-medium text-gray-900">
-              {mode === 'dinein' ? t('customer.mode.dineIn') : t('customer.mode.pickUp')}
+              {mode === 'dinein'
+                ? t('customer.mode.dineIn')
+                : mode === 'delivery'
+                  ? (t('customer.mode.delivery') === 'customer.mode.delivery' ? 'Delivery' : t('customer.mode.delivery'))
+                  : t('customer.mode.pickUp')}
             </span>
-            <svg
-              style={{ width: '18px', height: '18px', color: '#1ca406' }}
-              viewBox="0 0 24 24"
-              fill="currentColor"
-            >
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-            </svg>
+            <FaCheckCircle style={{ width: '18px', height: '18px', color: '#1ca406' }} />
           </div>
         </div>
       </section>
@@ -438,7 +448,7 @@ export default function OrderSummaryCashPage() {
           QR CODE BOX - ESB Style
       ======================================== */}
       <div
-        className="flex flex-col flex-grow items-center mt-6 mb-3"
+        className="flex flex-col grow items-center mt-6 mb-3"
         style={{ margin: '24px 16px 12px', borderRadius: '10px' }}
       >
         {/* Order Number Title */}
@@ -517,11 +527,101 @@ export default function OrderSummaryCashPage() {
             }}
           >
             <QRCodeSVG
-              value={order.orderNumber}
+              value={customerTrackUrl(merchantCode, order.orderNumber, {
+                token: trackingToken || undefined,
+                back: 'history',
+                mode,
+              })}
               size={350}
               level="H"
               includeMargin={false}
             />
+          </div>
+        </div>
+
+        {/* Copy tracking link (Delivery) */}
+        {mode === 'delivery' && trackingToken ? (
+          <div className="flex justify-center mb-4">
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  const url = customerTrackUrl(merchantCode, order.orderNumber, {
+                    token: trackingToken,
+                    back: 'history',
+                    mode,
+                  });
+                  await navigator.clipboard.writeText(url);
+                  setIsTrackingLinkCopied(true);
+                  window.setTimeout(() => setIsTrackingLinkCopied(false), 2000);
+                } catch {
+                  // Clipboard might be unavailable (non-secure context)
+                  setIsTrackingLinkCopied(false);
+                }
+              }}
+              className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition-colors"
+            >
+              {isTrackingLinkCopied ? (
+                <>
+                  <FaCheck className="w-4 h-4 text-green-600" />
+                  <span>{t('customer.orderSummary.copied') || 'Copied'}</span>
+                </>
+              ) : (
+                <>
+                  <FaCopy className="w-4 h-4 text-gray-600" />
+                  <span>{t('customer.orderSummary.copyTrackingLink') || 'Copy tracking link'}</span>
+                </>
+              )}
+            </button>
+          </div>
+        ) : null}
+
+        {/* Payment & Delivery Summary */}
+        <div
+          className="mx-auto mb-3"
+          style={{
+            padding: '12px 16px',
+            width: '64%',
+            minWidth: '343px',
+            margin: '0 auto 12px auto',
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            border: '1px solid #e5e7eb',
+          }}
+        >
+          <div className="flex items-start gap-3">
+            <div className="mt-1" style={{ color: '#f05a28' }}>
+              {mode === 'delivery' ? <FaMotorcycle className="w-5 h-5" /> : <FaMoneyBillWave className="w-5 h-5" />}
+            </div>
+            <div className="flex-1">
+              <p className="text-sm" style={{ color: '#111827', fontWeight: 600, marginBottom: '2px' }}>
+                {mode === 'delivery' ? (t('customer.orderSummary.deliveryTitle') || 'Delivery order') : (t('customer.orderSummary.paymentTitle') || 'Payment')}
+              </p>
+              {mode === 'delivery' ? (
+                <p className="text-xs" style={{ color: '#4b5563', lineHeight: '18px' }}>
+                  {(order?.payment?.paymentMethod === 'CASH_ON_DELIVERY' || !order?.payment?.paymentMethod)
+                    ? (t('customer.orderSummary.deliveryPayToDriver') || 'Payment: Cash on delivery (pay the driver when your order arrives).')
+                    : (t('customer.orderSummary.deliveryPaymentMethod') || `Payment: ${order?.payment?.paymentMethod || '-'}`)}
+                  {order?.payment?.status ? ` • ${t('customer.orderSummary.paymentStatus') || 'Status'}: ${order.payment.status}` : ''}
+                </p>
+              ) : (
+                <p className="text-xs" style={{ color: '#4b5563', lineHeight: '18px' }}>
+                  {t('customer.orderSummary.payAtCashierHint') || 'Show this QR to the cashier/staff to process your order.'}
+                </p>
+              )}
+
+              {mode === 'delivery' && order?.deliveryAddress ? (
+                <div className="mt-2 text-xs" style={{ color: '#374151' }}>
+                  <div className="flex items-center gap-2" style={{ color: '#6b7280' }}>
+                    <FaInfoCircle className="w-4 h-4" />
+                    <span>{t('customer.delivery.address') || 'Delivery Address'}</span>
+                  </div>
+                  <div style={{ marginTop: '4px' }}>
+                    {order.deliveryUnit ? `${order.deliveryUnit}, ${order.deliveryAddress}` : order.deliveryAddress}
+                  </div>
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
 
@@ -539,19 +639,7 @@ export default function OrderSummaryCashPage() {
             letterSpacing: '0'
           }}
         >
-          <svg
-            className="flex-shrink-0"
-            style={{
-              width: '20px',
-              height: '20px',
-              marginRight: '8px',
-              color: '#dc6803'
-            }}
-            viewBox="0 0 24 24"
-            fill="currentColor"
-          >
-            <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
-          </svg>
+          <FaQrcode className="shrink-0" style={{ width: '20px', height: '20px', marginRight: '8px', color: '#dc6803' }} />
           <span
             style={{
               color: '#1d2939',
@@ -562,7 +650,9 @@ export default function OrderSummaryCashPage() {
               textAlign: 'start'
             }}
           >
-            {t('customer.orderSummary.showQRInstruction')}
+            {mode === 'delivery'
+              ? (t('customer.orderSummary.deliveryQrInstruction') || 'Save this QR to track your delivery status and driver updates.')
+              : t('customer.orderSummary.showQRInstruction')}
           </span>
         </div>
 
@@ -580,18 +670,7 @@ export default function OrderSummaryCashPage() {
               fontSize: '14px',
             }}
           >
-            <svg
-              className="flex-shrink-0"
-              style={{
-                width: '24px',
-                height: '24px',
-                color: '#0284c7',
-              }}
-              viewBox="0 0 24 24"
-              fill="currentColor"
-            >
-              <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z" />
-            </svg>
+            <FaBell className="shrink-0" style={{ width: '24px', height: '24px', color: '#0284c7' }} />
             <div className="flex-1">
               <p style={{ color: '#0c4a6e', fontWeight: 500, marginBottom: '2px' }}>
                 {t('customer.push.enableTitle')}
@@ -617,9 +696,7 @@ export default function OrderSummaryCashPage() {
               className="text-gray-400 hover:text-gray-600"
               aria-label="Close"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
-              </svg>
+              <FaTimes className="w-4 h-4" />
             </button>
           </div>
         )}
@@ -684,7 +761,7 @@ export default function OrderSummaryCashPage() {
                     </div>
 
                     {/* Menu Name & Addons */}
-                    <div className="flex-grow flex flex-col">
+                    <div className="grow flex flex-col">
                       <div style={{ maxWidth: '245px', fontWeight: 500, color: '#212529' }}>
                         {item.menuName}
                       </div>
@@ -709,7 +786,10 @@ export default function OrderSummaryCashPage() {
                       {/* Notes */}
                       {item.notes && (
                         <div style={{ fontSize: '12px', color: '#6b7280', fontStyle: 'italic', marginTop: '4px' }}>
-                          📝 {item.notes}
+                          <span className="inline-flex items-center gap-2">
+                            <FaStickyNote className="w-3.5 h-3.5" />
+                            <span>{item.notes}</span>
+                          </span>
                         </div>
                       )}
                     </div>
@@ -759,7 +839,7 @@ export default function OrderSummaryCashPage() {
               >
                 <div className="flex items-center">
                   {t('customer.payment.inclFees')}
-                  <svg
+                  <FaChevronDown
                     style={{
                       width: '24px',
                       height: '24px',
@@ -767,11 +847,7 @@ export default function OrderSummaryCashPage() {
                       transform: showFeeDetails ? 'rotate(180deg)' : 'rotate(0deg)',
                       transition: 'transform 0.2s ease'
                     }}
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                  >
-                    <path d="M7 10l5 5 5-5z" />
-                  </svg>
+                  />
                 </div>
                 <div style={{ fontWeight: 400 }}>
                   {formatCurrency(order.taxAmount + order.serviceChargeAmount + order.packagingFeeAmount)}
@@ -843,7 +919,7 @@ export default function OrderSummaryCashPage() {
             }}
           >
             <div
-              className="flex-grow"
+              className="grow"
               style={{ color: '#212529' }}
             >
               {t('customer.payment.total')}

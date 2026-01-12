@@ -69,7 +69,7 @@ export interface LocalCartItem {
  */
 export interface LocalCart {
   merchantCode: string;
-  mode: "dinein" | "takeaway";
+  mode: "dinein" | "takeaway" | "delivery";
   tableNumber?: string;
   items: LocalCartItem[];
   generalNotes?: string; // General notes for the entire order

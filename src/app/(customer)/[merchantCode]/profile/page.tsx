@@ -8,6 +8,7 @@ import PoweredByFooter from '@/components/common/PoweredByFooter';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import LanguageSelectorModal from '@/components/customer/LanguageSelectorModal';
 import { customerHistoryUrl, customerOrderUrl, customerProfileUrl } from '@/lib/utils/customerRoutes';
+import { FaArrowLeft, FaChevronRight, FaFileAlt, FaShieldAlt, FaSignOutAlt, FaUserCircle } from 'react-icons/fa';
 
 /**
  * Profile Page - Burjo ESB Style
@@ -77,9 +78,7 @@ function ProfileContent() {
             className="w-10 h-10 flex items-center justify-center -ml-2"
             aria-label="Back"
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 12H5M12 19l-7-7 7-7" />
-            </svg>
+            <FaArrowLeft className="w-5 h-5 text-gray-700" />
           </button>
           <h1 className="flex-1 text-center font-semibold text-gray-900 text-base pr-10">
             {t('customer.profile.title')}
@@ -98,10 +97,7 @@ function ProfileContent() {
                 {auth.customer.name.charAt(0).toUpperCase()}
               </span>
             ) : (
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-gray-400">
-                <circle cx="12" cy="8" r="4" />
-                <path d="M20 21a8 8 0 0 0-16 0" />
-              </svg>
+              <FaUserCircle className="w-9 h-9 text-gray-400" />
             )}
           </div>
 
@@ -149,13 +145,7 @@ function ProfileContent() {
             onClick={handleOrderHistory}
             className="w-full flex items-center gap-3 px-4 py-4 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-600">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <path d="M14 2v6h6" />
-              <path d="M16 13H8" />
-              <path d="M16 17H8" />
-              <path d="M10 9H8" />
-            </svg>
+            <FaFileAlt className="w-5 h-5 text-gray-600" />
             <span className="flex-1 text-left text-sm font-medium text-gray-700">
               {t('customer.profile.orderHistory')}
             </span>
@@ -173,9 +163,7 @@ function ProfileContent() {
             <span className="text-sm text-gray-500">
               {localeName}
             </span>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
-              <path d="M9 18l6-6-6-6" />
-            </svg>
+            <FaChevronRight className="w-4 h-4 text-gray-400" />
           </button>
 
           {/* Privacy Policy */}
@@ -183,9 +171,7 @@ function ProfileContent() {
             onClick={() => router.push(`/${merchantCode}/privacy-policy?mode=${mode}&ref=${encodeURIComponent(`/${merchantCode}/profile?mode=${mode}`)}`)}
             className="w-full flex items-center gap-3 px-4 py-4 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-600">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-            </svg>
+            <FaShieldAlt className="w-5 h-5 text-gray-600" />
             <span className="flex-1 text-left text-sm font-medium text-gray-700">
               {t('customer.profile.privacyPolicy')}
             </span>
@@ -200,11 +186,7 @@ function ProfileContent() {
             onClick={() => setShowLogoutConfirm(true)}
             className="w-full flex items-center justify-center gap-2 py-3 text-orange-500 hover:text-orange-600 font-medium transition-colors"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <polyline points="16,17 21,12 16,7" />
-              <line x1="21" y1="12" x2="9" y2="12" />
-            </svg>
+            <FaSignOutAlt className="w-5 h-5" />
             {t('auth.logout')}
           </button>
         </div>

@@ -15,6 +15,7 @@ import { useTranslation } from '@/lib/i18n/useTranslation';
 import { useModeAvailability } from '@/hooks/useModeAvailability';
 import UpsellSection from '@/components/customer/UpsellSection';
 import { customerOrderUrl } from '@/lib/utils/customerRoutes';
+import { FaArrowLeft, FaCheckCircle, FaChevronDown, FaEdit, FaExclamationTriangle, FaMinusCircle, FaPlusCircle, FaStickyNote, FaTrash } from 'react-icons/fa';
 
 interface MenuItem {
   id: string;
@@ -356,9 +357,7 @@ export default function ViewOrderPage() {
             className="w-10 h-10 flex items-center justify-center -ml-2"
             aria-label="Back"
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 12H5M12 19l-7-7 7-7" />
-            </svg>
+            <FaArrowLeft className="w-5 h-5 text-gray-700" />
           </button>
           <h1 className="flex-1 text-center font-semibold text-gray-900 text-base pr-10">
             {t('order.title')}
@@ -370,9 +369,7 @@ export default function ViewOrderPage() {
       {!modeAvailability.canOrderForPickup && modeAvailability.warningMessage && (
         <div className="mx-3 mt-3 p-3 rounded-lg bg-red-50 border border-red-200">
           <div className="flex items-start gap-2">
-            <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
+            <FaExclamationTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-medium text-red-700">Cannot Complete Order</p>
               <p className="text-xs text-red-600 mt-0.5">{modeAvailability.warningMessage}</p>
@@ -407,23 +404,7 @@ export default function ViewOrderPage() {
               <span className="font-medium text-gray-900">
                 {mode === 'dinein' ? t('customer.mode.dineIn') : t('customer.mode.pickUp')}
               </span>
-              <svg
-                style={{ width: '18px', height: '18px', color: '#212529' }}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-              >
-                {/* Hollow Circle */}
-                <circle cx="12" cy="12" r="10" strokeWidth="2" fill="none" />
-                {/* Solid Checkmark */}
-                <path
-                  d="M8 12l3 3 5-6"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  fill="none"
-                />
-              </svg>
+              <FaCheckCircle style={{ width: '18px', height: '18px', color: '#212529' }} />
             </div>
           </div>
         </section>
@@ -578,19 +559,14 @@ export default function ViewOrderPage() {
                           backgroundColor: 'transparent'
                         }}
                       >
-                        <svg
+                        <FaEdit
                           style={{
                             width: '16px',
                             height: '16px',
                             marginRight: '6px',
                             color: '#6C6C6C'
                           }}
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
+                        />
                         <span>{t('common.edit')}</span>
                       </button>
                     </div>
@@ -617,14 +593,7 @@ export default function ViewOrderPage() {
                       {/* Notes */}
                       <div className="flex items-center my-2">
                         <div className="mr-2" style={{ minWidth: '18px', minHeight: '18px' }}>
-                          <svg
-                            style={{ width: '18px', height: '18px', color: '#6c757d' }}
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
+                          <FaStickyNote style={{ width: '18px', height: '18px', color: '#6c757d' }} />
                         </div>
                         <p
                           className="m-0"
@@ -670,9 +639,7 @@ export default function ViewOrderPage() {
                           className="w-7 h-7 flex items-center justify-center"
                           title={item.quantity === 1 ? 'Remove from cart' : 'Decrease quantity'}
                         >
-                          <svg style={{ width: '24px', height: '24px', color: '#212529' }} viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-5-9h10v2H7z" />
-                          </svg>
+                          <FaMinusCircle style={{ width: '24px', height: '24px', color: '#212529' }} />
                         </button>
 
                         <div
@@ -691,9 +658,7 @@ export default function ViewOrderPage() {
                           className="w-7 h-7 flex items-center justify-center"
                           title="Increase quantity"
                         >
-                          <svg style={{ width: '24px', height: '24px', color: '#212529' }} viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm5-9h-4V7h-2v4H7v2h4v4h2v-4h4z" />
-                          </svg>
+                          <FaPlusCircle style={{ width: '24px', height: '24px', color: '#212529' }} />
                         </button>
                       </div>
                     </div>
@@ -734,15 +699,10 @@ export default function ViewOrderPage() {
               fontWeight: 400
             }}
           >
-            <svg
+            <FaStickyNote
               className="mr-2 flex-shrink-0"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
               style={{ minWidth: '24px', minHeight: '24px', width: '24px', color: generalNotes ? '#1A1A1A' : '#808080' }}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
+            />
             <span style={{ color: generalNotes ? '#1A1A1A' : '#808080' }}>
               {generalNotes || t('customer.cart.addNotes')}
             </span>
@@ -833,7 +793,7 @@ export default function ViewOrderPage() {
                   >
                     <div className="flex items-center">
                       <span>Incl. other fees</span>
-                      <svg
+                      <FaChevronDown
                         className="ml-1"
                         style={{
                           width: '20px',
@@ -841,11 +801,7 @@ export default function ViewOrderPage() {
                           transform: showOtherFees ? 'rotate(180deg)' : 'rotate(0deg)',
                           transition: 'transform 0.2s'
                         }}
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                      >
-                        <path d="M7 10l5 5 5-5z" />
-                      </svg>
+                      />
                     </div>
                     <span>
                       {formatCurrency(otherFees, merchantCurrency)}
@@ -1013,9 +969,7 @@ export default function ViewOrderPage() {
             <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-32px)] max-w-[320px] bg-white rounded-2xl z-[400] p-6 shadow-2xl">
               <div className="text-center mb-6">
                 <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
-                  <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
+                  <FaTrash className="w-8 h-8 text-red-500" />
                 </div>
                 <h3 className="text-lg font-bold text-gray-900 mb-2">
                   {t('customer.cart.removeItem')}

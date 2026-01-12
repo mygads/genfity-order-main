@@ -29,7 +29,7 @@ const authLog = (...args: unknown[]) => {
 /**
  * Get cart key for specific merchant and mode
  */
-function getCartKey(merchantCode: string, mode: 'dinein' | 'takeaway' = 'dinein'): string {
+function getCartKey(merchantCode: string, mode: 'dinein' | 'takeaway' | 'delivery' = 'dinein'): string {
   return `${STORAGE_KEYS.CART_PREFIX}${merchantCode}_${mode}`;
 }
 
@@ -49,7 +49,7 @@ function getTableKey(merchantCode: string): string {
  * @param merchantCode - Merchant identifier
  * @param mode - Order mode (defaults to 'dinein')
  */
-export function getCart(merchantCode: string, mode: 'dinein' | 'takeaway' = 'dinein'): LocalCart | null {
+export function getCart(merchantCode: string, mode: 'dinein' | 'takeaway' | 'delivery' = 'dinein'): LocalCart | null {
   if (typeof window === 'undefined') return null;
 
   try {
@@ -85,7 +85,7 @@ export function saveCart(cart: LocalCart): void {
 /**
  * Clear cart for specific merchant and mode
  */
-export function clearCart(merchantCode: string, mode: 'dinein' | 'takeaway' = 'dinein'): void {
+export function clearCart(merchantCode: string, mode: 'dinein' | 'takeaway' | 'delivery' = 'dinein'): void {
   if (typeof window === 'undefined') return;
 
   try {
@@ -102,7 +102,7 @@ export function clearCart(merchantCode: string, mode: 'dinein' | 'takeaway' = 'd
 /**
  * Get cart total price
  */
-export function getCartTotal(merchantCode: string, mode: 'dinein' | 'takeaway' = 'dinein'): number {
+export function getCartTotal(merchantCode: string, mode: 'dinein' | 'takeaway' | 'delivery' = 'dinein'): number {
   const cart = getCart(merchantCode, mode);
   if (!cart) return 0;
 
@@ -115,7 +115,7 @@ export function getCartTotal(merchantCode: string, mode: 'dinein' | 'takeaway' =
 /**
  * Get cart item count
  */
-export function getCartItemCount(merchantCode: string, mode: 'dinein' | 'takeaway' = 'dinein'): number {
+export function getCartItemCount(merchantCode: string, mode: 'dinein' | 'takeaway' | 'delivery' = 'dinein'): number {
   const cart = getCart(merchantCode, mode);
   if (!cart) return 0;
 

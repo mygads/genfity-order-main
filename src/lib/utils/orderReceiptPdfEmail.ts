@@ -4,6 +4,7 @@ import { getPublicAppOrigin } from '@/lib/utils/publicAppOrigin';
 import { formatCurrency, formatFullOrderNumber } from '@/lib/utils/format';
 import { ReceiptSettings } from '@/lib/types/receiptSettings';
 import { getReceiptLabels, mergeReceiptSettingsWithDefaults } from '@/lib/utils/receiptShared';
+import { buildOrderTrackingUrl } from '@/lib/utils/orderTrackingLinks.server';
 
 export type OrderReceiptEmailLanguage = 'en' | 'id';
 
@@ -325,8 +326,11 @@ export async function generateOrderReceiptPdfBuffer(data: OrderReceiptEmailPdfDa
   }
 
   // FOOTER + QR
-  const baseUrl = getPublicAppOrigin('https://order.genfity.com');
-  const trackingUrl = `${baseUrl}/${data.merchantCode}/track/${data.orderNumber}`;
+  const trackingUrl = buildOrderTrackingUrl({
+    merchantCode: data.merchantCode,
+    orderNumber: data.orderNumber,
+    baseUrlFallback: 'https://order.genfity.com',
+  });
 
   if (settings.showTrackingQRCode) {
     const qrDataUrl = await QRCode.toDataURL(trackingUrl, {

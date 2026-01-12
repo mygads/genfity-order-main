@@ -195,6 +195,20 @@ export default function OrderHistoryPage() {
       }
 
       const order = data.data;
+
+      // Mint tracking token for QR (token-required public tracking)
+      let trackingToken: string | null = null;
+      try {
+        const mintRes = await fetch(`/api/merchant/orders/${orderId}/tracking-token`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const mintJson = await mintRes.json();
+        if (mintRes.ok && mintJson?.success) {
+          trackingToken = mintJson?.data?.trackingToken || null;
+        }
+      } catch {
+        trackingToken = null;
+      }
       const rawSettings = (merchantData?.receiptSettings || {}) as Partial<ReceiptSettings>;
       const inferredLanguage: 'en' | 'id' = merchantData?.currency === 'IDR' ? 'id' : 'en';
       const language: 'en' | 'id' =
@@ -213,11 +227,20 @@ export default function OrderHistoryPage() {
       // Use unified receipt generator
       printReceipt({
         order: {
+          orderId: String(orderId),
           orderNumber: order.orderNumber,
           orderType: order.orderType,
           tableNumber: order.tableNumber,
+          deliveryUnit: order.deliveryUnit,
+          deliveryBuildingName: order.deliveryBuildingName,
+          deliveryBuildingNumber: order.deliveryBuildingNumber,
+          deliveryFloor: order.deliveryFloor,
+          deliveryInstructions: order.deliveryInstructions,
+          deliveryAddress: order.deliveryAddress,
           customerName: order.customerName,
           customerPhone: order.customerPhone,
+          customerEmail: order.customerEmail,
+          trackingToken,
           placedAt: order.placedAt,
           paidAt: order.paidAt,
           items: (order.orderItems || []).map((item: { 

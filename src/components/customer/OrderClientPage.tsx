@@ -37,6 +37,7 @@ import GroupOrderChoiceModal from '@/components/customer/GroupOrderChoiceModal';
 import { useGroupOrder } from '@/context/GroupOrderContext';
 import { useCustomerData } from '@/context/CustomerDataContext';
 import { useStockStream } from '@/hooks/useStockStream';
+import type { OrderMode } from '@/lib/types/customer';
 
 interface MenuItem {
   id: string; // ✅ String from API (BigInt serialized)
@@ -109,12 +110,18 @@ interface MerchantInfo {
   subscriptionSuspendReason?: string | null;
   isDineInEnabled?: boolean;
   isTakeawayEnabled?: boolean;
+  isDeliveryEnabled?: boolean;
+  latitude?: string | number | null;
+  longitude?: string | number | null;
   dineInLabel?: string | null; // Custom label for Dine In button
   takeawayLabel?: string | null; // Custom label for Takeaway button
+  deliveryLabel?: string | null; // Custom label for Delivery button
   dineInScheduleStart?: string | null;
   dineInScheduleEnd?: string | null;
   takeawayScheduleStart?: string | null;
   takeawayScheduleEnd?: string | null;
+  deliveryScheduleStart?: string | null;
+  deliveryScheduleEnd?: string | null;
   openingHours: OpeningHour[];
 }
 
@@ -152,6 +159,7 @@ export default function OrderClientPage({
     storeOpen,
     isDineInAvailable,
     isTakeawayAvailable,
+    isDeliveryAvailable: isDeliveryAvailableBySchedule,
     minutesUntilClose,
     openingHours: liveOpeningHours,
     isLoading: isStatusLoading,
@@ -161,6 +169,10 @@ export default function OrderClientPage({
     refreshInterval: 30000, // Refresh every 30 seconds
     revalidateOnFocus: true,
   });
+
+  const normalizedMode: OrderMode = (mode === 'dinein' || mode === 'takeaway' || mode === 'delivery')
+    ? (mode as OrderMode)
+    : 'takeaway';
 
   // Initialize state from server-provided props (instant render, no loading)
 
@@ -231,6 +243,9 @@ export default function OrderClientPage({
   // Use live opening hours or fallback to cached ones during loading
   const displayOpeningHours = liveOpeningHours.length > 0 ? liveOpeningHours : (merchantInfo?.openingHours || []);
 
+  const merchantHasDeliveryCoords = merchantInfo?.latitude !== null && merchantInfo?.latitude !== undefined && merchantInfo?.longitude !== null && merchantInfo?.longitude !== undefined;
+  const isDeliveryAvailable = isDeliveryAvailableBySchedule && merchantHasDeliveryCoords;
+
   const getMenuCartItems = (menuId: string): CartItem[] => {
     if (!cart || !Array.isArray(cart.items)) return [];
     return cart.items.filter((item) => item.menuId === menuId);
@@ -297,14 +312,19 @@ export default function OrderClientPage({
 
     // Only show modal if mode becomes unavailable while store is open
     if (storeOpen) {
-      if (mode === 'dinein' && !isDineInAvailable) {
+      if (normalizedMode === 'dinein' && !isDineInAvailable) {
         // Show modal to let user choose
         setShowModeUnavailableModal(true);
         return;
       }
 
-      if (mode === 'takeaway' && !isTakeawayAvailable) {
+      if (normalizedMode === 'takeaway' && !isTakeawayAvailable) {
         // Show modal to let user choose
+        setShowModeUnavailableModal(true);
+        return;
+      }
+
+      if (normalizedMode === 'delivery' && !isDeliveryAvailable) {
         setShowModeUnavailableModal(true);
         return;
       }
@@ -312,17 +332,23 @@ export default function OrderClientPage({
 
     // Close modal if mode becomes available again
     setShowModeUnavailableModal(false);
-  }, [merchantInfo, mode, storeOpen, isStatusLoading, isDineInAvailable, isTakeawayAvailable]);
+  }, [merchantInfo, normalizedMode, storeOpen, isStatusLoading, isDineInAvailable, isTakeawayAvailable, isDeliveryAvailable]);
 
   // ========================================
   // Mode Unavailable Modal Handlers
   // ========================================
   const handleSwitchMode = () => {
     setShowModeUnavailableModal(false);
-    if (mode === 'dinein' && isTakeawayAvailable) {
-      router.replace(`/${merchantCode}/order?mode=takeaway`);
-    } else if (mode === 'takeaway' && isDineInAvailable) {
-      router.replace(`/${merchantCode}/order?mode=dinein`);
+    const candidates: OrderMode[] = ['takeaway', 'dinein', 'delivery'];
+    const next = candidates.find((m) => {
+      if (m === normalizedMode) return false;
+      if (m === 'dinein') return isDineInAvailable;
+      if (m === 'takeaway') return isTakeawayAvailable;
+      return isDeliveryAvailable;
+    });
+
+    if (next) {
+      router.replace(`/${merchantCode}/order?mode=${next}`);
     }
   };
 
@@ -335,7 +361,7 @@ export default function OrderClientPage({
   // Handle Auto Table Number from URL (tableno param)
   // ========================================
   useEffect(() => {
-    if (mode !== 'dinein') return;
+    if (normalizedMode !== 'dinein') return;
 
     const params = new URLSearchParams(window.location.search);
     const tablenoFromUrl = params.get('tableno');
@@ -362,7 +388,7 @@ export default function OrderClientPage({
     if (tableData?.tableNumber) {
       setTableNumber(tableData.tableNumber);
     }
-  }, [merchantCode, mode, router]);
+  }, [merchantCode, normalizedMode, router]);
 
   // ========================================
   // Handle Outlet Info Modal via URL
@@ -477,8 +503,8 @@ export default function OrderClientPage({
   // ========================================
 
   useEffect(() => {
-    initializeCart(merchantCode, mode as 'dinein' | 'takeaway');
-  }, [merchantCode, mode, initializeCart]);
+    initializeCart(merchantCode, normalizedMode);
+  }, [merchantCode, normalizedMode, initializeCart]);
 
   // ========================================
   // Group Order Cart Sync - Update group cart when local cart changes
@@ -512,7 +538,7 @@ export default function OrderClientPage({
     // ✅ THROTTLED: Scroll handler with 100ms throttle for better performance
     const handleScroll = throttle(() => {
       // Header height is 55px + optional 40px table bar
-      const stickyHeaderHeight = mode === 'dinein' && tableNumber ? 95 : 55;
+      const stickyHeaderHeight = normalizedMode === 'dinein' && tableNumber ? 95 : 55;
       // Category tabs are 48px when sticky
       const totalStickyHeight = stickyHeaderHeight + 48;
 
@@ -676,11 +702,23 @@ export default function OrderClientPage({
       )}
 
       {/* Mode-Specific Closing Warning Banner */}
-      {storeOpen && merchantInfo && (
+      {storeOpen && merchantInfo && (normalizedMode === 'dinein' || normalizedMode === 'takeaway' || normalizedMode === 'delivery') && (
         <ModeClosingBanner
-          mode={mode}
-          modeLabel={mode === 'dinein' ? merchantInfo.dineInLabel || undefined : merchantInfo.takeawayLabel || undefined}
-          scheduleEnd={mode === 'dinein' ? merchantInfo.dineInScheduleEnd || null : merchantInfo.takeawayScheduleEnd || null}
+          mode={normalizedMode}
+          modeLabel={
+            normalizedMode === 'dinein'
+              ? merchantInfo.dineInLabel || undefined
+              : normalizedMode === 'takeaway'
+                ? merchantInfo.takeawayLabel || undefined
+                : merchantInfo.deliveryLabel || (t('customer.mode.delivery') === 'customer.mode.delivery' ? 'Delivery' : t('customer.mode.delivery'))
+          }
+          scheduleEnd={
+            normalizedMode === 'dinein'
+              ? merchantInfo.dineInScheduleEnd || null
+              : normalizedMode === 'takeaway'
+                ? merchantInfo.takeawayScheduleEnd || null
+                : merchantInfo.deliveryScheduleEnd || null
+          }
           showThresholdMinutes={30}
         />
       )}
@@ -694,14 +732,14 @@ export default function OrderClientPage({
         merchantLogo={merchantInfo?.logoUrl || null}
         isSticky={isSticky}
         tableNumber={tableNumber}
-        mode={mode as 'dinein' | 'takeaway'}
+        mode={normalizedMode}
         showTableBadge={showTableBadge}
         onBackClick={() => {
           localStorage.removeItem(`mode_${merchantCode}`);
           router.push(`/${merchantCode}`);
         }}
         onSearchClick={() => {
-          router.push(`/${merchantCode}/search?mode=${mode}&ref=${encodeURIComponent(`/${merchantCode}/order?mode=${mode}`)}`);
+          router.push(`/${merchantCode}/search?mode=${normalizedMode}&ref=${encodeURIComponent(`/${merchantCode}/order?mode=${normalizedMode}`)}`);
         }}
         onGroupOrderClick={() => {
           if (isInGroupOrder) {
@@ -1038,7 +1076,9 @@ export default function OrderClientPage({
           FLOATING CART BUTTON
           Hidden when store is closed - prevents checkout attempt
       ======================================== */}
-      <FloatingCartButton merchantCode={merchantCode} mode={mode as 'dinein' | 'takeaway'} storeOpen={storeOpen} />
+      <FloatingCartButton merchantCode={merchantCode} mode={normalizedMode} storeOpen={storeOpen} />
+      
+      
 
       {/* ========================================
           MENU DETAIL MODAL
@@ -1132,11 +1172,12 @@ export default function OrderClientPage({
       ======================================== */}
       <ModeUnavailableModal
         isOpen={showModeUnavailableModal}
-        currentMode={mode as 'dinein' | 'takeaway'}
+        currentMode={normalizedMode}
         alternativeMode={
-          mode === 'dinein' && isTakeawayAvailable ? 'takeaway' :
-            mode === 'takeaway' && isDineInAvailable ? 'dinein' :
-              null
+          normalizedMode === 'dinein' && isTakeawayAvailable ? 'takeaway' :
+            normalizedMode === 'takeaway' && isDineInAvailable ? 'dinein' :
+              normalizedMode !== 'delivery' && isDeliveryAvailable ? 'delivery' :
+                null
         }
         dineInLabel={merchantInfo?.dineInLabel || 'Dine In'}
         takeawayLabel={merchantInfo?.takeawayLabel || 'Takeaway'}
@@ -1167,7 +1208,7 @@ export default function OrderClientPage({
         onSubmitOrder={() => {
           setShowGroupDashboard(false);
           // Navigate to checkout page with group order items
-          router.push(`/${merchantCode}/view-order?mode=${mode}&groupOrder=true`);
+          router.push(`/${merchantCode}/view-order?mode=${normalizedMode}&groupOrder=true`);
         }}
         merchantCode={merchantCode}
         currency={merchantInfo?.currency || 'AUD'}
@@ -1202,7 +1243,7 @@ export default function OrderClientPage({
           setShowTableModal(true);
         }}
         merchantCode={merchantCode}
-        orderType={mode === 'dinein' ? 'DINE_IN' : 'TAKEAWAY'}
+        orderType={normalizedMode === 'dinein' ? 'DINE_IN' : 'TAKEAWAY'}
         tableNumber={tableNumber || undefined}
       />
 

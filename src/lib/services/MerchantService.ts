@@ -63,10 +63,13 @@ export interface UpdateMerchantInput {
   isTakeawayEnabled?: boolean;
   dineInLabel?: string | null;
   takeawayLabel?: string | null;
+  deliveryLabel?: string | null;
   dineInScheduleStart?: string | null;
   dineInScheduleEnd?: string | null;
   takeawayScheduleStart?: string | null;
   takeawayScheduleEnd?: string | null;
+  deliveryScheduleStart?: string | null;
+  deliveryScheduleEnd?: string | null;
   totalTables?: number | null;
   // Tax settings
   enableTax?: boolean;
@@ -86,6 +89,14 @@ export interface UpdateMerchantInput {
   timezone?: string;
   latitude?: number | null;
   longitude?: number | null;
+  // Delivery settings
+  isDeliveryEnabled?: boolean;
+  enforceDeliveryZones?: boolean;
+  deliveryMaxDistanceKm?: number | null;
+  deliveryFeeBase?: number | null;
+  deliveryFeePerKm?: number | null;
+  deliveryFeeMin?: number | null;
+  deliveryFeeMax?: number | null;
   // Receipt settings
   receiptSettings?: Record<string, unknown>;
 }
@@ -333,6 +344,24 @@ class MerchantService {
       validateEmail(input.email);
     }
 
+    // Delivery requires merchant coordinates (existing or incoming).
+    // Also prevents clearing coordinates while delivery is enabled.
+    const willEnableDelivery = input.isDeliveryEnabled !== undefined ? input.isDeliveryEnabled : existing.isDeliveryEnabled;
+
+    if (willEnableDelivery === true) {
+      const existingLatitude = existing.latitude === null ? null : Number(existing.latitude.toString());
+      const existingLongitude = existing.longitude === null ? null : Number(existing.longitude.toString());
+      const nextLatitude = input.latitude !== undefined ? (input.latitude as number | null) : existingLatitude;
+      const nextLongitude = input.longitude !== undefined ? (input.longitude as number | null) : existingLongitude;
+
+      if (nextLatitude === null || nextLongitude === null || !Number.isFinite(nextLatitude) || !Number.isFinite(nextLongitude)) {
+        throw new ValidationError(
+          'Delivery can only be enabled after setting merchant location coordinates',
+          ERROR_CODES.VALIDATION_FAILED
+        );
+      }
+    }
+
     // Map input fields to Prisma schema fields
     const updateData: Record<string, unknown> = {};
     if (input.code !== undefined) updateData.code = input.code; // Super admin can update merchant code
@@ -346,10 +375,13 @@ class MerchantService {
     if (input.isTakeawayEnabled !== undefined) updateData.isTakeawayEnabled = input.isTakeawayEnabled;
     if (input.dineInLabel !== undefined) updateData.dineInLabel = input.dineInLabel;
     if (input.takeawayLabel !== undefined) updateData.takeawayLabel = input.takeawayLabel;
+    if (input.deliveryLabel !== undefined) updateData.deliveryLabel = input.deliveryLabel;
     if (input.dineInScheduleStart !== undefined) updateData.dineInScheduleStart = input.dineInScheduleStart;
     if (input.dineInScheduleEnd !== undefined) updateData.dineInScheduleEnd = input.dineInScheduleEnd;
     if (input.takeawayScheduleStart !== undefined) updateData.takeawayScheduleStart = input.takeawayScheduleStart;
     if (input.takeawayScheduleEnd !== undefined) updateData.takeawayScheduleEnd = input.takeawayScheduleEnd;
+    if (input.deliveryScheduleStart !== undefined) updateData.deliveryScheduleStart = input.deliveryScheduleStart;
+    if (input.deliveryScheduleEnd !== undefined) updateData.deliveryScheduleEnd = input.deliveryScheduleEnd;
     if (input.totalTables !== undefined) updateData.totalTables = input.totalTables;
     // Tax settings
     if (input.enableTax !== undefined) updateData.enableTax = input.enableTax;
@@ -371,6 +403,14 @@ class MerchantService {
     if (input.timezone !== undefined) updateData.timezone = input.timezone;
     if (input.latitude !== undefined) updateData.latitude = input.latitude;
     if (input.longitude !== undefined) updateData.longitude = input.longitude;
+    // Delivery settings
+    if (input.isDeliveryEnabled !== undefined) updateData.isDeliveryEnabled = input.isDeliveryEnabled;
+    if (input.enforceDeliveryZones !== undefined) updateData.enforceDeliveryZones = input.enforceDeliveryZones;
+    if (input.deliveryMaxDistanceKm !== undefined) updateData.deliveryMaxDistanceKm = input.deliveryMaxDistanceKm;
+    if (input.deliveryFeeBase !== undefined) updateData.deliveryFeeBase = input.deliveryFeeBase;
+    if (input.deliveryFeePerKm !== undefined) updateData.deliveryFeePerKm = input.deliveryFeePerKm;
+    if (input.deliveryFeeMin !== undefined) updateData.deliveryFeeMin = input.deliveryFeeMin;
+    if (input.deliveryFeeMax !== undefined) updateData.deliveryFeeMax = input.deliveryFeeMax;
     // Receipt settings
     if (input.receiptSettings !== undefined) updateData.receiptSettings = input.receiptSettings;
 
@@ -593,6 +633,16 @@ class MerchantService {
     }
 
     await merchantRepository.addUser(merchantId, userId, role);
+  }
+
+  /**
+   * Add delivery driver to merchant
+   *
+   * @param merchantId Merchant ID
+   * @param userId User ID
+   */
+  async addDriver(merchantId: bigint, userId: bigint): Promise<void> {
+    await merchantRepository.addUser(merchantId, userId, 'DRIVER');
   }
 
   /**

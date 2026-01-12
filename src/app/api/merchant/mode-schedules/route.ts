@@ -2,7 +2,7 @@
  * Mode Schedule API
  * GET/POST/PUT/DELETE /api/merchant/mode-schedules
  * 
- * Manages per-day mode schedules for Dine In and Takeaway
+ * Manages per-day mode schedules for Dine In, Takeaway, and Delivery
  * Different schedules for each day of the week
  */
 
@@ -66,7 +66,7 @@ export const POST = withMerchant(async (
 
     // Validate each schedule
     for (const schedule of schedules) {
-      if (!schedule.mode || !['DINE_IN', 'TAKEAWAY'].includes(schedule.mode)) {
+      if (!schedule.mode || !['DINE_IN', 'TAKEAWAY', 'DELIVERY'].includes(schedule.mode)) {
         return NextResponse.json(
           { success: false, error: 'VALIDATION_ERROR', message: 'Invalid mode' },
           { status: 400 }
@@ -153,7 +153,7 @@ export const DELETE = withMerchant(async (
       where: {
         merchantId_mode_dayOfWeek: {
           merchantId,
-          mode: mode as 'DINE_IN' | 'TAKEAWAY',
+          mode: mode as 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY',
           dayOfWeek: parseInt(dayOfWeek),
         },
       },

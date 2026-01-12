@@ -45,6 +45,7 @@ export type OrderItemWithAddons = OrderItem & {
 export type OrderWithDetails = Order & {
   payment?: (Payment & { paidByUser?: Pick<User, 'id' | 'name' | 'email'> | null }) | null;
   customer?: Pick<User, 'id' | 'name' | 'email' | 'phone'> | null;
+  deliveryDriver?: Pick<User, 'id' | 'name' | 'email' | 'phone'> | null;
   orderItems: OrderItemWithAddons[];
 };
 
@@ -54,6 +55,7 @@ export type OrderWithDetails = Order & {
 export type OrderListItem = Order & {
   payment?: Pick<Payment, 'id' | 'status' | 'paymentMethod' | 'paidAt'> | null;
   customer?: Pick<User, 'id' | 'name' | 'phone'> | null;
+  deliveryDriver?: Pick<User, 'id' | 'name' | 'email' | 'phone'> | null;
   _count?: {
     orderItems: number;
   };
@@ -284,6 +286,14 @@ export const ORDER_DETAIL_INCLUDE: Prisma.OrderInclude = {
       phone: true,
     },
   },
+  deliveryDriver: {
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phone: true,
+    },
+  },
   orderItems: {
     include: {
       addons: {
@@ -323,6 +333,14 @@ export const ORDER_LIST_INCLUDE: Prisma.OrderInclude = {
     select: {
       id: true,
       name: true,
+      phone: true,
+    },
+  },
+  deliveryDriver: {
+    select: {
+      id: true,
+      name: true,
+      email: true,
       phone: true,
     },
   },

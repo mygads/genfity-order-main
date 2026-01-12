@@ -21,11 +21,18 @@ class OrderRepository {
     customerName: string;
     customerEmail: string;
     customerPhone?: string;
-    orderType: 'DINE_IN' | 'TAKEAWAY';
+    orderType: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY';
     tableNumber?: string;
     status?: string;
     subtotal: number;
     taxAmount: number;
+    serviceChargeAmount?: number;
+    packagingFeeAmount?: number;
+    deliveryFeeAmount?: number;
+    deliveryUnit?: string;
+    deliveryAddress?: string;
+    deliveryLatitude?: number;
+    deliveryLongitude?: number;
     totalAmount: number;
     notes?: string;
     qrCodeUrl?: string;
@@ -58,8 +65,15 @@ class OrderRepository {
           status: orderData.status as OrderStatus,
           subtotal: orderData.subtotal,
           taxAmount: orderData.taxAmount,
+          serviceChargeAmount: orderData.serviceChargeAmount ?? 0,
+          packagingFeeAmount: orderData.packagingFeeAmount ?? 0,
           totalAmount: orderData.totalAmount,
           notes: orderData.notes,
+          deliveryFeeAmount: orderData.deliveryFeeAmount ?? 0,
+          deliveryUnit: orderData.deliveryUnit,
+          deliveryAddress: orderData.deliveryAddress,
+          deliveryLatitude: orderData.deliveryLatitude,
+          deliveryLongitude: orderData.deliveryLongitude,
         },
       });
 

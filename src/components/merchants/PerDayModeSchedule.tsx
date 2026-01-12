@@ -15,7 +15,7 @@ import { FaCopy, FaMagic } from "react-icons/fa";
 
 interface ModeSchedule {
   id?: string;
-  mode: 'DINE_IN' | 'TAKEAWAY';
+  mode: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY';
   dayOfWeek: number;
   startTime: string;
   endTime: string;
@@ -24,6 +24,7 @@ interface ModeSchedule {
 
 interface PerDayModeScheduleProps {
   token: string;
+  embedded?: boolean;
 }
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -37,14 +38,14 @@ const TEMPLATES = {
   closed: { startTime: "10:00", endTime: "22:00", isActive: false },
 };
 
-export default function PerDayModeSchedule({ token }: PerDayModeScheduleProps) {
+export default function PerDayModeSchedule({ token, embedded = false }: PerDayModeScheduleProps) {
   const { error: showError, success: showSuccess } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [schedules, setSchedules] = useState<ModeSchedule[]>([]);
   const [enablePerDaySchedule, setEnablePerDaySchedule] = useState(false);
   const [showCopyModal, setShowCopyModal] = useState(false);
-  const [copySource, setCopySource] = useState<{ mode: 'DINE_IN' | 'TAKEAWAY'; dayOfWeek: number } | null>(null);
+  const [copySource, setCopySource] = useState<{ mode: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY'; dayOfWeek: number } | null>(null);
   const [copyTargetDays, setCopyTargetDays] = useState<number[]>([]);
 
   // Fetch existing schedules
@@ -70,7 +71,7 @@ export default function PerDayModeSchedule({ token }: PerDayModeScheduleProps) {
   }, [fetchSchedules]);
 
   // Initialize default schedules for a mode
-  const initializeSchedules = (mode: 'DINE_IN' | 'TAKEAWAY') => {
+  const initializeSchedules = (mode: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY') => {
     const newSchedules: ModeSchedule[] = [];
     for (let day = 0; day < 7; day++) {
       const existing = schedules.find(s => s.mode === mode && s.dayOfWeek === day);
@@ -88,7 +89,7 @@ export default function PerDayModeSchedule({ token }: PerDayModeScheduleProps) {
   };
 
   // Update a schedule
-  const updateSchedule = (mode: 'DINE_IN' | 'TAKEAWAY', dayOfWeek: number, field: string, value: string | boolean) => {
+  const updateSchedule = (mode: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY', dayOfWeek: number, field: string, value: string | boolean) => {
     setSchedules(prev => prev.map(s => {
       if (s.mode === mode && s.dayOfWeek === dayOfWeek) {
         return { ...s, [field]: value };
@@ -125,7 +126,7 @@ export default function PerDayModeSchedule({ token }: PerDayModeScheduleProps) {
   };
 
   // Apply preset template to all days
-  const applyTemplate = (mode: 'DINE_IN' | 'TAKEAWAY', template: 'weekday-weekend' | 'all-same' | 'closed-sunday') => {
+  const applyTemplate = (mode: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY', template: 'weekday-weekend' | 'all-same' | 'closed-sunday') => {
     setSchedules(prev => prev.map(s => {
       if (s.mode !== mode) return s;
 
@@ -158,7 +159,7 @@ export default function PerDayModeSchedule({ token }: PerDayModeScheduleProps) {
   };
 
   // Open copy modal
-  const openCopyModal = (mode: 'DINE_IN' | 'TAKEAWAY', dayOfWeek: number) => {
+  const openCopyModal = (mode: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY', dayOfWeek: number) => {
     setCopySource({ mode, dayOfWeek });
     setCopyTargetDays([]);
     setShowCopyModal(true);
@@ -206,7 +207,7 @@ export default function PerDayModeSchedule({ token }: PerDayModeScheduleProps) {
   };
 
   // Render schedule table for a mode
-  const renderModeScheduleTable = (mode: 'DINE_IN' | 'TAKEAWAY', label: string) => {
+  const renderModeScheduleTable = (mode: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY', label: string) => {
     const modeSchedules = schedules.filter(s => s.mode === mode);
     if (modeSchedules.length === 0) return null;
 
@@ -308,12 +309,16 @@ export default function PerDayModeSchedule({ token }: PerDayModeScheduleProps) {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h4 className="text-sm font-medium text-gray-900 dark:text-white">Per-Day Mode Schedules</h4>
-        <p className="text-xs text-gray-500 dark:text-gray-400">
-          Set different availability hours for each day (e.g., longer hours on weekends)
-        </p>
-      </div>
+      {!embedded && (
+        <>
+          <div>
+            <h4 className="text-sm font-medium text-gray-900 dark:text-white">Per-Day Mode Schedules</h4>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Set different availability hours for each day (e.g., longer hours on weekends)
+            </p>
+          </div>
+        </>
+      )}
 
       {/* Enable Toggle */}
       <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-900/50">
@@ -332,6 +337,7 @@ export default function PerDayModeSchedule({ token }: PerDayModeScheduleProps) {
               if (e.target.checked && schedules.length === 0) {
                 initializeSchedules('DINE_IN');
                 initializeSchedules('TAKEAWAY');
+                initializeSchedules('DELIVERY');
               }
             }}
             className="peer sr-only"
@@ -345,6 +351,7 @@ export default function PerDayModeSchedule({ token }: PerDayModeScheduleProps) {
         <>
           {renderModeScheduleTable('DINE_IN', 'Dine In Hours')}
           {renderModeScheduleTable('TAKEAWAY', 'Takeaway Hours')}
+          {renderModeScheduleTable('DELIVERY', 'Delivery Hours')}
 
           {/* Save Button */}
           <div className="flex justify-end">

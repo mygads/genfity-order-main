@@ -9,11 +9,15 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { getCustomerAuth, getTableNumber, saveRecentOrder } from '@/lib/utils/localStorage';
 import type { OrderMode } from '@/lib/types/customer';
 import PaymentConfirmationModal from '@/components/modals/PaymentConfirmationModal';
+import DeliveryAddressPicker from '@/components/delivery/DeliveryAddressPicker';
+import DeliveryFeePreview from '@/components/delivery/DeliveryFeePreview';
 import { useCart } from '@/context/CartContext';
 import { useGroupOrder } from '@/context/GroupOrderContext';
 import { useCustomerData } from '@/context/CustomerDataContext';
 import { calculateCartSubtotal } from '@/lib/utils/priceCalculator';
+import { formatCurrency as formatCurrencyUtil } from '@/lib/utils/format';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import { FaArrowLeft, FaCheckCircle, FaChevronDown, FaEnvelope, FaExclamationCircle, FaPhone, FaTable, FaUser } from 'react-icons/fa';
 
 /**
  * Payment Page - Customer Order Payment
@@ -46,7 +50,7 @@ export default function PaymentPage() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
 
   const merchantCode = params.merchantCode as string;
   const mode = (searchParams.get('mode') || 'takeaway') as OrderMode;
@@ -78,6 +82,7 @@ export default function PaymentPage() {
     phone?: string;
     email?: string;
     tableNumber?: string;
+    deliveryAddress?: string;
   }>({});
 
   // ✅ NEW: Refs for focusing invalid fields
@@ -93,32 +98,31 @@ export default function PaymentPage() {
   const [merchantPackagingFee, setMerchantPackagingFee] = useState(0);
   const [merchantCurrency, setMerchantCurrency] = useState('AUD');
 
+  // ✅ NEW: Delivery-specific state
+  const [deliveryUnit, setDeliveryUnit] = useState('');
+  const [deliveryBuildingName, setDeliveryBuildingName] = useState('');
+  const [deliveryBuildingNumber, setDeliveryBuildingNumber] = useState('');
+  const [deliveryFloor, setDeliveryFloor] = useState('');
+  const [deliveryInstructions, setDeliveryInstructions] = useState('');
+  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [deliveryAddressParts, setDeliveryAddressParts] = useState<{
+    streetLine?: string | null;
+    neighbourhood?: string | null;
+    suburb?: string | null;
+    city?: string | null;
+    state?: string | null;
+    postcode?: string | null;
+    country?: string | null;
+  } | null>(null);
+  const [deliveryLatitude, setDeliveryLatitude] = useState<number | null>(null);
+  const [deliveryLongitude, setDeliveryLongitude] = useState<number | null>(null);
+  const [deliveryFee, setDeliveryFee] = useState(0);
+  const [deliveryFeeError, setDeliveryFeeError] = useState('');
+  const [isDeliveryAvailable, setIsDeliveryAvailable] = useState(false);
+
   const auth = getCustomerAuth();
 
-  /**
-   * ✅ Format currency using merchant's currency
-   * Uses A$ prefix for Australian Dollar
-   */
-  const formatCurrency = (amount: number): string => {
-    // Special handling for AUD to show A$ prefix
-    if (merchantCurrency === 'AUD') {
-      return `A$${amount.toFixed(2)}`;
-    }
-
-    // Special handling for IDR - no decimals
-    if (merchantCurrency === 'IDR') {
-      const formatted = new Intl.NumberFormat('id-ID', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(Math.round(amount));
-      return `Rp ${formatted}`;
-    }
-
-    return new Intl.NumberFormat('en-AU', {
-      style: 'currency',
-      currency: merchantCurrency,
-    }).format(amount);
-  };
+  const formatCurrency = (amount: number): string => formatCurrencyUtil(amount, merchantCurrency, locale);
 
   // Initialize cart on mount
   useEffect(() => {
@@ -157,6 +161,10 @@ export default function PaymentPage() {
         setMerchantPackagingFee(Number(contextMerchantInfo.packagingFeeAmount) || 0);
       }
       setMerchantCurrency(contextMerchantInfo.currency || 'AUD');
+
+      // ✅ NEW: Check if delivery is available
+      const isDeliveryEnabled = (contextMerchantInfo as any).isDeliveryEnabled === true;
+      setIsDeliveryAvailable(isDeliveryEnabled);
     }
   }, [isInitialized, contextMerchantInfo, mode]);
 
@@ -199,6 +207,7 @@ export default function PaymentPage() {
    * Validates form before showing confirmation modal:
    * - Name is required
    * - Table number required for dine-in (already in cart)
+   * - Delivery address + coordinates required for delivery
    * 
    * @specification FRONTEND_SPECIFICATION.md - Payment Page Validation
    */
@@ -238,6 +247,18 @@ export default function PaymentPage() {
     if (mode === 'dinein' && !tableNumber.trim()) {
       errors.tableNumber = t('customer.payment.error.tableRequired');
       if (!firstInvalidRef) firstInvalidRef = tableNumberInputRef;
+    }
+
+    // ✅ NEW: Validate delivery address and coordinates for delivery mode
+    if (mode === 'delivery') {
+      if (!deliveryAddress.trim()) {
+        errors.deliveryAddress = t('customer.payment.error.deliveryAddressRequired') || 'Delivery address is required';
+        if (!firstInvalidRef) firstInvalidRef = null; // No ref for delivery address yet
+      }
+      if (deliveryLatitude === null || deliveryLongitude === null) {
+        errors.deliveryAddress = t('customer.payment.error.deliveryLocationRequired') || 'Please pick delivery location on map';
+        if (!firstInvalidRef) firstInvalidRef = null;
+      }
     }
 
     // If there are errors, set them and focus first invalid field
@@ -289,17 +310,18 @@ export default function PaymentPage() {
       // ========================================
       // STEP 2: Prepare Order Payload
       // ========================================
-      const orderType = mode === 'dinein' ? 'DINE_IN' : 'TAKEAWAY';
+      const orderType = mode === 'dinein' ? 'DINE_IN' : mode === 'takeaway' ? 'TAKEAWAY' : 'DELIVERY';
       // ✅ FIXED: Gunakan tableNumber dari state (bukan cart)
       const orderTableNumber = mode === 'dinein' ? tableNumber : null;
 
-      const orderPayload = {
+      const orderPayload: any = {
         merchantCode: cart.merchantCode,
         orderType,
         tableNumber: orderTableNumber, // ✅ Dari localStorage
         customerName: name.trim(),
         customerEmail: email.trim() || undefined,
         customerPhone: phone.trim() || undefined,
+        paymentMethod: mode === 'delivery' ? 'CASH_ON_DELIVERY' : 'CASH_ON_COUNTER',
         items: cart.items.map((item) => ({
           menuId: item.menuId.toString(),
           quantity: item.quantity,
@@ -313,6 +335,33 @@ export default function PaymentPage() {
           }, {} as Record<string, { addonItemId: string; quantity: number }>)).map((s) => ({ addonItemId: s.addonItemId, quantity: s.quantity })),
         })),
       };
+
+      // ✅ NEW: Add delivery fields if delivery mode
+      if (mode === 'delivery') {
+        orderPayload.deliveryUnit = deliveryUnit.trim() || undefined;
+        orderPayload.deliveryAddress = deliveryAddress.trim();
+        orderPayload.deliveryLatitude = deliveryLatitude;
+        orderPayload.deliveryLongitude = deliveryLongitude;
+
+        orderPayload.deliveryBuildingName = deliveryBuildingName.trim() || undefined;
+        orderPayload.deliveryBuildingNumber = deliveryBuildingNumber.trim() || undefined;
+        orderPayload.deliveryFloor = deliveryFloor.trim() || undefined;
+
+        const parts = deliveryAddressParts;
+        if (parts) {
+          orderPayload.deliveryStreetLine = parts.streetLine || undefined;
+          orderPayload.deliverySuburb = parts.suburb || undefined;
+          orderPayload.deliveryCity = parts.city || undefined;
+          orderPayload.deliveryState = parts.state || undefined;
+          orderPayload.deliveryPostcode = parts.postcode || undefined;
+          orderPayload.deliveryCountry = parts.country || undefined;
+        }
+
+        const instructions = deliveryInstructions.trim();
+        if (instructions) {
+          orderPayload.deliveryInstructions = instructions;
+        }
+      }
 
       // ✅ Debug logging BEFORE API call
       console.log('📦 Order Payload:', JSON.stringify(orderPayload, null, 2));
@@ -344,6 +393,8 @@ export default function PaymentPage() {
       }
 
       console.log('✅ Order created:', orderData.data.orderNumber);
+
+      const trackingToken = typeof orderData?.data?.trackingToken === 'string' ? orderData.data.trackingToken : null;
 
       // ========================================
       // STEP 4: Save order for push notification tracking (24h expiry)
@@ -377,7 +428,7 @@ export default function PaymentPage() {
 
       // ✅ 5. Navigate to summary
       router.push(
-        `/${merchantCode}/order-summary-cash?orderNumber=${orderData.data.orderNumber}&mode=${mode}`
+        `/${merchantCode}/order-summary-cash?orderNumber=${encodeURIComponent(orderData.data.orderNumber)}&mode=${encodeURIComponent(mode)}${trackingToken ? `&token=${encodeURIComponent(trackingToken)}` : ''}`
       );
 
       // ✅ 6. Clear cart context AFTER navigation (delayed)
@@ -404,7 +455,7 @@ export default function PaymentPage() {
   const taxAmount = cartSubtotal * (merchantTaxPercentage / 100);
   const serviceChargeAmount = cartSubtotal * (merchantServiceChargePercent / 100);
   const packagingFeeAmount = merchantPackagingFee;
-  const totalPayment = cartSubtotal + taxAmount + serviceChargeAmount + packagingFeeAmount;
+  const totalPayment = cartSubtotal + taxAmount + serviceChargeAmount + packagingFeeAmount + (mode === 'delivery' ? deliveryFee : 0);
 
   // Loading state while cart initializes
   if (cart === null) {
@@ -482,9 +533,7 @@ export default function PaymentPage() {
             className="w-10 h-10 flex items-center justify-center -ml-2"
             aria-label="Back"
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 12H5M12 19l-7-7 7-7" />
-            </svg>
+            <FaArrowLeft className="w-5 h-5 text-gray-700" />
           </button>
           <h1 className="flex-1 text-center font-semibold text-gray-900 text-base pr-10">
             {t('customer.payment.title')}
@@ -497,7 +546,10 @@ export default function PaymentPage() {
         {/* API Error Message */}
         {apiError && (
           <div className="m-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-sm text-red-600">⚠️ {apiError}</p>
+            <p className="text-sm text-red-600 flex items-center gap-2">
+              <FaExclamationCircle className="w-4 h-4" />
+              <span>{apiError}</span>
+            </p>
           </div>
         )}
 
@@ -516,25 +568,13 @@ export default function PaymentPage() {
             <span className="text-gray-700">{t('order.type')}</span>
             <div className="flex items-center gap-2">
               <span className="font-medium text-gray-900">
-                {mode === 'dinein' ? t('customer.mode.dineIn') : t('customer.mode.pickUp')}
+                {mode === 'dinein'
+                  ? t('customer.mode.dineIn')
+                  : mode === 'takeaway'
+                    ? t('customer.mode.pickUp')
+                      : (t('customer.mode.delivery') === 'customer.mode.delivery' ? 'Delivery' : t('customer.mode.delivery'))}
               </span>
-              <svg
-                style={{ width: '18px', height: '18px', color: '#212529' }}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-              >
-                {/* Hollow Circle */}
-                <circle cx="12" cy="12" r="10" strokeWidth="2" fill="none" />
-                {/* Solid Checkmark */}
-                <path
-                  d="M8 12l3 3 5-6"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  fill="none"
-                />
-              </svg>
+              <FaCheckCircle style={{ width: '18px', height: '18px', color: '#212529' }} />
             </div>
           </div>
         </section>
@@ -561,9 +601,7 @@ export default function PaymentPage() {
             </label>
             <div className="relative mb-1">
               <div className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: fieldErrors.name ? '#EF4444' : '#9CA3AF' }}>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
+                <FaUser className="w-5 h-5" />
               </div>
               <input
                 ref={nameInputRef}
@@ -586,9 +624,7 @@ export default function PaymentPage() {
             </div>
             {fieldErrors.name && (
               <p className="text-xs text-red-500 mb-2 flex items-center gap-1">
-                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
+                <FaExclamationCircle className="w-3 h-3" />
                 {fieldErrors.name}
               </p>
             )}
@@ -604,9 +640,7 @@ export default function PaymentPage() {
             </label>
             <div className="relative mb-1">
               <div className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: fieldErrors.phone ? '#EF4444' : '#9CA3AF' }}>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                </svg>
+                <FaPhone className="w-5 h-5" />
               </div>
               <input
                 ref={phoneInputRef}
@@ -630,9 +664,7 @@ export default function PaymentPage() {
             </div>
             {fieldErrors.phone && (
               <p className="text-xs text-red-500 mb-2 flex items-center gap-1">
-                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
+                <FaExclamationCircle className="w-3 h-3" />
                 {fieldErrors.phone}
               </p>
             )}
@@ -648,9 +680,7 @@ export default function PaymentPage() {
             </label>
             <div className="relative mb-1">
               <div className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: fieldErrors.email ? '#EF4444' : '#9CA3AF' }}>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
+                <FaEnvelope className="w-5 h-5" />
               </div>
               <input
                 ref={emailInputRef}
@@ -673,9 +703,7 @@ export default function PaymentPage() {
             </div>
             {fieldErrors.email && (
               <p className="text-xs text-red-500 mb-2 flex items-center gap-1">
-                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
+                <FaExclamationCircle className="w-3 h-3" />
                 {fieldErrors.email}
               </p>
             )}
@@ -693,9 +721,7 @@ export default function PaymentPage() {
                 </label>
                 <div className="relative mb-1">
                   <div className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: fieldErrors.tableNumber ? '#EF4444' : '#9CA3AF' }}>
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                    </svg>
+                    <FaTable className="w-5 h-5" />
                   </div>
                   <input
                     ref={tableNumberInputRef}
@@ -717,19 +743,66 @@ export default function PaymentPage() {
                 </div>
                 {fieldErrors.tableNumber && (
                   <p className="text-xs text-red-500 mb-2 flex items-center gap-1">
-                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
+                    <FaExclamationCircle className="w-3 h-3" />
                     {fieldErrors.tableNumber}
                   </p>
                 )}
                 {!fieldErrors.tableNumber && <div className="mb-2" />}
               </>
             )}
+
+            {/* ✅ NEW: Delivery Mode - Address & Map Picker */}
+            {mode === 'delivery' && isDeliveryAvailable && (
+              <>
+                <div className="mb-4 mt-4 pt-4 border-t border-gray-200">
+                  <DeliveryAddressPicker
+                    deliveryUnit={deliveryUnit}
+                    onUnitChange={setDeliveryUnit}
+                    deliveryBuildingName={deliveryBuildingName}
+                    onBuildingNameChange={setDeliveryBuildingName}
+                    deliveryBuildingNumber={deliveryBuildingNumber}
+                    onBuildingNumberChange={setDeliveryBuildingNumber}
+                    deliveryFloor={deliveryFloor}
+                    onFloorChange={setDeliveryFloor}
+                    deliveryInstructions={deliveryInstructions}
+                    onInstructionsChange={setDeliveryInstructions}
+                    onAddressPartsChange={setDeliveryAddressParts}
+                    onAddressChange={setDeliveryAddress}
+                    onCoordinatesChange={(lat, lng) => {
+                      setDeliveryLatitude(lat);
+                      setDeliveryLongitude(lng);
+                    }}
+                    deliveryAddress={deliveryAddress}
+                    deliveryLatitude={deliveryLatitude}
+                    deliveryLongitude={deliveryLongitude}
+                    merchantLatitude={(contextMerchantInfo as any)?.latitude !== undefined && (contextMerchantInfo as any)?.latitude !== null
+                      ? Number((contextMerchantInfo as any).latitude)
+                      : null}
+                    merchantLongitude={(contextMerchantInfo as any)?.longitude !== undefined && (contextMerchantInfo as any)?.longitude !== null
+                      ? Number((contextMerchantInfo as any).longitude)
+                      : null}
+                    error={fieldErrors.deliveryAddress}
+                  />
+                </div>
+
+                {/* Delivery Fee Preview */}
+                <div className="mb-4">
+                  <DeliveryFeePreview
+                    merchantCode={merchantCode}
+                    deliveryLatitude={deliveryLatitude}
+                    deliveryLongitude={deliveryLongitude}
+                    deliveryAddress={deliveryAddress}
+                    currency={merchantCurrency}
+                    onFeeCalculated={setDeliveryFee}
+                    onError={setDeliveryFeeError}
+                  />
+                </div>
+              </>
+            )}
           </form>
         </div>
 
-        {/* Pay at Cashier (ESB Exact Match) */}
+        {/* Payment instructions */}
         <div
           className="flex flex-col items-center text-center mb-20"
           style={{
@@ -744,15 +817,19 @@ export default function PaymentPage() {
         >
           <div>
             <Image
-              src="/images/cashier.png"
-              alt="Pay at Cashier"
+              src={mode === 'delivery' ? '/images/cod.png' : '/images/cashier.png'}
+              alt={mode === 'delivery' ? 'Pay on Delivery' : 'Pay at Cashier'}
               width={300}
               height={300}
               style={{ maxWidth: '300px', height: 'auto' }}
             />
           </div>
           <div>
-            <span>{t('customer.payment.showQRCode')}</span>
+            <span>
+              {mode === 'delivery'
+                ? (t('customer.payment.payOnDeliveryHint') || 'Pay on delivery. You can track your driver after the order is accepted.')
+                : t('customer.payment.showQRCode')}
+            </span>
           </div>
         </div>
       </main>
@@ -780,7 +857,7 @@ export default function PaymentPage() {
                 className="flex mb-1"
                 style={{ fontSize: '0.9rem', color: '#AEB3BE' }}
               >
-                <div className="flex-grow">{t('customer.payment.inclTax')}</div>
+                <div className="grow">{t('customer.payment.inclTax')}</div>
                 <div>{formatCurrency(taxAmount)}</div>
               </div>
             )}
@@ -790,7 +867,7 @@ export default function PaymentPage() {
                 className="flex mb-1"
                 style={{ fontSize: '0.9rem', color: '#AEB3BE' }}
               >
-                <div className="flex-grow">{t('customer.payment.serviceCharge')}</div>
+                <div className="grow">{t('customer.payment.serviceCharge')}</div>
                 <div>{formatCurrency(serviceChargeAmount)}</div>
               </div>
             )}
@@ -800,8 +877,18 @@ export default function PaymentPage() {
                 className="flex mb-1"
                 style={{ fontSize: '0.9rem', color: '#AEB3BE' }}
               >
-                <div className="flex-grow">{t('customer.payment.packagingFee')}</div>
+                <div className="grow">{t('customer.payment.packagingFee')}</div>
                 <div>{formatCurrency(packagingFeeAmount)}</div>
+              </div>
+            )}
+            {/* ✅ NEW: Delivery Fee Row */}
+            {mode === 'delivery' && deliveryFee > 0 && (
+              <div
+                className="flex mb-1"
+                style={{ fontSize: '0.9rem', color: '#AEB3BE' }}
+              >
+                <div className="grow">{t('customer.delivery.fee') || 'Delivery Fee'}</div>
+                <div>{formatCurrency(deliveryFee)}</div>
               </div>
             )}
           </div>
@@ -817,19 +904,15 @@ export default function PaymentPage() {
               onClick={() => setShowPaymentDetails(!showPaymentDetails)}
             >
               {t('customer.payment.paymentTotal')}
-              <svg
-                style={{
-                  width: '20px',
-                  height: '20px',
-                  marginLeft: '4px',
-                  transform: showPaymentDetails ? 'rotate(180deg)' : 'rotate(0deg)',
-                  transition: 'transform 0.2s ease'
-                }}
-                viewBox="0 0 24 24"
-                fill="currentColor"
-              >
-                <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z" />
-              </svg>
+                <FaChevronDown
+                  style={{
+                    width: '20px',
+                    height: '20px',
+                    marginLeft: '4px',
+                    transform: showPaymentDetails ? 'rotate(180deg)' : 'rotate(0deg)',
+                    transition: 'transform 0.2s ease'
+                  }}
+                />
             </div>
             <div
               className="flex items-center"
@@ -850,7 +933,11 @@ export default function PaymentPage() {
               fontSize: '16px'
             }}
           >
-            {isLoading ? t('customer.payment.processing') : t('customer.payment.payAtCashier')}
+            {isLoading
+              ? t('customer.payment.processing')
+              : (mode === 'delivery'
+                ? (t('customer.payment.placeDeliveryOrder') === 'customer.payment.placeDeliveryOrder' ? 'Place delivery order' : t('customer.payment.placeDeliveryOrder'))
+                : t('customer.payment.payAtCashier'))}
           </button>
         </div>
       </div>

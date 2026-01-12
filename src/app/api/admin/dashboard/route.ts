@@ -258,6 +258,110 @@ async function handleGet(req: NextRequest, context: AuthContext) {
       });
     }
 
+    // Delivery Driver Dashboard Data
+    if (role === 'DELIVERY') {
+      const merchantUser = await prisma.merchantUser.findFirst({
+        where: {
+          userId: BigInt(userId),
+          isActive: true,
+        },
+        include: {
+          merchant: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+              currency: true,
+            },
+          },
+        },
+      });
+
+      if (!merchantUser) {
+        return NextResponse.json({
+          success: true,
+          data: {
+            role,
+            noMerchant: true,
+          },
+          statusCode: 200,
+        });
+      }
+
+      const merchantId = merchantUser.merchantId;
+      const driverId = BigInt(userId);
+
+      const [assignedCount, pickedUpCount, deliveredTodayCount, activeDeliveries] = await Promise.all([
+        prisma.order.count({
+          where: {
+            merchantId,
+            orderType: 'DELIVERY',
+            deliveryDriverUserId: driverId,
+            deliveryStatus: { in: ['PENDING_ASSIGNMENT', 'ASSIGNED'] },
+          },
+        }),
+        prisma.order.count({
+          where: {
+            merchantId,
+            orderType: 'DELIVERY',
+            deliveryDriverUserId: driverId,
+            deliveryStatus: 'PICKED_UP',
+          },
+        }),
+        prisma.order.count({
+          where: {
+            merchantId,
+            orderType: 'DELIVERY',
+            deliveryDriverUserId: driverId,
+            deliveryStatus: 'DELIVERED',
+            deliveryDeliveredAt: {
+              gte: new Date(new Date().setHours(0, 0, 0, 0)),
+            },
+          },
+        }),
+        prisma.order.findMany({
+          where: {
+            merchantId,
+            orderType: 'DELIVERY',
+            deliveryDriverUserId: driverId,
+            deliveryStatus: { in: ['PENDING_ASSIGNMENT', 'ASSIGNED', 'PICKED_UP'] },
+          },
+          orderBy: { placedAt: 'desc' },
+          take: 20,
+          include: {
+            customer: {
+              select: {
+                name: true,
+                phone: true,
+                email: true,
+              },
+            },
+            orderItems: {
+              select: { id: true },
+            },
+          },
+        }),
+      ]);
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          role: 'DELIVERY',
+          merchant: serializeBigInt(merchantUser.merchant),
+          stats: {
+            assignedCount,
+            pickedUpCount,
+            deliveredTodayCount,
+          },
+          activeDeliveries: serializeBigInt(activeDeliveries.map((o) => ({
+            ...o,
+            itemsCount: o.orderItems.length,
+          }))),
+        },
+        statusCode: 200,
+      });
+    }
+
     return NextResponse.json(
       {
         success: false,

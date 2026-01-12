@@ -94,10 +94,13 @@ export const POST = withMerchant(async (
         closeTime: body.closeTime || null,
         isDineInEnabled: body.isDineInEnabled ?? null,
         isTakeawayEnabled: body.isTakeawayEnabled ?? null,
+        isDeliveryEnabled: body.isDeliveryEnabled ?? null,
         dineInStartTime: body.dineInStartTime || null,
         dineInEndTime: body.dineInEndTime || null,
         takeawayStartTime: body.takeawayStartTime || null,
         takeawayEndTime: body.takeawayEndTime || null,
+        deliveryStartTime: body.deliveryStartTime || null,
+        deliveryEndTime: body.deliveryEndTime || null,
       },
       update: {
         name: body.name || null,
@@ -106,10 +109,13 @@ export const POST = withMerchant(async (
         closeTime: body.closeTime || null,
         isDineInEnabled: body.isDineInEnabled ?? null,
         isTakeawayEnabled: body.isTakeawayEnabled ?? null,
+        isDeliveryEnabled: body.isDeliveryEnabled ?? null,
         dineInStartTime: body.dineInStartTime || null,
         dineInEndTime: body.dineInEndTime || null,
         takeawayStartTime: body.takeawayStartTime || null,
         takeawayEndTime: body.takeawayEndTime || null,
+        deliveryStartTime: body.deliveryStartTime || null,
+        deliveryEndTime: body.deliveryEndTime || null,
       },
     });
 

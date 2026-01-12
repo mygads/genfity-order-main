@@ -6,22 +6,24 @@ import { getCustomerAuth } from '@/lib/utils/localStorage';
 import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { TranslationKeys } from '@/lib/i18n';
+import { formatCurrency as formatCurrencyUtil } from '@/lib/utils/format';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/context/ToastContext';
 import { useCustomerData } from '@/context/CustomerDataContext';
-import { FaFileDownload, FaStickyNote } from 'react-icons/fa';
+import { FaArrowLeft, FaClipboardList, FaFileDownload, FaMotorcycle, FaRedo, FaShoppingBag, FaSpinner, FaStickyNote, FaUtensils } from 'react-icons/fa';
 import { customerMerchantHomeUrl, customerOrderUrl, customerTrackUrl } from '@/lib/utils/customerRoutes';
 
 interface OrderHistoryItem {
-  id: bigint;
+  id: string;
   orderNumber: string;
   merchantName: string;
   merchantCode: string;
-  mode: 'dinein' | 'takeaway';
+  mode: 'dinein' | 'takeaway' | 'delivery';
   status: string;
   totalAmount: number;
   placedAt: string;
   itemsCount: number;
+  trackingToken: string;
 }
 
 interface ReorderItem {
@@ -284,14 +286,15 @@ export default function OrderHistoryPage() {
 
     try {
       // Fetch full order details using public endpoint (supports orderNumber lookup)
-      let response = await fetch(`/api/public/orders/${order.orderNumber}`);
+      const tokenQuery = `?token=${encodeURIComponent(order.trackingToken)}`;
+      let response = await fetch(`/api/public/orders/${order.orderNumber}${tokenQuery}`);
 
       // If public endpoint fails, try constructing full order number with merchant code
       if (!response.ok) {
         const fullOrderNumber = order.orderNumber.includes('-')
           ? order.orderNumber
           : `${order.merchantCode}-${order.orderNumber}`;
-        response = await fetch(`/api/public/orders/${fullOrderNumber}`);
+        response = await fetch(`/api/public/orders/${fullOrderNumber}${tokenQuery}`);
       }
 
       if (!response.ok) {
@@ -312,8 +315,10 @@ export default function OrderHistoryPage() {
         merchantAddress: orderData.merchant?.address,
         merchantPhone: orderData.merchant?.phone,
         merchantLogo: orderData.merchant?.logoUrl,
-        orderType: orderData.orderType as 'DINE_IN' | 'TAKEAWAY',
+        orderType: orderData.orderType as 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY',
         tableNumber: orderData.tableNumber,
+        deliveryUnit: orderData.deliveryUnit,
+        deliveryAddress: orderData.deliveryAddress,
         customerName: auth.customer.name,
         customerEmail: auth.customer.email,
         customerPhone: auth.customer.phone,
@@ -332,10 +337,12 @@ export default function OrderHistoryPage() {
         taxAmount: Number(orderData.taxAmount) || 0,
         serviceChargeAmount: Number(orderData.serviceChargeAmount) || 0,
         packagingFeeAmount: Number(orderData.packagingFeeAmount) || 0,
+        deliveryFeeAmount: Number(orderData.deliveryFeeAmount) || 0,
         totalAmount: Number(orderData.totalAmount) || order.totalAmount,
         paymentMethod: orderData.payment?.paymentMethod,
         paymentStatus: orderData.payment?.status,
         currency: orderData.merchant?.currency || merchantCurrency,
+        trackingToken: order.trackingToken,
         // Staff who recorded the payment
         recordedBy: orderData.payment?.paidBy ? {
           name: orderData.payment.paidBy.name,
@@ -375,13 +382,16 @@ export default function OrderHistoryPage() {
 
   const handleOrderClick = (order: OrderHistoryItem) => {
     const status = order.status.toLowerCase();
+    const token = order.trackingToken;
 
     // If order is completed or ready, go to order-detail page (read-only view)
     if (status === 'completed' || status === 'ready') {
-      router.push(`/${order.merchantCode}/order-detail/${order.orderNumber}?mode=${order.mode}`);
+      router.push(`/${order.merchantCode}/order-detail/${order.orderNumber}?mode=${encodeURIComponent(order.mode)}&token=${encodeURIComponent(token)}`);
     } else {
       // For pending, accepted, in_progress orders, go to order-summary-cash (tracking page)
-      router.push(`/${order.merchantCode}/order-summary-cash?orderNumber=${order.orderNumber}&mode=${order.mode}`);
+      router.push(
+        `/${order.merchantCode}/order-summary-cash?orderNumber=${encodeURIComponent(order.orderNumber)}&mode=${encodeURIComponent(order.mode)}&token=${encodeURIComponent(token)}`
+      );
     }
   };
 
@@ -411,24 +421,7 @@ export default function OrderHistoryPage() {
    * @returns Formatted currency string
    */
   const formatCurrency = (amount: number): string => {
-    // Special handling for AUD to show A$ prefix
-    if (merchantCurrency === 'AUD') {
-      return `A$${amount.toFixed(2)}`;
-    }
-
-    // Special handling for IDR - no decimals
-    if (merchantCurrency === 'IDR') {
-      const formatted = new Intl.NumberFormat('id-ID', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(Math.round(amount));
-      return `Rp ${formatted}`;
-    }
-
-    return new Intl.NumberFormat('en-AU', {
-      style: 'currency',
-      currency: merchantCurrency,
-    }).format(amount);
+    return formatCurrencyUtil(amount, merchantCurrency, locale);
   };
 
   const formatDate = (dateString: string) => {
@@ -478,9 +471,7 @@ export default function OrderHistoryPage() {
             className="w-10 h-10 flex items-center justify-center -ml-2"
             aria-label="Go back"
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 12H5M12 19l-7-7 7-7" />
-            </svg>
+            <FaArrowLeft className="w-5 h-5 text-gray-700" />
           </button>
           {/* Title */}
           <h1 className="flex-1 text-center font-semibold text-gray-900 text-base pr-10">
@@ -556,9 +547,7 @@ export default function OrderHistoryPage() {
         ) : filteredOrders.length === 0 ? (
           <div className="text-center py-20">
             {/* Empty State - SVG Icon */}
-            <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
+            <FaClipboardList className="w-16 h-16 mx-auto mb-4 text-gray-300" />
             <p className="text-base font-semibold text-gray-900 mb-2">
               {filter === 'all' ? t('customer.history.noOrders') : t('common.noResults')}
             </p>
@@ -620,16 +609,20 @@ export default function OrderHistoryPage() {
                   <div className="flex items-center justify-between pt-3 border-t border-gray-200">
                     <div className="flex items-center gap-2 text-xs text-gray-600">
                       {/* Mode Icon - SVG instead of emoji */}
-                      {order.mode === 'dinein' ? (
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h18v18H3V3zm2 8h14M7 7v10m10-10v10" />
-                        </svg>
+                      {order.mode === 'delivery' ? (
+                        <FaMotorcycle className="w-4 h-4" />
+                      ) : order.mode === 'dinein' ? (
+                        <FaUtensils className="w-4 h-4" />
                       ) : (
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                        </svg>
+                        <FaShoppingBag className="w-4 h-4" />
                       )}
-                      <span>{order.mode === 'dinein' ? t('customer.mode.dineIn') : t('customer.mode.pickUp')}</span>
+                      <span>
+                        {order.mode === 'delivery'
+                          ? (t('customer.mode.delivery') === 'customer.mode.delivery' ? 'Delivery' : t('customer.mode.delivery'))
+                          : order.mode === 'dinein'
+                            ? t('customer.mode.dineIn')
+                            : t('customer.mode.pickUp')}
+                      </span>
                       <span>•</span>
                       <span>{order.itemsCount || 0} items</span>
                     </div>
@@ -656,7 +649,7 @@ export default function OrderHistoryPage() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          router.push(customerTrackUrl(order.merchantCode, order.orderNumber, { mode: order.mode }));
+                          router.push(customerTrackUrl(order.merchantCode, order.orderNumber, { mode: order.mode, token: (order as any).trackingToken }));
                         }}
                         className="flex-1 py-2 text-sm font-semibold text-white bg-orange-500 rounded-lg hover:bg-orange-600 transition-all"
                       >
@@ -676,17 +669,12 @@ export default function OrderHistoryPage() {
                       >
                         {reorderingOrderId === order.id.toString() ? (
                           <>
-                            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                            </svg>
+                            <FaSpinner className="h-4 w-4 animate-spin" />
                             <span>{t('common.loading')}</span>
                           </>
                         ) : (
                           <>
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
+                            <FaRedo className="w-4 h-4" />
                             <span>{t('customer.history.reorder')}</span>
                           </>
                         )}
@@ -699,7 +687,7 @@ export default function OrderHistoryPage() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            router.push(customerTrackUrl(order.merchantCode, order.orderNumber, { mode: order.mode }));
+                            router.push(customerTrackUrl(order.merchantCode, order.orderNumber, { mode: order.mode, token: (order as any).trackingToken }));
                           }}
                           className="w-10 h-10 flex items-center justify-center text-orange-500 border border-orange-500 rounded-lg hover:bg-orange-50 transition-all"
                           title={t('customer.history.trackOrder')}
@@ -717,10 +705,7 @@ export default function OrderHistoryPage() {
                           title={t('customer.receipt.downloadReceipt')}
                         >
                           {downloadingOrderId === order.id.toString() ? (
-                            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                            </svg>
+                            <FaSpinner className="h-4 w-4 animate-spin" />
                           ) : (
                             <FaFileDownload className="w-4 h-4" />
                           )}

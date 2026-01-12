@@ -13,6 +13,7 @@ import { PaymentRecordForm, type PaymentFormData } from './PaymentRecordForm';
 import { printReceipt } from '@/lib/utils/unifiedReceipt';
 import type { OrderWithDetails } from '@/lib/types/order';
 import { DEFAULT_RECEIPT_SETTINGS, type ReceiptSettings } from '@/lib/types/receiptSettings';
+import { formatCurrency as formatCurrencyUtil } from '@/lib/utils/format';
 
 interface PaymentVerificationModalProps {
   isOpen: boolean;
@@ -51,26 +52,7 @@ export const PaymentVerificationModal: React.FC<PaymentVerificationModalProps> =
 
   if (!isOpen) return null;
 
-  const formatCurrency = (amount: number) => {
-    // Special handling for AUD to show A$ prefix
-    if (merchantInfo.currency === 'AUD') {
-      return `A$${amount.toFixed(2)}`;
-    }
-    
-    // Special handling for IDR - no decimals
-    if (merchantInfo.currency === 'IDR') {
-      const formatted = new Intl.NumberFormat('id-ID', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(Math.round(amount));
-      return `Rp ${formatted}`;
-    }
-    
-    return new Intl.NumberFormat('en-AU', {
-      style: 'currency',
-      currency: merchantInfo.currency,
-    }).format(amount);
-  };
+  const formatCurrency = (amount: number) => formatCurrencyUtil(amount, merchantInfo.currency);
 
   const handleVerify = async () => {
     if (!orderNumber.trim()) return;
@@ -105,8 +87,15 @@ export const PaymentVerificationModal: React.FC<PaymentVerificationModalProps> =
             orderNumber: (verifiedOrder as any).orderNumber,
             orderType: (verifiedOrder as any).orderType,
             tableNumber: (verifiedOrder as any).tableNumber,
+            deliveryUnit: (verifiedOrder as any).deliveryUnit,
+            deliveryBuildingName: (verifiedOrder as any).deliveryBuildingName,
+            deliveryBuildingNumber: (verifiedOrder as any).deliveryBuildingNumber,
+            deliveryFloor: (verifiedOrder as any).deliveryFloor,
+            deliveryInstructions: (verifiedOrder as any).deliveryInstructions,
+            deliveryAddress: (verifiedOrder as any).deliveryAddress,
             customerName: (verifiedOrder as any).customerName,
             customerPhone: (verifiedOrder as any).customerPhone,
+            customerEmail: (verifiedOrder as any).customerEmail,
             placedAt: ((verifiedOrder as any).placedAt || (verifiedOrder as any).createdAt || new Date().toISOString()) as string,
             items: ((verifiedOrder as any).orderItems || []).map((item: any) => ({
               quantity: item.quantity,

@@ -208,7 +208,7 @@ export class MerchantRepository {
   /**
    * Add user to merchant
    */
-  async addUser(merchantId: bigint, userId: bigint, role: 'OWNER' | 'STAFF') {
+  async addUser(merchantId: bigint, userId: bigint, role: 'OWNER' | 'STAFF' | 'DRIVER') {
     const result = await prisma.merchantUser.create({
       data: {
         merchantId,

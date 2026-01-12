@@ -37,6 +37,9 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { Decimal } from '@prisma/client/runtime/library';
 import { SpecialPriceService } from '@/lib/services/SpecialPriceService';
+import DeliveryFeeService from '@/lib/services/DeliveryFeeService';
+import { haversineDistanceKm, isPointInPolygon, type LatLng } from '@/lib/utils/geo';
+import { createOrderTrackingToken } from '@/lib/utils/orderTrackingToken';
 
 const DEBUG_ORDERS = process.env.DEBUG_ORDERS === 'true';
 const orderLog = (...args: unknown[]) => {
@@ -65,8 +68,22 @@ interface _OrderRequestBody {
   customerName: string;
   customerEmail: string;
   customerPhone?: string;
-  orderType: 'DINE_IN' | 'TAKEAWAY';
+  orderType: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY';
   tableNumber?: string;
+  deliveryUnit?: string;
+  deliveryBuildingName?: string;
+  deliveryBuildingNumber?: string;
+  deliveryFloor?: string;
+  deliveryInstructions?: string;
+  deliveryAddress?: string;
+  deliveryStreetLine?: string;
+  deliverySuburb?: string;
+  deliveryCity?: string;
+  deliveryState?: string;
+  deliveryPostcode?: string;
+  deliveryCountry?: string;
+  deliveryLatitude?: number;
+  deliveryLongitude?: number;
   items: OrderItemInput[];
   notes?: string;
   paymentMethod?: string;
@@ -98,6 +115,8 @@ interface MerchantWithConfig {
   isActive: boolean;
   isOpen: boolean;
   timezone?: string;
+  latitude?: Decimal | null;
+  longitude?: Decimal | null;
   // Mode availability
   isDineInEnabled?: boolean;
   isTakeawayEnabled?: boolean;
@@ -105,6 +124,13 @@ interface MerchantWithConfig {
   dineInScheduleEnd?: string | null;
   takeawayScheduleStart?: string | null;
   takeawayScheduleEnd?: string | null;
+  isDeliveryEnabled?: boolean;
+  enforceDeliveryZones?: boolean;
+  deliveryMaxDistanceKm?: Decimal | null;
+  deliveryFeeBase?: Decimal | null;
+  deliveryFeePerKm?: Decimal | null;
+  deliveryFeeMin?: Decimal | null;
+  deliveryFeeMax?: Decimal | null;
   // Fee config
   serviceChargeRate?: number | null;
   packagingFeeAmount?: number | null;
@@ -133,7 +159,7 @@ interface PrismaError {
  * @returns { available: boolean, reason?: string }
  */
 function checkModeAvailability(
-  orderType: 'DINE_IN' | 'TAKEAWAY',
+  orderType: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY',
   merchant: MerchantWithConfig
 ): { available: boolean; reason?: string } {
   // Check if store is open
@@ -181,6 +207,15 @@ function checkModeAvailability(
           reason: `Takeaway is only available between ${merchant.takeawayScheduleStart} - ${merchant.takeawayScheduleEnd}`,
         };
       }
+    }
+  } else if (orderType === 'DELIVERY') {
+    if (merchant.isDeliveryEnabled === false) {
+      return { available: false, reason: 'Delivery is currently not available' };
+    }
+
+    // Delivery requires merchant coordinates
+    if (merchant.latitude === null || merchant.longitude === null) {
+      return { available: false, reason: 'Delivery is not available (merchant location not set)' };
     }
   }
 
@@ -245,12 +280,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate orderType
-    if (!body.orderType || !['DINE_IN', 'TAKEAWAY'].includes(body.orderType)) {
+    if (!body.orderType || !['DINE_IN', 'TAKEAWAY', 'DELIVERY'].includes(body.orderType)) {
       return NextResponse.json(
         {
           success: false,
           error: 'VALIDATION_ERROR',
-          message: 'Valid order type is required (DINE_IN or TAKEAWAY)',
+          message: 'Valid order type is required (DINE_IN, TAKEAWAY, or DELIVERY)',
           statusCode: 400,
         },
         { status: 400 }
@@ -275,6 +310,105 @@ export async function POST(req: NextRequest) {
         },
         { status: 400 }
       );
+    }
+
+    // ========================================
+    // DELIVERY VALIDATION + FEE CALC (using DeliveryFeeService)
+    // ========================================
+
+    const round2 = (num: number): number => Math.round(num * 100) / 100;
+
+    const optionalTrimmed = (fieldName: string, value: unknown, maxLen: number): string | null => {
+      if (typeof value !== 'string') return null;
+      const trimmed = value.trim();
+      if (!trimmed) return null;
+      if (trimmed.length > maxLen) {
+        throw new ValidationError(`${fieldName} is too long (max ${maxLen} chars)`);
+      }
+      return trimmed;
+    };
+
+    let deliveryDistanceKm: number | null = null;
+    let deliveryFeeAmount = 0;
+
+    if (body.orderType === 'DELIVERY') {
+      const deliveryUnit = typeof body.deliveryUnit === 'string' ? body.deliveryUnit.trim() : '';
+      const deliveryAddress = String(body.deliveryAddress || '').trim();
+      const deliveryLatitude = Number(body.deliveryLatitude);
+      const deliveryLongitude = Number(body.deliveryLongitude);
+
+      // Optional structured fields
+      // (keep deliveryUnit + deliveryAddress required fields separate)
+      optionalTrimmed('deliveryBuildingName', body.deliveryBuildingName, 80);
+      optionalTrimmed('deliveryBuildingNumber', body.deliveryBuildingNumber, 20);
+      optionalTrimmed('deliveryFloor', body.deliveryFloor, 20);
+      optionalTrimmed('deliveryInstructions', body.deliveryInstructions, 300);
+
+      optionalTrimmed('deliveryStreetLine', body.deliveryStreetLine, 120);
+      optionalTrimmed('deliverySuburb', body.deliverySuburb, 80);
+      optionalTrimmed('deliveryCity', body.deliveryCity, 80);
+      optionalTrimmed('deliveryState', body.deliveryState, 80);
+      optionalTrimmed('deliveryPostcode', body.deliveryPostcode, 20);
+      optionalTrimmed('deliveryCountry', body.deliveryCountry, 80);
+
+      if (deliveryUnit && deliveryUnit.length > 80) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'VALIDATION_ERROR',
+            message: 'Delivery unit is too long',
+            statusCode: 400,
+          },
+          { status: 400 }
+        );
+      }
+
+      if (!deliveryAddress) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'VALIDATION_ERROR',
+            message: 'Delivery address is required for delivery orders',
+            statusCode: 400,
+          },
+          { status: 400 }
+        );
+      }
+
+      if (!Number.isFinite(deliveryLatitude) || !Number.isFinite(deliveryLongitude)) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'VALIDATION_ERROR',
+            message: 'Delivery pin coordinates are required for delivery orders',
+            statusCode: 400,
+          },
+          { status: 400 }
+        );
+      }
+
+      // Use DeliveryFeeService to validate and calculate fee
+      const feeResult = await DeliveryFeeService.validateAndCalculateFee(
+        merchant.id,
+        deliveryLatitude,
+        deliveryLongitude
+      );
+
+      if (!feeResult.success) {
+        const errorMessage = DeliveryFeeService.getErrorMessage(feeResult.error?.code || '');
+        return NextResponse.json(
+          {
+            success: false,
+            error: feeResult.error?.code || 'DELIVERY_VALIDATION_ERROR',
+            message: errorMessage,
+            statusCode: 400,
+          },
+          { status: 400 }
+        );
+      }
+
+      deliveryDistanceKm = feeResult.data!.distanceKm;
+      deliveryFeeAmount = round2(feeResult.data!.feeAmount);
     }
 
     // Validate items array
@@ -411,8 +545,7 @@ export async function POST(req: NextRequest) {
     // STEP 2: Validate menu items & calculate prices
     // ========================================
 
-    // ✅ PERFORMANCE: Helper function for 2 decimal precision
-    const round2 = (num: number): number => Math.round(num * 100) / 100;
+    // round2 already defined above (used for delivery fee too)
 
     // ✅ PERFORMANCE: Batch fetch all menus in ONE query
     const menuIds = body.items.map((item: OrderItemInput) => BigInt(item.menuId));
@@ -547,8 +680,8 @@ export async function POST(req: NextRequest) {
     orderLog(`💰 [ORDER CALC] Packaging Fee: ${packagingFeeAmount} (orderType: ${body.orderType})`);
 
     // Total calculation
-    const totalAmount = round2(subtotal + taxAmount + serviceChargeAmount + packagingFeeAmount);
-    orderLog(`💰 [ORDER CALC] Total: ${totalAmount} (subtotal: ${subtotal} + tax: ${taxAmount} + service: ${serviceChargeAmount} + packaging: ${packagingFeeAmount})`);
+    const totalAmount = round2(subtotal + taxAmount + serviceChargeAmount + packagingFeeAmount + deliveryFeeAmount);
+    orderLog(`💰 [ORDER CALC] Total: ${totalAmount} (subtotal: ${subtotal} + tax: ${taxAmount} + service: ${serviceChargeAmount} + packaging: ${packagingFeeAmount} + delivery: ${deliveryFeeAmount})`);
 
     // ========================================
     // STEP 4: Generate unique order number
@@ -668,12 +801,51 @@ export async function POST(req: NextRequest) {
           orderType: body.orderType,
           tableNumber: body.tableNumber || null,
           status: 'PENDING',
+          deliveryStatus: body.orderType === 'DELIVERY' ? 'PENDING_ASSIGNMENT' : null,
+          deliveryUnit: body.orderType === 'DELIVERY' ? (typeof body.deliveryUnit === 'string' ? body.deliveryUnit.trim() || null : null) : null,
+          deliveryBuildingName: body.orderType === 'DELIVERY' ? (typeof body.deliveryBuildingName === 'string' ? body.deliveryBuildingName.trim() || null : null) : null,
+          deliveryBuildingNumber: body.orderType === 'DELIVERY' ? (typeof body.deliveryBuildingNumber === 'string' ? body.deliveryBuildingNumber.trim() || null : null) : null,
+          deliveryFloor: body.orderType === 'DELIVERY' ? (typeof body.deliveryFloor === 'string' ? body.deliveryFloor.trim() || null : null) : null,
+          deliveryInstructions: body.orderType === 'DELIVERY' ? (typeof body.deliveryInstructions === 'string' ? body.deliveryInstructions.trim() || null : null) : null,
+          deliveryAddress: body.orderType === 'DELIVERY' ? String(body.deliveryAddress || '').trim() : null,
+          deliveryStreetLine: body.orderType === 'DELIVERY' ? (typeof body.deliveryStreetLine === 'string' ? body.deliveryStreetLine.trim() || null : null) : null,
+          deliverySuburb: body.orderType === 'DELIVERY' ? (typeof body.deliverySuburb === 'string' ? body.deliverySuburb.trim() || null : null) : null,
+          deliveryCity: body.orderType === 'DELIVERY' ? (typeof body.deliveryCity === 'string' ? body.deliveryCity.trim() || null : null) : null,
+          deliveryState: body.orderType === 'DELIVERY' ? (typeof body.deliveryState === 'string' ? body.deliveryState.trim() || null : null) : null,
+          deliveryPostcode: body.orderType === 'DELIVERY' ? (typeof body.deliveryPostcode === 'string' ? body.deliveryPostcode.trim() || null : null) : null,
+          deliveryCountry: body.orderType === 'DELIVERY' ? (typeof body.deliveryCountry === 'string' ? body.deliveryCountry.trim() || null : null) : null,
+          deliveryLatitude: body.orderType === 'DELIVERY' ? Number(body.deliveryLatitude) : null,
+          deliveryLongitude: body.orderType === 'DELIVERY' ? Number(body.deliveryLongitude) : null,
+          deliveryDistanceKm: body.orderType === 'DELIVERY' && deliveryDistanceKm !== null ? deliveryDistanceKm : null,
+          deliveryFeeAmount,
           subtotal,
           taxAmount,
-          // Note: serviceChargeAmount and packagingFeeAmount are calculated but not stored in DB
-          // They are included in totalAmount
+          serviceChargeAmount,
+          packagingFeeAmount,
           totalAmount,
           notes: body.notes || null,
+        } as any,
+      });
+
+      // 1b. Create Payment record (orderId is required and unique)
+      // For DELIVERY, default to CASH_ON_DELIVERY; for others, default to CASH_ON_COUNTER.
+      const requestedPaymentMethod = typeof body.paymentMethod === 'string' ? body.paymentMethod : '';
+      const allowedMethods = body.orderType === 'DELIVERY'
+        ? new Set(['CASH_ON_DELIVERY', 'ONLINE'])
+        : new Set(['CASH_ON_COUNTER', 'CARD_ON_COUNTER']);
+
+      const defaultMethod = body.orderType === 'DELIVERY' ? 'CASH_ON_DELIVERY' : 'CASH_ON_COUNTER';
+      const paymentMethod = requestedPaymentMethod || defaultMethod;
+      if (!allowedMethods.has(paymentMethod)) {
+        throw new ValidationError('Invalid payment method');
+      }
+
+      await tx.payment.create({
+        data: {
+          orderId: createdOrder.id,
+          amount: totalAmount,
+          paymentMethod: paymentMethod as any,
+          status: 'PENDING',
         },
       });
 
@@ -792,7 +964,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: serializeBigInt(order),
+      data: {
+        ...serializeBigInt(order),
+        trackingToken: createOrderTrackingToken({ merchantCode: merchant.code, orderNumber }),
+      },
       message: 'Order created successfully',
       statusCode: 201,
     }, { status: 201 });

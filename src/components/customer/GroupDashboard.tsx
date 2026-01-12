@@ -18,7 +18,7 @@ interface GroupDashboardProps {
     onSubmitOrder: () => void;
     merchantCode: string;
     currency: string;
-    onModeChange?: (mode: 'dinein' | 'takeaway') => void;
+    onModeChange?: (mode: 'dinein' | 'takeaway' | 'delivery') => void;
 }
 
 // Price formatter helper - returns "Free" for zero price

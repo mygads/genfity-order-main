@@ -343,8 +343,7 @@ export class OrderService {
       status: 'PENDING',
       subtotal,
 
-      // @ts-expect-error - serviceFeeAmount type mismatch
-      serviceFeeAmount: serviceCharge,
+      serviceChargeAmount: serviceCharge,
       taxAmount,
 
       totalAmount,

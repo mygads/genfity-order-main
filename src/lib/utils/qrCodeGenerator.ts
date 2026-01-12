@@ -39,10 +39,15 @@ export async function generateQRCode(data: string): Promise<string> {
  */
 export async function generateOrderQRCode(
   orderNumber: string,
-  merchantCode: string
+  merchantCode: string,
+  options: { trackingToken?: string | null } = {}
 ): Promise<string> {
   // QR code will contain order tracking URL
   const baseUrl = getPublicAppOrigin('http://localhost:3000');
-  const trackingUrl = `${baseUrl}/${merchantCode}/track/${orderNumber}`;
+  const orderNumberEncoded = encodeURIComponent(orderNumber);
+  if (!options.trackingToken) {
+    throw new Error('trackingToken is required to generate a tracking QR code');
+  }
+  const trackingUrl = `${baseUrl}/${merchantCode}/track/${orderNumberEncoded}?token=${encodeURIComponent(options.trackingToken)}`;
   return generateQRCode(trackingUrl);
 }

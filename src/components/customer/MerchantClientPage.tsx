@@ -11,6 +11,7 @@ import PoweredByFooter from '@/components/common/PoweredByFooter';
 import { useStoreStatus } from '@/hooks/useStoreStatus';
 import { useToast } from '@/hooks/useToast';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import { FaMotorcycle } from 'react-icons/fa';
 
 interface OpeningHour {
     id: string;
@@ -30,6 +31,10 @@ interface MerchantData {
     phone?: string;
     logoUrl?: string | null;
     bannerUrl?: string | null;
+    deliveryLabel?: string | null;
+    isDeliveryEnabled?: boolean;
+    latitude?: string | number | null;
+    longitude?: string | number | null;
     openingHours: OpeningHour[];
 }
 
@@ -63,6 +68,7 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
         isTakeawayAvailable,
         dineInLabel,
         takeawayLabel,
+        deliveryLabel,
         minutesUntilClose,
         openingHours: liveOpeningHours,
         isLoading: isStatusLoading,
@@ -76,7 +82,15 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
     // Use live opening hours or fallback to cached ones during loading
     const displayOpeningHours = liveOpeningHours.length > 0 ? liveOpeningHours : merchant.openingHours;
 
-    const handleModeSelect = (selectedMode: 'dinein' | 'takeaway') => {
+    const merchantHasDeliveryCoords = merchant.latitude !== null && merchant.latitude !== undefined && merchant.longitude !== null && merchant.longitude !== undefined;
+    const isDeliveryEnabled = merchant.isDeliveryEnabled === true;
+    const isDeliveryAvailable = storeOpen && isDeliveryEnabled && merchantHasDeliveryCoords;
+
+    const deliveryModeI18n = t('customer.mode.delivery');
+    const deliveryModeFallback = deliveryModeI18n === 'customer.mode.delivery' ? 'Delivery' : deliveryModeI18n;
+    const resolvedDeliveryLabel = deliveryLabel || merchant.deliveryLabel || deliveryModeFallback;
+
+    const handleModeSelect = (selectedMode: 'dinein' | 'takeaway' | 'delivery') => {
         // Save mode to localStorage
         localStorage.setItem(`mode_${merchantCode}`, selectedMode);
 
@@ -98,6 +112,13 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                 message: `${takeawayLabel} is currently unavailable`,
                 duration: 4000
             });
+        } else if (selectedMode === 'delivery' && !isDeliveryAvailable) {
+            showToast({
+                variant: 'warning',
+                title: 'Mode Unavailable',
+                message: `${resolvedDeliveryLabel} is currently unavailable`,
+                duration: 4000
+            });
         }
     };
 
@@ -106,14 +127,17 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
         if (isStatusLoading) return; // Wait for status to load
         if (!storeOpen) return;
 
-        if (isDineInAvailable && !isTakeawayAvailable) {
-            // Only dine-in available, auto-redirect
-            router.replace(`/${merchantCode}/order?mode=dinein`);
-        } else if (!isDineInAvailable && isTakeawayAvailable) {
-            // Only takeaway available, auto-redirect
-            router.replace(`/${merchantCode}/order?mode=takeaway`);
+        const availability = {
+            dinein: isDineInAvailable,
+            takeaway: isTakeawayAvailable,
+            delivery: isDeliveryAvailable,
+        };
+
+        const availableModes = (Object.keys(availability) as Array<keyof typeof availability>).filter((k) => availability[k]);
+        if (availableModes.length === 1) {
+            router.replace(`/${merchantCode}/order?mode=${availableModes[0]}`);
         }
-    }, [isStatusLoading, storeOpen, isDineInAvailable, isTakeawayAvailable, merchantCode, router]);
+    }, [isStatusLoading, storeOpen, isDineInAvailable, isTakeawayAvailable, isDeliveryAvailable, merchantCode, router]);
 
     return (
         <>
@@ -221,7 +245,7 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
             </div>
 
             {/* Mode Selection Section - Always show if at least one mode is configured */}
-            {(isDineInEnabled || isTakeawayEnabled) && (
+            {(isDineInEnabled || isTakeawayEnabled || isDeliveryEnabled) && (
                 <div className={`px-3 mb-6 ${!storeOpen ? 'opacity-60' : ''}`}>
                     <div className="text-center">
                         <h3 className="my-4 mb-4 text-base font-semibold text-gray-900">
@@ -267,13 +291,33 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                                     )}
                                 </button>
                             )}
+
+                            {/* Delivery Button - Always show if enabled */}
+                            {isDeliveryEnabled && (
+                                <button
+                                    id="mode-delivery"
+                                    onClick={() => handleModeSelect('delivery')}
+                                    className={`w-full h-12 border rounded-lg text-base font-medium transition-colors duration-200 shadow-lg flex items-center justify-center gap-2 ${storeOpen && isDeliveryAvailable
+                                        ? 'border-gray-300 bg-white text-gray-900 hover:bg-gray-50'
+                                        : 'border-gray-200 text-gray-400 bg-gray-100'
+                                        }`}
+                                >
+                                    <FaMotorcycle className="h-4 w-4" />
+                                    <span>{resolvedDeliveryLabel}</span>
+                                    {(!storeOpen || !isDeliveryAvailable) && (
+                                        <span className="text-xs bg-gray-300 text-gray-600 px-2 py-0.5 rounded">
+                                            {merchantHasDeliveryCoords ? t('customer.mode.unavailableNow') : (t('customer.delivery.requiresLocation') || 'Setup required')}
+                                        </span>
+                                    )}
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
             )}
 
             {/* Show message if no modes enabled */}
-            {!isDineInEnabled && !isTakeawayEnabled && (
+            {!isDineInEnabled && !isTakeawayEnabled && !isDeliveryEnabled && (
                 <div className="px-3 mb-6">
                     <div className="p-4 bg-amber-50 rounded-xl border border-amber-200 text-center">
                         <p className="text-amber-700 font-medium">

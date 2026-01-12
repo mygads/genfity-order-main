@@ -33,7 +33,7 @@ interface OpeningHour {
 
 interface ModeSchedule {
   id: string;
-  mode: 'DINE_IN' | 'TAKEAWAY';
+  mode: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY';
   dayOfWeek: number;
   startTime: string;
   endTime: string;
@@ -45,12 +45,16 @@ interface StoreStatusResponse {
   timezone: string;
   isDineInEnabled: boolean;
   isTakeawayEnabled: boolean;
+  isDeliveryEnabled: boolean;
   dineInLabel: string | null;
   takeawayLabel: string | null;
+  deliveryLabel: string | null;
   dineInScheduleStart: string | null;
   dineInScheduleEnd: string | null;
   takeawayScheduleStart: string | null;
   takeawayScheduleEnd: string | null;
+  deliveryScheduleStart: string | null;
+  deliveryScheduleEnd: string | null;
   openingHours: OpeningHour[];
   modeSchedules?: ModeSchedule[];
   todaySpecialHour?: SpecialHour | null;
@@ -72,12 +76,15 @@ interface UseStoreStatusResult {
   // Mode availability
   isDineInEnabled: boolean;
   isTakeawayEnabled: boolean;
+  isDeliveryEnabled: boolean;
   isDineInAvailable: boolean;
   isTakeawayAvailable: boolean;
+  isDeliveryAvailable: boolean;
 
   // Labels
   dineInLabel: string;
   takeawayLabel: string;
+  deliveryLabel: string;
 
   // Time info
   minutesUntilClose: number | null;
@@ -155,10 +162,13 @@ export function useStoreStatus(
         scheduledStatus: true,
         isDineInEnabled: true,
         isTakeawayEnabled: true,
+        isDeliveryEnabled: false,
         isDineInAvailable: true,
         isTakeawayAvailable: true,
+        isDeliveryAvailable: false,
         dineInLabel: 'Dine In',
         takeawayLabel: 'Pick Up',
+        deliveryLabel: 'Delivery',
         minutesUntilClose: null,
         timezone: 'UTC',
         openingHours: [],
@@ -174,10 +184,13 @@ export function useStoreStatus(
       timezone: data.timezone,
       isDineInEnabled: data.isDineInEnabled,
       isTakeawayEnabled: data.isTakeawayEnabled,
+      isDeliveryEnabled: data.isDeliveryEnabled,
       dineInScheduleStart: data.dineInScheduleStart,
       dineInScheduleEnd: data.dineInScheduleEnd,
       takeawayScheduleStart: data.takeawayScheduleStart,
       takeawayScheduleEnd: data.takeawayScheduleEnd,
+      deliveryScheduleStart: data.deliveryScheduleStart,
+      deliveryScheduleEnd: data.deliveryScheduleEnd,
       openingHours: data.openingHours.map(h => ({
         dayOfWeek: h.dayOfWeek,
         openTime: h.openTime,
@@ -226,13 +239,16 @@ export function useStoreStatus(
     // Check mode availability (with per-day schedules and special hours)
     let isDineInAvailable: boolean;
     let isTakeawayAvailable: boolean;
+    let isDeliveryAvailable: boolean;
 
     if (data.todaySpecialHour || (data.modeSchedules && data.modeSchedules.length > 0)) {
       // Use extended function
       const dineInStatus = isModeAvailableWithSchedules('DINE_IN', extendedMerchant);
       const takeawayStatus = isModeAvailableWithSchedules('TAKEAWAY', extendedMerchant);
+      const deliveryStatus = isModeAvailableWithSchedules('DELIVERY', extendedMerchant);
       isDineInAvailable = dineInStatus.available;
       isTakeawayAvailable = takeawayStatus.available;
+      isDeliveryAvailable = deliveryStatus.available;
     } else {
       // Use original logic for backwards compatibility
       const isDineInWithinSchedule = isWithinSchedule(
@@ -245,8 +261,14 @@ export function useStoreStatus(
         data.takeawayScheduleEnd,
         data.timezone
       );
+      const isDeliveryWithinSchedule = isWithinSchedule(
+        data.deliveryScheduleStart,
+        data.deliveryScheduleEnd,
+        data.timezone
+      );
       isDineInAvailable = data.isDineInEnabled && isDineInWithinSchedule;
       isTakeawayAvailable = data.isTakeawayEnabled && isTakeawayWithinSchedule;
+      isDeliveryAvailable = data.isDeliveryEnabled && isDeliveryWithinSchedule;
     }
 
     // Calculate minutes until close
@@ -267,10 +289,13 @@ export function useStoreStatus(
       scheduledStatus,
       isDineInEnabled: data.isDineInEnabled,
       isTakeawayEnabled: data.isTakeawayEnabled,
+      isDeliveryEnabled: data.isDeliveryEnabled,
       isDineInAvailable: isSubscriptionSuspended ? false : isDineInAvailable,
       isTakeawayAvailable: isSubscriptionSuspended ? false : isTakeawayAvailable,
+      isDeliveryAvailable: isSubscriptionSuspended ? false : isDeliveryAvailable,
       dineInLabel: data.dineInLabel || 'Dine In',
       takeawayLabel: data.takeawayLabel || 'Pick Up',
+      deliveryLabel: data.deliveryLabel || 'Delivery',
       minutesUntilClose,
       timezone: data.timezone,
       openingHours: data.openingHours,

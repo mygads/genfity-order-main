@@ -35,6 +35,7 @@ interface SpecialHour {
 
 interface SpecialHoursManagerProps {
   token: string;
+  embedded?: boolean;
 }
 
 const PRESET_HOLIDAYS = [
@@ -47,7 +48,7 @@ const PRESET_HOLIDAYS = [
   { name: "New Year's Eve", month: 11, day: 31 },
 ];
 
-export default function SpecialHoursManager({ token }: SpecialHoursManagerProps) {
+export default function SpecialHoursManager({ token, embedded = false }: SpecialHoursManagerProps) {
   const { error: showError, success: showSuccess } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -415,12 +416,14 @@ export default function SpecialHoursManager({ token }: SpecialHoursManagerProps)
     <div className="space-y-4">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h4 className="text-sm font-medium text-gray-900 dark:text-white">Holiday & Special Hours</h4>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            Set custom hours for holidays and special occasions
-          </p>
-        </div>
+        {!embedded && (
+          <div>
+            <h4 className="text-sm font-medium text-gray-900 dark:text-white">Holiday & Special Hours</h4>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Set custom hours for holidays and special occasions
+            </p>
+          </div>
+        )}
         <div className="flex flex-wrap items-center gap-2">
           {/* View Toggle */}
           <div className="flex rounded-lg border border-gray-200 dark:border-gray-700">

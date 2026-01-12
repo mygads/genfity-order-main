@@ -28,6 +28,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
 import { withCustomer, CustomerAuthContext } from '@/lib/middleware/auth';
 import { serializeBigInt } from '@/lib/utils/serializer';
+import { createOrderTrackingToken } from '@/lib/utils/orderTrackingToken';
 
 /**
  * GET /api/customer/orders
@@ -79,11 +80,12 @@ export const GET = withCustomer(async (
       merchantName: order.merchant.name,
       merchantCode: order.merchant.code,
       merchantCurrency: order.merchant.currency,
-      mode: order.orderType === 'DINE_IN' ? 'dinein' : 'takeaway',
+      mode: order.orderType === 'DINE_IN' ? 'dinein' : order.orderType === 'TAKEAWAY' ? 'takeaway' : 'delivery',
       status: order.status,
       totalAmount: parseFloat(order.totalAmount.toString()),
       placedAt: order.placedAt.toISOString(),
       itemsCount: order.orderItems.length,
+      trackingToken: createOrderTrackingToken({ merchantCode: order.merchant.code, orderNumber: order.orderNumber }),
     }));
 
     // ✅ Serialize BigInt to string for JSON

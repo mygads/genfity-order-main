@@ -112,7 +112,7 @@ export default function SearchPage() {
   }, []);
 
   useEffect(() => {
-    initializeCart(merchantCode, mode as 'dinein' | 'takeaway');
+    initializeCart(merchantCode, mode as 'dinein' | 'takeaway' | 'delivery');
   }, [merchantCode, mode, initializeCart]);
 
   // ✅ Initialize data from Context (instant if available from Order page)
@@ -496,7 +496,7 @@ export default function SearchPage() {
         )}
       </div>
 
-      <FloatingCartButton merchantCode={merchantCode} mode={mode as 'dinein' | 'takeaway'} storeOpen={storeOpen} />
+      <FloatingCartButton merchantCode={merchantCode} mode={mode as 'dinein' | 'takeaway' | 'delivery'} storeOpen={storeOpen} />
 
       {selectedMenu && (
         <MenuDetailModal menu={selectedMenu} merchantCode={merchantCode} mode={mode} currency={merchantInfo?.currency || 'AUD'} editMode={Boolean(editingCartItem)} existingCartItem={editingCartItem} onClose={handleCloseMenuDetail} prefetchedAddons={menuAddonsCache[selectedMenu.id]} storeOpen={storeOpen} />

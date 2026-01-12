@@ -9,13 +9,14 @@
 'use client';
 
 import React from 'react';
-import { FaUser, FaUtensils, FaShoppingBag, FaClock, FaCheckSquare, FaSquare, FaCheck, FaArrowRight } from 'react-icons/fa';
+import { FaUser, FaUtensils, FaShoppingBag, FaTruck, FaClock, FaCheckSquare, FaSquare, FaCheck, FaArrowRight } from 'react-icons/fa';
 import { ORDER_STATUS_COLORS, PAYMENT_STATUS_COLORS } from '@/lib/constants/orderConstants';
 import { formatDistanceToNow } from 'date-fns';
 import type { OrderListItem } from '@/lib/types/order';
 import { OrderStatus } from '@prisma/client';
 import { useMerchant } from '@/context/MerchantContext';
 import { formatFullOrderNumber, formatOrderNumberSuffix } from '@/lib/utils/format';
+import DriverQuickAssign from '@/components/orders/DriverQuickAssign';
 
 type OrderNumberDisplayMode = 'full' | 'suffix' | 'raw';
 
@@ -57,8 +58,22 @@ export const OrderListCard: React.FC<OrderListCardProps> = ({
     if (numAmount === 0) {
       return 'Free';
     }
-    // Default to AUD format
-    return `A$${numAmount.toFixed(2)}`;
+
+    const currency = merchant?.currency || 'AUD';
+    const intlLocale = currency === 'IDR' ? 'id-ID' : 'en-AU';
+    const maximumFractionDigits = currency === 'IDR' ? 0 : 2;
+    const minimumFractionDigits = currency === 'IDR' ? 0 : 2;
+
+    try {
+      return new Intl.NumberFormat(intlLocale, {
+        style: 'currency',
+        currency,
+        maximumFractionDigits,
+        minimumFractionDigits,
+      }).format(numAmount);
+    } catch {
+      return `${currency} ${numAmount.toFixed(maximumFractionDigits)}`;
+    }
   };
 
   const timeAgo = formatDistanceToNow(new Date(order.placedAt), { addSuffix: true });
@@ -148,6 +163,11 @@ export const OrderListCard: React.FC<OrderListCardProps> = ({
                   <span className="text-xs font-semibold text-brand-700 dark:text-brand-300">T{order.tableNumber}</span>
                 )}
               </div>
+            ) : order.orderType === 'DELIVERY' ? (
+              <div className="flex items-center gap-1 px-2 py-1 rounded bg-blue-50 dark:bg-blue-900/30">
+                <FaTruck className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">DEL</span>
+              </div>
             ) : (
               <div className="flex items-center gap-1 px-2 py-1 rounded bg-success-50 dark:bg-success-900/30">
                 <FaShoppingBag className="h-3 w-3 text-success-600 dark:text-success-400" />
@@ -163,6 +183,15 @@ export const OrderListCard: React.FC<OrderListCardProps> = ({
             </span>
           </div>
         </div>
+
+        {showQuickActions && !bulkMode && order.orderType === 'DELIVERY' ? (
+          <div onClick={(e) => e.stopPropagation()} className="mb-2">
+            <DriverQuickAssign
+              orderId={String(order.id)}
+              currentDriverId={order.deliveryDriver?.id ? String(order.deliveryDriver.id) : ''}
+            />
+          </div>
+        ) : null}
 
         {/* Bottom Row: Time, Items, Price, Payment, Action */}
         <div className="flex items-center gap-2 flex-wrap">

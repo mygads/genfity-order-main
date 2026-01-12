@@ -12,7 +12,7 @@ interface OrderPageHeaderProps {
   isSticky: boolean;
   onBackClick: () => void;
   tableNumber?: string | null;
-  mode?: 'dinein' | 'takeaway';
+  mode?: 'dinein' | 'takeaway' | 'delivery';
   showTableBadge?: boolean;
   onSearchClick?: () => void;
   onGroupOrderClick?: () => void;

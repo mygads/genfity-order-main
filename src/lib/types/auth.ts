@@ -2,7 +2,7 @@
  * Authentication Types
  */
 
-export type UserRole = 'SUPER_ADMIN' | 'MERCHANT_OWNER' | 'MERCHANT_STAFF';
+export type UserRole = 'SUPER_ADMIN' | 'MERCHANT_OWNER' | 'MERCHANT_STAFF' | 'DELIVERY';
 export type SessionStatus = 'ACTIVE' | 'REVOKED' | 'EXPIRED';
 
 export interface LoginRequest {

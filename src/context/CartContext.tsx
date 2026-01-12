@@ -74,7 +74,7 @@ export interface CartItem {
  */
 export interface Cart {
   merchantCode: string;
-  mode: "dinein" | "takeaway";
+  mode: "dinein" | "takeaway" | "delivery";
   tableNumber?: string;
   items: CartItem[];
 }
@@ -87,7 +87,7 @@ interface CartContextType {
   clearCart: () => void;
   getItemCount: () => number;
   getTotal: () => number;
-  initializeCart: (merchantCode: string, mode: "dinein" | "takeaway") => void;
+  initializeCart: (merchantCode: string, mode: "dinein" | "takeaway" | "delivery") => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -128,7 +128,7 @@ export function CartProvider({ children }: CartProviderProps) {
   };
 
   // Initialize empty cart
-  const initializeEmptyCart = useCallback((merchantCode: string, mode: "dinein" | "takeaway") => {
+  const initializeEmptyCart = useCallback((merchantCode: string, mode: "dinein" | "takeaway" | "delivery") => {
     const newCart: Cart = {
       merchantCode,
       mode,
@@ -152,7 +152,7 @@ export function CartProvider({ children }: CartProviderProps) {
   /**
    * Load cart from localStorage
    */
-  const loadCart = useCallback((merchantCode: string, mode: "dinein" | "takeaway") => {
+  const loadCart = useCallback((merchantCode: string, mode: "dinein" | "takeaway" | "delivery") => {
     const key = `cart_${merchantCode}_${mode}`;
     const stored = localStorage.getItem(key);
 
@@ -432,7 +432,7 @@ export function CartProvider({ children }: CartProviderProps) {
   }, [cart]);
 
   const initializeCart = useCallback(
-    (merchantCode: string, mode: "dinein" | "takeaway") => {
+    (merchantCode: string, mode: "dinein" | "takeaway" | "delivery") => {
       console.log("🚀 [INIT CART] Initializing cart:", { merchantCode, mode });
       loadCart(merchantCode, mode);
     },

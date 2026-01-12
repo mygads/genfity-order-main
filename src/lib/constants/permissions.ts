@@ -206,6 +206,7 @@ export const PATH_PERMISSION_MAP: Record<string, StaffPermission> = {
  */
 export const API_PERMISSION_MAP: Record<string, StaffPermission> = {
   '/api/merchant/orders': STAFF_PERMISSIONS.ORDERS,
+  '/api/merchant/drivers': STAFF_PERMISSIONS.ORDERS,
   '/api/merchant/menu': STAFF_PERMISSIONS.MENU,
   '/api/merchant/menu/stock': STAFF_PERMISSIONS.MENU_STOCK,
   '/api/merchant/menu/builder': STAFF_PERMISSIONS.MENU_BUILDER,

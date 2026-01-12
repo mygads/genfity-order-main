@@ -38,7 +38,7 @@ export interface ModeSchedule {
 
 // Per-day mode schedule from database
 export interface PerDayModeSchedule {
-  mode: 'DINE_IN' | 'TAKEAWAY';
+  mode: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY';
   dayOfWeek: number;  // 0=Sunday, 6=Saturday
   startTime: string;  // HH:MM format
   endTime: string;    // HH:MM format
@@ -53,10 +53,13 @@ export interface SpecialHour {
   closeTime?: string | null;
   isDineInEnabled?: boolean | null;
   isTakeawayEnabled?: boolean | null;
+  isDeliveryEnabled?: boolean | null;
   dineInStartTime?: string | null;
   dineInEndTime?: string | null;
   takeawayStartTime?: string | null;
   takeawayEndTime?: string | null;
+  deliveryStartTime?: string | null;
+  deliveryEndTime?: string | null;
 }
 
 // Extended merchant status with new features
@@ -67,10 +70,13 @@ export interface ExtendedMerchantStatus extends MerchantStatus {
   // Global mode settings
   isDineInEnabled?: boolean;
   isTakeawayEnabled?: boolean;
+  isDeliveryEnabled?: boolean;
   dineInScheduleStart?: string | null;
   dineInScheduleEnd?: string | null;
   takeawayScheduleStart?: string | null;
   takeawayScheduleEnd?: string | null;
+  deliveryScheduleStart?: string | null;
+  deliveryScheduleEnd?: string | null;
 }
 
 /**
@@ -467,21 +473,21 @@ export function isStoreOpenWithSpecialHours(
  * Priority: Special Hours > Per-Day Schedule > Global Schedule > Mode Enabled
  */
 export function isModeAvailableWithSchedules(
-  modeType: 'DINE_IN' | 'TAKEAWAY',
+  modeType: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY',
   merchant: ExtendedMerchantStatus
 ): { available: boolean; reason?: string; schedule?: { start: string; end: string } } {
   const { dayOfWeek, currentTime } = getCurrentTimeInTimezone(merchant.timezone);
 
   // Check global mode enabled
-  const isEnabled = modeType === 'DINE_IN' 
-    ? merchant.isDineInEnabled !== false 
-    : merchant.isTakeawayEnabled !== false;
+  const isEnabled = modeType === 'DINE_IN'
+    ? merchant.isDineInEnabled !== false
+    : modeType === 'TAKEAWAY'
+      ? merchant.isTakeawayEnabled !== false
+      : merchant.isDeliveryEnabled === true;
 
   if (!isEnabled) {
-    return { 
-      available: false, 
-      reason: `${modeType === 'DINE_IN' ? 'Dine In' : 'Takeaway'} is not available` 
-    };
+    const label = modeType === 'DINE_IN' ? 'Dine In' : modeType === 'TAKEAWAY' ? 'Takeaway' : 'Delivery';
+    return { available: false, reason: `${label} is not available` };
   }
 
   // Priority 1: Check special hours mode override
@@ -489,20 +495,28 @@ export function isModeAvailableWithSchedules(
     const special = merchant.todaySpecialHour;
     
     // Check if mode is disabled for this special day
-    const modeEnabled = modeType === 'DINE_IN' 
-      ? special.isDineInEnabled 
-      : special.isTakeawayEnabled;
+    const modeEnabled = modeType === 'DINE_IN'
+      ? special.isDineInEnabled
+      : modeType === 'TAKEAWAY'
+        ? special.isTakeawayEnabled
+        : special.isDeliveryEnabled;
     
     if (modeEnabled === false) {
-      return { 
-        available: false, 
-        reason: `${modeType === 'DINE_IN' ? 'Dine In' : 'Takeaway'} not available today` 
-      };
+      const label = modeType === 'DINE_IN' ? 'Dine In' : modeType === 'TAKEAWAY' ? 'Takeaway' : 'Delivery';
+      return { available: false, reason: `${label} not available today` };
     }
 
     // Check special mode schedule
-    const startTime = modeType === 'DINE_IN' ? special.dineInStartTime : special.takeawayStartTime;
-    const endTime = modeType === 'DINE_IN' ? special.dineInEndTime : special.takeawayEndTime;
+    const startTime = modeType === 'DINE_IN'
+      ? special.dineInStartTime
+      : modeType === 'TAKEAWAY'
+        ? special.takeawayStartTime
+        : special.deliveryStartTime;
+    const endTime = modeType === 'DINE_IN'
+      ? special.dineInEndTime
+      : modeType === 'TAKEAWAY'
+        ? special.takeawayEndTime
+        : special.deliveryEndTime;
 
     if (startTime && endTime) {
       const isWithin = currentTime >= startTime && currentTime <= endTime;
@@ -531,12 +545,16 @@ export function isModeAvailableWithSchedules(
   }
 
   // Priority 3: Check global mode schedule
-  const globalStart = modeType === 'DINE_IN' 
-    ? merchant.dineInScheduleStart 
-    : merchant.takeawayScheduleStart;
-  const globalEnd = modeType === 'DINE_IN' 
-    ? merchant.dineInScheduleEnd 
-    : merchant.takeawayScheduleEnd;
+  const globalStart = modeType === 'DINE_IN'
+    ? merchant.dineInScheduleStart
+    : modeType === 'TAKEAWAY'
+      ? merchant.takeawayScheduleStart
+      : merchant.deliveryScheduleStart;
+  const globalEnd = modeType === 'DINE_IN'
+    ? merchant.dineInScheduleEnd
+    : modeType === 'TAKEAWAY'
+      ? merchant.takeawayScheduleEnd
+      : merchant.deliveryScheduleEnd;
 
   if (globalStart && globalEnd) {
     const isWithin = currentTime >= globalStart && currentTime <= globalEnd;
@@ -555,7 +573,7 @@ export function isModeAvailableWithSchedules(
  * Get minutes until mode closes (considering all schedule types)
  */
 export function getMinutesUntilModeCloses(
-  modeType: 'DINE_IN' | 'TAKEAWAY',
+  modeType: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY',
   merchant: ExtendedMerchantStatus
 ): number | null {
   const { dayOfWeek, currentTime } = getCurrentTimeInTimezone(merchant.timezone);
@@ -564,7 +582,11 @@ export function getMinutesUntilModeCloses(
   // Priority 1: Special hours
   if (merchant.todaySpecialHour) {
     const special = merchant.todaySpecialHour;
-    const specialEndTime = modeType === 'DINE_IN' ? special.dineInEndTime : special.takeawayEndTime;
+    const specialEndTime = modeType === 'DINE_IN'
+      ? special.dineInEndTime
+      : modeType === 'TAKEAWAY'
+        ? special.takeawayEndTime
+        : special.deliveryEndTime;
     endTime = specialEndTime ?? null;
     if (!endTime) {
       endTime = special.closeTime ?? null;
@@ -583,9 +605,11 @@ export function getMinutesUntilModeCloses(
 
   // Priority 3: Global schedule
   if (!endTime) {
-    endTime = modeType === 'DINE_IN' 
-      ? merchant.dineInScheduleEnd || null 
-      : merchant.takeawayScheduleEnd || null;
+    endTime = modeType === 'DINE_IN'
+      ? merchant.dineInScheduleEnd || null
+      : modeType === 'TAKEAWAY'
+        ? merchant.takeawayScheduleEnd || null
+        : merchant.deliveryScheduleEnd || null;
   }
 
   if (!endTime) return null;

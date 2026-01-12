@@ -9,6 +9,7 @@
 
 import React, { useState } from 'react';
 import { FaMoneyBillWave, FaCreditCard, FaCheck } from 'react-icons/fa';
+import { formatCurrency as formatCurrencyUtil } from '@/lib/utils/format';
 
 
 export type PaymentMethod =
@@ -66,26 +67,7 @@ export const PaymentRecordForm: React.FC<PaymentRecordFormProps> = ({
 
   const [errors, setErrors] = useState<Partial<Record<keyof PaymentFormData, string>>>({});
 
-  const formatCurrency = (amount: number) => {
-    // Special handling for AUD to show A$ prefix
-    if (currency === 'AUD') {
-      return `A$${amount.toFixed(2)}`;
-    }
-    
-    // Special handling for IDR - no decimals
-    if (currency === 'IDR') {
-      const formatted = new Intl.NumberFormat('id-ID', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(Math.round(amount));
-      return `Rp ${formatted}`;
-    }
-    
-    return new Intl.NumberFormat('en-AU', {
-      style: 'currency',
-      currency: currency,
-    }).format(amount);
-  };
+  const formatCurrency = (amount: number) => formatCurrencyUtil(amount, currency);
 
   const validate = (): boolean => {
     const newErrors: Partial<Record<keyof PaymentFormData, string>> = {};

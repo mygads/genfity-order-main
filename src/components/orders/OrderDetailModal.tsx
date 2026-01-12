@@ -17,6 +17,7 @@ import {
   FaEnvelope,
   FaUtensils,
   FaShoppingBag,
+  FaTruck,
   FaClock,
   FaMoneyBillWave,
   FaCreditCard,
@@ -24,6 +25,8 @@ import {
   FaCheck,
   FaSpinner,
   FaChevronDown,
+  FaImage,
+  FaStickyNote,
 } from 'react-icons/fa';
 import Image from 'next/image';
 import { ORDER_STATUS_COLORS } from '@/lib/constants/orderConstants';
@@ -70,8 +73,71 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     receiptSettings?: Partial<ReceiptSettings> | null;
   } | null>(null);
   const [showCustomerDetails, setShowCustomerDetails] = useState(false);
+
+  const [drivers, setDrivers] = useState<Array<{ id: string; name: string; email: string; phone?: string | null }>>(
+    []
+  );
+  const [driversLoading, setDriversLoading] = useState(false);
+  const [selectedDriverUserId, setSelectedDriverUserId] = useState<string>('');
+  const [assigningDriver, setAssigningDriver] = useState(false);
   const { showSuccess, showError } = useToast();
   const { merchant } = useMerchant();
+
+  const fetchDrivers = useCallback(async () => {
+    try {
+      setDriversLoading(true);
+      const token = localStorage.getItem('accessToken');
+      const res = await fetch('/api/merchant/drivers', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json?.success) {
+        throw new Error(json?.message || json?.error || 'Failed to load drivers');
+      }
+
+      const list = Array.isArray(json.data) ? json.data : [];
+      setDrivers(list);
+    } catch (error) {
+      console.error('Error fetching drivers:', error);
+      showError((error as Error).message || 'Failed to load drivers', 'Drivers');
+    } finally {
+      setDriversLoading(false);
+    }
+  }, [showError]);
+
+  const handleSaveDriverAssignment = async () => {
+    if (!order) return;
+
+    setAssigningDriver(true);
+    try {
+      const token = localStorage.getItem('accessToken');
+      const res = await fetch(`/api/merchant/orders/${orderId}/delivery/assign`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          driverUserId: selectedDriverUserId ? selectedDriverUserId : null,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json?.success) {
+        throw new Error(json?.message || json?.error || 'Failed to update driver assignment');
+      }
+
+      setOrder(json.data);
+      onUpdate?.();
+      showSuccess('Driver assignment updated', 'Success');
+    } catch (error) {
+      console.error('Error saving driver assignment:', error);
+      showError((error as Error).message || 'Failed to update driver assignment', 'Assignment Failed');
+    } finally {
+      setAssigningDriver(false);
+    }
+  };
 
   const fetchOrderDetails = useCallback(async () => {
     try {
@@ -133,6 +199,16 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
       }
     }
   }, [isOpen, orderId, initialOrder, currency, fetchOrderDetails]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!order || order.orderType !== 'DELIVERY') return;
+
+    fetchDrivers();
+
+    const currentDriverId = (order as any)?.deliveryDriver?.id;
+    setSelectedDriverUserId(typeof currentDriverId === 'string' ? currentDriverId : '');
+  }, [isOpen, order, fetchDrivers]);
 
   useEffect(() => {
     if (!allowPaymentRecording) {
@@ -235,7 +311,61 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     }
   };
 
-  const handlePrintReceipt = () => {
+  const mintTrackingToken = async (orderId: string | number): Promise<string | null> => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) return null;
+
+      const res = await fetch(`/api/merchant/orders/${orderId}/tracking-token`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json?.success) return null;
+
+      return json?.data?.trackingToken || null;
+    } catch {
+      return null;
+    }
+  };
+
+  const handleConfirmCashOnDelivery = async () => {
+    if (!order) return;
+
+    try {
+      setUpdating(true);
+      const token = localStorage.getItem('accessToken');
+      if (!token) return;
+
+      const response = await fetch(`/api/merchant/orders/${orderId}/cod/confirm`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({}),
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data?.success) {
+        showError(data?.message || data?.error || 'Failed to confirm cash payment', 'Payment Failed');
+        return;
+      }
+
+      await fetchOrderDetails();
+      onUpdate?.();
+      showSuccess('Cash on Delivery marked as paid', 'Payment Completed');
+    } catch (error) {
+      console.error('Error confirming COD payment:', error);
+      showError('Failed to confirm cash payment. Please try again.', 'Payment Failed');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handlePrintReceipt = async () => {
     if (!order) return;
 
     const rawSettings = (merchantProfile?.receiptSettings || {}) as Partial<ReceiptSettings>;
@@ -252,6 +382,10 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
       paperSize: rawSettings.paperSize === '58mm' ? '58mm' : '80mm',
     };
 
+    const trackingToken = settings.showTrackingQRCode
+      ? await mintTrackingToken(orderId)
+      : null;
+
     const placedAt =
       (order as unknown as { placedAt?: string }).placedAt ||
       (order as unknown as { createdAt?: string }).createdAt ||
@@ -261,11 +395,20 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
 
     printReceipt({
       order: {
+        orderId: String(orderId),
         orderNumber: (order as any).orderNumber,
         orderType: (order as any).orderType,
         tableNumber: (order as any).tableNumber,
+        deliveryUnit: (order as any).deliveryUnit,
+        deliveryBuildingName: (order as any).deliveryBuildingName,
+        deliveryBuildingNumber: (order as any).deliveryBuildingNumber,
+        deliveryFloor: (order as any).deliveryFloor,
+        deliveryInstructions: (order as any).deliveryInstructions,
+        deliveryAddress: (order as any).deliveryAddress,
         customerName: (order as any).customerName,
         customerPhone: (order as any).customerPhone,
+        customerEmail: (order as any).customerEmail,
+        trackingToken,
         placedAt,
         paidAt: payment?.paidAt || payment?.paidAt?.toString?.(),
         items: ((order as any).orderItems || []).map((item: any) => ({
@@ -374,6 +517,11 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                           <FaUtensils className="h-3 w-3" />
                           {order.tableNumber ? `Table ${order.tableNumber}` : 'Dine In'}
                         </>
+                      ) : order.orderType === 'DELIVERY' ? (
+                        <>
+                          <FaTruck className="h-3 w-3" />
+                          Delivery
+                        </>
                       ) : (
                         <>
                           <FaShoppingBag className="h-3 w-3" />
@@ -439,6 +587,110 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                 </div>
               )}
 
+              {/* Delivery Info + Driver Assignment */}
+              {order.orderType === 'DELIVERY' && (
+                <div className="mb-4 rounded-lg border border-gray-100 dark:border-gray-800 p-4">
+                  <div className="mb-3 flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Delivery</p>
+                      <p className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
+                        {(order as any).deliveryStatus || 'PENDING_ASSIGNMENT'}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Delivery fee</p>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                        {formatCurrency(Number((order as any).deliveryFeeAmount || 0))}
+                      </p>
+                    </div>
+                  </div>
+
+                  {((order as any).deliveryAddress || (order as any).deliveryUnit || (order as any).deliveryBuildingName || (order as any).deliveryFloor) && (
+                    <div className="mb-3">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Address</p>
+                      <p className="text-sm text-gray-900 dark:text-white/90">
+                        {(() => {
+                          const prefix = [
+                            (order as any).deliveryUnit,
+                            (order as any).deliveryBuildingName,
+                            (order as any).deliveryBuildingNumber ? `No ${(order as any).deliveryBuildingNumber}` : null,
+                            (order as any).deliveryFloor ? `Floor ${(order as any).deliveryFloor}` : null,
+                          ].filter(Boolean).join(', ');
+
+                          const addr = String((order as any).deliveryAddress || '').trim();
+                          if (prefix && addr) return `${prefix}, ${addr}`;
+                          return prefix || addr || '—';
+                        })()}
+                      </p>
+                    </div>
+                  )}
+
+                  {(order as any).deliveryInstructions && (
+                    <div className="mb-3 rounded-lg border border-amber-100 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-100">
+                      <div className="flex items-start gap-2">
+                        <FaStickyNote className="mt-0.5 h-4 w-4 text-amber-700 dark:text-amber-300" />
+                        <div>
+                          <p className="text-xs font-medium uppercase tracking-wide text-amber-700 dark:text-amber-300">Delivery instructions</p>
+                          <p className="mt-0.5">{String((order as any).deliveryInstructions)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Distance</p>
+                      <p className="text-sm text-gray-900 dark:text-white/90">
+                        {(order as any).deliveryDistanceKm ? `${Number((order as any).deliveryDistanceKm).toFixed(2)} km` : '—'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Driver</p>
+                      <p className="text-sm text-gray-900 dark:text-white/90">
+                        {(order as any).deliveryDriver?.name || 'Unassigned'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
+                    <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      Assign driver
+                    </p>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <select
+                        value={selectedDriverUserId}
+                        onChange={(e) => setSelectedDriverUserId(e.target.value)}
+                        disabled={driversLoading || assigningDriver}
+                        className="h-10 flex-1 min-w-[220px] rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
+                      >
+                        <option value="">Unassigned</option>
+                        {drivers.map((d) => (
+                          <option key={d.id} value={d.id}>
+                            {d.name}
+                          </option>
+                        ))}
+                      </select>
+
+                      <button
+                        type="button"
+                        onClick={handleSaveDriverAssignment}
+                        disabled={assigningDriver || driversLoading}
+                        className="h-10 rounded-lg bg-gray-900 px-4 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-60"
+                      >
+                        {assigningDriver ? 'Saving…' : 'Save'}
+                      </button>
+                    </div>
+
+                    {!driversLoading && drivers.length === 0 && (
+                      <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                        No drivers found. Add a staff member with role DRIVER.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Order Items */}
               <div className="mb-4">
                 <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Items</p>
@@ -458,9 +710,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                               />
                             ) : (
                               <div className="flex h-full w-full items-center justify-center">
-                                <svg className="h-8 w-8 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
+                                <FaImage className="h-8 w-8 text-gray-300 dark:text-gray-600" />
                               </div>
                             )}
                           </div>
@@ -585,14 +835,25 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                 {/* Payment Actions */}
                 {allowPaymentRecording ? (
                   (!order.payment || order.payment.status === 'PENDING') ? (
-                    <button
-                      onClick={() => setShowPaymentModal(true)}
-                      disabled={updating}
-                      className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-success-500 text-sm font-medium text-white hover:bg-success-600 disabled:opacity-50"
-                    >
-                      <FaMoneyBillWave className="h-4 w-4" />
-                      Record Payment
-                    </button>
+                    (order.payment?.paymentMethod === 'CASH_ON_DELIVERY' && (order as any).orderType === 'DELIVERY') ? (
+                      <button
+                        onClick={handleConfirmCashOnDelivery}
+                        disabled={updating}
+                        className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-success-500 text-sm font-medium text-white hover:bg-success-600 disabled:opacity-50"
+                      >
+                        <FaMoneyBillWave className="h-4 w-4" />
+                        Confirm Cash Received
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setShowPaymentModal(true)}
+                        disabled={updating}
+                        className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-success-500 text-sm font-medium text-white hover:bg-success-600 disabled:opacity-50"
+                      >
+                        <FaMoneyBillWave className="h-4 w-4" />
+                        Record Payment
+                      </button>
+                    )
                   ) : (
                     <button
                       onClick={handlePrintReceipt}

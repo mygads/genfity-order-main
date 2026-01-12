@@ -308,6 +308,138 @@ export function getStaffWelcomeTemplate(params: {
   return getBaseTemplate(content, params.supportEmail, locale);
 }
 
+/**
+ * Driver Welcome Email Template
+ * Sent when a delivery driver account is created for a merchant
+ */
+export function getDriverWelcomeTemplate(params: {
+  name: string;
+  email: string;
+  password: string;
+  merchantName: string;
+  merchantCode?: string;
+  loginUrl: string;
+  locale?: Locale;
+  supportEmail: string;
+}): string {
+  const locale = params.locale || 'en';
+  const isID = locale === 'id';
+  const merchantLabel = params.merchantCode
+    ? `${params.merchantName} (${params.merchantCode})`
+    : params.merchantName;
+
+  const content = `
+    <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #171717; text-align: center;">
+      ${isID ? 'Akun Driver Anda Siap' : 'Your Driver Account is Ready'}
+    </h1>
+    <p style="margin: 0 0 24px 0; font-size: 14px; color: #737373; text-align: center;">
+      ${isID
+        ? `Halo ${params.name}, Anda telah ditambahkan sebagai driver pengantaran untuk <strong style=\"color: #171717;\">${merchantLabel}</strong>.`
+        : `Hi ${params.name}, you’ve been added as a delivery driver for <strong style=\"color: #171717;\">${merchantLabel}</strong>.`}
+    </p>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; border: 1px solid #e5e5e5; border-radius: 10px; margin: 18px 0;">
+      <tr>
+        <td style="padding: 18px;">
+          <p style="margin: 0 0 12px 0; font-size: 14px; color: #171717; font-weight: 600;">${isID ? 'Kredensial Login' : 'Login Credentials'}</p>
+          <table width="100%" cellpadding="0" cellspacing="0">
+            ${renderDetailsRows([
+              { label: 'Email', value: params.email, emphasizeValue: true },
+              {
+                label: isID ? 'Password Sementara' : 'Temporary Password',
+                value: params.password,
+                emphasizeValue: true,
+              },
+              { label: isID ? 'Merchant' : 'Merchant', value: merchantLabel },
+            ])}
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
+      <tr>
+        <td align="center">
+          <a href="${params.loginUrl}" style="display: inline-block; background-color: #171717; color: #ffffff; font-size: 14px; font-weight: 600; padding: 12px 32px; border-radius: 8px; text-decoration: none;">
+            ${isID ? 'Masuk sebagai Driver' : 'Login as Driver'}
+          </a>
+        </td>
+      </tr>
+    </table>
+
+    <p style="margin: 0; font-size: 12px; color: #a3a3a3; text-align: center;">
+      ${isID
+        ? 'Untuk keamanan, silakan ganti password setelah login pertama.'
+        : 'For security, please change your password after your first login.'}
+    </p>
+  `;
+
+  return getBaseTemplate(content, params.supportEmail, locale);
+}
+
+/**
+ * Driver Invite Email Template
+ * Sent when an existing DELIVERY user is linked to a merchant as DRIVER
+ */
+export function getDriverInviteTemplate(params: {
+  name: string;
+  email: string;
+  merchantName: string;
+  merchantCode?: string;
+  loginUrl: string;
+  locale?: Locale;
+  supportEmail: string;
+}): string {
+  const locale = params.locale || 'en';
+  const isID = locale === 'id';
+  const merchantLabel = params.merchantCode
+    ? `${params.merchantName} (${params.merchantCode})`
+    : params.merchantName;
+
+  const content = `
+    <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #171717; text-align: center;">
+      ${isID ? 'Undangan Driver Pengantaran' : 'Delivery Driver Invitation'}
+    </h1>
+    <p style="margin: 0 0 24px 0; font-size: 14px; color: #737373; text-align: center;">
+      ${isID
+        ? `Halo ${params.name}, Anda telah diundang untuk bergabung sebagai driver pengantaran untuk <strong style=\"color: #171717;\">${merchantLabel}</strong>.`
+        : `Hi ${params.name}, you’ve been invited to join as a delivery driver for <strong style=\"color: #171717;\">${merchantLabel}</strong>.`}
+    </p>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; border: 1px solid #e5e5e5; border-radius: 10px; margin: 18px 0;">
+      <tr>
+        <td style="padding: 18px;">
+          <p style="margin: 0 0 12px 0; font-size: 14px; color: #171717; font-weight: 600;">${isID ? 'Detail' : 'Details'}</p>
+          <table width="100%" cellpadding="0" cellspacing="0">
+            ${renderDetailsRows([
+              { label: 'Email', value: params.email, emphasizeValue: true },
+              { label: isID ? 'Merchant' : 'Merchant', value: merchantLabel },
+            ])}
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
+      <tr>
+        <td align="center">
+          <a href="${params.loginUrl}" style="display: inline-block; background-color: #171717; color: #ffffff; font-size: 14px; font-weight: 600; padding: 12px 32px; border-radius: 8px; text-decoration: none;">
+            ${isID ? 'Buka Dashboard Driver' : 'Open Driver Dashboard'}
+          </a>
+        </td>
+      </tr>
+    </table>
+
+    <p style="margin: 0; font-size: 12px; color: #a3a3a3; text-align: center;">
+      ${isID
+        ? 'Gunakan kredensial GENFITY Anda yang sudah ada. Jika lupa password, gunakan fitur “Lupa password” pada halaman login.'
+        : 'Use your existing GENFITY credentials. If you forgot your password, use “Forgot password” on the login page.'}
+    </p>
+  `;
+
+  return getBaseTemplate(content, params.supportEmail, locale);
+}
+
 export function getTestEmailTemplate(params: {
   locale?: Locale;
   supportEmail: string;

@@ -34,12 +34,20 @@ export interface ReceiptOrderItem {
 }
 
 export interface ReceiptOrderData {
+  orderId?: string;
   orderNumber: string;
-  orderType: 'DINE_IN' | 'TAKEAWAY';
+  orderType: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY';
   tableNumber?: string | null;
+  deliveryUnit?: string | null;
+  deliveryBuildingName?: string | null;
+  deliveryBuildingNumber?: string | null;
+  deliveryFloor?: string | null;
+  deliveryInstructions?: string | null;
+  deliveryAddress?: string | null;
   customerName?: string | null;
   customerPhone?: string | null;
   customerEmail?: string | null;
+  trackingToken?: string | null;
   placedAt: string;
   paidAt?: string | null;
   items: ReceiptOrderItem[];
@@ -342,13 +350,39 @@ function buildOrderInfoSection(
   }
 
   if (settings.showOrderType) {
-    const typeLabel = order.orderType === 'DINE_IN' ? labels.dineIn : labels.takeaway;
+    const typeLabel =
+      order.orderType === 'DINE_IN'
+        ? labels.dineIn
+        : order.orderType === 'TAKEAWAY'
+          ? labels.takeaway
+          : 'Delivery';
     const tableInfo = settings.showTableNumber && order.tableNumber
       ? ` - ${labels.table} ${order.tableNumber}`
       : '';
     parts.push(`<p class="order-meta">${typeLabel}${tableInfo}</p>`);
   } else if (settings.showTableNumber && order.tableNumber) {
     parts.push(`<p class="order-meta">${labels.table} ${order.tableNumber}</p>`);
+  }
+
+  if (order.orderType === 'DELIVERY') {
+    const prefix = [
+      order.deliveryUnit,
+      order.deliveryBuildingName,
+      order.deliveryBuildingNumber ? `No ${order.deliveryBuildingNumber}` : null,
+      order.deliveryFloor ? `Floor ${order.deliveryFloor}` : null,
+    ].filter(Boolean).join(', ');
+
+    const address = String(order.deliveryAddress || '').trim();
+    const fullAddress = prefix && address ? `${prefix}, ${address}` : (prefix || address);
+
+    if (fullAddress) {
+      parts.push(`<p class="order-meta">📍 ${fullAddress}</p>`);
+    }
+
+    const instructions = String(order.deliveryInstructions || '').trim();
+    if (instructions) {
+      parts.push(`<p class="order-meta">📝 ${instructions}</p>`);
+    }
   }
 
   if (settings.showDateTime) {
@@ -531,21 +565,28 @@ function buildFooterSection(
 
     if (merchantCode) {
       const baseUrl = getPublicAppOrigin('https://order.genfity.com');
-      const trackingUrl = `${baseUrl}/${merchantCode}/track/${order.orderNumber}`;
+      const orderNumberEncoded = encodeURIComponent(order.orderNumber);
+      const trackingUrl = order.trackingToken
+        ? `${baseUrl}/${merchantCode}/track/${orderNumberEncoded}?token=${encodeURIComponent(order.trackingToken)}`
+        : null;
       const qrSizePx = settings.paperSize === '58mm' ? 90 : 110;
-      const qrDataUri = buildQrSvgDataUri(trackingUrl, qrSizePx);
-      parts.push(`
-        <div class="qr-section">
-          <p class="qr-label">${labels.scanToTrack}</p>
-          <div class="qr-code">
-            <img src="${qrDataUri || `https://api.qrserver.com/v1/create-qr-code/?size=${qrSizePx}x${qrSizePx}&data=${encodeURIComponent(trackingUrl)}`}"
-                 alt="Track Order"
-                 width="${qrSizePx}"
-                 height="${qrSizePx}"
-                 style="display: block; margin: 0 auto;" />
+      if (trackingUrl) {
+        const qrDataUri = buildQrSvgDataUri(trackingUrl, qrSizePx);
+        parts.push(`
+          <div class="qr-section">
+            <p class="qr-label">${labels.scanToTrack}</p>
+            <div class="qr-code">
+              <img src="${qrDataUri || `https://api.qrserver.com/v1/create-qr-code/?size=${qrSizePx}x${qrSizePx}&data=${encodeURIComponent(trackingUrl)}`}"
+                   alt="Track Order"
+                   width="${qrSizePx}"
+                   height="${qrSizePx}"
+                   style="display: block; margin: 0 auto;" />
+            </div>
           </div>
-        </div>
-      `);
+        `);
+      } else {
+        parts.push(`<p class="merchant-info" style="margin-top: 8px;">${labels.scanToTrack}: (token missing)</p>`);
+      }
     }
   }
 

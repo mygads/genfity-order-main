@@ -122,10 +122,13 @@ async function handlePut(req: NextRequest, authContext: AuthContext) {
         isTakeawayEnabled: body.isTakeawayEnabled,
         dineInLabel: body.dineInLabel,
         takeawayLabel: body.takeawayLabel,
+        deliveryLabel: body.deliveryLabel,
         dineInScheduleStart: body.dineInScheduleStart,
         dineInScheduleEnd: body.dineInScheduleEnd,
         takeawayScheduleStart: body.takeawayScheduleStart,
         takeawayScheduleEnd: body.takeawayScheduleEnd,
+        deliveryScheduleStart: body.deliveryScheduleStart,
+        deliveryScheduleEnd: body.deliveryScheduleEnd,
         totalTables: body.totalTables,
         // Tax settings
         enableTax: body.enableTax,
@@ -143,6 +146,14 @@ async function handlePut(req: NextRequest, authContext: AuthContext) {
         timezone: body.timezone,
         latitude: body.latitude,
         longitude: body.longitude,
+        // Delivery settings
+        isDeliveryEnabled: body.isDeliveryEnabled,
+        enforceDeliveryZones: body.enforceDeliveryZones,
+        deliveryMaxDistanceKm: body.deliveryMaxDistanceKm,
+        deliveryFeeBase: body.deliveryFeeBase,
+        deliveryFeePerKm: body.deliveryFeePerKm,
+        deliveryFeeMin: body.deliveryFeeMin,
+        deliveryFeeMax: body.deliveryFeeMax,
         // Receipt settings
         receiptSettings: body.receiptSettings,
       }

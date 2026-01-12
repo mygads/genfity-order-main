@@ -6,10 +6,11 @@ import { useCart } from '@/context/CartContext';
 import { useGroupOrder } from '@/context/GroupOrderContext';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { useCustomerData } from '@/context/CustomerDataContext';
+import { FaInfoCircle, FaShoppingCart } from 'react-icons/fa';
 
 interface FloatingCartButtonProps {
   merchantCode: string;
-  mode?: 'dinein' | 'takeaway';
+  mode?: 'dinein' | 'takeaway' | 'delivery';
   storeOpen?: boolean; // When false, hide checkout button entirely
 }
 
@@ -118,7 +119,8 @@ export default function FloatingCartButton({ merchantCode, mode, storeOpen = tru
     if (isInGroupOrder) {
       if (isHost) {
         // Host: Go to view-order with group order flag
-        const modeParam = mode || (session?.orderType === 'DINE_IN' ? 'dinein' : 'takeaway');
+        const sessionOrderType = (session as unknown as { orderType?: string } | null)?.orderType;
+        const modeParam = mode || (sessionOrderType === 'DINE_IN' ? 'dinein' : sessionOrderType === 'DELIVERY' ? 'delivery' : 'takeaway');
         router.push(`/${merchantCode}/view-order?mode=${modeParam}&groupOrder=true`);
       } else {
         // Non-host: Show modal
@@ -152,20 +154,7 @@ export default function FloatingCartButton({ merchantCode, mode, storeOpen = tru
         >
           {/* LEFT: Cart Icon with Badge */}
           <div className="relative flex items-center justify-center w-14 bg-white py-2">
-            <svg
-              width="26"
-              height="26"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#F97316"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <circle cx="9" cy="21" r="1" />
-              <circle cx="20" cy="21" r="1" />
-              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-            </svg>
+            <FaShoppingCart className="h-6 w-6 text-orange-500" />
 
             {/* Badge */}
             <div className="absolute top-1 right-1 min-w-5 h-5 px-1.5 bg-orange-500 text-white text-[11px] font-bold rounded-full flex items-center justify-center shadow-sm">
@@ -203,9 +192,7 @@ export default function FloatingCartButton({ merchantCode, mode, storeOpen = tru
             <div className="w-full max-w-[500px] bg-white rounded-t-2xl shadow-2xl p-6">
               <div className="text-center mb-6">
                 <div className="w-16 h-16 mx-auto mb-4 bg-orange-100 rounded-full flex items-center justify-center">
-                  <svg className="w-8 h-8 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
+                  <FaInfoCircle className="h-8 w-8 text-orange-500" />
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
                   Host Only Checkout

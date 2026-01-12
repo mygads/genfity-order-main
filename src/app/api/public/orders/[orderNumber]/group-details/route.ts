@@ -17,6 +17,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
 import { decimalToNumber } from '@/lib/utils/serializer';
 import type { Decimal } from '@prisma/client/runtime/library';
+import { verifyOrderTrackingToken } from '@/lib/utils/orderTrackingToken';
 
 interface RouteParams {
   params: Promise<{ orderNumber: string }>;
@@ -55,6 +56,8 @@ export async function GET(req: NextRequest, context: RouteParams) {
   try {
     const { orderNumber } = await context.params;
 
+    const token = req.nextUrl.searchParams.get('token') || '';
+
     if (!orderNumber) {
       return NextResponse.json({
         success: false,
@@ -86,6 +89,24 @@ export async function GET(req: NextRequest, context: RouteParams) {
     });
 
     if (!order) {
+      return NextResponse.json({
+        success: false,
+        error: 'ORDER_NOT_FOUND',
+        message: 'Order not found',
+      }, { status: 404 });
+    }
+
+    // Tokenized access is REQUIRED for public tracking
+    const merchantCode = order.merchant?.code || '';
+    const ok = token
+      ? verifyOrderTrackingToken({
+          token,
+          merchantCode,
+          orderNumber: order.orderNumber,
+        })
+      : false;
+
+    if (!ok) {
       return NextResponse.json({
         success: false,
         error: 'ORDER_NOT_FOUND',

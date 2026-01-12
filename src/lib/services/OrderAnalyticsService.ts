@@ -120,6 +120,7 @@ export class OrderAnalyticsService {
     const ordersByType: Record<OrderType, number> = {
       DINE_IN: 0,
       TAKEAWAY: 0,
+      DELIVERY: 0,
     };
 
     let totalAmount = 0;

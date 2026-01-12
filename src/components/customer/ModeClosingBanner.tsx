@@ -77,7 +77,7 @@ export default function ModeClosingBanner({
         return null;
     }
 
-    const displayLabel = modeLabel || (mode === "dinein" ? "Dine In" : "Takeaway");
+    const displayLabel = modeLabel || (mode === "dinein" ? "Dine In" : mode === "delivery" ? "Delivery" : "Takeaway");
 
     // Format the remaining time
     const formatRemaining = (minutes: number) => {

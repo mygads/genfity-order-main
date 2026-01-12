@@ -3,9 +3,9 @@
  */
 
 /**
- * Order mode type
+ * Order mode type - Dine-in, Takeaway, or Delivery
  */
-export type OrderMode = 'dinein' | 'takeaway';
+export type OrderMode = 'dinein' | 'takeaway' | 'delivery';
 
 /**
  * Cart item with selected addons

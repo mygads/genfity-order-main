@@ -5,6 +5,8 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { useGroupOrder } from '@/context/GroupOrderContext';
 import { formatCurrency } from '@/lib/utils/format';
+import { customerTrackUrl } from '@/lib/utils/customerRoutes';
+import { FaCheckCircle, FaLightbulb, FaMoneyBillWave } from 'react-icons/fa';
 
 /**
  * Group Order Summary Page
@@ -24,6 +26,7 @@ export default function GroupOrderSummaryPage({
 
     const [merchantCode, setMerchantCode] = useState<string>('');
     const [currency, setCurrency] = useState<string>('AUD');
+    const [trackError, setTrackError] = useState<string>('');
 
     useEffect(() => {
         params.then(p => {
@@ -33,6 +36,7 @@ export default function GroupOrderSummaryPage({
 
     // Get order number from URL if navigated from submit
     const orderNumber = searchParams.get('orderNumber') || session?.order?.orderNumber;
+    const trackingToken = searchParams.get('token');
 
     // If no session or split bill, redirect back
     useEffect(() => {
@@ -62,7 +66,15 @@ export default function GroupOrderSummaryPage({
 
     const handleTrackOrder = () => {
         if (orderNumber) {
-            router.push(`/${merchantCode}/track/${orderNumber}`);
+            if (!trackingToken) {
+                setTrackError('Tracking link is unavailable (missing token).');
+                return;
+            }
+            router.push(
+                customerTrackUrl(merchantCode, orderNumber, {
+                    token: trackingToken,
+                })
+            );
         }
     };
 
@@ -85,9 +97,7 @@ export default function GroupOrderSummaryPage({
             {/* Success Header */}
             <div className="bg-gradient-to-r from-green-500 to-emerald-500 px-6 py-8 text-center text-white">
                 <div className="w-16 h-16 bg-white/20 backdrop-blur rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                    </svg>
+                    <FaCheckCircle className="w-8 h-8" />
                 </div>
                 <h1 className="text-2xl font-bold mb-2">
                     {t("groupOrder.success.submitted") || "Order Submitted!"}
@@ -105,7 +115,7 @@ export default function GroupOrderSummaryPage({
                     {/* Header */}
                     <div className="px-5 py-4 border-b border-gray-100">
                         <div className="flex items-center gap-3">
-                            <span className="text-2xl">💸</span>
+                            <FaMoneyBillWave className="w-5 h-5 text-gray-700" />
                             <div>
                                 <h2 className="font-semibold text-gray-900">
                                     {t("groupOrder.splitBill") || "Split Bill"}
@@ -178,7 +188,7 @@ export default function GroupOrderSummaryPage({
             <div className="px-4 pb-6 space-y-3">
                 <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                     <div className="flex items-start gap-3">
-                        <span className="text-xl">💡</span>
+                        <FaLightbulb className="w-5 h-5 text-blue-700 mt-0.5" />
                         <div>
                             <h3 className="font-medium text-blue-800 mb-1">
                                 How to pay
@@ -197,6 +207,7 @@ export default function GroupOrderSummaryPage({
                     {orderNumber && (
                         <button
                             onClick={handleTrackOrder}
+                            disabled={!trackingToken}
                             className="flex-1 py-3 border-2 border-gray-200 rounded-xl font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                         >
                             Track Order
@@ -209,6 +220,10 @@ export default function GroupOrderSummaryPage({
                         Done
                     </button>
                 </div>
+
+                {trackError ? (
+                    <p className="mt-2 text-xs text-red-600">{trackError}</p>
+                ) : null}
             </div>
         </div>
     );

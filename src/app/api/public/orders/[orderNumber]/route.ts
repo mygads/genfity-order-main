@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
 import { serializeBigInt } from '@/lib/utils/serializer';
+import { verifyOrderTrackingToken } from '@/lib/utils/orderTrackingToken';
 
 /**
  * GET /api/public/orders/[orderNumber]
@@ -24,6 +25,8 @@ export async function GET(
 
   try {
     const { orderNumber } = params;
+
+    const token = request.nextUrl.searchParams.get('token') || '';
 
     // Validate order number
     if (!orderNumber) {
@@ -101,6 +104,29 @@ export async function GET(
     });
 
     if (!order) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'ORDER_NOT_FOUND',
+          message: 'Order not found',
+          statusCode: 404,
+        },
+        { status: 404 }
+      );
+    }
+
+    // Tokenized access is REQUIRED for public tracking
+    // Avoid leaking whether the order exists for invalid/missing tokens.
+    const merchantCode = order.merchant?.code || '';
+    const ok = token
+      ? verifyOrderTrackingToken({
+          token,
+          merchantCode,
+          orderNumber: order.orderNumber,
+        })
+      : false;
+
+    if (!ok) {
       return NextResponse.json(
         {
           success: false,

@@ -19,6 +19,13 @@ interface MerchantData {
   phone?: string;
   logoUrl?: string | null;
   bannerUrl?: string | null;
+  // Ordering modes
+  isDineInEnabled?: boolean;
+  isTakeawayEnabled?: boolean;
+  isDeliveryEnabled?: boolean;
+  // Needed to decide if delivery can run
+  latitude?: string | number | null;
+  longitude?: string | number | null;
   openingHours: {
     id: string;
     dayOfWeek: number;

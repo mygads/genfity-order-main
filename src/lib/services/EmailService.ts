@@ -11,6 +11,8 @@ import {
   getOrderCompletedTemplate,
   getCustomerWelcomeTemplate,
   getStaffWelcomeTemplate,
+  getDriverWelcomeTemplate,
+  getDriverInviteTemplate,
   getTestEmailTemplate,
   getPermissionUpdateTemplate,
   getPaymentVerifiedTemplate,
@@ -20,6 +22,7 @@ import {
 import { formatCurrency } from '@/lib/utils/format';
 import { generateOrderReceiptPdfBuffer } from '@/lib/utils/orderReceiptPdfEmail';
 import { formatFullOrderNumber } from '@/lib/utils/format';
+import { buildOrderTrackingUrl } from '@/lib/utils/orderTrackingLinks.server';
 
 // Track initialization to prevent duplicate logs
 let isInitialized = false;
@@ -281,7 +284,11 @@ class EmailService {
     total: number;
   }): Promise<boolean> {
     const merchantLocale = this.getMerchantEmailLocale(params.merchantCountry);
-    const trackingUrl = `${process.env.NEXT_PUBLIC_APP_URL}/${params.merchantCode}/order-summary?orderNumber=${params.orderNumber}`;
+    const trackingUrl = buildOrderTrackingUrl({
+      merchantCode: params.merchantCode,
+      orderNumber: params.orderNumber,
+      baseUrlFallback: process.env.NEXT_PUBLIC_APP_URL,
+    });
 
     const currency = params.currency || 'AUD';
 
@@ -554,6 +561,78 @@ class EmailService {
         locale === 'id'
           ? `Selamat datang di ${params.merchantName} - Akun Staff Anda`
           : `Welcome to ${params.merchantName} - Your Staff Account`,
+      html,
+    });
+  }
+
+  /**
+   * Send welcome email to new delivery driver (account created)
+   */
+  async sendDriverWelcome(params: {
+    to: string;
+    name: string;
+    email: string;
+    password: string;
+    merchantName: string;
+    merchantCode?: string;
+    merchantCountry?: string | null;
+  }): Promise<boolean> {
+    const locale = this.getMerchantEmailLocale(params.merchantCountry);
+    const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL}/admin/login`;
+    const supportEmail = process.env.EMAIL_FROM || process.env.SMTP_FROM_EMAIL || 'support@genfity.com';
+
+    const html = getDriverWelcomeTemplate({
+      name: params.name,
+      email: params.email,
+      password: params.password,
+      merchantName: params.merchantName,
+      merchantCode: params.merchantCode,
+      loginUrl,
+      supportEmail,
+      locale,
+    });
+
+    return this.sendEmail({
+      to: params.to,
+      subject:
+        locale === 'id'
+          ? `Akun driver Anda - ${params.merchantName}`
+          : `Your driver account - ${params.merchantName}`,
+      html,
+    });
+  }
+
+  /**
+   * Send invite email to existing delivery driver (linked to merchant)
+   */
+  async sendDriverInvite(params: {
+    to: string;
+    name: string;
+    email: string;
+    merchantName: string;
+    merchantCode?: string;
+    merchantCountry?: string | null;
+  }): Promise<boolean> {
+    const locale = this.getMerchantEmailLocale(params.merchantCountry);
+    const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL}/admin/login`;
+    const supportEmail = process.env.EMAIL_FROM || process.env.SMTP_FROM_EMAIL || 'support@genfity.com';
+
+    const html = getDriverInviteTemplate({
+      name: params.name,
+      email: params.email,
+      merchantName: params.merchantName,
+      merchantCode: params.merchantCode,
+      loginUrl,
+      supportEmail,
+      locale,
+    });
+
+    return this.sendEmail({
+      to: params.to,
+      subject:
+        locale === 'id'
+          ? `Undangan driver - ${params.merchantName}`
+          : `Driver invitation - ${params.merchantName}`,
       html,
     });
   }
