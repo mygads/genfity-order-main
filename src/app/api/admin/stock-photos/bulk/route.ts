@@ -14,6 +14,7 @@ interface BulkPhotoItem {
   name: string;
   imageUrl: string;
   thumbnailUrl?: string;
+  thumbnailMeta?: unknown;
 }
 
 /**
@@ -61,6 +62,7 @@ async function postHandler(request: NextRequest, authContext: AuthContext) {
           name: photo.name.trim(),
           imageUrl: photo.imageUrl,
           thumbnailUrl: photo.thumbnailUrl || null,
+          thumbnailMeta: photo.thumbnailMeta ?? null,
           uploadedByUserId: authContext.userId,
         },
       })

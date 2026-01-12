@@ -105,7 +105,7 @@ async function getHandler(request: NextRequest, authContext: AuthContext) {
  */
 async function postHandler(request: NextRequest, authContext: AuthContext) {
   const body = await request.json();
-  const { category, name, imageUrl, thumbnailUrl } = body;
+  const { category, name, imageUrl, thumbnailUrl, thumbnailMeta } = body;
 
   // Validation
   if (!category || !name || !imageUrl) {
@@ -131,6 +131,7 @@ async function postHandler(request: NextRequest, authContext: AuthContext) {
       name: name.trim(),
       imageUrl,
       thumbnailUrl: thumbnailUrl || null,
+      thumbnailMeta: thumbnailMeta ?? null,
       uploadedByUserId: authContext.userId,
     },
     include: {

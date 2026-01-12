@@ -335,10 +335,20 @@ async function tickHandler(req: NextRequest, _ctx: AuthContext) {
 
     try {
       const buffer = await fetchImageBuffer(photo.imageUrl, 15000);
+      const sourceMetadata = await sharp(buffer).metadata();
+
+      const sourceWidth = sourceMetadata.width ?? null;
+      const sourceHeight = sourceMetadata.height ?? null;
 
       const thumbJpegBuffer = await sharp(buffer)
         .rotate()
         .resize(600, 600, { fit: 'cover' })
+        .jpeg({ quality: 80, mozjpeg: true })
+        .toBuffer();
+
+      const thumb2xJpegBuffer = await sharp(buffer)
+        .rotate()
+        .resize(1200, 1200, { fit: 'cover' })
         .jpeg({ quality: 80, mozjpeg: true })
         .toBuffer();
 
@@ -349,6 +359,8 @@ async function tickHandler(req: NextRequest, _ctx: AuthContext) {
 
       const pathname = `stock-photos/thumbs/stock-photo-${photo.id.toString()}.jpg`;
 
+      const pathname2x = `stock-photos/thumbs/stock-photo-${photo.id.toString()}-2x.jpg`;
+
       const thumbResult = await BlobService.uploadFile(thumbJpegBuffer, pathname, {
         access: 'public',
         addRandomSuffix: true,
@@ -356,10 +368,33 @@ async function tickHandler(req: NextRequest, _ctx: AuthContext) {
         contentType: 'image/jpeg',
       });
 
+      const thumb2xResult = await BlobService.uploadFile(thumb2xJpegBuffer, pathname2x, {
+        access: 'public',
+        addRandomSuffix: true,
+        cacheControlMaxAge: 86400 * 365,
+        contentType: 'image/jpeg',
+      });
+
+      const thumbnailMeta = {
+        format: 'jpeg',
+        source: {
+          width: sourceWidth,
+          height: sourceHeight,
+          format: sourceMetadata.format ?? null,
+        },
+        variants: [
+          { dpr: 1, width: 600, height: 600, url: thumbResult.url },
+          { dpr: 2, width: 1200, height: 1200, url: thumb2xResult.url },
+        ],
+      };
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (prisma as any).stockPhoto.update({
         where: { id: photo.id },
-        data: { thumbnailUrl: thumbResult.url },
+        data: {
+          thumbnailUrl: thumbResult.url,
+          thumbnailMeta: thumbnailMeta as unknown as object,
+        },
       });
 
       updated++;

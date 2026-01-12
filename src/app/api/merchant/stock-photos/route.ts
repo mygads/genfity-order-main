@@ -56,6 +56,7 @@ async function getHandler(request: NextRequest, _authContext: AuthContext) {
         name: true,
         imageUrl: true,
         thumbnailUrl: true,
+        thumbnailMeta: true,
       },
       orderBy: [
         { category: 'asc' },

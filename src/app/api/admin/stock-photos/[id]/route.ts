@@ -69,7 +69,7 @@ async function putHandler(
   const { id } = await context.params;
   const photoId = BigInt(id);
   const body = await request.json();
-  const { category, name, imageUrl, thumbnailUrl, isActive } = body;
+  const { category, name, imageUrl, thumbnailUrl, thumbnailMeta, isActive } = body;
 
   // Check if photo exists
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -92,6 +92,7 @@ async function putHandler(
     name?: string;
     imageUrl?: string;
     thumbnailUrl?: string | null;
+    thumbnailMeta?: unknown | null;
     isActive?: boolean;
   } = {};
 
@@ -104,6 +105,7 @@ async function putHandler(
   if (name !== undefined) updateData.name = name.trim();
   if (imageUrl !== undefined) updateData.imageUrl = imageUrl;
   if (thumbnailUrl !== undefined) updateData.thumbnailUrl = thumbnailUrl || null;
+  if (thumbnailMeta !== undefined) updateData.thumbnailMeta = thumbnailMeta ?? null;
   if (isActive !== undefined) updateData.isActive = isActive;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

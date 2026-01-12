@@ -1559,6 +1559,7 @@ model StockPhoto {
   name            String    // Display name of the photo
   imageUrl        String    @map("image_url") // URL to the stock photo
   thumbnailUrl    String?   @map("thumbnail_url") // Optional smaller thumbnail
+  thumbnailMeta   Json?     @map("thumbnail_meta") // Thumbnail variants + source dimensions
   uploadedByUserId BigInt   @map("uploaded_by_user_id") // Super Admin who uploaded
   isActive        Boolean   @default(true) @map("is_active")
   usageCount      Int       @default(0) @map("usage_count") // Track how many times used

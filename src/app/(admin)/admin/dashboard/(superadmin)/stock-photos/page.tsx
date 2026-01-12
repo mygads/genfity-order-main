@@ -290,7 +290,11 @@ export default function StockPhotosPage() {
       formData.append('file', selectedFile);
 
       // Use XMLHttpRequest for progress tracking
-      const imageUrl = await new Promise<string>((resolve, reject) => {
+      const uploadResult = await new Promise<{
+        imageUrl: string;
+        thumbnailUrl?: string;
+        thumbnailMeta?: unknown;
+      }>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
 
         xhr.upload.addEventListener('progress', (event) => {
@@ -304,7 +308,11 @@ export default function StockPhotosPage() {
           if (xhr.status >= 200 && xhr.status < 300) {
             const data = JSON.parse(xhr.responseText);
             if (data.success) {
-              resolve(data.data.url);
+              resolve({
+                imageUrl: data.data.url,
+                thumbnailUrl: data.data.thumbUrl,
+                thumbnailMeta: data.data.thumbMeta,
+              });
             } else {
               reject(new Error(data.message || 'Failed to upload image'));
             }
@@ -338,7 +346,9 @@ export default function StockPhotosPage() {
         body: JSON.stringify({
           category: uploadForm.category,
           name: uploadForm.name,
-          imageUrl: imageUrl,
+          imageUrl: uploadResult.imageUrl,
+          thumbnailUrl: uploadResult.thumbnailUrl || null,
+          thumbnailMeta: uploadResult.thumbnailMeta ?? null,
         }),
       });
 
