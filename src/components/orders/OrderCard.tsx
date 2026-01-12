@@ -17,7 +17,7 @@ import type { OrderListItem, OrderWithDetails } from '@/lib/types/order';
 import { useMerchant } from '@/context/MerchantContext';
 import { formatFullOrderNumber, formatOrderNumberSuffix } from '@/lib/utils/format';
 import DriverQuickAssign from '@/components/orders/DriverQuickAssign';
-import { shouldConfirmUnpaidBeforeInProgress } from '@/lib/utils/orderPaymentRules';
+import { shouldConfirmUnpaidBeforeComplete, shouldConfirmUnpaidBeforeInProgress } from '@/lib/utils/orderPaymentRules';
 
 type OrderNumberDisplayMode = 'full' | 'suffix' | 'raw';
 
@@ -46,6 +46,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
   currency: _currency = 'AUD',
 }) => {
   const [showUnpaidConfirm, setShowUnpaidConfirm] = useState(false);
+  const [showUnpaidCompleteConfirm, setShowUnpaidCompleteConfirm] = useState(false);
   const { merchant } = useMerchant();
 
   const statusConfig = ORDER_STATUS_COLORS[order.status as keyof typeof ORDER_STATUS_COLORS];
@@ -95,7 +96,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
     <div
       onClick={(e) => {
         // Don't open detail modal if confirmation modal is open
-        if (showUnpaidConfirm) {
+        if (showUnpaidConfirm || showUnpaidCompleteConfirm) {
           e.stopPropagation();
           return;
         }
@@ -309,7 +310,11 @@ export const OrderCard: React.FC<OrderCardProps> = ({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                onStatusChange('COMPLETED');
+                if (shouldConfirmUnpaidBeforeComplete(order)) {
+                  setShowUnpaidCompleteConfirm(true);
+                } else {
+                  onStatusChange('COMPLETED');
+                }
               }}
               className="w-full h-9 px-4 rounded-lg bg-success-500 text-white font-semibold text-sm hover:bg-success-600 transition-colors duration-150 flex items-center justify-center gap-2"
             >
@@ -332,6 +337,22 @@ export const OrderCard: React.FC<OrderCardProps> = ({
         title="Unpaid Order"
         message="This order has not been paid yet. Do you want to continue marking it as In Progress?"
         confirmText="Continue Anyway"
+        cancelText="Cancel"
+        variant="warning"
+      />
+
+      {/* Unpaid Complete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showUnpaidCompleteConfirm}
+        onClose={() => setShowUnpaidCompleteConfirm(false)}
+        onConfirm={() => {
+          if (onStatusChange) {
+            onStatusChange('COMPLETED');
+          }
+        }}
+        title="Unpaid Order"
+        message="This order is not marked as paid yet. Completing it will mark the payment as paid. Continue?"
+        confirmText="Complete & Mark Paid"
         cancelText="Cancel"
         variant="warning"
       />

@@ -151,32 +151,73 @@ export class OrderManagementService {
       }
     }
 
-    const updated = await prisma.order.update({
-      where: { id: orderId },
-      data: {
-        status: data.status,
-        ...(data.status === 'COMPLETED' && { completedAt: new Date() }),
-        ...(data.status === 'CANCELLED' && { cancelledAt: new Date() }),
-        ...(data.status === 'READY' && { actualReadyAt: new Date() }),
-        // Note: acceptedAt field doesn't exist in schema, status change is sufficient
-      },
-      include: {
-        ...ORDER_DETAIL_INCLUDE,
-        merchant: {
-          select: {
-            name: true,
-            code: true,
-            country: true,
-            timezone: true,
-            currency: true,
-            address: true,
-            phone: true,
-            email: true,
-            logoUrl: true,
-            receiptSettings: true,
+    const shouldAutoMarkPaid = order.status === 'READY' && data.status === 'COMPLETED';
+    const now = new Date();
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const updatedOrder = await tx.order.update({
+        where: { id: orderId },
+        data: {
+          status: data.status,
+          ...(data.status === 'COMPLETED' && { completedAt: now }),
+          ...(data.status === 'CANCELLED' && { cancelledAt: now }),
+          ...(data.status === 'READY' && { actualReadyAt: now }),
+          // Note: acceptedAt field doesn't exist in schema, status change is sufficient
+        },
+        include: {
+          ...ORDER_DETAIL_INCLUDE,
+          merchant: {
+            select: {
+              name: true,
+              code: true,
+              country: true,
+              timezone: true,
+              currency: true,
+              address: true,
+              phone: true,
+              email: true,
+              logoUrl: true,
+              receiptSettings: true,
+            },
           },
         },
-      },
+      });
+
+      if (shouldAutoMarkPaid) {
+        const existingPayment = await tx.payment.findUnique({
+          where: { orderId },
+        });
+
+        const defaultPaymentMethod: PaymentMethod =
+          updatedOrder.orderType === 'DELIVERY'
+            ? 'CASH_ON_DELIVERY'
+            : 'CASH_ON_COUNTER';
+
+        if (existingPayment) {
+          await tx.payment.update({
+            where: { orderId },
+            data: {
+              status: 'COMPLETED',
+              paidAt: existingPayment.paidAt ?? now,
+              paidByUserId: existingPayment.paidByUserId ?? data.userId,
+            },
+          });
+        } else {
+          await tx.payment.create({
+            data: {
+              orderId,
+              amount: updatedOrder.totalAmount,
+              paymentMethod: defaultPaymentMethod,
+              status: 'COMPLETED',
+              paidAt: now,
+              paidByUserId: data.userId,
+              notes: 'Auto-marked as paid when order was completed',
+            },
+          });
+        }
+      }
+
+      return updatedOrder;
     });
 
     // Deduct order fee when order is ACCEPTED (for deposit mode subscription)

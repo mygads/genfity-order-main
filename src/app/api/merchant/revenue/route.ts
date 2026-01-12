@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
 import { withMerchant } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/middleware/auth';
+import { PaymentStatus } from '@prisma/client';
 
 /**
  * GET /api/merchant/revenue
@@ -48,106 +49,128 @@ async function handleGet(req: NextRequest, context: AuthContext) {
 
     const merchantId = merchantUser.merchantId;
 
-    // 1. Daily Revenue Report
-    const dailyRevenue = await prisma.$queryRaw<Array<{
-      date: Date;
-      total_orders: bigint;
-      total_revenue: number;
-      total_tax: number;
-      total_service_charge: number;
-      grand_total: number;
-    }>>`
-      SELECT 
-        DATE(placed_at) as date,
-        COUNT(*)::bigint as total_orders,
-        SUM(subtotal)::numeric as total_revenue,
-        SUM(tax_amount)::numeric as total_tax,
-        SUM(COALESCE(service_charge_amount, 0))::numeric as total_service_charge,
-        SUM(total_amount)::numeric as grand_total
-      FROM orders
-      WHERE merchant_id = ${merchantId}
-        AND status = 'COMPLETED'
-        AND placed_at >= ${startDate}
-        AND placed_at <= ${endDate}
-      GROUP BY DATE(placed_at)
-      ORDER BY date ASC
-    `;
-
-    // 2. Total Summary (use raw SQL to include new fee fields)
-    const totalSummaryResult = await prisma.$queryRaw<Array<{
-      total_orders: bigint;
-      total_subtotal: number;
-      total_tax: number;
-      total_service_charge: number;
-      grand_total: number;
-      avg_order_value: number;
-    }>>`
-      SELECT
-        COUNT(*)::bigint as total_orders,
-        COALESCE(SUM(subtotal), 0)::numeric as total_subtotal,
-        COALESCE(SUM(tax_amount), 0)::numeric as total_tax,
-        COALESCE(SUM(service_charge_amount), 0)::numeric as total_service_charge,
-        COALESCE(SUM(total_amount), 0)::numeric as grand_total,
-        COALESCE(AVG(total_amount), 0)::numeric as avg_order_value
-      FROM orders
-      WHERE merchant_id = ${merchantId}
-        AND status = 'COMPLETED'
-        AND placed_at >= ${startDate}
-        AND placed_at <= ${endDate}
-    `;
-    const totalSummary = totalSummaryResult[0] || {
-      total_orders: BigInt(0),
-      total_subtotal: 0,
-      total_tax: 0,
-      total_service_charge: 0,
-      grand_total: 0,
-      avg_order_value: 0,
-    };
-
-    // 3. Order Status Breakdown
-    const orderStatusBreakdown = await prisma.order.groupBy({
-      by: ['status'],
+    // Revenue is based on PAID transactions only
+    const paidOrders = await prisma.order.findMany({
       where: {
         merchantId,
         placedAt: {
           gte: startDate,
           lte: endDate,
         },
-      },
-      _count: {
-        id: true,
-      },
-    });
-
-    // 4. Order Type Breakdown (DINE_IN vs TAKEAWAY)
-    const orderTypeBreakdown = await prisma.order.groupBy({
-      by: ['orderType'],
-      where: {
-        merchantId,
-        status: 'COMPLETED',
-        placedAt: {
-          gte: startDate,
-          lte: endDate,
+        payment: {
+          is: {
+            status: PaymentStatus.COMPLETED,
+          },
         },
       },
-      _count: {
-        id: true,
-      },
-      _sum: {
+      select: {
+        placedAt: true,
+        status: true,
+        orderType: true,
+        subtotal: true,
+        taxAmount: true,
+        serviceChargeAmount: true,
+        packagingFeeAmount: true,
         totalAmount: true,
+        payment: {
+          select: {
+            status: true,
+            paymentMethod: true,
+          },
+        },
+      },
+      orderBy: {
+        placedAt: 'asc',
       },
     });
 
-    // 5. Top Selling Menu Items
+    // 1. Daily Revenue Report (grouped in JS)
+    const dailyMap = new Map<
+      string,
+      {
+        totalOrders: number;
+        totalRevenue: number;
+        totalTax: number;
+        totalServiceCharge: number;
+        totalPackagingFee: number;
+        grandTotal: number;
+      }
+    >();
+
+    for (const order of paidOrders) {
+      const day = order.placedAt.toISOString().split('T')[0];
+      const existing = dailyMap.get(day) || {
+        totalOrders: 0,
+        totalRevenue: 0,
+        totalTax: 0,
+        totalServiceCharge: 0,
+        totalPackagingFee: 0,
+        grandTotal: 0,
+      };
+
+      existing.totalOrders += 1;
+      existing.totalRevenue += Number(order.subtotal);
+      existing.totalTax += Number(order.taxAmount);
+      existing.totalServiceCharge += Number(order.serviceChargeAmount ?? 0);
+      existing.totalPackagingFee += Number(order.packagingFeeAmount ?? 0);
+      existing.grandTotal += Number(order.totalAmount);
+
+      dailyMap.set(day, existing);
+    }
+
+    const dailyRevenue = Array.from(dailyMap.entries()).map(([date, row]) => ({
+      date,
+      ...row,
+    }));
+
+    // 2. Total Summary
+    const totalOrders = paidOrders.length;
+    const totalSubtotal = paidOrders.reduce((sum, o) => sum + Number(o.subtotal), 0);
+    const totalTax = paidOrders.reduce((sum, o) => sum + Number(o.taxAmount), 0);
+    const totalServiceCharge = paidOrders.reduce((sum, o) => sum + Number(o.serviceChargeAmount ?? 0), 0);
+    const totalPackagingFee = paidOrders.reduce((sum, o) => sum + Number(o.packagingFeeAmount ?? 0), 0);
+    const grandTotal = paidOrders.reduce((sum, o) => sum + Number(o.totalAmount), 0);
+    const avgOrderValue = totalOrders > 0 ? grandTotal / totalOrders : 0;
+
+    // 3. Order Status Breakdown (paid orders only)
+    const statusCounts = paidOrders.reduce((acc, o) => {
+      acc[o.status] = (acc[o.status] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    const orderStatusBreakdown = Object.entries(statusCounts).map(([status, count]) => ({
+      status,
+      count,
+    }));
+
+    // 4. Order Type Breakdown (paid orders only)
+    const orderTypeMap = new Map<string, { count: number; revenue: number }>();
+    for (const o of paidOrders) {
+      const key = o.orderType;
+      const existing = orderTypeMap.get(key) || { count: 0, revenue: 0 };
+      existing.count += 1;
+      existing.revenue += Number(o.totalAmount);
+      orderTypeMap.set(key, existing);
+    }
+    const orderTypeBreakdown = Array.from(orderTypeMap.entries()).map(([type, v]) => ({
+      type,
+      count: v.count,
+      revenue: v.revenue,
+    }));
+
+    // 5. Top Selling Menu Items (paid orders only)
     const topMenuItems = await prisma.orderItem.groupBy({
       by: ['menuId', 'menuName'],
       where: {
         order: {
           merchantId,
-          status: 'COMPLETED',
           placedAt: {
             gte: startDate,
             lte: endDate,
+          },
+          payment: {
+            is: {
+              status: PaymentStatus.COMPLETED,
+            },
           },
         },
       },
@@ -163,24 +186,18 @@ async function handleGet(req: NextRequest, context: AuthContext) {
       take: 10,
     });
 
-    // 6. Hourly Distribution (peak hours)
-    const hourlyDistribution = await prisma.$queryRaw<Array<{
-      hour: number;
-      order_count: bigint;
-      total_revenue: number;
-    }>>`
-      SELECT 
-        EXTRACT(HOUR FROM placed_at)::int as hour,
-        COUNT(*)::bigint as order_count,
-        SUM(total_amount)::numeric as total_revenue
-      FROM orders
-      WHERE merchant_id = ${merchantId}
-        AND status = 'COMPLETED'
-        AND placed_at >= ${startDate}
-        AND placed_at <= ${endDate}
-      GROUP BY EXTRACT(HOUR FROM placed_at)
-      ORDER BY hour ASC
-    `;
+    // 6. Hourly Distribution (paid orders only)
+    const hourlyCounts = new Array(24).fill(0).map(() => ({ orderCount: 0, revenue: 0 }));
+    for (const o of paidOrders) {
+      const hour = o.placedAt.getHours();
+      hourlyCounts[hour].orderCount += 1;
+      hourlyCounts[hour].revenue += Number(o.totalAmount);
+    }
+    const hourlyDistribution = hourlyCounts.map((v, hour) => ({
+      hour,
+      orderCount: v.orderCount,
+      revenue: v.revenue,
+    }));
 
     // Format the response
     return NextResponse.json({
@@ -192,30 +209,17 @@ async function handleGet(req: NextRequest, context: AuthContext) {
         }, merchant: {
           currency: merchantUser.merchant.currency || 'AUD',
         }, summary: {
-          totalOrders: Number(totalSummary.total_orders),
-          totalRevenue: Number(totalSummary.total_subtotal) || 0,
-          totalTax: Number(totalSummary.total_tax) || 0,
-          totalServiceCharge: Number(totalSummary.total_service_charge) || 0,
-          grandTotal: Number(totalSummary.grand_total) || 0,
-          averageOrderValue: Number(totalSummary.avg_order_value) || 0,
+          totalOrders,
+          totalRevenue: totalSubtotal,
+          totalTax,
+          totalServiceCharge,
+          totalPackagingFee,
+          grandTotal,
+          averageOrderValue: avgOrderValue,
         },
-        dailyRevenue: dailyRevenue.map(row => ({
-          date: row.date.toISOString().split('T')[0],
-          totalOrders: Number(row.total_orders),
-          totalRevenue: Number(row.total_revenue),
-          totalTax: Number(row.total_tax),
-          totalServiceCharge: Number(row.total_service_charge),
-          grandTotal: Number(row.grand_total),
-        })),
-        orderStatusBreakdown: orderStatusBreakdown.map(item => ({
-          status: item.status,
-          count: item._count.id,
-        })),
-        orderTypeBreakdown: orderTypeBreakdown.map(item => ({
-          type: item.orderType,
-          count: item._count.id,
-          revenue: Number(item._sum.totalAmount) || 0,
-        })),
+        dailyRevenue,
+        orderStatusBreakdown,
+        orderTypeBreakdown,
         topMenuItems: topMenuItems
           .filter(item => item.menuId !== null)
           .map(item => ({
@@ -224,11 +228,7 @@ async function handleGet(req: NextRequest, context: AuthContext) {
             totalQuantity: item._sum.quantity || 0,
             totalRevenue: Number(item._sum.subtotal) || 0,
           })),
-        hourlyDistribution: hourlyDistribution.map(row => ({
-          hour: row.hour,
-          orderCount: Number(row.order_count),
-          revenue: Number(row.total_revenue),
-        })),
+        hourlyDistribution,
       },
       message: 'Revenue analytics retrieved successfully',
       statusCode: 200,

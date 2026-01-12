@@ -293,7 +293,11 @@ export class OrderAnalyticsService {
           gte: dateRange.start,
           lte: dateRange.end,
         },
-        status: 'COMPLETED',
+        payment: {
+          is: {
+            status: 'COMPLETED',
+          },
+        },
       },
       select: {
         placedAt: true,

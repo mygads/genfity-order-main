@@ -4,7 +4,7 @@
  */
 
 import prisma from '@/lib/db/client';
-import { OrderStatus, OrderType } from '@prisma/client';
+import { OrderStatus, OrderType, PaymentStatus } from '@prisma/client';
 import { serializeData } from '@/lib/utils/serializer';
 
 class OrderRepository {
@@ -330,7 +330,11 @@ class OrderRepository {
       by: ['placedAt'],
       where: {
         merchantId,
-        status: 'COMPLETED',
+        payment: {
+          is: {
+            status: PaymentStatus.COMPLETED,
+          },
+        },
         placedAt: {
           gte: startDate,
           lte: endDate,
@@ -356,7 +360,11 @@ class OrderRepository {
     const result = await prisma.order.aggregate({
       where: {
         merchantId,
-        status: 'COMPLETED',
+        payment: {
+          is: {
+            status: PaymentStatus.COMPLETED,
+          },
+        },
         ...(startDate &&
           endDate && {
           placedAt: {

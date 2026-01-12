@@ -25,3 +25,16 @@ export function shouldConfirmUnpaidBeforeInProgress(order: OrderLike): boolean {
 
   return !isCashOnDeliveryDelivery;
 }
+
+/**
+ * Returns true when we should show the "Unpaid Order" confirmation
+ * before allowing READY → COMPLETED.
+ *
+ * Rule:
+ * - If payment is already COMPLETED: no confirmation
+ * - Otherwise: confirmation needed
+ */
+export function shouldConfirmUnpaidBeforeComplete(order: OrderLike): boolean {
+  const paymentStatus = order.payment?.status ?? null;
+  return paymentStatus !== PaymentStatus.COMPLETED;
+}

@@ -29,7 +29,7 @@ import type { OrderListItem } from '@/lib/types/order';
 import { OrderStatus, OrderType, PaymentStatus } from '@prisma/client';
 import { playNotificationSound } from '@/lib/utils/soundNotification';
 import { canTransitionStatus } from '@/lib/utils/orderStatusRules';
-import { shouldConfirmUnpaidBeforeInProgress } from '@/lib/utils/orderPaymentRules';
+import { shouldConfirmUnpaidBeforeComplete, shouldConfirmUnpaidBeforeInProgress } from '@/lib/utils/orderPaymentRules';
 
 type OrderNumberDisplayMode = 'full' | 'suffix' | 'raw';
 
@@ -87,6 +87,8 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
   const [overId, setOverId] = useState<string | null>(null);
   const [showUnpaidConfirm, setShowUnpaidConfirm] = useState(false);
   const [pendingStatusChange, setPendingStatusChange] = useState<{ orderId: string; newStatus: OrderStatus } | null>(null);
+  const [showUnpaidCompleteConfirm, setShowUnpaidCompleteConfirm] = useState(false);
+  const [pendingCompleteStatusChange, setPendingCompleteStatusChange] = useState<{ orderId: string; newStatus: OrderStatus } | null>(null);
   const [updatingOrders, setUpdatingOrders] = useState<Set<string>>(new Set()); // Track orders being updated
   const previousOrderCountRef = useRef(0);
   const { showError, showSuccess } = useToast();
@@ -286,12 +288,32 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
       return;
     }
 
+    // Check if dragging from READY to COMPLETED with unpaid order
+    if (
+      order.status === 'READY' &&
+      newStatus === 'COMPLETED' &&
+      shouldConfirmUnpaidBeforeComplete(order)
+    ) {
+      setPendingCompleteStatusChange({ orderId, newStatus });
+      setShowUnpaidCompleteConfirm(true);
+      return;
+    }
+
     await updateOrderStatus(orderId, newStatus);
   };
 
   // Handle status change from button click
   const handleStatusChange = async (orderId: string, newStatus: string) => {
-    await updateOrderStatus(orderId, newStatus as OrderStatus);
+    const targetStatus = newStatus as OrderStatus;
+
+    const order = orders.find(o => String(o.id) === orderId);
+    if (order && order.status === 'READY' && targetStatus === 'COMPLETED' && shouldConfirmUnpaidBeforeComplete(order)) {
+      setPendingCompleteStatusChange({ orderId, newStatus: targetStatus });
+      setShowUnpaidCompleteConfirm(true);
+      return;
+    }
+
+    await updateOrderStatus(orderId, targetStatus);
   };
 
   // Common function to update order status
@@ -530,6 +552,26 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
         title="Unpaid Order"
         message="This order has not been paid yet. Do you want to continue marking it as In Progress?"
         confirmText="Continue Anyway"
+        cancelText="Cancel"
+        variant="warning"
+      />
+
+      {/* Unpaid Complete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showUnpaidCompleteConfirm}
+        onClose={() => {
+          setShowUnpaidCompleteConfirm(false);
+          setPendingCompleteStatusChange(null);
+        }}
+        onConfirm={() => {
+          if (pendingCompleteStatusChange) {
+            updateOrderStatus(pendingCompleteStatusChange.orderId, pendingCompleteStatusChange.newStatus);
+            setPendingCompleteStatusChange(null);
+          }
+        }}
+        title="Unpaid Order"
+        message="This order is not marked as paid yet. Completing it will mark the payment as paid. Continue?"
+        confirmText="Complete & Mark Paid"
         cancelText="Cancel"
         variant="warning"
       />
