@@ -146,9 +146,14 @@ export async function GET(
     // });
 
     // ✅ Return with proper serialization
+    const serialized = serializeBigInt(order) as Record<string, unknown>;
+    // Never expose admin-only note fields to public tracking
+    delete (serialized as any).adminNote;
+    delete (serialized as any).kitchenNotes;
+
     return NextResponse.json({
       success: true,
-      data: serializeBigInt(order),
+      data: serialized,
       message: 'Order retrieved successfully',
       statusCode: 200,
     });

@@ -74,6 +74,10 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   } | null>(null);
   const [showCustomerDetails, setShowCustomerDetails] = useState(false);
 
+  const [isEditingAdminNote, setIsEditingAdminNote] = useState(false);
+  const [adminNoteDraft, setAdminNoteDraft] = useState<string>('');
+  const [savingAdminNote, setSavingAdminNote] = useState(false);
+
   const [drivers, setDrivers] = useState<Array<{ id: string; name: string; email: string; phone?: string | null }>>(
     []
   );
@@ -199,6 +203,46 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
       }
     }
   }, [isOpen, orderId, initialOrder, currency, fetchOrderDetails]);
+
+  useEffect(() => {
+    if (!isOpen || !order) return;
+    setIsEditingAdminNote(false);
+    setAdminNoteDraft(String((order as any)?.adminNote ?? ''));
+  }, [isOpen, orderId, order]);
+
+  const handleSaveAdminNote = async () => {
+    if (!order) return;
+
+    setSavingAdminNote(true);
+    try {
+      const token = localStorage.getItem('accessToken');
+      const res = await fetch(`/api/merchant/orders/${orderId}/admin-note`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          adminNote: adminNoteDraft,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json?.success) {
+        throw new Error(json?.message || json?.error || 'Failed to update admin note');
+      }
+
+      setOrder(json.data);
+      onUpdate?.();
+      setIsEditingAdminNote(false);
+      showSuccess('Admin note updated', 'Success');
+    } catch (error) {
+      console.error('Error saving admin note:', error);
+      showError((error as Error).message || 'Failed to update admin note', 'Update Failed');
+    } finally {
+      setSavingAdminNote(false);
+    }
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -662,7 +706,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                         value={selectedDriverUserId}
                         onChange={(e) => setSelectedDriverUserId(e.target.value)}
                         disabled={driversLoading || assigningDriver}
-                        className="h-10 flex-1 min-w-[220px] rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
+                        className="h-10 flex-1 min-w-55 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
                       >
                         <option value="">Unassigned</option>
                         {drivers.map((d) => (
@@ -769,13 +813,106 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                 </div>
               </div>
 
-              {/* Order Notes */}
-              {order.notes && (
-                <div className="mb-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/50 px-4 py-3">
-                  <p className="text-xs font-medium text-amber-700 dark:text-amber-400 mb-1">Order Note</p>
-                  <p className="text-sm text-amber-800 dark:text-amber-300">{order.notes}</p>
+              {/* Notes (Customer note read-only + Admin note editable) */}
+              <div className="mb-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/3 overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/40">
+                      <FaStickyNote className="h-4 w-4 text-amber-700 dark:text-amber-400" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white">Order Notes</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                        Customer note is read-only. Admin note is internal.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingAdminNote((v) => !v)}
+                    className="h-9 px-3 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-800 dark:text-white/90 text-xs font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  >
+                    {isEditingAdminNote ? 'Close' : ((order as any)?.adminNote ? 'Edit Admin Note' : 'Add Admin Note')}
+                  </button>
                 </div>
-              )}
+
+                <div className="px-4 py-3 space-y-3">
+                  {/* Customer note */}
+                  <div className="rounded-lg bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-800 px-3 py-2">
+                    <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Customer note</p>
+                    {order.notes ? (
+                      <p className="text-sm text-gray-900 dark:text-white/90 wrap-break-word">{order.notes}</p>
+                    ) : (
+                      <p className="text-sm text-gray-500 dark:text-gray-400 italic">No customer note</p>
+                    )}
+                  </div>
+
+                  {/* Existing admin note (read mode) */}
+                  {!isEditingAdminNote && ((order as any)?.adminNote || (order as any)?.kitchenNotes) ? (
+                    <div className="rounded-lg bg-amber-50/70 dark:bg-amber-900/10 border border-amber-200/70 dark:border-amber-900/40 px-3 py-2">
+                      <p className="text-[11px] font-semibold text-amber-800/80 dark:text-amber-300/80 uppercase tracking-wide mb-1">Kitchen / Kanban note</p>
+                      <p className="text-sm text-amber-900 dark:text-amber-200 wrap-break-word">
+                        {String(((order as any)?.kitchenNotes ?? '')).trim() || '—'}
+                      </p>
+                    </div>
+                  ) : null}
+
+                  {/* Edit admin note */}
+                  {isEditingAdminNote ? (
+                    <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-3 py-3">
+                      <label className="block text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+                        Admin note (auto saved as “- admin: …”)
+                      </label>
+                      <textarea
+                        value={adminNoteDraft}
+                        onChange={(e) => setAdminNoteDraft(e.target.value)}
+                        rows={3}
+                        placeholder="Type internal note for kitchen/kanban…"
+                        className="w-full rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-gray-900 dark:text-white/90 text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      />
+
+                      <div className="mt-2 flex items-center justify-between gap-2">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Preview stored note:
+                          <span className="ml-2 text-gray-800 dark:text-white/80 font-medium">
+                            {(() => {
+                              const customerNote = String(order.notes ?? '').trim();
+                              const adminNote = String(adminNoteDraft ?? '').trim();
+                              if (!adminNote) return '—';
+                              return customerNote
+                                ? `${customerNote} - admin: ${adminNote}`
+                                : `- admin: ${adminNote}`;
+                            })()}
+                          </span>
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsEditingAdminNote(false);
+                              setAdminNoteDraft(String((order as any)?.adminNote ?? ''));
+                            }}
+                            className="h-9 px-3 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-800 dark:text-white/90 text-xs font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                            disabled={savingAdminNote}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleSaveAdminNote}
+                            className="h-9 px-3 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold transition-colors disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2"
+                            disabled={savingAdminNote}
+                          >
+                            {savingAdminNote ? <FaSpinner className="h-3.5 w-3.5 animate-spin" /> : null}
+                            Save
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
 
               {/* Price Breakdown */}
               <div className="mb-4 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">

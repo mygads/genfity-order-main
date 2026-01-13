@@ -962,10 +962,15 @@ export async function POST(req: NextRequest) {
     // STEP 7: Return serialized response
     // ========================================
 
+    const serializedOrder = serializeBigInt(order) as Record<string, unknown>;
+    // Never expose admin-only note fields to public endpoints
+    delete (serializedOrder as any).adminNote;
+    delete (serializedOrder as any).kitchenNotes;
+
     return NextResponse.json({
       success: true,
       data: {
-        ...serializeBigInt(order),
+        ...serializedOrder,
         trackingToken: createOrderTrackingToken({ merchantCode: merchant.code, orderNumber }),
       },
       message: 'Order created successfully',

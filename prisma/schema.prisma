@@ -766,6 +766,12 @@ model Order {
   packagingFeeAmount   Decimal     @default(0) @map("packaging_fee") @db.Decimal(10, 2)
   totalAmount          Decimal     @map("total_amount") @db.Decimal(10, 2)
   notes                String?
+  // Admin-only note (NOT shown to customers)
+  adminNote            String?     @map("admin_note") @db.Text
+
+  // Combined note for kitchen/kanban display stored in DB
+  // Format: "<customer notes> - admin: <admin note>"
+  kitchenNotes         String?     @map("kitchen_notes") @db.Text
   placedAt             DateTime    @default(now()) @map("placed_at") @db.Timestamptz(6)
   createdAt            DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt            DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)

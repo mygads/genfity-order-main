@@ -36,6 +36,8 @@ export const KitchenOrderCard: React.FC<KitchenOrderCardProps> = ({
   const hasOrderItems = 'orderItems' in order && Array.isArray(order.orderItems);
   const items = hasOrderItems ? order.orderItems : [];
 
+  const displayNotes = String(((order as any).kitchenNotes ?? order.notes) ?? '').trim();
+
   return (
     <div
       className="
@@ -147,13 +149,13 @@ export const KitchenOrderCard: React.FC<KitchenOrderCardProps> = ({
         )}
       </div>
 
-      {/* Order Notes */}
-      {order.notes && (
-        <div className="mb-3 p-2 bg-error-50 dark:bg-error-900/20 border border-error-200 dark:border-error-800 rounded-lg">
-          <div className="flex items-start gap-1.5">
-            <FaExclamationTriangle className="h-3.5 w-3.5 text-error-600 dark:text-error-400 mt-0.5 shrink-0" />
-            <p className="text-xs font-semibold text-error-800 dark:text-error-300">
-              {order.notes}
+      {/* Order Notes (customer + admin combined) */}
+      {displayNotes && (
+        <div className="mb-3 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/40 rounded-lg">
+          <div className="flex items-start gap-2">
+            <FaStickyNote className="h-3.5 w-3.5 text-amber-700 dark:text-amber-400 mt-0.5 shrink-0" />
+            <p className="text-xs font-semibold text-amber-900 dark:text-amber-200 wrap-break-word">
+              {displayNotes}
             </p>
           </div>
         </div>

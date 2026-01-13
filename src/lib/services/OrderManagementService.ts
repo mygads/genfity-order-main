@@ -46,6 +46,53 @@ function redactEmailForLogs(email: string): string {
 
 export class OrderManagementService {
   /**
+   * Update admin-only note for an order.
+   * - Customer notes (order.notes) remain read-only and unchanged
+   * - Persists adminNote and a DB-stored combined kitchenNotes string
+   */
+  static async updateAdminNote(
+    orderId: bigint,
+    merchantId: bigint,
+    adminNote: string | null,
+  ): Promise<OrderWithDetails> {
+    const order = await prisma.order.findFirst({
+      where: {
+        id: orderId,
+        merchantId,
+      },
+      select: {
+        id: true,
+        notes: true,
+      },
+    });
+
+    if (!order) {
+      throw new Error('Order not found');
+    }
+
+    const normalizedAdmin = (adminNote ?? '').trim();
+    const nextAdminNote = normalizedAdmin.length > 0 ? normalizedAdmin : null;
+
+    const customerNote = (order.notes ?? '').trim();
+    const nextKitchenNotes = nextAdminNote
+      ? (customerNote ? `${customerNote} - admin: ${nextAdminNote}` : `- admin: ${nextAdminNote}`)
+      : null;
+
+    const updated = await prisma.order.update({
+      where: { id: orderId },
+      data: {
+        adminNote: nextAdminNote,
+        kitchenNotes: nextKitchenNotes,
+      },
+      include: ORDER_DETAIL_INCLUDE,
+    });
+
+    // Prisma's payload inference can lose nested include typing when using shared include constants.
+    // We include ORDER_DETAIL_INCLUDE (which includes addons), so the runtime shape matches OrderWithDetails.
+    return updated as unknown as OrderWithDetails;
+  }
+
+  /**
    * Fetch merchant orders with filters and pagination
    * @param merchantId - Merchant ID
    * @param filters - Order filters including optional includeItems for kitchen display

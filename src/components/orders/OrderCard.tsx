@@ -9,7 +9,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { FaUser, FaUtensils, FaShoppingBag, FaTruck, FaClock, FaCheck } from 'react-icons/fa';
+import { FaUser, FaUtensils, FaShoppingBag, FaTruck, FaClock, FaCheck, FaStickyNote } from 'react-icons/fa';
 import { ORDER_STATUS_COLORS, PAYMENT_STATUS_COLORS } from '@/lib/constants/orderConstants';
 import { formatDistanceToNow } from 'date-fns';
 import { ConfirmationModal } from '@/components/common/ConfirmationModal';
@@ -91,6 +91,8 @@ export const OrderCard: React.FC<OrderCardProps> = ({
       : orderNumberDisplayMode === 'raw'
         ? (order.orderNumber ?? '')
         : fullOrderNumber;
+
+  const displayNotes = String(((order as any).kitchenNotes ?? order.notes) ?? '').trim();
 
   return (
     <div
@@ -200,6 +202,18 @@ export const OrderCard: React.FC<OrderCardProps> = ({
         <div className="mb-3">
           <div className="text-sm text-gray-600 dark:text-gray-400">
             {itemCount} item{itemCount !== 1 ? 's' : ''}
+          </div>
+        </div>
+      )}
+
+      {/* Notes (customer + admin combined for admin screens) */}
+      {displayNotes && (
+        <div className="mb-3 rounded-lg border border-amber-200/70 dark:border-amber-900/40 bg-amber-50/70 dark:bg-amber-900/10 px-3 py-2">
+          <div className="flex items-start gap-2">
+            <FaStickyNote className="h-3.5 w-3.5 text-amber-700 dark:text-amber-400 mt-0.5 shrink-0" />
+            <p className="text-xs font-medium text-amber-900 dark:text-amber-200 wrap-break-word overflow-hidden max-h-11">
+              {displayNotes}
+            </p>
           </div>
         </div>
       )}
