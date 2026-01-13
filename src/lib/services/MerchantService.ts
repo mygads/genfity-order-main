@@ -61,6 +61,7 @@ export interface UpdateMerchantInput {
   // Sale mode settings
   isDineInEnabled?: boolean;
   isTakeawayEnabled?: boolean;
+  requireTableNumberForDineIn?: boolean;
   dineInLabel?: string | null;
   takeawayLabel?: string | null;
   deliveryLabel?: string | null;
@@ -71,6 +72,12 @@ export interface UpdateMerchantInput {
   deliveryScheduleStart?: string | null;
   deliveryScheduleEnd?: string | null;
   totalTables?: number | null;
+  // Reservation settings
+  isReservationEnabled?: boolean;
+  reservationMenuRequired?: boolean;
+  reservationMinItemCount?: number;
+  // Scheduled Orders
+  isScheduledOrderEnabled?: boolean;
   // Tax settings
   enableTax?: boolean;
   taxRate?: number;
@@ -231,6 +238,17 @@ class MerchantService {
         longitude: input.longitude || null,
         enableTax: (input.taxRate !== undefined && input.taxRate > 0), // Map to enableTax
         taxPercentage: input.taxRate !== undefined ? input.taxRate : null, // Map to taxPercentage
+        // Feature defaults for NEW merchants:
+        // - Dine-in enabled
+        // - All other sales modes OFF until manually enabled
+        // - Reservations OFF until manually enabled
+        isDineInEnabled: true,
+        isTakeawayEnabled: false,
+        isDeliveryEnabled: false,
+        isReservationEnabled: false,
+        isScheduledOrderEnabled: false,
+        reservationMenuRequired: false,
+        reservationMinItemCount: 0,
         isActive: true,
       },
       owner.id, // Pass userId
@@ -348,6 +366,12 @@ class MerchantService {
     // Also prevents clearing coordinates while delivery is enabled.
     const willEnableDelivery = input.isDeliveryEnabled !== undefined ? input.isDeliveryEnabled : existing.isDeliveryEnabled;
 
+    // Reservation rule consistency:
+    // If menu is not required for reservations, reservationMinItemCount is ignored and forced to 0.
+    const nextReservationMenuRequired = input.reservationMenuRequired !== undefined
+      ? input.reservationMenuRequired
+      : (existing as unknown as { reservationMenuRequired?: boolean }).reservationMenuRequired;
+
     if (willEnableDelivery === true) {
       const existingLatitude = existing.latitude === null ? null : Number(existing.latitude.toString());
       const existingLongitude = existing.longitude === null ? null : Number(existing.longitude.toString());
@@ -373,6 +397,7 @@ class MerchantService {
     // Sale mode settings
     if (input.isDineInEnabled !== undefined) updateData.isDineInEnabled = input.isDineInEnabled;
     if (input.isTakeawayEnabled !== undefined) updateData.isTakeawayEnabled = input.isTakeawayEnabled;
+    if (input.requireTableNumberForDineIn !== undefined) updateData.requireTableNumberForDineIn = input.requireTableNumberForDineIn;
     if (input.dineInLabel !== undefined) updateData.dineInLabel = input.dineInLabel;
     if (input.takeawayLabel !== undefined) updateData.takeawayLabel = input.takeawayLabel;
     if (input.deliveryLabel !== undefined) updateData.deliveryLabel = input.deliveryLabel;
@@ -383,6 +408,18 @@ class MerchantService {
     if (input.deliveryScheduleStart !== undefined) updateData.deliveryScheduleStart = input.deliveryScheduleStart;
     if (input.deliveryScheduleEnd !== undefined) updateData.deliveryScheduleEnd = input.deliveryScheduleEnd;
     if (input.totalTables !== undefined) updateData.totalTables = input.totalTables;
+    // Reservation settings
+    if (input.isReservationEnabled !== undefined) updateData.isReservationEnabled = input.isReservationEnabled;
+    if (input.reservationMenuRequired !== undefined) updateData.reservationMenuRequired = input.reservationMenuRequired;
+    if (nextReservationMenuRequired === false) {
+      // Force to 0 for consistency (ignore any incoming non-zero values)
+      updateData.reservationMinItemCount = 0;
+    } else if (input.reservationMinItemCount !== undefined) {
+      updateData.reservationMinItemCount = Math.max(0, Number(input.reservationMinItemCount) || 0);
+    }
+
+    // Scheduled orders
+    if (input.isScheduledOrderEnabled !== undefined) updateData.isScheduledOrderEnabled = input.isScheduledOrderEnabled;
     // Tax settings
     if (input.enableTax !== undefined) updateData.enableTax = input.enableTax;
     if (input.taxRate !== undefined) {

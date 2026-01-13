@@ -44,6 +44,16 @@ export type OrderItemWithAddons = OrderItem & {
  */
 export type OrderWithDetails = Order & {
   payment?: (Payment & { paidByUser?: Pick<User, 'id' | 'name' | 'email'> | null }) | null;
+  reservation?: {
+    id: bigint;
+    partySize: number;
+    reservationDate: Date;
+    reservationTime: string;
+    tableNumber?: string | null;
+    status: string;
+    createdAt?: Date;
+    updatedAt?: Date;
+  } | null;
   customer?: Pick<User, 'id' | 'name' | 'email' | 'phone'> | null;
   deliveryDriver?: Pick<User, 'id' | 'name' | 'email' | 'phone'> | null;
   orderItems: OrderItemWithAddons[];
@@ -54,6 +64,14 @@ export type OrderWithDetails = Order & {
  */
 export type OrderListItem = Order & {
   payment?: Pick<Payment, 'id' | 'status' | 'paymentMethod' | 'paidAt'> | null;
+  reservation?: {
+    id: bigint;
+    partySize: number;
+    reservationDate: Date;
+    reservationTime: string;
+    tableNumber?: string | null;
+    status: string;
+  } | null;
   customer?: Pick<User, 'id' | 'name' | 'phone'> | null;
   deliveryDriver?: Pick<User, 'id' | 'name' | 'email' | 'phone'> | null;
   _count?: {
@@ -278,6 +296,18 @@ export const ORDER_DETAIL_INCLUDE: Prisma.OrderInclude = {
       },
     },
   },
+  reservation: {
+    select: {
+      id: true,
+      partySize: true,
+      reservationDate: true,
+      reservationTime: true,
+      tableNumber: true,
+      status: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  },
   customer: {
     select: {
       id: true,
@@ -329,6 +359,16 @@ export const ORDER_LIST_INCLUDE: Prisma.OrderInclude = {
       paidAt: true,
     },
   },
+  reservation: {
+    select: {
+      id: true,
+      partySize: true,
+      reservationDate: true,
+      reservationTime: true,
+      tableNumber: true,
+      status: true,
+    },
+  },
   customer: {
     select: {
       id: true,
@@ -361,6 +401,16 @@ export const ORDER_KITCHEN_INCLUDE: Prisma.OrderInclude = {
       status: true,
       paymentMethod: true,
       paidAt: true,
+    },
+  },
+  reservation: {
+    select: {
+      id: true,
+      partySize: true,
+      reservationDate: true,
+      reservationTime: true,
+      tableNumber: true,
+      status: true,
     },
   },
   customer: {

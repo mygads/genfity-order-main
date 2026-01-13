@@ -3,12 +3,13 @@
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { getCustomerAuth } from '@/lib/utils/localStorage';
-import { useTranslation } from '@/lib/i18n/useTranslation';
+import { useTranslation, tOr } from '@/lib/i18n/useTranslation';
 import { formatCurrency as formatCurrencyUtil } from '@/lib/utils/format';
 import { useCustomerData } from '@/context/CustomerDataContext';
 import { useToast } from '@/context/ToastContext';
 import { Skeleton } from '@/components/common/SkeletonLoaders';
 import { FaArrowLeft, FaBoxOpen, FaFileDownload, FaSpinner } from 'react-icons/fa';
+import { formatPaymentMethodLabel, formatPaymentStatusLabel } from '@/lib/utils/paymentDisplay';
 
 interface OrderDetail {
     id: string;
@@ -16,6 +17,9 @@ interface OrderDetail {
     status: string;
     orderType: string;
     tableNumber: string | null;
+    isScheduled?: boolean;
+    scheduledDate?: string | null;
+    scheduledTime?: string | null;
     deliveryStatus?: string | null;
     deliveryUnit?: string | null;
     deliveryAddress?: string | null;
@@ -54,6 +58,13 @@ interface OrderDetail {
         address?: string;
         phone?: string;
     };
+    reservation?: {
+        partySize: number;
+        reservationDate: string;
+        reservationTime: string;
+        tableNumber: string | null;
+        status?: string;
+    };
 }
 
 /**
@@ -73,6 +84,8 @@ export default function OrderDetailPage() {
     const mode = searchParams.get('mode') || 'takeaway';
 
     const { merchantInfo: contextMerchantInfo, initializeData, isInitialized } = useCustomerData();
+
+    const isTableNumberEnabled = contextMerchantInfo?.requireTableNumberForDineIn === true;
 
     const [order, setOrder] = useState<OrderDetail | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -105,7 +118,7 @@ export default function OrderDetailPage() {
 
             const token = searchParams.get('token') || '';
             if (!token) {
-                setError('Tracking token missing');
+                setError(t('customer.errors.trackingTokenMissing'));
                 setIsLoading(false);
                 return;
             }
@@ -117,14 +130,14 @@ export default function OrderDetailPage() {
                     if (publicData.success) {
                         setOrder(publicData.data);
                     } else {
-                        setError(publicData.error || 'Order not found');
+                        setError(publicData.error || t('customer.errors.orderNotFound'));
                     }
                 } else {
-                    setError('Order not found');
+                    setError(t('customer.errors.orderNotFound'));
                 }
             } catch (err) {
                 console.error('Failed to fetch order:', err);
-                setError('Failed to load order details');
+                setError(t('customer.errors.orderLoadFailed'));
             } finally {
                 setIsLoading(false);
             }
@@ -147,7 +160,8 @@ export default function OrderDetailPage() {
 
     const formatDate = (dateString: string) => {
         const date = new Date(dateString);
-        return new Intl.DateTimeFormat('id-ID', {
+        const localeTag = locale === 'id' ? 'id-ID' : 'en-AU';
+        return new Intl.DateTimeFormat(localeTag, {
             day: 'numeric',
             month: 'short',
             year: 'numeric',
@@ -197,13 +211,13 @@ export default function OrderDetailPage() {
             // Prepare data for PDF generation
             const receiptData = {
                 orderNumber: order.orderNumber,
-                merchantName: order.merchant?.name || 'Merchant',
+                merchantName: order.merchant?.name || t('customer.common.merchant'),
                 merchantCode: merchantCode,
                 merchantAddress: order.merchant?.address,
                 merchantPhone: order.merchant?.phone,
                 merchantLogo: (order.merchant as { logoUrl?: string })?.logoUrl,
                 orderType: order.orderType as 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY',
-                tableNumber: order.tableNumber,
+                tableNumber: isTableNumberEnabled ? order.tableNumber : null,
                 deliveryUnit: order.deliveryUnit,
                 deliveryAddress: order.deliveryAddress,
                 customerName: auth.customer.name,
@@ -343,13 +357,47 @@ export default function OrderDetailPage() {
                                 : order.orderType === 'DELIVERY'
                                     ? t('customer.track.deliveryOrder')
                                     : t('customer.track.takeawayOrder')}
-                            {order.tableNumber && ` • Table ${order.tableNumber}`}
+                                                        {isTableNumberEnabled && order.tableNumber
+                                                            ? ` • ${t('customer.orderDetail.tableLabel', { tableNumber: order.tableNumber })}`
+                                                            : ''}
                         </p>
+
+                        {order.isScheduled && order.scheduledTime && (
+                            <p className="mt-1 inline-flex items-center gap-2 rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700">
+                                <span>
+                                    {(order.orderType === 'DELIVERY'
+                                        ? tOr(t, 'customer.orderSummary.deliveryAt', 'Delivery at')
+                                        : order.orderType === 'DINE_IN'
+                                          ? tOr(t, 'customer.orderSummary.dineInAt', 'Dine-in at')
+                                          : tOr(t, 'customer.orderSummary.pickupAt', 'Pickup at'))}{' '}
+                                    {order.scheduledTime}
+                                </span>
+                            </p>
+                        )}
                         {order.orderType === 'DELIVERY' && order.deliveryAddress && (
                             <p className="mt-1">
                                 {t('customer.track.deliveryAddress')}: {order.deliveryUnit ? `${order.deliveryUnit}, ${order.deliveryAddress}` : order.deliveryAddress}
                             </p>
                         )}
+                        {order.reservation ? (
+                            <div className="mt-3 rounded-lg border border-gray-200 px-3 py-2">
+                                <p className="text-xs font-semibold text-black">{t('customer.orderDetail.reservationDetails')}</p>
+                                <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-black">
+                                    <span>{t('customer.orderDetail.partySize')}</span>
+                                    <span className="font-medium text-right">{order.reservation.partySize}</span>
+                                    <span>{t('customer.orderDetail.date')}</span>
+                                    <span className="font-medium text-right">{order.reservation.reservationDate}</span>
+                                    <span>{t('customer.orderDetail.time')}</span>
+                                    <span className="font-medium text-right">{order.reservation.reservationTime}</span>
+                                    {isTableNumberEnabled && order.reservation.tableNumber ? (
+                                        <>
+                                            <span>{t('customer.orderDetail.table')}</span>
+                                            <span className="font-medium text-right">{order.reservation.tableNumber}</span>
+                                        </>
+                                    ) : null}
+                                </div>
+                            </div>
+                        ) : null}
                     </div>
                 </div>
 
@@ -391,24 +439,24 @@ export default function OrderDetailPage() {
                     <h2 className="font-bold text-gray-900 mb-4">{t('order.paymentDetails')}</h2>
                     <div className="space-y-2 text-sm">
                         <div className="flex justify-between text-gray-600">
-                            <span>Subtotal</span>
+                            <span>{t('customer.payment.subtotal')}</span>
                             <span>{formatCurrency(Number(order.subtotal) || 0)}</span>
                         </div>
                         {Number(order.taxAmount) > 0 && (
                             <div className="flex justify-between text-gray-600">
-                                <span>Tax</span>
+                                <span>{t('customer.payment.tax')}</span>
                                 <span>{formatCurrency(Number(order.taxAmount))}</span>
                             </div>
                         )}
                         {Number(order.serviceChargeAmount) > 0 && (
                             <div className="flex justify-between text-gray-600">
-                                <span>Service Charge</span>
+                                <span>{t('customer.payment.serviceCharge')}</span>
                                 <span>{formatCurrency(Number(order.serviceChargeAmount))}</span>
                             </div>
                         )}
                         {Number(order.packagingFeeAmount) > 0 && (
                             <div className="flex justify-between text-gray-600">
-                                <span>Packaging Fee</span>
+                                <span>{t('customer.payment.packagingFee')}</span>
                                 <span>{formatCurrency(Number(order.packagingFeeAmount))}</span>
                             </div>
                         )}
@@ -420,7 +468,7 @@ export default function OrderDetailPage() {
                         )}
                         <div className="border-t border-gray-200 pt-2 mt-2">
                             <div className="flex justify-between font-bold text-gray-900">
-                                <span>Total</span>
+                                <span>{t('customer.payment.total')}</span>
                                 <span className="text-orange-500">{formatCurrency(Number(order.totalAmount) || 0)}</span>
                             </div>
                         </div>
@@ -430,15 +478,19 @@ export default function OrderDetailPage() {
                     {order.payment && (
                         <div className="mt-4 pt-4 border-t border-gray-200">
                             <div className="flex justify-between text-sm">
-                                <span className="text-gray-600">Payment Method</span>
-                                <span className="font-medium text-gray-900 capitalize">
-                                    {order.payment.paymentMethod ? order.payment.paymentMethod.replace(/_/g, ' ').toLowerCase() : '-'}
+                                <span className="text-gray-600">{t('customer.orderDetail.paymentMethod')}</span>
+                                <span className="font-medium text-gray-900">
+                                    {formatPaymentMethodLabel({
+                                        orderType: order.orderType,
+                                        paymentStatus: order.payment.status,
+                                        paymentMethod: order.payment.paymentMethod,
+                                    }, { t })}
                                 </span>
                             </div>
                             <div className="flex justify-between text-sm mt-1">
-                                <span className="text-gray-600">Payment Status</span>
+                                <span className="text-gray-600">{t('customer.orderDetail.paymentStatus')}</span>
                                 <span className={`font-medium ${order.payment.status === 'COMPLETED' ? 'text-green-600' : 'text-yellow-600'}`}>
-                                    {order.payment.status || '-'}
+                                    {formatPaymentStatusLabel(order.payment.status, { t }) || '-'}
                                 </span>
                             </div>
                         </div>

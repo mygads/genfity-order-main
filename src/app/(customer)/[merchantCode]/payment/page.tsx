@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { getCustomerAuth, getTableNumber, saveRecentOrder } from '@/lib/utils/localStorage';
+import { clearReservationDetails, clearTableNumber, getCustomerAuth, getReservationDetails, getTableNumber, saveRecentOrder } from '@/lib/utils/localStorage';
 import type { OrderMode } from '@/lib/types/customer';
 import PaymentConfirmationModal from '@/components/modals/PaymentConfirmationModal';
 import DeliveryAddressPicker from '@/components/delivery/DeliveryAddressPicker';
@@ -17,7 +17,50 @@ import { useCustomerData } from '@/context/CustomerDataContext';
 import { calculateCartSubtotal } from '@/lib/utils/priceCalculator';
 import { formatCurrency as formatCurrencyUtil } from '@/lib/utils/format';
 import { useTranslation, tOr } from '@/lib/i18n/useTranslation';
-import { FaArrowLeft, FaCheckCircle, FaChevronDown, FaEnvelope, FaExclamationCircle, FaPhone, FaTable, FaUser } from 'react-icons/fa';
+import { FaArrowLeft, FaCheckCircle, FaChevronDown, FaClock, FaEnvelope, FaExclamationCircle, FaPhone, FaTable, FaToggleOff, FaToggleOn, FaUser, FaUsers } from 'react-icons/fa';
+import ReservationDetailsModal, { type ReservationDetails } from '@/components/customer/ReservationDetailsModal';
+
+function isValidHHMM(value: string): boolean {
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
+}
+
+function formatTimeHHMM(date: Date, timezone: string): string {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: timezone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(date);
+
+  const hh = parts.find((p) => p.type === 'hour')?.value ?? '00';
+  const mm = parts.find((p) => p.type === 'minute')?.value ?? '00';
+  return `${hh}:${mm}`;
+}
+
+function hhmmToMinutes(value: string): number | null {
+  if (!isValidHHMM(value)) return null;
+  const [h, m] = value.split(':').map((x) => Number(x));
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+  return h * 60 + m;
+}
+
+function minutesToHHMM(totalMinutes: number): string {
+  const clamped = ((totalMinutes % (24 * 60)) + (24 * 60)) % (24 * 60);
+  const hh = String(Math.floor(clamped / 60)).padStart(2, '0');
+  const mm = String(clamped % 60).padStart(2, '0');
+  return `${hh}:${mm}`;
+}
+
+function suggestNextTimeFromNowLabel(nowLabel: string | null, stepMinutes = 15): string {
+  const nowMinutes = nowLabel ? hhmmToMinutes(nowLabel) : null;
+  if (nowMinutes === null) return '';
+
+  // Always suggest a time *after* now.
+  const base = nowMinutes + stepMinutes;
+  const remainder = base % stepMinutes;
+  const rounded = remainder === 0 ? base : base + (stepMinutes - remainder);
+  return minutesToHHMM(rounded);
+}
 
 /**
  * Payment Page - Customer Order Payment
@@ -54,6 +97,10 @@ export default function PaymentPage() {
 
   const merchantCode = params.merchantCode as string;
   const mode = (searchParams.get('mode') || 'takeaway') as OrderMode;
+  const flow = searchParams.get('flow') || '';
+  const isReservationFlow = flow === 'reservation';
+  const scheduled = searchParams.get('scheduled') || '';
+  const isScheduledRequested = scheduled === '1' || scheduled === 'true';
   const _isGroupOrderCheckout = searchParams.get('groupOrder') === 'true';
 
   const { cart, initializeCart, clearCart: clearCartContext } = useCart();
@@ -83,6 +130,7 @@ export default function PaymentPage() {
     email?: string;
     tableNumber?: string;
     deliveryAddress?: string;
+    scheduledTime?: string;
   }>({});
 
   // ✅ NEW: Refs for focusing invalid fields
@@ -97,6 +145,71 @@ export default function PaymentPage() {
   const [merchantServiceChargePercent, setMerchantServiceChargePercent] = useState(0);
   const [merchantPackagingFee, setMerchantPackagingFee] = useState(0);
   const [merchantCurrency, setMerchantCurrency] = useState('AUD');
+
+  // ✅ NEW: Scheduled order (same-day only; validated on server in merchant timezone)
+  const [isScheduledOrder, setIsScheduledOrder] = useState(isReservationFlow ? false : isScheduledRequested);
+  const [scheduledTime, setScheduledTime] = useState('');
+  const [merchantNowTimeLabel, setMerchantNowTimeLabel] = useState<string | null>(null);
+
+  const [availableScheduledSlots, setAvailableScheduledSlots] = useState<string[]>([]);
+  const [availableScheduledSlotsLoading, setAvailableScheduledSlotsLoading] = useState(false);
+  const [availableScheduledSlotsError, setAvailableScheduledSlotsError] = useState<string>('');
+
+  const isScheduledOrderEnabled = contextMerchantInfo?.isScheduledOrderEnabled === true;
+  const requireTableNumberForDineIn = contextMerchantInfo?.requireTableNumberForDineIn === true;
+  const shouldShowTableNumberField = mode === 'dinein' && requireTableNumberForDineIn && !isReservationFlow;
+
+  // If user entered payment via "Schedule Order" flow, pre-enable scheduled ordering.
+  useEffect(() => {
+    if (!isScheduledOrderEnabled) return;
+    if (isReservationFlow) return;
+    if (!isScheduledRequested) return;
+    setIsScheduledOrder(true);
+  }, [isScheduledOrderEnabled, isScheduledRequested, isReservationFlow]);
+
+  // Reservation flow never supports scheduled ordering UI/payload.
+  useEffect(() => {
+    if (!isReservationFlow) return;
+
+    if (isScheduledOrder) setIsScheduledOrder(false);
+    setScheduledTime('');
+    setFieldErrors((prev) => ({ ...prev, scheduledTime: undefined }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isReservationFlow]);
+
+  // Load reservation details for payment display/edit.
+  useEffect(() => {
+    if (!isReservationFlow) {
+      setReservationDetails(null);
+      setShowReservationDetailsModal(false);
+      return;
+    }
+
+    const saved = getReservationDetails(merchantCode);
+    if (saved) {
+      setReservationDetails({
+        partySize: saved.partySize,
+        reservationDate: saved.reservationDate,
+        reservationTime: saved.reservationTime,
+      });
+      return;
+    }
+
+    setReservationDetails(null);
+    setShowReservationDetailsModal(true);
+  }, [isReservationFlow, merchantCode]);
+
+  // If merchant disables scheduled orders, force UI state back to normal order
+  useEffect(() => {
+    if (!isScheduledOrderEnabled && isScheduledOrder) {
+      setIsScheduledOrder(false);
+      setScheduledTime('');
+      if (fieldErrors.scheduledTime) {
+        setFieldErrors((prev) => ({ ...prev, scheduledTime: undefined }));
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isScheduledOrderEnabled]);
 
   // ✅ NEW: Delivery-specific state
   const [deliveryUnit, setDeliveryUnit] = useState('');
@@ -121,6 +234,8 @@ export default function PaymentPage() {
   const [isDeliveryAvailable, setIsDeliveryAvailable] = useState(false);
 
   const auth = getCustomerAuth();
+  const [reservationDetails, setReservationDetails] = useState<ReservationDetails | null>(null);
+  const [showReservationDetailsModal, setShowReservationDetailsModal] = useState(false);
 
   const formatCurrency = (amount: number): string => formatCurrencyUtil(amount, merchantCurrency, locale);
 
@@ -132,14 +247,29 @@ export default function PaymentPage() {
     const storedCart = localStorage.getItem(cartKey);
     console.log('📦 Payment page - Cart from localStorage:', JSON.parse(storedCart || '{}'));
 
-    // ✅ Load table number dari localStorage
-    const tableData = getTableNumber(merchantCode);
-    console.log('📍 Payment page - Table number from localStorage:', tableData);
+    // ✅ Load table number from localStorage (only if enabled)
+    if (mode === 'dinein') {
+      const tableData = getTableNumber(merchantCode);
+      console.log('📍 Payment page - Table number from localStorage:', tableData);
 
-    if (tableData && tableData.tableNumber) {
-      setTableNumber(tableData.tableNumber);
+      if (tableData && tableData.tableNumber) {
+        setTableNumber(tableData.tableNumber);
+      }
     }
   }, [merchantCode, mode, initializeCart]);
+
+  // If merchant does not require table numbers, clear any stored values and hide UI.
+  useEffect(() => {
+    if (mode !== 'dinein') return;
+    if (requireTableNumberForDineIn) return;
+
+    if (tableNumber) setTableNumber('');
+    clearTableNumber(merchantCode);
+    if (fieldErrors.tableNumber) {
+      setFieldErrors((prev) => ({ ...prev, tableNumber: undefined }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [merchantCode, mode, requireTableNumberForDineIn]);
 
   // ✅ Initialize context for this merchant
   useEffect(() => {
@@ -168,6 +298,89 @@ export default function PaymentPage() {
     }
   }, [isInitialized, contextMerchantInfo, mode]);
 
+  // Load valid scheduled slots for today (merchant timezone) when scheduling is enabled.
+  useEffect(() => {
+    if (!isScheduledOrderEnabled || !isScheduledOrder) {
+      setAvailableScheduledSlots([]);
+      setAvailableScheduledSlotsError('');
+      setAvailableScheduledSlotsLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const modeParam = mode === 'dinein' ? 'DINE_IN' : mode === 'takeaway' ? 'TAKEAWAY' : 'DELIVERY';
+
+    const fetchSlots = async () => {
+      try {
+        setAvailableScheduledSlotsLoading(true);
+        setAvailableScheduledSlotsError('');
+
+        const res = await fetch(
+          `/api/public/merchants/${encodeURIComponent(merchantCode)}/available-times?mode=${encodeURIComponent(modeParam)}`,
+          { signal: controller.signal }
+        );
+
+        const json = await res.json();
+        const slots = Array.isArray(json?.data?.slots) ? (json.data.slots as string[]) : [];
+        const normalized = slots.filter((s) => typeof s === 'string' && isValidHHMM(s));
+
+        setAvailableScheduledSlots(normalized);
+
+        if (normalized.length === 0) {
+          setAvailableScheduledSlotsError(t('customer.payment.scheduled.noSlots'));
+          return;
+        }
+
+        const tz = contextMerchantInfo?.timezone;
+        const nowLabel = tz ? formatTimeHHMM(new Date(), tz) : null;
+        const nowMinutes = nowLabel ? hhmmToMinutes(nowLabel) : null;
+        const targetMinutes = (nowMinutes ?? 0) + 15;
+        const recommendedSlot =
+          normalized.find((slot) => {
+            const mins = hhmmToMinutes(slot);
+            return mins !== null && mins >= targetMinutes;
+          }) ?? normalized[0];
+
+        // Keep scheduledTime aligned with currently valid slots.
+        if (!scheduledTime || !normalized.includes(scheduledTime)) {
+          setScheduledTime(recommendedSlot);
+          if (fieldErrors.scheduledTime) setFieldErrors((prev) => ({ ...prev, scheduledTime: undefined }));
+        }
+      } catch (e) {
+        if ((e as any)?.name === 'AbortError') return;
+        setAvailableScheduledSlots([]);
+        setAvailableScheduledSlotsError(t('customer.payment.scheduled.slotsLoadFailed'));
+      } finally {
+        setAvailableScheduledSlotsLoading(false);
+      }
+    };
+
+    fetchSlots();
+    return () => controller.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isScheduledOrderEnabled, isScheduledOrder, merchantCode, mode]);
+
+  // Keep a lightweight “merchant now” hint for scheduled orders.
+  useEffect(() => {
+    const tz = contextMerchantInfo?.timezone;
+    if (!tz) {
+      setMerchantNowTimeLabel(null);
+      return;
+    }
+
+    const update = () => {
+      try {
+        setMerchantNowTimeLabel(formatTimeHHMM(new Date(), tz));
+      } catch {
+        setMerchantNowTimeLabel(null);
+      }
+    };
+
+    update();
+    const timer = window.setInterval(update, 30_000);
+    return () => window.clearInterval(timer);
+  }, [contextMerchantInfo?.timezone]);
+
   /**
    * ✅ FIXED: Only redirect if NOT processing order
    * 
@@ -187,7 +400,7 @@ export default function PaymentPage() {
 
     if (cart !== null && (!cart || cart.items.length === 0)) {
       console.log('⚠️ Cart is empty, redirecting to order page...');
-      router.push(`/${merchantCode}/order?mode=${mode}`);
+      router.push(`/${merchantCode}/order?mode=${mode}${isReservationFlow ? '&flow=reservation' : ''}${isScheduledRequested ? '&scheduled=1' : ''}`);
     }
   }, [cart, merchantCode, mode, router, isProcessingOrder]);
 
@@ -243,8 +456,9 @@ export default function PaymentPage() {
       }
     }
 
-    // Validate table number for dine-in
-    if (mode === 'dinein' && !tableNumber.trim()) {
+    // Validate table number for dine-in (only when merchant requires it)
+    // Not required when scheduling for later, and not required for reservation flow.
+    if (mode === 'dinein' && requireTableNumberForDineIn && !isScheduledOrder && !isReservationFlow && !tableNumber.trim()) {
       errors.tableNumber = t('customer.payment.error.tableRequired');
       if (!firstInvalidRef) firstInvalidRef = tableNumberInputRef;
     }
@@ -258,6 +472,15 @@ export default function PaymentPage() {
       if (deliveryLatitude === null || deliveryLongitude === null) {
         errors.deliveryAddress = t('customer.payment.error.deliveryLocationRequired') || 'Please pick delivery location on map';
         if (!firstInvalidRef) firstInvalidRef = null;
+      }
+    }
+
+    // ✅ NEW: Validate scheduled time (same-day; final validation happens server-side in merchant timezone)
+    if (isScheduledOrder) {
+      if (!scheduledTime || !isValidHHMM(scheduledTime)) {
+        errors.scheduledTime = t('customer.payment.error.scheduledTimeInvalid');
+      } else if (availableScheduledSlots.length > 0 && !availableScheduledSlots.includes(scheduledTime)) {
+        errors.scheduledTime = t('customer.payment.error.scheduledTimeUnavailable');
       }
     }
 
@@ -312,12 +535,74 @@ export default function PaymentPage() {
       // ========================================
       const orderType = mode === 'dinein' ? 'DINE_IN' : mode === 'takeaway' ? 'TAKEAWAY' : 'DELIVERY';
       // ✅ FIXED: Gunakan tableNumber dari state (bukan cart)
-      const orderTableNumber = mode === 'dinein' ? tableNumber : null;
+      const orderTableNumber = mode === 'dinein' && requireTableNumberForDineIn && !isReservationFlow ? tableNumber : null;
+
+      // Reservation flow submits a reservation (optionally with preorder items) instead of creating an order immediately.
+      if (isReservationFlow) {
+        if (!reservationDetails) {
+          setShowReservationDetailsModal(true);
+          throw new Error(tOr(t, 'customer.reservation.error.detailsMissing', 'Reservation details are required.'));
+        }
+
+        const reservationPayload: any = {
+          merchantCode: cart.merchantCode,
+          customerName: name.trim(),
+          customerEmail: email.trim() || undefined,
+          customerPhone: phone.trim() || undefined,
+          partySize: reservationDetails.partySize,
+          reservationDate: reservationDetails.reservationDate,
+          reservationTime: reservationDetails.reservationTime,
+          items: cart.items.map((item) => ({
+            menuId: item.menuId.toString(),
+            quantity: item.quantity,
+            notes: item.notes || undefined,
+            addons: Object.values((item.addons || []).reduce((acc: Record<string, { addonItemId: string; quantity: number }>, addon: { id: string | number }) => {
+              const key = addon.id.toString();
+              if (!acc[key]) acc[key] = { addonItemId: key, quantity: 0 };
+              acc[key].quantity += 1;
+              return acc;
+            }, {} as Record<string, { addonItemId: string; quantity: number }>)).map((s) => ({ addonItemId: s.addonItemId, quantity: s.quantity })),
+          })),
+        };
+
+        console.log('📦 Reservation Payload:', JSON.stringify(reservationPayload, null, 2));
+
+        const reservationResponse = await fetch('/api/public/reservations', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(reservationPayload),
+        });
+
+        const reservationData = await reservationResponse.json();
+
+        if (!reservationResponse.ok || reservationData?.success !== true) {
+          throw new Error(reservationData?.message || 'Failed to submit reservation');
+        }
+
+        const reservationId = reservationData?.data?.id as string | undefined;
+        if (!reservationId) {
+          throw new Error('Reservation submitted, but no reservationId was returned');
+        }
+
+        // Clear local state/storage and go to history.
+        localStorage.removeItem(`mode_${merchantCode}`);
+        localStorage.removeItem(`cart_${merchantCode}_${mode}`);
+        clearReservationDetails(merchantCode);
+
+        router.push(`/${merchantCode}/history`);
+        setTimeout(() => {
+          clearCartContext();
+        }, 100);
+
+        return;
+      }
 
       const orderPayload: any = {
         merchantCode: cart.merchantCode,
         orderType,
-        tableNumber: orderTableNumber, // ✅ Dari localStorage
+        tableNumber: orderTableNumber,
         customerName: name.trim(),
         customerEmail: email.trim() || undefined,
         customerPhone: phone.trim() || undefined,
@@ -335,6 +620,14 @@ export default function PaymentPage() {
           }, {} as Record<string, { addonItemId: string; quantity: number }>)).map((s) => ({ addonItemId: s.addonItemId, quantity: s.quantity })),
         })),
       };
+
+      // ✅ NEW: Scheduled order (same-day validation happens server-side in merchant timezone)
+      if (isScheduledOrder) {
+        const trimmed = scheduledTime.trim();
+        if (trimmed) {
+          orderPayload.scheduledTime = trimmed;
+        }
+      }
 
       // ✅ NEW: Add delivery fields if delivery mode
       if (mode === 'delivery') {
@@ -529,7 +822,7 @@ export default function PaymentPage() {
       <header className="sticky top-0 z-10 bg-white border-b border-gray-300 shadow-md">
         <div className="flex items-center px-4 py-3">
           <button
-            onClick={() => router.push(`/${merchantCode}/view-order?mode=${mode}`)}
+            onClick={() => router.push(`/${merchantCode}/view-order?mode=${mode}${isReservationFlow ? '&flow=reservation' : ''}${isScheduledRequested ? '&scheduled=1' : ''}`)}
             className="w-10 h-10 flex items-center justify-center -ml-2"
             aria-label="Back"
           >
@@ -578,6 +871,52 @@ export default function PaymentPage() {
             </div>
           </div>
         </section>
+
+        {/* Reservation Summary (Reservation flow only) */}
+        {isReservationFlow && (
+          <div className="mx-4 -mt-1">
+            <button
+              type="button"
+              onClick={() => setShowReservationDetailsModal(true)}
+              className="w-full text-left"
+              aria-label={tOr(t, 'customer.reservationDetails.editAriaLabel', 'Edit reservation details')}
+              style={{
+                backgroundColor: '#fff7ed',
+                padding: '12px 16px',
+                borderRadius: '16px',
+                fontFamily: 'Inter, sans-serif',
+              }}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2" style={{ fontSize: '14px', fontWeight: 600, color: '#212529' }}>
+                    <FaUsers className="w-4 h-4" />
+                    <span>{tOr(t, 'customer.reservationDetails.pillLabel', 'Reservation')}</span>
+                  </div>
+
+                  {reservationDetails ? (
+                    <div className="mt-1 flex flex-wrap items-center gap-2" style={{ fontSize: '14px', fontWeight: 500, color: '#212529' }}>
+                      <span style={{ fontWeight: 700 }}>{reservationDetails.partySize}</span>
+                      <span>•</span>
+                      <span>{reservationDetails.reservationDate}</span>
+                      <span>•</span>
+                      <span>{reservationDetails.reservationTime}</span>
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-sm text-gray-700">
+                      {tOr(t, 'customer.reservationDetails.detailsMissing', 'Tap to add date, time, and number of people.')}
+                    </p>
+                  )}
+                </div>
+                      <span className="text-sm font-semibold">{t('common.edit')}</span>
+                <div className="shrink-0 flex items-center gap-2 text-gray-700">
+                  <span className="text-sm font-semibold">Edit</span>
+                  <FaChevronDown className="w-4 h-4" style={{ transform: 'rotate(-90deg)' }} />
+                </div>
+              </div>
+            </button>
+          </div>
+        )}
 
         {/* Customer Info Form (ESB Exact Match) */}
         <div className="p-4 pb-0">
@@ -709,15 +1048,15 @@ export default function PaymentPage() {
             )}
             {!fieldErrors.email && <div className="mb-2" />}
 
-            {/* Table Number (Dine-in only) */}
-            {mode === 'dinein' && (
+            {/* Table Number (Dine-in only; shown only if merchant uses tables) */}
+            {shouldShowTableNumberField && (
               <>
                 <label
                   htmlFor="tableNumber"
                   className="mb-1"
                   style={{ fontSize: '14px', color: '#212529' }}
                 >
-                  {t('customer.table.title')}<span className="text-red-500">*</span>
+                  {t('customer.table.title')}{!isScheduledOrder ? <span className="text-red-500">*</span> : null}
                 </label>
                 <div className="relative mb-1">
                   <div className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: fieldErrors.tableNumber ? '#EF4444' : '#9CA3AF' }}>
@@ -727,7 +1066,7 @@ export default function PaymentPage() {
                     ref={tableNumberInputRef}
                     id="tableNumber"
                     type="text"
-                    required
+                    required={!isScheduledOrder}
                     maxLength={50}
                     value={tableNumber}
                     onChange={(e) => {
@@ -748,6 +1087,113 @@ export default function PaymentPage() {
                   </p>
                 )}
                 {!fieldErrors.tableNumber && <div className="mb-2" />}
+              </>
+            )}
+
+            {/* ✅ NEW: Scheduled order (same-day) */}
+            {isScheduledOrderEnabled && !isReservationFlow && (
+              <>
+                <div className="mb-4 mt-4 pt-4 border-t border-gray-200">
+                  <div className="flex items-start justify-between gap-3">
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={isScheduledOrder}
+                      onClick={() => {
+                        const next = !isScheduledOrder;
+                        setIsScheduledOrder(next);
+
+                        if (!next) {
+                          setScheduledTime('');
+                          if (fieldErrors.scheduledTime) setFieldErrors((prev) => ({ ...prev, scheduledTime: undefined }));
+                          return;
+                        }
+
+                        // Pre-fill with a best-effort "merchant now" suggestion; available-times fetch may refine it.
+                        const suggested = suggestNextTimeFromNowLabel(merchantNowTimeLabel, 15);
+                        setScheduledTime(suggested);
+                        if (fieldErrors.tableNumber) setFieldErrors((prev) => ({ ...prev, tableNumber: undefined }));
+                      }}
+                      className="flex w-full items-start gap-3 text-left cursor-pointer select-none"
+                    >
+                      <span className="mt-0.5">
+                        {isScheduledOrder ? (
+                          <FaToggleOn className="h-5 w-5 text-[#f05a28]" />
+                        ) : (
+                          <FaToggleOff className="h-5 w-5 text-gray-400" />
+                        )}
+                      </span>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2" style={{ fontSize: '14px', color: '#212529' }}>
+                          <FaClock className="w-4 h-4" style={{ color: fieldErrors.scheduledTime ? '#EF4444' : '#9CA3AF' }} />
+                          <span className="font-medium">{t('customer.payment.scheduled.title')}</span>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {t('customer.payment.scheduled.hint')}
+                          {contextMerchantInfo?.timezone ? ` (${contextMerchantInfo.timezone})` : ''}.
+                          {merchantNowTimeLabel ? ` ${t('customer.payment.scheduled.now')}: ${merchantNowTimeLabel}` : ''}
+                        </p>
+                      </div>
+                    </button>
+                  </div>
+
+                  {isScheduledOrder && (
+                    <div className="mt-3">
+                      <label
+                        htmlFor="scheduledTime"
+                        className="mb-1 block"
+                        style={{ fontSize: '14px', color: '#212529' }}
+                      >
+                        {t('customer.payment.scheduled.timeLabel')}
+                      </label>
+                      {availableScheduledSlots.length > 0 ? (
+                        <select
+                          id="scheduledTime"
+                          value={scheduledTime}
+                          onChange={(e) => {
+                            setScheduledTime(e.target.value);
+                            if (fieldErrors.scheduledTime) setFieldErrors((prev) => ({ ...prev, scheduledTime: undefined }));
+                          }}
+                          disabled={availableScheduledSlotsLoading}
+                          className={`w-full h-12 px-4 border-2 rounded-xl text-sm font-semibold bg-white focus:outline-none transition-colors ${fieldErrors.scheduledTime
+                            ? 'border-red-500 ring-1 ring-red-500 focus:border-red-500 focus:ring-red-500'
+                            : 'border-gray-300 focus:ring-1 focus:ring-[#f05a28] focus:border-[#f05a28]'
+                            }`}
+                        >
+                          {availableScheduledSlots.map((slot) => (
+                            <option key={slot} value={slot}>
+                              {slot}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          id="scheduledTime"
+                          type="time"
+                          value={scheduledTime}
+                          onChange={(e) => {
+                            setScheduledTime(e.target.value);
+                            if (fieldErrors.scheduledTime) setFieldErrors((prev) => ({ ...prev, scheduledTime: undefined }));
+                          }}
+                          className={`w-full h-12 px-4 border-2 rounded-xl text-sm font-semibold bg-white focus:outline-none transition-colors ${fieldErrors.scheduledTime
+                            ? 'border-red-500 ring-1 ring-red-500 focus:border-red-500 focus:ring-red-500'
+                            : 'border-gray-300 focus:ring-1 focus:ring-[#f05a28] focus:border-[#f05a28]'
+                            }`}
+                        />
+                      )}
+
+                      {availableScheduledSlotsError ? (
+                        <p className="text-xs text-gray-500 mt-2">{availableScheduledSlotsError}</p>
+                      ) : null}
+                      {fieldErrors.scheduledTime && (
+                        <p className="text-xs text-red-500 mt-2 flex items-center gap-1">
+                          <FaExclamationCircle className="w-3 h-3" />
+                          {fieldErrors.scheduledTime}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
               </>
             )}
 
@@ -818,7 +1264,9 @@ export default function PaymentPage() {
           <div>
             <Image
               src={mode === 'delivery' ? '/images/cod.png' : '/images/cashier.png'}
-              alt={mode === 'delivery' ? 'Pay on Delivery' : 'Pay at Cashier'}
+              alt={mode === 'delivery'
+                ? tOr(t, 'customer.payment.altPayOnDelivery', 'Pay on Delivery')
+                : tOr(t, 'customer.payment.altPayAtCashier', 'Pay at Cashier')}
               width={300}
               height={300}
               style={{ maxWidth: '300px', height: 'auto' }}
@@ -941,6 +1389,19 @@ export default function PaymentPage() {
           </button>
         </div>
       </div>
+
+      {/* Reservation Details Modal (Reservation flow only) */}
+      {isReservationFlow && (
+        <ReservationDetailsModal
+          merchantCode={merchantCode}
+          merchantTimezone={contextMerchantInfo?.timezone || 'Australia/Sydney'}
+          isOpen={showReservationDetailsModal}
+          onConfirm={(details) => {
+            setReservationDetails(details);
+            setShowReservationDetailsModal(false);
+          }}
+        />
+      )}
 
       {/* Payment Confirmation Modal */}
       <PaymentConfirmationModal

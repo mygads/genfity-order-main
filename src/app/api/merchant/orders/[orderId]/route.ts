@@ -72,6 +72,120 @@ async function handleGet(
 export const GET = withMerchant(handleGet);
 
 /**
+ * PATCH /api/merchant/orders/[orderId]
+ * Update limited order fields (Phase 1)
+ * - tableNumber (DINE_IN only)
+ */
+async function handlePatch(
+  req: NextRequest,
+  authContext: AuthContext,
+  routeContext: RouteContext
+) {
+  try {
+    const orderIdResult = await requireBigIntRouteParam(routeContext, 'orderId');
+    if (!orderIdResult.ok) {
+      return NextResponse.json(orderIdResult.body, { status: orderIdResult.status });
+    }
+
+    const { merchantId } = authContext;
+    if (!merchantId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Merchant ID is required',
+        },
+        { status: 400 }
+      );
+    }
+
+    const body = await req.json().catch(() => ({}));
+    const tableNumberRaw = (body as any)?.tableNumber;
+    const tableNumber = String(tableNumberRaw ?? '').trim();
+
+    if (!tableNumber) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'TABLE_NUMBER_REQUIRED',
+          message: 'Table number is required',
+        },
+        { status: 400 }
+      );
+    }
+
+    if (tableNumber.length > 50) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'TABLE_NUMBER_TOO_LONG',
+          message: 'Table number is too long',
+        },
+        { status: 400 }
+      );
+    }
+
+    const orderId = orderIdResult.value;
+
+    const existing = await prisma.order.findFirst({
+      where: {
+        id: orderId,
+        merchantId,
+      },
+      select: {
+        id: true,
+        orderType: true,
+      },
+    });
+
+    if (!existing) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Order not found',
+        },
+        { status: 404 }
+      );
+    }
+
+    if (existing.orderType !== 'DINE_IN') {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'TABLE_NUMBER_DINEIN_ONLY',
+          message: 'Table number can only be set for dine-in orders',
+        },
+        { status: 400 }
+      );
+    }
+
+    await prisma.order.update({
+      where: { id: existing.id },
+      data: {
+        tableNumber,
+      },
+    });
+
+    const updated = await OrderManagementService.getOrderById(orderId, merchantId);
+
+    return NextResponse.json({
+      success: true,
+      data: serializeBigInt(updated),
+    });
+  } catch (error) {
+    console.error('[PATCH /api/merchant/orders/[orderId]] Error:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to update order',
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export const PATCH = withMerchant(handlePatch);
+
+/**
  * DELETE /api/merchant/orders/[orderId]
  * Delete an order with PIN verification
  */

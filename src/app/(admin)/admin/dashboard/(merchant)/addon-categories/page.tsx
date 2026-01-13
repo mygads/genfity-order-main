@@ -490,7 +490,7 @@ function AddonCategoriesPageContent() {
       if (previewResponse.ok) {
         const previewData = await previewResponse.json();
         const { affectedMenusCount, affectedMenus, addonItemsCount } = previewData.data;
-        
+
         let menuList = "";
         if (affectedMenusCount > 0 && affectedMenus?.length > 0) {
           const menuNames = affectedMenus.slice(0, 3).map((m: { name: string }) => m.name).join(", ");
@@ -498,14 +498,14 @@ function AddonCategoriesPageContent() {
           menuList = remainingCount > 0 ? `${menuNames}, and ${remainingCount} more` : menuNames;
         }
 
-        setDeleteConfirm({ 
-          show: true, 
-          id, 
-          name, 
-          menuCount: affectedMenusCount, 
-          menuList, 
+        setDeleteConfirm({
+          show: true,
+          id,
+          name,
+          menuCount: affectedMenusCount,
+          menuList,
           addonItemsCount: addonItemsCount || 0,
-          loading: false 
+          loading: false
         });
       } else {
         // Fallback - show without preview
@@ -692,12 +692,12 @@ function AddonCategoriesPageContent() {
 
         <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6">
           <div className="mb-5 flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">Addon Categories</h3>
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">{t("admin.addonCategories.title")}</h3>
             <div className="flex items-center gap-3">
               {selectedCategories.length > 0 && (
                 <>
                   <span className="text-sm text-gray-600 dark:text-gray-400">
-                    {selectedCategories.length} selected
+                    {t("admin.addonCategories.selected", { count: selectedCategories.length })}
                   </span>
                   <button
                     onClick={() => setShowBulkDeleteConfirm(true)}
@@ -706,7 +706,7 @@ function AddonCategoriesPageContent() {
                     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
-                    Delete {selectedCategories.length}
+                    {t("admin.addonCategories.deleteSelected", { count: selectedCategories.length })}
                   </button>
                 </>
               )}
@@ -724,9 +724,9 @@ function AddonCategoriesPageContent() {
                 onClick={() => {
                   try {
                     exportAddonCategories(categories);
-                    showSuccess('Addon categories exported successfully!');
+                    showSuccess(t('admin.addonCategories.exportSuccess'));
                   } catch (err) {
-                    showError(err instanceof Error ? err.message : 'Export failed');
+                    showError(err instanceof Error ? err.message : t('admin.addonCategories.exportFailed'));
                   }
                 }}
                 disabled={categories.length === 0}
@@ -736,7 +736,7 @@ function AddonCategoriesPageContent() {
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                Export
+                {t("admin.addonCategories.export")}
               </button>
               <button
                 data-tutorial="add-addon-category-btn"
@@ -746,7 +746,7 @@ function AddonCategoriesPageContent() {
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
-                Add Addon Category
+                {t("admin.addonCategories.addCategory")}
               </button>
             </div>
           </div>
@@ -947,17 +947,24 @@ function AddonCategoriesPageContent() {
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    Delete {selectedCategories.length} Addon Category{selectedCategories.length > 1 ? 's' : ''}
+                    {selectedCategories.length > 1
+                      ? t("admin.addonCategories.bulkDeleteTitlePlural", { count: selectedCategories.length })
+                      : t("admin.addonCategories.bulkDeleteTitle", { count: selectedCategories.length })}
                   </h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    This action cannot be undone
+                    {t("admin.addonCategories.actionCannotBeUndone")}
                   </p>
                 </div>
               </div>
 
               <p className="mb-6 text-sm text-gray-700 dark:text-gray-300">
-                Are you sure you want to delete {selectedCategories.length} addon category{selectedCategories.length > 1 ? 's' : ''}?
-                This will also delete all addon items in {selectedCategories.length > 1 ? 'these categories' : 'this category'}.
+                {selectedCategories.length > 1
+                  ? t("admin.addonCategories.bulkDeleteConfirmPlural", { count: selectedCategories.length })
+                  : t("admin.addonCategories.bulkDeleteConfirm", { count: selectedCategories.length })}
+                {' '}
+                {selectedCategories.length > 1
+                  ? t("admin.addonCategories.bulkDeleteAlsoDeletesPlural")
+                  : t("admin.addonCategories.bulkDeleteAlsoDeletes")}
               </p>
 
               <div className="flex gap-3">
@@ -965,13 +972,15 @@ function AddonCategoriesPageContent() {
                   onClick={() => setShowBulkDeleteConfirm(false)}
                   className="flex-1 h-11 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
                 >
-                  Cancel
+                  {t("admin.addonCategories.cancel")}
                 </button>
                 <button
                   onClick={handleBulkDeleteCategories}
                   className="flex-1 h-11 rounded-lg bg-error-600 text-sm font-medium text-white hover:bg-error-700"
                 >
-                  Delete {selectedCategories.length} Category{selectedCategories.length > 1 ? 's' : ''}
+                  {selectedCategories.length > 1
+                    ? t("admin.addonCategories.bulkDeleteTitlePlural", { count: selectedCategories.length })
+                    : t("admin.addonCategories.deleteCategory")}
                 </button>
               </div>
             </div>
@@ -990,10 +999,10 @@ function AddonCategoriesPageContent() {
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    Delete Addon Category
+                    {t("admin.addonCategories.deleteSingleTitle")}
                   </h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    This action cannot be undone
+                    {t("admin.addonCategories.actionCannotBeUndone")}
                   </p>
                 </div>
               </div>
@@ -1011,14 +1020,18 @@ function AddonCategoriesPageContent() {
                           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                           </svg>
-                          Warning: This will affect the following
+                          {t("admin.addonCategories.warningAffects")}
                         </div>
                         <ul className="mt-2 space-y-1 text-xs text-warning-600 dark:text-warning-500">
                           {deleteConfirm.menuCount > 0 && (
-                            <li>• Removes from {deleteConfirm.menuCount} menu{deleteConfirm.menuCount > 1 ? 's' : ''}: {deleteConfirm.menuList}</li>
+                            <li>• {deleteConfirm.menuCount > 1
+                              ? t("admin.addonCategories.removesFromMenusPlural", { count: deleteConfirm.menuCount, list: deleteConfirm.menuList })
+                              : t("admin.addonCategories.removesFromMenus", { count: deleteConfirm.menuCount, list: deleteConfirm.menuList })}</li>
                           )}
                           {deleteConfirm.addonItemsCount > 0 && (
-                            <li>• Deletes {deleteConfirm.addonItemsCount} addon item{deleteConfirm.addonItemsCount > 1 ? 's' : ''} in this category</li>
+                            <li>• {deleteConfirm.addonItemsCount > 1
+                              ? t("admin.addonCategories.deletesAddonItemsPlural", { count: deleteConfirm.addonItemsCount })
+                              : t("admin.addonCategories.deletesAddonItems", { count: deleteConfirm.addonItemsCount })}</li>
                           )}
                         </ul>
                       </div>
@@ -1028,8 +1041,8 @@ function AddonCategoriesPageContent() {
                     </div>
                   ) : (
                     <p className="mb-6 text-sm text-gray-700 dark:text-gray-300">
-                      Are you sure you want to delete &ldquo;<span className="font-medium">{deleteConfirm.name}</span>&rdquo;?
-                      This addon category is not assigned to any menus and has no items.
+                      {t("admin.addonCategories.deleteConfirm", { name: deleteConfirm.name })}
+                      {' '}{t("admin.addonCategories.deleteNoRelations")}
                     </p>
                   )}
 
@@ -1038,13 +1051,13 @@ function AddonCategoriesPageContent() {
                       onClick={() => setDeleteConfirm({ show: false, id: "", name: "", menuCount: 0, menuList: "", addonItemsCount: 0, loading: false })}
                       className="flex-1 h-11 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
                     >
-                      Cancel
+                      {t("admin.addonCategories.cancel")}
                     </button>
                     <button
                       onClick={confirmDeleteCategory}
                       className="flex-1 h-11 rounded-lg bg-error-600 text-sm font-medium text-white hover:bg-error-700"
                     >
-                      Delete Category
+                      {t("admin.addonCategories.deleteCategory")}
                     </button>
                   </div>
                 </>
@@ -1060,7 +1073,7 @@ function AddonCategoriesPageContent() {
         onClose={() => setShowArchiveModal(false)}
         onRestoreSuccess={() => {
           fetchCategories();
-          showSuccess('Item restored successfully!');
+          showSuccess(t('admin.addonCategories.itemRestored'));
         }}
       />
     </div>

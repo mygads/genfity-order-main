@@ -27,6 +27,8 @@ import {
   FaChevronDown,
   FaImage,
   FaStickyNote,
+  FaCalendarCheck,
+  FaUsers,
 } from 'react-icons/fa';
 import Image from 'next/image';
 import { ORDER_STATUS_COLORS } from '@/lib/constants/orderConstants';
@@ -38,6 +40,7 @@ import { OrderStatus, PaymentMethod } from '@prisma/client';
 import { printReceipt } from '@/lib/utils/unifiedReceipt';
 import { DEFAULT_RECEIPT_SETTINGS, type ReceiptSettings } from '@/lib/types/receiptSettings';
 import { formatFullOrderNumber } from '@/lib/utils/format';
+import { formatPaymentMethodLabel } from '@/lib/utils/paymentDisplay';
 
 interface OrderDetailModalProps {
   orderId: string;
@@ -78,6 +81,10 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   const [adminNoteDraft, setAdminNoteDraft] = useState<string>('');
   const [savingAdminNote, setSavingAdminNote] = useState(false);
 
+  const [isEditingTableNumber, setIsEditingTableNumber] = useState(false);
+  const [tableNumberDraft, setTableNumberDraft] = useState('');
+  const [savingTableNumber, setSavingTableNumber] = useState(false);
+
   const [drivers, setDrivers] = useState<Array<{ id: string; name: string; email: string; phone?: string | null }>>(
     []
   );
@@ -86,6 +93,57 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   const [assigningDriver, setAssigningDriver] = useState(false);
   const { showSuccess, showError } = useToast();
   const { merchant } = useMerchant();
+
+  const isTableNumberEnabled = merchant?.requireTableNumberForDineIn === true;
+
+  useEffect(() => {
+    if (!isOpen) {
+      setIsEditingTableNumber(false);
+      setTableNumberDraft('');
+      setSavingTableNumber(false);
+    }
+  }, [isOpen, orderId]);
+
+  const handleSaveTableNumber = useCallback(async () => {
+    if (!order) return;
+    if (order.orderType !== 'DINE_IN') return;
+    if (!isTableNumberEnabled) return;
+
+    const value = tableNumberDraft.trim();
+    if (!value) {
+      showError('Table number is required', 'Table');
+      return;
+    }
+
+    setSavingTableNumber(true);
+    try {
+      const token = localStorage.getItem('accessToken');
+      const res = await fetch(`/api/merchant/orders/${orderId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ tableNumber: value }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json?.success) {
+        throw new Error(json?.message || json?.error || 'Failed to update table number');
+      }
+
+      setOrder(json.data);
+      setIsEditingTableNumber(false);
+      setTableNumberDraft('');
+      onUpdate?.();
+      showSuccess('Table number updated', 'Success');
+    } catch (error) {
+      console.error('Error updating table number:', error);
+      showError((error as Error).message || 'Failed to update table number', 'Table');
+    } finally {
+      setSavingTableNumber(false);
+    }
+  }, [order, orderId, onUpdate, showError, showSuccess, tableNumberDraft, isTableNumberEnabled]);
 
   const fetchDrivers = useCallback(async () => {
     try {
@@ -340,8 +398,11 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
         onUpdate?.();
         setShowPaymentModal(false);
 
-        // Show success toast - format method name for display
-        const methodLabel = paymentMethod.replace(/_/g, ' ').replace(/ON COUNTER/g, '').trim();
+        const methodLabel = formatPaymentMethodLabel({
+          orderType: order.orderType,
+          paymentStatus: 'COMPLETED',
+          paymentMethod,
+        });
         showSuccess(`Payment recorded successfully (${methodLabel})`, 'Payment Recorded');
       } else {
         console.error('[OrderDetailModal] Payment failed:', data.error);
@@ -559,7 +620,9 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                       {order.orderType === 'DINE_IN' ? (
                         <>
                           <FaUtensils className="h-3 w-3" />
-                          {order.tableNumber ? `Table ${order.tableNumber}` : 'Dine In'}
+                          {isTableNumberEnabled
+                            ? `Table ${order.tableNumber || '-'}`
+                            : 'Dine In'}
                         </>
                       ) : order.orderType === 'DELIVERY' ? (
                         <>
@@ -574,6 +637,56 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                       )}
                     </span>
                   </div>
+
+                  {order.orderType === 'DINE_IN' && isTableNumberEnabled && (
+                    <div className="mt-3">
+                      {!isEditingTableNumber ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsEditingTableNumber(true);
+                            setTableNumberDraft(order.tableNumber || '');
+                          }}
+                          className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
+                        >
+                          {order.tableNumber ? 'Edit table number' : 'Add table number'}
+                        </button>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={tableNumberDraft}
+                            onChange={(e) => setTableNumberDraft(e.target.value)}
+                            maxLength={50}
+                            placeholder="Table number"
+                            className="h-9 w-40 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 outline-none focus:border-primary-300 focus:ring-2 focus:ring-primary-200 dark:border-gray-800 dark:bg-gray-900 dark:text-white dark:focus:border-primary-700 dark:focus:ring-primary-900/40"
+                            autoFocus
+                          />
+                          <button
+                            type="button"
+                            onClick={handleSaveTableNumber}
+                            disabled={savingTableNumber}
+                            className="inline-flex h-9 items-center justify-center rounded-lg bg-primary-600 px-3 text-xs font-semibold text-white hover:bg-primary-700 disabled:opacity-60"
+                            title="Save"
+                          >
+                            {savingTableNumber ? <FaSpinner className="h-3.5 w-3.5 animate-spin" /> : <FaCheck className="h-3.5 w-3.5" />}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsEditingTableNumber(false);
+                              setTableNumberDraft('');
+                              setSavingTableNumber(false);
+                            }}
+                            className="inline-flex h-9 items-center justify-center rounded-lg border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
+                            title="Cancel"
+                          >
+                            <FaTimes className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <button
                   onClick={onClose}
@@ -586,15 +699,64 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
 
             {/* Scrollable Content */}
             <div className="overflow-y-auto px-5 py-4" style={{ maxHeight: 'calc(90vh - 160px)' }}>
-              {/* Payment Status - Compact */}
-              {order.payment && order.payment.status === 'COMPLETED' && (
+              {/* Payment Summary */}
+              {order.payment && (
                 <div className="mb-4 flex items-center justify-between rounded-lg bg-gray-50 dark:bg-gray-800 px-4 py-3">
                   <div className="flex items-center gap-2">
-                    <FaCheck className="h-4 w-4 text-green-600" />
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">Paid</span>
+                    {order.payment.status === 'COMPLETED' ? (
+                      <FaCheck className="h-4 w-4 text-green-600" />
+                    ) : null}
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">
+                      {order.payment.status === 'COMPLETED' ? 'Paid' : 'Unpaid'}
+                    </span>
                   </div>
                   <div className="text-sm text-gray-600 dark:text-gray-400">
-                    {order.payment.paymentMethod.replace(/_/g, ' ')} • {formatCurrency(Number(order.payment.amount))}
+                    {formatPaymentMethodLabel({
+                      orderType: order.orderType,
+                      paymentStatus: order.payment.status,
+                      paymentMethod: order.payment.paymentMethod,
+                    })}{' '}
+                    • {formatCurrency(Number((order.payment as any).amount ?? order.totalAmount))}
+                  </div>
+                </div>
+              )}
+
+              {/* Reservation Details */}
+              {order.reservation && (
+                <div className="mb-4 rounded-lg border border-gray-100 dark:border-gray-800 p-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    Reservation details
+                  </p>
+                  <div className="mt-2 grid grid-cols-2 gap-3">
+                    <div className="flex items-start gap-2">
+                      <FaCalendarCheck className="mt-0.5 h-4 w-4 text-purple-600 dark:text-purple-400" />
+                      <div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Date & time</p>
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                          {new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(
+                            new Date(order.reservation.reservationDate)
+                          )}{' '}
+                          • {order.reservation.reservationTime}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <FaUsers className="mt-0.5 h-4 w-4 text-purple-600 dark:text-purple-400" />
+                      <div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Party size</p>
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                          {order.reservation.partySize}
+                        </p>
+                      </div>
+                    </div>
+                    {(order.tableNumber || order.reservation.tableNumber) && (
+                      <div className="col-span-2">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Table</p>
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                          {order.tableNumber || order.reservation.tableNumber}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -822,9 +984,6 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                     </span>
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-gray-900 dark:text-white">Order Notes</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                        Customer note is read-only. Admin note is internal.
-                      </p>
                     </div>
                   </div>
 
@@ -833,7 +992,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                     onClick={() => setIsEditingAdminNote((v) => !v)}
                     className="h-9 px-3 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-800 dark:text-white/90 text-xs font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                   >
-                    {isEditingAdminNote ? 'Close' : ((order as any)?.adminNote ? 'Edit Admin Note' : 'Add Admin Note')}
+                    {isEditingAdminNote ? 'Close' : ((order as any)?.adminNote ? 'Edit Note' : 'Add Note')}
                   </button>
                 </div>
 

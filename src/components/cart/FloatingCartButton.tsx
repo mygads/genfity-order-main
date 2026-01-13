@@ -11,6 +11,8 @@ import { FaInfoCircle, FaShoppingCart } from 'react-icons/fa';
 interface FloatingCartButtonProps {
   merchantCode: string;
   mode?: 'dinein' | 'takeaway' | 'delivery';
+  flow?: 'reservation';
+  scheduled?: boolean;
   storeOpen?: boolean; // When false, hide checkout button entirely
 }
 
@@ -22,7 +24,7 @@ interface FloatingCartButtonProps {
  * - Host: Goes to view-order page with groupOrder=true
  * - Non-host: Shows modal that only host can checkout
  */
-export default function FloatingCartButton({ merchantCode, mode, storeOpen = true }: FloatingCartButtonProps) {
+export default function FloatingCartButton({ merchantCode, mode, flow, scheduled, storeOpen = true }: FloatingCartButtonProps) {
   const router = useRouter();
   const { cart, getItemCount, getTotal } = useCart();
   const { isInGroupOrder, isHost, session } = useGroupOrder();
@@ -116,12 +118,14 @@ export default function FloatingCartButton({ merchantCode, mode, storeOpen = tru
   }
 
   const handleClick = () => {
+    const flowParam = flow ? `&flow=${flow}` : '';
+    const scheduledParam = scheduled ? `&scheduled=1` : '';
     if (isInGroupOrder) {
       if (isHost) {
         // Host: Go to view-order with group order flag
         const sessionOrderType = (session as unknown as { orderType?: string } | null)?.orderType;
         const modeParam = mode || (sessionOrderType === 'DINE_IN' ? 'dinein' : sessionOrderType === 'DELIVERY' ? 'delivery' : 'takeaway');
-        router.push(`/${merchantCode}/view-order?mode=${modeParam}&groupOrder=true`);
+        router.push(`/${merchantCode}/view-order?mode=${modeParam}&groupOrder=true${flowParam}${scheduledParam}`);
       } else {
         // Non-host: Show modal
         setShowNonHostModal(true);
@@ -129,7 +133,7 @@ export default function FloatingCartButton({ merchantCode, mode, storeOpen = tru
     } else {
       // Normal checkout
       const modeParam = mode || cart?.mode || 'takeaway';
-      router.push(`/${merchantCode}/view-order?mode=${modeParam}`);
+      router.push(`/${merchantCode}/view-order?mode=${modeParam}${flowParam}${scheduledParam}`);
     }
   };
 

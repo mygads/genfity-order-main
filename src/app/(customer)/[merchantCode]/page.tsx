@@ -23,6 +23,13 @@ interface MerchantData {
   isDineInEnabled?: boolean;
   isTakeawayEnabled?: boolean;
   isDeliveryEnabled?: boolean;
+  // Scheduled orders
+  isScheduledOrderEnabled?: boolean;
+  // Reservations
+  isReservationEnabled?: boolean;
+  reservationMenuRequired?: boolean;
+  reservationMinItemCount?: number;
+  timezone?: string;
   // Needed to decide if delivery can run
   latitude?: string | number | null;
   longitude?: string | number | null;

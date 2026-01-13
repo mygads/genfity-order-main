@@ -44,6 +44,7 @@ import {
   FaTv,
   FaSmile,
   FaTruck,
+  FaCalendarAlt,
 } from "react-icons/fa";
 import MerchantBanner from "../components/merchants/MerchantBanner";
 
@@ -219,6 +220,13 @@ const merchantNavGroups: NavGroup[] = [
         permission: STAFF_PERMISSIONS.ORDERS,
       },
       {
+        icon: <FaCalendarAlt />,
+        nameKey: "admin.nav.reservations",
+        path: "/admin/dashboard/reservations",
+        roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+        permission: STAFF_PERMISSIONS.ORDERS,
+      },
+      {
         icon: <FaHistory />,
         nameKey: "admin.nav.orderHistory",
         path: "/admin/dashboard/orders/history",
@@ -387,6 +395,7 @@ const AppSidebar: React.FC = () => {
   const { t } = useTranslation();
   const [hasMerchant, setHasMerchant] = React.useState<boolean | null>(null);
   const [showScrollIndicator, setShowScrollIndicator] = useState(false);
+  const [pendingReservationCount, setPendingReservationCount] = useState<number | null>(null);
 
   // Check if merchant owner/staff has merchant association
   React.useEffect(() => {
@@ -410,6 +419,48 @@ const AppSidebar: React.FC = () => {
       setHasMerchant(true); // Super admin always has access
     }
   }, [user]);
+
+  // Fetch active reservation count for conditional nav visibility.
+  useEffect(() => {
+    if (!user || (user.role !== 'MERCHANT_OWNER' && user.role !== 'MERCHANT_STAFF')) {
+      setPendingReservationCount(null);
+      return;
+    }
+    if (hasMerchant === false) {
+      setPendingReservationCount(null);
+      return;
+    }
+
+    let cancelled = false;
+    const fetchCount = async () => {
+      try {
+        const token = localStorage.getItem('accessToken');
+        if (!token) return;
+
+        const res = await fetch('/api/merchant/reservations/count', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (!res.ok) {
+          if (!cancelled) setPendingReservationCount(0);
+          return;
+        }
+
+        const json = await res.json();
+        const pending = typeof json?.data?.pending === 'number' ? json.data.pending : 0;
+        if (!cancelled) setPendingReservationCount(pending);
+      } catch {
+        if (!cancelled) setPendingReservationCount(0);
+      }
+    };
+
+    fetchCount();
+    const timer = window.setInterval(fetchCount, 30_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [user, hasMerchant]);
 
   // Scroll detection for indicator
   useEffect(() => {
@@ -632,10 +683,24 @@ const AppSidebar: React.FC = () => {
                               : "menu-item-icon-inactive"
                               }`}
                           >
-                            {nav.icon}
+                            <span className="relative inline-flex">
+                              {nav.icon}
+                              {nav.path === '/admin/dashboard/reservations' && (pendingReservationCount ?? 0) > 0 && !(isExpanded || isHovered || isMobileOpen) && (
+                                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+                                  {pendingReservationCount}
+                                </span>
+                              )}
+                            </span>
                           </span>
                           {(isExpanded || isHovered || isMobileOpen) && (
-                            <span className="menu-item-text">{t(nav.nameKey)}</span>
+                            <>
+                              <span className="menu-item-text">{t(nav.nameKey)}</span>
+                              {nav.path === '/admin/dashboard/reservations' && (pendingReservationCount ?? 0) > 0 && (
+                                <span className="ml-auto min-w-[24px] h-6 px-2 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">
+                                  {pendingReservationCount}
+                                </span>
+                              )}
+                            </>
                           )}
                         </Link>
                       </li>

@@ -12,6 +12,7 @@ import type { LocalCart } from '@/lib/types/cart';
 const STORAGE_KEYS = {
   CART_PREFIX: 'genfity_cart_',
   TABLE_PREFIX: 'genfity_table_',
+  RESERVATION_PREFIX: 'genfity_reservation_',
   AUTH: 'genfity_customer_auth',
   FAVORITES_PREFIX: 'genfity_favorites_',
   RECENT_ORDERS: 'genfity_recent_orders',
@@ -39,6 +40,18 @@ function getCartKey(merchantCode: string, mode: 'dinein' | 'takeaway' | 'deliver
 function getTableKey(merchantCode: string): string {
   return `${STORAGE_KEYS.TABLE_PREFIX}${merchantCode}`;
 }
+
+function getReservationKey(merchantCode: string): string {
+  return `${STORAGE_KEYS.RESERVATION_PREFIX}${merchantCode}`;
+}
+
+export type StoredReservationDetails = {
+  merchantCode: string;
+  partySize: number;
+  reservationDate: string; // YYYY-MM-DD
+  reservationTime: string; // HH:MM
+  setAt: string;
+};
 
 // ============================================================================
 // CART MANAGEMENT
@@ -177,6 +190,56 @@ export function clearTableNumber(merchantCode: string): void {
     localStorage.removeItem(key);
   } catch (error) {
     console.error('Error clearing table number:', error);
+  }
+}
+
+// ============================================================================
+// RESERVATION DETAILS (customer reservation ordering flow)
+// ============================================================================
+
+export function getReservationDetails(merchantCode: string): StoredReservationDetails | null {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    const key = getReservationKey(merchantCode);
+    const data = localStorage.getItem(key);
+    if (!data) return null;
+    return JSON.parse(data) as StoredReservationDetails;
+  } catch (error) {
+    console.error('Error getting reservation details:', error);
+    return null;
+  }
+}
+
+export function saveReservationDetails(
+  merchantCode: string,
+  details: { partySize: number; reservationDate: string; reservationTime: string }
+): void {
+  if (typeof window === 'undefined') return;
+
+  try {
+    const key = getReservationKey(merchantCode);
+    const payload: StoredReservationDetails = {
+      merchantCode,
+      partySize: Number(details.partySize),
+      reservationDate: String(details.reservationDate),
+      reservationTime: String(details.reservationTime),
+      setAt: new Date().toISOString(),
+    };
+    localStorage.setItem(key, JSON.stringify(payload));
+  } catch (error) {
+    console.error('Error saving reservation details:', error);
+  }
+}
+
+export function clearReservationDetails(merchantCode: string): void {
+  if (typeof window === 'undefined') return;
+
+  try {
+    const key = getReservationKey(merchantCode);
+    localStorage.removeItem(key);
+  } catch (error) {
+    console.error('Error clearing reservation details:', error);
   }
 }
 

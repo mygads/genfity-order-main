@@ -18,10 +18,12 @@ import {
 } from 'react-icons/fa';
 import { TrackOrderSkeleton } from '@/components/common/SkeletonLoaders';
 import { formatCurrency } from '@/lib/utils/format';
-import { useTranslation } from '@/lib/i18n/useTranslation';
+import { useTranslation, tOr } from '@/lib/i18n/useTranslation';
 import { TranslationKeys } from '@/lib/i18n';
 import FeedbackModal from '@/components/customer/FeedbackModal';
 import { customerHistoryUrl, customerMerchantHomeUrl } from '@/lib/utils/customerRoutes';
+import { formatPaymentMethodLabel, formatPaymentStatusLabel } from '@/lib/utils/paymentDisplay';
+import { useCustomerData } from '@/context/CustomerDataContext';
 
 // Order status types
 type OrderStatus = 'PENDING' | 'ACCEPTED' | 'IN_PROGRESS' | 'READY' | 'COMPLETED' | 'CANCELLED';
@@ -33,6 +35,9 @@ interface OrderData {
     status: OrderStatus;
     orderType: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY';
     tableNumber: string | null;
+    isScheduled?: boolean;
+    scheduledDate?: string | null;
+    scheduledTime?: string | null;
     customerName: string;
     totalAmount: number;
     createdAt: string;
@@ -66,6 +71,14 @@ interface OrderData {
     } | null;
     completedAt?: string | null;
     placedAt?: string | null;
+
+    reservation?: {
+        status: string;
+        partySize: number;
+        reservationDate: string;
+        reservationTime: string;
+        tableNumber: string | null;
+    } | null;
 }
 
 // Group Order Data
@@ -187,6 +200,9 @@ export default function OrderTrackPage() {
     const orderNumber = params.orderNumber as string;
     const token = searchParams.get('token') || '';
 
+    const { merchantInfo: contextMerchantInfo, initializeData } = useCustomerData();
+    const isTableNumberEnabled = contextMerchantInfo?.requireTableNumberForDineIn === true;
+
     const [order, setOrder] = useState<OrderData | null>(null);
     const [groupOrderData, setGroupOrderData] = useState<GroupOrderData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -194,6 +210,10 @@ export default function OrderTrackPage() {
     const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [showSplitBill, setShowSplitBill] = useState(false);
+
+    useEffect(() => {
+        initializeData(merchantCode);
+    }, [merchantCode, initializeData]);
 
     // Feedback modal state
     const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -211,7 +231,7 @@ export default function OrderTrackPage() {
             const data = await response.json();
 
             if (!response.ok) {
-                setError(data.message || 'Failed to load order');
+                setError(data.message || t('customer.errors.orderLoadFailed'));
                 return;
             }
 
@@ -249,6 +269,15 @@ export default function OrderTrackPage() {
                 deliveryFeeAmount: convertDecimal(data.data.deliveryFeeAmount),
                 deliveryDistanceKm: data.data.deliveryDistanceKm ? convertDecimal(data.data.deliveryDistanceKm) : null,
                 deliveryDeliveredAt: data.data.deliveryDeliveredAt ?? null,
+                reservation: data.data.reservation
+                    ? {
+                            status: data.data.reservation.status,
+                            partySize: data.data.reservation.partySize,
+                            reservationDate: data.data.reservation.reservationDate,
+                            reservationTime: data.data.reservation.reservationTime,
+                            tableNumber: data.data.reservation.tableNumber ?? null,
+                        }
+                    : null,
                 orderItems: data.data.orderItems?.map((item: {
                     menuName: string;
                     quantity: number;
@@ -296,12 +325,12 @@ export default function OrderTrackPage() {
             setError('');
         } catch (err) {
             console.error('Error fetching order:', err);
-            setError('Failed to load order');
+            setError(t('customer.errors.orderLoadFailed'));
         } finally {
             setIsLoading(false);
             setIsRefreshing(false);
         }
-    }, [orderNumber, token]);
+    }, [orderNumber, token, t]);
 
     // Initial fetch
     useEffect(() => {
@@ -534,11 +563,53 @@ export default function OrderTrackPage() {
                     </div>
                     <p className="text-sm text-gray-600">
                         {order.orderType === 'DINE_IN'
-                            ? `${t('admin.orders.table')} #${order.tableNumber}`
+                            ? (isTableNumberEnabled && order.tableNumber
+                                ? `${t('admin.orders.table')} #${order.tableNumber}`
+                                : tOr(t, 'customer.track.dineInOrder', 'Dine-in order'))
                             : order.orderType === 'DELIVERY'
                                 ? t('customer.track.deliveryOrder')
                                 : t('customer.track.takeawayOrder')}
                     </p>
+
+                    {order.reservation ? (
+                        <div className="mt-3 inline-flex flex-col items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-left shadow-sm">
+                            <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-xs font-semibold text-gray-800">
+                                <span className="inline-flex items-center gap-2">
+                                    <FaUsers className="h-4 w-4 text-gray-500" />
+                                    <span>
+                                        {tOr(t, 'customer.reservation.party', 'Party')}: {order.reservation.partySize}
+                                    </span>
+                                </span>
+                                <span className="inline-flex items-center gap-2">
+                                    <FaClock className="h-4 w-4 text-gray-500" />
+                                    <span>
+                                        {order.reservation.reservationDate} • {order.reservation.reservationTime}
+                                    </span>
+                                </span>
+                            </div>
+
+                            {String(order.reservation.status || '').toUpperCase() === 'ACCEPTED' &&
+                            isTableNumberEnabled && (order.reservation.tableNumber || order.tableNumber) ? (
+                                <div className="text-xs font-semibold text-gray-800">
+                                    {tOr(t, 'admin.orders.table', 'Table')} #{order.reservation.tableNumber || order.tableNumber}
+                                </div>
+                            ) : null}
+                        </div>
+                    ) : null}
+
+                    {order.isScheduled && order.scheduledTime && (
+                        <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700">
+                            <FaClock className="h-3 w-3" />
+                                                <span>
+                                                    {(order.orderType === 'DELIVERY'
+                                                      ? tOr(t, 'customer.orderSummary.deliveryAt', 'Delivery at')
+                                                      : order.orderType === 'DINE_IN'
+                                                        ? tOr(t, 'customer.orderSummary.dineInAt', 'Dine-in at')
+                                                        : tOr(t, 'customer.orderSummary.pickupAt', 'Pickup at'))}{' '}
+                                                    {order.scheduledTime}
+                                                </span>
+                        </div>
+                    )}
                     <p className="text-xs text-gray-500 mt-1">
                         {t('customer.track.lastUpdated')} {lastUpdated.toLocaleTimeString()}
                     </p>
@@ -746,28 +817,30 @@ export default function OrderTrackPage() {
                             {order.payment && (
                                 <div className="border border-gray-200 rounded-xl p-6 bg-white mb-6">
                                     <div className="flex items-center justify-between">
-                                        <p className="text-sm font-semibold text-gray-900">Payment</p>
+                                        <p className="text-sm font-semibold text-gray-900">{t('customer.payment.title')}</p>
                                         <span
                                             className={`rounded-full px-2.5 py-1 text-xs font-medium ${order.payment.status === 'COMPLETED'
                                                     ? 'bg-green-100 text-green-700'
                                                     : 'bg-yellow-100 text-yellow-800'
                                                 }`}
                                         >
-                                            {order.payment.status || '—'}
+                                            {formatPaymentStatusLabel(order.payment.status, { t }) || '—'}
                                         </span>
                                     </div>
 
                                     <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                                         <div>
-                                            <p className="text-xs text-gray-500">Method</p>
+                                            <p className="text-xs text-gray-500">{t('customer.track.paymentMethod')}</p>
                                             <p className="text-sm font-medium text-gray-900">
-                                                {order.payment.paymentMethod === 'CASH_ON_DELIVERY'
-                                                    ? 'Cash on Delivery'
-                                                    : (order.payment.paymentMethod || '—')}
+                                                {formatPaymentMethodLabel({
+                                                    orderType: order.orderType,
+                                                    paymentStatus: order.payment.status,
+                                                    paymentMethod: order.payment.paymentMethod,
+                                                }, { t })}
                                             </p>
                                         </div>
                                         <div>
-                                            <p className="text-xs text-gray-500">Amount</p>
+                                            <p className="text-xs text-gray-500">{t('customer.track.paymentAmount')}</p>
                                             <p className="text-sm font-medium text-gray-900">
                                                 {typeof order.payment.amount === 'number'
                                                     ? formatPrice(order.payment.amount, order.merchant.currency)
@@ -775,13 +848,18 @@ export default function OrderTrackPage() {
                                             </p>
                                         </div>
                                         <div className="sm:col-span-2">
-                                            <p className="text-xs text-gray-500">Paid at</p>
+                                            <p className="text-xs text-gray-500">{t('customer.track.paymentPaidAt')}</p>
                                             <p className="text-sm font-medium text-gray-900">
                                                 {order.payment.paidAt ? new Date(order.payment.paidAt).toLocaleString() : '—'}
                                             </p>
                                             {order.payment.paymentMethod === 'CASH_ON_DELIVERY' && order.payment.status === 'PENDING' && (
                                                 <p className="mt-1 text-xs text-gray-500">
-                                                    Pay the driver when the order arrives.
+                                                    {t('customer.track.payDriverHint')}
+                                                </p>
+                                            )}
+                                            {order.orderType !== 'DELIVERY' && order.payment.status !== 'COMPLETED' && (
+                                                <p className="mt-1 text-xs text-gray-500">
+                                                    {t('customer.track.payAtCashierHint')}
                                                 </p>
                                             )}
                                         </div>

@@ -9,6 +9,7 @@
 
 import React, { useState } from 'react';
 import { FaCalendar } from 'react-icons/fa';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 // ===== TYPES =====
 
@@ -67,16 +68,17 @@ export const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
   onChange,
   className = '',
 }) => {
+  const { t, locale } = useTranslation();
   const [selectedPreset, setSelectedPreset] = useState<PresetRange>('month');
   const [showCustom, setShowCustom] = useState(false);
 
   const presets: Array<{ id: PresetRange; label: string }> = [
-    { id: 'today', label: 'Today' },
-    { id: 'week', label: 'Last 7 Days' },
-    { id: 'month', label: 'Last 30 Days' },
-    { id: '3months', label: 'Last 90 Days' },
-    { id: 'year', label: 'Last Year' },
-    { id: 'custom', label: 'Custom' },
+    { id: 'today', label: t('admin.history.dateRange.today') },
+    { id: 'week', label: t('admin.history.dateRange.last7Days') },
+    { id: 'month', label: t('admin.history.dateRange.last30Days') },
+    { id: '3months', label: t('admin.history.dateRange.last90Days') },
+    { id: 'year', label: t('admin.history.dateRange.lastYear') },
+    { id: 'custom', label: t('admin.history.dateRange.custom') },
   ];
 
   const handlePresetClick = (preset: PresetRange) => {
@@ -109,10 +111,11 @@ export const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
           <button
             key={preset.id}
             onClick={() => handlePresetClick(preset.id)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-150 ${selectedPreset === preset.id
-              ? 'bg-brand-500 text-white'
-              : 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
-              }`}
+            className={`h-10 px-4 rounded-lg text-sm font-medium transition-colors duration-150 ${
+              selectedPreset === preset.id
+                ? 'bg-primary-500 text-white'
+                : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+            }`}
           >
             {preset.label}
           </button>
@@ -121,36 +124,36 @@ export const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
 
       {/* Custom Date Range Inputs */}
       {showCustom && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/[0.03]">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/3">
           {/* Start Date */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Start Date
+              {t('admin.history.dateRange.startDate')}
             </label>
             <div className="relative">
               <input
                 type="date"
                 value={formatDate(value.start)}
                 onChange={(e) => handleCustomDateChange('start', e.target.value)}
-                className="w-full h-10 pl-10 pr-4 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-800 dark:text-white/90 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                className="w-full h-10 pl-11 pr-4 rounded-lg border border-gray-200 bg-white text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
               />
-              <FaCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <FaCalendar className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
             </div>
           </div>
 
           {/* End Date */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              End Date
+              {t('admin.history.dateRange.endDate')}
             </label>
             <div className="relative">
               <input
                 type="date"
                 value={formatDate(value.end)}
                 onChange={(e) => handleCustomDateChange('end', e.target.value)}
-                className="w-full h-10 pl-10 pr-4 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-800 dark:text-white/90 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                className="w-full h-10 pl-11 pr-4 rounded-lg border border-gray-200 bg-white text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
               />
-              <FaCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <FaCalendar className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
             </div>
           </div>
         </div>
@@ -160,13 +163,13 @@ export const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
       <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
         <FaCalendar className="text-gray-400" />
         <span>
-          {value.start.toLocaleDateString('en-AU', {
+          {value.start.toLocaleDateString(locale === 'id' ? 'id-ID' : 'en-AU', {
             day: 'numeric',
             month: 'short',
             year: 'numeric',
           })}{' '}
           -{' '}
-          {value.end.toLocaleDateString('en-AU', {
+          {value.end.toLocaleDateString(locale === 'id' ? 'id-ID' : 'en-AU', {
             day: 'numeric',
             month: 'short',
             year: 'numeric',

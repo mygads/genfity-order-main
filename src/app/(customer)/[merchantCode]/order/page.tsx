@@ -12,6 +12,8 @@ interface OrderPageProps {
   }>;
   searchParams: Promise<{
     mode?: string;
+    flow?: string;
+    scheduled?: string;
   }>;
 }
 
@@ -33,6 +35,7 @@ interface MerchantInfo {
   currency: string;
   enableTax: boolean;
   taxPercentage: number;
+  requireTableNumberForDineIn?: boolean;
   openingHours: Array<{
     id: string;
     merchantId: string;
@@ -136,7 +139,7 @@ async function getInitialData(merchantCode: string): Promise<InitialData> {
  */
 export default async function OrderPage({ params, searchParams }: OrderPageProps) {
   const { merchantCode } = await params;
-  const { mode = 'takeaway' } = await searchParams;
+  const { mode = 'takeaway', flow, scheduled } = await searchParams;
 
   // Fetch initial data server-side (ISR cached)
   const initialData = await getInitialData(merchantCode);
@@ -151,6 +154,8 @@ export default async function OrderPage({ params, searchParams }: OrderPageProps
       <OrderClientPage
         merchantCode={merchantCode}
         mode={mode}
+        flow={flow}
+        scheduled={scheduled}
         initialMerchant={initialData.merchant}
         initialCategories={initialData.categories}
         initialMenus={initialData.menus}

@@ -2,9 +2,16 @@
 
 import { ArrowLeft, Search, Menu, User } from 'lucide-react';
 import { HiUserGroup } from 'react-icons/hi2';
+import { FaUsers } from 'react-icons/fa';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { getCustomerAuth } from '@/lib/utils/localStorage';
 import { useState, useEffect } from 'react';
+
+type ReservationSummary = {
+  partySize: number;
+  reservationDate: string;
+  reservationTime: string;
+};
 
 interface OrderPageHeaderProps {
   merchantName: string;
@@ -12,6 +19,7 @@ interface OrderPageHeaderProps {
   isSticky: boolean;
   onBackClick: () => void;
   tableNumber?: string | null;
+  reservationSummary?: ReservationSummary | null;
   mode?: 'dinein' | 'takeaway' | 'delivery';
   showTableBadge?: boolean;
   onSearchClick?: () => void;
@@ -38,6 +46,7 @@ export default function OrderPageHeader({
   isSticky,
   onBackClick,
   tableNumber,
+  reservationSummary,
   mode,
   showTableBadge = false,
   onSearchClick,
@@ -58,8 +67,8 @@ export default function OrderPageHeader({
     setIsLoggedIn(auth !== null);
   }, []);
 
-  // Determine if we should show table number (dine-in with table number and sticky)
-  const showTableNum = isSticky && mode === 'dinein' && tableNumber && showTableBadge;
+  const showTopInfoBar = Boolean(isSticky && mode === 'dinein' && showTableBadge && (tableNumber || reservationSummary));
+  const topInfoKind: 'table' | 'reservation' | null = tableNumber ? 'table' : reservationSummary ? 'reservation' : null;
 
   const handleProfileClick = () => {
     router.push(`/${merchantCode}/profile?ref=${encodeURIComponent(`/${merchantCode}/order?mode=${currentMode}`)}`);
@@ -82,9 +91,9 @@ export default function OrderPageHeader({
   return (
     <>
       {/* Sticky Table Number Bar - Appears above header when scrolled (Burjo style) */}
-      {showTableNum && (
+      {showTopInfoBar && topInfoKind && (
         <div
-          className="fixed top-0 left-0 right-0 z-[60] max-w-[500px] mx-auto"
+          className="fixed top-0 left-0 right-0 z-60 max-w-125 mx-auto"
           style={{
             backgroundColor: '#fff7ed',
             height: '40px',
@@ -97,7 +106,21 @@ export default function OrderPageHeader({
             color: '#212529',
           }}
         >
-          Table {tableNumber}
+          {topInfoKind === 'table' ? (
+            <>Table {tableNumber}</>
+          ) : (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                Reservation
+                <FaUsers className="h-4 w-4" />
+                <span style={{ fontWeight: 700 }}>{reservationSummary?.partySize}</span>
+              </span>
+              <span>•</span>
+              <span>{reservationSummary?.reservationDate}</span>
+              <span>•</span>
+              <span>{reservationSummary?.reservationTime}</span>
+            </span>
+          )}
         </div>
       )}
 
@@ -105,9 +128,9 @@ export default function OrderPageHeader({
       <header
         data-header
         data-main-header
-        className={`fixed left-0 right-0 z-50 max-w-[500px] mx-auto transition-all duration-300`}
+        className={`fixed left-0 right-0 z-50 max-w-125 mx-auto transition-all duration-300`}
         style={{
-          top: showTableNum ? '40px' : '0',
+          top: showTopInfoBar ? '40px' : '0',
           height: '55px',
           backgroundColor: isSticky ? '#ffffff' : 'transparent',
           boxShadow: isSticky ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
@@ -130,7 +153,7 @@ export default function OrderPageHeader({
             {/* Store Name - Only show when sticky */}
             {isSticky && (
               <h1
-                className="text-base font-bold text-[#212529] truncate max-w-[180px]"
+                className="text-base font-bold text-[#212529] truncate max-w-45"
                 style={{ fontFamily: 'Inter, sans-serif' }}
               >
                 {merchantName}

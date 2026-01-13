@@ -56,6 +56,17 @@ export function customerTrackUrl(
   return `/${normalized}/track/${encodedOrderNumber}${buildQuery({ mode, ref, back, ...rest })}`;
 }
 
+export function customerReservationTrackUrl(
+  merchantCode: string,
+  reservationId: string,
+  options: { ref?: string; back?: string } & QueryParams = {}
+): string {
+  const normalized = normalizeMerchantCode(merchantCode);
+  const encodedReservationId = encodeURIComponent(reservationId);
+  const { ref, back, ...rest } = options;
+  return `/${normalized}/track/reservation/${encodedReservationId}${buildQuery({ ref, back, ...rest })}`;
+}
+
 export function customerProfileUrl(
   merchantCode: string,
   options: { mode?: CustomerOrderMode; ref?: string } & QueryParams = {}

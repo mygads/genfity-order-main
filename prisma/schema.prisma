@@ -290,6 +290,7 @@ model Customer {
   lastOrderAt         DateTime?         @map("last_order_at") @db.Timestamptz(6)
   
   orders              Order[]
+  reservations        Reservation[]
   sessions            CustomerSession[]
   favorites           CustomerFavorite[]
   groupOrderParticipations GroupOrderParticipant[]
@@ -388,7 +389,7 @@ model Merchant {
   isOpen                 Boolean               @default(true) @map("is_open")
   isManualOverride       Boolean               @default(false) @map("is_manual_override") // When true, isOpen overrides schedule
   isDineInEnabled        Boolean               @default(true) @map("is_dine_in_enabled")
-  isTakeawayEnabled      Boolean               @default(true) @map("is_takeaway_enabled")
+  isTakeawayEnabled      Boolean               @default(false) @map("is_takeaway_enabled")
   dineInLabel            String?               @map("dine_in_label")
   takeawayLabel          String?               @map("takeaway_label")
   deliveryLabel          String?               @map("delivery_label")
@@ -401,9 +402,19 @@ model Merchant {
   deliveryScheduleStart  String?               @map("delivery_schedule_start")
   deliveryScheduleEnd    String?               @map("delivery_schedule_end")
   totalTables            Int?                  @map("total_tables")
+  requireTableNumberForDineIn Boolean          @default(false) @map("require_table_number_for_dine_in")
   latitude               Decimal?              @db.Decimal(10, 8)
   longitude              Decimal?              @db.Decimal(11, 8)
   timezone               String                @default("Australia/Sydney")
+
+  // Reservations
+  isReservationEnabled       Boolean            @default(false) @map("is_reservation_enabled")
+  reservationMenuRequired    Boolean            @default(false) @map("reservation_menu_required")
+  reservationMinItemCount    Int                @default(0) @map("reservation_min_item_count")
+
+  // Scheduled Orders (pickup/delivery scheduled time)
+  // Same-day in merchant timezone; enforced in /api/public/orders
+  isScheduledOrderEnabled    Boolean            @default(false) @map("is_scheduled_order_enabled")
 
   // Delivery settings (default OFF)
   isDeliveryEnabled          Boolean              @default(false) @map("is_delivery_enabled")
@@ -421,6 +432,7 @@ model Merchant {
   specialHours           MerchantSpecialHour[]
   merchantUsers          MerchantUser[]
   orders                 Order[]
+  reservations           Reservation[]
   deliveryZones          MerchantDeliveryZone[]
   menuBooks              MenuBook[]
   specialPrices          SpecialPrice[]
@@ -443,6 +455,10 @@ model Merchant {
   
   // Receipt Template Settings (JSON field with customization options)
   receiptSettings        Json?                 @map("receipt_settings") @db.JsonB
+
+  // Feature flags (structured JSON) for safe onboarding of new features
+  // Example: { "reservations": { "enabled": true } }
+  features               Json?                 @map("features") @db.JsonB
 
   // Stock Alert Settings
   stockAlertEnabled         Boolean              @default(true) @map("stock_alert_enabled")
@@ -739,6 +755,14 @@ model Order {
   tableNumber          String?     @map("table_number")
   status               OrderStatus @default(PENDING)
 
+  // Scheduled Orders (same-day in merchant timezone)
+  isScheduled          Boolean     @default(false) @map("is_scheduled")
+  scheduledDate        String?     @map("scheduled_date") // YYYY-MM-DD (merchant timezone)
+  scheduledTime        String?     @map("scheduled_time") // HH:MM (merchant timezone)
+
+  // Stock is deducted immediately for normal orders, and at ACCEPTED for scheduled orders.
+  stockDeductedAt      DateTime?   @map("stock_deducted_at") @db.Timestamptz(6)
+
   // Delivery-specific fields (only used when orderType = DELIVERY)
   deliveryStatus        DeliveryStatus? @map("delivery_status")
   deliveryUnit          String?         @map("delivery_unit")
@@ -782,6 +806,7 @@ model Order {
   estimatedReadyAt     DateTime?   @map("estimated_ready_at") @db.Timestamptz(6)
   orderItems           OrderItem[]
   customer             Customer?   @relation(fields: [customerId], references: [id])
+  reservation          Reservation?
   merchant             Merchant    @relation(fields: [merchantId], references: [id], onDelete: Cascade)
   payment              Payment?
   groupOrderSession    GroupOrderSession?
@@ -794,9 +819,47 @@ model Order {
   @@index([status])
   @@index([placedAt])
   @@index([estimatedReadyAt])
+  @@index([isScheduled])
+  @@index([scheduledDate])
+  @@index([scheduledTime])
+  @@index([stockDeductedAt])
   @@index([deliveryDriverUserId])
   @@index([deliveryStatus])
   @@map("orders")
+}
+
+model Reservation {
+  id               BigInt            @id @default(autoincrement())
+  merchantId       BigInt            @map("merchant_id")
+  customerId       BigInt            @map("customer_id")
+  status           ReservationStatus @default(PENDING)
+  partySize        Int               @map("party_size")
+  reservationDate  String            @map("reservation_date") // YYYY-MM-DD (merchant timezone)
+  reservationTime  String            @map("reservation_time") // HH:MM (merchant timezone)
+  tableNumber      String?           @map("table_number")
+  notes            String?           @db.Text
+
+  // Optional preorder payload (items/addons) stored as JSON
+  preorder         Json?             @map("preorder") @db.JsonB
+
+  // If accepted, we create an Order and link it here.
+  orderId          BigInt?           @unique @map("order_id")
+
+  acceptedAt       DateTime?         @map("accepted_at") @db.Timestamptz(6)
+  cancelledAt      DateTime?         @map("cancelled_at") @db.Timestamptz(6)
+  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  merchant         Merchant          @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  customer         Customer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  order            Order?            @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([merchantId])
+  @@index([customerId])
+  @@index([status])
+  @@index([reservationDate])
+  @@index([reservationTime])
+  @@map("reservations")
 }
 
 model OrderItem {
@@ -1162,6 +1225,12 @@ enum OrderStatus {
   IN_PROGRESS
   READY
   COMPLETED
+  CANCELLED
+}
+
+enum ReservationStatus {
+  PENDING
+  ACCEPTED
   CANCELLED
 }
 

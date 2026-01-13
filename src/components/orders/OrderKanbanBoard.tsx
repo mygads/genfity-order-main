@@ -56,7 +56,8 @@ interface OrderKanbanBoardProps {
   onRefreshReady?: (refreshFn: () => void) => void;
 }
 
-const ACTIVE_STATUSES: OrderStatus[] = [
+const BOARD_STATUSES: OrderStatus[] = [
+  'CANCELLED',
   'PENDING',
   'ACCEPTED',
   'IN_PROGRESS',
@@ -207,7 +208,7 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
   });
 
   // Group orders by status
-  const ordersByStatus = ACTIVE_STATUSES.reduce((acc, status) => {
+  const ordersByStatus = BOARD_STATUSES.reduce((acc, status) => {
     acc[status] = filteredOrders.filter(order => order.status === status);
     return acc;
   }, {} as Record<OrderStatus, OrderListItem[]>);
@@ -233,7 +234,7 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
   const handleDragOver = (event: DragOverEvent) => {
     const overId = event.over ? String(event.over.id) : null;
     // Only set overId if it's a valid status column
-    if (overId && ACTIVE_STATUSES.includes(overId as OrderStatus)) {
+    if (overId && BOARD_STATUSES.includes(overId as OrderStatus)) {
       setOverId(overId);
     } else {
       setOverId(null);
@@ -254,7 +255,7 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
 
     // Check if the target is a valid status column
     // If not, it might be another order card - in that case, find the column it belongs to
-    if (!ACTIVE_STATUSES.includes(targetStatus as OrderStatus)) {
+    if (!BOARD_STATUSES.includes(targetStatus as OrderStatus)) {
       // The drop target is an order card, find which column it belongs to
       const targetOrder = orders.find(o => String(o.id) === targetStatus);
       if (targetOrder) {
@@ -455,7 +456,7 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
   }
 
   return (
-    <div>
+    <div className="h-full min-h-0">
       {/* Kanban Board */}
       <DndContext
         sensors={sensors}
@@ -464,28 +465,30 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {ACTIVE_STATUSES.map(status => {
-            const isInvalid = !!(activeId && !isValidDrop(activeId, status));
-            return (
-              <OrderColumn
-                key={status}
-                status={status}
-                orders={ordersByStatus[status] || []}
-                onOrderClick={(order) => onOrderClick?.(order)}
-                onStatusChange={handleStatusChange}
-                orderNumberDisplayMode={orderNumberDisplayMode}
-                isInvalidDropZone={isInvalid}
-                isOver={overId === status}
-                selectedOrders={selectedOrders}
-                bulkMode={bulkMode}
-                onToggleSelection={onToggleSelection}
-                onSelectAllInColumn={onSelectAllInColumn}
-                onDeselectAllInColumn={onDeselectAllInColumn}
-                currency={currency}
-              />
-            );
-          })}
+        <div className="h-full min-h-0 overflow-x-auto pb-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 min-w-350 h-full min-h-0">
+            {BOARD_STATUSES.map(status => {
+              const isInvalid = !!(activeId && !isValidDrop(activeId, status));
+              return (
+                <OrderColumn
+                  key={status}
+                  status={status}
+                  orders={ordersByStatus[status] || []}
+                  onOrderClick={(order) => onOrderClick?.(order)}
+                  onStatusChange={handleStatusChange}
+                  orderNumberDisplayMode={orderNumberDisplayMode}
+                  isInvalidDropZone={isInvalid}
+                  isOver={overId === status}
+                  selectedOrders={selectedOrders}
+                  bulkMode={bulkMode}
+                  onToggleSelection={onToggleSelection}
+                  onSelectAllInColumn={onSelectAllInColumn}
+                  onDeselectAllInColumn={onDeselectAllInColumn}
+                  currency={currency}
+                />
+              );
+            })}
+          </div>
         </div>
 
         <DragOverlay>

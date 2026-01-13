@@ -151,6 +151,23 @@ export async function GET(
     delete (serialized as any).adminNote;
     delete (serialized as any).kitchenNotes;
 
+    // If this order was created from a reservation, include reservation details
+    // (safe because tokenized access is already validated above).
+    const reservation = await prisma.reservation.findFirst({
+      where: { orderId: order.id },
+      select: {
+        status: true,
+        partySize: true,
+        reservationDate: true,
+        reservationTime: true,
+        tableNumber: true,
+      },
+    });
+
+    if (reservation) {
+      (serialized as any).reservation = reservation;
+    }
+
     return NextResponse.json({
       success: true,
       data: serialized,

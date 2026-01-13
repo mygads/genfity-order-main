@@ -39,6 +39,7 @@ interface OrderTabListViewProps {
 }
 
 const ACTIVE_STATUSES: OrderStatus[] = [
+  'CANCELLED',
   'PENDING',
   'ACCEPTED',
   'IN_PROGRESS',
@@ -67,6 +68,7 @@ export const OrderTabListView: React.FC<OrderTabListViewProps> = ({
   const [previousOrderCount, setPreviousOrderCount] = useState(0);
   const previousDataRef = useRef<string>('');
   const { showError } = useToast();
+  const [updatingOrders, setUpdatingOrders] = useState<Set<string>>(new Set());
 
   // Fetch orders
   const fetchOrders = useCallback(async () => {
@@ -134,9 +136,17 @@ export const OrderTabListView: React.FC<OrderTabListViewProps> = ({
 
   // Handle status change
   const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
+    if (updatingOrders.has(orderId)) return;
+
+    const previousOrders = orders;
+    setUpdatingOrders(prev => new Set(prev).add(orderId));
+
+    // Optimistic UI
+    setOrders(prev => prev.map(o => (String(o.id) === orderId ? { ...o, status: newStatus } : o)));
+
     try {
       const token = localStorage.getItem('accessToken');
-      if (!token) return;
+      if (!token) throw new Error('Authentication required');
 
       const response = await fetch(`/api/merchant/orders/${orderId}/status`, {
         method: 'PUT',
@@ -147,11 +157,26 @@ export const OrderTabListView: React.FC<OrderTabListViewProps> = ({
         body: JSON.stringify({ status: newStatus }),
       });
 
-      if (response.ok) {
-        await fetchOrders();
+      if (!response.ok) {
+        throw new Error('Failed to update order status');
       }
+
+      const json = await response.json();
+      if (!json?.success) {
+        throw new Error(json?.error || 'Failed to update order status');
+      }
+
+      await fetchOrders();
     } catch (error) {
       console.error('Error updating order status:', error);
+      setOrders(previousOrders);
+      showError(error instanceof Error ? error.message : 'Failed to update order', 'Update Failed');
+    } finally {
+      setUpdatingOrders(prev => {
+        const next = new Set(prev);
+        next.delete(orderId);
+        return next;
+      });
     }
   };
 
@@ -204,9 +229,9 @@ export const OrderTabListView: React.FC<OrderTabListViewProps> = ({
   const filteredOrders = getFilteredOrders();
 
   return (
-    <div className="space-y-6">
+    <div className="h-full min-h-0 flex flex-col gap-6">
       {/* Professional Tabs with Underline Indicator */}
-      <div className="border-b border-gray-200 dark:border-gray-800">
+      <div className="border-b border-gray-200 dark:border-gray-800 shrink-0">
         <div className="flex flex-wrap gap-1 -mb-px">
           {ACTIVE_STATUSES.map((status) => {
             const statusConfig = ORDER_STATUS_COLORS[status as keyof typeof ORDER_STATUS_COLORS];
@@ -259,7 +284,7 @@ export const OrderTabListView: React.FC<OrderTabListViewProps> = ({
       </div>
 
       {/* List Content with Container */}
-      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 p-4">
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 p-4 flex-1 min-h-0 overflow-y-auto">
         <div className="space-y-3">
           {filteredOrders.length === 0 ? (
             <div className="rounded-xl bg-white dark:bg-gray-900 border border-dashed border-gray-300 dark:border-gray-700 px-6 py-16 text-center">

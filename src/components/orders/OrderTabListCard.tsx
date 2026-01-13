@@ -8,7 +8,7 @@
 'use client';
 
 import React from 'react';
-import { FaUser, FaUtensils, FaShoppingBag, FaTruck, FaClock, FaCheckSquare, FaSquare, FaCheck, FaArrowRight } from 'react-icons/fa';
+import { FaUser, FaUtensils, FaShoppingBag, FaTruck, FaClock, FaCheckSquare, FaSquare, FaCheck, FaArrowRight, FaCalendarCheck, FaUsers } from 'react-icons/fa';
 import { ORDER_STATUS_COLORS, PAYMENT_STATUS_COLORS } from '@/lib/constants/orderConstants';
 import { formatDistanceToNow } from 'date-fns';
 import type { OrderListItem } from '@/lib/types/order';
@@ -151,10 +151,21 @@ export const OrderTabListCard: React.FC<OrderTabListCardProps> = ({
             </div>
 
             {/* Table Number or Takeaway */}
-            {order.orderType === 'DINE_IN' && order.tableNumber ? (
+            {order.reservation ? (
+              <div className="flex items-center gap-1.5" title="Reservation order">
+                <FaCalendarCheck className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                <span className="inline-flex items-center gap-1 text-sm font-semibold text-purple-700 dark:text-purple-300">
+                  <FaUsers className="h-3.5 w-3.5" />
+                  {order.reservation.partySize}
+                </span>
+                <span className="text-sm font-semibold text-purple-700 dark:text-purple-300">
+                  Table {order.tableNumber || order.reservation.tableNumber || '-'}
+                </span>
+              </div>
+            ) : order.orderType === 'DINE_IN' ? (
               <div className="flex items-center gap-1.5">
                 <FaUtensils className="h-3.5 w-3.5 text-brand-600 dark:text-brand-400" />
-                <span className="text-sm font-semibold text-brand-700 dark:text-brand-300">Table {order.tableNumber}</span>
+                <span className="text-sm font-semibold text-brand-700 dark:text-brand-300">Table {order.tableNumber || '-'}</span>
               </div>
             ) : order.orderType === 'DELIVERY' ? (
               <div className="flex items-center gap-1.5">

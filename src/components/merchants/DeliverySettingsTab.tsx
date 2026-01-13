@@ -531,9 +531,6 @@ export default function DeliverySettingsTab({
             >
               {formData.isDeliveryEnabled ? 'Enabled' : 'Disabled'}
             </span>
-            <span className="text-xs text-gray-500 dark:text-gray-400">
-              Toggle this in the Sales Modes tab
-            </span>
           </div>
         </div>
 

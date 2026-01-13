@@ -53,7 +53,11 @@ export default function ViewOrderPage() {
   const { t } = useTranslation();
 
   const merchantCode = params.merchantCode as string;
-  const mode = (searchParams.get('mode') || 'takeaway') as 'dinein' | 'takeaway';
+  const mode = (searchParams.get('mode') || 'takeaway') as 'dinein' | 'takeaway' | 'delivery';
+  const flow = searchParams.get('flow') || '';
+  const isReservationFlow = flow === 'reservation';
+  const scheduled = searchParams.get('scheduled') || '';
+  const isScheduledFlow = scheduled === '1' || scheduled === 'true';
   const isGroupOrderCheckout = searchParams.get('groupOrder') === 'true';
 
   const { cart, updateItem, removeItem, initializeCart, addItem } = useCart();
@@ -281,11 +285,29 @@ export default function ViewOrderPage() {
     if (cart && generalNotes.trim()) {
       console.log('General notes:', generalNotes.trim());
     }
+
+    if (isReservationFlow) {
+      const minItems = Number((contextMerchantInfo as unknown as { reservationMinItemCount?: number }).reservationMinItemCount ?? 0);
+      const requiresPreorder = (contextMerchantInfo as unknown as { reservationMenuRequired?: boolean }).reservationMenuRequired === true || minItems > 0;
+
+      const itemCount = (cart?.items || []).reduce((sum, item) => sum + (item.quantity || 0), 0);
+      if (requiresPreorder && itemCount === 0) {
+        alert(t('customer.reservation.preorderRequired') || 'Preorder is required for reservations.');
+        return;
+      }
+      if (minItems > 0 && itemCount < minItems) {
+        alert((t('customer.reservation.minItems') || 'Minimum items for reservation: {min}')
+          .replace('{min}', String(minItems)));
+        return;
+      }
+    }
+
+    const scheduledParam = isScheduledFlow ? '&scheduled=1' : '';
     if (isGroupOrderCheckout) {
       // For group order, go to payment with groupOrder flag
-      router.push(`/${merchantCode}/payment?mode=${mode}&groupOrder=true`);
+      router.push(`/${merchantCode}/payment?mode=${mode}&groupOrder=true${isReservationFlow ? '&flow=reservation' : ''}${scheduledParam}`);
     } else {
-      router.push(`/${merchantCode}/payment?mode=${mode}`);
+      router.push(`/${merchantCode}/payment?mode=${mode}${isReservationFlow ? '&flow=reservation' : ''}${scheduledParam}`);
     }
   };
 
@@ -932,7 +954,7 @@ export default function ViewOrderPage() {
               }}
             >
               {modeAvailability.canOrderForPickup
-                ? t('customer.cart.continueToPayment')
+                ? (isReservationFlow ? (t('customer.reservation.submit') || 'Continue') : t('customer.cart.continueToPayment'))
                 : 'Mode Unavailable'}
             </button>
           </div>

@@ -80,6 +80,7 @@ interface MerchantSettings {
   enablePackagingFee: boolean;
   packagingFeeAmount: number | null;
   totalTables: number | null;
+  requireTableNumberForDineIn: boolean;
 }
 
 interface POSMenuData {
@@ -547,6 +548,15 @@ export default function POSPage() {
   const menuItems = posData?.menuItems || [];
   const currency = merchantSettings?.currency || 'AUD';
 
+  const isTableNumberEnabled = orderType === 'DINE_IN' && merchantSettings?.requireTableNumberForDineIn === true;
+
+  useEffect(() => {
+    if (!isTableNumberEnabled) {
+      if (tableNumber) setTableNumber('');
+      if (showTableModal) setShowTableModal(false);
+    }
+  }, [isTableNumberEnabled, showTableModal, tableNumber]);
+
   // ========================================
   // HANDLERS
   // ========================================
@@ -685,6 +695,12 @@ export default function POSPage() {
   const handlePlaceOrder = useCallback(async () => {
     if (cartItems.length === 0) return;
 
+    if (isTableNumberEnabled && !tableNumber.trim()) {
+      showError(t('pos.tableNumberRequired') || 'Table number is required', t('common.error'));
+      setShowTableModal(true);
+      return;
+    }
+
     setIsPlacingOrder(true);
 
     // Build order items with names and prices for offline display
@@ -708,7 +724,7 @@ export default function POSPage() {
     if (!isOnline) {
       const pendingOrder: Omit<PendingOrder, 'id' | 'createdAt'> = {
         orderType,
-        tableNumber: tableNumber || undefined,
+        tableNumber: isTableNumberEnabled ? (tableNumber || undefined) : undefined,
         notes: orderNotes || undefined,
         customer: (customerInfo.name || customerInfo.phone || customerInfo.email)
           ? customerInfo
@@ -743,7 +759,7 @@ export default function POSPage() {
       // Build request body
       const requestBody = {
         orderType,
-        tableNumber: tableNumber || undefined,
+        tableNumber: isTableNumberEnabled ? (tableNumber || undefined) : undefined,
         notes: orderNotes || undefined,
         customer: (customerInfo.name || customerInfo.phone || customerInfo.email)
           ? customerInfo
@@ -835,7 +851,7 @@ export default function POSPage() {
       if (!navigator.onLine) {
         const pendingOrder: Omit<PendingOrder, 'id' | 'createdAt'> = {
           orderType,
-          tableNumber: tableNumber || undefined,
+          tableNumber: isTableNumberEnabled ? (tableNumber || undefined) : undefined,
           notes: orderNotes || undefined,
           customer: (customerInfo.name || customerInfo.phone || customerInfo.email)
             ? customerInfo
@@ -876,6 +892,7 @@ export default function POSPage() {
     showError,
     showWarning,
     isOnline,
+    isTableNumberEnabled,
     addPendingOrder,
     updatePendingOrder,
     editingPendingOfflineOrderId,
@@ -1256,8 +1273,21 @@ export default function POSPage() {
 
       {/* Main Content - Fixed height to prevent scrolling */}
       <div className="flex-1 flex min-h-0 overflow-hidden" style={{ contain: 'size layout' }}>
-        {/* Left Panel - Cart - Fixed width */}
-        <div className="w-80 lg:w-96 shrink-0 flex flex-col overflow-hidden border-r border-gray-200 dark:border-gray-700">
+        {/* Left Panel - Product Grid */}
+        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+          <POSProductGrid
+            categories={categories}
+            menuItems={menuItems}
+            currency={currency}
+            isLoading={posLoading}
+            onAddItem={handleAddItem}
+            gridColumns={gridColumns}
+            popularMenuIds={popularMenuIds}
+          />
+        </div>
+
+        {/* Right Panel - Cart - Fixed width */}
+        <div className="w-80 lg:w-96 shrink-0 flex flex-col overflow-hidden border-l border-gray-200 dark:border-gray-700">
           <POSCartPanel
             items={cartItems}
             orderType={orderType}
@@ -1265,6 +1295,7 @@ export default function POSPage() {
             orderNotes={orderNotes}
             customerInfo={customerInfo}
             currency={currency}
+            isTableNumberEnabled={isTableNumberEnabled}
             taxPercentage={merchantSettings?.taxPercentage || 0}
             serviceChargePercent={merchantSettings?.serviceChargePercent || 0}
             packagingFeeAmount={merchantSettings?.packagingFeeAmount || 0}
@@ -1275,7 +1306,9 @@ export default function POSPage() {
             onRemoveItem={handleRemoveItem}
             onEditItemNotes={handleEditItemNotes}
             onSetOrderType={setOrderType}
-            onSetTableNumber={() => setShowTableModal(true)}
+            onSetTableNumber={() => {
+              if (isTableNumberEnabled) setShowTableModal(true);
+            }}
             onSetOrderNotes={() => setShowOrderNotesModal(true)}
             onSetCustomerInfo={() => setShowCustomerModal(true)}
             onLookupCustomer={() => setShowCustomerLookup(true)}
@@ -1285,19 +1318,6 @@ export default function POSPage() {
             heldOrdersCount={heldOrders.length}
             onShowHeldOrders={() => setShowHeldOrdersPanel(true)}
             isPlacingOrder={isPlacingOrder}
-          />
-        </div>
-
-        {/* Right Panel - Product Grid */}
-        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-          <POSProductGrid
-            categories={categories}
-            menuItems={menuItems}
-            currency={currency}
-            isLoading={posLoading}
-            onAddItem={handleAddItem}
-            gridColumns={gridColumns}
-            popularMenuIds={popularMenuIds}
           />
         </div>
       </div>
@@ -1323,13 +1343,15 @@ export default function POSPage() {
         initialValue={customerInfo}
       />
 
-      <TableNumberModal
-        isOpen={showTableModal}
-        onClose={() => setShowTableModal(false)}
-        onConfirm={(num) => setTableNumber(num)}
-        initialValue={tableNumber}
-        totalTables={merchantSettings?.totalTables}
-      />
+      {isTableNumberEnabled ? (
+        <TableNumberModal
+          isOpen={showTableModal}
+          onClose={() => setShowTableModal(false)}
+          onConfirm={(num) => setTableNumber(num)}
+          initialValue={tableNumber}
+          totalTables={merchantSettings?.totalTables}
+        />
+      ) : null}
 
       <OrderNotesModal
         isOpen={showOrderNotesModal}

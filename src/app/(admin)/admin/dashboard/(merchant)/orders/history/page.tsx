@@ -6,8 +6,8 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { FaHistory } from 'react-icons/fa';
 import OrderHistoryTable from '@/components/orders/OrderHistoryTable';
 import { OrderDetailModal } from '@/components/orders/OrderDetailModal';
@@ -40,7 +40,25 @@ interface OrderData {
 // ===== MAIN PAGE =====
 
 export default function OrderHistoryPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-[calc(100vh-100px)] items-center justify-center bg-gray-50">
+          <div className="text-center">
+            <FaHistory className="mx-auto mb-3 h-10 w-10 text-gray-300" />
+            <div className="text-sm font-semibold text-gray-600">Loading...</div>
+          </div>
+        </div>
+      }
+    >
+      <OrderHistoryPageContent />
+    </Suspense>
+  );
+}
+
+function OrderHistoryPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useTranslation();
   const { showSuccess, showError } = useToast();
   const [loading, setLoading] = useState(true);
@@ -94,7 +112,7 @@ export default function OrderHistoryPage() {
         }
       );
 
-      if (!response.ok) throw new Error('Failed to fetch orders');
+      if (!response.ok) throw new Error(t('admin.history.error.fetchFailed'));
 
       const data = await response.json();
       if (data.success) {
@@ -103,19 +121,28 @@ export default function OrderHistoryPage() {
           total: data.total || data.data.length,
         });
       } else {
-        setError(data.error || 'Failed to load orders');
+        setError(data.error || t('admin.history.error.loadFailed'));
       }
     } catch (error) {
       console.error('Error fetching orders:', error);
-      setError('Failed to load order data');
+      setError(t('admin.history.error.loadFailed'));
     } finally {
       setLoading(false);
     }
-  }, [dateRange, router]);
+  }, [dateRange, router, t]);
 
   useEffect(() => {
     fetchOrders();
   }, [fetchOrders]);
+
+  // Deep-link support: /admin/dashboard/orders/history?orderId=...
+  useEffect(() => {
+    const orderId = searchParams.get('orderId');
+    if (orderId) {
+      setSelectedOrderId(String(orderId));
+      setIsModalOpen(true);
+    }
+  }, [searchParams]);
 
   const handleViewOrder = (orderId: string | number) => {
     setSelectedOrderId(String(orderId));
@@ -125,6 +152,10 @@ export default function OrderHistoryPage() {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedOrderId(null);
+    // Clear deep-link param so closing the modal doesn't immediately re-open it.
+    if (searchParams.get('orderId')) {
+      router.replace('/admin/dashboard/orders/history');
+    }
     // Refresh data after modal closes
     fetchOrders();
   };
@@ -141,7 +172,7 @@ export default function OrderHistoryPage() {
 
     const token = localStorage.getItem('accessToken');
     if (!token) {
-      throw new Error('Not authenticated');
+      throw new Error(t('admin.history.error.notAuthenticated'));
     }
 
     const response = await fetch(`/api/merchant/orders/${deleteOrderId}`, {
@@ -156,10 +187,10 @@ export default function OrderHistoryPage() {
     const data = await response.json();
 
     if (!data.success) {
-      throw new Error(data.message || 'Failed to delete order');
+      throw new Error(data.message || t('admin.history.error.deleteFailed'));
     }
 
-    showSuccess('Order deleted successfully');
+    showSuccess(t('admin.history.deleteSuccess'));
     setIsDeleteModalOpen(false);
     setDeleteOrderId(null);
     setDeleteOrderNumber(null);
@@ -184,13 +215,13 @@ export default function OrderHistoryPage() {
       });
       
       if (!response.ok) {
-        showError(t('admin.history.printFailed') || 'Failed to load order');
+        showError(t('admin.history.error.orderLoadFailed'));
         return;
       }
 
       const data = await response.json();
       if (!data.success) {
-        showError(data.message || 'Failed to load order');
+        showError(data.message || t('admin.history.error.orderLoadFailed'));
         return;
       }
 
@@ -286,25 +317,23 @@ export default function OrderHistoryPage() {
         language,
       });
 
-      showSuccess(t('admin.history.printSuccess') || 'Receipt printed');
+      showSuccess(t('admin.history.printSuccess'));
     } catch (error) {
       console.error('Print receipt error:', error);
-      showError(t('admin.history.printFailed') || 'Failed to print receipt');
+      showError(t('admin.history.printFailed'));
     }
   };
 
   return (
-    <div data-tutorial="order-history-page">
-      {/* Title Section */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t("admin.history.title")}</h1>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
-          {t("admin.history.subtitle")}
-        </p>
+    <div data-tutorial="order-history-page" className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6">
+      <div className="mb-5 flex items-start justify-between gap-4">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">{t('admin.history.title')}</h3>
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{t('admin.history.subtitle')}</p>
+        </div>
       </div>
 
-      {/* Date Range Filter */}
-      <div data-tutorial="history-date-filter" className="mb-6">
+      <div data-tutorial="history-date-filter" className="mb-5">
         <DateRangeFilter value={dateRange} onChange={setDateRange} />
       </div>
 

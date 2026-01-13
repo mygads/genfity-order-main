@@ -20,14 +20,16 @@ import { useCart } from '@/context/CartContext';
 import type { CartItem } from '@/context/CartContext';
 import OutletInfoModal from '@/components/customer/OutletInfoModal';
 import { CustomerOrderSkeleton } from '@/components/common/SkeletonLoaders';
-import { getTableNumber, saveTableNumber } from '@/lib/utils/localStorage';
+import { clearTableNumber, getReservationDetails, getTableNumber, saveTableNumber } from '@/lib/utils/localStorage';
 import TableNumberModal from '@/components/customer/TableNumberModal';
+import ReservationDetailsModal, { type ReservationDetails } from '@/components/customer/ReservationDetailsModal';
 import ModeUnavailableModal from '@/components/modals/ModeUnavailableModal';
 import ModeClosingBanner from '@/components/customer/ModeClosingBanner';
 import { extractAddonDataFromMenus } from '@/lib/utils/addonExtractor';
 import { throttle } from '@/lib/utils/throttle';
 import { useStoreStatus } from '@/hooks/useStoreStatus';
 import { useTranslation, tOr } from '@/lib/i18n/useTranslation';
+import { FaUsers } from 'react-icons/fa';
 import GroupSessionBanner from '@/components/customer/GroupSessionBanner';
 import GroupDashboard from '@/components/customer/GroupDashboard';
 import CreateGroupModal from '@/components/customer/CreateGroupModal';
@@ -111,6 +113,7 @@ interface MerchantInfo {
   isDineInEnabled?: boolean;
   isTakeawayEnabled?: boolean;
   isDeliveryEnabled?: boolean;
+  requireTableNumberForDineIn?: boolean;
   latitude?: string | number | null;
   longitude?: string | number | null;
   dineInLabel?: string | null; // Custom label for Dine In button
@@ -128,6 +131,8 @@ interface MerchantInfo {
 interface OrderClientPageProps {
   merchantCode: string;
   mode: string;
+  flow?: string;
+  scheduled?: string;
   initialMerchant: MerchantInfo | null;
   initialCategories: Category[];
   initialMenus: MenuItem[];
@@ -147,12 +152,18 @@ interface OrderClientPageProps {
 export default function OrderClientPage({
   merchantCode,
   mode,
+  flow,
+  scheduled,
   initialMerchant,
   initialCategories,
   initialMenus,
 }: OrderClientPageProps) {
   const router = useRouter();
   const { t } = useTranslation();
+  const urlSearchParams = useSearchParams();
+
+  const isReservationFlow = flow === 'reservation';
+  const isScheduledFlow = (scheduled === '1' || scheduled === 'true') || (urlSearchParams.get('scheduled') === '1' || urlSearchParams.get('scheduled') === 'true');
 
   // Use real-time store status hook (fetches from API, not cached ISR data)
   const {
@@ -198,6 +209,31 @@ export default function OrderClientPage({
   const [error, setError] = useState<string | null>(null);
   const [showTableModal, setShowTableModal] = useState(false); // Table number modal state
   const [showOutletInfo, setShowOutletInfo] = useState(false); // Outlet info modal state
+
+  const isTableNumberEnabled = normalizedMode === 'dinein' && merchantInfo?.requireTableNumberForDineIn === true;
+
+  // Reservation required details (party/date/time)
+  const [showReservationDetailsModal, setShowReservationDetailsModal] = useState(false);
+  const [reservationDetails, setReservationDetails] = useState<ReservationDetails | null>(null);
+
+  useEffect(() => {
+    if (!isReservationFlow) return;
+    const saved = getReservationDetails(merchantCode);
+    if (saved) {
+      setReservationDetails({
+        partySize: saved.partySize,
+        reservationDate: saved.reservationDate,
+        reservationTime: saved.reservationTime,
+      });
+    }
+    // Same behavior as table-number: always show the modal again on refresh/back.
+    setShowReservationDetailsModal(true);
+  }, [isReservationFlow, merchantCode]);
+
+  const hasTopInfoCard = normalizedMode === 'dinein' && (
+    (isTableNumberEnabled && Boolean(tableNumber) && !isReservationFlow && !isScheduledFlow) ||
+    (isReservationFlow && Boolean(reservationDetails))
+  );
   const [showModeUnavailableModal, setShowModeUnavailableModal] = useState(false); // Mode unavailable modal
   const [isSticky, setIsSticky] = useState(false); // Track if header should be sticky
   const [isCategoryTabsSticky, setIsCategoryTabsSticky] = useState(false); // Track if category tabs should be sticky
@@ -348,7 +384,13 @@ export default function OrderClientPage({
     });
 
     if (next) {
-      router.replace(`/${merchantCode}/order?mode=${next}`);
+      const params = new URLSearchParams(window.location.search);
+      params.set('mode', next);
+      if (isReservationFlow) params.set('flow', 'reservation');
+      else params.delete('flow');
+      if (isScheduledFlow) params.set('scheduled', '1');
+      else params.delete('scheduled');
+      router.replace(`/${merchantCode}/order?${params.toString()}`);
     }
   };
 
@@ -362,6 +404,21 @@ export default function OrderClientPage({
   // ========================================
   useEffect(() => {
     if (normalizedMode !== 'dinein') return;
+
+    // Merchant does not use table numbers for dine-in.
+    if (!isTableNumberEnabled) {
+      setShowTableModal(false);
+      setTableNumber(null);
+      clearTableNumber(merchantCode);
+      return;
+    }
+
+    // Reservation / scheduled dine-in: table number is entered by cashier/admin.
+    if (isReservationFlow || isScheduledFlow) {
+      setShowTableModal(false);
+      setTableNumber(null);
+      return;
+    }
 
     const params = new URLSearchParams(window.location.search);
     const tablenoFromUrl = params.get('tableno');
@@ -388,7 +445,7 @@ export default function OrderClientPage({
     if (tableData?.tableNumber) {
       setTableNumber(tableData.tableNumber);
     }
-  }, [merchantCode, normalizedMode, router]);
+  }, [merchantCode, normalizedMode, router, isReservationFlow, isScheduledFlow, isTableNumberEnabled]);
 
   // ========================================
   // Handle Outlet Info Modal via URL
@@ -537,8 +594,8 @@ export default function OrderClientPage({
 
     // ✅ THROTTLED: Scroll handler with 100ms throttle for better performance
     const handleScroll = throttle(() => {
-      // Header height is 55px + optional 40px table bar
-      const stickyHeaderHeight = normalizedMode === 'dinein' && tableNumber ? 95 : 55;
+      // Header height is 55px + optional 40px info bar (table number OR reservation summary)
+      const stickyHeaderHeight = hasTopInfoCard ? 95 : 55;
       // Category tabs are 48px when sticky
       const totalStickyHeight = stickyHeaderHeight + 48;
 
@@ -625,7 +682,7 @@ export default function OrderClientPage({
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('resize', updateHeaderHeight);
     };
-  }, [mode, tableNumber, selectedCategory, activeScrollTab, categories]);
+  }, [mode, tableNumber, selectedCategory, activeScrollTab, categories, isReservationFlow, isScheduledFlow]);
 
   // ✅ MEMOIZED: Filter items by selected category
   const displayedItems = useMemo(() => {
@@ -732,6 +789,7 @@ export default function OrderClientPage({
         merchantLogo={merchantInfo?.logoUrl || null}
         isSticky={isSticky}
         tableNumber={tableNumber}
+        reservationSummary={isReservationFlow ? reservationDetails : null}
         mode={normalizedMode}
         showTableBadge={showTableBadge}
         onBackClick={() => {
@@ -816,10 +874,49 @@ export default function OrderClientPage({
               )}
             </div>
 
-            {/* Table Number (Dinein Only) - No divider between components like Burjo */}
-            {mode === 'dinein' && tableNumber && (
+            {/* Dine-in Info Card (Table Number OR Reservation Summary) */}
+            {mode === 'dinein' && hasTopInfoCard && (
               <div className={`px-4 my-2 relative z-10 ${!storeOpen ? 'opacity-50' : ''}`} data-table-number-card>
-                <TableNumberCard tableNumber={tableNumber} />
+                {isReservationFlow && reservationDetails ? (
+                  <div
+                    className="text-center cursor-pointer"
+                    onClick={() => setShowReservationDetailsModal(true)}
+                    style={{
+                      backgroundColor: '#fff7ed',
+                      padding: '12px 16px',
+                      borderRadius: '16px 16px 0 0',
+                      fontFamily: 'Inter, sans-serif',
+                    }}
+                    role="button"
+                    aria-label="Edit reservation details"
+                  >
+                    <p
+                      style={{
+                        fontSize: '14px',
+                        fontWeight: 500,
+                        color: '#212529',
+                        margin: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        flexWrap: 'wrap',
+                      }}
+                    >
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                        {tOr(t, 'customer.reservationDetails.pillLabel', 'Reservation')}
+                        <FaUsers className="h-4 w-4" />
+                        <span style={{ fontWeight: 700 }}>{reservationDetails.partySize}</span>
+                      </span>
+                      <span>•</span>
+                      <span>{reservationDetails.reservationDate}</span>
+                      <span>•</span>
+                      <span>{reservationDetails.reservationTime}</span>
+                    </p>
+                  </div>
+                ) : (
+                  <TableNumberCard tableNumber={tableNumber as string} />
+                )}
               </div>
             )}
 
@@ -831,7 +928,7 @@ export default function OrderClientPage({
 
             {/* Placeholder spacer - shown when CategoryTabs is fixed to prevent content jump */}
             {isCategoryTabsSticky && (
-              <div className="h-[48px]" aria-hidden="true" />
+              <div className="h-12" aria-hidden="true" />
             )}
 
             {/* CategoryTabs - Always rendered, positioned based on its own sticky state */}
@@ -840,10 +937,10 @@ export default function OrderClientPage({
               className={`transition-all duration-300 ${isCategoryTabsSticky
                 ? 'fixed left-0 right-0 z-40'
                 : 'relative'
-                } max-w-[500px] mx-auto bg-white`}
+                } max-w-125 mx-auto bg-white`}
               style={{
                 top: isCategoryTabsSticky
-                  ? (mode === 'dinein' && tableNumber ? '95px' : '55px') // 55px header + optional 40px table bar
+                  ? (hasTopInfoCard ? '95px' : '55px') // 55px header + optional 40px info bar
                   : 'auto',
               }}
             >
@@ -858,7 +955,7 @@ export default function OrderClientPage({
                       setActiveScrollTab(categoryId);
 
                       // Since we're always in 'all' mode now, scroll to the section
-                      const stickyHeaderHeight = mode === 'dinein' && tableNumber ? 95 : 55;
+                      const stickyHeaderHeight = hasTopInfoCard ? 95 : 55;
                       const totalStickyHeight = stickyHeaderHeight + 48; // Header + tabs
                       const element = sectionRefs.current[categoryId];
 
@@ -872,7 +969,7 @@ export default function OrderClientPage({
                     }}
                   />
                 </div>
-                <div className="flex-shrink-0 ml-2">
+                <div className="shrink-0 ml-2">
                   <ViewModeToggle value={viewMode} onChange={setViewMode} />
                 </div>
               </div>
@@ -1076,7 +1173,15 @@ export default function OrderClientPage({
           FLOATING CART BUTTON
           Hidden when store is closed - prevents checkout attempt
       ======================================== */}
-      <FloatingCartButton merchantCode={merchantCode} mode={normalizedMode} storeOpen={storeOpen} />
+      <FloatingCartButton
+        merchantCode={merchantCode}
+        mode={normalizedMode}
+        flow={isReservationFlow ? 'reservation' : undefined}
+        scheduled={isScheduledFlow ? true : undefined}
+        storeOpen={storeOpen}
+      />
+
+      
       
       
 
@@ -1130,19 +1235,21 @@ export default function OrderClientPage({
       {/* ========================================
           TABLE NUMBER MODAL (Dinein Only)
       ======================================== */}
-      <TableNumberModal
-        merchantCode={merchantCode}
-        isOpen={showTableModal}
-        onClose={() => {
-          // Allow closing modal - user can cancel if they want
-          setShowTableModal(false);
-        }}
-        onConfirm={(number: string) => {
-          setTableNumber(number);
-          setShowTableModal(false);
-          console.log('✅ Table number confirmed:', number);
-        }}
-      />
+      {isTableNumberEnabled && (
+        <TableNumberModal
+          merchantCode={merchantCode}
+          isOpen={showTableModal}
+          onClose={() => {
+            // Allow closing modal - user can cancel if they want
+            setShowTableModal(false);
+          }}
+          onConfirm={(number: string) => {
+            setTableNumber(number);
+            setShowTableModal(false);
+            console.log('✅ Table number confirmed:', number);
+          }}
+        />
+      )}
 
       {/* ========================================
           OUTLET INFO MODAL
@@ -1214,7 +1321,20 @@ export default function OrderClientPage({
         currency={merchantInfo?.currency || 'AUD'}
         onModeChange={(newMode) => {
           // Update URL with new mode since mode is a prop from URL
-          router.replace(`/${merchantCode}/order?mode=${newMode}`);
+          const flowParam = isReservationFlow ? '&flow=reservation' : '';
+          const scheduledParam = isScheduledFlow ? '&scheduled=1' : '';
+          router.replace(`/${merchantCode}/order?mode=${newMode}${flowParam}${scheduledParam}`);
+        }}
+      />
+
+      {/* Required Reservation Details Modal */}
+      <ReservationDetailsModal
+        merchantCode={merchantCode}
+        merchantTimezone={merchantInfo?.timezone || 'Australia/Sydney'}
+        isOpen={showReservationDetailsModal}
+        onConfirm={(details) => {
+          setReservationDetails(details);
+          setShowReservationDetailsModal(false);
         }}
       />
 
@@ -1238,6 +1358,7 @@ export default function OrderClientPage({
           // Session is now active, header icon will update
         }}
         onNeedTableNumber={() => {
+          if (isReservationFlow || isScheduledFlow) return;
           // Close create modal and show table number modal
           setShowCreateGroupModal(false);
           setShowTableModal(true);

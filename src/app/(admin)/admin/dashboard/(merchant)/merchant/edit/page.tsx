@@ -49,6 +49,7 @@ interface MerchantFormData {
   // Sale mode settings
   isDineInEnabled: boolean;
   isTakeawayEnabled: boolean;
+  requireTableNumberForDineIn: boolean;
   dineInLabel: string;
   takeawayLabel: string;
   deliveryLabel: string;
@@ -59,6 +60,12 @@ interface MerchantFormData {
   deliveryScheduleStart: string;
   deliveryScheduleEnd: string;
   totalTables: number | null;
+  // Reservation settings
+  isReservationEnabled: boolean;
+  reservationMenuRequired: boolean;
+  reservationMinItemCount: number;
+  // Scheduled orders
+  isScheduledOrderEnabled: boolean;
   // Fee settings
   enableTax: boolean;
   taxPercentage: number;
@@ -84,11 +91,11 @@ const TAB_KEYS: Array<{ id: string; key: TranslationKeys }> = [
   { id: "basic", key: "admin.merchant.basicInfo" },
   { id: "location", key: "admin.merchant.location" },
   { id: "sale-modes", key: "admin.merchant.saleModes" },
-  { id: "table-settings", key: "admin.merchant.tableSetting" },
   { id: "delivery", key: "admin.merchant.delivery" },
   { id: "fees", key: "admin.merchant.feesCharges" },
   { id: "hours", key: "admin.merchant.openingHours" },
   { id: "receipt", key: "admin.merchant.customReceipt" },
+  { id: "table-settings", key: "admin.merchant.tableSetting" },
   { id: "pin", key: "admin.merchant.pin" },
 ];
 
@@ -124,6 +131,13 @@ export default function EditMerchantPage() {
   const [showPerDayModeSchedules, setShowPerDayModeSchedules] = useState(false);
   const [showSpecialHours, setShowSpecialHours] = useState(false);
 
+  // Reservations enable wizard
+  const [showReservationsWizard, setShowReservationsWizard] = useState(false);
+  const [reservationsWizardError, setReservationsWizardError] = useState<string>("");
+  const [reservationsWizardTotalTables, setReservationsWizardTotalTables] = useState<number>(0);
+  const [reservationsWizardRequirePreorder, setReservationsWizardRequirePreorder] = useState<boolean>(false);
+  const [reservationsWizardMinItems, setReservationsWizardMinItems] = useState<number>(0);
+
   // PIN state
   const [deletePin, setDeletePin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
@@ -155,7 +169,8 @@ export default function EditMerchantPage() {
     deliveryFeeMax: null,
     // Sale mode settings
     isDineInEnabled: true,
-    isTakeawayEnabled: true,
+    isTakeawayEnabled: false,
+    requireTableNumberForDineIn: false,
     dineInLabel: "",
     takeawayLabel: "",
     deliveryLabel: "",
@@ -166,6 +181,12 @@ export default function EditMerchantPage() {
     deliveryScheduleStart: "",
     deliveryScheduleEnd: "",
     totalTables: null,
+    // Reservation settings
+    isReservationEnabled: false,
+    reservationMenuRequired: false,
+    reservationMinItemCount: 0,
+    // Scheduled orders
+    isScheduledOrderEnabled: false,
     // Fee settings
     enableTax: false,
     taxPercentage: 0,
@@ -249,7 +270,8 @@ export default function EditMerchantPage() {
         deliveryFeeMax: merchant.deliveryFeeMax ? parseFloat(merchant.deliveryFeeMax) : null,
         // Sale mode settings
         isDineInEnabled: merchant.isDineInEnabled ?? true,
-        isTakeawayEnabled: merchant.isTakeawayEnabled ?? true,
+        isTakeawayEnabled: merchant.isTakeawayEnabled ?? false,
+        requireTableNumberForDineIn: merchant.requireTableNumberForDineIn ?? false,
         dineInLabel: merchant.dineInLabel || "",
         takeawayLabel: merchant.takeawayLabel || "",
         deliveryLabel: merchant.deliveryLabel || "",
@@ -260,6 +282,12 @@ export default function EditMerchantPage() {
         deliveryScheduleStart: merchant.deliveryScheduleStart || "",
         deliveryScheduleEnd: merchant.deliveryScheduleEnd || "",
         totalTables: merchant.totalTables ?? null,
+        // Reservation settings
+        isReservationEnabled: merchant.isReservationEnabled ?? false,
+        reservationMenuRequired: merchant.reservationMenuRequired ?? false,
+        reservationMinItemCount: Number(merchant.reservationMinItemCount ?? 0),
+        // Scheduled orders
+        isScheduledOrderEnabled: merchant.isScheduledOrderEnabled ?? false,
         // Fee settings
         enableTax: merchant.enableTax || false,
         taxPercentage: merchant.taxPercentage ? parseFloat(merchant.taxPercentage) : 0,
@@ -325,7 +353,8 @@ export default function EditMerchantPage() {
         deliveryFeeMin: merchant.deliveryFeeMin ? parseFloat(merchant.deliveryFeeMin) : null,
         deliveryFeeMax: merchant.deliveryFeeMax ? parseFloat(merchant.deliveryFeeMax) : null,
         isDineInEnabled: merchant.isDineInEnabled ?? true,
-        isTakeawayEnabled: merchant.isTakeawayEnabled ?? true,
+        isTakeawayEnabled: merchant.isTakeawayEnabled ?? false,
+        requireTableNumberForDineIn: merchant.requireTableNumberForDineIn ?? false,
         dineInLabel: merchant.dineInLabel || "",
         takeawayLabel: merchant.takeawayLabel || "",
         deliveryLabel: merchant.deliveryLabel || "",
@@ -336,6 +365,10 @@ export default function EditMerchantPage() {
         deliveryScheduleStart: merchant.deliveryScheduleStart || "",
         deliveryScheduleEnd: merchant.deliveryScheduleEnd || "",
         totalTables: merchant.totalTables ?? null,
+        isReservationEnabled: merchant.isReservationEnabled ?? false,
+        reservationMenuRequired: merchant.reservationMenuRequired ?? false,
+        reservationMinItemCount: Number(merchant.reservationMinItemCount ?? 0),
+        isScheduledOrderEnabled: merchant.isScheduledOrderEnabled ?? false,
         enableTax: merchant.enableTax || false,
         taxPercentage: merchant.taxPercentage ? parseFloat(merchant.taxPercentage) : 0,
         enableServiceCharge: merchant.enableServiceCharge || false,
@@ -385,6 +418,14 @@ export default function EditMerchantPage() {
       setPendingTab(null);
     }
     setShowUnsavedModal(false);
+  };
+
+  const discardChangesAndContinue = () => {
+    if (originalFormData) {
+      setFormData(originalFormData);
+    }
+    setOpeningHours(JSON.parse(JSON.stringify(originalOpeningHours)));
+    confirmTabChange();
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -501,6 +542,34 @@ export default function EditMerchantPage() {
     }
   };
 
+  const openReservationsWizard = () => {
+    setReservationsWizardError("");
+    setReservationsWizardRequirePreorder(Boolean(formData.reservationMenuRequired));
+    setReservationsWizardMinItems(Number(formData.reservationMinItemCount ?? 0));
+    setShowReservationsWizard(true);
+  };
+
+  const confirmEnableReservations = () => {
+    const requirePreorder = Boolean(reservationsWizardRequirePreorder);
+    let minItems = Math.floor(Number(reservationsWizardMinItems));
+    if (!Number.isFinite(minItems) || minItems < 0) minItems = 0;
+
+    // Keep reservation rules consistent
+    if (!requirePreorder) {
+      minItems = 0;
+    } else {
+      minItems = Math.max(1, minItems);
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      isReservationEnabled: true,
+      reservationMenuRequired: requirePreorder,
+      reservationMinItemCount: minItems,
+    }));
+    setShowReservationsWizard(false);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -522,6 +591,7 @@ export default function EditMerchantPage() {
         takeawayScheduleEnd: formData.takeawayScheduleEnd || null,
         deliveryScheduleStart: formData.deliveryScheduleStart || null,
         deliveryScheduleEnd: formData.deliveryScheduleEnd || null,
+        reservationMinItemCount: Number.isFinite(Number(formData.reservationMinItemCount)) ? Number(formData.reservationMinItemCount) : 0,
       };
 
       const merchantResponse = await fetch("/api/merchant/profile", {
@@ -790,9 +860,9 @@ export default function EditMerchantPage() {
       ) : null}
 
       <div>
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Choose modes</h3>
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('admin.merchantEdit.modes.chooseTitle')}</h3>
         <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-          At least one mode must be enabled.
+          {t('admin.merchantEdit.modes.chooseDescription')}
         </p>
       </div>
 
@@ -802,8 +872,8 @@ export default function EditMerchantPage() {
         <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">Dine In</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Allow customers to order for eating at your place</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">{t('admin.merchantEdit.modes.dineInTitle')}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{t('admin.merchantEdit.modes.dineInDesc')}</p>
             </div>
             <label className="relative inline-flex cursor-pointer items-center">
               <input
@@ -821,14 +891,38 @@ export default function EditMerchantPage() {
               <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
             </label>
           </div>
+
+          <div className="mt-4 border-t border-gray-200 pt-4 dark:border-gray-800">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className={`text-sm font-medium ${formData.isDineInEnabled ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'}`}>
+                  {tOr(t, 'admin.merchantEdit.modes.requireTableNumberTitle', 'Require table number')}
+                </p>
+                <p className={`text-xs ${formData.isDineInEnabled ? 'text-gray-500 dark:text-gray-400' : 'text-gray-400 dark:text-gray-600'}`}>
+                  {tOr(t, 'admin.merchantEdit.modes.requireTableNumberDesc', 'If enabled, customers/admin must provide a table number for Dine In orders.')}
+                </p>
+              </div>
+
+              <label className="relative inline-flex cursor-pointer items-center">
+                <input
+                  type="checkbox"
+                  checked={formData.requireTableNumberForDineIn}
+                  disabled={!formData.isDineInEnabled}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, requireTableNumberForDineIn: e.target.checked }))}
+                  className="peer sr-only"
+                />
+                <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-disabled:cursor-not-allowed peer-disabled:opacity-50 dark:bg-gray-700" />
+              </label>
+            </div>
+          </div>
         </div>
 
         {/* Takeaway Toggle */}
         <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">Takeaway / Pick Up</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Allow customers to order for takeaway</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">{t('admin.merchantEdit.orderModes.takeawayTitle')}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{t('admin.merchantEdit.orderModes.takeawayDesc')}</p>
             </div>
             <label className="relative inline-flex cursor-pointer items-center">
               <input
@@ -836,7 +930,7 @@ export default function EditMerchantPage() {
                 checked={formData.isTakeawayEnabled}
                 onChange={(e) => {
                   if (!e.target.checked && !formData.isDineInEnabled && !formData.isDeliveryEnabled) {
-                    showError("Error", "At least one sale mode must be enabled");
+                    showError(t('common.error'), t('admin.merchantEdit.orderModes.atLeastOneRequired'));
                     return;
                   }
                   setFormData(prev => ({ ...prev, isTakeawayEnabled: e.target.checked }));
@@ -852,8 +946,8 @@ export default function EditMerchantPage() {
         <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50 sm:col-span-2">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">Delivery</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Allow customers to order for delivery</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">{t('admin.merchantEdit.orderModes.deliveryTitle')}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{t('admin.merchantEdit.orderModes.deliveryDesc')}</p>
             </div>
             <label className="relative inline-flex cursor-pointer items-center">
               <input
@@ -863,11 +957,11 @@ export default function EditMerchantPage() {
                 onChange={(e) => {
                   const next = e.target.checked;
                   if (next && (formData.latitude === null || formData.longitude === null)) {
-                    showError('Error', 'Set merchant location first (Location tab) to enable delivery');
+                    showError(t('common.error'), t('admin.merchantEdit.orderModes.deliveryRequiresLocation'));
                     return;
                   }
                   if (!next && !formData.isDineInEnabled && !formData.isTakeawayEnabled) {
-                    showError('Error', 'At least one sale mode must be enabled');
+                    showError(t('common.error'), t('admin.merchantEdit.orderModes.atLeastOneRequired'));
                     return;
                   }
                   setFormData((prev) => ({ ...prev, isDeliveryEnabled: next }));
@@ -877,6 +971,95 @@ export default function EditMerchantPage() {
               <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-disabled:cursor-not-allowed peer-disabled:opacity-50 dark:bg-gray-700" />
             </label>
           </div>
+        </div>
+
+        {/* Scheduled Orders (feature) */}
+        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50 sm:col-span-2">
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">{t('admin.merchantEdit.scheduledOrders.title')}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{t('admin.merchantEdit.scheduledOrders.desc')}</p>
+            </div>
+            <label className="relative inline-flex cursor-pointer items-center">
+              <input
+                type="checkbox"
+                checked={formData.isScheduledOrderEnabled}
+                onChange={(e) => setFormData((prev) => ({ ...prev, isScheduledOrderEnabled: e.target.checked }))}
+                className="peer sr-only"
+              />
+              <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
+            </label>
+          </div>
+        </div>
+
+        {/* Reservations (feature) */}
+        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50 sm:col-span-2">
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">{t('admin.merchantEdit.reservations.title')}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{t('admin.merchantEdit.reservations.desc')}</p>
+            </div>
+            <label className="relative inline-flex cursor-pointer items-center">
+              <input
+                type="checkbox"
+                checked={formData.isReservationEnabled}
+                onChange={(e) => {
+                  const next = e.target.checked;
+                  if (next) {
+                    openReservationsWizard();
+                    return;
+                  }
+                  setFormData((prev) => ({ ...prev, isReservationEnabled: false }));
+                }}
+                className="peer sr-only"
+              />
+              <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
+            </label>
+          </div>
+
+          {formData.isReservationEnabled && (
+            <div className="grid grid-cols-1 gap-4">
+              <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">{t('admin.merchantEdit.reservations.requirePreorderTitle')}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{t('admin.merchantEdit.reservations.requirePreorderDesc')}</p>
+                  </div>
+                  <label className="relative inline-flex cursor-pointer items-center">
+                    <input
+                      type="checkbox"
+                      checked={formData.reservationMenuRequired}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, reservationMenuRequired: e.target.checked }))}
+                      className="peer sr-only"
+                    />
+                    <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
+                  </label>
+                </div>
+              </div>
+
+              {formData.reservationMenuRequired ? (
+                <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+                  <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">{t('admin.merchantEdit.reservations.minPreorderItemsLabel')}</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="99"
+                    value={formData.reservationMinItemCount ?? 1}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        reservationMinItemCount: e.target.value ? Math.max(1, parseInt(e.target.value, 10) || 1) : 1,
+                      }))
+                    }
+                    className="h-10 w-full max-w-[220px] rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                  />
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    {t('admin.merchantEdit.reservations.minPreorderItemsHelp')}
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          )}
         </div>
       </div>
 
@@ -1171,6 +1354,7 @@ export default function EditMerchantPage() {
             </div>
           </div>
         )}
+
       </div>
     </div>
   );
@@ -1925,6 +2109,81 @@ export default function EditMerchantPage() {
           </form>
         </div>
 
+            {/* Reservations Enable Wizard */}
+            {showReservationsWizard && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Enable Reservations</h3>
+                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                    Configure whether preorders are required. Table assignment happens when staff accepts a reservation.
+                  </p>
+
+                  {reservationsWizardError ? (
+                    <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-900/10 dark:text-red-300">
+                      {reservationsWizardError}
+                    </div>
+                  ) : null}
+
+                  <div className="mt-5 space-y-4">
+                    <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">Require preorder menu</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Require customers to select menu items when reserving.</p>
+                        </div>
+                        <label className="relative inline-flex cursor-pointer items-center">
+                          <input
+                            type="checkbox"
+                            checked={reservationsWizardRequirePreorder}
+                            onChange={(e) => setReservationsWizardRequirePreorder(e.target.checked)}
+                            className="peer sr-only"
+                          />
+                          <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
+                        </label>
+                      </div>
+
+                      {reservationsWizardRequirePreorder && (
+                        <div className="mt-4">
+                          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Minimum preorder items</label>
+                          <input
+                            type="number"
+                            min="1"
+                            max="99"
+                            value={reservationsWizardMinItems}
+                            onChange={(e) => setReservationsWizardMinItems(parseInt(e.target.value || '1', 10) || 1)}
+                            className="h-10 w-full max-w-[220px] rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                          />
+                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            If preorder is required, customers must select at least this many items.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mt-6 flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowReservationsWizard(false);
+                        setReservationsWizardError('');
+                      }}
+                      className="h-11 flex-1 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={confirmEnableReservations}
+                      className="h-11 flex-1 rounded-lg bg-brand-500 text-sm font-medium text-white hover:bg-brand-600"
+                    >
+                      Enable
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
         {/* Unsaved Changes Modal */}
         {showUnsavedModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -1946,7 +2205,7 @@ export default function EditMerchantPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={confirmTabChange}
+                  onClick={discardChangesAndContinue}
                   className="h-11 flex-1 rounded-lg bg-warning-500 text-sm font-medium text-white hover:bg-warning-600"
                 >
                   Discard & Continue

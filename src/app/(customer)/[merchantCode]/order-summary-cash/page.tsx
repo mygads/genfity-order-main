@@ -15,6 +15,7 @@ import { useCustomerPushNotifications } from '@/hooks/useCustomerPushNotificatio
 import { customerTrackUrl } from '@/lib/utils/customerRoutes';
 import { getPublicAppOrigin } from '@/lib/utils/publicAppOrigin';
 import { FaBell, FaCheck, FaCheckCircle, FaChevronDown, FaCopy, FaInfoCircle, FaMoneyBillWave, FaMotorcycle, FaQrcode, FaStickyNote, FaTimes } from 'react-icons/fa';
+import { formatPaymentMethodLabel, formatPaymentStatusLabel } from '@/lib/utils/paymentDisplay';
 
 // ✅ Order Summary Data Interface
 interface OrderSummaryData {
@@ -23,6 +24,8 @@ interface OrderSummaryData {
   merchantName: string;
   customerName: string;
   mode: OrderMode;
+  isScheduled?: boolean;
+  scheduledTime?: string | null;
   tableNumber: string | null;
   status: string;
   deliveryUnit?: string | null;
@@ -150,13 +153,13 @@ export default function OrderSummaryCashPage() {
   useEffect(() => {
     const loadData = async () => {
       if (!orderNumber) {
-        setError('Order number not found');
+        setError(t('customer.errors.orderNumberMissing'));
         setIsLoading(false);
         return;
       }
 
       if (!trackingToken) {
-        setError('Tracking token missing. Please open the link from checkout/receipt/email.');
+        setError(t('customer.errors.trackingTokenMissingLong'));
         setIsLoading(false);
         return;
       }
@@ -182,7 +185,7 @@ export default function OrderSummaryCashPage() {
         const data = await response.json();
 
         if (!response.ok) {
-          setError(data.message || 'Failed to load order');
+          setError(data.message || t('customer.errors.orderLoadFailed'));
           setIsLoading(false);
           return;
         }
@@ -234,6 +237,8 @@ export default function OrderSummaryCashPage() {
           merchantName: data.data.merchant?.name || data.data.merchantName,
           customerName: data.data.customerName,
           mode: data.data.orderType === 'DINE_IN' ? 'dinein' : data.data.orderType === 'TAKEAWAY' ? 'takeaway' : 'delivery',
+          isScheduled: Boolean((data.data as any).isScheduled),
+          scheduledTime: ((data.data as any).scheduledTime ?? null) as string | null,
           tableNumber: data.data.tableNumber,
           status: data.data.status,
           deliveryUnit: data.data.deliveryUnit ?? null,
@@ -273,7 +278,7 @@ export default function OrderSummaryCashPage() {
 
       } catch (err) {
         console.error('❌ Load order error:', err);
-        setError('Failed to load order');
+        setError(t('customer.errors.orderLoadFailed'));
       } finally {
         setIsLoading(false);
       }
@@ -385,6 +390,8 @@ export default function OrderSummaryCashPage() {
   // ========================================
   // SUCCESS STATE - ESB DESIGN
   // ========================================
+  const effectiveMode = order.mode || mode;
+
   return (
     <>
       {/* ========================================
@@ -439,12 +446,22 @@ export default function OrderSummaryCashPage() {
           <span className="text-gray-700">{t('customer.orderSummary.orderType')}</span>
           <div className="flex items-center gap-2">
             <span className="font-medium text-gray-900">
-              {mode === 'dinein'
+              {effectiveMode === 'dinein'
                 ? t('customer.mode.dineIn')
-                : mode === 'delivery'
+                : effectiveMode === 'delivery'
                   ? tOr('customer.mode.delivery', 'Delivery')
                   : t('customer.mode.pickUp')}
             </span>
+            {order.isScheduled && order.scheduledTime ? (
+              <span className="inline-flex items-center rounded-full border border-gray-200 bg-white/70 px-2 py-0.5 text-[11px] font-medium text-gray-700">
+                {(effectiveMode === 'delivery'
+                  ? tOr('customer.orderSummary.deliveryAt', 'Delivery at')
+                  : effectiveMode === 'dinein'
+                    ? tOr('customer.orderSummary.dineInAt', 'Dine-in at')
+                    : tOr('customer.orderSummary.pickupAt', 'Pickup at'))}{' '}
+                {order.scheduledTime}
+              </span>
+            ) : null}
             <FaCheckCircle style={{ width: '18px', height: '18px', color: '#1ca406' }} />
           </div>
         </div>
@@ -536,7 +553,7 @@ export default function OrderSummaryCashPage() {
               value={customerTrackUrl(merchantCode, order.orderNumber, {
                 token: trackingToken || undefined,
                 back: 'history',
-                mode,
+                mode: effectiveMode,
               })}
               size={350}
               level="H"
@@ -555,7 +572,7 @@ export default function OrderSummaryCashPage() {
                   const path = customerTrackUrl(merchantCode, order.orderNumber, {
                     token: trackingToken,
                     back: 'history',
-                    mode,
+                    mode: effectiveMode,
                   });
                   const url = `${getPublicAppOrigin('http://localhost:3000')}${path}`;
                   await navigator.clipboard.writeText(url);
@@ -584,7 +601,7 @@ export default function OrderSummaryCashPage() {
         ) : null}
 
         {/* Payment & Delivery Summary */}
-        <div className="mx-auto mb-3 w-full max-w-[420px] rounded-xl border border-gray-200 bg-white px-4 py-3">
+        <div className="mx-auto mb-3 w-full max-w-105 rounded-xl border border-gray-200 bg-white px-4 py-3">
           <div className="flex items-start gap-3">
             <div className="mt-0.5 text-[#f05a28]">
               {mode === 'delivery' ? <FaMotorcycle className="h-5 w-5" /> : <FaMoneyBillWave className="h-5 w-5" />}
@@ -600,7 +617,8 @@ export default function OrderSummaryCashPage() {
 
                 {mode === 'delivery' ? (
                   <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-700">
-                    {tOr('customer.orderSummary.paymentStatus', 'Status')}: {order?.payment?.status || order?.status || '-'}
+                    {tOr('customer.orderSummary.paymentStatus', 'Status')}:{' '}
+                    {formatPaymentStatusLabel(order?.payment?.status, { t }) || order?.status || '-'}
                   </span>
                 ) : null}
               </div>
@@ -608,12 +626,17 @@ export default function OrderSummaryCashPage() {
               {mode === 'delivery' ? (
                 <div className="mt-1 space-y-2">
                   <p className="text-xs leading-5 text-gray-600">
-                    {(order?.payment?.paymentMethod === 'CASH_ON_DELIVERY' || !order?.payment?.paymentMethod)
-                      ? tOr('customer.orderSummary.deliveryPayToDriver', 'Payment: Cash on delivery.')
-                      : tOr('customer.orderSummary.deliveryPaymentMethod', `Payment: ${order?.payment?.paymentMethod || '-'}`).replace(
-                          '{method}',
-                          String(order?.payment?.paymentMethod || '-')
-                        )}
+                    {tOr(
+                      'customer.orderSummary.deliveryPaymentMethod',
+                      'Payment: {method}'
+                    ).replace(
+                      '{method}',
+                      formatPaymentMethodLabel({
+                        orderType: 'DELIVERY',
+                        paymentStatus: order?.payment?.status,
+                        paymentMethod: order?.payment?.paymentMethod,
+                      }, { t })
+                    )}
                   </p>
 
                   {order?.deliveryAddress ? (
@@ -622,7 +645,7 @@ export default function OrderSummaryCashPage() {
                         <FaInfoCircle className="h-4 w-4" />
                         <span>{t('customer.delivery.address') || 'Delivery Address'}</span>
                       </div>
-                      <p className="mt-1 break-words text-xs leading-5 text-gray-800">
+                      <p className="mt-1 wrap-break-word text-xs leading-5 text-gray-800">
                         {order.deliveryUnit ? `${order.deliveryUnit}, ${order.deliveryAddress}` : order.deliveryAddress}
                       </p>
                     </div>
@@ -638,9 +661,9 @@ export default function OrderSummaryCashPage() {
         </div>
 
         {/* Notification Message - ESB Style with 2-line layout */}
-        <div className="mx-auto mb-3 mt-2 flex w-full max-w-[420px] items-start gap-2 rounded-lg bg-[#fef0c7] px-4 py-3">
+        <div className="mx-auto mb-3 mt-2 flex w-full max-w-105 items-start gap-2 rounded-lg bg-warning-100 px-4 py-3">
           <FaQrcode className="shrink-0" style={{ width: '20px', height: '20px', marginTop: '2px', color: '#dc6803' }} />
-          <p className="text-sm leading-5 text-[#1d2939]">
+          <p className="text-sm leading-5 text-gray-800">
             {mode === 'delivery'
               ? tOr('customer.orderSummary.deliveryQrInstruction', 'Save this QR to track your delivery status and driver updates.')
               : tOr('customer.orderSummary.showQRInstruction', 'Show the QR code or 7-digit order number to our cashier.')}
@@ -649,7 +672,7 @@ export default function OrderSummaryCashPage() {
 
         {/* ✅ Push Notification Prompt Banner */}
         {showPushPrompt && isPushSupported && !isPushSubscribed && (
-          <div className="mx-auto flex w-full max-w-[420px] animate-fade-in items-center gap-3 rounded-lg bg-[#e0f2fe] px-4 py-3">
+          <div className="mx-auto flex w-full max-w-105 animate-fade-in items-center gap-3 rounded-lg bg-blue-light-100 px-4 py-3">
             <FaBell className="shrink-0" style={{ width: '24px', height: '24px', color: '#0284c7' }} />
             <div className="flex-1">
               <p style={{ color: '#0c4a6e', fontWeight: 500, marginBottom: '2px' }}>

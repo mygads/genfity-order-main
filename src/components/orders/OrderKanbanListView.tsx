@@ -55,6 +55,7 @@ interface OrderKanbanListViewProps {
 }
 
 const ACTIVE_STATUSES: OrderStatus[] = [
+  'CANCELLED',
   'PENDING',
   'ACCEPTED',
   'IN_PROGRESS',
@@ -84,6 +85,7 @@ export const OrderKanbanListView: React.FC<OrderKanbanListViewProps> = ({
   const [previousOrderCount, setPreviousOrderCount] = useState(0);
   const previousDataRef = useRef<string>('');
   const { showError } = useToast();
+  const [updatingOrders, setUpdatingOrders] = useState<Set<string>>(new Set());
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -157,6 +159,51 @@ export const OrderKanbanListView: React.FC<OrderKanbanListViewProps> = ({
     }
   }, [onRefreshReady, fetchOrders]);
 
+  const updateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
+    if (updatingOrders.has(orderId)) return;
+
+    const previousOrders = orders;
+    setUpdatingOrders(prev => new Set(prev).add(orderId));
+
+    // Optimistic UI
+    setOrders(prev => prev.map(o => (String(o.id) === orderId ? { ...o, status: newStatus } : o)));
+
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) throw new Error('Authentication required');
+
+      const response = await fetch(`/api/merchant/orders/${orderId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update order status');
+      }
+
+      const json = await response.json();
+      if (!json?.success) {
+        throw new Error(json?.error || 'Failed to update order status');
+      }
+
+      await fetchOrders();
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      setOrders(previousOrders);
+      showError(error instanceof Error ? error.message : 'Failed to update order', 'Update Failed');
+    } finally {
+      setUpdatingOrders(prev => {
+        const next = new Set(prev);
+        next.delete(orderId);
+        return next;
+      });
+    }
+  };
+
   // Drag handlers
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(String(event.active.id));
@@ -180,49 +227,11 @@ export const OrderKanbanListView: React.FC<OrderKanbanListViewProps> = ({
 
     if (oldStatus === newStatus) return;
 
-    // Update order status via API
-    try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) return;
-
-      const response = await fetch(`/api/merchant/orders/${orderId}/status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      if (response.ok) {
-        // Refresh orders
-        await fetchOrders();
-      }
-    } catch (error) {
-      console.error('Error updating order status:', error);
-    }
+    await updateOrderStatus(orderId, newStatus);
   };
 
   const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
-    try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) return;
-
-      const response = await fetch(`/api/merchant/orders/${orderId}/status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      if (response.ok) {
-        await fetchOrders();
-      }
-    } catch (error) {
-      console.error('Error updating order status:', error);
-    }
+    await updateOrderStatus(orderId, newStatus);
   };
 
   // Filter orders by status
@@ -286,7 +295,8 @@ export const OrderKanbanListView: React.FC<OrderKanbanListViewProps> = ({
       <div
         ref={setNodeRef}
         className={`
-          flex flex-col gap-2 min-h-100 rounded-lg p-3 bg-white dark:bg-gray-900
+          flex flex-col gap-2 rounded-lg p-3 bg-white dark:bg-gray-900
+          flex-1 min-h-0 overflow-y-auto
           transition-all duration-200 border
           ${isInvalid
             ? 'border-2 border-dashed border-error-400 bg-error-50/50 dark:border-error-600 dark:bg-error-900/20'
@@ -314,13 +324,14 @@ export const OrderKanbanListView: React.FC<OrderKanbanListViewProps> = ({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-        {ACTIVE_STATUSES.map((status) => {
-          const statusOrders = getOrdersByStatus(status);
-          const statusConfig = ORDER_STATUS_COLORS[status as keyof typeof ORDER_STATUS_COLORS];
+      <div className="h-full min-h-0 overflow-x-auto pb-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 min-w-350 h-full min-h-0">
+          {ACTIVE_STATUSES.map((status) => {
+            const statusOrders = getOrdersByStatus(status);
+            const statusConfig = ORDER_STATUS_COLORS[status as keyof typeof ORDER_STATUS_COLORS];
 
-          return (
-            <div key={status} className="flex flex-col gap-3">
+            return (
+              <div key={status} className="flex flex-col gap-3 min-h-0">
               {/* Column Header */}
               <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800">
                 <div className="flex items-center gap-2">
@@ -364,8 +375,9 @@ export const OrderKanbanListView: React.FC<OrderKanbanListViewProps> = ({
                 </SortableContext>
               </DroppableColumn>
             </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
       {/* Drag Overlay */}

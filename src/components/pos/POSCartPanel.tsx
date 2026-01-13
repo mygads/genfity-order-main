@@ -57,6 +57,7 @@ interface POSCartPanelProps {
   items: CartItem[];
   orderType: 'DINE_IN' | 'TAKEAWAY';
   tableNumber?: string;
+  isTableNumberEnabled?: boolean;
   orderNotes?: string;
   customerInfo?: CustomerInfo;
   currency: string;
@@ -86,6 +87,7 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
   items,
   orderType,
   tableNumber,
+  isTableNumberEnabled = true,
   orderNotes,
   customerInfo,
   currency,
@@ -145,7 +147,7 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
               }`}>
               {orderType === 'DINE_IN' ? t('pos.dineIn') : t('pos.takeaway')}
             </span>
-            {tableNumber && (
+            {isTableNumberEnabled && tableNumber && (
               <span className="px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-full text-xs font-medium">
                 {t('pos.table')} {tableNumber}
               </span>
@@ -178,16 +180,18 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
         </div>
 
         <div className="flex gap-2 mt-3">
-          <button
-            onClick={onSetTableNumber}
-            className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5 ${tableNumber
-              ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-800'
-              : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-              }`}
-          >
-            <FaChair className="w-3 h-3" />
-            {tableNumber ? `${t('pos.table')} ${tableNumber}` : t('pos.addTable')}
-          </button>
+          {isTableNumberEnabled ? (
+            <button
+              onClick={onSetTableNumber}
+              className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5 ${tableNumber
+                ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-800'
+                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                }`}
+            >
+              <FaChair className="w-3 h-3" />
+              {tableNumber ? `${t('pos.table')} ${tableNumber}` : t('pos.addTable')}
+            </button>
+          ) : null}
 
           <div className={`flex-1 flex ${onLookupCustomer ? 'gap-1' : ''}`}>
             <button

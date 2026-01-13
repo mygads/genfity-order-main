@@ -12,7 +12,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import {
   FaCheckSquare,
   FaSquare,
@@ -25,6 +25,7 @@ import {
   FaExpand,
   FaCompress,
   FaSearch,
+  FaUserFriends,
 } from 'react-icons/fa';
 import { useContextualHint, CONTEXTUAL_HINTS, useClickHereHint, CLICK_HINTS } from '@/lib/tutorial';
 import { OrderKanbanBoard } from '@/components/orders/OrderKanbanBoard';
@@ -37,6 +38,8 @@ import type { OrderListItem } from '@/lib/types/order';
 import { useMerchant } from '@/context/MerchantContext';
 import { OrderStatus } from '@prisma/client';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import MerchantReservationsPanel from '@/components/reservations/MerchantReservationsPanel';
+import AdminPillTabs, { type AdminPillTabItem } from '@/components/common/AdminPillTabs';
 
 type ViewMode = 'kanban-card' | 'kanban-list' | 'tab-list';
 
@@ -62,11 +65,12 @@ export default function MerchantOrdersPage() {
  * Inner content component that uses useSearchParams
  */
 function MerchantOrdersPageContent() {
-  const _router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useTranslation();
   const { showHint } = useContextualHint();
   const { showClickHint } = useClickHereHint();
+
+  const [activeMainTab, setActiveMainTab] = useState<'orders' | 'reservations'>('orders');
 
   // State management
   const [viewMode, setViewMode] = useState<ViewMode>('kanban-card');
@@ -77,6 +81,29 @@ function MerchantOrdersPageContent() {
   const [loading, setLoading] = useState(true);
   const [displayMode, setDisplayMode] = useState<'normal' | 'clean' | 'fullscreen'>('normal');
   const [searchQuery, setSearchQuery] = useState('');
+  const [pendingReservationCount, setPendingReservationCount] = useState<number>(0);
+  const [activeReservationCount, setActiveReservationCount] = useState<number>(0);
+
+  const showReservationsTab = activeReservationCount > 0;
+
+  const mainTabItems: Array<AdminPillTabItem<'orders' | 'reservations'>> = [
+    {
+      id: 'orders',
+      label: t('admin.orders.title'),
+      color: 'primary',
+    },
+    ...(showReservationsTab
+      ? [
+          {
+            id: 'reservations',
+            label: t('admin.orders.reservationsTab'),
+            icon: <FaUserFriends className="h-3.5 w-3.5" />,
+            badge: pendingReservationCount,
+            color: 'amber',
+          } satisfies AdminPillTabItem<'orders' | 'reservations'>,
+        ]
+      : []),
+  ];
 
   // Track order ID from URL for auto-opening modal
   const [urlOrderId, setUrlOrderId] = useState<string | null>(null);
@@ -137,6 +164,52 @@ function MerchantOrdersPageContent() {
   useEffect(() => {
     fetchMerchantId();
   }, [fetchMerchantId]);
+
+  // Show Reservations tab only when there are active reservations (pending+accepted).
+  useEffect(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    if (!token) {
+      setPendingReservationCount(0);
+      setActiveReservationCount(0);
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchReservationCount = async () => {
+      try {
+        const res = await fetch('/api/merchant/reservations/count', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const json = await res.json();
+        const pending = Number(json?.data?.pending ?? 0);
+        const active = Number(json?.data?.active ?? 0);
+        if (!cancelled) {
+          setPendingReservationCount(Number.isFinite(pending) ? pending : 0);
+          setActiveReservationCount(Number.isFinite(active) ? active : 0);
+        }
+      } catch {
+        if (!cancelled) {
+          setPendingReservationCount(0);
+          setActiveReservationCount(0);
+        }
+      }
+    };
+
+    fetchReservationCount();
+    const timer = window.setInterval(fetchReservationCount, 15_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  // If active reservations are gone, ensure we don't stay on the reservations tab.
+  useEffect(() => {
+    if (activeReservationCount <= 0 && activeMainTab === 'reservations') {
+      setActiveMainTab('orders');
+    }
+  }, [activeReservationCount, activeMainTab]);
 
   // Handle display mode changes
   useEffect(() => {
@@ -284,7 +357,7 @@ function MerchantOrdersPageContent() {
   }
 
   return (
-    <div data-tutorial="orders-page" className={`${displayMode !== 'normal' ? 'fixed inset-0 z-40 overflow-hidden bg-white dark:bg-gray-950 flex flex-col' : 'flex flex-col h-[calc(100vh-100px)]'}`}>
+    <div data-tutorial="orders-page" className={`${displayMode !== 'normal' ? 'fixed inset-0 z-40 overflow-hidden bg-white dark:bg-gray-950 flex flex-col' : 'flex flex-col h-[calc(100vh-100px)] overflow-hidden'}`}>
       {/* Header - Always Sticky like Kitchen Display */}
       <div className={`sticky top-0 z-30 bg-white/95 backdrop-blur-sm dark:bg-gray-950/95 border-b border-gray-200 dark:border-gray-800 ${displayMode !== 'normal' ? 'px-6 pt-6 pb-4' : 'pb-4 -mx-6 px-6 pt-0'}`}>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -295,66 +368,79 @@ function MerchantOrdersPageContent() {
           </div>
 
           {/* Search Bar */}
-          <div data-tutorial="order-search" className="relative w-full lg:w-auto lg:min-w-75">
-            <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-              <FaSearch className="h-4 w-4 text-gray-400" />
+          {activeMainTab === 'orders' ? (
+            <div data-tutorial="order-search" className="relative w-full lg:w-auto lg:min-w-75">
+              <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                <FaSearch className="h-4 w-4 text-gray-400" />
+              </div>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t("admin.orders.searchPlaceholder")}
+                className="w-full h-11 pl-11 pr-10 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 placeholder-gray-400 shadow-sm focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:placeholder-gray-500 dark:focus:border-primary-500"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  <FaTimes className="h-3.5 w-3.5" />
+                </button>
+              )}
             </div>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t("admin.orders.searchPlaceholder")}
-              className="w-full h-11 pl-11 pr-10 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 placeholder-gray-400 shadow-sm focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:placeholder-gray-500 dark:focus:border-primary-500"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-              >
-                <FaTimes className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
+          ) : (
+            <div className="hidden lg:block" />
+          )}
 
           <div className="flex flex-wrap items-center gap-3">
+            <AdminPillTabs
+              activeId={activeMainTab}
+              onChange={setActiveMainTab}
+              items={mainTabItems}
+            />
+
             {/* View Mode Selector */}
-            <div data-tutorial="order-view-modes" className="flex items-center gap-1 rounded-lg border border-gray-200 bg-white p-1 dark:border-gray-800 dark:bg-gray-900">
-              <button
-                onClick={() => setViewMode('kanban-card')}
-                className={`flex h-8 items-center gap-2 rounded-md px-3 text-xs font-semibold transition-all ${viewMode === 'kanban-card'
-                  ? 'bg-primary-500 text-white shadow-sm'
-                  : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
-                  }`}
-                title="Kanban + Card View"
-              >
-                <FaTh className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">{t("admin.orders.viewCard")}</span>
-              </button>
-              <button
-                onClick={() => setViewMode('kanban-list')}
-                className={`flex h-8 items-center gap-2 rounded-md px-3 text-xs font-semibold transition-all ${viewMode === 'kanban-list'
-                  ? 'bg-primary-500 text-white shadow-sm'
-                  : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
-                  }`}
-                title="Kanban + List View"
-              >
-                <FaList className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">{t("admin.orders.viewList")}</span>
-              </button>
-              <button
-                onClick={() => setViewMode('tab-list')}
-                className={`flex h-8 items-center gap-2 rounded-md px-3 text-xs font-semibold transition-all ${viewMode === 'tab-list'
-                  ? 'bg-primary-500 text-white shadow-sm'
-                  : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
-                  }`}
-                title="Tab + List View"
-              >
-                <FaTags className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">{t("admin.orders.viewTabs")}</span>
-              </button>
-            </div>
+            {activeMainTab === 'orders' ? (
+              <div data-tutorial="order-view-modes" className="flex items-center gap-1 rounded-lg border border-gray-200 bg-white p-1 dark:border-gray-800 dark:bg-gray-900">
+                <button
+                  onClick={() => setViewMode('kanban-card')}
+                  className={`flex h-8 items-center gap-2 rounded-md px-3 text-xs font-semibold transition-all ${viewMode === 'kanban-card'
+                    ? 'bg-primary-500 text-white shadow-sm'
+                    : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
+                    }`}
+                  title={t('admin.orders.viewCardTitle')}
+                >
+                  <FaTh className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">{t("admin.orders.viewCard")}</span>
+                </button>
+                <button
+                  onClick={() => setViewMode('kanban-list')}
+                  className={`flex h-8 items-center gap-2 rounded-md px-3 text-xs font-semibold transition-all ${viewMode === 'kanban-list'
+                    ? 'bg-primary-500 text-white shadow-sm'
+                    : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
+                    }`}
+                  title={t('admin.orders.viewListTitle')}
+                >
+                  <FaList className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">{t("admin.orders.viewList")}</span>
+                </button>
+                <button
+                  onClick={() => setViewMode('tab-list')}
+                  className={`flex h-8 items-center gap-2 rounded-md px-3 text-xs font-semibold transition-all ${viewMode === 'tab-list'
+                    ? 'bg-primary-500 text-white shadow-sm'
+                    : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
+                    }`}
+                  title={t('admin.orders.viewTabsTitle')}
+                >
+                  <FaTags className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">{t("admin.orders.viewTabs")}</span>
+                </button>
+              </div>
+            ) : null}
 
             {/* Filter Toggle */}
+            {activeMainTab === 'orders' ? (
             <button
               data-tutorial="order-filters-btn"
               onClick={() => setShowFilters(!showFilters)}
@@ -366,8 +452,10 @@ function MerchantOrdersPageContent() {
               <FaFilter />
               <span className="hidden sm:inline">{t("admin.orders.filters")}</span>
             </button>
+            ) : null}
 
             {/* Bulk Mode Toggle */}
+            {activeMainTab === 'orders' ? (
             <button
               data-tutorial="order-bulk-mode"
               onClick={toggleBulkMode}
@@ -379,6 +467,7 @@ function MerchantOrdersPageContent() {
               {bulkMode ? <FaCheckSquare /> : <FaSquare />}
               <span className="hidden sm:inline">{t("admin.orders.bulkSelect")}</span>
             </button>
+            ) : null}
 
             {/* Progressive Display Mode: Normal → Clean → Fullscreen */}
             <button
@@ -430,142 +519,171 @@ function MerchantOrdersPageContent() {
         </div>
       </div>
 
-      {/* Content Area - with spacing from header */}
-      <div className={`flex-1 overflow-y-auto space-y-6 ${displayMode !== 'normal' ? 'px-6 pb-6 pt-6' : 'pt-6'}`}>
-        {/* Filters Section */}
-        {showFilters && (
-          <OrderFiltersComponent
-            filters={filters}
-            onChange={setFilters}
-            onReset={handleResetFilters}
-          />
-        )}
+      {/* Content Area */}
+      <div className={`flex-1 min-h-0 flex flex-col ${displayMode !== 'normal' ? 'px-6 pb-6 pt-6' : 'pt-6'}`}>
+        {activeMainTab === 'orders' ? (
+          <>
+            {/* Non-scroll controls (filters + bulk actions) */}
+            <div className="shrink-0 space-y-6">
+              {showFilters && (
+                <div className="max-h-[40vh] overflow-y-auto rounded-xl">
+                  <OrderFiltersComponent
+                    filters={filters}
+                    onChange={setFilters}
+                    onReset={handleResetFilters}
+                  />
+                </div>
+              )}
 
-        {/* Bulk Operations Bar */}
-        {bulkMode && selectedOrders.size > 0 && (
-          <div className="rounded-xl border border-primary-200 bg-primary-50 p-4 dark:border-primary-800 dark:bg-primary-900/20">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-semibold text-primary-700 dark:text-primary-400">
-                  {t("admin.orders.ordersSelected", { count: selectedOrders.size })}
-                </span>
-                <button
-                  onClick={() => setSelectedOrders(new Set())}
-                  className="flex h-8 items-center gap-1.5 rounded-lg border border-primary-300 bg-white px-3 text-xs font-medium text-primary-700 hover:bg-primary-50 dark:border-primary-700 dark:bg-primary-900 dark:text-primary-400 dark:hover:bg-primary-800"
-                >
-                  <FaTimes className="h-3 w-3" />
-                  {t("common.clear")}
-                </button>
-              </div>
+              {bulkMode && selectedOrders.size > 0 && (
+                <div className="rounded-xl border border-primary-200 bg-primary-50 p-4 dark:border-primary-800 dark:bg-primary-900/20">
+                  <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-semibold text-primary-700 dark:text-primary-400">
+                        {t("admin.orders.ordersSelected", { count: selectedOrders.size })}
+                      </span>
+                      <button
+                        onClick={() => setSelectedOrders(new Set())}
+                        className="flex h-8 items-center gap-1.5 rounded-lg border border-primary-300 bg-white px-3 text-xs font-medium text-primary-700 hover:bg-primary-50 dark:border-primary-700 dark:bg-primary-900 dark:text-primary-400 dark:hover:bg-primary-800"
+                      >
+                        <FaTimes className="h-3 w-3" />
+                        {t("common.clear")}
+                      </button>
+                    </div>
 
-              <div className="flex items-center gap-3">
-                <select
-                  value={bulkStatusUpdate}
-                  onChange={(e) => setBulkStatusUpdate(e.target.value as OrderStatus)}
-                  className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
-                >
-                  <option value="">{t("admin.orders.selectStatus")}</option>
-                  <option value="PENDING">{t("admin.status.pending")}</option>
-                  <option value="ACCEPTED">{t("admin.status.accepted")}</option>
-                  <option value="IN_PROGRESS">{t("admin.status.inProgress")}</option>
-                  <option value="READY">{t("admin.status.ready")}</option>
-                  <option value="COMPLETED">{t("admin.status.completed")}</option>
-                  <option value="CANCELLED">{t("admin.status.cancelled")}</option>
-                </select>
+                    <div className="flex items-center gap-3">
+                      <select
+                        value={bulkStatusUpdate}
+                        onChange={(e) => setBulkStatusUpdate(e.target.value as OrderStatus)}
+                        className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
+                      >
+                        <option value="">{t("admin.orders.selectStatus")}</option>
+                        <option value="PENDING">{t("admin.status.pending")}</option>
+                        <option value="ACCEPTED">{t("admin.status.accepted")}</option>
+                        <option value="IN_PROGRESS">{t("admin.status.inProgress")}</option>
+                        <option value="READY">{t("admin.status.ready")}</option>
+                        <option value="COMPLETED">{t("admin.status.completed")}</option>
+                        <option value="CANCELLED">{t("admin.status.cancelled")}</option>
+                      </select>
 
-                <button
-                  onClick={handleBulkStatusUpdate}
-                  disabled={!bulkStatusUpdate}
-                  className="h-9 rounded-lg bg-primary-500 px-4 text-sm font-semibold text-white hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-primary-600 dark:hover:bg-primary-700"
-                >
-                  {t("admin.orders.updateStatus")}
-                </button>
-              </div>
+                      <button
+                        onClick={handleBulkStatusUpdate}
+                        disabled={!bulkStatusUpdate}
+                        className="h-9 rounded-lg bg-primary-500 px-4 text-sm font-semibold text-white hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-primary-600 dark:hover:bg-primary-700"
+                      >
+                        {t("admin.orders.updateStatus")}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Scrollable body area */}
+            <div className="flex-1 min-h-0 overflow-hidden">
+              {merchantId && (
+                <div data-tutorial="order-kanban-board" className="h-full min-h-0">
+                  {viewMode === 'kanban-card' && (
+                    <OrderKanbanBoard
+                      merchantId={merchantId}
+                      autoRefresh={true}
+                      refreshInterval={1000}
+                      enableDragDrop={!bulkMode}
+                      onOrderClick={handleOrderClick}
+                      orderNumberDisplayMode="suffix"
+                      filters={filters}
+                      searchQuery={searchQuery}
+                      selectedOrders={selectedOrders}
+                      bulkMode={bulkMode}
+                      onToggleSelection={toggleOrderSelection}
+                      onSelectAllInColumn={selectAllInColumn}
+                      onDeselectAllInColumn={deselectAllInColumn}
+                      currency={merchantCurrency}
+                      onRefreshReady={(refreshFn) => {
+                        kanbanRefreshRef.current = refreshFn;
+                      }}
+                    />
+                  )}
+
+                  {viewMode === 'kanban-list' && (
+                    <div className="h-full min-h-0 overflow-hidden">
+                      <OrderKanbanListView
+                        merchantId={merchantId}
+                        autoRefresh={true}
+                        refreshInterval={1000}
+                        enableDragDrop={!bulkMode}
+                        onOrderClick={handleOrderClick}
+                        orderNumberDisplayMode="suffix"
+                        filters={filters}
+                        searchQuery={searchQuery}
+                        selectedOrders={selectedOrders}
+                        bulkMode={bulkMode}
+                        onToggleSelection={toggleOrderSelection}
+                        currency={merchantCurrency}
+                        onRefreshReady={(refreshFn) => {
+                          kanbanRefreshRef.current = refreshFn;
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {viewMode === 'tab-list' && (
+                    <div className="h-full min-h-0 overflow-hidden">
+                      <OrderTabListView
+                        merchantId={merchantId}
+                        autoRefresh={true}
+                        refreshInterval={1000}
+                        onOrderClick={handleOrderClick}
+                        orderNumberDisplayMode="suffix"
+                        filters={filters}
+                        searchQuery={searchQuery}
+                        selectedOrders={selectedOrders}
+                        bulkMode={bulkMode}
+                        onToggleSelection={toggleOrderSelection}
+                        currency={merchantCurrency}
+                        onRefreshReady={(refreshFn) => {
+                          kanbanRefreshRef.current = refreshFn;
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Order Detail Modal - handles both clicked orders and URL-triggered orders */}
+            {(selectedOrder || urlOrderId) && (
+              <OrderDetailModal
+                orderId={selectedOrder ? String(selectedOrder.id) : urlOrderId!}
+                isOpen={isModalOpen || !!urlOrderId}
+                onClose={() => {
+                  handleCloseModal();
+                  setUrlOrderId(null);
+                  // Clear the URL param without page reload
+                  window.history.replaceState({}, '', '/admin/dashboard/orders');
+                }}
+                onUpdate={handleOrderUpdate}
+                initialOrder={selectedOrder as unknown as import('@/lib/types/order').OrderWithDetails}
+                currency={merchantCurrency}
+              />
+            )}
+          </>
+        ) : (
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+              <MerchantReservationsPanel
+                embedded
+                onPendingCountChange={(pendingCount) => {
+                  setPendingReservationCount(pendingCount);
+                }}
+                onOrderCreated={(orderId) => {
+                  setActiveMainTab('orders');
+                  setUrlOrderId(orderId);
+                  kanbanRefreshRef.current?.();
+                }}
+              />
             </div>
           </div>
-        )}
-
-        {/* Order Views - Conditional Rendering Based on View Mode */}
-        {merchantId && (
-          <div data-tutorial="order-kanban-board">
-            {viewMode === 'kanban-card' && (
-              <OrderKanbanBoard
-                merchantId={merchantId}
-                autoRefresh={true}
-                refreshInterval={1000}
-                enableDragDrop={!bulkMode}
-                onOrderClick={handleOrderClick}
-                orderNumberDisplayMode="suffix"
-                filters={filters}
-                searchQuery={searchQuery}
-                selectedOrders={selectedOrders}
-                bulkMode={bulkMode}
-                onToggleSelection={toggleOrderSelection}
-                onSelectAllInColumn={selectAllInColumn}
-                onDeselectAllInColumn={deselectAllInColumn}
-                currency={merchantCurrency}
-                onRefreshReady={(refreshFn) => {
-                  kanbanRefreshRef.current = refreshFn;
-                }}
-              />
-            )}
-
-            {viewMode === 'kanban-list' && (
-              <OrderKanbanListView
-                merchantId={merchantId}
-                autoRefresh={true}
-                refreshInterval={1000}
-                enableDragDrop={!bulkMode}
-                onOrderClick={handleOrderClick}
-                orderNumberDisplayMode="suffix"
-                filters={filters}
-                searchQuery={searchQuery}
-                selectedOrders={selectedOrders}
-                bulkMode={bulkMode}
-                onToggleSelection={toggleOrderSelection}
-                currency={merchantCurrency}
-                onRefreshReady={(refreshFn) => {
-                  kanbanRefreshRef.current = refreshFn;
-                }}
-              />
-            )}
-
-            {viewMode === 'tab-list' && (
-              <OrderTabListView
-                merchantId={merchantId}
-                autoRefresh={true}
-                refreshInterval={1000}
-                onOrderClick={handleOrderClick}
-                orderNumberDisplayMode="suffix"
-                filters={filters}
-                searchQuery={searchQuery}
-                selectedOrders={selectedOrders}
-                bulkMode={bulkMode}
-                onToggleSelection={toggleOrderSelection}
-                currency={merchantCurrency}
-                onRefreshReady={(refreshFn) => {
-                  kanbanRefreshRef.current = refreshFn;
-                }}
-              />
-            )}
-          </div>
-        )}
-
-        {/* Order Detail Modal - handles both clicked orders and URL-triggered orders */}
-        {(selectedOrder || urlOrderId) && (
-          <OrderDetailModal
-            orderId={selectedOrder ? String(selectedOrder.id) : urlOrderId!}
-            isOpen={isModalOpen || !!urlOrderId}
-            onClose={() => {
-              handleCloseModal();
-              setUrlOrderId(null);
-              // Clear the URL param without page reload
-              window.history.replaceState({}, '', '/admin/dashboard/orders');
-            }}
-            onUpdate={handleOrderUpdate}
-            initialOrder={selectedOrder as unknown as import('@/lib/types/order').OrderWithDetails}
-            currency={merchantCurrency}
-          />
         )}
       </div>
     </div>

@@ -11,7 +11,7 @@ import PoweredByFooter from '@/components/common/PoweredByFooter';
 import { useStoreStatus } from '@/hooks/useStoreStatus';
 import { useToast } from '@/hooks/useToast';
 import { useTranslation, tOr } from '@/lib/i18n/useTranslation';
-import { FaMotorcycle, FaShoppingBag, FaUtensils } from 'react-icons/fa';
+import { FaCalendarAlt, FaMotorcycle, FaShoppingBag, FaUtensils } from 'react-icons/fa';
 
 interface OpeningHour {
     id: string;
@@ -33,6 +33,13 @@ interface MerchantData {
     bannerUrl?: string | null;
     deliveryLabel?: string | null;
     isDeliveryEnabled?: boolean;
+    // Scheduled orders
+    isScheduledOrderEnabled?: boolean;
+    // Reservations
+    isReservationEnabled?: boolean;
+    reservationMenuRequired?: boolean;
+    reservationMinItemCount?: number;
+    timezone?: string;
     latitude?: string | number | null;
     longitude?: string | number | null;
     openingHours: OpeningHour[];
@@ -58,6 +65,7 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
     const { t } = useTranslation();
     const [showOutletInfo, setShowOutletInfo] = useState(false);
     const [showLanguageModal, setShowLanguageModal] = useState(false);
+    const [showScheduledModal, setShowScheduledModal] = useState(false);
 
     // Use real-time store status hook (fetches from API, not cached ISR data)
     const {
@@ -86,6 +94,12 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
     const isDeliveryEnabled = merchant.isDeliveryEnabled === true;
     const isDeliveryAvailable = storeOpen && isDeliveryEnabled && merchantHasDeliveryCoords;
 
+    const isReservationEnabled = merchant.isReservationEnabled === true;
+    const reservationMinItemCount = Number(merchant.reservationMinItemCount ?? 0);
+    const reservationRequiresPreorder = merchant.reservationMenuRequired === true || reservationMinItemCount > 0;
+
+    const isScheduledOrderEnabled = merchant.isScheduledOrderEnabled === true;
+
     const resolvedDeliveryLabel = deliveryLabel || merchant.deliveryLabel || tOr(t, 'customer.mode.delivery', 'Delivery');
 
     const handleModeSelect = (selectedMode: 'dinein' | 'takeaway' | 'delivery') => {
@@ -99,23 +113,51 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
         if (selectedMode === 'dinein' && !isDineInAvailable) {
             showToast({
                 variant: 'warning',
-                title: 'Mode Unavailable',
-                message: `${dineInLabel} is currently unavailable`,
+                title: tOr(t, 'customer.toast.modeUnavailableTitle', 'Mode Unavailable'),
+                message: tOr(t, 'customer.toast.modeUnavailableMessage', '{mode} is currently unavailable', { mode: dineInLabel }),
                 duration: 4000
             });
         } else if (selectedMode === 'takeaway' && !isTakeawayAvailable) {
             showToast({
                 variant: 'warning',
-                title: 'Mode Unavailable',
-                message: `${takeawayLabel} is currently unavailable`,
+                title: tOr(t, 'customer.toast.modeUnavailableTitle', 'Mode Unavailable'),
+                message: tOr(t, 'customer.toast.modeUnavailableMessage', '{mode} is currently unavailable', { mode: takeawayLabel }),
                 duration: 4000
             });
         } else if (selectedMode === 'delivery' && !isDeliveryAvailable) {
             showToast({
                 variant: 'warning',
-                title: 'Mode Unavailable',
-                message: `${resolvedDeliveryLabel} is currently unavailable`,
+                title: tOr(t, 'customer.toast.modeUnavailableTitle', 'Mode Unavailable'),
+                message: tOr(t, 'customer.toast.modeUnavailableMessage', '{mode} is currently unavailable', { mode: resolvedDeliveryLabel }),
                 duration: 4000
+            });
+        }
+    };
+
+    const handleScheduledOrderStart = () => {
+        setShowScheduledModal(true);
+    };
+
+    const handleScheduledModeSelect = (selectedMode: 'dinein' | 'takeaway') => {
+        // Scheduled orders are still dine-in/takeaway; we just carry a flag to pre-enable scheduling in checkout.
+        localStorage.setItem(`mode_${merchantCode}`, selectedMode);
+        setShowScheduledModal(false);
+        router.replace(`/${merchantCode}/order?mode=${selectedMode}&scheduled=1`);
+    };
+
+    const handleReservationSelect = () => {
+        // Use the same Order UI flow, with a required reservation-details bottom sheet.
+        router.replace(`/${merchantCode}/order?mode=dinein&flow=reservation`);
+        if (!storeOpen) {
+            showToast({
+                variant: 'info',
+                title: tOr(t, 'customer.toast.storeClosedTitle', 'Store Closed'),
+                message: tOr(
+                  t,
+                  'customer.toast.reservationAllowedWhenClosed',
+                  'You can still request a reservation. The merchant will confirm it when available.'
+                ),
+                duration: 4000,
             });
         }
     };
@@ -311,7 +353,43 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                                     )}
                                 </button>
                             )}
+
+                            {/* Schedule Order Button - placed below Delivery, same style as other modes */}
+                            {isScheduledOrderEnabled && (isDineInEnabled || isTakeawayEnabled) && (
+                                <button
+                                    id="mode-scheduled"
+                                    onClick={handleScheduledOrderStart}
+                                    className={`w-full h-12 border rounded-lg text-base font-medium transition-colors duration-200 shadow-lg flex items-center justify-center gap-2 ${storeOpen
+                                        ? 'border-gray-300 bg-white text-gray-900 hover:bg-gray-50'
+                                        : 'border-gray-200 text-gray-700 bg-gray-100'
+                                        }`}
+                                >
+                                    <span>{tOr(t, 'customer.mode.scheduleOrder', 'Schedule Order')}</span>
+                                </button>
+                            )}
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Reservation CTA (separate from ordering modes) */}
+            {isReservationEnabled && (
+                <div className={`px-3 mb-6 ${!storeOpen ? 'opacity-80' : ''}`}>
+                    <div className="text-center">
+                                                <h3 className="my-4 mb-2 text-md font-semibold text-gray-900">
+                                                    {tOr(t, 'customer.reservation.ctaTitle', 'Book a table?')}
+                                                </h3>
+
+                        <button
+                            id="mode-reservation"
+                            onClick={handleReservationSelect}
+                            className={`w-full h-12 border rounded-lg text-base font-medium transition-colors duration-200 shadow-lg flex items-center justify-center gap-2 ${storeOpen
+                                ? 'border-gray-300 bg-white text-gray-900 hover:bg-gray-50'
+                                : 'border-gray-200 text-gray-700 bg-gray-100'
+                                }`}
+                        >
+                            <span>{tOr(t, 'customer.reservation.ctaButton', 'Reservation')}</span>
+                        </button>
                     </div>
                 </div>
             )}
@@ -362,6 +440,66 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                     <LanguageToggle className="shadow-lg border border-gray-200" />
                 </div>
             </div>
+
+            {/* Scheduled Order Mode Picker (Bottom Sheet) */}
+            {showScheduledModal && (
+                <>
+                    <div
+                        className="fixed inset-0 bg-black/50 z-[110]"
+                        onClick={() => setShowScheduledModal(false)}
+                    />
+                    <div className="fixed inset-x-0 bottom-0 z-[111] flex justify-center animate-slideUp">
+                        <div className="w-full max-w-[500px] bg-white rounded-t-2xl shadow-2xl">
+                            <div className="px-4 py-3 border-b border-gray-200">
+                                <h2 className="text-lg font-semibold text-gray-900" style={{ margin: 0, lineHeight: 'normal' }}>
+                                    {tOr(t, 'customer.scheduledOrders.chooseModeTitle', 'Schedule Order')}
+                                </h2>
+                                <p className="text-xs text-gray-500 mt-1">
+                                    {tOr(t, 'customer.scheduledOrders.chooseModeDesc', 'Choose how you want to order for later today.')}
+                                </p>
+                            </div>
+
+                            <div className="px-4 py-4 space-y-3">
+                                {isTakeawayEnabled && (
+                                    <button
+                                        type="button"
+                                        onClick={() => handleScheduledModeSelect('takeaway')}
+                                        className="w-full h-12 border rounded-lg text-base font-medium transition-colors duration-200 shadow-lg flex items-center justify-center gap-2 border-gray-300 bg-white text-gray-900 hover:bg-gray-50"
+                                    >
+                                        <span>{takeawayLabel}</span>
+                                    </button>
+                                )}
+
+                                {isDineInEnabled && (
+                                    <button
+                                        type="button"
+                                        onClick={() => handleScheduledModeSelect('dinein')}
+                                        className="w-full h-12 border rounded-lg text-base font-medium transition-colors duration-200 shadow-lg flex items-center justify-center gap-2 border-gray-300 bg-white text-gray-900 hover:bg-gray-50"
+                                    >
+                                        <span>{dineInLabel}</span>
+                                    </button>
+                                )}
+
+                                <button
+                                    type="button"
+                                    onClick={() => setShowScheduledModal(false)}
+                                    className="w-full h-12 border rounded-lg text-base font-medium transition-colors duration-200 flex items-center justify-center border-gray-200 bg-gray-100 text-gray-700 hover:bg-gray-200"
+                                >
+                                    {tOr(t, 'common.cancel', 'Cancel')}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <style jsx>{`
+                        @keyframes slideUp {
+                            from { transform: translateY(100%); }
+                            to { transform: translateY(0); }
+                        }
+                        .animate-slideUp { animation: slideUp 250ms ease-out forwards; }
+                    `}</style>
+                </>
+            )}
         </>
     );
 }

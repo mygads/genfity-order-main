@@ -92,6 +92,7 @@ export interface MerchantInfo {
   subscriptionSuspendReason?: string | null;
   isDineInEnabled?: boolean;
   isTakeawayEnabled?: boolean;
+  requireTableNumberForDineIn?: boolean;
   dineInLabel?: string | null;
   takeawayLabel?: string | null;
   deliveryLabel?: string | null;
@@ -99,6 +100,8 @@ export interface MerchantInfo {
   dineInScheduleEnd?: string | null;
   takeawayScheduleStart?: string | null;
   takeawayScheduleEnd?: string | null;
+  // Scheduled orders (pickup/delivery scheduling)
+  isScheduledOrderEnabled?: boolean;
   openingHours: OpeningHour[];
 }
 

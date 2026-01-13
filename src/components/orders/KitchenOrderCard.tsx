@@ -8,7 +8,7 @@
 'use client';
 
 import React from 'react';
-import { FaUtensils, FaShoppingBag, FaChair, FaStickyNote, FaExclamationTriangle, FaFire, FaCheck } from 'react-icons/fa';
+import { FaUtensils, FaShoppingBag, FaChair, FaStickyNote, FaExclamationTriangle, FaFire, FaCheck, FaCalendarCheck, FaRegClock, FaUsers } from 'react-icons/fa';
 import { ORDER_STATUS_COLORS } from '@/lib/constants/orderConstants';
 import { OrderTimer } from './OrderTimer';
 import type { OrderListItem, OrderWithDetails } from '@/lib/types/order';
@@ -31,6 +31,8 @@ export const KitchenOrderCard: React.FC<KitchenOrderCardProps> = ({
   const statusConfig = ORDER_STATUS_COLORS[order.status as keyof typeof ORDER_STATUS_COLORS];
   const { merchant } = useMerchant();
   const displayOrderNumber = formatFullOrderNumber(order.orderNumber, merchant?.code);
+  const scheduledTime = (order as any).scheduledTime as string | null | undefined;
+  const isScheduled = Boolean((order as any).isScheduled && scheduledTime);
   
   // Check if order has orderItems (OrderWithDetails) or just _count (OrderListItem)
   const hasOrderItems = 'orderItems' in order && Array.isArray(order.orderItems);
@@ -55,18 +57,26 @@ export const KitchenOrderCard: React.FC<KitchenOrderCardProps> = ({
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                 #{displayOrderNumber}
               </h2>
-              {order.orderType === 'DINE_IN' ? (
+              {order.reservation ? (
+                <div className="flex items-center gap-1.5" title="Reservation order">
+                  <FaCalendarCheck className="h-4 w-4 text-purple-600" />
+                  <span className="inline-flex items-center gap-1 rounded-md border border-purple-200 bg-purple-50 px-2 py-0.5 text-[11px] font-semibold text-purple-700">
+                    <FaUsers className="h-3 w-3" />
+                    {order.reservation.partySize}
+                  </span>
+                </div>
+              ) : order.orderType === 'DINE_IN' ? (
                 <FaUtensils className="h-4 w-4 text-brand-500" title="Dine In" />
               ) : (
                 <FaShoppingBag className="h-4 w-4 text-success-500" title="Takeaway" />
               )}
             </div>
             
-            {order.tableNumber && (
+            {(order.tableNumber || order.reservation?.tableNumber) && (
               <div className="flex items-center gap-1.5">
                 <FaChair className="h-3.5 w-3.5 text-gray-500" />
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Table {order.tableNumber}
+                  Table {order.tableNumber || order.reservation?.tableNumber}
                 </p>
               </div>
             )}
@@ -77,6 +87,16 @@ export const KitchenOrderCard: React.FC<KitchenOrderCardProps> = ({
               startTime={order.placedAt}
               className="text-xs px-2 py-1"
             />
+
+            {isScheduled && (
+              <span
+                className="inline-flex items-center gap-1.5 rounded-md border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-700"
+                title="Scheduled order"
+              >
+                <FaRegClock className="h-3 w-3" />
+                <span className="font-bold">{scheduledTime}</span>
+              </span>
+            )}
             
             <span
               className={`

@@ -13,18 +13,25 @@ import {
   FaSortUp,
   FaSortDown,
   FaSearch,
+  FaTimes,
   FaFileExport,
   FaEye,
   FaChevronLeft,
   FaChevronRight,
   FaTrash,
   FaPrint,
+  FaCalendarAlt,
+  FaTruck,
+  FaUtensils,
+  FaShoppingBag,
 } from 'react-icons/fa';
 import { OrderStatus, PaymentStatus, OrderType } from '@prisma/client';
 import { exportOrdersToCSV, exportOrdersToExcel } from '@/lib/utils/exportOrders';
 import { useMerchant } from '@/context/MerchantContext';
 import { getCurrencySymbol } from '@/lib/utils/format';
 import { formatFullOrderNumber } from '@/lib/utils/format';
+import { formatPaymentMethodLabel } from '@/lib/utils/paymentDisplay';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 // ===== TYPES =====
 
@@ -35,6 +42,13 @@ interface Order {
   status: OrderStatus;
   customerName?: string;
   tableNumber?: string;
+  reservation?: {
+    partySize: number;
+    reservationDate: string | Date;
+    reservationTime: string;
+    tableNumber?: string | null;
+    status?: string;
+  } | null;
   totalAmount: number;
   placedAt: string;
   completedAt?: string;
@@ -55,42 +69,62 @@ interface OrderHistoryTableProps {
 
 type SortField = 'orderNumber' | 'placedAt' | 'totalAmount' | 'status';
 type SortDirection = 'asc' | 'desc';
+type OrderTypeFilter = 'ALL' | 'RESERVATION' | 'ORDER';
+
+const getAdminStatusKey = (status: OrderStatus): string => {
+  switch (status) {
+    case 'PENDING':
+      return 'admin.status.pending';
+    case 'ACCEPTED':
+      return 'admin.status.accepted';
+    case 'IN_PROGRESS':
+      return 'admin.status.inProgress';
+    case 'READY':
+      return 'admin.status.ready';
+    case 'COMPLETED':
+      return 'admin.status.completed';
+    case 'CANCELLED':
+      return 'admin.status.cancelled';
+    default:
+      return 'admin.status.pending';
+  }
+};
 
 // ===== STATUS BADGES =====
 
-const OrderStatusBadge: React.FC<{ status: OrderStatus }> = ({ status }) => {
+const OrderStatusBadge: React.FC<{ status: OrderStatus; label: string }> = ({ status, label }) => {
   const statusConfig = {
-    PENDING: { bg: 'bg-warning-100 dark:bg-warning-900/20', text: 'text-warning-700 dark:text-warning-400', label: 'Pending' },
-    ACCEPTED: { bg: 'bg-brand-100 dark:bg-brand-900/20', text: 'text-brand-700 dark:text-brand-400', label: 'Accepted' },
-    IN_PROGRESS: { bg: 'bg-blue-100 dark:bg-blue-900/20', text: 'text-blue-700 dark:text-blue-400', label: 'In Progress' },
-    READY: { bg: 'bg-success-100 dark:bg-success-900/20', text: 'text-success-700 dark:text-success-400', label: 'Ready' },
-    COMPLETED: { bg: 'bg-gray-100 dark:bg-gray-800', text: 'text-gray-700 dark:text-gray-300', label: 'Completed' },
-    CANCELLED: { bg: 'bg-error-100 dark:bg-error-900/20', text: 'text-error-700 dark:text-error-400', label: 'Cancelled' },
+    PENDING: { bg: 'bg-warning-100 dark:bg-warning-900/20', text: 'text-warning-700 dark:text-warning-400' },
+    ACCEPTED: { bg: 'bg-brand-100 dark:bg-brand-900/20', text: 'text-brand-700 dark:text-brand-400' },
+    IN_PROGRESS: { bg: 'bg-blue-100 dark:bg-blue-900/20', text: 'text-blue-700 dark:text-blue-400' },
+    READY: { bg: 'bg-success-100 dark:bg-success-900/20', text: 'text-success-700 dark:text-success-400' },
+    COMPLETED: { bg: 'bg-gray-100 dark:bg-gray-800', text: 'text-gray-700 dark:text-gray-300' },
+    CANCELLED: { bg: 'bg-error-100 dark:bg-error-900/20', text: 'text-error-700 dark:text-error-400' },
   };
 
   const config = statusConfig[status];
 
   return (
     <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text}`}>
-      {config.label}
+      {label}
     </span>
   );
 };
 
-const PaymentStatusBadge: React.FC<{ status: PaymentStatus }> = ({ status }) => {
+const PaymentStatusBadge: React.FC<{ status: PaymentStatus; label: string }> = ({ status, label }) => {
   const statusConfig = {
-    PENDING: { bg: 'bg-warning-100', text: 'text-warning-700', label: 'Unpaid' },
-    COMPLETED: { bg: 'bg-success-100', text: 'text-success-700', label: 'Paid' },
-    FAILED: { bg: 'bg-error-100', text: 'text-error-700', label: 'Failed' },
-    REFUNDED: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Refunded' },
-    CANCELLED: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Cancelled' },
+    PENDING: { bg: 'bg-warning-100', text: 'text-warning-700' },
+    COMPLETED: { bg: 'bg-success-100', text: 'text-success-700' },
+    FAILED: { bg: 'bg-error-100', text: 'text-error-700' },
+    REFUNDED: { bg: 'bg-blue-100', text: 'text-blue-700' },
+    CANCELLED: { bg: 'bg-gray-100', text: 'text-gray-700' },
   };
 
   const config = statusConfig[status];
 
   return (
     <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text}`}>
-      {config.label}
+      {label}
     </span>
   );
 };
@@ -105,12 +139,14 @@ export const OrderHistoryTable: React.FC<OrderHistoryTableProps> = ({
   hasDeletePin = false,
   loading = false,
 }) => {
+  const { t } = useTranslation();
   const { currency, merchant } = useMerchant();
   const currencySymbol = getCurrencySymbol(currency);
   // Derive timezone from currency until timezone is added to merchant settings
   const timezone = currency === 'IDR' ? 'Asia/Jakarta' : 'Australia/Sydney';
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState<OrderTypeFilter>('ALL');
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'ALL'>('COMPLETED');
   const [paymentFilter, setPaymentFilter] = useState<PaymentStatus | 'ALL'>('ALL');
   const [sortField, setSortField] = useState<SortField>('placedAt');
@@ -120,7 +156,7 @@ export const OrderHistoryTable: React.FC<OrderHistoryTableProps> = ({
 
   // Format currency using merchant currency
   const formatCurrency = (amount: number) => {
-    if (amount === 0) return 'Free';
+    if (amount === 0) return t('admin.history.free');
     if (currency === 'IDR') {
       return `Rp ${new Intl.NumberFormat('id-ID', { minimumFractionDigits: 0 }).format(Math.round(amount))}`;
     }
@@ -130,6 +166,13 @@ export const OrderHistoryTable: React.FC<OrderHistoryTableProps> = ({
   // Filter and sort orders
   const filteredAndSortedOrders = useMemo(() => {
     let filtered = [...orders];
+
+    // Type filter (reservation vs normal order)
+    if (typeFilter === 'RESERVATION') {
+      filtered = filtered.filter((order) => !!order.reservation);
+    } else if (typeFilter === 'ORDER') {
+      filtered = filtered.filter((order) => !order.reservation);
+    }
 
     // Search filter
     if (searchQuery) {
@@ -172,7 +215,7 @@ export const OrderHistoryTable: React.FC<OrderHistoryTableProps> = ({
     });
 
     return filtered;
-  }, [orders, searchQuery, statusFilter, paymentFilter, sortField, sortDirection]);
+  }, [orders, typeFilter, searchQuery, statusFilter, paymentFilter, sortField, sortDirection]);
 
   // Pagination
   const totalPages = Math.ceil(filteredAndSortedOrders.length / itemsPerPage);
@@ -224,162 +267,228 @@ export const OrderHistoryTable: React.FC<OrderHistoryTableProps> = ({
   return (
     <div data-tutorial="order-history-list" className="space-y-4">
       {/* Filters & Search */}
-      <div className="flex flex-col md:flex-row gap-4">
+      <div className="flex flex-wrap items-center gap-3">
         {/* Search */}
-        <div className="flex-1 relative">
+        <div className="relative flex-1 min-w-50">
           <input
             type="text"
-            placeholder="Search by order number, customer, table..."
+            placeholder={t('admin.history.filters.searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-10 pl-10 pr-4 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-800 dark:text-white/90 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+            className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-11 pr-10 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
           />
-          <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <FaSearch className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              aria-label={t('admin.history.filters.clearSearch')}
+            >
+              <FaTimes className="h-4 w-4" />
+            </button>
+          )}
         </div>
+
+        {/* Type Filter */}
+        <select
+          value={typeFilter}
+          onChange={(e) => setTypeFilter(e.target.value as OrderTypeFilter)}
+          className="h-10 rounded-lg border border-gray-200 bg-white px-3 pr-8 text-sm text-gray-700 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+        >
+          <option value="ALL">{t('admin.history.filters.allTypes')}</option>
+          <option value="RESERVATION">{t('admin.history.filters.reservationsOnly')}</option>
+          <option value="ORDER">{t('admin.history.filters.ordersOnly')}</option>
+        </select>
 
         {/* Status Filter */}
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as OrderStatus | 'ALL')}
-          className="h-10 px-4 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-800 dark:text-white/90 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+          className="h-10 rounded-lg border border-gray-200 bg-white px-3 pr-8 text-sm text-gray-700 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
         >
-          <option value="ALL">All Statuses</option>
-          <option value="PENDING">Pending</option>
-          <option value="ACCEPTED">Accepted</option>
-          <option value="IN_PROGRESS">In Progress</option>
-          <option value="READY">Ready</option>
-          <option value="COMPLETED">Completed</option>
-          <option value="CANCELLED">Cancelled</option>
+          <option value="ALL">{t('admin.history.filters.allStatuses')}</option>
+          <option value="PENDING">{t('admin.status.pending')}</option>
+          <option value="ACCEPTED">{t('admin.status.accepted')}</option>
+          <option value="IN_PROGRESS">{t('admin.status.inProgress')}</option>
+          <option value="READY">{t('admin.status.ready')}</option>
+          <option value="COMPLETED">{t('admin.status.completed')}</option>
+          <option value="CANCELLED">{t('admin.status.cancelled')}</option>
         </select>
 
         {/* Payment Filter */}
         <select
           value={paymentFilter}
           onChange={(e) => setPaymentFilter(e.target.value as PaymentStatus | 'ALL')}
-          className="h-10 px-4 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-800 dark:text-white/90 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+          className="h-10 rounded-lg border border-gray-200 bg-white px-3 pr-8 text-sm text-gray-700 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
         >
-          <option value="ALL">All Payments</option>
-          <option value="PENDING">Unpaid</option>
-          <option value="COMPLETED">Paid</option>
-          <option value="FAILED">Failed</option>
-          <option value="REFUNDED">Refunded</option>
+          <option value="ALL">{t('admin.history.filters.allPayments')}</option>
+          <option value="PENDING">{t('admin.payment.unpaid')}</option>
+          <option value="COMPLETED">{t('admin.payment.paid')}</option>
+          <option value="FAILED">{t('admin.payment.failed')}</option>
+          <option value="REFUNDED">{t('admin.payment.refunded')}</option>
         </select>
 
         {/* Export Buttons */}
         <div data-tutorial="export-orders-btn" className="flex gap-2">
           <button
             onClick={handleExportCSV}
-            className="h-10 px-4 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-800 dark:text-white/90 font-medium text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-2"
+            className="inline-flex h-10 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+            title={t('admin.history.export.csv')}
           >
             <FaFileExport />
-            CSV
+            {t('admin.history.export.csvShort')}
           </button>
           <button
             onClick={handleExportExcel}
-            className="h-10 px-4 rounded-lg bg-brand-500 text-white font-medium text-sm hover:bg-brand-600 transition-colors flex items-center gap-2"
+            className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary-500 px-3 text-sm font-medium text-white hover:bg-primary-600 focus:outline-none focus:ring-3 focus:ring-primary-500/20"
+            title={t('admin.history.export.excel')}
           >
             <FaFileExport />
-            Excel
+            {t('admin.history.export.excelShort')}
           </button>
         </div>
       </div>
 
       {/* Table */}
-      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/3 overflow-hidden">
+      <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/3 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 dark:bg-gray-900/50">
-              <tr>
+          <table className="w-full table-auto">
+            <thead>
+              <tr className="bg-gray-50 text-left dark:bg-gray-900/50">
                 <th
                   onClick={() => handleSort('orderNumber')}
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+                  className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
                 >
                   <div className="flex items-center gap-2">
-                    Order # <SortIcon field="orderNumber" />
+                    {t('admin.history.table.orderNumber')} <SortIcon field="orderNumber" />
                   </div>
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Type
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">
+                  {t('admin.history.table.type')}
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Customer
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">
+                  {t('admin.history.table.customer')}
                 </th>
                 <th
                   onClick={() => handleSort('status')}
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+                  className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
                 >
                   <div className="flex items-center gap-2">
-                    Status <SortIcon field="status" />
+                    {t('admin.history.table.status')} <SortIcon field="status" />
                   </div>
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Payment
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">
+                  {t('admin.history.table.payment')}
                 </th>
                 <th
                   onClick={() => handleSort('totalAmount')}
-                  className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+                  className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
                 >
                   <div className="flex items-center justify-end gap-2">
-                    Total <SortIcon field="totalAmount" />
+                    {t('admin.history.table.total')} <SortIcon field="totalAmount" />
                   </div>
                 </th>
                 <th
                   onClick={() => handleSort('placedAt')}
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+                  className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
                 >
                   <div className="flex items-center gap-2">
-                    Date <SortIcon field="placedAt" />
+                    {t('admin.history.table.date')} <SortIcon field="placedAt" />
                   </div>
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Actions
+                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">
+                  {t('admin.history.table.actions')}
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {paginatedOrders.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-8 text-center text-gray-400 dark:text-gray-600">
-                    No orders found
+                    {t('admin.history.table.noOrdersFound')}
                   </td>
                 </tr>
               ) : (
                 paginatedOrders.map((order) => (
                   <tr
                     key={order.id}
-                    className="hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors"
+                    className="hover:bg-gray-50 dark:hover:bg-gray-900/30 transition-colors"
                   >
                     <td className="px-4 py-3 text-sm font-medium text-gray-800 dark:text-white/90">
                       {formatFullOrderNumber(order.orderNumber, merchant?.code)}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
-                      {order.orderType === 'DINE_IN' ? '🍽️ Dine In' : '🥡 Takeaway'}
-                      {order.tableNumber && (
-                        <div className="text-xs text-gray-500">Table {order.tableNumber}</div>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {order.reservation ? (
+                          <FaCalendarAlt className="text-gray-400" />
+                        ) : order.orderType === 'DELIVERY' ? (
+                          <FaTruck className="text-gray-400" />
+                        ) : order.orderType === 'DINE_IN' ? (
+                          <FaUtensils className="text-gray-400" />
+                        ) : (
+                          <FaShoppingBag className="text-gray-400" />
+                        )}
+                        <span>
+                          {order.reservation
+                            ? t('admin.history.type.reservation')
+                            : order.orderType === 'DELIVERY'
+                              ? t('admin.history.type.delivery')
+                              : order.orderType === 'DINE_IN'
+                                ? t('admin.history.type.dineIn')
+                                : t('admin.history.type.takeaway')}
+                        </span>
+                      </div>
+                      {order.reservation ? (
+                        <div className="text-xs text-gray-500">
+                          {t('admin.history.type.guests', { count: order.reservation.partySize })}
+                          {` • ${t('admin.history.type.table', {
+                            tableNumber: String(order.tableNumber || order.reservation.tableNumber || '-'),
+                          })}`}
+                        </div>
+                      ) : order.orderType === 'DINE_IN' ? (
+                        <div className="text-xs text-gray-500">
+                          {t('admin.history.type.table', { tableNumber: String(order.tableNumber || '-') })}
+                        </div>
+                      ) : null}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
-                      {order.customerName || 'Guest'}
+                      {order.customerName || t('admin.history.customer.guest')}
                     </td>
                     <td className="px-4 py-3">
-                      <OrderStatusBadge status={order.status} />
+                      <OrderStatusBadge status={order.status} label={t(getAdminStatusKey(order.status))} />
                     </td>
                     <td className="px-4 py-3">
                       {order.payment ? (
                         <div>
-                          <PaymentStatusBadge status={order.payment.status} />
-                          {order.payment.paymentMethod && (
-                            <div className="text-xs text-gray-500 mt-1">
-                              {order.payment.paymentMethod.replace(/_/g, ' ')}
-                            </div>
-                          )}
+                          <PaymentStatusBadge
+                            status={order.payment.status}
+                            label={
+                              order.payment.status === 'PENDING'
+                                ? t('admin.payment.unpaid')
+                                : order.payment.status === 'COMPLETED'
+                                  ? t('admin.payment.paid')
+                                  : order.payment.status === 'FAILED'
+                                    ? t('admin.payment.failed')
+                                    : order.payment.status === 'REFUNDED'
+                                      ? t('admin.payment.refunded')
+                                      : t('admin.payment.cancelled')
+                            }
+                          />
+                          <div className="text-xs text-gray-500 mt-1">
+                            {formatPaymentMethodLabel({
+                              orderType: order.orderType,
+                              paymentStatus: order.payment.status,
+                              paymentMethod: order.payment.paymentMethod,
+                            }, { t })}
+                          </div>
                         </div>
                       ) : (
-                        <span className="text-xs text-gray-400">N/A</span>
+                        <span className="text-xs text-gray-400">{t('admin.history.payment.na')}</span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-sm font-medium text-right text-gray-800 dark:text-white/90">
-                      <span className={formatCurrency(Number(order.totalAmount)) === 'Free' ? 'text-success-600 dark:text-success-400' : ''}>
+                      <span className={formatCurrency(Number(order.totalAmount)) === t('admin.history.free') ? 'text-success-600 dark:text-success-400' : ''}>
                         {formatCurrency(Number(order.totalAmount))}
                       </span>
                     </td>
@@ -400,24 +509,24 @@ export const OrderHistoryTable: React.FC<OrderHistoryTableProps> = ({
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => onViewOrder?.(order.id)}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                          className="inline-flex h-9 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
                         >
                           <FaEye />
-                          View
+                          {t('common.view')}
                         </button>
                         {onPrintReceipt && (
                           <button
                             onClick={() => onPrintReceipt(order.id)}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400 text-sm hover:bg-brand-100 dark:hover:bg-brand-900/40 transition-colors"
-                            title="Print Receipt"
+                            className="inline-flex h-9 items-center justify-center rounded-lg border border-gray-200 bg-white px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                            title={t('admin.history.actions.printReceipt')}
                           >
                             <FaPrint />
                           </button>
                         )}
                         <button
                           onClick={() => onDeleteOrder?.(order.id)}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-error-200 dark:border-error-800 bg-error-50 dark:bg-error-900/20 text-error-600 dark:text-error-400 text-sm hover:bg-error-100 dark:hover:bg-error-900/40 transition-colors"
-                          title="Void Transaction"
+                          className="inline-flex h-9 items-center justify-center rounded-lg border border-error-300 bg-error-50 px-3 text-sm font-medium text-error-700 hover:bg-error-100 dark:border-error-700 dark:bg-error-900/20 dark:text-error-400 dark:hover:bg-error-900/30"
+                          title={hasDeletePin ? t('admin.history.actions.voidTransaction') : t('admin.history.actions.deleteOrder')}
                         >
                           <FaTrash />
                         </button>
@@ -435,25 +544,27 @@ export const OrderHistoryTable: React.FC<OrderHistoryTableProps> = ({
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <div className="text-sm text-gray-600 dark:text-gray-400">
-            Showing {(currentPage - 1) * itemsPerPage + 1} to{' '}
-            {Math.min(currentPage * itemsPerPage, filteredAndSortedOrders.length)} of{' '}
-            {filteredAndSortedOrders.length} orders
+            {t('admin.history.pagination.showing', {
+              from: (currentPage - 1) * itemsPerPage + 1,
+              to: Math.min(currentPage * itemsPerPage, filteredAndSortedOrders.length),
+              total: filteredAndSortedOrders.length,
+            })}
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
               disabled={currentPage === 1}
-              className="h-9 w-9 flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-800"
+              className="h-9 w-9 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
             >
               <FaChevronLeft size={12} />
             </button>
             <span className="text-sm text-gray-600 dark:text-gray-400">
-              Page {currentPage} of {totalPages}
+              {t('admin.history.pagination.page', { page: currentPage, totalPages })}
             </span>
             <button
               onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
               disabled={currentPage === totalPages}
-              className="h-9 w-9 flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-800"
+              className="h-9 w-9 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
             >
               <FaChevronRight size={12} />
             </button>

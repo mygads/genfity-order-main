@@ -9,7 +9,7 @@
 'use client';
 
 import React from 'react';
-import { FaUser, FaUtensils, FaShoppingBag, FaTruck, FaClock, FaCheckSquare, FaSquare, FaCheck, FaArrowRight } from 'react-icons/fa';
+import { FaUser, FaUtensils, FaShoppingBag, FaTruck, FaClock, FaCheckSquare, FaSquare, FaCheck, FaArrowRight, FaCalendarCheck, FaUsers } from 'react-icons/fa';
 import { ORDER_STATUS_COLORS, PAYMENT_STATUS_COLORS } from '@/lib/constants/orderConstants';
 import { formatDistanceToNow } from 'date-fns';
 import type { OrderListItem } from '@/lib/types/order';
@@ -156,12 +156,21 @@ export const OrderListCard: React.FC<OrderListCardProps> = ({
 
           {/* Order Type */}
           <div className="shrink-0">
-            {order.orderType === 'DINE_IN' ? (
+            {order.reservation ? (
+              <div className="flex items-center gap-1 px-2 py-1 rounded bg-purple-50 dark:bg-purple-900/30" title="Reservation order">
+                <FaCalendarCheck className="h-3 w-3 text-purple-600 dark:text-purple-400" />
+                <span className="inline-flex items-center gap-1 text-xs font-semibold text-purple-700 dark:text-purple-300">
+                  <FaUsers className="h-3 w-3" />
+                  {order.reservation.partySize}
+                </span>
+                <span className="text-xs font-semibold text-purple-700 dark:text-purple-300">
+                  T{order.tableNumber || order.reservation.tableNumber || '-'}
+                </span>
+              </div>
+            ) : order.orderType === 'DINE_IN' ? (
               <div className="flex items-center gap-1 px-2 py-1 rounded bg-brand-50 dark:bg-brand-900/30">
                 <FaUtensils className="h-3 w-3 text-brand-600 dark:text-brand-400" />
-                {order.tableNumber && (
-                  <span className="text-xs font-semibold text-brand-700 dark:text-brand-300">T{order.tableNumber}</span>
-                )}
+                <span className="text-xs font-semibold text-brand-700 dark:text-brand-300">T{order.tableNumber || '-'}</span>
               </div>
             ) : order.orderType === 'DELIVERY' ? (
               <div className="flex items-center gap-1 px-2 py-1 rounded bg-blue-50 dark:bg-blue-900/30">

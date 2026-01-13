@@ -33,6 +33,9 @@ import balanceService from '@/lib/services/BalanceService';
 import subscriptionHistoryService from '@/lib/services/SubscriptionHistoryService';
 import CustomerPushService from '@/lib/services/CustomerPushService';
 import { shouldSendCustomerEmail } from '@/lib/utils/emailGuards';
+import { getCurrentTimeInTimezone } from '@/lib/utils/storeStatus';
+
+type TxClient = Prisma.TransactionClient;
 
 function redactEmailForLogs(email: string): string {
   const normalized = email.trim();
@@ -45,6 +48,199 @@ function redactEmailForLogs(email: string): string {
 }
 
 export class OrderManagementService {
+  private static async deductStockForScheduledOrderOnAccept(
+    tx: TxClient,
+    orderId: bigint,
+    now: Date
+  ): Promise<void> {
+    const orderForStock = await tx.order.findUnique({
+      where: { id: orderId },
+      include: {
+        merchant: {
+          select: {
+            timezone: true,
+          },
+        },
+        orderItems: {
+          include: {
+            menu: {
+              select: {
+                id: true,
+                name: true,
+                trackStock: true,
+                stockQty: true,
+                isActive: true,
+              },
+            },
+            addons: {
+              include: {
+                addonItem: {
+                  select: {
+                    id: true,
+                    name: true,
+                    trackStock: true,
+                    stockQty: true,
+                    isActive: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!orderForStock) {
+      throw new Error('Order not found');
+    }
+
+    const timezone = orderForStock.merchant?.timezone ?? 'Australia/Sydney';
+    // Scheduled orders are merchant-controlled: do not block ACCEPTED/processing
+    // based on current time. Staff decides when to accept/start preparing.
+    void timezone;
+
+    const menuRequired = new Map<string, { id: bigint; name: string; qty: number; stockQty: number | null }>();
+    const addonRequired = new Map<string, { id: bigint; name: string; qty: number; stockQty: number | null }>();
+
+    for (const item of orderForStock.orderItems) {
+      const menu = (item as any).menu as { id: bigint; name: string; trackStock: boolean; stockQty: number | null } | null;
+      if (menu?.trackStock && menu.stockQty !== null) {
+        const key = String(menu.id);
+        const existing = menuRequired.get(key);
+        const nextQty = (existing?.qty ?? 0) + item.quantity;
+        menuRequired.set(key, {
+          id: menu.id,
+          name: menu.name,
+          qty: nextQty,
+          stockQty: menu.stockQty,
+        });
+      }
+
+      for (const addon of item.addons ?? []) {
+        const addonItem = (addon as any).addonItem as { id: bigint; name: string; trackStock: boolean; stockQty: number | null } | null;
+        if (addonItem?.trackStock && addonItem.stockQty !== null) {
+          const key = String(addonItem.id);
+          const existing = addonRequired.get(key);
+          const nextQty = (existing?.qty ?? 0) + addon.quantity;
+          addonRequired.set(key, {
+            id: addonItem.id,
+            name: addonItem.name,
+            qty: nextQty,
+            stockQty: addonItem.stockQty,
+          });
+        }
+      }
+    }
+
+    for (const required of menuRequired.values()) {
+      if (required.stockQty !== null && required.stockQty < required.qty) {
+        throw new Error(`Insufficient stock for ${required.name}`);
+      }
+      const res = await tx.menu.updateMany({
+        where: {
+          id: required.id,
+          trackStock: true,
+          stockQty: {
+            gte: required.qty,
+          },
+        },
+        data: {
+          stockQty: {
+            decrement: required.qty,
+          },
+        },
+      });
+      if (res.count !== 1) {
+        throw new Error(`Insufficient stock for ${required.name}`);
+      }
+
+      const updatedMenu = await tx.menu.findUnique({ where: { id: required.id }, select: { stockQty: true } });
+      if (updatedMenu && updatedMenu.stockQty !== null) {
+        await tx.menu.update({
+          where: { id: required.id },
+          data: {
+            isActive: updatedMenu.stockQty > 0,
+          },
+        });
+      }
+    }
+
+    for (const required of addonRequired.values()) {
+      if (required.stockQty !== null && required.stockQty < required.qty) {
+        throw new Error(`Insufficient stock for ${required.name}`);
+      }
+      const res = await tx.addonItem.updateMany({
+        where: {
+          id: required.id,
+          trackStock: true,
+          stockQty: {
+            gte: required.qty,
+          },
+        },
+        data: {
+          stockQty: {
+            decrement: required.qty,
+          },
+        },
+      });
+      if (res.count !== 1) {
+        throw new Error(`Insufficient stock for ${required.name}`);
+      }
+
+      const updatedAddon = await tx.addonItem.findUnique({ where: { id: required.id }, select: { stockQty: true } });
+      if (updatedAddon && updatedAddon.stockQty !== null) {
+        await tx.addonItem.update({
+          where: { id: required.id },
+          data: {
+            isActive: updatedAddon.stockQty > 0,
+          },
+        });
+      }
+    }
+
+    await tx.order.update({
+      where: { id: orderId },
+      data: {
+        stockDeductedAt: now,
+      },
+    });
+  }
+
+  private static async acceptOrderIfPendingAfterPayment(
+    tx: TxClient,
+    orderId: bigint,
+    now: Date
+  ): Promise<void> {
+    const order = await tx.order.findUnique({
+      where: { id: orderId },
+      select: {
+        id: true,
+        status: true,
+        isScheduled: true,
+        stockDeductedAt: true,
+      },
+    });
+
+    if (!order) {
+      throw new Error('Order not found');
+    }
+
+    if (order.status !== 'PENDING') {
+      return;
+    }
+
+    if (order.isScheduled === true && order.stockDeductedAt === null) {
+      await this.deductStockForScheduledOrderOnAccept(tx, orderId, now);
+    }
+
+    await tx.order.update({
+      where: { id: orderId },
+      data: {
+        status: 'ACCEPTED',
+      },
+    });
+  }
+
   /**
    * Update admin-only note for an order.
    * - Customer notes (order.notes) remain read-only and unchanged
@@ -201,7 +397,17 @@ export class OrderManagementService {
     const shouldAutoMarkPaid = order.status === 'READY' && data.status === 'COMPLETED';
     const now = new Date();
 
+    const shouldDeductStockOnAccept =
+      order.isScheduled === true &&
+      order.stockDeductedAt === null &&
+      order.status === 'PENDING' &&
+      data.status === 'ACCEPTED';
+
     const updated = await prisma.$transaction(async (tx) => {
+      if (shouldDeductStockOnAccept) {
+        await this.deductStockForScheduledOrderOnAccept(tx, orderId, now);
+      }
+
       const updatedOrder = await tx.order.update({
         where: { id: orderId },
         data: {
@@ -493,21 +699,8 @@ export class OrderManagementService {
       }
 
       // ✅ Auto-update order status to ACCEPTED if currently PENDING
-      // This ensures paid orders move to the next stage automatically
-      const currentOrder = await tx.order.findUnique({
-        where: { id: orderId },
-        select: { status: true },
-      });
-
-      if (currentOrder?.status === 'PENDING') {
-        await tx.order.update({
-          where: { id: orderId },
-          data: {
-            status: 'ACCEPTED',
-          },
-        });
-        console.log(`[OrderManagementService] Order ${orderId} auto-accepted after payment recorded`);
-      }
+      // For scheduled orders, stock is deducted on ACCEPTED (not at booking time).
+      await this.acceptOrderIfPendingAfterPayment(tx, orderId, new Date());
 
       const order = await tx.order.findUnique({
         where: { id: orderId },
@@ -578,19 +771,8 @@ export class OrderManagementService {
       }
 
       // If the order is still pending, accept it after payment.
-      const currentOrder = await tx.order.findUnique({
-        where: { id: orderId },
-        select: { status: true },
-      });
-
-      if (currentOrder?.status === 'PENDING') {
-        await tx.order.update({
-          where: { id: orderId },
-          data: {
-            status: 'ACCEPTED',
-          },
-        });
-      }
+      // For scheduled orders, this also triggers deferred stock deduction.
+      await this.acceptOrderIfPendingAfterPayment(tx, orderId, new Date());
 
       const fullOrder = await tx.order.findUnique({
         where: { id: orderId },

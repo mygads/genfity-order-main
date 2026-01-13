@@ -116,7 +116,8 @@ export async function GET(
       subscriptionType, // Include subscription type for UI decisions
       // Sale mode settings
       isDineInEnabled: merchantData.isDineInEnabled ?? true,
-      isTakeawayEnabled: merchantData.isTakeawayEnabled ?? true,
+      isTakeawayEnabled: merchantData.isTakeawayEnabled ?? false,
+      requireTableNumberForDineIn: merchantData.requireTableNumberForDineIn ?? false,
       dineInLabel: merchantData.dineInLabel,
       takeawayLabel: merchantData.takeawayLabel,
       deliveryLabel: merchantData.deliveryLabel,
@@ -147,6 +148,12 @@ export async function GET(
       timezone: merchantData.timezone,
       latitude: merchantData.latitude,
       longitude: merchantData.longitude,
+      // Reservation settings
+      isReservationEnabled: merchantData.isReservationEnabled ?? false,
+      reservationMenuRequired: merchantData.reservationMenuRequired ?? false,
+      reservationMinItemCount: merchantData.reservationMinItemCount ?? 0,
+      // Scheduled orders
+      isScheduledOrderEnabled: merchantData.isScheduledOrderEnabled ?? false,
       openingHours: merchant.openingHours,
     };
 

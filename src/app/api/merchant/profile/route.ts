@@ -120,6 +120,7 @@ async function handlePut(req: NextRequest, authContext: AuthContext) {
         // Sale mode settings
         isDineInEnabled: body.isDineInEnabled,
         isTakeawayEnabled: body.isTakeawayEnabled,
+        requireTableNumberForDineIn: body.requireTableNumberForDineIn,
         dineInLabel: body.dineInLabel,
         takeawayLabel: body.takeawayLabel,
         deliveryLabel: body.deliveryLabel,
@@ -130,6 +131,12 @@ async function handlePut(req: NextRequest, authContext: AuthContext) {
         deliveryScheduleStart: body.deliveryScheduleStart,
         deliveryScheduleEnd: body.deliveryScheduleEnd,
         totalTables: body.totalTables,
+        // Reservation settings
+        isReservationEnabled: body.isReservationEnabled,
+        reservationMenuRequired: body.reservationMenuRequired,
+        reservationMinItemCount: body.reservationMinItemCount,
+        // Scheduled orders
+        isScheduledOrderEnabled: body.isScheduledOrderEnabled,
         // Tax settings
         enableTax: body.enableTax,
         taxRate: body.taxPercentage,

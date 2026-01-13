@@ -10,7 +10,7 @@ import { formatCurrency as formatCurrencyUtil } from '@/lib/utils/format';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/context/ToastContext';
 import { useCustomerData } from '@/context/CustomerDataContext';
-import { FaArrowLeft, FaClipboardList, FaFileDownload, FaMotorcycle, FaRedo, FaShoppingBag, FaSpinner, FaStickyNote, FaUtensils } from 'react-icons/fa';
+import { FaArrowLeft, FaClipboardList, FaClock, FaFileDownload, FaMotorcycle, FaRedo, FaShoppingBag, FaSpinner, FaStickyNote, FaUtensils, FaUsers } from 'react-icons/fa';
 import { customerMerchantHomeUrl, customerOrderUrl, customerTrackUrl } from '@/lib/utils/customerRoutes';
 
 interface OrderHistoryItem {
@@ -19,11 +19,31 @@ interface OrderHistoryItem {
   merchantName: string;
   merchantCode: string;
   mode: 'dinein' | 'takeaway' | 'delivery';
+  isScheduled?: boolean;
+  scheduledTime?: string | null;
   status: string;
   totalAmount: number;
   placedAt: string;
   itemsCount: number;
   trackingToken: string;
+}
+
+interface ReservationHistoryItem {
+  id: string;
+  merchantName: string;
+  merchantCode: string;
+  status: string;
+  partySize: number;
+  reservationDate: string;
+  reservationTime: string;
+  itemsCount: number;
+  order: null | {
+    orderNumber: string;
+    mode: 'dinein' | 'takeaway' | 'delivery' | string;
+    status: string;
+    trackingToken: string;
+  };
+  createdAt: string;
 }
 
 interface ReorderItem {
@@ -84,10 +104,14 @@ export default function OrderHistoryPage() {
   // ✅ Use CustomerData Context for instant merchant info access
   const { merchantInfo: contextMerchantInfo, initializeData, isInitialized } = useCustomerData();
 
+  const isTableNumberEnabled = contextMerchantInfo?.requireTableNumberForDineIn === true;
+
   const [orders, setOrders] = useState<OrderHistoryItem[]>([]);
+  const [reservations, setReservations] = useState<ReservationHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [auth, setAuth] = useState<ReturnType<typeof getCustomerAuth> | null>(null);
   const [filter, setFilter] = useState<'all' | 'pending' | 'completed' | 'cancelled'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'orders' | 'reservations'>('all');
   const [merchantCurrency, setMerchantCurrency] = useState('AUD');
   const [reorderingOrderId, setReorderingOrderId] = useState<string | null>(null);
   const [downloadingOrderId, setDownloadingOrderId] = useState<string | null>(null);
@@ -143,8 +167,8 @@ export default function OrderHistoryPage() {
       return;
     }
 
-    // ✅ 4. Fetch orders if authenticated (merchant info from context)
-    fetchOrders(customerAuth);
+    // ✅ 4. Fetch history if authenticated (merchant info from context)
+    fetchHistory(customerAuth);
   }, [router, merchantCode, mode]);
 
   /**
@@ -154,21 +178,40 @@ export default function OrderHistoryPage() {
    * 
    * @specification STEP_04_API_ENDPOINTS.txt - Order Endpoints
    */
-  const fetchOrders = async (customerAuth: NonNullable<ReturnType<typeof getCustomerAuth>>) => {
+  const fetchHistory = async (customerAuth: NonNullable<ReturnType<typeof getCustomerAuth>>) => {
     setIsLoading(true);
-    try {
-      const response = await fetch('/api/customer/orders', {
-        headers: {
-          'Authorization': `Bearer ${customerAuth.accessToken}`,
-        },
-      });
 
-      if (response.ok) {
-        const data = await response.json();
-        setOrders(data.data || []);
+    try {
+      const [ordersRes, reservationsRes] = await Promise.all([
+        fetch('/api/customer/orders', {
+          headers: {
+            'Authorization': `Bearer ${customerAuth.accessToken}`,
+          },
+        }),
+        fetch('/api/customer/reservations', {
+          headers: {
+            'Authorization': `Bearer ${customerAuth.accessToken}`,
+          },
+        }),
+      ]);
+
+      if (ordersRes.ok) {
+        const ordersJson = await ordersRes.json();
+        setOrders(ordersJson.data || []);
+      } else {
+        setOrders([]);
+      }
+
+      if (reservationsRes.ok) {
+        const reservationsJson = await reservationsRes.json();
+        setReservations(reservationsJson.data || []);
+      } else {
+        setReservations([]);
       }
     } catch (error) {
-      console.error('Failed to fetch orders:', error);
+      console.error('Failed to fetch history:', error);
+      setOrders([]);
+      setReservations([]);
     } finally {
       setIsLoading(false);
     }
@@ -316,7 +359,7 @@ export default function OrderHistoryPage() {
         merchantPhone: orderData.merchant?.phone,
         merchantLogo: orderData.merchant?.logoUrl,
         orderType: orderData.orderType as 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY',
-        tableNumber: orderData.tableNumber,
+        tableNumber: isTableNumberEnabled ? orderData.tableNumber : null,
         deliveryUnit: orderData.deliveryUnit,
         deliveryAddress: orderData.deliveryAddress,
         customerName: auth.customer.name,
@@ -386,7 +429,9 @@ export default function OrderHistoryPage() {
 
     // If order is completed or ready, go to order-detail page (read-only view)
     if (status === 'completed' || status === 'ready') {
-      router.push(`/${order.merchantCode}/order-detail/${order.orderNumber}?mode=${encodeURIComponent(order.mode)}&token=${encodeURIComponent(token)}`);
+      router.push(
+        `/${order.merchantCode}/order-detail/${order.orderNumber}?mode=${encodeURIComponent(order.mode)}&token=${encodeURIComponent(token)}`
+      );
     } else {
       // For pending, accepted, in_progress orders, go to order-summary-cash (tracking page)
       router.push(
@@ -398,6 +443,7 @@ export default function OrderHistoryPage() {
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<string, { border: string; text: string; labelKey: TranslationKeys }> = {
       pending: { border: 'border-yellow-500', text: 'text-yellow-600', labelKey: 'customer.status.pending' },
+      accepted: { border: 'border-blue-500', text: 'text-blue-600', labelKey: 'customer.status.confirmed' },
       confirmed: { border: 'border-blue-500', text: 'text-blue-600', labelKey: 'customer.status.confirmed' },
       in_progress: { border: 'border-orange-500', text: 'text-orange-600', labelKey: 'customer.status.inProgress' },
       ready: { border: 'border-purple-500', text: 'text-purple-600', labelKey: 'customer.status.ready' },
@@ -435,6 +481,20 @@ export default function OrderHistoryPage() {
     }).format(date);
   };
 
+  const getReservationDerivedStatus = (reservation: ReservationHistoryItem): string => {
+    const orderStatus = (reservation.order?.status || '').toLowerCase();
+    if (orderStatus === 'completed') return 'completed';
+    if (orderStatus === 'cancelled') return 'cancelled';
+    return reservation.status;
+  };
+
+  const normalizeReservationToFilterBucket = (reservation: ReservationHistoryItem): 'pending' | 'completed' | 'cancelled' => {
+    const derived = (getReservationDerivedStatus(reservation) || '').toLowerCase();
+    if (derived === 'cancelled') return 'cancelled';
+    if (derived === 'completed') return 'completed';
+    return 'pending';
+  };
+
   // Filter orders based on selected filter
   const filteredOrders = orders
     .filter(order => {
@@ -455,10 +515,22 @@ export default function OrderHistoryPage() {
       return new Date(b.placedAt).getTime() - new Date(a.placedAt).getTime();
     });
 
+  const filteredReservations = reservations
+    .filter((reservation) => {
+      if (filter === 'all') return true;
+      return normalizeReservationToFilterBucket(reservation) === filter;
+    })
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  const hasReservations = reservations.length > 0;
+  const effectiveType = hasReservations ? typeFilter : 'orders';
+  const visibleOrders = effectiveType === 'all' || effectiveType === 'orders' ? filteredOrders : [];
+  const visibleReservations = effectiveType === 'all' || effectiveType === 'reservations' ? filteredReservations : [];
+
   // ✅ HYDRATION FIX: Show loading during SSR → CSR transition
-  if (!isMounted || !auth) {
-    return <LoadingState type="page" message={LOADING_MESSAGES.LOADING} />;
-  }
+  // if (!isMounted || !auth) {
+  //   return <LoadingState type="page" message={LOADING_MESSAGES.LOADING} />;
+  // }
 
   return (
     <div className="">
@@ -509,6 +581,40 @@ export default function OrderHistoryPage() {
             {t('customer.history.completedOrders')}
           </button>
         </div>
+
+        {/* Type Tabs (All / Orders / Reservations) - only if reservations exist */}
+        {hasReservations ? (
+          <div className="flex border-t border-gray-200 bg-white">
+            <button
+              onClick={() => setTypeFilter('all')}
+              className={`flex-1 py-2 text-xs font-semibold transition-colors ${typeFilter === 'all'
+                ? 'text-gray-900'
+                : 'text-gray-500'
+                }`}
+            >
+              {tOr(t, 'customer.history.typeAll', 'All')}
+            </button>
+            <button
+              onClick={() => setTypeFilter('orders')}
+              className={`flex-1 py-2 text-xs font-semibold transition-colors ${typeFilter === 'orders'
+                ? 'text-gray-900'
+                : 'text-gray-500'
+                }`}
+            >
+              {tOr(t, 'customer.history.typeOrders', 'Orders')}
+            </button>
+            <button
+              onClick={() => setTypeFilter('reservations')}
+              className={`flex-1 py-2 text-xs font-semibold transition-colors ${typeFilter === 'reservations'
+                ? 'text-gray-900'
+                : 'text-gray-500'
+                }`}
+            >
+              {tOr(t, 'customer.history.typeReservations', 'Reservations')}
+            </button>
+          </div>
+        ) : null}
+
       </header>
 
       {/* Main Content */}
@@ -544,7 +650,7 @@ export default function OrderHistoryPage() {
               </div>
             ))}
           </div>
-        ) : filteredOrders.length === 0 ? (
+        ) : visibleOrders.length === 0 && visibleReservations.length === 0 ? (
           <div className="text-center py-20">
             {/* Empty State - SVG Icon */}
             <FaClipboardList className="w-16 h-16 mx-auto mb-4 text-gray-300" />
@@ -567,7 +673,130 @@ export default function OrderHistoryPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            {filteredOrders.map((order) => {
+            {visibleReservations.length > 0 ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold text-gray-900">
+                    {tOr(t, 'customer.history.reservationsTitle', 'Reservations')}
+                  </p>
+                </div>
+
+                {visibleReservations.map((reservation) => (
+                  <div
+                    key={`reservation_${reservation.id}`}
+                    className="p-4 border border-gray-200 rounded-xl bg-white"
+                  >
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-gray-900 mb-1 truncate">
+                          {reservation.merchantName}
+                        </p>
+                        <p className="text-xs text-gray-500">{formatDate(reservation.createdAt)}</p>
+                      </div>
+                      {getStatusBadge(getReservationDerivedStatus(reservation))}
+                    </div>
+
+                    <div className="mb-3 p-2 bg-gray-50 rounded-lg">
+                      <p className="text-xs text-gray-600 mb-1">
+                        {tOr(t, 'customer.reservation.title', 'Reservation')}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-gray-700">
+                        <span className="inline-flex items-center gap-2">
+                          <FaUsers className="w-4 h-4 text-gray-500" />
+                          <span>
+                            {tOr(t, 'customer.reservation.party', 'Party')}: {reservation.partySize}
+                          </span>
+                        </span>
+                        <span className="inline-flex items-center gap-2">
+                          <FaClock className="w-4 h-4 text-gray-500" />
+                          <span>
+                            {reservation.reservationDate} • {reservation.reservationTime}
+                          </span>
+                        </span>
+                        <span>
+                          {tOr(t, 'customer.reservation.preorderItems', 'Preorder')}: {reservation.itemsCount || 0}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 mt-4 pt-3 border-t border-gray-200">
+                      {reservation.order?.orderNumber && getReservationDerivedStatus(reservation).toLowerCase() === 'completed' ? (
+                        <>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(
+                                `/${reservation.merchantCode}/order-detail/${reservation.order!.orderNumber}?mode=${encodeURIComponent(String(reservation.order!.mode || 'dinein'))}&token=${encodeURIComponent(reservation.order!.trackingToken)}`
+                              );
+                            }}
+                            className="flex-1 py-2 text-sm font-semibold text-orange-500 border border-orange-500 rounded-lg hover:bg-orange-50 transition-all"
+                          >
+                            {t('customer.history.viewOrder')}
+                          </button>
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const receiptOrder: OrderHistoryItem = {
+                                id: `reservation_${reservation.id}`,
+                                orderNumber: reservation.order!.orderNumber,
+                                merchantName: reservation.merchantName,
+                                merchantCode: reservation.merchantCode,
+                                mode: (reservation.order!.mode as OrderHistoryItem['mode']) || 'dinein',
+                                status: reservation.order!.status,
+                                totalAmount: 0,
+                                placedAt: reservation.createdAt,
+                                itemsCount: reservation.itemsCount || 0,
+                                trackingToken: reservation.order!.trackingToken,
+                              };
+                              handleDownloadReceipt(receiptOrder);
+                            }}
+                            disabled={downloadingOrderId === `reservation_${reservation.id}`}
+                            className="flex-1 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                          >
+                            {downloadingOrderId === `reservation_${reservation.id}` ? (
+                              <>
+                                <FaSpinner className="h-4 w-4 animate-spin" />
+                                <span>{t('customer.receipt.downloading')}</span>
+                              </>
+                            ) : (
+                              <>
+                                <FaFileDownload className="w-4 h-4" />
+                                <span>{t('customer.receipt.downloadReceipt')}</span>
+                              </>
+                            )}
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+
+                            if (!reservation.order?.orderNumber) return;
+
+                            router.push(
+                              customerTrackUrl(reservation.merchantCode, reservation.order.orderNumber, {
+                                mode: reservation.order.mode,
+                                token: reservation.order.trackingToken,
+                              })
+                            );
+                          }}
+                          disabled={!reservation.order?.orderNumber}
+                          className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${reservation.order?.orderNumber
+                            ? 'text-white bg-orange-500 hover:bg-orange-600'
+                            : 'text-gray-500 border border-gray-200 bg-gray-50'
+                            }`}
+                        >
+                          {t('customer.history.trackOrder')}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            {visibleOrders.map((order) => {
               const isOrderActive = !['completed', 'cancelled'].includes(order.status.toLowerCase());
 
               return (
@@ -623,6 +852,19 @@ export default function OrderHistoryPage() {
                             ? t('customer.mode.dineIn')
                             : t('customer.mode.pickUp')}
                       </span>
+                      {order.isScheduled && order.scheduledTime ? (
+                        <>
+                          <span>•</span>
+                          <span className="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-[11px] font-medium text-gray-700">
+                            {(order.mode === 'delivery'
+                              ? tOr(t, 'customer.orderSummary.deliveryAt', 'Delivery at')
+                              : order.mode === 'dinein'
+                                ? tOr(t, 'customer.orderSummary.dineInAt', 'Dine-in at')
+                                : tOr(t, 'customer.orderSummary.pickupAt', 'Pickup at'))}{' '}
+                            {order.scheduledTime}
+                          </span>
+                        </>
+                      ) : null}
                       <span>•</span>
                       <span>{order.itemsCount || 0} items</span>
                     </div>

@@ -45,9 +45,33 @@ export const GET = withCustomer(async (
     // Fetch Orders from Customer table relation
     // ========================================
     
+    // Exclude orders that were created from reservations.
+    const reservationOrders = await prisma.reservation.findMany({
+      where: {
+        customerId: context.customerId,
+        orderId: {
+          not: null,
+        },
+      },
+      select: {
+        orderId: true,
+      },
+    });
+
+    const excludedOrderIds = reservationOrders
+      .map((r) => r.orderId)
+      .filter((id): id is bigint => typeof id === 'bigint');
+
     const orders = await prisma.order.findMany({
       where: {
         customerId: context.customerId,
+        ...(excludedOrderIds.length > 0
+          ? {
+              id: {
+                notIn: excludedOrderIds,
+              },
+            }
+          : {}),
       },
       include: {
         merchant: {
@@ -81,6 +105,8 @@ export const GET = withCustomer(async (
       merchantCode: order.merchant.code,
       merchantCurrency: order.merchant.currency,
       mode: order.orderType === 'DINE_IN' ? 'dinein' : order.orderType === 'TAKEAWAY' ? 'takeaway' : 'delivery',
+      isScheduled: Boolean((order as any).isScheduled),
+      scheduledTime: ((order as any).scheduledTime ?? null) as string | null,
       status: order.status,
       totalAmount: parseFloat(order.totalAmount.toString()),
       placedAt: order.placedAt.toISOString(),

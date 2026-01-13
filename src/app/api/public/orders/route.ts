@@ -40,6 +40,11 @@ import { SpecialPriceService } from '@/lib/services/SpecialPriceService';
 import DeliveryFeeService from '@/lib/services/DeliveryFeeService';
 import { haversineDistanceKm, isPointInPolygon, type LatLng } from '@/lib/utils/geo';
 import { createOrderTrackingToken } from '@/lib/utils/orderTrackingToken';
+import {
+  type ExtendedMerchantStatus,
+  isStoreOpenWithSpecialHoursAtTime,
+  isModeAvailableWithSchedulesAtTime,
+} from '@/lib/utils/storeStatus';
 
 const DEBUG_ORDERS = process.env.DEBUG_ORDERS === 'true';
 const orderLog = (...args: unknown[]) => {
@@ -69,6 +74,9 @@ interface _OrderRequestBody {
   customerEmail: string;
   customerPhone?: string;
   orderType: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY';
+  // Scheduled orders (same-day only, merchant timezone)
+  // Example: "12:00"
+  scheduledTime?: string;
   tableNumber?: string;
   deliveryUnit?: string;
   deliveryBuildingName?: string;
@@ -114,6 +122,7 @@ interface MerchantWithConfig {
   country?: string | null;
   isActive: boolean;
   isOpen: boolean;
+  isManualOverride?: boolean;
   timezone?: string;
   latitude?: Decimal | null;
   longitude?: Decimal | null;
@@ -131,8 +140,12 @@ interface MerchantWithConfig {
   deliveryFeePerKm?: Decimal | null;
   deliveryFeeMin?: Decimal | null;
   deliveryFeeMax?: Decimal | null;
+  deliveryScheduleStart?: string | null;
+  deliveryScheduleEnd?: string | null;
   // Fee config
   serviceChargeRate?: number | null;
+  // Scheduled orders
+  isScheduledOrderEnabled?: boolean;
   packagingFeeAmount?: number | null;
   taxRate?: number | null;
   taxIncluded?: boolean;
@@ -142,6 +155,38 @@ interface MerchantWithConfig {
   enableServiceCharge?: boolean;
   serviceChargePercent?: number | null;
   enablePackagingFee?: boolean;
+
+  // Opening hours + schedules
+  openingHours?: Array<{
+    dayOfWeek: number;
+    openTime?: string | null;
+    closeTime?: string | null;
+    isClosed: boolean;
+    is24Hours?: boolean | null;
+  }>;
+  modeSchedules?: Array<{
+    mode: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY';
+    dayOfWeek: number;
+    startTime: string;
+    endTime: string;
+    isActive?: boolean;
+  }>;
+  todaySpecialHour?: {
+    date: string | Date;
+    name?: string | null;
+    isClosed: boolean;
+    openTime?: string | null;
+    closeTime?: string | null;
+    isDineInEnabled?: boolean | null;
+    isTakeawayEnabled?: boolean | null;
+    isDeliveryEnabled?: boolean | null;
+    dineInStartTime?: string | null;
+    dineInEndTime?: string | null;
+    takeawayStartTime?: string | null;
+    takeawayEndTime?: string | null;
+    deliveryStartTime?: string | null;
+    deliveryEndTime?: string | null;
+  } | null;
 }
 
 interface PrismaError {
@@ -162,58 +207,79 @@ function checkModeAvailability(
   orderType: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY',
   merchant: MerchantWithConfig
 ): { available: boolean; reason?: string } {
-  // Check if store is open
-  if (!merchant.isOpen) {
-    return { available: false, reason: 'Store is currently closed' };
+  const tz = merchant.timezone || 'Australia/Sydney';
+  const currentTime = getCurrentTimeInTimezoneString(tz);
+
+  const merchantStatus = merchant as unknown as ExtendedMerchantStatus;
+  const store = isStoreOpenWithSpecialHoursAtTime(merchantStatus, currentTime);
+  if (!store.isOpen) {
+    return { available: false, reason: store.reason || 'Store is currently closed' };
   }
 
-  // Get current time in merchant's timezone
-  const tz = merchant.timezone || 'Australia/Sydney';
-  const now = new Date();
-  const timeFormatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: tz,
+  const mode = isModeAvailableWithSchedulesAtTime(orderType, merchantStatus, currentTime);
+  if (!mode.available) {
+    return { available: false, reason: mode.reason || 'This order mode is currently unavailable' };
+  }
+
+  if (orderType === 'DELIVERY') {
+    // Delivery requires merchant coordinates
+    if (merchant.latitude === null || merchant.longitude === null) {
+      return { available: false, reason: 'Delivery is not available (merchant location not set)' };
+    }
+  }
+
+  return { available: true };
+}
+
+function isValidHHMM(value: string): boolean {
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
+}
+
+function getCurrentDateInTimezone(timezone: string): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+
+  const y = parts.find((p) => p.type === 'year')?.value;
+  const m = parts.find((p) => p.type === 'month')?.value;
+  const d = parts.find((p) => p.type === 'day')?.value;
+
+  return `${y}-${m}-${d}`;
+}
+
+function getCurrentTimeInTimezoneString(timezone: string): string {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
-  });
-  const currentTime = timeFormatter.format(now);
+  }).format(new Date());
+}
 
-  if (orderType === 'DINE_IN') {
-    // Check if Dine In is enabled
-    if (merchant.isDineInEnabled === false) {
-      return { available: false, reason: 'Dine In is currently not available' };
-    }
+function checkModeAvailabilityAtTime(
+  orderType: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY',
+  merchant: MerchantWithConfig,
+  timeHHMM: string
+): { available: boolean; reason?: string } {
+  const merchantStatus = merchant as unknown as ExtendedMerchantStatus;
 
-    // Check schedule
-    if (merchant.dineInScheduleStart && merchant.dineInScheduleEnd) {
-      if (currentTime < merchant.dineInScheduleStart || currentTime > merchant.dineInScheduleEnd) {
-        return {
-          available: false,
-          reason: `Dine In is only available between ${merchant.dineInScheduleStart} - ${merchant.dineInScheduleEnd}`,
-        };
-      }
-    }
-  } else if (orderType === 'TAKEAWAY') {
-    // Check if Takeaway is enabled
-    if (merchant.isTakeawayEnabled === false) {
-      return { available: false, reason: 'Takeaway is currently not available' };
-    }
+  // Scheduled orders should be allowed when the store is closed *right now* due to schedule,
+  // but must be blocked if the store will be closed at the requested time.
+  // Manual override closed should block all scheduling.
+  const store = isStoreOpenWithSpecialHoursAtTime(merchantStatus, timeHHMM);
+  if (!store.isOpen) {
+    return { available: false, reason: store.reason || 'Store is currently closed' };
+  }
 
-    // Check schedule
-    if (merchant.takeawayScheduleStart && merchant.takeawayScheduleEnd) {
-      if (currentTime < merchant.takeawayScheduleStart || currentTime > merchant.takeawayScheduleEnd) {
-        return {
-          available: false,
-          reason: `Takeaway is only available between ${merchant.takeawayScheduleStart} - ${merchant.takeawayScheduleEnd}`,
-        };
-      }
-    }
-  } else if (orderType === 'DELIVERY') {
-    if (merchant.isDeliveryEnabled === false) {
-      return { available: false, reason: 'Delivery is currently not available' };
-    }
+  const mode = isModeAvailableWithSchedulesAtTime(orderType, merchantStatus, timeHHMM);
+  if (!mode.available) {
+    return { available: false, reason: mode.reason || 'This order mode is currently unavailable' };
+  }
 
-    // Delivery requires merchant coordinates
+  if (orderType === 'DELIVERY') {
     if (merchant.latitude === null || merchant.longitude === null) {
       return { available: false, reason: 'Delivery is not available (merchant location not set)' };
     }
@@ -252,6 +318,12 @@ export async function POST(req: NextRequest) {
     // Get merchant by code
     const merchant = await prisma.merchant.findUnique({
       where: { code: body.merchantCode },
+      include: {
+        openingHours: true,
+        modeSchedules: {
+          where: { isActive: true },
+        },
+      },
     }) as MerchantWithConfig | null;
 
     if (!merchant || !merchant.isActive) {
@@ -292,13 +364,68 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const tz = merchant.timezone || 'Australia/Sydney';
+
+    // Attach today's special hour (if any) for correct open/close + mode overrides
+    const todayDateStr = getCurrentDateInTimezone(tz);
+    const todayDate = new Date(todayDateStr);
+    const todaySpecialHour = await prisma.merchantSpecialHour.findUnique({
+      where: {
+        merchantId_date: {
+          merchantId: merchant.id,
+          date: todayDate,
+        },
+      },
+    });
+    merchant.todaySpecialHour = (todaySpecialHour as unknown as MerchantWithConfig['todaySpecialHour']) ?? null;
+    const scheduledTimeRaw = typeof body.scheduledTime === 'string' ? body.scheduledTime.trim() : '';
+    const isScheduled = scheduledTimeRaw.length > 0;
+
+    if (isScheduled) {
+      if (merchant.isScheduledOrderEnabled !== true) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'SCHEDULED_ORDERS_DISABLED',
+            message: 'Scheduled orders are not enabled for this merchant.',
+            statusCode: 400,
+          },
+          { status: 400 }
+        );
+      }
+      if (!isValidHHMM(scheduledTimeRaw)) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'VALIDATION_ERROR',
+            message: 'scheduledTime must be in HH:MM format',
+            statusCode: 400,
+          },
+          { status: 400 }
+        );
+      }
+
+      // Same-day only (by design): we store today (merchant timezone) + HH:MM.
+      const currentTime = getCurrentTimeInTimezoneString(tz);
+      if (scheduledTimeRaw < currentTime) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'VALIDATION_ERROR',
+            message: `Scheduled time must be later than current time (${currentTime})`,
+            statusCode: 400,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     // ========================================
     // VALIDATE MODE AVAILABILITY (Real-time check)
     // ========================================
-    const isModeAvailable = checkModeAvailability(
-      body.orderType,
-      merchant,
-    );
+    const isModeAvailable = isScheduled
+      ? checkModeAvailabilityAtTime(body.orderType, merchant, scheduledTimeRaw)
+      : checkModeAvailability(body.orderType, merchant);
 
     if (!isModeAvailable.available) {
       return NextResponse.json(
@@ -790,6 +917,8 @@ export async function POST(req: NextRequest) {
      * 2. Create OrderItems (get orderItemIds)
      * 3. Create OrderItemAddons (with orderItemIds)
      */
+    const scheduledDate = isScheduled ? getCurrentDateInTimezone(tz) : null;
+    const now = new Date();
     const order = await prisma.$transaction(async (tx) => {
       // 1. Create Order
       // ✅ Customer info stored in users table, accessed via customerId relation
@@ -801,6 +930,10 @@ export async function POST(req: NextRequest) {
           orderType: body.orderType,
           tableNumber: body.tableNumber || null,
           status: 'PENDING',
+          isScheduled,
+          scheduledDate,
+          scheduledTime: isScheduled ? scheduledTimeRaw : null,
+          stockDeductedAt: isScheduled ? null : now,
           deliveryStatus: body.orderType === 'DELIVERY' ? 'PENDING_ASSIGNMENT' : null,
           deliveryUnit: body.orderType === 'DELIVERY' ? (typeof body.deliveryUnit === 'string' ? body.deliveryUnit.trim() || null : null) : null,
           deliveryBuildingName: body.orderType === 'DELIVERY' ? (typeof body.deliveryBuildingName === 'string' ? body.deliveryBuildingName.trim() || null : null) : null,
@@ -916,31 +1049,33 @@ export async function POST(req: NextRequest) {
     // STEP 6: Decrement stock (non-blocking)
     // ========================================
 
-    for (const item of body.items) {
-      try {
-        const menu = await prisma.menu.findUnique({
-          where: { id: BigInt(item.menuId) },
-        });
-
-        if (menu && menu.trackStock && menu.stockQty !== null) {
-          const newQty = menu.stockQty - item.quantity;
-          await prisma.menu.update({
-            where: { id: menu.id },
-            data: {
-              stockQty: newQty,
-              isActive: newQty > 0,
-            },
+    if (!isScheduled) {
+      for (const item of body.items) {
+        try {
+          const menu = await prisma.menu.findUnique({
+            where: { id: BigInt(item.menuId) },
           });
 
-          // Send stock out notification if item is now out of stock
-          if (newQty <= 0) {
-            userNotificationService.notifyStockOut(merchant.id, menu.name, menu.id).catch(err => {
-              console.error('⚠️ Stock notification failed:', err);
+          if (menu && menu.trackStock && menu.stockQty !== null) {
+            const newQty = menu.stockQty - item.quantity;
+            await prisma.menu.update({
+              where: { id: menu.id },
+              data: {
+                stockQty: newQty,
+                isActive: newQty > 0,
+              },
             });
+
+            // Send stock out notification if item is now out of stock
+            if (newQty <= 0) {
+              userNotificationService.notifyStockOut(merchant.id, menu.name, menu.id).catch(err => {
+                console.error('⚠️ Stock notification failed:', err);
+              });
+            }
           }
+        } catch (stockError) {
+          console.error('⚠️ Stock decrement failed (non-critical):', stockError);
         }
-      } catch (stockError) {
-        console.error('⚠️ Stock decrement failed (non-critical):', stockError);
       }
     }
 

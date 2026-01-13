@@ -22,12 +22,12 @@ interface _ModeSchedule {
  * Hook to check if ordering mode will be available at estimated pickup time
  * 
  * @param merchantCode - The merchant code
- * @param mode - 'dinein' | 'takeaway'
+ * @param mode - 'dinein' | 'takeaway' | 'delivery'
  * @param estimatedMinutes - Estimated preparation/pickup time in minutes (default 15)
  */
 export function useModeAvailability(
     merchantCode: string,
-    mode: 'dinein' | 'takeaway',
+    mode: 'dinein' | 'takeaway' | 'delivery',
     estimatedMinutes: number = 15
 ): ModeAvailabilityResult {
     const [result, setResult] = useState<ModeAvailabilityResult>({
@@ -74,8 +74,10 @@ export function useModeAvailability(
             // First check for mode-specific global schedule
             if (mode === 'dinein') {
                 modeScheduleEnd = merchant.dineInScheduleEnd || null;
-            } else {
+            } else if (mode === 'takeaway') {
                 modeScheduleEnd = merchant.takeawayScheduleEnd || null;
+            } else {
+                modeScheduleEnd = merchant.deliveryScheduleEnd || null;
             }
 
             // If no mode-specific schedule, check opening hours
@@ -119,12 +121,14 @@ export function useModeAvailability(
 
             // Generate warning message if needed
             let warningMessage: string | null = null;
+            const modeLabel = mode === 'dinein' ? 'Dine In' : mode === 'takeaway' ? 'Takeaway' : 'Delivery';
+
             if (!isAvailable) {
-                warningMessage = `${mode === 'dinein' ? 'Dine In' : 'Takeaway'} is now closed`;
+                warningMessage = `${modeLabel} is now closed`;
             } else if (!canOrderForPickup) {
-                warningMessage = `${mode === 'dinein' ? 'Dine In' : 'Takeaway'} closes at ${modeScheduleEnd}. Your estimated pickup time is ${estimatedMinutes} minutes. Please try again tomorrow or switch modes.`;
+                warningMessage = `${modeLabel} closes at ${modeScheduleEnd}. Your estimated time is ${estimatedMinutes} minutes. Please try again tomorrow or switch modes.`;
             } else if (minutesUntilClose <= 30) {
-                warningMessage = `${mode === 'dinein' ? 'Dine In' : 'Takeaway'} closes in ${minutesUntilClose} minutes`;
+                warningMessage = `${modeLabel} closes in ${minutesUntilClose} minutes`;
             }
 
             setResult({

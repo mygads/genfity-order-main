@@ -185,6 +185,7 @@ export const PATH_PERMISSION_MAP: Record<string, StaffPermission> = {
   '/admin/dashboard/orders': STAFF_PERMISSIONS.ORDERS,
   '/admin/dashboard/orders/kitchen': STAFF_PERMISSIONS.ORDERS_KITCHEN,
   '/admin/dashboard/orders/history': STAFF_PERMISSIONS.ORDERS_HISTORY,
+  '/admin/dashboard/reservations': STAFF_PERMISSIONS.ORDERS,
   '/admin/dashboard/menu': STAFF_PERMISSIONS.MENU,
   '/admin/dashboard/menu/stock-overview': STAFF_PERMISSIONS.MENU_STOCK,
   '/admin/dashboard/menu/builder': STAFF_PERMISSIONS.MENU_BUILDER,
@@ -206,6 +207,7 @@ export const PATH_PERMISSION_MAP: Record<string, StaffPermission> = {
  */
 export const API_PERMISSION_MAP: Record<string, StaffPermission> = {
   '/api/merchant/orders': STAFF_PERMISSIONS.ORDERS,
+  '/api/merchant/reservations': STAFF_PERMISSIONS.ORDERS,
   '/api/merchant/drivers': STAFF_PERMISSIONS.ORDERS,
   '/api/merchant/menu': STAFF_PERMISSIONS.MENU,
   '/api/merchant/menu/stock': STAFF_PERMISSIONS.MENU_STOCK,
