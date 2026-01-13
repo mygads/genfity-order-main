@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
 import { withCustomer, type CustomerAuthContext } from '@/lib/middleware/auth';
 import { decimalToNumber } from '@/lib/utils/serializer';
+import { getIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 /**
  * GENFITY - Customer Re-order API
@@ -19,29 +20,14 @@ import { decimalToNumber } from '@/lib/utils/serializer';
  * - copilot-instructions.md - Authentication Requirements
  */
 
-interface RouteContext {
-  params: Promise<Record<string, string>>;
-}
-
 export const GET = withCustomer(async (
   _request: NextRequest,
   authContext: CustomerAuthContext,
   routeContext: RouteContext
 ): Promise<NextResponse> => {
   try {
-    const params = await routeContext.params;
-    const orderId = params.orderId;
-
-    if (!orderId) {
-      return NextResponse.json(
-        { success: false, error: 'INVALID_ORDER_ID', message: 'Invalid order ID' },
-        { status: 400 }
-      );
-    }
-
-    // Validate orderId
-    const orderIdNum = parseInt(orderId, 10);
-    if (isNaN(orderIdNum)) {
+    const orderIdNum = await getIntRouteParam(routeContext, 'orderId');
+    if (orderIdNum === null || orderIdNum <= 0) {
       return NextResponse.json(
         { success: false, error: 'INVALID_ORDER_ID', message: 'Invalid order ID' },
         { status: 400 }

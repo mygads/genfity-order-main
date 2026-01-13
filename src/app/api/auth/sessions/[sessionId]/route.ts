@@ -14,19 +14,23 @@
  * }
  */
 
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import authService from '@/lib/services/AuthService';
 import { successResponse } from '@/lib/middleware/errorHandler';
 import { withAuth } from '@/lib/middleware/auth';
 import { AuthContext } from '@/lib/types/auth';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 async function revokeSessionHandler(
   request: NextRequest,
   authContext: AuthContext,
-  context: { params: Promise<Record<string, string>> }
+  context: RouteContext
 ) {
-  const params = await context.params;
-  const sessionId = BigInt(params.sessionId);
+  const sessionIdResult = await requireBigIntRouteParam(context, 'sessionId');
+  if (!sessionIdResult.ok) {
+    return NextResponse.json(sessionIdResult.body, { status: sessionIdResult.status });
+  }
+  const sessionId = sessionIdResult.value;
 
   // Revoke session
   await authService.revokeSession(sessionId, authContext.userId);

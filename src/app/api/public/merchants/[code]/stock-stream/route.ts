@@ -17,6 +17,7 @@
 
 import { NextRequest } from 'next/server';
 import prisma from '@/lib/db/client';
+import type { RouteContext } from '@/lib/utils/routeContext';
 
 // Stock data structure sent to clients
 interface StockUpdate {
@@ -42,7 +43,7 @@ const STOCK_CHECK_INTERVAL = 5000; // 5 seconds
  */
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<Record<string, string>> }
+  context: RouteContext
 ) {
   const params = await context.params;
   const merchantCode = params.code;

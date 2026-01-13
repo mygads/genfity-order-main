@@ -10,6 +10,7 @@ import balanceService from '@/lib/services/BalanceService';
 import emailService from '@/lib/services/EmailService';
 import prisma from '@/lib/db/client';
 import { z } from 'zod';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 const adjustSchema = z.object({
     amount: z.number(), // Can be positive or negative
@@ -19,11 +20,14 @@ const adjustSchema = z.object({
 async function handlePost(
     req: NextRequest,
     context: AuthContext,
-    routeContext: { params: Promise<Record<string, string>> }
+    routeContext: RouteContext
 ) {
     try {
-        const { id } = await routeContext.params;
-        const merchantId = BigInt(id);
+        const merchantIdResult = await requireBigIntRouteParam(routeContext, 'id');
+        if (!merchantIdResult.ok) {
+            return NextResponse.json(merchantIdResult.body, { status: merchantIdResult.status });
+        }
+        const merchantId = merchantIdResult.value;
 
         const body = await req.json();
         const validation = adjustSchema.safeParse(body);

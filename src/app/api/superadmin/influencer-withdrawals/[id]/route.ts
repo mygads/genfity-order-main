@@ -3,15 +3,21 @@ import prisma from '@/lib/db/client';
 import { withSuperAdmin, AuthContext } from '@/lib/middleware/auth';
 import { serializeBigInt } from '@/lib/utils/serializer';
 import { Decimal } from '@prisma/client/runtime/library';
+import { getBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 /**
  * PUT /api/superadmin/influencer-withdrawals/[id]
  * Process a withdrawal request (approve, reject)
  */
-export const PUT = withSuperAdmin(async (req: NextRequest, authContext: AuthContext, routeContext: { params: Promise<Record<string, string>> }) => {
+export const PUT = withSuperAdmin(async (req: NextRequest, authContext: AuthContext, routeContext: RouteContext) => {
   try {
-    const { id } = await routeContext.params;
-    const withdrawalId = BigInt(id);
+    const withdrawalId = await getBigIntRouteParam(routeContext, 'id');
+    if (!withdrawalId) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid withdrawal id' },
+        { status: 400 }
+      );
+    }
     const body = await req.json();
     const { status, adminNotes } = body;
 

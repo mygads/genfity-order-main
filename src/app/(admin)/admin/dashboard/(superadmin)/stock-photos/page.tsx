@@ -58,6 +58,12 @@ type MaintenanceJob = {
   completedAt?: string | null;
 };
 
+type ThumbnailMissingSummary = {
+  missingMenus: number;
+  missingStockPhotos: number;
+  totalMissing: number;
+};
+
 export default function StockPhotosPage() {
   const { toasts, success: showSuccess, error: showError } = useToast();
 
@@ -82,6 +88,7 @@ export default function StockPhotosPage() {
   const [rebuildJob, setRebuildJob] = useState<MaintenanceJob | null>(null);
   const [isRebuildWorking, setIsRebuildWorking] = useState(false);
   const rebuildLoopCancelledRef = React.useRef(false);
+  const [thumbnailMissingSummary, setThumbnailMissingSummary] = useState<ThumbnailMissingSummary | null>(null);
 
   // Upload form state
   const [uploadForm, setUploadForm] = useState({
@@ -114,11 +121,31 @@ export default function StockPhotosPage() {
     }
   }, []);
 
+  const loadThumbnailMissingSummary = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) return;
+
+      const res = await fetch("/api/superadmin/thumbnails/missing-summary", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const json = await res.json();
+      if (json?.success) {
+        setThumbnailMissingSummary(json.data?.summary || null);
+      }
+    } catch {
+      // Non-blocking
+    }
+  }, []);
+
   const startRebuildJob = useCallback(async () => {
     const token = localStorage.getItem("accessToken");
     if (!token) {
       showError("Missing access token", "Authentication Required");
-      return null;
+      return { job: null, startedNew: false };
     }
 
     const res = await fetch("/api/superadmin/thumbnails/rebuild", {
@@ -133,13 +160,19 @@ export default function StockPhotosPage() {
     const json = await res.json();
 
     if (!json?.success) {
+      // Allow resuming an already-running job
+      if ((json?.error === 'ALREADY_RUNNING' || json?.error === 'ALREADY_COMPLETED') && json?.data?.job) {
+        setRebuildJob(json.data.job);
+        return { job: json.data.job as MaintenanceJob, startedNew: false };
+      }
+
       showError(json?.message || "Failed to start rebuild", "Rebuild Failed");
       if (json?.data?.job) setRebuildJob(json.data.job);
-      return null;
+      return { job: null, startedNew: false };
     }
 
     setRebuildJob(json.data?.job || null);
-    return json.data?.job as MaintenanceJob | null;
+    return { job: (json.data?.job as MaintenanceJob | null) || null, startedNew: true };
   }, [showError]);
 
   const tickRebuildJob = useCallback(async () => {
@@ -172,10 +205,13 @@ export default function StockPhotosPage() {
     setIsRebuildWorking(true);
 
     try {
-      let job = await startRebuildJob();
+      const started = await startRebuildJob();
+      let job = started?.job || null;
       if (!job) return;
 
-      showSuccess("Global thumbnail rebuild started", "Running");
+      if (started?.startedNew) {
+        showSuccess("Global thumbnail rebuild started", "Running");
+      }
 
       while (!rebuildLoopCancelledRef.current && job?.status === "RUNNING") {
         // Process one batch per loop to keep requests short and allow progress UI.
@@ -188,6 +224,8 @@ export default function StockPhotosPage() {
 
       if (job?.status === "COMPLETED") {
         showSuccess("Global thumbnail rebuild completed", "Done");
+        // Refresh summary so the one-time button can disappear even if the job record is missing.
+        loadThumbnailMissingSummary();
       }
 
       if (job?.status === "FAILED") {
@@ -196,14 +234,22 @@ export default function StockPhotosPage() {
     } finally {
       setIsRebuildWorking(false);
     }
-  }, [isRebuildWorking, showError, showSuccess, startRebuildJob, tickRebuildJob]);
+  }, [isRebuildWorking, loadThumbnailMissingSummary, showError, showSuccess, startRebuildJob, tickRebuildJob]);
 
   React.useEffect(() => {
     loadRebuildStatus();
+    loadThumbnailMissingSummary();
     return () => {
       rebuildLoopCancelledRef.current = true;
     };
-  }, [loadRebuildStatus]);
+  }, [loadRebuildStatus, loadThumbnailMissingSummary]);
+
+  // If a rebuild is already RUNNING (e.g., user refreshed), resume ticking.
+  React.useEffect(() => {
+    if (rebuildJob?.status === 'RUNNING' && !isRebuildWorking) {
+      runRebuildLoop();
+    }
+  }, [isRebuildWorking, rebuildJob?.status, runRebuildLoop]);
 
   // Build API URL with filters
   const apiUrl = useMemo(() => {
@@ -445,6 +491,12 @@ export default function StockPhotosPage() {
     });
   };
 
+  const showRebuildThumbnailsButton =
+    rebuildJob?.status === 'RUNNING' ||
+    (thumbnailMissingSummary
+      ? thumbnailMissingSummary.totalMissing > 0
+      : rebuildJob?.status !== 'COMPLETED');
+
   return (
     <div>
       <PageBreadcrumb pageTitle="Stock Photos" />
@@ -462,21 +514,17 @@ export default function StockPhotosPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setRebuildDialogOpen(true)}
-              disabled={rebuildJob?.status === "RUNNING" || rebuildJob?.status === "COMPLETED"}
-              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-              title={
-                rebuildJob?.status === "COMPLETED"
-                  ? "Already completed"
-                  : rebuildJob?.status === "RUNNING"
-                    ? "Currently running"
-                    : "Rebuild thumbnails (one-time)"
-              }
-            >
-              <FaSyncAlt className="h-4 w-4" />
-              Rebuild Thumbnails
-            </button>
+            {showRebuildThumbnailsButton && (
+              <button
+                onClick={() => setRebuildDialogOpen(true)}
+                disabled={rebuildJob?.status === "RUNNING"}
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                title={rebuildJob?.status === "RUNNING" ? "Currently running" : "Rebuild thumbnails (one-time)"}
+              >
+                <FaSyncAlt className="h-4 w-4" />
+                Rebuild Thumbnails
+              </button>
+            )}
             <a
               href="/admin/dashboard/stock-photos/bulk-upload"
               className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
@@ -496,7 +544,7 @@ export default function StockPhotosPage() {
       </div>
 
       {/* Global rebuild status */}
-      {rebuildJob && (
+      {rebuildJob && rebuildJob.status !== 'COMPLETED' && (
         <div className="mb-6 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -513,9 +561,7 @@ export default function StockPhotosPage() {
             <div className="text-xs text-gray-500 dark:text-gray-400">
               {typeof rebuildJob.progressTotal === "number" && rebuildJob.progressTotal > 0
                 ? `${rebuildJob.progressCurrent}/${rebuildJob.progressTotal}`
-                : rebuildJob.status === "COMPLETED"
-                  ? "Done"
-                  : "Preparing"}
+                : "Preparing"}
             </div>
           </div>
 
@@ -528,7 +574,7 @@ export default function StockPhotosPage() {
               return (
                 <div
                   className="h-full rounded-full bg-brand-500 transition-all"
-                  style={{ width: `${rebuildJob.status === "COMPLETED" ? 100 : percent}%` }}
+                  style={{ width: `${percent}%` }}
                 />
               );
             })()}

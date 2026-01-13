@@ -7,14 +7,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
 import { withSuperAdmin, AuthContext } from '@/lib/middleware/auth';
 import { serializeBigInt } from '@/lib/utils/serializer';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 async function handler(
   _request: NextRequest,
   _context: AuthContext,
-  routeContext: { params: Promise<Record<string, string>> }
+  routeContext: RouteContext
 ): Promise<NextResponse> {
-  const { id } = await routeContext.params;
-  const influencerId = BigInt(id);
+  const influencerIdResult = await requireBigIntRouteParam(routeContext, 'id');
+  if (!influencerIdResult.ok) {
+    return NextResponse.json(influencerIdResult.body, { status: influencerIdResult.status });
+  }
+  const influencerId = influencerIdResult.value;
 
   const influencer = await prisma.influencer.findUnique({
     where: { id: influencerId },

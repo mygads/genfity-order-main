@@ -9,6 +9,7 @@ import { withMerchant } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/types/auth';
 import { serializeBigInt } from '@/lib/utils/serializer';
 import prisma from '@/lib/db/client';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 /**
  * PATCH /api/merchant/addon-items/[id]/toggle-active
@@ -17,7 +18,7 @@ import prisma from '@/lib/db/client';
 async function handlePatch(
   req: NextRequest,
   context: AuthContext,
-  contextParams: { params: Promise<Record<string, string>> }
+  contextParams: RouteContext
 ) {
   try {
     // Get merchant from user's merchant_users relationship
@@ -37,8 +38,11 @@ async function handlePatch(
       );
     }
 
-    const params = await contextParams.params;
-    const itemId = BigInt(params?.id || '0');
+    const itemIdResult = await requireBigIntRouteParam(contextParams, 'id');
+    if (!itemIdResult.ok) {
+      return NextResponse.json(itemIdResult.body, { status: itemIdResult.status });
+    }
+    const itemId = itemIdResult.value;
 
     const item = await addonService.toggleAddonItemActive(
       itemId,

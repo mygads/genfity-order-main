@@ -11,6 +11,7 @@ import { OrderManagementService } from '@/lib/services/OrderManagementService';
 import { serializeBigInt } from '@/lib/utils/serializer';
 import prisma from '@/lib/db/client';
 import bcrypt from 'bcryptjs';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 /**
  * GET /api/merchant/orders/[orderId]
@@ -19,21 +20,14 @@ import bcrypt from 'bcryptjs';
 async function handleGet(
   req: NextRequest,
   authContext: AuthContext,
-  routeContext: { params: Promise<Record<string, string>> }
+  routeContext: RouteContext
 ) {
   try {
-    const params = await routeContext.params;
-    if (!params?.orderId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Order ID is required',
-        },
-        { status: 400 }
-      );
+    const orderIdResult = await requireBigIntRouteParam(routeContext, 'orderId');
+    if (!orderIdResult.ok) {
+      return NextResponse.json(orderIdResult.body, { status: orderIdResult.status });
     }
-
-    const orderId = BigInt(params.orderId);
+    const orderId = orderIdResult.value;
     const { merchantId } = authContext;
 
     if (!merchantId) {
@@ -84,18 +78,12 @@ export const GET = withMerchant(handleGet);
 async function handleDelete(
   req: NextRequest,
   authContext: AuthContext,
-  routeContext: { params: Promise<Record<string, string>> }
+  routeContext: RouteContext
 ) {
   try {
-    const params = await routeContext.params;
-    if (!params?.orderId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Order ID is required',
-        },
-        { status: 400 }
-      );
+    const orderIdResult = await requireBigIntRouteParam(routeContext, 'orderId');
+    if (!orderIdResult.ok) {
+      return NextResponse.json(orderIdResult.body, { status: orderIdResult.status });
     }
 
     const body = await req.json();
@@ -156,7 +144,7 @@ async function handleDelete(
       );
     }
 
-    const orderId = BigInt(params.orderId);
+    const orderId = orderIdResult.value;
 
     // Find the order
     const order = await prisma.order.findFirst({

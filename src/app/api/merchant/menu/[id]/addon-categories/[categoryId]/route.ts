@@ -8,6 +8,7 @@ import { withMerchant } from '@/lib/middleware/auth';
 import { NotFoundError } from '@/lib/constants/errors';
 import type { AuthContext } from '@/lib/types/auth';
 import prisma from '@/lib/db/client';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 /**
  * DELETE /api/merchant/menu/[menuId]/addon-categories/[categoryId]
@@ -16,12 +17,19 @@ import prisma from '@/lib/db/client';
 async function handleDelete(
   req: NextRequest,
   context: AuthContext,
-  contextParams: { params: Promise<Record<string, string>> }
+  contextParams: RouteContext
 ) {
   try {
-    const params = await contextParams.params;
-    const menuId = BigInt(params?.id || '0');
-    const categoryId = BigInt(params?.categoryId || '0');
+    const menuIdResult = await requireBigIntRouteParam(contextParams, 'id');
+    if (!menuIdResult.ok) {
+      return NextResponse.json(menuIdResult.body, { status: menuIdResult.status });
+    }
+    const categoryIdResult = await requireBigIntRouteParam(contextParams, 'categoryId');
+    if (!categoryIdResult.ok) {
+      return NextResponse.json(categoryIdResult.body, { status: categoryIdResult.status });
+    }
+    const menuId = menuIdResult.value;
+    const categoryId = categoryIdResult.value;
 
     // Verify menu exists and belongs to merchant
     const menu = await prisma.menu.findFirst({

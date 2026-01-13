@@ -8,10 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withSuperAdmin } from '@/lib/middleware/auth';
 import prisma from '@/lib/db/client';
 import { serializeBigInt } from '@/lib/utils/serializer';
-
-type RouteContext = {
-  params: Promise<Record<string, string>>;
-};
+import { getBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 /**
  * GET /api/admin/customers/[id]
@@ -19,8 +16,13 @@ type RouteContext = {
  */
 export const GET = withSuperAdmin(async (_req: NextRequest, _context, routeContext: RouteContext) => {
   try {
-    const params = await routeContext.params;
-    const customerId = BigInt(params.id);
+    const customerId = await getBigIntRouteParam(routeContext, 'id');
+    if (!customerId) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid customer id' },
+        { status: 400 }
+      );
+    }
 
     const customer = await prisma.customer.findUnique({
       where: { id: customerId },
@@ -118,8 +120,13 @@ export const GET = withSuperAdmin(async (_req: NextRequest, _context, routeConte
  */
 export const PUT = withSuperAdmin(async (req: NextRequest, _context, routeContext: RouteContext) => {
   try {
-    const params = await routeContext.params;
-    const customerId = BigInt(params.id);
+    const customerId = await getBigIntRouteParam(routeContext, 'id');
+    if (!customerId) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid customer id' },
+        { status: 400 }
+      );
+    }
     const body = await req.json();
 
     const customer = await prisma.customer.findUnique({

@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
 import { withSuperAdmin } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/types/auth';
+import type { RouteContext } from '@/lib/utils/routeContext';
 
 // Cleanup threshold - records older than this will be permanently deleted
 const CLEANUP_THRESHOLD_DAYS = 30;
@@ -25,7 +26,7 @@ interface CleanupResult {
 async function handlePost(
   req: NextRequest,
   _context: AuthContext,
-  _routeContext: { params: Promise<Record<string, string>> }
+  _routeContext: RouteContext
 ) {
   try {
     const thresholdDate = new Date();
@@ -141,7 +142,7 @@ async function handlePost(
 async function handleGet(
   req: NextRequest,
   _context: AuthContext,
-  _routeContext: { params: Promise<Record<string, string>> }
+  _routeContext: RouteContext
 ) {
   try {
     const thresholdDate = new Date();

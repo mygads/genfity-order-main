@@ -7,6 +7,7 @@ import { useTranslation } from '@/lib/i18n/useTranslation';
 import { saveDriverAuth } from '@/lib/utils/driverAuth';
 import Image from 'next/image';
 import { LanguageToggle } from '@/components/common/LanguageSelector';
+import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
 
 export default function DriverLoginPage() {
   return (
@@ -27,6 +28,8 @@ function DriverLoginInner() {
   const searchParams = useSearchParams();
   const { t } = useTranslation();
 
+  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+
   const redirectPath = searchParams.get('redirect') || '/driver/dashboard';
   const errorParam = searchParams.get('error');
 
@@ -34,6 +37,7 @@ function DriverLoginInner() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState('');
 
   const initialError = useMemo(() => {
     if (errorParam === 'expired') return t('driver.login.error.sessionExpired');
@@ -41,7 +45,11 @@ function DriverLoginInner() {
     return '';
   }, [errorParam, t]);
 
-  const canSubmit = email.trim().length > 0 && password.length >= 8 && !isLoading;
+  const canSubmit =
+    email.trim().length > 0 &&
+    password.length >= 8 &&
+    !isLoading &&
+    (!turnstileSiteKey || Boolean(turnstileToken));
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -54,6 +62,12 @@ function DriverLoginInner() {
 
     setIsLoading(true);
 
+    if (turnstileSiteKey && !turnstileToken) {
+      setError(t('auth.turnstile.required'));
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
@@ -62,6 +76,7 @@ function DriverLoginInner() {
           email: email.trim().toLowerCase(),
           password,
           rememberMe: true,
+          turnstileToken: turnstileSiteKey ? turnstileToken : undefined,
         }),
       });
 
@@ -267,6 +282,18 @@ function DriverLoginInner() {
                     {t('driver.login.forgotPassword')}
                   </Link>
                 </div>
+
+                {turnstileSiteKey && (
+                  <div className="flex justify-center">
+                    <TurnstileWidget
+                      siteKey={turnstileSiteKey}
+                      onVerify={(token) => setTurnstileToken(token)}
+                      onExpire={() => setTurnstileToken('')}
+                      onError={() => setTurnstileToken('')}
+                      theme="auto"
+                    />
+                  </div>
+                )}
 
                 <button
                   type="submit"

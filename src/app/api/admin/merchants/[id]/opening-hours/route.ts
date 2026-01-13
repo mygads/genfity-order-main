@@ -16,12 +16,13 @@
  * }
  */
 
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
 import { successResponse, handleError } from '@/lib/middleware/errorHandler';
 import { withSuperAdmin } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/middleware/auth';
 import { ValidationError } from '@/lib/constants/errors';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 interface OpeningHourInput {
   dayOfWeek: number;
@@ -33,11 +34,14 @@ interface OpeningHourInput {
 async function updateOpeningHoursHandler(
   request: NextRequest,
   _authContext: AuthContext,
-  context: { params: Promise<Record<string, string>> }
+  context: RouteContext
 ) {
   try {
-    const params = await context.params;
-    const merchantId = BigInt(params.id);
+    const merchantIdResult = await requireBigIntRouteParam(context, 'id');
+    if (!merchantIdResult.ok) {
+      return NextResponse.json(merchantIdResult.body, { status: merchantIdResult.status });
+    }
+    const merchantId = merchantIdResult.value;
     const body = await request.json();
 
     // Validate merchant exists

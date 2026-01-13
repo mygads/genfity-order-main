@@ -9,6 +9,7 @@ import type { AuthContext } from '@/lib/types/auth';
 import { OrderManagementService } from '@/lib/services/OrderManagementService';
 import { serializeBigInt } from '@/lib/utils/serializer';
 import { OrderStatus } from '@prisma/client';
+import type { RouteContext } from '@/lib/utils/routeContext';
 
 /**
  * PUT /api/merchant/orders/[orderId]/status
@@ -21,7 +22,7 @@ import { OrderStatus } from '@prisma/client';
 async function handlePut(
   req: NextRequest,
   context: AuthContext,
-  contextParams: { params: Promise<Record<string, string>> }
+  contextParams: RouteContext
 ) {
   try {
     // Handle params - Next.js 15 uses Promise for params

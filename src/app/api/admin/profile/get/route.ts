@@ -9,11 +9,12 @@ import prisma from '@/lib/db/client';
 import { successResponse } from '@/lib/middleware/errorHandler';
 import { withAuth } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/middleware/auth';
+import type { RouteContext } from '@/lib/utils/routeContext';
 
 async function getProfileHandler(
   _request: NextRequest,
   authContext: AuthContext,
-  _routeContext: { params: Promise<Record<string, string>> }
+  _routeContext: RouteContext
 ) {
   try {
     // Fetch user profile data using Prisma

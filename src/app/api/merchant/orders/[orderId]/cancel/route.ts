@@ -8,6 +8,7 @@ import { withMerchant } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/types/auth';
 import { OrderManagementService } from '@/lib/services/OrderManagementService';
 import { serializeBigInt } from '@/lib/utils/serializer';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 /**
  * POST /api/merchant/orders/[orderId]/cancel
@@ -19,11 +20,14 @@ import { serializeBigInt } from '@/lib/utils/serializer';
 async function handlePost(
   req: NextRequest,
   context: AuthContext,
-  contextParams: { params: Promise<Record<string, string>> }
+  contextParams: RouteContext
 ) {
   try {
-    const params = await contextParams.params;
-    const orderId = BigInt(params?.orderId || '0');
+    const orderIdResult = await requireBigIntRouteParam(contextParams, 'orderId');
+    if (!orderIdResult.ok) {
+      return NextResponse.json(orderIdResult.body, { status: orderIdResult.status });
+    }
+    const orderId = orderIdResult.value;
     const body = await req.json();
 
     // Validate required fields

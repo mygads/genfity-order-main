@@ -10,6 +10,8 @@ import {
   FaEye,
   FaSpinner,
 } from 'react-icons/fa';
+import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 // Carousel slides for influencer login
 const carouselSlides = [
@@ -88,6 +90,8 @@ function InfluencerLoginSkeleton() {
 
 function InfluencerLoginForm() {
   const router = useRouter();
+  const { t } = useTranslation();
+  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -95,6 +99,7 @@ function InfluencerLoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState('');
   const [currentSlide, setCurrentSlide] = useState(0);
 
   // Auto-rotate carousel every 5 seconds
@@ -124,6 +129,12 @@ function InfluencerLoginForm() {
       return;
     }
 
+    if (turnstileSiteKey && !turnstileToken) {
+      setError(t('auth.turnstile.required'));
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const response = await fetch('/api/influencer/auth/login', {
         method: 'POST',
@@ -133,6 +144,7 @@ function InfluencerLoginForm() {
         body: JSON.stringify({
           email: formData.email.toLowerCase(),
           password: formData.password,
+          turnstileToken: turnstileSiteKey ? turnstileToken : undefined,
         }),
       });
 
@@ -352,10 +364,22 @@ function InfluencerLoginForm() {
                   </div>
                 </div>
 
+                {turnstileSiteKey && (
+                  <div className="flex justify-center">
+                    <TurnstileWidget
+                      siteKey={turnstileSiteKey}
+                      onVerify={(token) => setTurnstileToken(token)}
+                      onExpire={() => setTurnstileToken('')}
+                      onError={() => setTurnstileToken('')}
+                      theme="auto"
+                    />
+                  </div>
+                )}
+
                 {/* Submit Button */}
                 <button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isLoading || (turnstileSiteKey ? !turnstileToken : false)}
                   className="w-full py-3 px-4 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isLoading ? (

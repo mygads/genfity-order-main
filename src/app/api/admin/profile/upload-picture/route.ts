@@ -10,11 +10,12 @@ import { successResponse } from '@/lib/middleware/errorHandler';
 import { withAuth } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/middleware/auth';
 import { BlobService } from '@/lib/services/BlobService';
+import type { RouteContext } from '@/lib/utils/routeContext';
 
 async function uploadProfilePictureHandler(
   request: NextRequest,
   authContext: AuthContext,
-  _routeContext: { params: Promise<Record<string, string>> }
+  _routeContext: RouteContext
 ) {
   try {
     const formData = await request.formData();

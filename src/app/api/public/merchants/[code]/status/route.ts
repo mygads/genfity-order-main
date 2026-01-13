@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
 import { serializeBigInt } from '@/lib/utils/serializer';
+import type { RouteContext } from '@/lib/utils/routeContext';
 
 export const dynamic = 'force-dynamic'; // Never cache this route
 
@@ -18,7 +19,7 @@ export const dynamic = 'force-dynamic'; // Never cache this route
  */
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<Record<string, string>> }
+  context: RouteContext
 ) {
   const params = await context.params;
 

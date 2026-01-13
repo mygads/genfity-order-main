@@ -14,10 +14,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
 import { Prisma } from '@prisma/client';
+import type { RouteContext } from '@/lib/utils/routeContext';
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: Promise<{ code: string }> }
+    { params }: RouteContext<{ code: string }>
 ) {
     try {
         const { code } = await params;

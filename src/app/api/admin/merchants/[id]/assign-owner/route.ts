@@ -4,7 +4,7 @@
  * Access: SUPER_ADMIN only
  */
 
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
 import { successResponse } from '@/lib/middleware/errorHandler';
 import { withSuperAdmin } from '@/lib/middleware/auth';
@@ -14,6 +14,7 @@ import {
   NotFoundError,
   ERROR_CODES 
 } from '@/lib/constants/errors';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 /**
  * Assign a user as merchant owner
@@ -21,10 +22,13 @@ import {
 async function assignOwnerHandler(
   request: NextRequest,
   authContext: AuthContext,
-  context: { params: Promise<Record<string, string>> }
+  context: RouteContext
 ) {
-  const params = await context.params;
-  const merchantId = BigInt(params.id);
+  const merchantIdResult = await requireBigIntRouteParam(context, 'id');
+  if (!merchantIdResult.ok) {
+    return NextResponse.json(merchantIdResult.body, { status: merchantIdResult.status });
+  }
+  const merchantId = merchantIdResult.value;
 
   // Parse request body
   const body = await request.json();

@@ -9,6 +9,7 @@ import prisma from '@/lib/db/client';
 import { withMerchant } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/middleware/auth';
 import { serializeBigInt } from '@/lib/utils/serializer';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 /**
  * GET /api/merchant/categories/[id]/menus
@@ -17,11 +18,14 @@ import { serializeBigInt } from '@/lib/utils/serializer';
 async function handleGet(
   req: NextRequest,
   context: AuthContext,
-  routeContext: { params: Promise<Record<string, string>> }
+  routeContext: RouteContext
 ) {
   try {
-    const params = await routeContext.params;
-    const categoryId = BigInt(params.id);
+    const categoryIdResult = await requireBigIntRouteParam(routeContext, 'id');
+    if (!categoryIdResult.ok) {
+      return NextResponse.json(categoryIdResult.body, { status: categoryIdResult.status });
+    }
+    const categoryId = categoryIdResult.value;
 
     // Verify category belongs to merchant
     const category = await prisma.menuCategory.findFirst({
@@ -85,11 +89,14 @@ async function handleGet(
 async function handlePost(
   req: NextRequest,
   context: AuthContext,
-  routeContext: { params: Promise<Record<string, string>> }
+  routeContext: RouteContext
 ) {
   try {
-    const params = await routeContext.params;
-    const categoryId = BigInt(params.id);
+    const categoryIdResult = await requireBigIntRouteParam(routeContext, 'id');
+    if (!categoryIdResult.ok) {
+      return NextResponse.json(categoryIdResult.body, { status: categoryIdResult.status });
+    }
+    const categoryId = categoryIdResult.value;
     const body = await req.json();
     
     // Validate menuId is provided

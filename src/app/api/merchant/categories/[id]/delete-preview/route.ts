@@ -9,6 +9,7 @@ import prisma from '@/lib/db/client';
 import { withMerchant } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/types/auth';
 import { serializeBigInt } from '@/lib/utils/serializer';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 /**
  * GET /api/merchant/categories/[id]/delete-preview
@@ -17,11 +18,14 @@ import { serializeBigInt } from '@/lib/utils/serializer';
 async function handleGet(
   req: NextRequest,
   context: AuthContext,
-  contextParams: { params: Promise<Record<string, string>> }
+  contextParams: RouteContext
 ) {
   try {
-    const params = await contextParams.params;
-    const categoryId = BigInt(params?.id || '0');
+    const categoryIdResult = await requireBigIntRouteParam(contextParams, 'id');
+    if (!categoryIdResult.ok) {
+      return NextResponse.json(categoryIdResult.body, { status: categoryIdResult.status });
+    }
+    const categoryId = categoryIdResult.value;
 
     // Get merchant from user's merchant_users relationship
     const merchantUser = await prisma.merchantUser.findFirst({

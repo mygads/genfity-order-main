@@ -10,6 +10,7 @@ import menuService from '@/lib/services/MenuService';
 import { withMerchant } from '@/lib/middleware/auth';
 import { ValidationError, NotFoundError } from '@/lib/constants/errors';
 import type { AuthContext } from '@/lib/types/auth';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 /**
  * GET /api/merchant/menu/[id]
@@ -18,11 +19,14 @@ import type { AuthContext } from '@/lib/types/auth';
 async function handleGet(
   req: NextRequest,
   context: AuthContext,
-  contextParams: { params: Promise<Record<string, string>> }
+  contextParams: RouteContext
 ) {
   try {
-    const params = await contextParams.params;
-    const menuId = BigInt(params?.id || '0');
+    const menuIdResult = await requireBigIntRouteParam(contextParams, 'id');
+    if (!menuIdResult.ok) {
+      return NextResponse.json(menuIdResult.body, { status: menuIdResult.status });
+    }
+    const menuId = menuIdResult.value;
     const menu = await menuService.getMenuWithAddons(menuId);
 
     if (!menu) {
@@ -65,11 +69,14 @@ async function handleGet(
 async function handlePut(
   req: NextRequest,
   context: AuthContext,
-  contextParams: { params: Promise<Record<string, string>> }
+  contextParams: RouteContext
 ) {
   try {
-    const params = await contextParams.params;
-    const menuId = BigInt(params?.id || '0');
+    const menuIdResult = await requireBigIntRouteParam(contextParams, 'id');
+    if (!menuIdResult.ok) {
+      return NextResponse.json(menuIdResult.body, { status: menuIdResult.status });
+    }
+    const menuId = menuIdResult.value;
     const body = await req.json();
 
     // Note: Promo is now managed via SpecialPrice table, not menu fields
@@ -143,11 +150,14 @@ async function handlePut(
 async function handleDelete(
   req: NextRequest,
   context: AuthContext,
-  contextParams: { params: Promise<Record<string, string>> }
+  contextParams: RouteContext
 ) {
   try {
-    const params = await contextParams.params;
-    const menuId = BigInt(params?.id || '0');
+    const menuIdResult = await requireBigIntRouteParam(contextParams, 'id');
+    if (!menuIdResult.ok) {
+      return NextResponse.json(menuIdResult.body, { status: menuIdResult.status });
+    }
+    const menuId = menuIdResult.value;
     const { merchantId, userId } = context;
 
     // Verify menu belongs to this merchant

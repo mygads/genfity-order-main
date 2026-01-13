@@ -259,6 +259,27 @@ class SubscriptionHistoryService {
     }
 
     /**
+     * Get subscription history plus merchant currency
+     */
+    async getMerchantHistoryWithCurrency(
+        merchantId: bigint,
+        options: { limit?: number; offset?: number; eventType?: SubscriptionEventType } = {}
+    ) {
+        const [historyResult, merchant] = await Promise.all([
+            this.getMerchantHistory(merchantId, options),
+            prisma.merchant.findUnique({
+                where: { id: merchantId },
+                select: { currency: true },
+            }),
+        ]);
+
+        return {
+            ...historyResult,
+            currency: merchant?.currency || 'IDR',
+        };
+    }
+
+    /**
      * Get all subscription events for analytics (super admin)
      */
     async getAnalyticsData(options: {

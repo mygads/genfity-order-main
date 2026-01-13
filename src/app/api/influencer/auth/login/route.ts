@@ -7,11 +7,12 @@ import { NextRequest } from 'next/server';
 import influencerAuthService from '@/lib/services/InfluencerAuthService';
 import { handleError, successResponse } from '@/lib/middleware/errorHandler';
 import { ValidationError, ERROR_CODES } from '@/lib/constants/errors';
+import { isTurnstileEnabled, verifyTurnstileToken } from '@/lib/utils/turnstile';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, password } = body;
+    const { email, password, turnstileToken } = body;
 
     // Validate required fields
     if (!email || !password) {
@@ -27,6 +28,17 @@ export async function POST(request: NextRequest) {
       request.headers.get('x-forwarded-for')?.split(',')[0] || 
       request.headers.get('x-real-ip') || 
       'Unknown';
+
+    if (isTurnstileEnabled()) {
+      if (!turnstileToken || typeof turnstileToken !== 'string') {
+        throw new ValidationError(
+          'Security verification required',
+          ERROR_CODES.VALIDATION_FAILED
+        );
+      }
+
+      await verifyTurnstileToken({ token: turnstileToken, ipAddress });
+    }
 
     const result = await influencerAuthService.login(
       { email, password },

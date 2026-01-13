@@ -4,11 +4,12 @@ import type { AuthContext } from '@/lib/middleware/auth';
 import prisma from '@/lib/db/client';
 import { OrderManagementService } from '@/lib/services/OrderManagementService';
 import { serializeBigInt } from '@/lib/utils/serializer';
+import type { RouteContext } from '@/lib/utils/routeContext';
 
 export const POST = withMerchant(async (
   req: NextRequest,
   context: AuthContext,
-  routeContext: { params: Promise<Record<string, string>> }
+  routeContext: RouteContext
 ) => {
   try {
     const { orderId } = await routeContext.params;

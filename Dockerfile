@@ -25,12 +25,14 @@ RUN pnpm exec prisma generate
 COPY . .
 
 # Build the application (with dummy env vars for build time only)
+ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy?schema=public"
 ENV JWT_SECRET="build-time-dummy-jwt-secret-not-used-in-production"
 ENV JWT_REFRESH_SECRET="build-time-dummy-refresh-secret-not-used-in-production"
 ENV NEXT_PUBLIC_APP_URL="http://localhost:3000"
+ENV NEXT_PUBLIC_TURNSTILE_SITE_KEY=${NEXT_PUBLIC_TURNSTILE_SITE_KEY}
 RUN pnpm build
 
 # Stage 2: Runner

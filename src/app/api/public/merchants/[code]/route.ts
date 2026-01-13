@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import merchantService from '@/lib/services/MerchantService';
+import type { RouteContext } from '@/lib/utils/routeContext';
 
 /**
  * GET /api/public/merchant/[code]
@@ -12,7 +13,7 @@ import merchantService from '@/lib/services/MerchantService';
  */
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<Record<string, string>> }
+  context: RouteContext
 ) {
   const params = await context.params;
   try {

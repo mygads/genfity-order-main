@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
 import { withMerchant } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/middleware/auth';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 /**
  * DELETE /api/merchant/categories/[id]/menus/[menuId]
@@ -15,12 +16,20 @@ import type { AuthContext } from '@/lib/middleware/auth';
 async function handleDelete(
   req: NextRequest,
   context: AuthContext,
-  routeContext: { params: Promise<Record<string, string>> }
+  routeContext: RouteContext
 ) {
   try {
-    const params = await routeContext.params;
-    const categoryId = BigInt(params.id);
-    const menuId = BigInt(params.menuId);
+    const categoryIdResult = await requireBigIntRouteParam(routeContext, 'id');
+    if (!categoryIdResult.ok) {
+      return NextResponse.json(categoryIdResult.body, { status: categoryIdResult.status });
+    }
+    const menuIdResult = await requireBigIntRouteParam(routeContext, 'menuId');
+    if (!menuIdResult.ok) {
+      return NextResponse.json(menuIdResult.body, { status: menuIdResult.status });
+    }
+
+    const categoryId = categoryIdResult.value;
+    const menuId = menuIdResult.value;
 
     // Get merchant
     const merchantUser = await prisma.merchantUser.findFirst({

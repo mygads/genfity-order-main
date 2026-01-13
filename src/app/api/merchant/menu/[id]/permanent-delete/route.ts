@@ -11,14 +11,14 @@ import { withMerchant } from '@/lib/middleware/auth';
 import prisma from '@/lib/db/client';
 import { serializeBigInt } from '@/lib/utils/serializer';
 import type { AuthContext } from '@/lib/types/auth';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 async function handleDelete(
   req: NextRequest,
   authContext: AuthContext,
-  contextParams: { params: Promise<Record<string, string>> }
+  contextParams: RouteContext
 ) {
   try {
-    const params = await contextParams.params;
     const { merchantId } = authContext;
 
     if (!merchantId) {
@@ -28,18 +28,16 @@ async function handleDelete(
       );
     }
 
-    const menuId = parseInt(params?.id || '0');
-    if (isNaN(menuId) || menuId === 0) {
-      return NextResponse.json(
-        { success: false, error: 'INVALID_ID', message: 'Invalid menu ID' },
-        { status: 400 }
-      );
+    const menuIdResult = await requireBigIntRouteParam(contextParams, 'id');
+    if (!menuIdResult.ok) {
+      return NextResponse.json(menuIdResult.body, { status: menuIdResult.status });
     }
+    const menuId = menuIdResult.value;
 
     // Verify the menu exists, belongs to the merchant, and is soft-deleted
     const menu = await prisma.menu.findFirst({
       where: {
-        id: BigInt(menuId),
+        id: menuId,
         merchantId: BigInt(merchantId),
         deletedAt: { not: null },
       },
@@ -55,19 +53,19 @@ async function handleDelete(
 
     // Delete related records first (junction tables)
     await prisma.menuCategoryItem.deleteMany({
-      where: { menuId: BigInt(menuId) },
+      where: { menuId },
     });
 
     await prisma.menuAddonCategory.deleteMany({
-      where: { menuId: BigInt(menuId) },
+      where: { menuId },
     });
 
     // Permanently delete the menu
     await prisma.menu.delete({
-      where: { id: BigInt(menuId) },
+      where: { id: menuId },
     });
 
-    console.log(`🗑️ Menu ${menu.name} (ID: ${menuId}) permanently deleted`);
+    console.log(`🗑️ Menu ${menu.name} (ID: ${menuId.toString()}) permanently deleted`);
 
     return NextResponse.json({
       success: true,

@@ -10,15 +10,22 @@ import { successResponse } from '@/lib/middleware/errorHandler';
 import { withSuperAdmin } from '@/lib/middleware/auth';
 import { AuthContext } from '@/lib/types/auth';
 import { BlobService } from '@/lib/services/BlobService';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 async function uploadMerchantLogoHandler(
   request: NextRequest,
   _authContext: AuthContext,
-  context: { params: Promise<Record<string, string>> }
+  context: RouteContext
 ) {
   try {
-    const params = await context.params;
-    const { id } = params;
+    const merchantIdResult = await requireBigIntRouteParam(context, 'id');
+    if (!merchantIdResult.ok) {
+      return NextResponse.json(merchantIdResult.body, { status: merchantIdResult.status });
+    }
+
+    const merchantId = merchantIdResult.value;
+    const merchantIdStr = merchantId.toString();
+
     const formData = await request.formData();
     const file = formData.get('file') as File;
 
@@ -40,7 +47,7 @@ async function uploadMerchantLogoHandler(
 
     // Check if merchant exists using Prisma
     const merchant = await prisma.merchant.findUnique({
-      where: { id: BigInt(id) },
+      where: { id: merchantId },
       select: { id: true, name: true },
     });
 
@@ -52,14 +59,14 @@ async function uploadMerchantLogoHandler(
     }
 
     // Delete old logo if exists
-    await BlobService.deleteOldMerchantLogo(id);
+    await BlobService.deleteOldMerchantLogo(merchantIdStr);
 
     // Upload new logo
-    const uploadResult = await BlobService.uploadMerchantLogo(id, file);
+    const uploadResult = await BlobService.uploadMerchantLogo(merchantIdStr, file);
 
     // Update merchant logo URL in database using Prisma
     await prisma.merchant.update({
-      where: { id: BigInt(id) },
+      where: { id: merchantId },
       data: {
         logoUrl: uploadResult.url,
       },

@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
 import { serializeBigInt } from '@/lib/utils/serializer';
 import { verifyOrderTrackingToken } from '@/lib/utils/orderTrackingToken';
+import type { RouteContext } from '@/lib/utils/routeContext';
 
 /**
  * GET /api/public/orders/[orderNumber]
@@ -19,7 +20,7 @@ import { verifyOrderTrackingToken } from '@/lib/utils/orderTrackingToken';
  */
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<Record<string, string>> }
+  context: RouteContext
 ) {
   const params = await context.params;
 

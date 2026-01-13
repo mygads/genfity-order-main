@@ -3,6 +3,7 @@ import { withMerchant } from "@/lib/middleware/auth";
 import type { AuthContext } from "@/lib/middleware/auth";
 import prisma from "@/lib/db/client";
 import { serializeBigInt } from "@/lib/utils/serializer";
+import { requireBigIntRouteParam, type RouteContext } from "@/lib/utils/routeContext";
 
 /**
  * GET /api/merchant/addon-categories/[id]/relationships
@@ -11,7 +12,7 @@ import { serializeBigInt } from "@/lib/utils/serializer";
 async function handleGet(
   request: NextRequest,
   context: AuthContext,
-  routeContext: { params: Promise<Record<string, string>> }
+  routeContext: RouteContext
 ) {
   try {
     // Get merchant from user's merchant_users relationship
@@ -31,8 +32,11 @@ async function handleGet(
       );
     }
 
-    const params = await routeContext.params;
-    const addonCategoryId = BigInt(params.id || "0");
+    const addonCategoryIdResult = await requireBigIntRouteParam(routeContext, "id");
+    if (!addonCategoryIdResult.ok) {
+      return NextResponse.json(addonCategoryIdResult.body, { status: addonCategoryIdResult.status });
+    }
+    const addonCategoryId = addonCategoryIdResult.value;
 
     // Verify addon category belongs to merchant
     const addonCategory = await prisma.addonCategory.findFirst({

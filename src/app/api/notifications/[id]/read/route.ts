@@ -7,15 +7,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/middleware/auth';
 import userNotificationService from '@/lib/services/UserNotificationService';
+import { getBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 async function handlePost(
     req: NextRequest,
     context: AuthContext,
-    routeContext: { params: Promise<Record<string, string>> }
+    routeContext: RouteContext
 ) {
     try {
-        const { id } = await routeContext.params;
-        const notificationId = BigInt(id);
+        const notificationId = await getBigIntRouteParam(routeContext, 'id');
+        if (!notificationId) {
+            return NextResponse.json(
+                { success: false, error: 'VALIDATION_ERROR', message: 'Invalid notification id' },
+                { status: 400 }
+            );
+        }
 
         await userNotificationService.markAsRead(notificationId, context.userId);
 

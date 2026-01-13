@@ -11,10 +11,7 @@ import prisma from '@/lib/db/client';
 import { withSuperAdmin } from '@/lib/middleware/auth';
 import { serializeBigInt } from '@/lib/utils/serializer';
 import type { AuthContext } from '@/lib/middleware/auth';
-
-type RouteContext = {
-  params: Promise<{ id: string }>;
-};
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 /**
  * GET - Get single stock photo
@@ -24,8 +21,11 @@ async function getHandler(
   authContext: AuthContext,
   context: RouteContext
 ) {
-  const { id } = await context.params;
-  const photoId = BigInt(id);
+  const photoIdResult = await requireBigIntRouteParam(context, 'id');
+  if (!photoIdResult.ok) {
+    return NextResponse.json(photoIdResult.body, { status: photoIdResult.status });
+  }
+  const photoId = photoIdResult.value;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const photo = await (prisma as any).stockPhoto.findUnique({
@@ -66,8 +66,11 @@ async function putHandler(
   authContext: AuthContext,
   context: RouteContext
 ) {
-  const { id } = await context.params;
-  const photoId = BigInt(id);
+  const photoIdResult = await requireBigIntRouteParam(context, 'id');
+  if (!photoIdResult.ok) {
+    return NextResponse.json(photoIdResult.body, { status: photoIdResult.status });
+  }
+  const photoId = photoIdResult.value;
   const body = await request.json();
   const { category, name, imageUrl, thumbnailUrl, thumbnailMeta, isActive } = body;
 
@@ -139,8 +142,11 @@ async function deleteHandler(
   authContext: AuthContext,
   context: RouteContext
 ) {
-  const { id } = await context.params;
-  const photoId = BigInt(id);
+  const photoIdResult = await requireBigIntRouteParam(context, 'id');
+  if (!photoIdResult.ok) {
+    return NextResponse.json(photoIdResult.body, { status: photoIdResult.status });
+  }
+  const photoId = photoIdResult.value;
 
   // Check if photo exists
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

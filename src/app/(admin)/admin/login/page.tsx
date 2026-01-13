@@ -9,6 +9,7 @@ import { saveAdminAuth } from '@/lib/utils/adminAuth';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { TranslationKeys } from '@/lib/i18n';
 import type { MerchantInfo } from '@/lib/types/auth';
+import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
 
 // Carousel data with translation keys
 const carouselSlides: Array<{
@@ -160,6 +161,8 @@ function AdminLoginForm() {
   const searchParams = useSearchParams();
   const { t } = useTranslation();
 
+  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -167,6 +170,7 @@ function AdminLoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState<string>('');
   const [currentSlide, setCurrentSlide] = useState(0);
 
   // Merchant selection state
@@ -309,6 +313,12 @@ function AdminLoginForm() {
     setError('');
     setIsLoading(true);
 
+    if (turnstileSiteKey && !turnstileToken) {
+      setError(t('auth.turnstile.required'));
+      setIsLoading(false);
+      return;
+    }
+
     // Input validation - use early return pattern
     if (!formData.email || !formData.password) {
       setError(t('admin.login.error.emailPasswordRequired'));
@@ -339,6 +349,7 @@ function AdminLoginForm() {
           email: formData.email.trim().toLowerCase(),
           password: formData.password,
           rememberMe: true,
+          turnstileToken: turnstileSiteKey ? turnstileToken : undefined,
         }),
       });
 
@@ -396,7 +407,11 @@ function AdminLoginForm() {
   };
 
   // Check if form is valid for button state
-  const isFormValid = formData.email && formData.password && formData.password.length >= 8;
+  const isFormValid =
+    formData.email &&
+    formData.password &&
+    formData.password.length >= 8 &&
+    (!turnstileSiteKey || Boolean(turnstileToken));
 
   return (
     <>
@@ -618,6 +633,18 @@ function AdminLoginForm() {
                       {t('auth.forgotPassword')}?
                     </Link>
                   </div>
+
+                  {turnstileSiteKey && (
+                    <div className="flex justify-center">
+                      <TurnstileWidget
+                        siteKey={turnstileSiteKey}
+                        onVerify={(token) => setTurnstileToken(token)}
+                        onExpire={() => setTurnstileToken('')}
+                        onError={() => setTurnstileToken('')}
+                        theme="auto"
+                      />
+                    </div>
+                  )}
 
                   {/* Submit Button */}
                   <button

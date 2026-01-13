@@ -6,8 +6,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
 import { serializeBigInt } from '@/lib/utils/serializer';
+import type { RouteContext } from '@/lib/utils/routeContext';
 
-export async function GET(_request: NextRequest, context: { params: Promise<Record<string, string>> }) {
+export async function GET(_request: NextRequest, context: RouteContext) {
   const params = await context.params;
 
   try {

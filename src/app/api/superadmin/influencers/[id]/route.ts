@@ -3,15 +3,21 @@ import prisma from '@/lib/db/client';
 import { withSuperAdmin } from '@/lib/middleware/auth';
 import { serializeBigInt } from '@/lib/utils/serializer';
 import { z } from 'zod';
+import { getBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 /**
  * GET /api/superadmin/influencers/[id]
  * Get influencer details
  */
-export const GET = withSuperAdmin(async (req: NextRequest, authContext, routeContext: { params: Promise<Record<string, string>> }) => {
+export const GET = withSuperAdmin(async (req: NextRequest, authContext, routeContext: RouteContext) => {
   try {
-    const { id } = await routeContext.params;
-    const influencerId = BigInt(id);
+    const influencerId = await getBigIntRouteParam(routeContext, 'id');
+    if (!influencerId) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid influencer id' },
+        { status: 400 }
+      );
+    }
 
     const influencer = await prisma.influencer.findUnique({
       where: { id: influencerId },
@@ -80,10 +86,15 @@ export const GET = withSuperAdmin(async (req: NextRequest, authContext, routeCon
  * PUT /api/superadmin/influencers/[id]
  * Update influencer (approve, activate/deactivate)
  */
-export const PUT = withSuperAdmin(async (req: NextRequest, authContext, routeContext: { params: Promise<Record<string, string>> }) => {
+export const PUT = withSuperAdmin(async (req: NextRequest, authContext, routeContext: RouteContext) => {
   try {
-    const { id } = await routeContext.params;
-    const influencerId = BigInt(id);
+    const influencerId = await getBigIntRouteParam(routeContext, 'id');
+    if (!influencerId) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid influencer id' },
+        { status: 400 }
+      );
+    }
     const body = await req.json();
 
     const schema = z.object({
@@ -201,10 +212,15 @@ export const PUT = withSuperAdmin(async (req: NextRequest, authContext, routeCon
  * DELETE /api/superadmin/influencers/[id]
  * Delete an influencer (soft delete by deactivating)
  */
-export const DELETE = withSuperAdmin(async (req: NextRequest, authContext, routeContext: { params: Promise<Record<string, string>> }) => {
+export const DELETE = withSuperAdmin(async (req: NextRequest, authContext, routeContext: RouteContext) => {
   try {
-    const { id } = await routeContext.params;
-    const influencerId = BigInt(id);
+    const influencerId = await getBigIntRouteParam(routeContext, 'id');
+    if (!influencerId) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid influencer id' },
+        { status: 400 }
+      );
+    }
 
     // Validate influencer exists
     const influencer = await prisma.influencer.findUnique({

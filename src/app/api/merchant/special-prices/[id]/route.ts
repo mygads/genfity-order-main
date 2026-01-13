@@ -10,6 +10,7 @@ import prisma from '@/lib/db/client';
 import { withMerchant } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/types/auth';
 import { serializeBigInt } from '@/lib/utils/serializer';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 /**
  * GET /api/merchant/special-prices/[id]
@@ -17,11 +18,15 @@ import { serializeBigInt } from '@/lib/utils/serializer';
 async function handleGet(
     req: NextRequest,
     context: AuthContext,
-    contextParams: { params: Promise<Record<string, string>> }
+    contextParams: RouteContext
 ) {
     try {
-        const params = await contextParams.params;
-        const id = params?.id || '0';
+        const specialPriceIdResult = await requireBigIntRouteParam(contextParams, 'id');
+        if (!specialPriceIdResult.ok) {
+            return NextResponse.json(specialPriceIdResult.body, { status: specialPriceIdResult.status });
+        }
+
+        const specialPriceId = specialPriceIdResult.value;
 
         const merchantUser = await prisma.merchantUser.findFirst({
             where: { userId: context.userId },
@@ -36,7 +41,7 @@ async function handleGet(
 
         const specialPrice = await prisma.specialPrice.findFirst({
             where: {
-                id: BigInt(id),
+                id: specialPriceId,
                 merchantId: merchantUser.merchantId
             },
             include: {
@@ -79,11 +84,15 @@ async function handleGet(
 async function handlePut(
     req: NextRequest,
     context: AuthContext,
-    contextParams: { params: Promise<Record<string, string>> }
+    contextParams: RouteContext
 ) {
     try {
-        const params = await contextParams.params;
-        const id = params?.id || '0';
+        const specialPriceIdResult = await requireBigIntRouteParam(contextParams, 'id');
+        if (!specialPriceIdResult.ok) {
+            return NextResponse.json(specialPriceIdResult.body, { status: specialPriceIdResult.status });
+        }
+
+        const specialPriceId = specialPriceIdResult.value;
 
         const merchantUser = await prisma.merchantUser.findFirst({
             where: { userId: context.userId },
@@ -98,7 +107,7 @@ async function handlePut(
 
         const existing = await prisma.specialPrice.findFirst({
             where: {
-                id: BigInt(id),
+                id: specialPriceId,
                 merchantId: merchantUser.merchantId
             }
         });
@@ -118,7 +127,7 @@ async function handlePut(
 
         const updated = await prisma.$transaction(async (tx) => {
             const _specialPrice = await tx.specialPrice.update({
-                where: { id: BigInt(id) },
+                where: { id: specialPriceId },
                 data: {
                     name: name?.trim() || existing.name,
                     menuBookId: menuBookId ? BigInt(menuBookId) : existing.menuBookId,
@@ -134,13 +143,13 @@ async function handlePut(
 
             if (priceItems !== undefined) {
                 await tx.specialPriceItem.deleteMany({
-                    where: { specialPriceId: BigInt(id) }
+                    where: { specialPriceId }
                 });
 
                 if (priceItems.length > 0) {
                     await tx.specialPriceItem.createMany({
                         data: priceItems.map((item: { menuId: string; promoPrice: number }) => ({
-                            specialPriceId: BigInt(id),
+                            specialPriceId,
                             menuId: BigInt(item.menuId),
                             promoPrice: item.promoPrice
                         }))
@@ -149,7 +158,7 @@ async function handlePut(
             }
 
             return tx.specialPrice.findUnique({
-                where: { id: BigInt(id) },
+                where: { id: specialPriceId },
                 include: {
                     menuBook: { select: { id: true, name: true } },
                     priceItems: {
@@ -179,11 +188,15 @@ async function handlePut(
 async function handleDelete(
     req: NextRequest,
     context: AuthContext,
-    contextParams: { params: Promise<Record<string, string>> }
+    contextParams: RouteContext
 ) {
     try {
-        const params = await contextParams.params;
-        const id = params?.id || '0';
+        const specialPriceIdResult = await requireBigIntRouteParam(contextParams, 'id');
+        if (!specialPriceIdResult.ok) {
+            return NextResponse.json(specialPriceIdResult.body, { status: specialPriceIdResult.status });
+        }
+
+        const specialPriceId = specialPriceIdResult.value;
 
         const merchantUser = await prisma.merchantUser.findFirst({
             where: { userId: context.userId },
@@ -198,7 +211,7 @@ async function handleDelete(
 
         const existing = await prisma.specialPrice.findFirst({
             where: {
-                id: BigInt(id),
+                id: specialPriceId,
                 merchantId: merchantUser.merchantId
             }
         });
@@ -211,7 +224,7 @@ async function handleDelete(
         }
 
         await prisma.specialPrice.delete({
-            where: { id: BigInt(id) }
+            where: { id: specialPriceId }
         });
 
         return NextResponse.json({

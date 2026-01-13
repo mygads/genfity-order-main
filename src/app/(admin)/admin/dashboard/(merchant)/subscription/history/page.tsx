@@ -5,6 +5,7 @@ import Link from "next/link";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { getAdminToken } from "@/lib/utils/adminAuth";
+import { formatCurrency } from "@/lib/utils/format";
 import { 
     FaHistory, 
     FaArrowLeft, 
@@ -69,6 +70,7 @@ export default function SubscriptionHistoryPage() {
     const { t, locale } = useTranslation();
     const [events, setEvents] = useState<HistoryEvent[]>([]);
     const [pagination, setPagination] = useState<PaginationInfo | null>(null);
+    const [currency, setCurrency] = useState<string>('IDR');
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -92,6 +94,7 @@ export default function SubscriptionHistoryPage() {
                     setEvents(prev => [...prev, ...data.data.history]);
                 }
                 setPagination(data.data.pagination);
+                if (data.data.currency) setCurrency(data.data.currency);
                 setError(null);
             } else {
                 setError(data.error || 'Failed to load history');
@@ -165,6 +168,11 @@ export default function SubscriptionHistoryPage() {
             'MONTHLY': { en: 'Monthly', id: 'Bulanan' },
         };
         return labels[type]?.[locale] || type;
+    };
+
+    const formatBalance = (amount: number | null) => {
+        if (amount === null || amount === undefined) return '-';
+        return formatCurrency(amount, currency, locale);
     };
 
     if (loading) {
@@ -298,15 +306,15 @@ export default function SubscriptionHistoryPage() {
                                                 {/* Balance Change */}
                                                 {(event.previousBalance !== null || event.newBalance !== null) && (
                                                     <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                                                        {locale === 'id' ? 'Saldo: ' : 'Balance: '}
-                                                        {event.previousBalance !== null && (
-                                                            <span>Rp {event.previousBalance.toLocaleString('id-ID')}</span>
+                                                       {locale === 'id' ? 'Saldo: ' : 'Balance: '} 
+                                                       {event.previousBalance !== null && (
+                                                           <span>{formatBalance(event.previousBalance)}</span>
                                                         )}
                                                         {event.previousBalance !== null && event.newBalance !== null && (
                                                             <span> → </span>
                                                         )}
                                                         {event.newBalance !== null && (
-                                                            <span className="font-medium">Rp {event.newBalance.toLocaleString('id-ID')}</span>
+                                                           <span className="font-medium">{formatBalance(event.newBalance)}</span>
                                                         )}
                                                     </div>
                                                 )}

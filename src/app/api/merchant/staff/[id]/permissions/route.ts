@@ -15,6 +15,7 @@ import { ValidationError, ERROR_CODES } from '@/lib/constants/errors';
 import { serializeBigInt } from '@/lib/utils/serializer';
 import prisma from '@/lib/db/client';
 import { PERMISSION_GROUPS } from '@/lib/constants/permissions';
+import type { RouteContext } from '@/lib/utils/routeContext';
 
 // Helper to get human-readable permission names from keys
 function getPermissionDisplayNames(permissionKeys: string[]): string[] {
@@ -39,7 +40,7 @@ function getPermissionDisplayNames(permissionKeys: string[]): string[] {
 async function updatePermissionsHandler(
   request: NextRequest,
   authContext: AuthContext,
-  routeContext: { params: Promise<Record<string, string>> }
+  routeContext: RouteContext
 ) {
   try {
     const params = await routeContext.params;
@@ -125,7 +126,7 @@ async function updatePermissionsHandler(
 async function getPermissionsHandler(
   request: NextRequest,
   authContext: AuthContext,
-  routeContext: { params: Promise<Record<string, string>> }
+  routeContext: RouteContext
 ) {
   try {
     const params = await routeContext.params;
@@ -166,7 +167,7 @@ export const PUT = withMerchantOwner(updatePermissionsHandler);
 async function toggleStatusHandler(
   request: NextRequest,
   authContext: AuthContext,
-  routeContext: { params: Promise<Record<string, string>> }
+  routeContext: RouteContext
 ) {
   try {
     const params = await routeContext.params;

@@ -3,6 +3,7 @@ import prisma from '@/lib/db/client';
 import { withMerchant } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/middleware/auth';
 import { createOrderTrackingToken } from '@/lib/utils/orderTrackingToken';
+import type { RouteContext } from '@/lib/utils/routeContext';
 
 /**
  * Mint tracking token for an order (merchant-authenticated).
@@ -13,7 +14,7 @@ import { createOrderTrackingToken } from '@/lib/utils/orderTrackingToken';
 export const GET = withMerchant(async (
   _req: NextRequest,
   auth: AuthContext,
-  routeContext: { params: Promise<Record<string, string>> }
+  routeContext: RouteContext
 ) => {
   try {
     const params = await routeContext.params;

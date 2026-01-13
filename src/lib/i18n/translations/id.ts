@@ -234,6 +234,9 @@ const id = {
   "auth.continueAsGuest": "Lanjutkan sebagai Tamu",
   "auth.loginAsGuest": "Masuk sebagai Tamu",
 
+  // Turnstile
+  "auth.turnstile.required": "Silakan verifikasi bahwa Anda bukan robot.",
+
   // Form fields
   "auth.email": "Email",
   "auth.emailAddress": "Alamat Email",

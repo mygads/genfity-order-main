@@ -9,6 +9,7 @@ import type { AuthContext } from '@/lib/types/auth';
 import { OrderManagementService } from '@/lib/services/OrderManagementService';
 import { serializeBigInt } from '@/lib/utils/serializer';
 import { PaymentMethod } from '@prisma/client';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 /**
  * POST /api/merchant/orders/[id]/payment
@@ -22,18 +23,20 @@ import { PaymentMethod } from '@prisma/client';
 async function handlePost(
   req: NextRequest,
   context: AuthContext,
-  contextParams: { params: Promise<Record<string, string>> }
+  contextParams: RouteContext
 ) {
   try {
     const params = await contextParams.params;
-    // Fix: use 'orderId' instead of 'id' to match folder name [orderId]
-    const orderIdString = params?.orderId || params?.id || '0';
-    const orderId = BigInt(orderIdString);
+    const orderIdResult = await requireBigIntRouteParam(contextParams, 'orderId');
+    if (!orderIdResult.ok) {
+      return NextResponse.json(orderIdResult.body, { status: orderIdResult.status });
+    }
+
+    const orderId = orderIdResult.value;
     const body = await req.json();
 
     console.log('[Payment API] Request received:', {
       params,
-      orderIdString,
       orderId: orderId.toString(),
       body,
       bodyType: {
@@ -41,18 +44,6 @@ async function handlePost(
         amount: typeof body.amount,
       },
     });
-
-    // Validate orderId
-    if (orderId === BigInt(0)) {
-      console.error('[Payment API] Invalid order ID');
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Invalid order ID',
-        },
-        { status: 400 }
-      );
-    }
 
     // Validate required fields
     if (!body.paymentMethod) {

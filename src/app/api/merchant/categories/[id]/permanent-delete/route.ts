@@ -11,14 +11,14 @@ import { withMerchant } from '@/lib/middleware/auth';
 import prisma from '@/lib/db/client';
 import { serializeBigInt } from '@/lib/utils/serializer';
 import type { AuthContext } from '@/lib/types/auth';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 async function handleDelete(
   req: NextRequest,
   authContext: AuthContext,
-  contextParams: { params: Promise<Record<string, string>> }
+  contextParams: RouteContext
 ) {
   try {
-    const params = await contextParams.params;
     const { merchantId } = authContext;
 
     if (!merchantId) {
@@ -28,18 +28,16 @@ async function handleDelete(
       );
     }
 
-    const categoryId = parseInt(params?.id || '0');
-    if (isNaN(categoryId) || categoryId === 0) {
-      return NextResponse.json(
-        { success: false, error: 'INVALID_ID', message: 'Invalid category ID' },
-        { status: 400 }
-      );
+    const categoryIdResult = await requireBigIntRouteParam(contextParams, 'id');
+    if (!categoryIdResult.ok) {
+      return NextResponse.json(categoryIdResult.body, { status: categoryIdResult.status });
     }
+    const categoryId = categoryIdResult.value;
 
     // Verify the category exists, belongs to the merchant, and is soft-deleted
     const category = await prisma.menuCategory.findFirst({
       where: {
-        id: BigInt(categoryId),
+        id: categoryId,
         merchantId: BigInt(merchantId),
         deletedAt: { not: null },
       },
@@ -55,15 +53,15 @@ async function handleDelete(
 
     // Delete related records first (junction tables)
     await prisma.menuCategoryItem.deleteMany({
-      where: { categoryId: BigInt(categoryId) },
+      where: { categoryId },
     });
 
     // Permanently delete the category
     await prisma.menuCategory.delete({
-      where: { id: BigInt(categoryId) },
+      where: { id: categoryId },
     });
 
-    console.log(`🗑️ Category ${category.name} (ID: ${categoryId}) permanently deleted`);
+    console.log(`🗑️ Category ${category.name} (ID: ${categoryId.toString()}) permanently deleted`);
 
     return NextResponse.json({
       success: true,

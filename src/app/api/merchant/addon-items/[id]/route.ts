@@ -12,6 +12,7 @@ import type { AuthContext } from '@/lib/types/auth';
 import { ValidationError, NotFoundError } from '@/lib/constants/errors';
 import { serializeBigInt } from '@/lib/utils/serializer';
 import prisma from '@/lib/db/client';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 /**
  * GET /api/merchant/addon-items/[id]
@@ -20,7 +21,7 @@ import prisma from '@/lib/db/client';
 async function handleGet(
   req: NextRequest,
   context: AuthContext,
-  contextParams: { params: Promise<Record<string, string>> }
+  contextParams: RouteContext
 ) {
   try {
     // Get merchant from user's merchant_users relationship
@@ -40,8 +41,11 @@ async function handleGet(
       );
     }
 
-    const params = await contextParams.params;
-    const itemId = BigInt(params?.id || '0');
+    const itemIdResult = await requireBigIntRouteParam(contextParams, 'id');
+    if (!itemIdResult.ok) {
+      return NextResponse.json(itemIdResult.body, { status: itemIdResult.status });
+    }
+    const itemId = itemIdResult.value;
 
     // Get addon item
     const item = await addonService.getAddonItemById(
@@ -78,7 +82,7 @@ async function handleGet(
 async function handlePut(
   req: NextRequest,
   context: AuthContext,
-  contextParams: { params: Promise<Record<string, string>> }
+  contextParams: RouteContext
 ) {
   try {
     // Get merchant from user's merchant_users relationship
@@ -98,8 +102,11 @@ async function handlePut(
       );
     }
 
-    const params = await contextParams.params;
-    const itemId = BigInt(params?.id || '0');
+    const itemIdResult = await requireBigIntRouteParam(contextParams, 'id');
+    if (!itemIdResult.ok) {
+      return NextResponse.json(itemIdResult.body, { status: itemIdResult.status });
+    }
+    const itemId = itemIdResult.value;
     const body = await req.json();
 
     // Update addon item
@@ -175,7 +182,7 @@ async function handlePut(
 async function handleDelete(
   req: NextRequest,
   context: AuthContext,
-  contextParams: { params: Promise<Record<string, string>> }
+  contextParams: RouteContext
 ) {
   try {
     // Get merchant from user's merchant_users relationship
@@ -195,8 +202,11 @@ async function handleDelete(
       );
     }
 
-    const params = await contextParams.params;
-    const itemId = BigInt(params?.id || '0');
+    const itemIdResult = await requireBigIntRouteParam(contextParams, 'id');
+    if (!itemIdResult.ok) {
+      return NextResponse.json(itemIdResult.body, { status: itemIdResult.status });
+    }
+    const itemId = itemIdResult.value;
 
     // Delete addon item
     await addonService.deleteAddonItem(itemId, merchantUser.merchantId);

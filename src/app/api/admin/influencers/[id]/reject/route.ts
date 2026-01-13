@@ -8,6 +8,7 @@ import prisma from '@/lib/db/client';
 import { withSuperAdmin, AuthContext } from '@/lib/middleware/auth';
 import { serializeBigInt } from '@/lib/utils/serializer';
 import { z } from 'zod';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 const bodySchema = z.object({
   reason: z.string().min(3).max(500),
@@ -16,10 +17,13 @@ const bodySchema = z.object({
 async function handler(
   request: NextRequest,
   context: AuthContext,
-  routeContext: { params: Promise<Record<string, string>> }
+  routeContext: RouteContext
 ): Promise<NextResponse> {
-  const { id } = await routeContext.params;
-  const influencerId = BigInt(id);
+  const influencerIdResult = await requireBigIntRouteParam(routeContext, 'id');
+  if (!influencerIdResult.ok) {
+    return NextResponse.json(influencerIdResult.body, { status: influencerIdResult.status });
+  }
+  const influencerId = influencerIdResult.value;
 
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {

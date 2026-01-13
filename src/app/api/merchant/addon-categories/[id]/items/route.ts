@@ -9,11 +9,12 @@ import type { AuthContext } from '@/lib/middleware/auth';
 import addonRepository from '@/lib/repositories/AddonRepository';
 import prisma from '@/lib/db/client';
 import { serializeBigInt } from '@/lib/utils/serializer';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 async function handleGet(
   request: NextRequest,
   context: AuthContext,
-  routeContext: { params: Promise<Record<string, string>> }
+  routeContext: RouteContext
 ) {
   try {
     // Get merchant from user's merchant_users relationship
@@ -33,8 +34,11 @@ async function handleGet(
       );
     }
 
-    const params = await routeContext.params;
-    const categoryId = BigInt(params.id || '0');
+    const categoryIdResult = await requireBigIntRouteParam(routeContext, 'id');
+    if (!categoryIdResult.ok) {
+      return NextResponse.json(categoryIdResult.body, { status: categoryIdResult.status });
+    }
+    const categoryId = categoryIdResult.value;
 
     // Verify category belongs to merchant
     const category = await addonRepository.getAddonCategoryById(

@@ -8,6 +8,7 @@ import addonService from '@/lib/services/AddonService';
 import { withMerchant } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/types/auth';
 import prisma from '@/lib/db/client';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 /**
  * POST /api/merchant/addon-categories/[id]/reorder-items
@@ -16,7 +17,7 @@ import prisma from '@/lib/db/client';
 async function handlePost(
   req: NextRequest,
   context: AuthContext,
-  contextParams: { params: Promise<Record<string, string>> }
+  contextParams: RouteContext
 ) {
   try {
     // Get merchant from user's merchant_users relationship
@@ -36,8 +37,11 @@ async function handlePost(
       );
     }
 
-    const params = await contextParams.params;
-    const categoryId = BigInt(params?.id || '0');
+    const categoryIdResult = await requireBigIntRouteParam(contextParams, 'id');
+    if (!categoryIdResult.ok) {
+      return NextResponse.json(categoryIdResult.body, { status: categoryIdResult.status });
+    }
+    const categoryId = categoryIdResult.value;
     const body = await req.json();
 
     // Validate request body

@@ -11,6 +11,7 @@ import type { AuthContext } from '@/lib/types/auth';
 import { ValidationError } from '@/lib/constants/errors';
 import { serializeBigInt } from '@/lib/utils/serializer';
 import prisma from '@/lib/db/client';
+import type { RouteContext } from '@/lib/utils/routeContext';
 
 /**
  * GET /api/merchant/addon-categories
@@ -19,7 +20,7 @@ import prisma from '@/lib/db/client';
 async function handleGet(
   req: NextRequest,
   context: AuthContext,
-  _routeContext: { params: Promise<Record<string, string>> }
+  _routeContext: RouteContext
 ) {
   try {
     // Get merchant from user's merchant_users relationship
@@ -71,7 +72,7 @@ async function handleGet(
 async function handlePost(
   req: NextRequest,
   context: AuthContext,
-  _routeContext: { params: Promise<Record<string, string>> }
+  _routeContext: RouteContext
 ) {
   try {
     // Get merchant from user's merchant_users relationship

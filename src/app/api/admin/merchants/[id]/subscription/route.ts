@@ -12,6 +12,7 @@ import subscriptionRepository from '@/lib/repositories/SubscriptionRepository';
 import emailService from '@/lib/services/EmailService';
 import prisma from '@/lib/db/client';
 import { z } from 'zod';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 const updateSubscriptionSchema = z.object({
     type: z.enum(['TRIAL', 'DEPOSIT', 'MONTHLY']).optional(),
@@ -24,11 +25,14 @@ const updateSubscriptionSchema = z.object({
 async function handleGet(
     req: NextRequest,
     context: AuthContext,
-    routeContext: { params: Promise<Record<string, string>> }
+    routeContext: RouteContext
 ) {
     try {
-        const { id } = await routeContext.params;
-        const merchantId = BigInt(id);
+        const merchantIdResult = await requireBigIntRouteParam(routeContext, 'id');
+        if (!merchantIdResult.ok) {
+            return NextResponse.json(merchantIdResult.body, { status: merchantIdResult.status });
+        }
+        const merchantId = merchantIdResult.value;
 
         const status = await subscriptionService.getSubscriptionStatus(merchantId);
 
@@ -55,11 +59,14 @@ async function handleGet(
 async function handlePut(
     req: NextRequest,
     context: AuthContext,
-    routeContext: { params: Promise<Record<string, string>> }
+    routeContext: RouteContext
 ) {
     try {
-        const { id } = await routeContext.params;
-        const merchantId = BigInt(id);
+        const merchantIdResult = await requireBigIntRouteParam(routeContext, 'id');
+        if (!merchantIdResult.ok) {
+            return NextResponse.json(merchantIdResult.body, { status: merchantIdResult.status });
+        }
+        const merchantId = merchantIdResult.value;
 
         const body = await req.json();
         const validation = updateSubscriptionSchema.safeParse(body);

@@ -26,20 +26,24 @@
  * Soft delete merchant (Super Admin only)
  */
 
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import merchantService from '@/lib/services/MerchantService';
 import { successResponse } from '@/lib/middleware/errorHandler';
 import { withSuperAdmin } from '@/lib/middleware/auth';
 import type { UpdateMerchantInput } from '@/lib/services/MerchantService';
 import { AuthContext } from '@/lib/types/auth';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 async function getMerchantHandler(
   request: NextRequest,
   authContext: AuthContext,
-  context: { params: Promise<Record<string, string>> }
+  context: RouteContext
 ) {
-  const params = await context.params;
-  const merchantId = BigInt(params.id);
+  const merchantIdResult = await requireBigIntRouteParam(context, 'id');
+  if (!merchantIdResult.ok) {
+    return NextResponse.json(merchantIdResult.body, { status: merchantIdResult.status });
+  }
+  const merchantId = merchantIdResult.value;
 
   // Get merchant details
   const merchant = await merchantService.getMerchantById(merchantId);
@@ -50,10 +54,13 @@ async function getMerchantHandler(
 async function updateMerchantHandler(
   request: NextRequest,
   authContext: AuthContext,
-  context: { params: Promise<Record<string, string>> }
+  context: RouteContext
 ) {
-  const params = await context.params;
-  const merchantId = BigInt(params.id);
+  const merchantIdResult = await requireBigIntRouteParam(context, 'id');
+  if (!merchantIdResult.ok) {
+    return NextResponse.json(merchantIdResult.body, { status: merchantIdResult.status });
+  }
+  const merchantId = merchantIdResult.value;
   const body: UpdateMerchantInput = await request.json();
 
   // Update merchant
@@ -65,10 +72,13 @@ async function updateMerchantHandler(
 async function deleteMerchantHandler(
   request: NextRequest,
   authContext: AuthContext,
-  context: { params: Promise<Record<string, string>> }
+  context: RouteContext
 ) {
-  const params = await context.params;
-  const merchantId = BigInt(params.id);
+  const merchantIdResult = await requireBigIntRouteParam(context, 'id');
+  if (!merchantIdResult.ok) {
+    return NextResponse.json(merchantIdResult.body, { status: merchantIdResult.status });
+  }
+  const merchantId = merchantIdResult.value;
 
   // Delete merchant (soft delete)
   await merchantService.deleteMerchant(merchantId);

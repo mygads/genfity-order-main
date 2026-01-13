@@ -9,7 +9,7 @@
  * Delete user (soft delete)
  */
 
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { successResponse } from '@/lib/middleware/errorHandler';
 import { withSuperAdmin } from '@/lib/middleware/auth';
 import { AuthContext } from '@/lib/types/auth';
@@ -19,6 +19,7 @@ import { validateEmail } from '@/lib/utils/validators';
 import { hashPassword } from '@/lib/utils/passwordHasher';
 import { NotFoundError, ERROR_CODES } from '@/lib/constants/errors';
 import prisma from '@/lib/db/client';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 /**
  * GET handler - Get user by ID
@@ -26,10 +27,13 @@ import prisma from '@/lib/db/client';
 async function getUserHandler(
   request: NextRequest,
   authContext: AuthContext,
-  context: { params: Promise<Record<string, string>> }
+  context: RouteContext
 ) {
-  const params = await context.params;
-  const userId = BigInt(params.id);
+  const userIdResult = await requireBigIntRouteParam(context, 'id');
+  if (!userIdResult.ok) {
+    return NextResponse.json(userIdResult.body, { status: userIdResult.status });
+  }
+  const userId = userIdResult.value;
 
   const user = await userRepository.findById(userId);
   if (!user) {
@@ -45,10 +49,13 @@ async function getUserHandler(
 async function updateUserHandler(
   request: NextRequest,
   authContext: AuthContext,
-  context: { params: Promise<Record<string, string>> }
+  context: RouteContext
 ) {
-  const params = await context.params;
-  const userId = BigInt(params.id);
+  const userIdResult = await requireBigIntRouteParam(context, 'id');
+  if (!userIdResult.ok) {
+    return NextResponse.json(userIdResult.body, { status: userIdResult.status });
+  }
+  const userId = userIdResult.value;
   const body = await request.json();
 
   // Validate user exists
@@ -103,10 +110,13 @@ async function updateUserHandler(
 async function deleteUserHandler(
   request: NextRequest,
   authContext: AuthContext,
-  context: { params: Promise<Record<string, string>> }
+  context: RouteContext
 ) {
-  const params = await context.params;
-  const userId = BigInt(params.id);
+  const userIdResult = await requireBigIntRouteParam(context, 'id');
+  if (!userIdResult.ok) {
+    return NextResponse.json(userIdResult.body, { status: userIdResult.status });
+  }
+  const userId = userIdResult.value;
 
   // Validate user exists
   const user = await userRepository.findById(userId);

@@ -11,14 +11,14 @@ import { withMerchant } from '@/lib/middleware/auth';
 import prisma from '@/lib/db/client';
 import { serializeBigInt } from '@/lib/utils/serializer';
 import type { AuthContext } from '@/lib/types/auth';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 async function handleDelete(
   req: NextRequest,
   authContext: AuthContext,
-  contextParams: { params: Promise<Record<string, string>> }
+  contextParams: RouteContext
 ) {
   try {
-    const params = await contextParams.params;
     const { merchantId } = authContext;
 
     if (!merchantId) {
@@ -28,18 +28,16 @@ async function handleDelete(
       );
     }
 
-    const addonItemId = parseInt(params?.id || '0');
-    if (isNaN(addonItemId) || addonItemId === 0) {
-      return NextResponse.json(
-        { success: false, error: 'INVALID_ID', message: 'Invalid addon item ID' },
-        { status: 400 }
-      );
+    const addonItemIdResult = await requireBigIntRouteParam(contextParams, 'id');
+    if (!addonItemIdResult.ok) {
+      return NextResponse.json(addonItemIdResult.body, { status: addonItemIdResult.status });
     }
+    const addonItemId = addonItemIdResult.value;
 
     // Verify the addon item exists, belongs to the merchant's addon category, and is soft-deleted
     const addonItem = await prisma.addonItem.findFirst({
       where: {
-        id: BigInt(addonItemId),
+        id: addonItemId,
         deletedAt: { not: null },
         addonCategory: {
           merchantId: BigInt(merchantId),
@@ -57,15 +55,15 @@ async function handleDelete(
 
     // Delete related order item addons first (if any)
     await prisma.orderItemAddon.deleteMany({
-      where: { addonItemId: BigInt(addonItemId) },
+      where: { addonItemId },
     });
 
     // Permanently delete the addon item
     await prisma.addonItem.delete({
-      where: { id: BigInt(addonItemId) },
+      where: { id: addonItemId },
     });
 
-    console.log(`🗑️ Addon Item ${addonItem.name} (ID: ${addonItemId}) permanently deleted`);
+    console.log(`🗑️ Addon Item ${addonItem.name} (ID: ${addonItemId.toString()}) permanently deleted`);
 
     return NextResponse.json({
       success: true,

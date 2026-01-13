@@ -11,14 +11,14 @@ import { withMerchant } from '@/lib/middleware/auth';
 import dataCleanupService from '@/lib/services/DataCleanupService';
 import { serializeBigInt } from '@/lib/utils/serializer';
 import type { AuthContext } from '@/lib/types/auth';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 async function handlePost(
   req: NextRequest,
   authContext: AuthContext,
-  contextParams: { params: Promise<Record<string, string>> }
+  contextParams: RouteContext
 ) {
   try {
-    const params = await contextParams.params;
     const { userId, merchantId } = authContext;
 
     if (!merchantId) {
@@ -28,21 +28,19 @@ async function handlePost(
       );
     }
 
-    const menuId = parseInt(params?.id || '0');
-    if (isNaN(menuId) || menuId === 0) {
-      return NextResponse.json(
-        { success: false, error: 'INVALID_ID', message: 'Invalid menu ID' },
-        { status: 400 }
-      );
+    const menuIdResult = await requireBigIntRouteParam(contextParams, 'id');
+    if (!menuIdResult.ok) {
+      return NextResponse.json(menuIdResult.body, { status: menuIdResult.status });
     }
+    const menuId = menuIdResult.value;
 
     // Restore the menu
     const restoredMenu = await dataCleanupService.restoreMenu(
-      BigInt(menuId),
+      menuId,
       BigInt(userId)
     );
 
-    console.log(`✅ Menu ${menuId} restored by user ${userId}`);
+    console.log(`✅ Menu ${menuId.toString()} restored by user ${userId}`);
 
     return NextResponse.json({
       success: true,

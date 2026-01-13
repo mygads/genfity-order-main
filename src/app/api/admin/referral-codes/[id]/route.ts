@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withSuperAdmin } from '@/lib/middleware/auth';
 import referralService from '@/lib/services/ReferralService';
 import { z } from 'zod';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 const updateCodeSchema = z.object({
     description: z.string().max(500).optional(),
@@ -23,11 +24,14 @@ const updateCodeSchema = z.object({
 async function handleGet(
     _req: NextRequest,
     _context: unknown,
-    routeContext: { params: Promise<Record<string, string>> }
+    routeContext: RouteContext
 ) {
     try {
-        const { id } = await routeContext.params;
-        const codeId = BigInt(id);
+        const codeIdResult = await requireBigIntRouteParam(routeContext, 'id');
+        if (!codeIdResult.ok) {
+            return NextResponse.json(codeIdResult.body, { status: codeIdResult.status });
+        }
+        const codeId = codeIdResult.value;
 
         const codeWithStats = await referralService.getCodeWithStats(codeId);
 
@@ -68,11 +72,14 @@ async function handleGet(
 async function handlePatch(
     req: NextRequest,
     _context: unknown,
-    routeContext: { params: Promise<Record<string, string>> }
+    routeContext: RouteContext
 ) {
     try {
-        const { id } = await routeContext.params;
-        const codeId = BigInt(id);
+        const codeIdResult = await requireBigIntRouteParam(routeContext, 'id');
+        if (!codeIdResult.ok) {
+            return NextResponse.json(codeIdResult.body, { status: codeIdResult.status });
+        }
+        const codeId = codeIdResult.value;
 
         const body = await req.json();
         const validation = updateCodeSchema.safeParse(body);
@@ -134,11 +141,14 @@ async function handlePatch(
 async function handleDelete(
     _req: NextRequest,
     _context: unknown,
-    routeContext: { params: Promise<Record<string, string>> }
+    routeContext: RouteContext
 ) {
     try {
-        const { id } = await routeContext.params;
-        const codeId = BigInt(id);
+        const codeIdResult = await requireBigIntRouteParam(routeContext, 'id');
+        if (!codeIdResult.ok) {
+            return NextResponse.json(codeIdResult.body, { status: codeIdResult.status });
+        }
+        const codeId = codeIdResult.value;
 
         await referralService.deactivateCode(codeId);
 

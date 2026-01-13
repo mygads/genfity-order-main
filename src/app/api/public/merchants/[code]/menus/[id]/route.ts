@@ -15,6 +15,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
 import { serializeBigInt, decimalToNumber } from '@/lib/utils/serializer';
 import { SpecialPriceService } from '@/lib/services/SpecialPriceService';
+import { requireBigIntRouteParam, requireRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 /**
  * GET /api/public/merchants/[code]/menus/[id]
@@ -22,28 +23,23 @@ import { SpecialPriceService } from '@/lib/services/SpecialPriceService';
  */
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<Record<string, string>> }
+  context: RouteContext
 ) {
   const params = await context.params;
   
   try {
-    const { code, id } = params;
-
-    // Validate parameters
-    if (!code || !id) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'VALIDATION_ERROR',
-          message: 'Merchant code and menu ID are required',
-          statusCode: 400,
-        },
-        { status: 400 }
-      );
+    const codeResult = await requireRouteParam(context, 'code');
+    if (!codeResult.ok) {
+      return NextResponse.json(codeResult.body, { status: codeResult.status });
     }
 
-    // Parse menu ID
-    const menuId = BigInt(id);
+    const menuIdResult = await requireBigIntRouteParam(context, 'id');
+    if (!menuIdResult.ok) {
+      return NextResponse.json(menuIdResult.body, { status: menuIdResult.status });
+    }
+
+    const code = codeResult.value;
+    const menuId = menuIdResult.value;
 
     // Get merchant by code
     const merchant = await prisma.merchant.findUnique({

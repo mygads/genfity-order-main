@@ -10,6 +10,7 @@ import paymentRequestService from '@/lib/services/PaymentRequestService';
 import userNotificationService from '@/lib/services/UserNotificationService';
 import prisma from '@/lib/db/client';
 import { z } from 'zod';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 const rejectSchema = z.object({
     reason: z.string().min(1).max(500),
@@ -18,11 +19,14 @@ const rejectSchema = z.object({
 async function handlePost(
     req: NextRequest,
     context: AuthContext,
-    routeContext: { params: Promise<Record<string, string>> }
+    routeContext: RouteContext
 ) {
     try {
-        const { id } = await routeContext.params;
-        const requestId = BigInt(id);
+        const requestIdResult = await requireBigIntRouteParam(routeContext, 'id');
+        if (!requestIdResult.ok) {
+            return NextResponse.json(requestIdResult.body, { status: requestIdResult.status });
+        }
+        const requestId = requestIdResult.value;
 
         const body = await req.json();
         const validation = rejectSchema.safeParse(body);

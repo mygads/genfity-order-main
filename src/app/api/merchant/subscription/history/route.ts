@@ -22,7 +22,7 @@ export const GET = withMerchant(async (
         const offset = parseInt(searchParams.get('offset') || '0');
         const eventType = searchParams.get('eventType') || undefined;
 
-        const result = await subscriptionHistoryService.getMerchantHistory(
+        const result = await subscriptionHistoryService.getMerchantHistoryWithCurrency(
             BigInt(merchantId!),
             {
                 limit: Math.min(limit, 100),

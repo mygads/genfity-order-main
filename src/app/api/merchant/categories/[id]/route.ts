@@ -9,6 +9,7 @@ import menuService from '@/lib/services/MenuService';
 import { withMerchant } from '@/lib/middleware/auth';
 import { ValidationError, NotFoundError } from '@/lib/constants/errors';
 import type { AuthContext } from '@/lib/types/auth';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 /**
  * PUT /api/merchant/categories/[id]
@@ -17,11 +18,14 @@ import type { AuthContext } from '@/lib/types/auth';
 async function handlePut(
   req: NextRequest,
   context: AuthContext,
-  contextParams: { params: Promise<Record<string, string>> }
+  contextParams: RouteContext
 ) {
   try {
-    const params = await contextParams.params;
-    const categoryId = BigInt(params?.id || '0');
+    const categoryIdResult = await requireBigIntRouteParam(contextParams, 'id');
+    if (!categoryIdResult.ok) {
+      return NextResponse.json(categoryIdResult.body, { status: categoryIdResult.status });
+    }
+    const categoryId = categoryIdResult.value;
     const body = await req.json();
 
     const category = await menuService.updateCategory(categoryId, {
@@ -82,11 +86,14 @@ async function handlePut(
 async function handleDelete(
   req: NextRequest,
   context: AuthContext,
-  contextParams: { params: Promise<Record<string, string>> }
+  contextParams: RouteContext
 ) {
   try {
-    const params = await contextParams.params;
-    const categoryId = BigInt(params?.id || '0');
+    const categoryIdResult = await requireBigIntRouteParam(contextParams, 'id');
+    if (!categoryIdResult.ok) {
+      return NextResponse.json(categoryIdResult.body, { status: categoryIdResult.status });
+    }
+    const categoryId = categoryIdResult.value;
 
     await menuService.deleteCategory(categoryId);
 

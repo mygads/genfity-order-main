@@ -10,6 +10,7 @@ import prisma from '@/lib/db/client';
 import { withSuperAdmin } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/middleware/auth';
 import { serializeBigInt } from '@/lib/utils/serializer';
+import { getBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type VoucherRecord = any;
@@ -26,10 +27,15 @@ type VoucherType = 'BALANCE' | 'SUBSCRIPTION_DAYS';
 async function handleGet(
     req: NextRequest,
     context: AuthContext,
-    routeContext: { params: Promise<Record<string, string>> }
+    routeContext: RouteContext
 ) {
-    const { id } = await routeContext.params;
-    const voucherId = BigInt(id);
+    const voucherId = await getBigIntRouteParam(routeContext, 'id');
+    if (!voucherId) {
+        return NextResponse.json(
+            { success: false, error: 'VALIDATION_ERROR', message: 'Invalid voucher id' },
+            { status: 400 }
+        );
+    }
 
     const voucher = await prisma.voucher.findUnique({
         where: { id: voucherId },
@@ -78,10 +84,15 @@ async function handleGet(
 async function handlePut(
     req: NextRequest,
     context: AuthContext,
-    routeContext: { params: Promise<Record<string, string>> }
+    routeContext: RouteContext
 ) {
-    const { id } = await routeContext.params;
-    const voucherId = BigInt(id);
+    const voucherId = await getBigIntRouteParam(routeContext, 'id');
+    if (!voucherId) {
+        return NextResponse.json(
+            { success: false, error: 'VALIDATION_ERROR', message: 'Invalid voucher id' },
+            { status: 400 }
+        );
+    }
     const body = await req.json();
 
     const {
@@ -180,10 +191,15 @@ async function handlePut(
 async function handleDelete(
     req: NextRequest,
     context: AuthContext,
-    routeContext: { params: Promise<Record<string, string>> }
+    routeContext: RouteContext
 ) {
-    const { id } = await routeContext.params;
-    const voucherId = BigInt(id);
+    const voucherId = await getBigIntRouteParam(routeContext, 'id');
+    if (!voucherId) {
+        return NextResponse.json(
+            { success: false, error: 'VALIDATION_ERROR', message: 'Invalid voucher id' },
+            { status: 400 }
+        );
+    }
 
     // Check if voucher exists and has redemptions
     const voucher = await prisma.voucher.findUnique({

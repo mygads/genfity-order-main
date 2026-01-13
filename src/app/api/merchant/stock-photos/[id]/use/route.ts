@@ -8,26 +8,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
 import { withMerchant } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/middleware/auth';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 /**
  * POST - Track usage of stock photo
  */
-async function postHandler(request: NextRequest, _authContext: AuthContext) {
-  // Extract ID from URL
-  const urlParts = request.url.split('/');
-  const useIndex = urlParts.indexOf('use');
-  const id = urlParts[useIndex - 1];
-  
-  if (!id) {
-    return NextResponse.json({
-      success: false,
-      error: 'VALIDATION_ERROR',
-      message: 'Photo ID is required',
-      statusCode: 400,
-    }, { status: 400 });
+async function postHandler(
+  request: NextRequest,
+  _authContext: AuthContext,
+  context: RouteContext
+) {
+  const photoIdResult = await requireBigIntRouteParam(context, 'id');
+  if (!photoIdResult.ok) {
+    return NextResponse.json(photoIdResult.body, { status: photoIdResult.status });
   }
 
-  const photoId = BigInt(id);
+  const photoId = photoIdResult.value;
 
   // Check if photo exists and is active
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

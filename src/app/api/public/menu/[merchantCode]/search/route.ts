@@ -15,6 +15,7 @@ import prisma from '@/lib/db/client';
 import { serializeBigInt, decimalToNumber } from '@/lib/utils/serializer';
 import { SpecialPriceService } from '@/lib/services/SpecialPriceService';
 import { isMenuAvailable } from '@/lib/services/MenuSchedulingService';
+import type { RouteContext } from '@/lib/utils/routeContext';
 
 /**
  * Calculate Levenshtein distance between two strings
@@ -98,7 +99,7 @@ function fuzzyMatchScore(query: string, text: string): number {
  */
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<Record<string, string>> }
+  context: RouteContext
 ) {
   const params = await context.params;
   const { searchParams } = new URL(request.url);

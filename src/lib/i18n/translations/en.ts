@@ -240,6 +240,9 @@ const en = {
   "auth.continueAsGuest": "Continue as Guest",
   "auth.loginAsGuest": "Login as Guest",
 
+  // Turnstile
+  "auth.turnstile.required": "Please verify you are not a robot.",
+
   // Form fields
   "auth.email": "Email",
   "auth.emailAddress": "Email Address",

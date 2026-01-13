@@ -11,14 +11,14 @@ import { withMerchant } from '@/lib/middleware/auth';
 import prisma from '@/lib/db/client';
 import { serializeBigInt } from '@/lib/utils/serializer';
 import type { AuthContext } from '@/lib/types/auth';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 async function handleDelete(
   req: NextRequest,
   authContext: AuthContext,
-  contextParams: { params: Promise<Record<string, string>> }
+  contextParams: RouteContext
 ) {
   try {
-    const params = await contextParams.params;
     const { merchantId } = authContext;
 
     if (!merchantId) {
@@ -28,18 +28,16 @@ async function handleDelete(
       );
     }
 
-    const addonCategoryId = parseInt(params?.id || '0');
-    if (isNaN(addonCategoryId) || addonCategoryId === 0) {
-      return NextResponse.json(
-        { success: false, error: 'INVALID_ID', message: 'Invalid addon category ID' },
-        { status: 400 }
-      );
+    const addonCategoryIdResult = await requireBigIntRouteParam(contextParams, 'id');
+    if (!addonCategoryIdResult.ok) {
+      return NextResponse.json(addonCategoryIdResult.body, { status: addonCategoryIdResult.status });
     }
+    const addonCategoryId = addonCategoryIdResult.value;
 
     // Verify the addon category exists, belongs to the merchant, and is soft-deleted
     const addonCategory = await prisma.addonCategory.findFirst({
       where: {
-        id: BigInt(addonCategoryId),
+        id: addonCategoryId,
         merchantId: BigInt(merchantId),
         deletedAt: { not: null },
       },
@@ -56,20 +54,20 @@ async function handleDelete(
     // Delete related records first
     // Delete menu addon category relationships
     await prisma.menuAddonCategory.deleteMany({
-      where: { addonCategoryId: BigInt(addonCategoryId) },
+      where: { addonCategoryId },
     });
 
     // Delete addon items in this category
     await prisma.addonItem.deleteMany({
-      where: { addonCategoryId: BigInt(addonCategoryId) },
+      where: { addonCategoryId },
     });
 
     // Permanently delete the addon category
     await prisma.addonCategory.delete({
-      where: { id: BigInt(addonCategoryId) },
+      where: { id: addonCategoryId },
     });
 
-    console.log(`🗑️ Addon Category ${addonCategory.name} (ID: ${addonCategoryId}) permanently deleted`);
+    console.log(`🗑️ Addon Category ${addonCategory.name} (ID: ${addonCategoryId.toString()}) permanently deleted`);
 
     return NextResponse.json({
       success: true,

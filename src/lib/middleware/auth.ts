@@ -8,35 +8,10 @@ import authService from '@/lib/services/AuthService';
 import customerAuthService from '@/lib/services/CustomerAuthService';
 import influencerAuthService from '@/lib/services/InfluencerAuthService';
 import { extractTokenFromHeader } from '@/lib/utils/jwtManager';
+import { normalizeRouteContext, type NextRouteContext, type NormalizedRouteContext } from '@/lib/utils/routeContext';
 import { AuthenticationError, AuthorizationError, ERROR_CODES } from '@/lib/constants/errors';
 import { handleError } from '@/lib/middleware/errorHandler';
 import type { UserRole } from '@/lib/types/auth';
-
-type NextRouteContext = { params: Promise<unknown> };
-type NormalizedRouteContext = { params: Promise<Record<string, string>> };
-
-function normalizeRouteContext(routeContext: NextRouteContext): NormalizedRouteContext {
-  return {
-    params: (async () => {
-      try {
-        const rawParams = await routeContext.params;
-
-        if (!rawParams || typeof rawParams !== 'object') {
-          return {};
-        }
-
-        const normalized: Record<string, string> = {};
-        for (const [key, value] of Object.entries(rawParams as Record<string, unknown>)) {
-          normalized[key] = typeof value === 'string' ? value : String(value);
-        }
-
-        return normalized;
-      } catch {
-        return {};
-      }
-    })(),
-  };
-}
 
 /**
  * Authenticated user context

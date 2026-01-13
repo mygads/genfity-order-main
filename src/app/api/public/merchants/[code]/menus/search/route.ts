@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
 import { decimalToNumber } from '@/lib/utils/serializer';
 import { SpecialPriceService } from '@/lib/services/SpecialPriceService';
+import type { RouteContext } from '@/lib/utils/routeContext';
 
 /**
  * Calculate similarity score using Levenshtein distance
@@ -98,7 +99,7 @@ function calculateRelevance(query: string, name: string, description: string | n
  */
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<Record<string, string>> }
+  context: RouteContext
 ) {
   const params = await context.params;
   try {

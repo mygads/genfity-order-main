@@ -6,15 +6,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withSuperAdmin } from '@/lib/middleware/auth';
 import referralService from '@/lib/services/ReferralService';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 async function handleGet(
     req: NextRequest,
     _context: unknown,
-    routeContext: { params: Promise<Record<string, string>> }
+    routeContext: RouteContext
 ) {
     try {
-        const { id } = await routeContext.params;
-        const codeId = BigInt(id);
+        const codeIdResult = await requireBigIntRouteParam(routeContext, 'id');
+        if (!codeIdResult.ok) {
+            return NextResponse.json(codeIdResult.body, { status: codeIdResult.status });
+        }
+        const codeId = codeIdResult.value;
 
         const { searchParams } = new URL(req.url);
         const limit = parseInt(searchParams.get('limit') || '50', 10);

@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
 import { serializeBigInt } from '@/lib/utils/serializer';
+import type { RouteContext } from '@/lib/utils/routeContext';
 
 /**
  * GET /api/public/merchants/[code]/categories
@@ -17,7 +18,7 @@ import { serializeBigInt } from '@/lib/utils/serializer';
  */
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<Record<string, string>> }
+  context: RouteContext
 ) {
   const params = await context.params;
   try {

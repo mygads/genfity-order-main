@@ -32,12 +32,13 @@ import { NextRequest } from 'next/server';
 import authService from '@/lib/services/AuthService';
 import { handleError, successResponse } from '@/lib/middleware/errorHandler';
 import { ValidationError, ERROR_CODES } from '@/lib/constants/errors';
+import { isTurnstileEnabled, verifyTurnstileToken } from '@/lib/utils/turnstile';
 
 export async function POST(request: NextRequest) {
   try {
     // Parse request body
     const body = await request.json();
-    const { email, password, rememberMe = false } = body;
+    const { email, password, rememberMe = false, turnstileToken } = body;
 
     // Validate required fields
     if (!email || !password) {
@@ -53,6 +54,18 @@ export async function POST(request: NextRequest) {
       request.headers.get('x-forwarded-for')?.split(',')[0] || 
       request.headers.get('x-real-ip') || 
       'Unknown';
+
+    // Optional anti-bot protection: enforce only when configured
+    if (isTurnstileEnabled()) {
+      if (!turnstileToken || typeof turnstileToken !== 'string') {
+        throw new ValidationError(
+          'Security verification required',
+          ERROR_CODES.VALIDATION_FAILED
+        );
+      }
+
+      await verifyTurnstileToken({ token: turnstileToken, ipAddress });
+    }
 
       // Call AuthService login with remember me flag
     const result = await authService.login(

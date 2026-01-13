@@ -8,6 +8,7 @@ import prisma from '@/lib/db/client';
 import { withSuperAdmin } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/middleware/auth';
 import { serializeBigInt } from '@/lib/utils/serializer';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 /**
  * PUT /api/admin/merchants/:id/toggle-open
@@ -17,11 +18,14 @@ import { serializeBigInt } from '@/lib/utils/serializer';
 async function handlePut(
   req: NextRequest,
   authContext: AuthContext,
-  context: { params: Promise<Record<string, string>> }
+  context: RouteContext
 ) {
   try {
-    const params = await context.params;
-    const merchantId = BigInt(params.id);
+    const merchantIdResult = await requireBigIntRouteParam(context, 'id');
+    if (!merchantIdResult.ok) {
+      return NextResponse.json(merchantIdResult.body, { status: merchantIdResult.status });
+    }
+    const merchantId = merchantIdResult.value;
 
     const body = await req.json();
     const { isOpen } = body;

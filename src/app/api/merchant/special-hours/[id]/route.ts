@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
 import { withMerchant, AuthContext } from '@/lib/middleware/auth';
 import { serializeBigInt } from '@/lib/utils/serializer';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 /**
  * GET /api/merchant/special-hours/[id]
@@ -17,15 +18,19 @@ import { serializeBigInt } from '@/lib/utils/serializer';
 export const GET = withMerchant(async (
   request: NextRequest,
   context: AuthContext,
-  routeContext: { params: Promise<Record<string, string>> }
+  routeContext: RouteContext
 ) => {
   try {
     const merchantId = context.merchantId!;
-    const { id } = await routeContext.params;
+    const specialHourIdResult = await requireBigIntRouteParam(routeContext, 'id');
+    if (!specialHourIdResult.ok) {
+      return NextResponse.json(specialHourIdResult.body, { status: specialHourIdResult.status });
+    }
+    const specialHourId = specialHourIdResult.value;
 
     const specialHour = await prisma.merchantSpecialHour.findFirst({
       where: {
-        id: BigInt(id),
+        id: specialHourId,
         merchantId,
       },
     });
@@ -57,17 +62,21 @@ export const GET = withMerchant(async (
 export const PUT = withMerchant(async (
   request: NextRequest,
   context: AuthContext,
-  routeContext: { params: Promise<Record<string, string>> }
+  routeContext: RouteContext
 ) => {
   try {
     const merchantId = context.merchantId!;
-    const { id } = await routeContext.params;
+    const specialHourIdResult = await requireBigIntRouteParam(routeContext, 'id');
+    if (!specialHourIdResult.ok) {
+      return NextResponse.json(specialHourIdResult.body, { status: specialHourIdResult.status });
+    }
+    const specialHourId = specialHourIdResult.value;
     const body = await request.json();
 
     // Check ownership
     const existing = await prisma.merchantSpecialHour.findFirst({
       where: {
-        id: BigInt(id),
+        id: specialHourId,
         merchantId,
       },
     });
@@ -80,7 +89,7 @@ export const PUT = withMerchant(async (
     }
 
     const specialHour = await prisma.merchantSpecialHour.update({
-      where: { id: BigInt(id) },
+      where: { id: specialHourId },
       data: {
         name: body.name !== undefined ? body.name : existing.name,
         isClosed: body.isClosed !== undefined ? body.isClosed : existing.isClosed,
@@ -119,16 +128,20 @@ export const PUT = withMerchant(async (
 export const DELETE = withMerchant(async (
   request: NextRequest,
   context: AuthContext,
-  routeContext: { params: Promise<Record<string, string>> }
+  routeContext: RouteContext
 ) => {
   try {
     const merchantId = context.merchantId!;
-    const { id } = await routeContext.params;
+    const specialHourIdResult = await requireBigIntRouteParam(routeContext, 'id');
+    if (!specialHourIdResult.ok) {
+      return NextResponse.json(specialHourIdResult.body, { status: specialHourIdResult.status });
+    }
+    const specialHourId = specialHourIdResult.value;
 
     // Check ownership
     const existing = await prisma.merchantSpecialHour.findFirst({
       where: {
-        id: BigInt(id),
+        id: specialHourId,
         merchantId,
       },
     });
@@ -141,7 +154,7 @@ export const DELETE = withMerchant(async (
     }
 
     await prisma.merchantSpecialHour.delete({
-      where: { id: BigInt(id) },
+      where: { id: specialHourId },
     });
 
     return NextResponse.json({

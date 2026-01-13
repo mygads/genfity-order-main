@@ -11,14 +11,14 @@ import { withMerchant } from '@/lib/middleware/auth';
 import dataCleanupService from '@/lib/services/DataCleanupService';
 import { serializeBigInt } from '@/lib/utils/serializer';
 import type { AuthContext } from '@/lib/types/auth';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 async function handlePost(
   req: NextRequest,
   authContext: AuthContext,
-  contextParams: { params: Promise<Record<string, string>> }
+  contextParams: RouteContext
 ) {
   try {
-    const params = await contextParams.params;
     const { userId, merchantId } = authContext;
 
     if (!merchantId) {
@@ -28,21 +28,19 @@ async function handlePost(
       );
     }
 
-    const itemId = parseInt(params?.id || '0');
-    if (isNaN(itemId) || itemId === 0) {
-      return NextResponse.json(
-        { success: false, error: 'INVALID_ID', message: 'Invalid addon item ID' },
-        { status: 400 }
-      );
+    const itemIdResult = await requireBigIntRouteParam(contextParams, 'id');
+    if (!itemIdResult.ok) {
+      return NextResponse.json(itemIdResult.body, { status: itemIdResult.status });
     }
+    const itemId = itemIdResult.value;
 
     // Restore the addon item
     const restoredItem = await dataCleanupService.restoreAddonItem(
-      BigInt(itemId),
+      itemId,
       BigInt(userId)
     );
 
-    console.log(`✅ Addon item ${itemId} restored by user ${userId}`);
+    console.log(`✅ Addon item ${itemId.toString()} restored by user ${userId}`);
 
     return NextResponse.json({
       success: true,

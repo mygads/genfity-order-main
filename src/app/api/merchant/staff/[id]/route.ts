@@ -6,7 +6,7 @@
  * Remove staff from merchant (soft delete user)
  */
 
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { successResponse } from '@/lib/middleware/errorHandler';
 import { withMerchantOwner } from '@/lib/middleware/auth';
 import { AuthContext } from '@/lib/types/auth';
@@ -14,6 +14,7 @@ import userRepository from '@/lib/repositories/UserRepository';
 import merchantService from '@/lib/services/MerchantService';
 import { validateEmail } from '@/lib/utils/validators';
 import { NotFoundError, ERROR_CODES } from '@/lib/constants/errors';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 /**
  * PUT handler - Update staff
@@ -21,10 +22,13 @@ import { NotFoundError, ERROR_CODES } from '@/lib/constants/errors';
 async function updateStaffHandler(
   request: NextRequest,
   authContext: AuthContext,
-  context: { params: Promise<Record<string, string>> }
+  context: RouteContext
 ) {
-  const params = await context.params;
-  const staffId = BigInt(params.id);
+  const staffIdResult = await requireBigIntRouteParam(context, 'id');
+  if (!staffIdResult.ok) {
+    return NextResponse.json(staffIdResult.body, { status: staffIdResult.status });
+  }
+  const staffId = staffIdResult.value;
   const body = await request.json();
 
   // Validate staff exists
@@ -56,11 +60,14 @@ async function updateStaffHandler(
 async function deleteStaffHandler(
   request: NextRequest,
   authContext: AuthContext,
-  context: { params: Promise<Record<string, string>> }
+  context: RouteContext
 ) {
-  const params = await context.params;
   const merchantId = authContext.merchantId!;
-  const staffId = BigInt(params.id);
+  const staffIdResult = await requireBigIntRouteParam(context, 'id');
+  if (!staffIdResult.ok) {
+    return NextResponse.json(staffIdResult.body, { status: staffIdResult.status });
+  }
+  const staffId = staffIdResult.value;
 
   // Validate staff exists
   const staff = await userRepository.findById(staffId);
