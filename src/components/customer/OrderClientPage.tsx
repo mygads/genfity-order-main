@@ -27,7 +27,7 @@ import ModeClosingBanner from '@/components/customer/ModeClosingBanner';
 import { extractAddonDataFromMenus } from '@/lib/utils/addonExtractor';
 import { throttle } from '@/lib/utils/throttle';
 import { useStoreStatus } from '@/hooks/useStoreStatus';
-import { useTranslation } from '@/lib/i18n/useTranslation';
+import { useTranslation, tOr } from '@/lib/i18n/useTranslation';
 import GroupSessionBanner from '@/components/customer/GroupSessionBanner';
 import GroupDashboard from '@/components/customer/GroupDashboard';
 import CreateGroupModal from '@/components/customer/CreateGroupModal';
@@ -710,7 +710,7 @@ export default function OrderClientPage({
               ? merchantInfo.dineInLabel || undefined
               : normalizedMode === 'takeaway'
                 ? merchantInfo.takeawayLabel || undefined
-                : merchantInfo.deliveryLabel || (t('customer.mode.delivery') === 'customer.mode.delivery' ? 'Delivery' : t('customer.mode.delivery'))
+                    : merchantInfo.deliveryLabel || tOr(t, 'customer.mode.delivery', 'Delivery')
           }
           scheduleEnd={
             normalizedMode === 'dinein'

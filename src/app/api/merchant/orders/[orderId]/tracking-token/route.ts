@@ -3,7 +3,7 @@ import prisma from '@/lib/db/client';
 import { withMerchant } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/middleware/auth';
 import { createOrderTrackingToken } from '@/lib/utils/orderTrackingToken';
-import type { RouteContext } from '@/lib/utils/routeContext';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 /**
  * Mint tracking token for an order (merchant-authenticated).
@@ -17,23 +17,12 @@ export const GET = withMerchant(async (
   routeContext: RouteContext
 ) => {
   try {
-    const params = await routeContext.params;
-    const orderIdRaw = params?.orderId || '';
-
-    let orderId: bigint;
-    try {
-      orderId = BigInt(orderIdRaw);
-    } catch {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'VALIDATION_ERROR',
-          message: 'Invalid orderId',
-          statusCode: 400,
-        },
-        { status: 400 }
-      );
+    const orderIdResult = await requireBigIntRouteParam(routeContext, 'orderId', 'Invalid orderId');
+    if (!orderIdResult.ok) {
+      return NextResponse.json(orderIdResult.body, { status: orderIdResult.status });
     }
+
+    const orderId = orderIdResult.value;
 
     const order = await prisma.order.findFirst({
       where: {

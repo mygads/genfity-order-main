@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withSuperAdmin } from '@/lib/middleware/auth';
 import prisma from '@/lib/db/client';
 import type { AuthContext } from '@/lib/types/auth';
+import { parseOptionalBigIntQueryParam } from '@/lib/utils/routeContext';
 
 async function handleGet(
   request: NextRequest,
@@ -17,7 +18,10 @@ async function handleGet(
   try {
     const { searchParams } = new URL(request.url);
     const code = searchParams.get('code');
-    const excludeId = searchParams.get('excludeId');
+    const excludeIdResult = parseOptionalBigIntQueryParam(searchParams, 'excludeId', 'Invalid excludeId');
+    if (!excludeIdResult.ok) {
+      return NextResponse.json(excludeIdResult.body, { status: excludeIdResult.status });
+    }
 
     if (!code) {
       return NextResponse.json(
@@ -30,7 +34,7 @@ async function handleGet(
     const existingMerchant = await prisma.merchant.findFirst({
       where: {
         code: code.toUpperCase(),
-        ...(excludeId ? { NOT: { id: BigInt(excludeId) } } : {}),
+        ...(excludeIdResult.value !== null ? { NOT: { id: excludeIdResult.value } } : {}),
       },
       select: { id: true, name: true },
     });

@@ -13,7 +13,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
 import { decimalToNumber } from '@/lib/utils/serializer';
 import { SpecialPriceService } from '@/lib/services/SpecialPriceService';
-import type { RouteContext } from '@/lib/utils/routeContext';
+import { invalidRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 /**
  * Calculate similarity score using Levenshtein distance
@@ -147,6 +147,11 @@ export async function GET(
 
     // Add category filter if provided
     if (categoryId && categoryId !== 'all') {
+      if (!/^\d+$/.test(categoryId)) {
+        const err = invalidRouteParam('category', 'Invalid category');
+        return NextResponse.json(err.body, { status: err.status });
+      }
+
       whereCondition.categories = {
         some: {
           categoryId: BigInt(categoryId),

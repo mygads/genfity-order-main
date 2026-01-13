@@ -11,59 +11,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
-import { serializeBigInt as _serializeBigInt, decimalToNumber } from '@/lib/utils/serializer';
+import { decimalToNumber } from '@/lib/utils/serializer';
+import { withCustomer } from '@/lib/middleware/auth';
+import type { CustomerAuthContext } from '@/lib/middleware/auth';
 
-// Simple JWT verification (same as other customer routes)
-async function verifyCustomerToken(token: string) {
+export const GET = withCustomer(async (request: NextRequest, customerContext: CustomerAuthContext) => {
   try {
-    // Import dynamically to avoid issues
-    const { default: jwt } = await import('jsonwebtoken');
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
-      customerId: string;
-      type: string;
-    };
-
-    if (decoded.type !== 'customer') {
-      return null;
-    }
-
-    const session = await prisma.customerSession.findFirst({
-      where: {
-        customerId: BigInt(decoded.customerId),
-        status: 'ACTIVE',
-      },
-      include: {
-        customer: true,
-      },
-    });
-
-    return session?.customer || null;
-  } catch {
-    return null;
-  }
-}
-
-export async function GET(request: NextRequest) {
-  try {
-    // Get authorization header
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { success: false, error: 'UNAUTHORIZED', message: 'Missing authorization' },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    const customer = await verifyCustomerToken(token);
-
-    if (!customer) {
-      return NextResponse.json(
-        { success: false, error: 'UNAUTHORIZED', message: 'Invalid or expired token' },
-        { status: 401 }
-      );
-    }
-
     // Parse query params
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
@@ -76,7 +29,7 @@ export async function GET(request: NextRequest) {
     // Build where condition
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const whereCondition: any = {
-      customerId: customer.id,
+      customerId: customerContext.customerId,
     };
 
     // Status filter
@@ -221,4 +174,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

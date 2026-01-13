@@ -16,7 +16,7 @@ import SpecialHoursManager from "@/components/merchants/SpecialHoursManager";
 import { ReceiptTemplateTab } from "@/components/merchants/ReceiptTemplateTab";
 import DeliverySettingsTab from "@/components/merchants/DeliverySettingsTab";
 import { ReceiptSettings, DEFAULT_RECEIPT_SETTINGS } from "@/lib/types/receiptSettings";
-import { useTranslation } from "@/lib/i18n/useTranslation";
+import { useTranslation, tOr } from "@/lib/i18n/useTranslation";
 import { TranslationKeys } from "@/lib/i18n";
 import SubscriptionRequired from "@/components/subscription/SubscriptionRequired";
 import { useContextualHint, CONTEXTUAL_HINTS } from "@/lib/tutorial";
@@ -953,6 +953,51 @@ export default function EditMerchantPage() {
                   className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
                 />
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Leave empty to use default</p>
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
+              <div className="text-sm font-medium text-gray-900 dark:text-white">Preview (customer buttons)</div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {([
+                  {
+                    key: 'dinein',
+                    enabled: formData.isDineInEnabled,
+                    label: (formData.dineInLabel || '').trim() || tOr(t, 'customer.mode.dineIn', 'Dine In'),
+                  },
+                  {
+                    key: 'takeaway',
+                    enabled: formData.isTakeawayEnabled,
+                    label: (formData.takeawayLabel || '').trim() || tOr(t, 'customer.mode.pickUp', 'Takeaway'),
+                  },
+                  {
+                    key: 'delivery',
+                    enabled: formData.isDeliveryEnabled,
+                    label: (formData.deliveryLabel || '').trim() || tOr(t, 'customer.mode.delivery', 'Delivery'),
+                  },
+                ] as const).map((item) => (
+                  <div key={item.key} className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled
+                      className={`h-9 rounded-lg border px-3 text-sm font-semibold ${
+                        item.enabled
+                          ? 'border-gray-200 bg-white text-gray-900 dark:border-gray-800 dark:bg-gray-950 dark:text-white'
+                          : 'border-gray-200 bg-white/60 text-gray-400 dark:border-gray-800 dark:bg-gray-950/40 dark:text-gray-500'
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                    {!item.enabled && (
+                      <span className="rounded-full bg-gray-200 px-2 py-0.5 text-[11px] font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                        Disabled
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                This matches customer-visible labels after translation fallback and merchant overrides.
               </div>
             </div>
           </div>

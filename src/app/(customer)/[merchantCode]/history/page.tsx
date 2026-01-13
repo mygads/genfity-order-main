@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams, useParams } from 'next/navigation';
 import { getCustomerAuth } from '@/lib/utils/localStorage';
 import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';
-import { useTranslation } from '@/lib/i18n/useTranslation';
+import { useTranslation, tOr } from '@/lib/i18n/useTranslation';
 import { TranslationKeys } from '@/lib/i18n';
 import { formatCurrency as formatCurrencyUtil } from '@/lib/utils/format';
 import { useCart } from '@/context/CartContext';
@@ -618,7 +618,7 @@ export default function OrderHistoryPage() {
                       )}
                       <span>
                         {order.mode === 'delivery'
-                          ? (t('customer.mode.delivery') === 'customer.mode.delivery' ? 'Delivery' : t('customer.mode.delivery'))
+                          ? tOr(t, 'customer.mode.delivery', 'Delivery')
                           : order.mode === 'dinein'
                             ? t('customer.mode.dineIn')
                             : t('customer.mode.pickUp')}

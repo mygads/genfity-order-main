@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
 import { withCustomer, type CustomerAuthContext } from '@/lib/middleware/auth';
 import { decimalToNumber } from '@/lib/utils/serializer';
-import { getIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 /**
  * GENFITY - Customer Re-order API
@@ -26,17 +26,23 @@ export const GET = withCustomer(async (
   routeContext: RouteContext
 ): Promise<NextResponse> => {
   try {
-    const orderIdNum = await getIntRouteParam(routeContext, 'orderId');
-    if (orderIdNum === null || orderIdNum <= 0) {
+    const orderIdResult = await requireBigIntRouteParam(routeContext, 'orderId', 'Invalid order ID');
+    if (!orderIdResult.ok) {
+      return NextResponse.json(orderIdResult.body, { status: orderIdResult.status });
+    }
+
+    if (orderIdResult.value <= BigInt(0)) {
       return NextResponse.json(
         { success: false, error: 'INVALID_ORDER_ID', message: 'Invalid order ID' },
         { status: 400 }
       );
     }
 
+    const orderId = orderIdResult.value;
+
     // Fetch order with items and verify ownership
     const order = await prisma.order.findUnique({
-      where: { id: BigInt(orderIdNum) },
+      where: { id: orderId },
       include: {
         merchant: {
           select: {

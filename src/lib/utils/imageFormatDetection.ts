@@ -9,7 +9,7 @@
 export type ImageFormat = 'webp' | 'avif' | 'jpeg' | 'png' | 'gif' | 'svg';
 
 // Format support detection cache
-let formatSupportCache: Record<ImageFormat, boolean | null> = {
+const formatSupportCache: Record<ImageFormat, boolean | null> = {
   webp: null,
   avif: null,
   jpeg: true, // Always supported

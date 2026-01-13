@@ -180,16 +180,22 @@ async function deleteStaffHandler(
     throw new ValidationError('User ID required', ERROR_CODES.VALIDATION_ERROR);
   }
 
+  if (!/^\d+$/.test(userIdToRemove)) {
+    throw new ValidationError('Invalid userId', ERROR_CODES.VALIDATION_ERROR);
+  }
+
+  const userIdToRemoveBigInt = BigInt(userIdToRemove);
+
   // Prevent owner from removing themselves
-  if (BigInt(userIdToRemove) === BigInt(authContext.userId)) {
+  if (userIdToRemoveBigInt === authContext.userId) {
     throw new ValidationError('Cannot remove yourself', ERROR_CODES.VALIDATION_ERROR);
   }
 
   // Check if user is staff of this merchant
   const staffToRemove = await prisma.merchantUser.findFirst({
     where: {
-      userId: BigInt(userIdToRemove),
-      merchantId: BigInt(merchantId),
+      userId: userIdToRemoveBigInt,
+      merchantId,
     },
     include: {
       user: true,

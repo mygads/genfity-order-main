@@ -15,9 +15,15 @@ export type RouteParamErrorBody = {
   param: string;
 };
 
+export type RouteParamErrorResult = {
+  ok: false;
+  status: 400;
+  body: RouteParamErrorBody;
+};
+
 export type RouteParamResult<T> =
   | { ok: true; value: T }
-  | { ok: false; status: 400; body: RouteParamErrorBody };
+  | RouteParamErrorResult;
 
 // Next.js route handler context params can be many shapes; we normalize it.
 export type NextRouteContext = { params: Promise<unknown> };
@@ -76,7 +82,7 @@ export async function getRouteParam(
   return typeof value === 'string' && value.length > 0 ? value : undefined;
 }
 
-export function invalidRouteParam(param: string, message?: string): RouteParamResult<never> {
+export function invalidRouteParam(param: string, message?: string): RouteParamErrorResult {
   return {
     ok: false,
     status: 400,
@@ -148,6 +154,50 @@ export async function requireBigIntRouteParam(
 ): Promise<RouteParamResult<bigint>> {
   const value = await getRouteParam(routeContext, key);
   if (!value) return invalidRouteParam(key, message);
+  if (!/^\d+$/.test(value)) return invalidRouteParam(key, message ?? `Invalid ${key}`);
+
+  try {
+    return { ok: true, value: BigInt(value) };
+  } catch {
+    return invalidRouteParam(key, message ?? `Invalid ${key}`);
+  }
+}
+
+export function getBigIntQueryParam(searchParams: URLSearchParams, key: string): bigint | null {
+  const value = searchParams.get(key);
+  if (!value) return null;
+  if (!/^\d+$/.test(value)) return null;
+
+  try {
+    return BigInt(value);
+  } catch {
+    return null;
+  }
+}
+
+export function requireBigIntQueryParam(
+  searchParams: URLSearchParams,
+  key: string,
+  message?: string
+): RouteParamResult<bigint> {
+  const value = searchParams.get(key);
+  if (!value) return invalidRouteParam(key, message);
+  if (!/^\d+$/.test(value)) return invalidRouteParam(key, message ?? `Invalid ${key}`);
+
+  try {
+    return { ok: true, value: BigInt(value) };
+  } catch {
+    return invalidRouteParam(key, message ?? `Invalid ${key}`);
+  }
+}
+
+export function parseOptionalBigIntQueryParam(
+  searchParams: URLSearchParams,
+  key: string,
+  message?: string
+): RouteParamResult<bigint | null> {
+  const value = searchParams.get(key);
+  if (!value) return { ok: true, value: null };
   if (!/^\d+$/.test(value)) return invalidRouteParam(key, message ?? `Invalid ${key}`);
 
   try {

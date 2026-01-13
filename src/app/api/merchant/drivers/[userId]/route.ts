@@ -4,6 +4,7 @@ import { withMerchantOwner } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/middleware/auth';
 import { serializeBigInt } from '@/lib/utils/serializer';
 import { ERROR_CODES, ValidationError } from '@/lib/constants/errors';
+import { getBigIntRouteParam } from '@/lib/utils/routeContext';
 
 /**
  * PATCH /api/merchant/drivers/:userId
@@ -28,14 +29,8 @@ export const PATCH = withMerchantOwner(async (req: NextRequest, authContext: Aut
       );
     }
 
-    const params = await routeContext.params;
-    const userIdParam = params?.userId;
-
-    if (!userIdParam) {
-      throw new ValidationError('User ID is required', ERROR_CODES.VALIDATION_ERROR);
-    }
-
-    const userId = BigInt(userIdParam);
+    const userId = await getBigIntRouteParam(routeContext, 'userId');
+    if (!userId) throw new ValidationError('User ID is required', ERROR_CODES.VALIDATION_ERROR);
     const body = await req.json();
 
     if (typeof body.isActive !== 'boolean') {

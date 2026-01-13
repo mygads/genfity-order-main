@@ -11,6 +11,7 @@ import { withMerchant } from '@/lib/middleware/auth';
 import { ValidationError } from '@/lib/constants/errors';
 import type { AuthContext } from '@/lib/middleware/auth';
 import { serializeBigInt } from '@/lib/utils/serializer';
+import { parseOptionalBigIntQueryParam } from '@/lib/utils/routeContext';
 
 /**
  * GET /api/merchant/menu
@@ -37,11 +38,14 @@ async function handleGet(req: NextRequest, context: AuthContext) {
     }
 
     const { searchParams } = new URL(req.url);
-    const categoryId = searchParams.get('categoryId');
+    const categoryIdResult = parseOptionalBigIntQueryParam(searchParams, 'categoryId', 'Invalid categoryId');
+    if (!categoryIdResult.ok) {
+      return NextResponse.json(categoryIdResult.body, { status: categoryIdResult.status });
+    }
 
     const menus = await menuService.getMenusByMerchant(
       merchantUser.merchantId,
-      categoryId ? BigInt(categoryId) : undefined
+      categoryIdResult.value ?? undefined
     );
 
     return NextResponse.json({

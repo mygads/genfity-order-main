@@ -54,7 +54,8 @@ interface DbParticipant {
 
 export async function GET(req: NextRequest, context: RouteParams) {
   try {
-    const { orderNumber } = await context.params;
+    const params = await context.params;
+    const orderNumber = params.orderNumber;
 
     const token = req.nextUrl.searchParams.get('token') || '';
 

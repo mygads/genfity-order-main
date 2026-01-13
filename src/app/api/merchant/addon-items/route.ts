@@ -11,7 +11,7 @@ import type { AuthContext } from '@/lib/types/auth';
 import { ValidationError } from '@/lib/constants/errors';
 import { serializeBigInt } from '@/lib/utils/serializer';
 import prisma from '@/lib/db/client';
-import type { RouteContext } from '@/lib/utils/routeContext';
+import { parseOptionalBigIntQueryParam, type RouteContext } from '@/lib/utils/routeContext';
 
 /**
  * GET /api/merchant/addon-items
@@ -41,12 +41,15 @@ async function handleGet(
     }
 
     const { searchParams } = new URL(req.url);
-    const categoryIdParam = searchParams.get('categoryId');
+    const categoryIdResult = parseOptionalBigIntQueryParam(searchParams, 'categoryId', 'Invalid categoryId');
+    if (!categoryIdResult.ok) {
+      return NextResponse.json(categoryIdResult.body, { status: categoryIdResult.status });
+    }
 
     let items;
-    if (categoryIdParam) {
+    if (categoryIdResult.value !== null) {
       // Get items for specific category
-      const categoryId = BigInt(categoryIdParam);
+      const categoryId = categoryIdResult.value;
       items = await addonService.getAddonItems(
         categoryId,
         merchantUser.merchantId

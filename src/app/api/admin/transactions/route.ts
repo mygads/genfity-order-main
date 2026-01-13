@@ -15,6 +15,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withSuperAdmin } from '@/lib/middleware/auth';
 import prisma from '@/lib/db/client';
 import { serializeBigInt } from '@/lib/utils/serializer';
+import { parseOptionalBigIntQueryParam } from '@/lib/utils/routeContext';
 
 interface TransactionWithDetails {
   id: bigint;
@@ -42,7 +43,12 @@ async function handleGet(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
-    const merchantId = searchParams.get('merchantId');
+    const merchantIdResult = parseOptionalBigIntQueryParam(searchParams, 'merchantId', 'Invalid merchantId');
+    if (!merchantIdResult.ok) {
+      return NextResponse.json(merchantIdResult.body, { status: merchantIdResult.status });
+    }
+
+    const merchantId = merchantIdResult.value;
     const type = searchParams.get('type');
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
@@ -52,9 +58,9 @@ async function handleGet(req: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = {};
 
-    if (merchantId) {
+    if (merchantId !== null) {
       where.balance = {
-        merchantId: BigInt(merchantId),
+        merchantId,
       };
     }
 
@@ -112,9 +118,9 @@ async function handleGet(req: NextRequest) {
     const conditions: string[] = [];
     const params: unknown[] = [];
     
-    if (merchantId) {
+    if (merchantId !== null) {
       conditions.push(`mb.merchant_id = $${params.length + 1}`);
-      params.push(BigInt(merchantId));
+      params.push(merchantId);
     }
     if (startDate) {
       conditions.push(`bt.created_at >= $${params.length + 1}`);

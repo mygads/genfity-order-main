@@ -14,7 +14,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
 import { Prisma } from '@prisma/client';
-import type { RouteContext } from '@/lib/utils/routeContext';
+import { invalidRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 export async function GET(
     request: NextRequest,
@@ -33,7 +33,16 @@ export async function GET(
         }
 
         // Parse menu IDs from comma-separated string
-        const cartMenuIds = menuIdsParam.split(',').map(id => BigInt(id.trim())).filter(Boolean);
+        const cartMenuIds: bigint[] = [];
+        for (const raw of menuIdsParam.split(',')) {
+            const value = raw.trim();
+            if (!value) continue;
+            if (!/^\d+$/.test(value)) {
+                const err = invalidRouteParam('menuIds', 'menuIds must be a comma-separated list of numeric IDs');
+                return NextResponse.json(err.body, { status: err.status });
+            }
+            cartMenuIds.push(BigInt(value));
+        }
 
         if (cartMenuIds.length === 0) {
             return NextResponse.json({ success: true, data: [] });

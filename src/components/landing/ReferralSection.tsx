@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 
 export default function ReferralSection() {
@@ -43,7 +44,7 @@ export default function ReferralSection() {
                                 </div>
                             </div>
 
-                            <a
+                            <Link
                                 href="/influencer/register"
                                 className="inline-flex items-center gap-2 px-6 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg transition-all text-sm"
                             >
@@ -51,7 +52,7 @@ export default function ReferralSection() {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                                 </svg>
                                 {t('landing.referral.cta')}
-                            </a>
+                            </Link>
                         </div>
                     </div>
                 </div>

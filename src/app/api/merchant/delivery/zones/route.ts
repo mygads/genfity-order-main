@@ -11,6 +11,7 @@ import { Prisma } from '@prisma/client';
 import { withMerchantOwner } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/middleware/auth';
 import { serializeBigInt } from '@/lib/utils/serializer';
+import { requireBigIntQueryParam } from '@/lib/utils/routeContext';
 
 type DeliveryZoneType = 'RADIUS' | 'POLYGON';
 
@@ -237,22 +238,21 @@ export const DELETE = withMerchantOwner(async (req: NextRequest, context: AuthCo
   try {
     const merchantId = context.merchantId!;
     const { searchParams } = new URL(req.url);
-    const id = searchParams.get('id');
-
-    if (!id) {
+    const zoneIdResult = requireBigIntQueryParam(searchParams, 'id', 'Zone id is required');
+    if (!zoneIdResult.ok) {
       return NextResponse.json(
         {
-          success: false,
-          error: 'VALIDATION_ERROR',
-          message: 'Zone id is required',
+          ...zoneIdResult.body,
           statusCode: 400,
         },
         { status: 400 }
       );
     }
 
+    const zoneId = zoneIdResult.value;
+
     const zone = await prisma.merchantDeliveryZone.findUnique({
-      where: { id: BigInt(id) },
+      where: { id: zoneId },
       select: { id: true, merchantId: true },
     });
 

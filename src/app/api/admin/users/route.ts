@@ -48,6 +48,10 @@ async function getUsersHandler(
   
   // If merchantId is specified, fetch users linked to that merchant only
   if (merchantId) {
+    if (!/^\d+$/.test(merchantId)) {
+      throw new ValidationError('Invalid merchantId');
+    }
+
     const merchantIdBigInt = BigInt(merchantId);
     users = await userRepository.findByMerchant(merchantIdBigInt);
   } else if (role) {

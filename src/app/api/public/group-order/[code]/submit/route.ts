@@ -63,7 +63,8 @@ interface OrderItemData {
 
 export async function POST(req: NextRequest, context: RouteParams) {
     try {
-        const { code } = await context.params;
+        const params = await context.params;
+        const code = params.code;
         const sessionCode = code.toUpperCase();
         const body = await req.json();
 

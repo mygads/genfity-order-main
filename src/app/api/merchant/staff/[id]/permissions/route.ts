@@ -15,7 +15,7 @@ import { ValidationError, ERROR_CODES } from '@/lib/constants/errors';
 import { serializeBigInt } from '@/lib/utils/serializer';
 import prisma from '@/lib/db/client';
 import { PERMISSION_GROUPS } from '@/lib/constants/permissions';
-import type { RouteContext } from '@/lib/utils/routeContext';
+import { getBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 // Helper to get human-readable permission names from keys
 function getPermissionDisplayNames(permissionKeys: string[]): string[] {
@@ -43,12 +43,8 @@ async function updatePermissionsHandler(
   routeContext: RouteContext
 ) {
   try {
-    const params = await routeContext.params;
-    const staffUserId = params.id;
-
-    if (!staffUserId) {
-      throw new ValidationError('Staff ID required', ERROR_CODES.VALIDATION_ERROR);
-    }
+    const staffUserId = await getBigIntRouteParam(routeContext, 'id');
+    if (!staffUserId) throw new ValidationError('Staff ID required', ERROR_CODES.VALIDATION_ERROR);
 
     const body = await request.json();
     const { permissions } = body;
@@ -59,7 +55,7 @@ async function updatePermissionsHandler(
 
     await staffPermissionService.updatePermissions(
       authContext.merchantId!,
-      BigInt(staffUserId),
+      staffUserId,
       permissions,
       authContext.userId
     );
@@ -67,7 +63,7 @@ async function updatePermissionsHandler(
     // Fetch updated staff info
     const updatedStaff = await prisma.merchantUser.findFirst({
       where: {
-        userId: BigInt(staffUserId),
+        userId: staffUserId,
         merchantId: authContext.merchantId!,
       },
       include: {
@@ -129,15 +125,11 @@ async function getPermissionsHandler(
   routeContext: RouteContext
 ) {
   try {
-    const params = await routeContext.params;
-    const staffUserId = params.id;
-
-    if (!staffUserId) {
-      throw new ValidationError('Staff ID required', ERROR_CODES.VALIDATION_ERROR);
-    }
+    const staffUserId = await getBigIntRouteParam(routeContext, 'id');
+    if (!staffUserId) throw new ValidationError('Staff ID required', ERROR_CODES.VALIDATION_ERROR);
 
     const staffInfo = await staffPermissionService.getStaffPermissions(
-      BigInt(staffUserId),
+      staffUserId,
       authContext.merchantId!
     );
 
@@ -147,7 +139,7 @@ async function getPermissionsHandler(
 
     return successResponse(
       {
-        userId: staffUserId,
+        userId: staffUserId.toString(),
         ...staffInfo,
       },
       'Staff permissions retrieved successfully',
@@ -170,12 +162,8 @@ async function toggleStatusHandler(
   routeContext: RouteContext
 ) {
   try {
-    const params = await routeContext.params;
-    const staffUserId = params.id;
-
-    if (!staffUserId) {
-      throw new ValidationError('Staff ID required', ERROR_CODES.VALIDATION_ERROR);
-    }
+    const staffUserId = await getBigIntRouteParam(routeContext, 'id');
+    if (!staffUserId) throw new ValidationError('Staff ID required', ERROR_CODES.VALIDATION_ERROR);
 
     const body = await request.json();
     const { isActive } = body;
@@ -186,7 +174,7 @@ async function toggleStatusHandler(
 
     await staffPermissionService.toggleStaffActive(
       authContext.merchantId!,
-      BigInt(staffUserId),
+      staffUserId,
       isActive,
       authContext.userId
     );
@@ -194,7 +182,7 @@ async function toggleStatusHandler(
     // Fetch updated staff info
     const updatedStaff = await prisma.merchantUser.findFirst({
       where: {
-        userId: BigInt(staffUserId),
+        userId: staffUserId,
         merchantId: authContext.merchantId!,
       },
       include: {

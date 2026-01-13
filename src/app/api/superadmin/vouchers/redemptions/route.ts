@@ -8,6 +8,7 @@ import prisma from '@/lib/db/client';
 import { withSuperAdmin } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/middleware/auth';
 import { serializeBigInt } from '@/lib/utils/serializer';
+import { parseOptionalBigIntQueryParam } from '@/lib/utils/routeContext';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type VoucherRedemptionRecord = any;
@@ -20,8 +21,15 @@ async function handleGet(req: NextRequest, context: AuthContext) {
     const searchParams = req.nextUrl.searchParams;
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = parseInt(searchParams.get('limit') || '50', 10);
-    const voucherId = searchParams.get('voucherId');
-    const merchantId = searchParams.get('merchantId');
+    const voucherIdResult = parseOptionalBigIntQueryParam(searchParams, 'voucherId', 'Invalid voucherId');
+    if (!voucherIdResult.ok) {
+        return NextResponse.json(voucherIdResult.body, { status: voucherIdResult.status });
+    }
+
+    const merchantIdResult = parseOptionalBigIntQueryParam(searchParams, 'merchantId', 'Invalid merchantId');
+    if (!merchantIdResult.ok) {
+        return NextResponse.json(merchantIdResult.body, { status: merchantIdResult.status });
+    }
 
     const offset = (page - 1) * limit;
 
@@ -31,12 +39,12 @@ async function handleGet(req: NextRequest, context: AuthContext) {
         merchantId?: bigint;
     } = {};
 
-    if (voucherId) {
-        where.voucherId = BigInt(voucherId);
+    if (voucherIdResult.value !== null) {
+        where.voucherId = voucherIdResult.value;
     }
 
-    if (merchantId) {
-        where.merchantId = BigInt(merchantId);
+    if (merchantIdResult.value !== null) {
+        where.merchantId = merchantIdResult.value;
     }
 
     const [redemptions, total] = await Promise.all([

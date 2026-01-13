@@ -16,7 +16,7 @@ import { useGroupOrder } from '@/context/GroupOrderContext';
 import { useCustomerData } from '@/context/CustomerDataContext';
 import { calculateCartSubtotal } from '@/lib/utils/priceCalculator';
 import { formatCurrency as formatCurrencyUtil } from '@/lib/utils/format';
-import { useTranslation } from '@/lib/i18n/useTranslation';
+import { useTranslation, tOr } from '@/lib/i18n/useTranslation';
 import { FaArrowLeft, FaCheckCircle, FaChevronDown, FaEnvelope, FaExclamationCircle, FaPhone, FaTable, FaUser } from 'react-icons/fa';
 
 /**
@@ -572,7 +572,7 @@ export default function PaymentPage() {
                   ? t('customer.mode.dineIn')
                   : mode === 'takeaway'
                     ? t('customer.mode.pickUp')
-                      : (t('customer.mode.delivery') === 'customer.mode.delivery' ? 'Delivery' : t('customer.mode.delivery'))}
+                      : tOr(t, 'customer.mode.delivery', 'Delivery')}
               </span>
               <FaCheckCircle style={{ width: '18px', height: '18px', color: '#212529' }} />
             </div>
@@ -936,7 +936,7 @@ export default function PaymentPage() {
             {isLoading
               ? t('customer.payment.processing')
               : (mode === 'delivery'
-                ? (t('customer.payment.placeDeliveryOrder') === 'customer.payment.placeDeliveryOrder' ? 'Place delivery order' : t('customer.payment.placeDeliveryOrder'))
+                ? tOr(t, 'customer.payment.placeDeliveryOrder', 'Place delivery order')
                 : t('customer.payment.payAtCashier'))}
           </button>
         </div>

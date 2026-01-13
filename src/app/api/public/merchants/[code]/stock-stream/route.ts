@@ -69,7 +69,7 @@ export async function GET(
   }
 
   // Track previous stock state for change detection
-  let previousStockMap: Map<string, number | null> = new Map();
+  const previousStockMap: Map<string, number | null> = new Map();
 
   // Fetch current stock data
   async function fetchStockData(): Promise<StockUpdate[]> {

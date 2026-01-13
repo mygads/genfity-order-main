@@ -22,7 +22,8 @@ interface RouteParams {
  */
 export async function GET(req: NextRequest, context: RouteParams) {
     try {
-        const { code } = await context.params;
+        const params = await context.params;
+        const code = params.code;
         const sessionCode = code.toUpperCase();
 
         const session = await prisma.groupOrderSession.findFirst({
@@ -133,7 +134,8 @@ export async function GET(req: NextRequest, context: RouteParams) {
  */
 export async function DELETE(req: NextRequest, context: RouteParams) {
     try {
-        const { code } = await context.params;
+        const params = await context.params;
+        const code = params.code;
         const sessionCode = code.toUpperCase();
         const body = await req.json();
         const { deviceId } = body;

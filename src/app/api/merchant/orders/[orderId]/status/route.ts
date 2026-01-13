@@ -9,7 +9,7 @@ import type { AuthContext } from '@/lib/types/auth';
 import { OrderManagementService } from '@/lib/services/OrderManagementService';
 import { serializeBigInt } from '@/lib/utils/serializer';
 import { OrderStatus } from '@prisma/client';
-import type { RouteContext } from '@/lib/utils/routeContext';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 /**
  * PUT /api/merchant/orders/[orderId]/status
@@ -25,27 +25,12 @@ async function handlePut(
   contextParams: RouteContext
 ) {
   try {
-    // Handle params - Next.js 15 uses Promise for params
-    let orderIdStr: string | undefined;
-    
-    if (contextParams?.params) {
-      const resolvedParams = await contextParams.params;
-      orderIdStr = resolvedParams?.orderId;
-    }
-    
-    console.log('[Order Status API] Received request:', { orderIdStr, hasParams: !!contextParams?.params });
-    
-    if (!orderIdStr) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Order ID is required',
-        },
-        { status: 400 }
-      );
+    const orderIdResult = await requireBigIntRouteParam(contextParams, 'orderId', 'Order ID is required');
+    if (!orderIdResult.ok) {
+      return NextResponse.json(orderIdResult.body, { status: orderIdResult.status });
     }
 
-    const orderId = BigInt(orderIdStr);
+    const orderId = orderIdResult.value;
     const body = await req.json();
 
     if (!body.status) {

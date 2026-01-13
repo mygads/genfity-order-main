@@ -20,7 +20,8 @@ export async function POST(
   context: { params: Promise<{ code: string }> }
 ) {
   try {
-    const { code } = await context.params;
+    const params = await context.params;
+    const code = params.code;
     const merchantCode = code;
     const body: QuoteRequest = await req.json();
 

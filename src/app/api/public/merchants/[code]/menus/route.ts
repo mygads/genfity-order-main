@@ -10,7 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
 import { serializeBigInt, decimalToNumber } from '@/lib/utils/serializer';
 import { SpecialPriceService } from '@/lib/services/SpecialPriceService';
-import type { RouteContext } from '@/lib/utils/routeContext';
+import { invalidRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 /**
  * GET /api/public/merchants/[code]/menus
@@ -62,6 +62,11 @@ export async function GET(
           none: {},
         };
       } else {
+        if (!/^\d+$/.test(categoryId)) {
+          const err = invalidRouteParam('category', 'Invalid category');
+          return NextResponse.json(err.body, { status: err.status });
+        }
+
         // Regular category filter
         whereCondition.categories = {
           some: {

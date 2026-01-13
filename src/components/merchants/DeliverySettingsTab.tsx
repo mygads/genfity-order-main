@@ -927,7 +927,14 @@ export default function DeliverySettingsTab({
 
         {previewResult && !previewResult.isCovered && (
           <div className="mt-4 rounded-xl border border-warning-200 bg-warning-50 p-4 text-sm text-warning-800 dark:border-warning-900/40 dark:bg-warning-900/10 dark:text-warning-200">
-            <div className="mb-2 font-semibold">Not covered</div>
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <div className="font-semibold">Not covered</div>
+              {previewResult.errorCode && (
+                <span className="inline-flex items-center rounded-full border border-warning-300 bg-warning-100 px-2 py-0.5 text-xs font-semibold text-warning-900 dark:border-warning-900/40 dark:bg-warning-900/20 dark:text-warning-100">
+                  Reason: {previewResult.errorCode}
+                </span>
+              )}
+            </div>
             <div>{previewResult.message || 'This location is outside the delivery coverage.'}</div>
           </div>
         )}

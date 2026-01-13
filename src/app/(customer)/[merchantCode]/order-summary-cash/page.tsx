@@ -442,7 +442,7 @@ export default function OrderSummaryCashPage() {
               {mode === 'dinein'
                 ? t('customer.mode.dineIn')
                 : mode === 'delivery'
-                  ? (t('customer.mode.delivery') === 'customer.mode.delivery' ? 'Delivery' : t('customer.mode.delivery'))
+                  ? tOr('customer.mode.delivery', 'Delivery')
                   : t('customer.mode.pickUp')}
             </span>
             <FaCheckCircle style={{ width: '18px', height: '18px', color: '#1ca406' }} />

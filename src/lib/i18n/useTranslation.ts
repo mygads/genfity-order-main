@@ -137,6 +137,16 @@ export function useTranslation(): UseTranslationReturn {
   };
 }
 
+export function tOr(
+  t: (key: TranslationKeys | string, params?: InterpolationParams) => string,
+  key: TranslationKeys | string,
+  fallback: string,
+  params?: InterpolationParams
+): string {
+  const translated = t(key, params);
+  return translated === String(key) ? fallback : translated;
+}
+
 // ============================================================================
 // Utility Functions (for non-hook usage)
 // ============================================================================

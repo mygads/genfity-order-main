@@ -54,6 +54,7 @@ interface POSPaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (paymentData: POSPaymentData) => Promise<void>;
+  orderId?: string | number;
   orderNumber: string;
   totalAmount: number;
   currency: string;
@@ -114,6 +115,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
   isOpen,
   onClose,
   onConfirm,
+  orderId,
   orderNumber,
   totalAmount,
   currency,
@@ -238,7 +240,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
   ];
 
   // Print receipt function
-  const handlePrintReceipt = useCallback(() => {
+  const handlePrintReceipt = useCallback(async () => {
     if (!orderDetails || !merchantInfo) return;
 
     const rawSettings = (receiptSettings || {}) as Partial<ReceiptSettings>;
@@ -255,12 +257,35 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
       paperSize: rawSettings.paperSize === '58mm' ? '58mm' : '80mm',
     };
 
+    let trackingToken: string | null = null;
+    if (settings.showTrackingQRCode && orderId != null) {
+      try {
+        const token = localStorage.getItem('accessToken');
+        if (token) {
+          const res = await fetch(`/api/merchant/orders/${orderId}/tracking-token`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          const json = await res.json();
+          if (res.ok && json?.success) {
+            trackingToken = json?.data?.trackingToken || null;
+          }
+        }
+      } catch {
+        trackingToken = null;
+      }
+    }
+
     printUnifiedReceipt({
       order: {
+        orderId: orderId != null ? String(orderId) : undefined,
         orderNumber,
         orderType: orderDetails.orderType,
         tableNumber: orderDetails.tableNumber,
         placedAt: orderDetails.placedAt.toISOString(),
+        trackingToken,
         items: orderDetails.items.map((item) => ({
           quantity: item.quantity,
           menuName: item.menuName,
@@ -299,7 +324,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
       settings,
       language,
     });
-  }, [orderDetails, merchantInfo, merchant?.code, orderNumber, discountAmount, finalTotal, paymentMethod, amount, change, cashAmount, cardAmount, currency, receiptSettings, locale]);
+  }, [orderDetails, merchantInfo, merchant?.code, orderNumber, discountAmount, finalTotal, paymentMethod, amount, change, cashAmount, cardAmount, currency, receiptSettings, locale, orderId]);
 
   // Handle submit
   const handleSubmit = async () => {
@@ -329,7 +354,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
       // Print receipt after successful payment if option is enabled
       if (printReceipt && orderDetails && merchantInfo) {
         setTimeout(() => {
-          handlePrintReceipt();
+          void handlePrintReceipt();
         }, 50);
       }
     } finally {

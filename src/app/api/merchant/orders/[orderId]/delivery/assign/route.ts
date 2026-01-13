@@ -9,6 +9,7 @@ import { withMerchant } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/middleware/auth';
 import { serializeBigInt } from '@/lib/utils/serializer';
 import { ORDER_DETAIL_INCLUDE } from '@/lib/types/order';
+import { invalidRouteParam, requireBigIntRouteParam } from '@/lib/utils/routeContext';
 
 type AssignBody = {
   driverUserId?: string | null;
@@ -16,7 +17,12 @@ type AssignBody = {
 
 export const PUT = withMerchant(async (request: NextRequest, authContext: AuthContext, routeContext) => {
   try {
-    const { orderId } = await routeContext.params;
+    const orderIdResult = await requireBigIntRouteParam(routeContext, 'orderId', 'Order ID is required');
+    if (!orderIdResult.ok) {
+      return NextResponse.json(orderIdResult.body, { status: orderIdResult.status });
+    }
+
+    const orderId = orderIdResult.value;
 
     if (!authContext.merchantId) {
       return NextResponse.json(
@@ -30,24 +36,12 @@ export const PUT = withMerchant(async (request: NextRequest, authContext: AuthCo
       );
     }
 
-    if (!orderId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'VALIDATION_ERROR',
-          message: 'Order ID is required',
-          statusCode: 400,
-        },
-        { status: 400 }
-      );
-    }
-
     const body = (await request.json()) as AssignBody;
     const driverUserIdRaw = body?.driverUserId;
 
     const order = await prisma.order.findFirst({
       where: {
-        id: BigInt(orderId),
+        id: orderId,
         merchantId: authContext.merchantId,
       },
       select: {
@@ -116,20 +110,13 @@ export const PUT = withMerchant(async (request: NextRequest, authContext: AuthCo
       });
     }
 
-    let driverUserId: bigint;
-    try {
-      driverUserId = BigInt(driverUserIdRaw);
-    } catch {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'VALIDATION_ERROR',
-          message: 'driverUserId must be a valid ID',
-          statusCode: 400,
-        },
-        { status: 400 }
-      );
+    const driverUserIdValue = typeof driverUserIdRaw === 'string' ? driverUserIdRaw.trim() : '';
+    if (!/^\d+$/.test(driverUserIdValue)) {
+      const err = invalidRouteParam('driverUserId', 'driverUserId must be a valid ID');
+      return NextResponse.json(err.body, { status: err.status });
     }
+
+    const driverUserId = BigInt(driverUserIdValue);
 
     const driver = await prisma.merchantUser.findFirst({
       where: {

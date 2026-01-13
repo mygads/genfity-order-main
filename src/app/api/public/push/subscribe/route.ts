@@ -21,6 +21,19 @@ export async function POST(request: Request) {
         const body = await request.json();
         const { subscription, orderNumbers, customerId, userAgent } = body;
 
+        let parsedCustomerId: bigint | null = null;
+        if (customerId !== undefined && customerId !== null && customerId !== '') {
+            const customerIdValue = typeof customerId === 'bigint' ? customerId.toString() : String(customerId).trim();
+            if (!/^\d+$/.test(customerIdValue)) {
+                return NextResponse.json(
+                    { success: false, error: 'VALIDATION_ERROR', message: 'Invalid customerId' },
+                    { status: 400 }
+                );
+            }
+
+            parsedCustomerId = BigInt(customerIdValue);
+        }
+
         if (!subscription || !subscription.endpoint || !subscription.keys) {
             return NextResponse.json(
                 { success: false, error: 'Invalid subscription data' },
@@ -54,7 +67,7 @@ export async function POST(request: Request) {
                 data: {
                     p256dhKey: subscription.keys.p256dh,
                     authKey: subscription.keys.auth,
-                    customerId: customerId ? BigInt(customerId) : existingSubscription.customerId,
+                    customerId: parsedCustomerId ?? existingSubscription.customerId,
                     orderNumbers: mergedOrderNumbers,
                     userAgent: userAgent || existingSubscription.userAgent,
                     isActive: true,
@@ -75,7 +88,7 @@ export async function POST(request: Request) {
                 endpoint: subscription.endpoint,
                 p256dhKey: subscription.keys.p256dh,
                 authKey: subscription.keys.auth,
-                customerId: customerId ? BigInt(customerId) : null,
+                customerId: parsedCustomerId,
                 orderNumbers: orderNumbers || [],
                 userAgent: userAgent || null,
                 isActive: true,

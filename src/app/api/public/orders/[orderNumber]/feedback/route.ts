@@ -19,7 +19,8 @@ export async function GET(
     context: { params: Promise<{ orderNumber: string }> }
 ) {
     try {
-        const { orderNumber } = await context.params;
+        const params = await context.params;
+        const orderNumber = params.orderNumber;
 
         const token = request.nextUrl.searchParams.get('token') || '';
 
@@ -97,7 +98,8 @@ export async function POST(
     context: { params: Promise<{ orderNumber: string }> }
 ) {
     try {
-        const { orderNumber } = await context.params;
+        const params = await context.params;
+        const orderNumber = params.orderNumber;
 
         const token = request.nextUrl.searchParams.get('token') || '';
 

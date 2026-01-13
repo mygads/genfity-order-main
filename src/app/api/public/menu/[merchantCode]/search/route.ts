@@ -15,7 +15,7 @@ import prisma from '@/lib/db/client';
 import { serializeBigInt, decimalToNumber } from '@/lib/utils/serializer';
 import { SpecialPriceService } from '@/lib/services/SpecialPriceService';
 import { isMenuAvailable } from '@/lib/services/MenuSchedulingService';
-import type { RouteContext } from '@/lib/utils/routeContext';
+import { parseOptionalBigIntQueryParam, type RouteContext } from '@/lib/utils/routeContext';
 
 /**
  * Calculate Levenshtein distance between two strings
@@ -105,7 +105,12 @@ export async function GET(
   const { searchParams } = new URL(request.url);
   
   const query = searchParams.get('q')?.trim() || '';
-  const categoryId = searchParams.get('categoryId');
+  const categoryIdResult = parseOptionalBigIntQueryParam(searchParams, 'categoryId', 'Invalid categoryId');
+  if (!categoryIdResult.ok) {
+    return NextResponse.json(categoryIdResult.body, { status: categoryIdResult.status });
+  }
+
+  const categoryId = categoryIdResult.value;
   const minPrice = searchParams.get('minPrice') ? parseFloat(searchParams.get('minPrice')!) : undefined;
   const maxPrice = searchParams.get('maxPrice') ? parseFloat(searchParams.get('maxPrice')!) : undefined;
   const sort = searchParams.get('sort') || 'relevance';
@@ -181,7 +186,7 @@ export async function GET(
     // Filter by category if specified
     let filteredMenus = menus;
     if (categoryId) {
-      const catId = BigInt(categoryId);
+      const catId = categoryId;
       filteredMenus = menus.filter(menu =>
         menu.categories.some(mc => mc.categoryId === catId)
       );

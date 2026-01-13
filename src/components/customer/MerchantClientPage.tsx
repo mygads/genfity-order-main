@@ -10,7 +10,7 @@ import { LanguageToggle } from '@/components/common/LanguageSelector';
 import PoweredByFooter from '@/components/common/PoweredByFooter';
 import { useStoreStatus } from '@/hooks/useStoreStatus';
 import { useToast } from '@/hooks/useToast';
-import { useTranslation } from '@/lib/i18n/useTranslation';
+import { useTranslation, tOr } from '@/lib/i18n/useTranslation';
 import { FaMotorcycle, FaShoppingBag, FaUtensils } from 'react-icons/fa';
 
 interface OpeningHour {
@@ -86,9 +86,7 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
     const isDeliveryEnabled = merchant.isDeliveryEnabled === true;
     const isDeliveryAvailable = storeOpen && isDeliveryEnabled && merchantHasDeliveryCoords;
 
-    const deliveryModeI18n = t('customer.mode.delivery');
-    const deliveryModeFallback = deliveryModeI18n === 'customer.mode.delivery' ? 'Delivery' : deliveryModeI18n;
-    const resolvedDeliveryLabel = deliveryLabel || merchant.deliveryLabel || deliveryModeFallback;
+    const resolvedDeliveryLabel = deliveryLabel || merchant.deliveryLabel || tOr(t, 'customer.mode.delivery', 'Delivery');
 
     const handleModeSelect = (selectedMode: 'dinein' | 'takeaway' | 'delivery') => {
         // Save mode to localStorage

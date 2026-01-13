@@ -54,6 +54,26 @@ export const PaymentVerificationModal: React.FC<PaymentVerificationModalProps> =
 
   const formatCurrency = (amount: number) => formatCurrencyUtil(amount, merchantInfo.currency);
 
+  const mintTrackingToken = async (orderId: string | number): Promise<string | null> => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) return null;
+
+      const res = await fetch(`/api/merchant/orders/${orderId}/tracking-token`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json?.success) return null;
+
+      return json?.data?.trackingToken || null;
+    } catch {
+      return null;
+    }
+  };
+
   const handleVerify = async () => {
     if (!orderNumber.trim()) return;
     
@@ -82,8 +102,14 @@ export const PaymentVerificationModal: React.FC<PaymentVerificationModalProps> =
           paperSize: rawSettings.paperSize === '58mm' ? '58mm' : '80mm',
         };
 
+        const orderId = (verifiedOrder as any)?.id as string | number | undefined;
+        const trackingToken = settings.showTrackingQRCode && orderId != null
+          ? await mintTrackingToken(orderId)
+          : null;
+
         printReceipt({
           order: {
+            orderId: orderId != null ? String(orderId) : undefined,
             orderNumber: (verifiedOrder as any).orderNumber,
             orderType: (verifiedOrder as any).orderType,
             tableNumber: (verifiedOrder as any).tableNumber,
@@ -96,6 +122,7 @@ export const PaymentVerificationModal: React.FC<PaymentVerificationModalProps> =
             customerName: (verifiedOrder as any).customerName,
             customerPhone: (verifiedOrder as any).customerPhone,
             customerEmail: (verifiedOrder as any).customerEmail,
+            trackingToken,
             placedAt: ((verifiedOrder as any).placedAt || (verifiedOrder as any).createdAt || new Date().toISOString()) as string,
             items: ((verifiedOrder as any).orderItems || []).map((item: any) => ({
               quantity: item.quantity,

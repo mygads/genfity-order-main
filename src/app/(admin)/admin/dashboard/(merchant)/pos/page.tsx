@@ -1353,6 +1353,7 @@ export default function POSPage() {
         isOpen={showPaymentModal}
         onClose={handlePaymentCancel}
         onConfirm={handlePaymentConfirm}
+        orderId={pendingOrderId}
         orderNumber={lastOrderNumber}
         totalAmount={pendingOrderTotal}
         currency={currency}

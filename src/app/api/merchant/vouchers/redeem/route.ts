@@ -153,7 +153,7 @@ async function handlePost(req: NextRequest, context: AuthContext) {
 
     let resultMessage = '';
     let autoSwitchTriggered = false;
-    let previousSubType = currentSubscription?.type || 'NONE';
+    const previousSubType = currentSubscription?.type || 'NONE';
     let newSubType = previousSubType;
 
     // Handle based on voucher type

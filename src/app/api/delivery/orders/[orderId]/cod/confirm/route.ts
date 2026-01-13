@@ -4,7 +4,7 @@ import { withDelivery } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/middleware/auth';
 import { OrderManagementService } from '@/lib/services/OrderManagementService';
 import { serializeBigInt } from '@/lib/utils/serializer';
-import type { RouteContext } from '@/lib/utils/routeContext';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
 export const POST = withDelivery(async (
   req: NextRequest,
@@ -12,23 +12,15 @@ export const POST = withDelivery(async (
   routeContext: RouteContext
 ) => {
   try {
-    const { orderId } = await routeContext.params;
+    const orderIdResult = await requireBigIntRouteParam(routeContext, 'orderId', 'Invalid orderId');
+    if (!orderIdResult.ok) {
+      return NextResponse.json(orderIdResult.body, { status: orderIdResult.status });
+    }
+
+    const orderId = orderIdResult.value;
     const body = await req.json().catch(() => ({} as any));
 
-    let id: bigint;
-    try {
-      id = BigInt(orderId);
-    } catch {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'VALIDATION_ERROR',
-          message: 'Invalid orderId',
-          statusCode: 400,
-        },
-        { status: 400 }
-      );
-    }
+    const id = orderId;
 
     const order = await prisma.order.findUnique({
       where: { id },
