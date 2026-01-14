@@ -72,6 +72,8 @@ export interface UpdateMerchantInput {
   deliveryScheduleStart?: string | null;
   deliveryScheduleEnd?: string | null;
   totalTables?: number | null;
+  // POS settings
+  posPayImmediately?: boolean;
   // Reservation settings
   isReservationEnabled?: boolean;
   reservationMenuRequired?: boolean;
@@ -408,6 +410,7 @@ class MerchantService {
     if (input.deliveryScheduleStart !== undefined) updateData.deliveryScheduleStart = input.deliveryScheduleStart;
     if (input.deliveryScheduleEnd !== undefined) updateData.deliveryScheduleEnd = input.deliveryScheduleEnd;
     if (input.totalTables !== undefined) updateData.totalTables = input.totalTables;
+    if (input.posPayImmediately !== undefined) updateData.posPayImmediately = input.posPayImmediately;
     // Reservation settings
     if (input.isReservationEnabled !== undefined) updateData.isReservationEnabled = input.isReservationEnabled;
     if (input.reservationMenuRequired !== undefined) updateData.reservationMenuRequired = input.reservationMenuRequired;

@@ -66,6 +66,9 @@ import {
   type POSPaymentData,
 } from '@/components/pos';
 
+import { printReceipt } from '@/lib/utils/unifiedReceipt';
+import type { ReceiptSettings } from '@/lib/types/receiptSettings';
+
 // ============================================
 // INTERFACES
 // ============================================
@@ -81,6 +84,7 @@ interface MerchantSettings {
   packagingFeeAmount: number | null;
   totalTables: number | null;
   requireTableNumberForDineIn: boolean;
+  posPayImmediately: boolean;
 }
 
 interface POSMenuData {
@@ -831,8 +835,16 @@ export default function POSPage() {
         // Store order info and show payment modal
         setPendingOrderId(data.data.id);
         setLastOrderNumber(data.data.orderNumber);
-        setPendingOrderTotal(calculateOrderTotal());
-        setShowPaymentModal(true);
+        const createdTotal = calculateOrderTotal();
+        setPendingOrderTotal(createdTotal);
+
+        const shouldPayImmediately = merchantSettings?.posPayImmediately ?? true;
+        if (shouldPayImmediately) {
+          setShowPaymentModal(true);
+        } else {
+          setLastOrderTotal(formatCurrency(createdTotal));
+          setShowSuccessModal(true);
+        }
 
         // Done editing any pending offline order
         setEditingPendingOfflineOrderId(null);
@@ -894,6 +906,7 @@ export default function POSPage() {
     addPendingOrder,
     updatePendingOrder,
     editingPendingOfflineOrderId,
+    merchantSettings,
     t,
   ]);
 
@@ -902,6 +915,9 @@ export default function POSPage() {
     setShowSuccessModal(false);
     setLastOrderNumber('');
     setLastOrderTotal('');
+    setPendingOrderId('');
+    setPendingOrderTotal(0);
+    setPendingOrderDetails(null);
   }, []);
 
   // Handle view order after success
@@ -909,6 +925,60 @@ export default function POSPage() {
     setShowSuccessModal(false);
     router.push('/admin/dashboard/orders');
   }, [router]);
+
+  const handlePrintCreatedOrderReceipt = useCallback(() => {
+    if (!merchant || !pendingOrderDetails) {
+      showError(t('common.error') || 'Error', 'Receipt data is not available');
+      return;
+    }
+
+    const rawSettings = (merchant.receiptSettings || {}) as Partial<ReceiptSettings>;
+    const ok = printReceipt({
+      order: {
+        orderId: pendingOrderId ? String(pendingOrderId) : undefined,
+        orderNumber: lastOrderNumber,
+        orderType: pendingOrderDetails.orderType,
+        tableNumber: pendingOrderDetails.tableNumber || null,
+        placedAt: pendingOrderDetails.placedAt.toISOString(),
+        items: pendingOrderDetails.items.map((it) => ({
+          quantity: it.quantity,
+          menuName: it.menuName,
+          subtotal: it.subtotal,
+          addons: (it.addons || []).map((a) => ({
+            addonName: a.addonName,
+            addonPrice: a.addonPrice,
+          })),
+        })),
+        subtotal: pendingOrderDetails.subtotal,
+        taxAmount: pendingOrderDetails.taxAmount,
+        serviceChargeAmount: pendingOrderDetails.serviceChargeAmount,
+        packagingFeeAmount: pendingOrderDetails.packagingFeeAmount,
+        totalAmount: pendingOrderTotal || calculateOrderTotal(),
+        paymentStatus: 'UNPAID',
+      },
+      merchant: {
+        name: merchant.name || merchant.code || 'Merchant',
+        code: merchant.code,
+        logoUrl: merchant.logoUrl,
+        address: merchant.address,
+        phone: merchant.phone,
+        email: merchant.email,
+        currency,
+      },
+      settings: rawSettings,
+      language: locale === 'id' ? 'id' : 'en',
+    });
+
+    if (!ok) {
+      showError(t('common.error') || 'Error', 'Failed to open print window (check popup blocker)');
+    }
+  }, [merchant, pendingOrderDetails, pendingOrderId, lastOrderNumber, pendingOrderTotal, calculateOrderTotal, currency, locale, showError, t]);
+
+  const handleMakePaymentFromSuccess = useCallback(() => {
+    if (!pendingOrderId) return;
+    setShowSuccessModal(false);
+    setShowPaymentModal(true);
+  }, [pendingOrderId]);
 
   // Handle payment confirmation
   const handlePaymentConfirm = useCallback(async (paymentData: POSPaymentData) => {
@@ -969,10 +1039,6 @@ export default function POSPage() {
     // Show success anyway since order is created
     setLastOrderTotal(formatCurrency(pendingOrderTotal));
     setShowSuccessModal(true);
-    // Clear payment state
-    setPendingOrderId('');
-    setPendingOrderTotal(0);
-    setPendingOrderDetails(null);
   }, [pendingOrderTotal, formatCurrency]);
 
   // Get editing cart item for notes modal
@@ -1396,6 +1462,9 @@ export default function POSPage() {
         total={lastOrderTotal}
         onNewOrder={handleNewOrder}
         onViewOrder={handleViewOrder}
+        onPrintReceipt={pendingOrderDetails ? handlePrintCreatedOrderReceipt : undefined}
+        canMakePayment={Boolean(pendingOrderId) && (merchantSettings?.posPayImmediately ?? true) === false}
+        onMakePayment={handleMakePaymentFromSuccess}
       />
 
       <POSOrderHistoryPanel

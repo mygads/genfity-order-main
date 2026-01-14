@@ -448,6 +448,9 @@ interface OrderSuccessModalProps {
   total: string;
   onNewOrder: () => void;
   onViewOrder: () => void;
+  onPrintReceipt?: () => void;
+  onMakePayment?: () => void;
+  canMakePayment?: boolean;
 }
 
 export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
@@ -457,6 +460,9 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
   total,
   onNewOrder,
   onViewOrder,
+  onPrintReceipt,
+  onMakePayment,
+  canMakePayment = false,
 }) => {
   const { t } = useTranslation();
 
@@ -504,19 +510,42 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex gap-2 p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-          <button
-            onClick={onViewOrder}
-            className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-          >
-            {t('pos.viewOrder')}
-          </button>
-          <button
-            onClick={onNewOrder}
-            className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium bg-orange-500 text-white hover:bg-orange-600 transition-colors"
-          >
-            {t('pos.newOrder')}
-          </button>
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 space-y-2">
+          {(onPrintReceipt || canMakePayment) && (
+            <div className="flex gap-2">
+              {onPrintReceipt && (
+                <button
+                  onClick={onPrintReceipt}
+                  className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                >
+                  {t('pos.printReceipt') || 'Print Receipt'}
+                </button>
+              )}
+              {canMakePayment && onMakePayment && (
+                <button
+                  onClick={onMakePayment}
+                  className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium bg-orange-500 text-white hover:bg-orange-600 transition-colors"
+                >
+                  {t('pos.makePayment') || 'Make Payment'}
+                </button>
+              )}
+            </div>
+          )}
+
+          <div className="flex gap-2">
+            <button
+              onClick={onViewOrder}
+              className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+            >
+              {t('pos.viewOrder')}
+            </button>
+            <button
+              onClick={onNewOrder}
+              className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium bg-orange-500 text-white hover:bg-orange-600 transition-colors"
+            >
+              {t('pos.newOrder')}
+            </button>
+          </div>
         </div>
       </div>
     </div>

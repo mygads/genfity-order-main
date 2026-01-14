@@ -46,6 +46,7 @@ async function handleGet(req: NextRequest, context: AuthContext) {
         packagingFeeAmount: true,
         totalTables: true,
         requireTableNumberForDineIn: true,
+        posPayImmediately: true,
       },
     });
 

@@ -131,6 +131,8 @@ async function handlePut(req: NextRequest, authContext: AuthContext) {
         deliveryScheduleStart: body.deliveryScheduleStart,
         deliveryScheduleEnd: body.deliveryScheduleEnd,
         totalTables: body.totalTables,
+        // POS settings
+        posPayImmediately: body.posPayImmediately,
         // Reservation settings
         isReservationEnabled: body.isReservationEnabled,
         reservationMenuRequired: body.reservationMenuRequired,

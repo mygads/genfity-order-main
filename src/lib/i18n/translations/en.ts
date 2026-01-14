@@ -3333,6 +3333,7 @@ const en = {
   "pos.frequentlyBought": "Frequently Bought",
   "pos.bestSellers": "Best Sellers",
   "pos.justNow": "Just Now",
+  "pos.makePayment" : "Make Payment",
 
   // ============================================================================
   // CUSTOMER - Schedule Order Mode

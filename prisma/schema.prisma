@@ -403,6 +403,8 @@ model Merchant {
   deliveryScheduleEnd    String?               @map("delivery_schedule_end")
   totalTables            Int?                  @map("total_tables")
   requireTableNumberForDineIn Boolean          @default(false) @map("require_table_number_for_dine_in")
+  // POS cashier behavior: when true, show payment modal immediately after POS order creation
+  posPayImmediately      Boolean               @default(true) @map("pos_pay_immediately")
   latitude               Decimal?              @db.Decimal(10, 8)
   longitude              Decimal?              @db.Decimal(11, 8)
   timezone               String                @default("Australia/Sydney")

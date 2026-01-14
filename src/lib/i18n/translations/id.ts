@@ -3328,6 +3328,7 @@ const id = {
   "pos.frequentlyBought": "Sering Dibeli",
   "pos.bestSellers": "Terlaris",
   "pos.justNow": "Baru Sekarang",
+  "pos.makePayment": "Lakukan Pembayaran",
 
   // ============================================================================
   // CUSTOMER - Schedule Order Mode

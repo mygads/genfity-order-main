@@ -227,6 +227,12 @@ export const POSOrderHistoryPanel: React.FC<POSOrderHistoryPanelProps> = ({
         }),
       });
 
+      const contentType = response.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        const text = await response.text();
+        throw new Error(`Refund failed (${response.status}). ${text.slice(0, 180)}`);
+      }
+
       const data = await response.json();
       
       if (!data.success) {

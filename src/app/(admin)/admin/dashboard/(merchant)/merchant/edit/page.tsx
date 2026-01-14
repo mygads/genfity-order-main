@@ -60,6 +60,8 @@ interface MerchantFormData {
   deliveryScheduleStart: string;
   deliveryScheduleEnd: string;
   totalTables: number | null;
+  // POS settings
+  posPayImmediately: boolean;
   // Reservation settings
   isReservationEnabled: boolean;
   reservationMenuRequired: boolean;
@@ -126,8 +128,6 @@ export default function EditMerchantPage() {
   const [pendingTab, setPendingTab] = useState<string | null>(null);
 
   // Collapsible sections
-  const [showCustomLabels, setShowCustomLabels] = useState(false);
-  const [showModeSchedules, setShowModeSchedules] = useState(false);
   const [showPerDayModeSchedules, setShowPerDayModeSchedules] = useState(false);
   const [showSpecialHours, setShowSpecialHours] = useState(false);
 
@@ -181,6 +181,8 @@ export default function EditMerchantPage() {
     deliveryScheduleStart: "",
     deliveryScheduleEnd: "",
     totalTables: null,
+    // POS settings
+    posPayImmediately: true,
     // Reservation settings
     isReservationEnabled: false,
     reservationMenuRequired: false,
@@ -282,6 +284,7 @@ export default function EditMerchantPage() {
         deliveryScheduleStart: merchant.deliveryScheduleStart || "",
         deliveryScheduleEnd: merchant.deliveryScheduleEnd || "",
         totalTables: merchant.totalTables ?? null,
+        posPayImmediately: merchant.posPayImmediately ?? true,
         // Reservation settings
         isReservationEnabled: merchant.isReservationEnabled ?? false,
         reservationMenuRequired: merchant.reservationMenuRequired ?? false,
@@ -365,6 +368,7 @@ export default function EditMerchantPage() {
         deliveryScheduleStart: merchant.deliveryScheduleStart || "",
         deliveryScheduleEnd: merchant.deliveryScheduleEnd || "",
         totalTables: merchant.totalTables ?? null,
+        posPayImmediately: merchant.posPayImmediately ?? true,
         isReservationEnabled: merchant.isReservationEnabled ?? false,
         reservationMenuRequired: merchant.reservationMenuRequired ?? false,
         reservationMinItemCount: Number(merchant.reservationMinItemCount ?? 0),
@@ -847,517 +851,696 @@ export default function EditMerchantPage() {
   /**
    * Sale Modes Tab - Dine in, Takeaway toggles, labels, schedules, tables
    */
-  const SaleModesTab = () => (
-    <div className="space-y-6">
-      <p className="text-sm text-gray-500 dark:text-gray-400">
-        Configure which ordering modes are available for customers, plus the schedule rules that control when each mode is active.
-      </p>
+  const SaleModesTab = () => {
+    const hasLocation = formData.latitude !== null && formData.longitude !== null;
+    const enabledModes = [formData.isDineInEnabled, formData.isTakeawayEnabled, formData.isDeliveryEnabled].filter(Boolean).length;
 
-      {formData.latitude === null || formData.longitude === null ? (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700 dark:border-amber-900/40 dark:bg-amber-900/10 dark:text-amber-300">
-          Delivery requires merchant coordinates. Set merchant location in the Location tab.
-        </div>
-      ) : null}
+    const hasCustomLabels = Boolean(
+      (formData.dineInLabel || '').trim() ||
+      (formData.takeawayLabel || '').trim() ||
+      (formData.deliveryLabel || '').trim()
+    );
 
-      <div>
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('admin.merchantEdit.modes.chooseTitle')}</h3>
-        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-          {t('admin.merchantEdit.modes.chooseDescription')}
+    const hasModeSchedules = Boolean(
+      formData.dineInScheduleStart ||
+      formData.dineInScheduleEnd ||
+      formData.takeawayScheduleStart ||
+      formData.takeawayScheduleEnd ||
+      formData.deliveryScheduleStart ||
+      formData.deliveryScheduleEnd
+    );
+
+    const showDineInLabel = formData.isDineInEnabled || Boolean((formData.dineInLabel || '').trim());
+    const showTakeawayLabel = formData.isTakeawayEnabled || Boolean((formData.takeawayLabel || '').trim());
+    const showDeliveryLabel = formData.isDeliveryEnabled || Boolean((formData.deliveryLabel || '').trim());
+
+    const showDineInSchedule =
+      formData.isDineInEnabled || Boolean(formData.dineInScheduleStart || formData.dineInScheduleEnd);
+    const showTakeawaySchedule =
+      formData.isTakeawayEnabled || Boolean(formData.takeawayScheduleStart || formData.takeawayScheduleEnd);
+    const showDeliverySchedule =
+      formData.isDeliveryEnabled || Boolean(formData.deliveryScheduleStart || formData.deliveryScheduleEnd);
+
+    const [labelsOpen, setLabelsOpen] = useState(false);
+    const [schedulesOpen, setSchedulesOpen] = useState(false);
+    const didInitAdvanced = useRef(false);
+
+    useEffect(() => {
+      if (didInitAdvanced.current) return;
+      if (!originalFormData) return;
+
+      setLabelsOpen(hasCustomLabels);
+      setSchedulesOpen(hasModeSchedules);
+      didInitAdvanced.current = true;
+    }, [originalFormData, hasCustomLabels, hasModeSchedules]);
+
+    return (
+      <div className="space-y-6">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          Configure which ordering modes are available to customers and how POS + optional features behave.
         </p>
-      </div>
 
-      {/* Mode Toggles */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {/* Dine In Toggle */}
-        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">{t('admin.merchantEdit.modes.dineInTitle')}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">{t('admin.merchantEdit.modes.dineInDesc')}</p>
-            </div>
-            <label className="relative inline-flex cursor-pointer items-center">
-              <input
-                type="checkbox"
-                checked={formData.isDineInEnabled}
-                onChange={(e) => {
-                  if (!e.target.checked && !formData.isTakeawayEnabled && !formData.isDeliveryEnabled) {
-                    showError("Error", "At least one sale mode must be enabled");
-                    return;
-                  }
-                  setFormData(prev => ({ ...prev, isDineInEnabled: e.target.checked }));
-                }}
-                className="peer sr-only"
-              />
-              <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
-            </label>
+        {!hasLocation ? (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700 dark:border-amber-900/40 dark:bg-amber-900/10 dark:text-amber-300">
+            Delivery requires merchant coordinates. Set merchant location in the Location tab.
           </div>
+        ) : null}
 
-          <div className="mt-4 border-t border-gray-200 pt-4 dark:border-gray-800">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className={`text-sm font-medium ${formData.isDineInEnabled ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'}`}>
-                  {tOr(t, 'admin.merchantEdit.modes.requireTableNumberTitle', 'Require table number')}
-                </p>
-                <p className={`text-xs ${formData.isDineInEnabled ? 'text-gray-500 dark:text-gray-400' : 'text-gray-400 dark:text-gray-600'}`}>
-                  {tOr(t, 'admin.merchantEdit.modes.requireTableNumberDesc', 'If enabled, customers/admin must provide a table number for Dine In orders.')}
-                </p>
+        <div className="grid gap-6 lg:grid-cols-3">
+          {/* Left: Core modes + mode options */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-950">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                    {tOr(t, 'admin.merchantEdit.modes.chooseTitle', 'Order modes')}
+                  </h3>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    {tOr(t, 'admin.merchantEdit.modes.chooseDescription', 'Choose which ordering modes are available for customers.')}
+                  </p>
+                </div>
+                <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600 dark:bg-gray-900 dark:text-gray-300">
+                  {enabledModes} enabled
+                </span>
               </div>
 
-              <label className="relative inline-flex cursor-pointer items-center">
-                <input
-                  type="checkbox"
-                  checked={formData.requireTableNumberForDineIn}
-                  disabled={!formData.isDineInEnabled}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, requireTableNumberForDineIn: e.target.checked }))}
-                  className="peer sr-only"
-                />
-                <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-disabled:cursor-not-allowed peer-disabled:opacity-50 dark:bg-gray-700" />
-              </label>
+              <div className="mt-4 divide-y divide-gray-200 dark:divide-gray-800">
+                {/* Dine In */}
+                <div className="py-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">
+                        {t('admin.merchantEdit.modes.dineInTitle')}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{t('admin.merchantEdit.modes.dineInDesc')}</p>
+                    </div>
+                    <label className="relative inline-flex cursor-pointer items-center">
+                      <input
+                        type="checkbox"
+                        checked={formData.isDineInEnabled}
+                        onChange={(e) => {
+                          if (!e.target.checked && !formData.isTakeawayEnabled && !formData.isDeliveryEnabled) {
+                            showError(t('common.error'), t('admin.merchantEdit.orderModes.atLeastOneRequired'));
+                            return;
+                          }
+                          setFormData((prev) => ({ ...prev, isDineInEnabled: e.target.checked }));
+                        }}
+                        className="peer sr-only"
+                      />
+                      <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
+                    </label>
+                  </div>
+
+                  {formData.isDineInEnabled && (
+                    <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/40">
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">
+                            {tOr(t, 'admin.merchantEdit.modes.requireTableNumberTitle', 'Require table number')}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            {tOr(
+                              t,
+                              'admin.merchantEdit.modes.requireTableNumberDesc',
+                              'If enabled, customers/admin must provide a table number for Dine In orders.'
+                            )}
+                          </p>
+                        </div>
+
+                        <label className="relative inline-flex cursor-pointer items-center">
+                          <input
+                            type="checkbox"
+                            checked={formData.requireTableNumberForDineIn}
+                            onChange={(e) =>
+                              setFormData((prev) => ({ ...prev, requireTableNumberForDineIn: e.target.checked }))
+                            }
+                            className="peer sr-only"
+                          />
+                          <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
+                        </label>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Takeaway */}
+                <div className="py-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">
+                        {t('admin.merchantEdit.orderModes.takeawayTitle')}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{t('admin.merchantEdit.orderModes.takeawayDesc')}</p>
+                    </div>
+                    <label className="relative inline-flex cursor-pointer items-center">
+                      <input
+                        type="checkbox"
+                        checked={formData.isTakeawayEnabled}
+                        onChange={(e) => {
+                          if (!e.target.checked && !formData.isDineInEnabled && !formData.isDeliveryEnabled) {
+                            showError(t('common.error'), t('admin.merchantEdit.orderModes.atLeastOneRequired'));
+                            return;
+                          }
+                          setFormData((prev) => ({ ...prev, isTakeawayEnabled: e.target.checked }));
+                        }}
+                        className="peer sr-only"
+                      />
+                      <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
+                    </label>
+                  </div>
+                </div>
+
+                {/* Delivery */}
+                <div className="py-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          {t('admin.merchantEdit.orderModes.deliveryTitle')}
+                        </p>
+                        {!hasLocation && !formData.isDeliveryEnabled ? (
+                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-200">
+                            Location required
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{t('admin.merchantEdit.orderModes.deliveryDesc')}</p>
+                    </div>
+                    <label className="relative inline-flex cursor-pointer items-center">
+                      <input
+                        type="checkbox"
+                        checked={formData.isDeliveryEnabled}
+                        disabled={!hasLocation && !formData.isDeliveryEnabled}
+                        onChange={(e) => {
+                          const next = e.target.checked;
+                          if (next && !hasLocation) {
+                            showError(t('common.error'), t('admin.merchantEdit.orderModes.deliveryRequiresLocation'));
+                            return;
+                          }
+                          if (!next && !formData.isDineInEnabled && !formData.isTakeawayEnabled) {
+                            showError(t('common.error'), t('admin.merchantEdit.orderModes.atLeastOneRequired'));
+                            return;
+                          }
+                          setFormData((prev) => ({ ...prev, isDeliveryEnabled: next }));
+                        }}
+                        className="peer sr-only"
+                      />
+                      <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-disabled:cursor-not-allowed peer-disabled:opacity-50 dark:bg-gray-700" />
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-950">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Mode labels & availability</h3>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Optional. Customize customer-facing button labels and set mode availability hours.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleTabChange('hours')}
+                  className="inline-flex h-9 items-center justify-center rounded-lg border border-gray-200 bg-white px-3 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-200"
+                >
+                  Manage overrides in Opening Hours
+                </button>
+              </div>
+
+              <div className="mt-4 grid gap-4">
+                {/* Labels */}
+                <details
+                  className="group rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-900/40"
+                  open={labelsOpen}
+                  onToggle={(e) => setLabelsOpen((e.target as HTMLDetailsElement).open)}
+                >
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-4">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">Customer button labels</p>
+                      <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Leave empty to use default translations.</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {hasCustomLabels ? (
+                        <span className="rounded-full bg-brand-100 px-2 py-0.5 text-[11px] font-medium text-brand-700 dark:bg-brand-900/30 dark:text-brand-200">
+                          Configured
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-gray-200 px-2 py-0.5 text-[11px] font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                          Optional
+                        </span>
+                      )}
+                      <FaChevronDown className="h-4 w-4 text-gray-500 transition-transform group-open:rotate-180" />
+                    </div>
+                  </summary>
+
+                  <div className="border-t border-gray-200 p-4 dark:border-gray-800">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      {showDineInLabel ? (
+                        <div>
+                          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Dine In button label
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.dineInLabel}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, dineInLabel: e.target.value }))}
+                            placeholder={tOr(t, 'customer.mode.dineIn', 'Dine In')}
+                            className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                          />
+                        </div>
+                      ) : null}
+
+                      {showTakeawayLabel ? (
+                        <div>
+                          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Takeaway button label
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.takeawayLabel}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, takeawayLabel: e.target.value }))}
+                            placeholder={tOr(t, 'customer.mode.pickUp', 'Takeaway')}
+                            className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                          />
+                        </div>
+                      ) : null}
+
+                      {showDeliveryLabel ? (
+                        <div>
+                          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Delivery button label
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.deliveryLabel}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, deliveryLabel: e.target.value }))}
+                            placeholder={tOr(t, 'customer.mode.delivery', 'Delivery')}
+                            className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                          />
+                          {!formData.isDeliveryEnabled ? (
+                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Delivery is currently disabled.</p>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </div>
+
+                    <div className="mt-4 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950">
+                      <div className="text-sm font-medium text-gray-900 dark:text-white">Preview</div>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {([
+                          {
+                            key: 'dinein',
+                            enabled: formData.isDineInEnabled,
+                            label: (formData.dineInLabel || '').trim() || tOr(t, 'customer.mode.dineIn', 'Dine In'),
+                          },
+                          {
+                            key: 'takeaway',
+                            enabled: formData.isTakeawayEnabled,
+                            label: (formData.takeawayLabel || '').trim() || tOr(t, 'customer.mode.pickUp', 'Takeaway'),
+                          },
+                          {
+                            key: 'delivery',
+                            enabled: formData.isDeliveryEnabled,
+                            label: (formData.deliveryLabel || '').trim() || tOr(t, 'customer.mode.delivery', 'Delivery'),
+                          },
+                        ] as const)
+                          .filter((item) => item.enabled)
+                          .map((item) => (
+                            <button
+                              key={item.key}
+                              type="button"
+                              disabled
+                              className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm font-semibold text-gray-900 dark:border-gray-800 dark:bg-gray-950 dark:text-white"
+                            >
+                              {item.label}
+                            </button>
+                          ))}
+                      </div>
+                      {enabledModes === 0 ? (
+                        <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">Enable at least one mode above.</div>
+                      ) : null}
+                    </div>
+                  </div>
+                </details>
+
+                {/* Mode schedules */}
+                <details
+                  className="group rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-900/40"
+                  open={schedulesOpen}
+                  onToggle={(e) => setSchedulesOpen((e.target as HTMLDetailsElement).open)}
+                >
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-4">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">Mode availability hours</p>
+                      <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                        Leave empty to follow opening hours. Overrides live in the Opening Hours tab.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {hasModeSchedules ? (
+                        <span className="rounded-full bg-brand-100 px-2 py-0.5 text-[11px] font-medium text-brand-700 dark:bg-brand-900/30 dark:text-brand-200">
+                          Configured
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-gray-200 px-2 py-0.5 text-[11px] font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                          Optional
+                        </span>
+                      )}
+                      <FaChevronDown className="h-4 w-4 text-gray-500 transition-transform group-open:rotate-180" />
+                    </div>
+                  </summary>
+
+                  <div className="space-y-4 border-t border-gray-200 p-4 dark:border-gray-800">
+                    <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">Quick presets</p>
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Applies to all modes (including disabled ones).</p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              dineInScheduleStart: '',
+                              dineInScheduleEnd: '',
+                              takeawayScheduleStart: '',
+                              takeawayScheduleEnd: '',
+                              deliveryScheduleStart: '',
+                              deliveryScheduleEnd: '',
+                            }))
+                          }
+                          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-200"
+                        >
+                          Always available
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              dineInScheduleStart: '11:00',
+                              dineInScheduleEnd: '21:00',
+                              takeawayScheduleStart: '11:00',
+                              takeawayScheduleEnd: '21:00',
+                              deliveryScheduleStart: '11:00',
+                              deliveryScheduleEnd: '21:00',
+                            }))
+                          }
+                          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-200"
+                        >
+                          Standard (11:00–21:00)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              dineInScheduleStart: '17:00',
+                              dineInScheduleEnd: '22:00',
+                              takeawayScheduleStart: '17:00',
+                              takeawayScheduleEnd: '22:00',
+                              deliveryScheduleStart: '17:00',
+                              deliveryScheduleEnd: '22:00',
+                            }))
+                          }
+                          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-200"
+                        >
+                          Dinner only (17:00–22:00)
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-4 lg:grid-cols-3">
+                      {showDineInSchedule ? (
+                        <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-sm font-medium text-gray-900 dark:text-white">Dine In</p>
+                            {!formData.isDineInEnabled ? (
+                              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-600 dark:bg-gray-900 dark:text-gray-300">
+                                Disabled
+                              </span>
+                            ) : null}
+                          </div>
+                          <div className="mt-3 grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="mb-1 block text-xs text-gray-500 dark:text-gray-400">From</label>
+                              <input
+                                type="time"
+                                value={formData.dineInScheduleStart}
+                                onChange={(e) => setFormData((prev) => ({ ...prev, dineInScheduleStart: e.target.value }))}
+                                className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                              />
+                            </div>
+                            <div>
+                              <label className="mb-1 block text-xs text-gray-500 dark:text-gray-400">To</label>
+                              <input
+                                type="time"
+                                value={formData.dineInScheduleEnd}
+                                onChange={(e) => setFormData((prev) => ({ ...prev, dineInScheduleEnd: e.target.value }))}
+                                className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {showTakeawaySchedule ? (
+                        <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-sm font-medium text-gray-900 dark:text-white">Takeaway</p>
+                            {!formData.isTakeawayEnabled ? (
+                              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-600 dark:bg-gray-900 dark:text-gray-300">
+                                Disabled
+                              </span>
+                            ) : null}
+                          </div>
+                          <div className="mt-3 grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="mb-1 block text-xs text-gray-500 dark:text-gray-400">From</label>
+                              <input
+                                type="time"
+                                value={formData.takeawayScheduleStart}
+                                onChange={(e) =>
+                                  setFormData((prev) => ({ ...prev, takeawayScheduleStart: e.target.value }))
+                                }
+                                className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                              />
+                            </div>
+                            <div>
+                              <label className="mb-1 block text-xs text-gray-500 dark:text-gray-400">To</label>
+                              <input
+                                type="time"
+                                value={formData.takeawayScheduleEnd}
+                                onChange={(e) =>
+                                  setFormData((prev) => ({ ...prev, takeawayScheduleEnd: e.target.value }))
+                                }
+                                className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {showDeliverySchedule ? (
+                        <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-sm font-medium text-gray-900 dark:text-white">Delivery</p>
+                            {!formData.isDeliveryEnabled ? (
+                              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-600 dark:bg-gray-900 dark:text-gray-300">
+                                Disabled
+                              </span>
+                            ) : null}
+                          </div>
+                          <div className="mt-3 grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="mb-1 block text-xs text-gray-500 dark:text-gray-400">From</label>
+                              <input
+                                type="time"
+                                value={formData.deliveryScheduleStart}
+                                onChange={(e) =>
+                                  setFormData((prev) => ({ ...prev, deliveryScheduleStart: e.target.value }))
+                                }
+                                className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                              />
+                            </div>
+                            <div>
+                              <label className="mb-1 block text-xs text-gray-500 dark:text-gray-400">To</label>
+                              <input
+                                type="time"
+                                value={formData.deliveryScheduleEnd}
+                                onChange={(e) =>
+                                  setFormData((prev) => ({ ...prev, deliveryScheduleEnd: e.target.value }))
+                                }
+                                className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                              />
+                            </div>
+                          </div>
+                          {!formData.isDeliveryEnabled ? (
+                            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">Delivery is currently disabled.</p>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                </details>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Takeaway Toggle */}
-        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">{t('admin.merchantEdit.orderModes.takeawayTitle')}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">{t('admin.merchantEdit.orderModes.takeawayDesc')}</p>
-            </div>
-            <label className="relative inline-flex cursor-pointer items-center">
-              <input
-                type="checkbox"
-                checked={formData.isTakeawayEnabled}
-                onChange={(e) => {
-                  if (!e.target.checked && !formData.isDineInEnabled && !formData.isDeliveryEnabled) {
-                    showError(t('common.error'), t('admin.merchantEdit.orderModes.atLeastOneRequired'));
-                    return;
-                  }
-                  setFormData(prev => ({ ...prev, isTakeawayEnabled: e.target.checked }));
-                }}
-                className="peer sr-only"
-              />
-              <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
-            </label>
-          </div>
-        </div>
+          {/* Right: POS + Features */}
+          <div className="space-y-6">
+            <div className="rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-950">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                {tOr(t, 'admin.merchantEdit.pos.sectionTitle', 'POS & checkout')}
+              </h3>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Control cashier flow and POS order creation behavior.
+              </p>
 
-        {/* Delivery Toggle */}
-        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50 sm:col-span-2">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">{t('admin.merchantEdit.orderModes.deliveryTitle')}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">{t('admin.merchantEdit.orderModes.deliveryDesc')}</p>
-            </div>
-            <label className="relative inline-flex cursor-pointer items-center">
-              <input
-                type="checkbox"
-                checked={formData.isDeliveryEnabled}
-                disabled={(formData.latitude === null || formData.longitude === null) && !formData.isDeliveryEnabled}
-                onChange={(e) => {
-                  const next = e.target.checked;
-                  if (next && (formData.latitude === null || formData.longitude === null)) {
-                    showError(t('common.error'), t('admin.merchantEdit.orderModes.deliveryRequiresLocation'));
-                    return;
-                  }
-                  if (!next && !formData.isDineInEnabled && !formData.isTakeawayEnabled) {
-                    showError(t('common.error'), t('admin.merchantEdit.orderModes.atLeastOneRequired'));
-                    return;
-                  }
-                  setFormData((prev) => ({ ...prev, isDeliveryEnabled: next }));
-                }}
-                className="peer sr-only"
-              />
-              <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-disabled:cursor-not-allowed peer-disabled:opacity-50 dark:bg-gray-700" />
-            </label>
-          </div>
-        </div>
-
-        {/* Scheduled Orders (feature) */}
-        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50 sm:col-span-2">
-          <div className="mb-3 flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">{t('admin.merchantEdit.scheduledOrders.title')}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">{t('admin.merchantEdit.scheduledOrders.desc')}</p>
-            </div>
-            <label className="relative inline-flex cursor-pointer items-center">
-              <input
-                type="checkbox"
-                checked={formData.isScheduledOrderEnabled}
-                onChange={(e) => setFormData((prev) => ({ ...prev, isScheduledOrderEnabled: e.target.checked }))}
-                className="peer sr-only"
-              />
-              <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
-            </label>
-          </div>
-        </div>
-
-        {/* Reservations (feature) */}
-        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50 sm:col-span-2">
-          <div className="mb-3 flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">{t('admin.merchantEdit.reservations.title')}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">{t('admin.merchantEdit.reservations.desc')}</p>
-            </div>
-            <label className="relative inline-flex cursor-pointer items-center">
-              <input
-                type="checkbox"
-                checked={formData.isReservationEnabled}
-                onChange={(e) => {
-                  const next = e.target.checked;
-                  if (next) {
-                    openReservationsWizard();
-                    return;
-                  }
-                  setFormData((prev) => ({ ...prev, isReservationEnabled: false }));
-                }}
-                className="peer sr-only"
-              />
-              <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
-            </label>
-          </div>
-
-          {formData.isReservationEnabled && (
-            <div className="grid grid-cols-1 gap-4">
-              <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
-                <div className="flex items-center justify-between">
+              <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/40">
+                <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">{t('admin.merchantEdit.reservations.requirePreorderTitle')}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{t('admin.merchantEdit.reservations.requirePreorderDesc')}</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                      {tOr(t, 'admin.merchantEdit.pos.payBehaviorTitle', 'POS payment behavior')}
+                    </p>
+                    <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                      {formData.posPayImmediately
+                        ? tOr(
+                            t,
+                            'admin.merchantEdit.pos.payBehaviorDescPayNow',
+                            'Pay immediately: show the payment modal right after creating an order in POS.'
+                          )
+                        : tOr(
+                            t,
+                            'admin.merchantEdit.pos.payBehaviorDescPayLater',
+                            'Pay later: show “Order created” first, with options to print receipt or record payment.'
+                          )}
+                    </p>
                   </div>
                   <label className="relative inline-flex cursor-pointer items-center">
                     <input
                       type="checkbox"
-                      checked={formData.reservationMenuRequired}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, reservationMenuRequired: e.target.checked }))}
+                      checked={formData.posPayImmediately}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, posPayImmediately: e.target.checked }))}
                       className="peer sr-only"
                     />
                     <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
                   </label>
                 </div>
               </div>
-
-              {formData.reservationMenuRequired ? (
-                <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
-                  <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">{t('admin.merchantEdit.reservations.minPreorderItemsLabel')}</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="99"
-                    value={formData.reservationMinItemCount ?? 1}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        reservationMinItemCount: e.target.value ? Math.max(1, parseInt(e.target.value, 10) || 1) : 1,
-                      }))
-                    }
-                    className="h-10 w-full max-w-[220px] rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
-                  />
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    {t('admin.merchantEdit.reservations.minPreorderItemsHelp')}
-                  </p>
-                </div>
-              ) : null}
             </div>
-          )}
+
+            <div className="rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-950">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Features</h3>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Optional customer flows and reservation settings.
+              </p>
+
+              <div className="mt-4 space-y-4">
+                {/* Scheduled Orders */}
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/40">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">{t('admin.merchantEdit.scheduledOrders.title')}</p>
+                      <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{t('admin.merchantEdit.scheduledOrders.desc')}</p>
+                    </div>
+                    <label className="relative inline-flex cursor-pointer items-center">
+                      <input
+                        type="checkbox"
+                        checked={formData.isScheduledOrderEnabled}
+                        onChange={(e) =>
+                          setFormData((prev) => ({ ...prev, isScheduledOrderEnabled: e.target.checked }))
+                        }
+                        className="peer sr-only"
+                      />
+                      <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
+                    </label>
+                  </div>
+                </div>
+
+                {/* Reservations */}
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/40">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">{t('admin.merchantEdit.reservations.title')}</p>
+                      <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{t('admin.merchantEdit.reservations.desc')}</p>
+                    </div>
+                    <label className="relative inline-flex cursor-pointer items-center">
+                      <input
+                        type="checkbox"
+                        checked={formData.isReservationEnabled}
+                        onChange={(e) => {
+                          const next = e.target.checked;
+                          if (next) {
+                            openReservationsWizard();
+                            return;
+                          }
+                          setFormData((prev) => ({ ...prev, isReservationEnabled: false }));
+                        }}
+                        className="peer sr-only"
+                      />
+                      <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
+                    </label>
+                  </div>
+
+                  {formData.isReservationEnabled ? (
+                    <div className="mt-4 space-y-4">
+                      <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950">
+                        <div className="flex items-start justify-between gap-4">
+                          <div>
+                            <p className="text-sm font-medium text-gray-900 dark:text-white">{t('admin.merchantEdit.reservations.requirePreorderTitle')}</p>
+                            <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{t('admin.merchantEdit.reservations.requirePreorderDesc')}</p>
+                          </div>
+                          <label className="relative inline-flex cursor-pointer items-center">
+                            <input
+                              type="checkbox"
+                              checked={formData.reservationMenuRequired}
+                              onChange={(e) =>
+                                setFormData((prev) => ({ ...prev, reservationMenuRequired: e.target.checked }))
+                              }
+                              className="peer sr-only"
+                            />
+                            <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
+                          </label>
+                        </div>
+                      </div>
+
+                      {formData.reservationMenuRequired ? (
+                        <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950">
+                          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            {t('admin.merchantEdit.reservations.minPreorderItemsLabel')}
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            max="99"
+                            value={formData.reservationMinItemCount ?? 1}
+                            onChange={(e) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                reservationMinItemCount: e.target.value
+                                  ? Math.max(1, parseInt(e.target.value, 10) || 1)
+                                  : 1,
+                              }))
+                            }
+                            className="h-10 w-full max-w-[220px] rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                          />
+                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            {t('admin.merchantEdit.reservations.minPreorderItemsHelp')}
+                          </p>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-
-      <div>
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Schedules</h3>
-        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-          Global schedules are the default. Use per-day schedules and special hours for overrides.
-        </p>
-      </div>
-
-      {/* Custom Labels - Collapsible */}
-      <div className="rounded-lg border border-gray-200 dark:border-gray-800">
-        <button
-          type="button"
-          onClick={() => setShowCustomLabels(!showCustomLabels)}
-          className="flex w-full items-center justify-between p-4 text-left"
-        >
-          <div className="flex items-center gap-3">
-            <label className="relative inline-flex cursor-pointer items-center">
-              <input
-                type="checkbox"
-                checked={showCustomLabels}
-                onChange={(e) => setShowCustomLabels(e.target.checked)}
-                className="peer sr-only"
-              />
-              <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
-            </label>
-            <div>
-              <h4 className="text-sm font-medium text-gray-900 dark:text-white">Custom Button Labels</h4>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Customize the labels for ordering mode buttons</p>
-            </div>
-          </div>
-          <FaChevronDown className={`h-5 w-5 text-gray-500 transition-transform ${showCustomLabels ? 'rotate-180' : ''}`} />
-        </button>
-        {showCustomLabels && (
-          <div className="border-t border-gray-200 p-4 dark:border-gray-800">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Dine In Button Label
-                </label>
-                <input
-                  type="text"
-                  value={formData.dineInLabel}
-                  onChange={(e) => setFormData(prev => ({ ...prev, dineInLabel: e.target.value }))}
-                  placeholder="Dine In"
-                  className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
-                />
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Leave empty to use default</p>
-              </div>
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Takeaway Button Label
-                </label>
-                <input
-                  type="text"
-                  value={formData.takeawayLabel}
-                  onChange={(e) => setFormData(prev => ({ ...prev, takeawayLabel: e.target.value }))}
-                  placeholder="Takeaway"
-                  className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
-                />
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Leave empty to use default</p>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Delivery Button Label
-                </label>
-                <input
-                  type="text"
-                  value={formData.deliveryLabel}
-                  onChange={(e) => setFormData(prev => ({ ...prev, deliveryLabel: e.target.value }))}
-                  placeholder="Delivery"
-                  className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
-                />
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Leave empty to use default</p>
-              </div>
-            </div>
-
-            <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
-              <div className="text-sm font-medium text-gray-900 dark:text-white">Preview (customer buttons)</div>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {([
-                  {
-                    key: 'dinein',
-                    enabled: formData.isDineInEnabled,
-                    label: (formData.dineInLabel || '').trim() || tOr(t, 'customer.mode.dineIn', 'Dine In'),
-                  },
-                  {
-                    key: 'takeaway',
-                    enabled: formData.isTakeawayEnabled,
-                    label: (formData.takeawayLabel || '').trim() || tOr(t, 'customer.mode.pickUp', 'Takeaway'),
-                  },
-                  {
-                    key: 'delivery',
-                    enabled: formData.isDeliveryEnabled,
-                    label: (formData.deliveryLabel || '').trim() || tOr(t, 'customer.mode.delivery', 'Delivery'),
-                  },
-                ] as const).map((item) => (
-                  <div key={item.key} className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      disabled
-                      className={`h-9 rounded-lg border px-3 text-sm font-semibold ${
-                        item.enabled
-                          ? 'border-gray-200 bg-white text-gray-900 dark:border-gray-800 dark:bg-gray-950 dark:text-white'
-                          : 'border-gray-200 bg-white/60 text-gray-400 dark:border-gray-800 dark:bg-gray-950/40 dark:text-gray-500'
-                      }`}
-                    >
-                      {item.label}
-                    </button>
-                    {!item.enabled && (
-                      <span className="rounded-full bg-gray-200 px-2 py-0.5 text-[11px] font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-300">
-                        Disabled
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-              <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                This matches customer-visible labels after translation fallback and merchant overrides.
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Mode Schedules - Collapsible */}
-      <div className="rounded-lg border border-gray-200 dark:border-gray-800">
-        <button
-          type="button"
-          onClick={() => setShowModeSchedules(!showModeSchedules)}
-          className="flex w-full items-center justify-between p-4 text-left"
-        >
-          <div className="flex items-center gap-3">
-            <label className="relative inline-flex cursor-pointer items-center">
-              <input
-                type="checkbox"
-                checked={showModeSchedules}
-                onChange={(e) => setShowModeSchedules(e.target.checked)}
-                className="peer sr-only"
-              />
-              <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
-            </label>
-            <div>
-              <h4 className="text-sm font-medium text-gray-900 dark:text-white">Mode Schedules</h4>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Set time ranges when each mode is available</p>
-            </div>
-          </div>
-          <FaChevronDown className={`h-5 w-5 text-gray-500 transition-transform ${showModeSchedules ? 'rotate-180' : ''}`} />
-        </button>
-        {showModeSchedules && (
-          <div className="space-y-4 border-t border-gray-200 p-4 dark:border-gray-800">
-            {/* Quick Presets */}
-            <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900/50">
-              <p className="text-sm font-medium text-gray-900 dark:text-white">Quick presets</p>
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                Apply common schedule patterns to all modes (Dine In, Takeaway, Delivery).
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => setFormData((prev) => ({
-                    ...prev,
-                    dineInScheduleStart: '',
-                    dineInScheduleEnd: '',
-                    takeawayScheduleStart: '',
-                    takeawayScheduleEnd: '',
-                    deliveryScheduleStart: '',
-                    deliveryScheduleEnd: '',
-                  }))}
-                  className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-200"
-                >
-                  Always available
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFormData((prev) => ({
-                    ...prev,
-                    dineInScheduleStart: '11:00',
-                    dineInScheduleEnd: '21:00',
-                    takeawayScheduleStart: '11:00',
-                    takeawayScheduleEnd: '21:00',
-                    deliveryScheduleStart: '11:00',
-                    deliveryScheduleEnd: '21:00',
-                  }))}
-                  className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-200"
-                >
-                  Standard (11:00–21:00)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFormData((prev) => ({
-                    ...prev,
-                    dineInScheduleStart: '17:00',
-                    dineInScheduleEnd: '22:00',
-                    takeawayScheduleStart: '17:00',
-                    takeawayScheduleEnd: '22:00',
-                    deliveryScheduleStart: '17:00',
-                    deliveryScheduleEnd: '22:00',
-                  }))}
-                  className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-200"
-                >
-                  Dinner only (17:00–22:00)
-                </button>
-              </div>
-            </div>
-
-            {/* Dine In Schedule */}
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
-              <p className="mb-3 text-sm font-medium text-gray-700 dark:text-gray-300">Dine In Available Hours</p>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="mb-1 block text-xs text-gray-500 dark:text-gray-400">From</label>
-                  <input
-                    type="time"
-                    value={formData.dineInScheduleStart}
-                    onChange={(e) => setFormData(prev => ({ ...prev, dineInScheduleStart: e.target.value }))}
-                    className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs text-gray-500 dark:text-gray-400">To</label>
-                  <input
-                    type="time"
-                    value={formData.dineInScheduleEnd}
-                    onChange={(e) => setFormData(prev => ({ ...prev, dineInScheduleEnd: e.target.value }))}
-                    className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Takeaway Schedule */}
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
-              <p className="mb-3 text-sm font-medium text-gray-700 dark:text-gray-300">Takeaway Available Hours</p>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="mb-1 block text-xs text-gray-500 dark:text-gray-400">From</label>
-                  <input
-                    type="time"
-                    value={formData.takeawayScheduleStart}
-                    onChange={(e) => setFormData(prev => ({ ...prev, takeawayScheduleStart: e.target.value }))}
-                    className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs text-gray-500 dark:text-gray-400">To</label>
-                  <input
-                    type="time"
-                    value={formData.takeawayScheduleEnd}
-                    onChange={(e) => setFormData(prev => ({ ...prev, takeawayScheduleEnd: e.target.value }))}
-                    className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Delivery Schedule */}
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Delivery Available Hours</p>
-                {!formData.isDeliveryEnabled && (
-                  <span className="text-xs text-gray-500 dark:text-gray-400">Enable Delivery above to use this</span>
-                )}
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="mb-1 block text-xs text-gray-500 dark:text-gray-400">From</label>
-                  <input
-                    type="time"
-                    value={formData.deliveryScheduleStart}
-                    onChange={(e) => setFormData(prev => ({ ...prev, deliveryScheduleStart: e.target.value }))}
-                    disabled={!formData.isDeliveryEnabled}
-                    className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs text-gray-500 dark:text-gray-400">To</label>
-                  <input
-                    type="time"
-                    value={formData.deliveryScheduleEnd}
-                    onChange={(e) => setFormData(prev => ({ ...prev, deliveryScheduleEnd: e.target.value }))}
-                    disabled={!formData.isDeliveryEnabled}
-                    className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
-                  />
-                </div>
-              </div>
-              <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                Leave empty to follow opening hours. Special Hours and Per-Day Mode Schedules override this.
-              </p>
-            </div>
-          </div>
-        )}
-
-      </div>
-    </div>
-  );
+    );
+  };
 
   /**
    * Table Settings Tab - Total tables used for QR generation
