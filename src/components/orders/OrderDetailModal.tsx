@@ -101,6 +101,12 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   const shouldShowFooterActions = actionMode !== 'history';
   const shouldShowPrintOnly = actionMode === 'history';
 
+  const apiOrderId = React.useMemo(() => {
+    if (/^\d+$/.test(String(orderId))) return String(orderId);
+    const fallback = order?.id !== undefined && order?.id !== null ? String(order.id) : String(orderId);
+    return /^\d+$/.test(fallback) ? fallback : String(orderId);
+  }, [orderId, order]);
+
   useEffect(() => {
     if (!isOpen) {
       setIsEditingTableNumber(false);
@@ -123,7 +129,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     setSavingTableNumber(true);
     try {
       const token = localStorage.getItem('accessToken');
-      const res = await fetch(`/api/merchant/orders/${orderId}`, {
+      const res = await fetch(`/api/merchant/orders/${apiOrderId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -148,7 +154,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     } finally {
       setSavingTableNumber(false);
     }
-  }, [order, orderId, onUpdate, showError, showSuccess, tableNumberDraft, isTableNumberEnabled]);
+  }, [order, apiOrderId, onUpdate, showError, showSuccess, tableNumberDraft, isTableNumberEnabled]);
 
   const fetchDrivers = useCallback(async () => {
     try {
@@ -179,7 +185,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     setAssigningDriver(true);
     try {
       const token = localStorage.getItem('accessToken');
-      const res = await fetch(`/api/merchant/orders/${orderId}/delivery/assign`, {
+      const res = await fetch(`/api/merchant/orders/${apiOrderId}/delivery/assign`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -210,7 +216,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     try {
       const token = localStorage.getItem('accessToken');
       const [orderResponse, merchantResponse] = await Promise.all([
-        fetch(`/api/merchant/orders/${orderId}`, {
+        fetch(`/api/merchant/orders/${apiOrderId}`, {
           headers: { 'Authorization': `Bearer ${token}` },
         }),
         fetch('/api/merchant/profile', {
@@ -233,7 +239,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [orderId]);
+  }, [apiOrderId]);
 
   useEffect(() => {
     if (isOpen && orderId) {
@@ -279,7 +285,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     setSavingAdminNote(true);
     try {
       const token = localStorage.getItem('accessToken');
-      const res = await fetch(`/api/merchant/orders/${orderId}/admin-note`, {
+      const res = await fetch(`/api/merchant/orders/${apiOrderId}/admin-note`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -329,7 +335,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     setUpdating(true);
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`/api/merchant/orders/${orderId}/status`, {
+      const response = await fetch(`/api/merchant/orders/${apiOrderId}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -378,11 +384,11 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
       };
 
       console.log('[OrderDetailModal] Recording payment:', {
-        orderId,
+        orderId: apiOrderId,
         requestBody,
       });
 
-      const response = await fetch(`/api/merchant/orders/${orderId}/payment`, {
+      const response = await fetch(`/api/merchant/orders/${apiOrderId}/payment`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -449,7 +455,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
       const token = localStorage.getItem('accessToken');
       if (!token) return;
 
-      const response = await fetch(`/api/merchant/orders/${orderId}/cod/confirm`, {
+      const response = await fetch(`/api/merchant/orders/${apiOrderId}/cod/confirm`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -493,7 +499,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     };
 
     const trackingToken = settings.showTrackingQRCode
-      ? await mintTrackingToken(orderId)
+      ? await mintTrackingToken(apiOrderId)
       : null;
 
     const placedAt =
@@ -505,7 +511,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
 
     printReceipt({
       order: {
-        orderId: String(orderId),
+        orderId: String(apiOrderId),
         orderNumber: (order as any).orderNumber,
         orderType: (order as any).orderType,
         tableNumber: (order as any).tableNumber,
@@ -1014,8 +1020,8 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
 
                   {/* Existing admin note (read mode) */}
                   {!isEditingAdminNote && ((order as any)?.adminNote || (order as any)?.kitchenNotes) ? (
-                    <div className="rounded-lg bg-amber-50/70 dark:bg-amber-900/10 border border-amber-200/70 dark:border-amber-900/40 px-3 py-2">
-                      <p className="text-[11px] font-semibold text-amber-800/80 dark:text-amber-300/80 uppercase tracking-wide mb-1">Kitchen / Kanban note</p>
+                    <div className="rounded-lg bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-800 px-3 py-2">
+                      <p className="text-[11px] font-semibold text-amber-800/80 dark:text-amber-300/80 uppercase tracking-wide mb-1">Kitchen note</p>
                       <p className="text-sm text-amber-900 dark:text-amber-200 wrap-break-word">
                         {String(((order as any)?.kitchenNotes ?? '')).trim() || '—'}
                       </p>
@@ -1207,8 +1213,12 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                     </button>
                   ) : (
                     getNextPossibleStatuses(order.status as OrderStatus).length > 0 && (
-                      <div className="flex gap-2">
-                        {getNextPossibleStatuses(order.status as OrderStatus).map(status => {
+                      (() => {
+                        const next = getNextPossibleStatuses(order.status as OrderStatus);
+                        const cancelStatus = next.find((s) => s === 'CANCELLED');
+                        const otherStatuses = next.filter((s) => s !== 'CANCELLED');
+
+                        const renderStatusButton = (status: OrderStatus, opts?: { fullWidth?: boolean }) => {
                           const isCancelled = status === 'CANCELLED';
                           const isCompleted = status === 'COMPLETED';
 
@@ -1217,7 +1227,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                               key={status}
                               onClick={() => handleStatusUpdate(status)}
                               disabled={updating}
-                              className={`flex h-10 flex-1 items-center justify-center gap-2 rounded-lg text-sm font-medium disabled:opacity-50 ${isCancelled
+                              className={`${opts?.fullWidth ? 'w-full' : 'flex-1'} flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-medium disabled:opacity-50 ${isCancelled
                                 ? 'bg-error-500 text-white hover:bg-error-600'
                                 : isCompleted
                                   ? 'bg-success-500 text-white hover:bg-success-600'
@@ -1231,8 +1241,19 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                               )}
                             </button>
                           );
-                        })}
-                      </div>
+                        };
+
+                        if (!cancelStatus) {
+                          return <div className="flex gap-2">{otherStatuses.map((s) => renderStatusButton(s))}</div>;
+                        }
+
+                        return (
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1">{renderStatusButton(cancelStatus, { fullWidth: true })}</div>
+                            <div className="flex flex-1 justify-end gap-2">{otherStatuses.map((s) => renderStatusButton(s))}</div>
+                          </div>
+                        );
+                      })()
                     )
                   )}
                 </div>
@@ -1242,8 +1263,11 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
             {/* Payment Modal */}
             {allowPaymentRecording && showPaymentModal && (
               <div
-                className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 p-4"
-                onClick={() => setShowPaymentModal(false)}
+                className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-[1px] p-4"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowPaymentModal(false);
+                }}
               >
                 <div
                   className="w-full max-w-sm rounded-xl border border-gray-200 bg-white p-5 shadow-xl dark:border-gray-800 dark:bg-gray-900"
