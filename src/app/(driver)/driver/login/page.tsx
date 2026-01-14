@@ -73,6 +73,7 @@ function DriverLoginInner() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          client: 'driver',
           email: email.trim().toLowerCase(),
           password,
           rememberMe: true,

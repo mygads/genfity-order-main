@@ -11,28 +11,12 @@ import { withMerchantOwner } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/middleware/auth';
 import staffPermissionService from '@/lib/services/StaffPermissionService';
 import emailService from '@/lib/services/EmailService';
+import authService from '@/lib/services/AuthService';
 import { ValidationError, ERROR_CODES } from '@/lib/constants/errors';
 import { serializeBigInt } from '@/lib/utils/serializer';
 import prisma from '@/lib/db/client';
 import { PERMISSION_GROUPS } from '@/lib/constants/permissions';
 import { getBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
-
-// Helper to get human-readable permission names from keys
-function getPermissionDisplayNames(permissionKeys: string[]): string[] {
-  const displayNames: string[] = [];
-
-  for (const group of Object.values(PERMISSION_GROUPS)) {
-    for (const perm of group.permissions) {
-      if (permissionKeys.includes(perm.key)) {
-        // Use nameKey but extract readable name (e.g., 'admin.permissions.orders' -> 'Orders')
-        const name = perm.nameKey.split('.').pop() || perm.key;
-        displayNames.push(name.charAt(0).toUpperCase() + name.slice(1));
-      }
-    }
-  }
-
-  return displayNames;
-}
 
 /**
  * PUT handler - Update staff permissions
@@ -91,13 +75,12 @@ async function updatePermissionsHandler(
 
     // Send email notification
     if (updatedStaff?.user?.email) {
-      const permissionNames = getPermissionDisplayNames(permissions);
-
       emailService.sendPermissionUpdateNotification({
         to: updatedStaff.user.email,
         name: updatedStaff.user.name || 'Staff',
         merchantName: updatedStaff.merchant?.name || 'Store',
-        permissions: permissionNames,
+        // Send raw permission keys; email template renders friendly labels per locale.
+        permissions,
         updatedBy: updater?.name || 'Owner',
         merchantCountry: updatedStaff.merchant?.country,
       }).catch((err) => {
@@ -179,6 +162,11 @@ async function toggleStatusHandler(
       authContext.userId
     );
 
+    // Force logout from all devices when access is disabled for this merchant
+    if (!isActive) {
+      await authService.logoutAll(staffUserId);
+    }
+
     // Fetch updated staff info
     const updatedStaff = await prisma.merchantUser.findFirst({
       where: {
@@ -193,8 +181,31 @@ async function toggleStatusHandler(
             email: true,
           },
         },
+        merchant: {
+          select: {
+            name: true,
+            code: true,
+            country: true,
+          },
+        },
       },
     });
+
+    // Notify staff when access is disabled
+    if (!isActive && updatedStaff?.user?.email) {
+      emailService
+        .sendMerchantAccessDisabled({
+          to: updatedStaff.user.email,
+          name: updatedStaff.user.name || 'Staff',
+          email: updatedStaff.user.email,
+          merchantName: updatedStaff.merchant?.name || 'Store',
+          merchantCode: updatedStaff.merchant?.code || undefined,
+          merchantCountry: updatedStaff.merchant?.country,
+        })
+        .catch((err) => {
+          console.error('Failed to send merchant access disabled email:', err);
+        });
+    }
 
     return successResponse(
       serializeBigInt(updatedStaff),

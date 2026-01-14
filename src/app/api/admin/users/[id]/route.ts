@@ -17,9 +17,11 @@ import userRepository from '@/lib/repositories/UserRepository';
 import merchantService from '@/lib/services/MerchantService';
 import { validateEmail } from '@/lib/utils/validators';
 import { hashPassword } from '@/lib/utils/passwordHasher';
-import { NotFoundError, ERROR_CODES } from '@/lib/constants/errors';
+import { NotFoundError, ERROR_CODES, ValidationError } from '@/lib/constants/errors';
 import prisma from '@/lib/db/client';
 import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
+import authService from '@/lib/services/AuthService';
+import emailService from '@/lib/services/EmailService';
 
 /**
  * GET handler - Get user by ID
@@ -69,6 +71,14 @@ async function updateUserHandler(
     validateEmail(body.email);
   }
 
+  // Prevent role escalation paths (staff/driver -> owner)
+  if (body.role === 'MERCHANT_OWNER' && (user.role === 'MERCHANT_STAFF' || user.role === 'DELIVERY')) {
+    throw new ValidationError(
+      'Cannot promote this account to MERCHANT_OWNER',
+      ERROR_CODES.VALIDATION_ERROR
+    );
+  }
+
   // Update user basic fields
   const updateData: Record<string, unknown> = {};
   if (body.name !== undefined) updateData.name = body.name;
@@ -82,12 +92,37 @@ async function updateUserHandler(
     updateData.passwordHash = await hashPassword(body.password);
   }
 
+  const wasActive = user.isActive;
   const updated = await userRepository.update(userId, updateData);
+
+  // If super admin deactivated this user, revoke sessions + notify.
+  if (wasActive && body.isActive === false) {
+    await authService.logoutAll(userId);
+    await emailService.sendUserDeactivatedByAdmin({
+      to: updated.email,
+      name: updated.name,
+      email: updated.email,
+      locale: 'id',
+    });
+  }
 
   // Update merchant link if role changed or merchantId changed
   if (body.merchantId !== undefined || body.role !== undefined) {
     const targetRole = body.role || user.role;
     const requiresMerchant = targetRole === 'MERCHANT_OWNER' || targetRole === 'MERCHANT_STAFF';
+
+    const existingMerchantUser = await prisma.merchantUser.findFirst({
+      where: { userId },
+      select: { merchantId: true },
+    });
+
+    const nextMerchantId = body.merchantId
+      ? BigInt(body.merchantId)
+      : existingMerchantUser?.merchantId;
+
+    if (requiresMerchant && !nextMerchantId) {
+      throw new ValidationError('merchantId is required for merchant roles', ERROR_CODES.VALIDATION_ERROR);
+    }
 
     // Remove existing merchant links
     await prisma.merchantUser.deleteMany({
@@ -95,9 +130,9 @@ async function updateUserHandler(
     });
 
     // Add new merchant link if required
-    if (requiresMerchant && body.merchantId) {
+    if (requiresMerchant && nextMerchantId) {
       const merchantRole = targetRole === 'MERCHANT_OWNER' ? 'OWNER' : 'STAFF';
-      await merchantService.addStaff(BigInt(body.merchantId), userId, merchantRole);
+      await merchantService.addStaff(nextMerchantId, userId, merchantRole);
     }
   }
 
@@ -125,7 +160,16 @@ async function deleteUserHandler(
   }
 
   // Soft delete user (set isActive = false)
-  await userRepository.update(userId, { isActive: false });
+  const updated = await userRepository.update(userId, { isActive: false });
+
+  // Revoke all sessions + notify
+  await authService.logoutAll(userId);
+  await emailService.sendUserDeactivatedByAdmin({
+    to: updated.email,
+    name: updated.name,
+    email: updated.email,
+    locale: 'id',
+  });
 
   return successResponse(null, 'User deleted successfully', 200);
 }

@@ -10,6 +10,12 @@ export interface LoginRequest {
   password: string;
   rememberMe?: boolean; // For admin, owner, staff - extends session to 1 week
   merchantId?: string; // Optional: specify which merchant to login to (for multi-merchant users)
+  /**
+   * Optional client context.
+   * - 'admin': default behavior
+   * - 'driver': driver login flow (may be a DELIVERY user or a staff granted driver access)
+   */
+  client?: 'admin' | 'driver';
 }
 
 export interface MerchantInfo {

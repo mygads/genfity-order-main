@@ -8,9 +8,9 @@ import ToastContainer from "@/components/ui/ToastContainer";
 import { useSWRStatic } from "@/hooks/useSWRWithAuth";
 import { StaffPageSkeleton } from "@/components/common/SkeletonLoaders";
 import AddDriverModal from "@/components/drivers/AddDriverModal";
-import InviteDriverModal from "@/components/drivers/InviteDriverModal";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { ConfirmationModal } from "@/components/common/ConfirmationModal";
 
 interface Driver {
   id: string;
@@ -19,6 +19,7 @@ interface Driver {
   phone?: string | null;
   isActive: boolean;
   joinedAt?: string;
+  source?: "driver" | "staff";
 }
 
 interface DriversApiResponse {
@@ -35,7 +36,8 @@ export default function DriversManagementPage() {
   const [search, setSearch] = useState("");
   const [filteredDrivers, setFilteredDrivers] = useState<Driver[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [driverToDelete, setDriverToDelete] = useState<Driver | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const {
     data: driversResponse,
@@ -66,8 +68,9 @@ export default function DriversManagementPage() {
     return () => clearTimeout(timer);
   }, [search, drivers]);
 
-  const handleToggleStatus = async (driver: Driver) => {
+  const handleDeleteDriver = async (driver: Driver) => {
     try {
+      setDeleteLoading(true);
       const token = localStorage.getItem("accessToken");
       if (!token) {
         router.push("/admin/login");
@@ -75,23 +78,24 @@ export default function DriversManagementPage() {
       }
 
       const response = await fetch(`/api/merchant/drivers/${driver.id}`, {
-        method: "PATCH",
+        method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ isActive: !driver.isActive }),
       });
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.message || "Failed to update driver status");
+        throw new Error(data.message || "Failed to remove driver access");
       }
 
-      showSuccess("Success", `${driver.name} ${!driver.isActive ? "activated" : "deactivated"}`);
+      showSuccess("Success", `${driver.name} removed from drivers`);
       fetchDrivers();
     } catch (err) {
-      showError("Error", err instanceof Error ? err.message : "Failed to update driver status");
+      showError("Error", err instanceof Error ? err.message : "Failed to remove driver access");
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -151,12 +155,6 @@ export default function DriversManagementPage() {
             {isOwner && (
               <div className="flex flex-wrap items-center gap-3">
                 <button
-                  onClick={() => setShowInviteModal(true)}
-                  className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
-                >
-                  Invite Driver
-                </button>
-                <button
                   onClick={() => setShowAddModal(true)}
                   className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-600"
                 >
@@ -182,7 +180,7 @@ export default function DriversManagementPage() {
                   </svg>
                 </div>
                 <p className="text-sm font-medium text-gray-900 dark:text-white">No drivers found</p>
-                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Add or invite a driver to get started.</p>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Add a driver from your accepted staff members.</p>
               </div>
             ) : (
               filteredDrivers.map((d) => (
@@ -212,12 +210,10 @@ export default function DriversManagementPage() {
 
                     {isOwner && (
                       <button
-                        onClick={() => handleToggleStatus(d)}
-                        className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${d.isActive
-                          ? "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
-                          : "bg-brand-500 text-white hover:bg-brand-600"}`}
+                        onClick={() => setDriverToDelete(d)}
+                        className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
                       >
-                        {d.isActive ? "Deactivate" : "Activate"}
+                        Delete Driver
                       </button>
                     )}
                   </div>
@@ -228,22 +224,29 @@ export default function DriversManagementPage() {
         </div>
       </div>
 
+      <ConfirmationModal
+        isOpen={!!driverToDelete}
+        onClose={() => {
+          if (deleteLoading) return;
+          setDriverToDelete(null);
+        }}
+        onConfirm={() => {
+          if (!driverToDelete) return;
+          void handleDeleteDriver(driverToDelete);
+        }}
+        title={"Remove driver access"}
+        message={driverToDelete ? `Remove ${driverToDelete.name} from drivers? They will lose driver portal access.` : "Remove this driver?"}
+        confirmText={deleteLoading ? "Removing..." : "Remove"}
+        cancelText={"Cancel"}
+        variant="danger"
+      />
+
       <AddDriverModal
         show={showAddModal}
         onClose={() => setShowAddModal(false)}
         onSuccess={() => {
           setShowAddModal(false);
-          showSuccess("Success", "Driver created successfully");
-          fetchDrivers();
-        }}
-      />
-
-      <InviteDriverModal
-        show={showInviteModal}
-        onClose={() => setShowInviteModal(false)}
-        onSuccess={() => {
-          setShowInviteModal(false);
-          showSuccess("Success", "Driver invited successfully");
+          showSuccess("Success", "Driver access granted successfully");
           fetchDrivers();
         }}
       />

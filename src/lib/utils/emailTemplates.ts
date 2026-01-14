@@ -4,8 +4,11 @@
  */
 
 import type { Locale } from '@/lib/i18n';
+import { getTranslation } from '@/lib/i18n';
+import { PERMISSION_GROUPS } from '@/lib/constants/permissions';
 import { formatCurrency } from '@/lib/utils/format';
 import { getPublicAppOrigin } from '@/lib/utils/publicAppOrigin';
+import { getPermissionLabelForLocale } from '@/lib/utils/permissionDisplay';
 
 // Base URL for logo (set in env or fallback)
 const _getLogoUrl = () => {
@@ -309,16 +312,15 @@ export function getStaffWelcomeTemplate(params: {
 }
 
 /**
- * Driver Welcome Email Template
- * Sent when a delivery driver account is created for a merchant
+ * Staff Invite Email Template
+ * Sent when an existing user is invited as staff and must accept the invitation.
  */
-export function getDriverWelcomeTemplate(params: {
+export function getStaffInviteTemplate(params: {
   name: string;
   email: string;
-  password: string;
   merchantName: string;
   merchantCode?: string;
-  loginUrl: string;
+  acceptUrl: string;
   locale?: Locale;
   supportEmail: string;
 }): string {
@@ -330,80 +332,12 @@ export function getDriverWelcomeTemplate(params: {
 
   const content = `
     <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #171717; text-align: center;">
-      ${isID ? 'Akun Driver Anda Siap' : 'Your Driver Account is Ready'}
+      ${isID ? 'Undangan Staff' : 'Staff Invitation'}
     </h1>
     <p style="margin: 0 0 24px 0; font-size: 14px; color: #737373; text-align: center;">
       ${isID
-        ? `Halo ${params.name}, Anda telah ditambahkan sebagai driver pengantaran untuk <strong style=\"color: #171717;\">${merchantLabel}</strong>.`
-        : `Hi ${params.name}, you’ve been added as a delivery driver for <strong style=\"color: #171717;\">${merchantLabel}</strong>.`}
-    </p>
-
-    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; border: 1px solid #e5e5e5; border-radius: 10px; margin: 18px 0;">
-      <tr>
-        <td style="padding: 18px;">
-          <p style="margin: 0 0 12px 0; font-size: 14px; color: #171717; font-weight: 600;">${isID ? 'Kredensial Login' : 'Login Credentials'}</p>
-          <table width="100%" cellpadding="0" cellspacing="0">
-            ${renderDetailsRows([
-              { label: 'Email', value: params.email, emphasizeValue: true },
-              {
-                label: isID ? 'Password Sementara' : 'Temporary Password',
-                value: params.password,
-                emphasizeValue: true,
-              },
-              { label: isID ? 'Merchant' : 'Merchant', value: merchantLabel },
-            ])}
-          </table>
-        </td>
-      </tr>
-    </table>
-
-    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
-      <tr>
-        <td align="center">
-          <a href="${params.loginUrl}" style="display: inline-block; background-color: #171717; color: #ffffff; font-size: 14px; font-weight: 600; padding: 12px 32px; border-radius: 8px; text-decoration: none;">
-            ${isID ? 'Masuk sebagai Driver' : 'Login as Driver'}
-          </a>
-        </td>
-      </tr>
-    </table>
-
-    <p style="margin: 0; font-size: 12px; color: #a3a3a3; text-align: center;">
-      ${isID
-        ? 'Untuk keamanan, silakan ganti password setelah login pertama.'
-        : 'For security, please change your password after your first login.'}
-    </p>
-  `;
-
-  return getBaseTemplate(content, params.supportEmail, locale);
-}
-
-/**
- * Driver Invite Email Template
- * Sent when an existing DELIVERY user is linked to a merchant as DRIVER
- */
-export function getDriverInviteTemplate(params: {
-  name: string;
-  email: string;
-  merchantName: string;
-  merchantCode?: string;
-  loginUrl: string;
-  locale?: Locale;
-  supportEmail: string;
-}): string {
-  const locale = params.locale || 'en';
-  const isID = locale === 'id';
-  const merchantLabel = params.merchantCode
-    ? `${params.merchantName} (${params.merchantCode})`
-    : params.merchantName;
-
-  const content = `
-    <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #171717; text-align: center;">
-      ${isID ? 'Undangan Driver Pengantaran' : 'Delivery Driver Invitation'}
-    </h1>
-    <p style="margin: 0 0 24px 0; font-size: 14px; color: #737373; text-align: center;">
-      ${isID
-        ? `Halo ${params.name}, Anda telah diundang untuk bergabung sebagai driver pengantaran untuk <strong style=\"color: #171717;\">${merchantLabel}</strong>.`
-        : `Hi ${params.name}, you’ve been invited to join as a delivery driver for <strong style=\"color: #171717;\">${merchantLabel}</strong>.`}
+        ? `Halo ${params.name}, Anda diundang untuk bergabung sebagai <strong style=\"color: #171717;\">staff</strong> di <strong style=\"color: #171717;\">${merchantLabel}</strong>.`
+        : `Hi ${params.name}, you’ve been invited to join as <strong style=\"color: #171717;\">staff</strong> at <strong style=\"color: #171717;\">${merchantLabel}</strong>.`}
     </p>
 
     <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; border: 1px solid #e5e5e5; border-radius: 10px; margin: 18px 0;">
@@ -423,8 +357,8 @@ export function getDriverInviteTemplate(params: {
     <table width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
       <tr>
         <td align="center">
-          <a href="${params.loginUrl}" style="display: inline-block; background-color: #171717; color: #ffffff; font-size: 14px; font-weight: 600; padding: 12px 32px; border-radius: 8px; text-decoration: none;">
-            ${isID ? 'Buka Dashboard Driver' : 'Open Driver Dashboard'}
+          <a href="${params.acceptUrl}" style="display: inline-block; background-color: #171717; color: #ffffff; font-size: 14px; font-weight: 600; padding: 12px 32px; border-radius: 8px; text-decoration: none;">
+            ${isID ? 'Terima Undangan' : 'Accept Invitation'}
           </a>
         </td>
       </tr>
@@ -432,8 +366,229 @@ export function getDriverInviteTemplate(params: {
 
     <p style="margin: 0; font-size: 12px; color: #a3a3a3; text-align: center;">
       ${isID
-        ? 'Gunakan kredensial GENFITY Anda yang sudah ada. Jika lupa password, gunakan fitur “Lupa password” pada halaman login.'
-        : 'Use your existing GENFITY credentials. If you forgot your password, use “Forgot password” on the login page.'}
+        ? 'Setelah menerima undangan, Anda bisa login ke dashboard admin.'
+        : 'After accepting, you can login to the admin dashboard.'}
+    </p>
+  `;
+
+  return getBaseTemplate(content, params.supportEmail, locale);
+}
+
+/**
+ * Merchant Access Disabled Email Template
+ * Sent when a merchant owner disables a staff member's access for that merchant.
+ */
+export function getMerchantAccessDisabledTemplate(params: {
+  name: string;
+  email: string;
+  merchantName: string;
+  merchantCode?: string;
+  supportEmail: string;
+  locale?: Locale;
+}): string {
+  const locale = params.locale || 'en';
+  const isID = locale === 'id';
+  const merchantLabel = params.merchantCode
+    ? `${params.merchantName} (${params.merchantCode})`
+    : params.merchantName;
+
+  const content = `
+    <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #171717; text-align: center;">
+      ${isID ? 'Akses Merchant Dinonaktifkan' : 'Merchant Access Disabled'}
+    </h1>
+    <p style="margin: 0 0 24px 0; font-size: 14px; color: #737373; text-align: center;">
+      ${isID
+        ? `Halo ${params.name}, akses Anda ke <strong style=\"color: #171717;\">${merchantLabel}</strong> telah dinonaktifkan oleh pemilik toko.`
+        : `Hi ${params.name}, your access to <strong style=\"color: #171717;\">${merchantLabel}</strong> has been disabled by the store owner.`}
+    </p>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; border: 1px solid #e5e5e5; border-radius: 10px; margin: 18px 0;">
+      <tr>
+        <td style="padding: 18px;">
+          <p style="margin: 0 0 12px 0; font-size: 14px; color: #171717; font-weight: 600;">${isID ? 'Detail' : 'Details'}</p>
+          <table width="100%" cellpadding="0" cellspacing="0">
+            ${renderDetailsRows([
+              { label: 'Email', value: params.email, emphasizeValue: true },
+              { label: isID ? 'Merchant' : 'Merchant', value: merchantLabel },
+              {
+                label: isID ? 'Status' : 'Status',
+                value: isID
+                  ? 'Akses dinonaktifkan (Anda tidak dapat menggunakan fitur toko)'
+                  : 'Access disabled (store features are not available)',
+              },
+            ])}
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <p style="margin: 0; font-size: 12px; color: #a3a3a3; text-align: center;">
+      ${isID
+        ? 'Jika ini tidak sesuai, silakan hubungi pemilik toko atau support.'
+        : 'If this is unexpected, please contact the store owner or support.'}
+    </p>
+  `;
+
+  return getBaseTemplate(content, params.supportEmail, locale);
+}
+
+/**
+ * Merchant Access Removed Email Template
+ * Sent when a merchant owner removes a staff member from that merchant.
+ */
+export function getMerchantAccessRemovedTemplate(params: {
+  name: string;
+  email: string;
+  merchantName: string;
+  merchantCode?: string;
+  supportEmail: string;
+  locale?: Locale;
+}): string {
+  const locale = params.locale || 'en';
+  const isID = locale === 'id';
+  const merchantLabel = params.merchantCode
+    ? `${params.merchantName} (${params.merchantCode})`
+    : params.merchantName;
+
+  const content = `
+    <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #171717; text-align: center;">
+      ${isID ? 'Anda Dihapus dari Merchant' : 'You Were Removed from a Merchant'}
+    </h1>
+    <p style="margin: 0 0 24px 0; font-size: 14px; color: #737373; text-align: center;">
+      ${isID
+        ? `Halo ${params.name}, Anda telah dihapus dari <strong style=\"color: #171717;\">${merchantLabel}</strong>.`
+        : `Hi ${params.name}, you were removed from <strong style=\"color: #171717;\">${merchantLabel}</strong>.`}
+    </p>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; border: 1px solid #e5e5e5; border-radius: 10px; margin: 18px 0;">
+      <tr>
+        <td style="padding: 18px;">
+          <p style="margin: 0 0 12px 0; font-size: 14px; color: #171717; font-weight: 600;">${isID ? 'Detail' : 'Details'}</p>
+          <table width="100%" cellpadding="0" cellspacing="0">
+            ${renderDetailsRows([
+              { label: 'Email', value: params.email, emphasizeValue: true },
+              { label: isID ? 'Merchant' : 'Merchant', value: merchantLabel },
+              {
+                label: isID ? 'Status' : 'Status',
+                value: isID ? 'Akses merchant dihapus' : 'Merchant access removed',
+              },
+            ])}
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <p style="margin: 0; font-size: 12px; color: #a3a3a3; text-align: center;">
+      ${isID
+        ? 'Jika Anda masih memerlukan akses, minta pemilik toko untuk mengundang Anda kembali.'
+        : 'If you still need access, ask the store owner to invite you again.'}
+    </p>
+  `;
+
+  return getBaseTemplate(content, params.supportEmail, locale);
+}
+
+/**
+ * User Deactivated by Super Admin Template
+ * Sent when Genfity Super Admin deactivates a user account (global).
+ */
+export function getUserDeactivatedByAdminTemplate(params: {
+  name: string;
+  email: string;
+  supportEmail: string;
+  locale?: Locale;
+}): string {
+  const locale = params.locale || 'en';
+  const isID = locale === 'id';
+
+  const content = `
+    <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #171717; text-align: center;">
+      ${isID ? 'Akun Anda Dinonaktifkan' : 'Your Account Was Deactivated'}
+    </h1>
+    <p style="margin: 0 0 24px 0; font-size: 14px; color: #737373; text-align: center;">
+      ${isID
+        ? `Halo ${params.name}, akun GENFITY Anda (${params.email}) telah dinonaktifkan oleh Admin GENFITY.`
+        : `Hi ${params.name}, your GENFITY account (${params.email}) has been deactivated by a Genfity admin.`}
+    </p>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; border: 1px solid #e5e5e5; border-radius: 10px; margin: 18px 0;">
+      <tr>
+        <td style="padding: 18px;">
+          <p style="margin: 0 0 12px 0; font-size: 14px; color: #171717; font-weight: 600;">${isID ? 'Langkah selanjutnya' : 'Next steps'}</p>
+          <p style="margin: 0; font-size: 13px; color: #525252; line-height: 1.6;">
+            ${isID
+              ? 'Anda tidak dapat login sampai akun diaktifkan kembali. Silakan hubungi support untuk bantuan.'
+              : 'You will not be able to login until the account is re-enabled. Please contact support for help.'}
+          </p>
+        </td>
+      </tr>
+    </table>
+
+    <p style="margin: 0; font-size: 12px; color: #a3a3a3; text-align: center;">
+      ${`Support: ${params.supportEmail}`}
+    </p>
+  `;
+
+  return getBaseTemplate(content, params.supportEmail, locale);
+}
+
+/**
+ * Password Changed Email Template
+ * Sent when a user's password is changed (by themselves or by a merchant owner/admin).
+ */
+export function getPasswordChangedTemplate(params: {
+  name: string;
+  email: string;
+  supportEmail: string;
+  locale?: Locale;
+  changedByLabel?: string; // e.g. 'you' | 'merchant owner'
+  merchantName?: string;
+}): string {
+  const locale = params.locale || 'en';
+  const isID = locale === 'id';
+
+  const changedByText = params.changedByLabel
+    ? params.changedByLabel
+    : isID
+      ? 'Anda'
+      : 'you';
+
+  const merchantLine = params.merchantName
+    ? `<p style="margin: 0; font-size: 13px; color: #525252; line-height: 1.6; text-align: center;">
+        ${isID
+          ? `Merchant: <strong style=\"color: #171717;\">${params.merchantName}</strong>`
+          : `Merchant: <strong style=\"color: #171717;\">${params.merchantName}</strong>`}
+      </p>`
+    : '';
+
+  const content = `
+    <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #171717; text-align: center;">
+      ${isID ? 'Kata Sandi Berhasil Diubah' : 'Password Changed'}
+    </h1>
+    <p style="margin: 0 0 14px 0; font-size: 14px; color: #737373; text-align: center;">
+      ${isID
+        ? `Halo ${params.name}, kata sandi untuk akun GENFITY Anda (${params.email}) telah diubah oleh <strong style=\"color: #171717;\">${changedByText}</strong>.`
+        : `Hi ${params.name}, the password for your GENFITY account (${params.email}) was changed by <strong style=\"color: #171717;\">${changedByText}</strong>.`}
+    </p>
+    ${merchantLine}
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; border: 1px solid #e5e5e5; border-radius: 10px; margin: 18px 0;">
+      <tr>
+        <td style="padding: 18px;">
+          <p style="margin: 0 0 8px 0; font-size: 14px; color: #171717; font-weight: 600;">${isID ? 'Jika ini bukan Anda' : 'If this wasn\'t you'}</p>
+          <p style="margin: 0; font-size: 13px; color: #525252; line-height: 1.6;">
+            ${isID
+              ? 'Jika Anda tidak melakukan perubahan ini, segera hubungi support dan pertimbangkan untuk mengganti kata sandi Anda.'
+              : 'If you did not perform this change, contact support immediately and consider updating your password.'}
+          </p>
+        </td>
+      </tr>
+    </table>
+
+    <p style="margin: 0; font-size: 12px; color: #a3a3a3; text-align: center;">
+      ${isID
+        ? `Butuh bantuan? Hubungi ${params.supportEmail}`
+        : `Need help? Contact ${params.supportEmail}`}
     </p>
   `;
 
@@ -723,9 +878,40 @@ export function getPermissionUpdateTemplate(params: {
 }): string {
   const locale = params.locale || 'en';
   const isID = locale === 'id';
-  const permissionsList = params.permissions.length > 0
-    ? params.permissions.map(p => `<li style="margin: 4px 0; font-size: 14px; color: #525252;">${p}</li>`).join('')
-    : `<li style="margin: 4px 0; font-size: 14px; color: #a3a3a3;">${isID ? 'Tidak ada izin yang diberikan' : 'No permissions assigned'}</li>`;
+
+  const formatPermission = (key: string): string => {
+    return getPermissionLabelForLocale(locale, key);
+  };
+
+  const permissionSet = new Set(params.permissions);
+
+  const groupedPermissionsHtml = Object.values(PERMISSION_GROUPS)
+    .map((group) => {
+      const keys = group.permissions
+        .map((p) => p.key)
+        .filter((key) => permissionSet.has(key));
+
+      if (keys.length === 0) return '';
+
+      const groupTitle = getTranslation(locale, group.titleKey as any);
+      const itemsHtml = keys
+        .map((key) => `<li style="margin: 4px 0; font-size: 14px; color: #525252;">${formatPermission(key)}</li>`)
+        .join('');
+
+      return `
+        <div style="margin: 14px 0;">
+          <p style="margin: 0 0 8px 0; font-size: 12px; font-weight: 600; color: #404040; text-transform: uppercase; letter-spacing: 0.4px;">${groupTitle}</p>
+          <ul style="margin: 0; padding: 0 0 0 16px; list-style-type: disc;">
+            ${itemsHtml}
+          </ul>
+        </div>
+      `;
+    })
+    .join('');
+
+  const permissionsHtml = params.permissions.length > 0
+    ? groupedPermissionsHtml
+    : `<p style="margin: 0; font-size: 14px; color: #a3a3a3;">${isID ? 'Tidak ada izin yang diberikan' : 'No permissions assigned'}</p>`;
 
   const content = `
     <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #171717; text-align: center;">
@@ -742,9 +928,7 @@ export function getPermissionUpdateTemplate(params: {
       <tr>
         <td style="padding: 20px;">
           <p style="margin: 0 0 12px 0; font-size: 12px; color: #737373; text-transform: uppercase; letter-spacing: 0.5px;">${isID ? 'Izin Saat Ini' : 'Your Current Permissions'}</p>
-          <ul style="margin: 0; padding: 0 0 0 16px; list-style-type: disc;">
-            ${permissionsList}
-          </ul>
+          ${permissionsHtml}
         </td>
       </tr>
     </table>

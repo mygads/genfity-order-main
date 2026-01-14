@@ -5,6 +5,7 @@ import type { AuthContext } from '@/lib/middleware/auth';
 import { serializeBigInt } from '@/lib/utils/serializer';
 import { ERROR_CODES, ValidationError } from '@/lib/constants/errors';
 import { getBigIntRouteParam } from '@/lib/utils/routeContext';
+import { STAFF_PERMISSIONS } from '@/lib/constants/permissions';
 
 /**
  * PATCH /api/merchant/drivers/:userId
@@ -37,11 +38,16 @@ export const PATCH = withMerchantOwner(async (req: NextRequest, authContext: Aut
       throw new ValidationError('isActive must be a boolean', ERROR_CODES.VALIDATION_ERROR);
     }
 
+    const driverPermission = STAFF_PERMISSIONS.DRIVER_DASHBOARD;
+
     const merchantUser = await prisma.merchantUser.findFirst({
       where: {
         merchantId: authContext.merchantId,
         userId,
-        role: 'DRIVER',
+        OR: [
+          { role: 'DRIVER' },
+          { role: 'STAFF', permissions: { has: driverPermission } },
+        ],
       },
       include: {
         user: {
@@ -59,9 +65,19 @@ export const PATCH = withMerchantOwner(async (req: NextRequest, authContext: Aut
       throw new ValidationError('Driver not found', ERROR_CODES.NOT_FOUND);
     }
 
+    // New model: drivers are STAFF with `driver_dashboard` permission.
+    // Toggling driver status should NOT deactivate the whole staff account.
+    // Legacy model: role DRIVER uses isActive.
     const updated = await prisma.merchantUser.update({
       where: { id: merchantUser.id },
-      data: { isActive: body.isActive },
+      data:
+        merchantUser.role === 'DRIVER'
+          ? { isActive: body.isActive }
+          : {
+              permissions: body.isActive
+                ? Array.from(new Set([...(merchantUser.permissions ?? []), driverPermission]))
+                : (merchantUser.permissions ?? []).filter((p) => p !== driverPermission),
+            },
       include: {
         user: {
           select: {
@@ -78,7 +94,10 @@ export const PATCH = withMerchantOwner(async (req: NextRequest, authContext: Aut
       success: true,
       data: serializeBigInt({
         ...updated.user,
-        isActive: updated.isActive,
+        isActive:
+          updated.role === 'DRIVER'
+            ? updated.isActive
+            : updated.isActive && (updated.permissions ?? []).includes(driverPermission),
         joinedAt: updated.createdAt,
       }),
       message: 'Driver status updated successfully',
@@ -104,6 +123,119 @@ export const PATCH = withMerchantOwner(async (req: NextRequest, authContext: Aut
         success: false,
         error: 'INTERNAL_ERROR',
         message: 'Failed to update driver status',
+        statusCode: 500,
+      },
+      { status: 500 }
+    );
+  }
+});
+
+/**
+ * DELETE /api/merchant/drivers/:userId
+ * Remove driver access for this merchant.
+ *
+ * New model: remove `driver_dashboard` permission from STAFF.
+ * Legacy model: deactivate DRIVER link.
+ *
+ * @access MERCHANT_OWNER only
+ */
+export const DELETE = withMerchantOwner(async (_req: NextRequest, authContext: AuthContext, routeContext) => {
+  try {
+    if (!authContext.merchantId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'MERCHANT_ID_REQUIRED',
+          message: 'Merchant ID is required',
+          statusCode: 400,
+        },
+        { status: 400 }
+      );
+    }
+
+    const userId = await getBigIntRouteParam(routeContext, 'userId');
+    if (!userId) throw new ValidationError('User ID is required', ERROR_CODES.VALIDATION_ERROR);
+
+    const driverPermission = STAFF_PERMISSIONS.DRIVER_DASHBOARD;
+
+    const merchantUser = await prisma.merchantUser.findFirst({
+      where: {
+        merchantId: authContext.merchantId,
+        userId,
+        OR: [
+          { role: 'DRIVER' },
+          { role: 'STAFF', permissions: { has: driverPermission } },
+        ],
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+          },
+        },
+      },
+    });
+
+    if (!merchantUser) {
+      throw new ValidationError('Driver not found', ERROR_CODES.NOT_FOUND);
+    }
+
+    const updated = await prisma.merchantUser.update({
+      where: { id: merchantUser.id },
+      data:
+        merchantUser.role === 'DRIVER'
+          ? { isActive: false }
+          : {
+              permissions: (merchantUser.permissions ?? []).filter((p) => p !== driverPermission),
+            },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+          },
+        },
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: serializeBigInt({
+        ...updated.user,
+        isActive:
+          updated.role === 'DRIVER'
+            ? updated.isActive
+            : updated.isActive && (updated.permissions ?? []).includes(driverPermission),
+        joinedAt: updated.createdAt,
+      }),
+      message: 'Driver access removed successfully',
+      statusCode: 200,
+    });
+  } catch (error) {
+    console.error('Error removing driver access:', error);
+
+    if (error instanceof ValidationError) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: error.errorCode || 'VALIDATION_ERROR',
+          message: error.message,
+          statusCode: 400,
+        },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'INTERNAL_ERROR',
+        message: 'Failed to remove driver access',
         statusCode: 500,
       },
       { status: 500 }

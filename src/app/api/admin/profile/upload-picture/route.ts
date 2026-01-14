@@ -11,6 +11,7 @@ import { withAuth } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/middleware/auth';
 import { BlobService } from '@/lib/services/BlobService';
 import type { RouteContext } from '@/lib/utils/routeContext';
+import userNotificationService from '@/lib/services/UserNotificationService';
 
 async function uploadProfilePictureHandler(
   request: NextRequest,
@@ -53,6 +54,23 @@ async function uploadProfilePictureHandler(
         profilePictureUrl: uploadResult.url,
       },
     });
+
+    // In-app notification only (no email)
+    const userPref = await prisma.userPreference.findUnique({
+      where: { userId: authContext.userId },
+      select: { language: true },
+    });
+    const locale = userPref?.language === 'id' ? 'id' : 'en';
+
+    userNotificationService
+      .createForUser({
+        userId: authContext.userId,
+        category: 'SYSTEM',
+        title: locale === 'id' ? 'Profil diperbarui' : 'Profile updated',
+        message: locale === 'id' ? 'Foto profil Anda berhasil diperbarui.' : 'Your profile picture was updated.',
+        actionUrl: '/admin/dashboard/profile',
+      })
+      .catch((err) => console.error('Failed to create profile picture notification:', err));
 
     return successResponse(
       {

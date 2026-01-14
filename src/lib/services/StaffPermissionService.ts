@@ -88,9 +88,10 @@ class StaffPermissionService {
   async checkApiPermission(
     userId: bigint,
     merchantId: bigint,
-    apiPath: string
+    apiPath: string,
+    method?: string
   ): Promise<boolean> {
-    const permission = getPermissionForApi(apiPath);
+    const permission = getPermissionForApi(apiPath, method);
     
     // If no specific permission required, allow access
     if (!permission) {

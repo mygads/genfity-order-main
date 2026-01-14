@@ -65,6 +65,11 @@ async function assignOwnerHandler(
     throw new ValidationError('User is already assigned to a merchant');
   }
 
+  // Delivery driver accounts must not become merchant owners
+  if (user.role === 'DELIVERY') {
+    throw new ValidationError('Delivery driver accounts cannot be assigned as merchant owners', ERROR_CODES.FORBIDDEN);
+  }
+
   // Check if user already has merchant link
   const existingLink = await prisma.merchantUser.findFirst({
     where: { userId: userIdBigInt },

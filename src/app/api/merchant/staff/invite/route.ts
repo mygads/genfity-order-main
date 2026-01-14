@@ -6,6 +6,7 @@ import { AuthContext } from '@/lib/types/auth';
 import { successResponse } from '@/lib/middleware/errorHandler';
 import { validateEmail, validateRequired } from '@/lib/utils/validators';
 import { ConflictError, ValidationError, ERROR_CODES } from '@/lib/constants/errors';
+import crypto from 'crypto';
 
 const prisma = new PrismaClient();
 
@@ -66,21 +67,58 @@ async function inviteStaffHandler(
     throw new ValidationError('Cannot add this user as staff', ERROR_CODES.VALIDATION_ERROR);
   }
 
+  // Staff accounts must not be linked to multiple merchants
+  if (existingUser.role === 'MERCHANT_STAFF') {
+    const existingStaffLinks = await prisma.merchantUser.findMany({
+      where: {
+        userId: existingUser.id,
+        isActive: true,
+        role: { in: ['OWNER', 'STAFF'] },
+        merchant: { isActive: true },
+      },
+      select: {
+        merchantId: true,
+      },
+    });
+
+    const hasOtherMerchant = existingStaffLinks.some((mu) => mu.merchantId !== BigInt(merchantId));
+    if (hasOtherMerchant) {
+      throw new ValidationError(
+        'This staff account is already linked to another merchant. Staff accounts must have exactly one merchant.',
+        ERROR_CODES.FORBIDDEN
+      );
+    }
+  }
+
   // Add existing user as staff
+  const inviteToken = crypto.randomBytes(32).toString('hex');
+  const inviteTokenExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
   await prisma.merchantUser.create({
     data: {
       userId: existingUser.id,
       merchantId: BigInt(merchantId),
+      role: 'STAFF',
+      isActive: true,
+      invitationStatus: 'WAITING',
+      invitedAt: new Date(),
+      inviteToken,
+      inviteTokenExpiresAt,
     },
   });
 
   // Send notification email
   try {
-    await emailService.sendPasswordNotification({
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://genfity.com';
+    const acceptUrl = `${baseUrl}/staff/accept?token=${inviteToken}`;
+
+    await emailService.sendStaffInvite({
       to: existingUser.email,
       name: existingUser.name,
       email: existingUser.email,
-      tempPassword: `You've been invited to join ${merchant.name} team on GENFITY`,
+      merchantName: merchant.name,
+      merchantCode: merchant.code,
+      acceptUrl,
       merchantCountry: merchant.country,
     });
   } catch (emailError) {

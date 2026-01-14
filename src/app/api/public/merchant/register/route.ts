@@ -68,6 +68,56 @@ export async function POST(req: NextRequest) {
 
         const data = validation.data;
 
+        // Prevent role escalation: existing staff/driver/admin accounts cannot register as merchant owners
+        const existingUser = await prisma.user.findUnique({
+            where: { email: data.ownerEmail.toLowerCase() },
+            select: { role: true },
+        });
+
+        if (existingUser) {
+            if (existingUser.role === 'MERCHANT_STAFF') {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        error: 'FORBIDDEN',
+                        message: 'Email ini sudah terdaftar sebagai staff. Staff tidak dapat mendaftar sebagai merchant owner. Gunakan email lain.',
+                    },
+                    { status: 403 }
+                );
+            }
+
+            if (existingUser.role === 'DELIVERY') {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        error: 'FORBIDDEN',
+                        message: 'Email ini sudah terdaftar sebagai driver. Driver tidak dapat mendaftar sebagai merchant owner. Gunakan email lain.',
+                    },
+                    { status: 403 }
+                );
+            }
+
+            if (existingUser.role === 'SUPER_ADMIN') {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        error: 'FORBIDDEN',
+                        message: 'Email ini tidak dapat digunakan untuk registrasi merchant. Gunakan email lain.',
+                    },
+                    { status: 403 }
+                );
+            }
+
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: 'EMAIL_ALREADY_EXISTS',
+                    message: 'Email sudah terdaftar. Silakan gunakan email lain atau login.',
+                },
+                { status: 409 }
+            );
+        }
+
         // Validate referral code if provided
         let validatedReferralCode: { id: bigint; code: string; discountType: string; discountValue: number | null } | null = null;
         if (data.referralCode && data.referralCode.trim() !== '') {

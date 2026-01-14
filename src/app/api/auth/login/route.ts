@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
   try {
     // Parse request body
     const body = await request.json();
-    const { email, password, rememberMe = false, turnstileToken } = body;
+    const { email, password, rememberMe = false, turnstileToken, client } = body;
 
     // Validate required fields
     if (!email || !password) {
@@ -67,9 +67,9 @@ export async function POST(request: NextRequest) {
       await verifyTurnstileToken({ token: turnstileToken, ipAddress });
     }
 
-      // Call AuthService login with remember me flag
+    // Call AuthService login with remember me flag
     const result = await authService.login(
-      { email, password, rememberMe },
+      { email, password, rememberMe, client },
       userAgent,
       ipAddress
     );

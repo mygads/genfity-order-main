@@ -71,8 +71,8 @@ async function handleGet(req: NextRequest, context: AuthContext) {
     // Merchant Owner / Staff Dashboard Data
     if (role === 'MERCHANT_OWNER' || role === 'MERCHANT_STAFF') {
       const merchantUser = await prisma.merchantUser.findFirst({
-        where: { userId: BigInt(userId) },
-        include: { 
+        where: { userId: BigInt(userId), isActive: true },
+        include: {
           merchant: {
             include: {
               openingHours: {
@@ -92,11 +92,31 @@ async function handleGet(req: NextRequest, context: AuthContext) {
       });
 
       if (!merchantUser) {
+        // If staff link exists but disabled, return a clearer state so UI can guide user.
+        const disabledMerchantUser = await prisma.merchantUser.findFirst({
+          where: { userId: BigInt(userId), isActive: false },
+          include: {
+            merchant: {
+              select: {
+                id: true,
+                name: true,
+                code: true,
+              },
+            },
+          },
+        });
+
         return NextResponse.json({
           success: true,
           data: {
             role,
             noMerchant: true,
+            ...(disabledMerchantUser
+              ? {
+                  merchantAccessDisabled: true,
+                  disabledMerchant: serializeBigInt(disabledMerchantUser.merchant),
+                }
+              : {}),
           },
           statusCode: 200,
         });

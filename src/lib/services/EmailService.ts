@@ -11,8 +11,11 @@ import {
   getOrderCompletedTemplate,
   getCustomerWelcomeTemplate,
   getStaffWelcomeTemplate,
-  getDriverWelcomeTemplate,
-  getDriverInviteTemplate,
+  getStaffInviteTemplate,
+  getMerchantAccessDisabledTemplate,
+  getMerchantAccessRemovedTemplate,
+  getUserDeactivatedByAdminTemplate,
+  getPasswordChangedTemplate,
   getTestEmailTemplate,
   getPermissionUpdateTemplate,
   getPaymentVerifiedTemplate,
@@ -566,28 +569,26 @@ class EmailService {
   }
 
   /**
-   * Send welcome email to new delivery driver (account created)
+   * Send staff invitation email (existing user must accept via link)
    */
-  async sendDriverWelcome(params: {
+  async sendStaffInvite(params: {
     to: string;
     name: string;
     email: string;
-    password: string;
     merchantName: string;
     merchantCode?: string;
+    acceptUrl: string;
     merchantCountry?: string | null;
   }): Promise<boolean> {
     const locale = this.getMerchantEmailLocale(params.merchantCountry);
-    const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL}/driver/login`;
     const supportEmail = process.env.EMAIL_FROM || process.env.SMTP_FROM_EMAIL || 'support@genfity.com';
 
-    const html = getDriverWelcomeTemplate({
+    const html = getStaffInviteTemplate({
       name: params.name,
       email: params.email,
-      password: params.password,
       merchantName: params.merchantName,
       merchantCode: params.merchantCode,
-      loginUrl,
+      acceptUrl: params.acceptUrl,
       supportEmail,
       locale,
     });
@@ -596,43 +597,8 @@ class EmailService {
       to: params.to,
       subject:
         locale === 'id'
-          ? `Akun driver Anda - ${params.merchantName}`
-          : `Your driver account - ${params.merchantName}`,
-      html,
-    });
-  }
-
-  /**
-   * Send invite email to existing delivery driver (linked to merchant)
-   */
-  async sendDriverInvite(params: {
-    to: string;
-    name: string;
-    email: string;
-    merchantName: string;
-    merchantCode?: string;
-    merchantCountry?: string | null;
-  }): Promise<boolean> {
-    const locale = this.getMerchantEmailLocale(params.merchantCountry);
-    const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL}/driver/login`;
-    const supportEmail = process.env.EMAIL_FROM || process.env.SMTP_FROM_EMAIL || 'support@genfity.com';
-
-    const html = getDriverInviteTemplate({
-      name: params.name,
-      email: params.email,
-      merchantName: params.merchantName,
-      merchantCode: params.merchantCode,
-      loginUrl,
-      supportEmail,
-      locale,
-    });
-
-    return this.sendEmail({
-      to: params.to,
-      subject:
-        locale === 'id'
-          ? `Undangan driver - ${params.merchantName}`
-          : `Driver invitation - ${params.merchantName}`,
+          ? `Undangan staff - ${params.merchantName}`
+          : `Staff invitation - ${params.merchantName}`,
       html,
     });
   }
@@ -673,6 +639,133 @@ class EmailService {
           : `[${params.merchantName}] Your Permissions Have Been Updated`,
       html,
     });
+  }
+
+  /**
+   * Notify staff that their access to a merchant was disabled
+   */
+  async sendMerchantAccessDisabled(params: {
+    to: string;
+    name: string;
+    email: string;
+    merchantName: string;
+    merchantCode?: string;
+    merchantCountry?: string | null;
+  }): Promise<boolean> {
+    const locale = this.getMerchantEmailLocale(params.merchantCountry);
+    const supportEmail = process.env.EMAIL_FROM || process.env.SMTP_FROM_EMAIL || 'support@genfity.com';
+
+    const html = getMerchantAccessDisabledTemplate({
+      name: params.name,
+      email: params.email,
+      merchantName: params.merchantName,
+      merchantCode: params.merchantCode,
+      supportEmail,
+      locale,
+    });
+
+    return this.sendEmail({
+      to: params.to,
+      subject:
+        locale === 'id'
+          ? `Akses merchant dinonaktifkan - ${params.merchantName}`
+          : `Merchant access disabled - ${params.merchantName}`,
+      html,
+    });
+  }
+
+  /**
+   * Notify staff that their access to a merchant was removed
+   */
+  async sendMerchantAccessRemoved(params: {
+    to: string;
+    name: string;
+    email: string;
+    merchantName: string;
+    merchantCode?: string;
+    merchantCountry?: string | null;
+  }): Promise<boolean> {
+    const locale = this.getMerchantEmailLocale(params.merchantCountry);
+    const supportEmail = process.env.EMAIL_FROM || process.env.SMTP_FROM_EMAIL || 'support@genfity.com';
+
+    const html = getMerchantAccessRemovedTemplate({
+      name: params.name,
+      email: params.email,
+      merchantName: params.merchantName,
+      merchantCode: params.merchantCode,
+      supportEmail,
+      locale,
+    });
+
+    return this.sendEmail({
+      to: params.to,
+      subject:
+        locale === 'id'
+          ? `Akses merchant dihapus - ${params.merchantName}`
+          : `Merchant access removed - ${params.merchantName}`,
+      html,
+    });
+  }
+
+  /**
+   * Notify user that their account was deactivated by Genfity admin (global)
+   */
+  async sendUserDeactivatedByAdmin(params: {
+    to: string;
+    name: string;
+    email: string;
+    locale?: 'en' | 'id';
+  }): Promise<boolean> {
+    const locale = params.locale || 'en';
+    const supportEmail = process.env.EMAIL_FROM || process.env.SMTP_FROM_EMAIL || 'support@genfity.com';
+
+    const html = getUserDeactivatedByAdminTemplate({
+      name: params.name,
+      email: params.email,
+      supportEmail,
+      locale,
+    });
+
+    return this.sendEmail({
+      to: params.to,
+      subject:
+        locale === 'id'
+          ? 'Akun Anda Dinonaktifkan - GENFITY'
+          : 'Your Account Was Deactivated - GENFITY',
+      html,
+    });
+  }
+
+  /**
+   * Security email: password changed
+   */
+  async sendPasswordChanged(params: {
+    to: string;
+    name: string;
+    email: string;
+    merchantCountry?: string | null;
+    locale?: 'en' | 'id';
+    changedByLabel?: string;
+    merchantName?: string;
+  }): Promise<boolean> {
+    const locale = params.locale || this.getMerchantEmailLocale(params.merchantCountry);
+    const supportEmail = process.env.EMAIL_FROM || process.env.SMTP_FROM_EMAIL || 'support@genfity.com';
+
+    const html = getPasswordChangedTemplate({
+      name: params.name,
+      email: params.email,
+      supportEmail,
+      locale,
+      changedByLabel: params.changedByLabel,
+      merchantName: params.merchantName,
+    });
+
+    const subject =
+      locale === 'id'
+        ? 'GENFITY - Kata Sandi Anda Diubah'
+        : 'GENFITY - Your Password Was Changed';
+
+    return this.sendEmail({ to: params.to, subject, html });
   }
 
   /**

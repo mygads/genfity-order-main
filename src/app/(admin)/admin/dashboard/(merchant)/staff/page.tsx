@@ -8,11 +8,17 @@ import ToastContainer from "@/components/ui/ToastContainer";
 import InviteStaffModal from "@/components/staff/InviteStaffModal";
 import AddStaffModal from "@/components/staff/AddStaffModal";
 import StaffPermissionsModal from "@/components/staff/StaffPermissionsModal";
+import StaffViewModal, { type StaffViewItem } from "@/components/staff/StaffViewModal";
+import EditStaffModal from "@/components/staff/EditStaffModal";
 import { useSWRStatic } from "@/hooks/useSWRWithAuth";
 import { StaffPageSkeleton } from "@/components/common/SkeletonLoaders";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { useContextualHint, CONTEXTUAL_HINTS, useClickHereHint, CLICK_HINTS } from "@/lib/tutorial";
+import { STAFF_PERMISSIONS } from "@/lib/constants/permissions";
+import IconToggle from "@/components/ui/IconToggle";
+import { ConfirmationModal } from "@/components/common/ConfirmationModal";
+import { FaEye, FaTrash, FaUserShield, FaEdit } from "react-icons/fa";
 
 interface Staff {
   id: string;
@@ -24,6 +30,9 @@ interface Staff {
   isActive: boolean;
   joinedAt: string;
   permissions?: string[];
+  invitationStatus?: 'WAITING' | 'ACCEPTED' | null;
+  invitedAt?: string | null;
+  acceptedAt?: string | null;
 }
 
 interface StaffApiResponse {
@@ -41,6 +50,15 @@ export default function StaffManagementPage() {
   const { showHint } = useContextualHint();
   const { showClickHint } = useClickHereHint();
 
+  // Staff management is owner-only
+  const isCurrentUserOwner = user?.role === 'MERCHANT_OWNER';
+
+  useEffect(() => {
+    if (user && !isCurrentUserOwner) {
+      router.replace('/admin/dashboard');
+    }
+  }, [user, isCurrentUserOwner, router]);
+
   const [filteredStaff, setFilteredStaff] = useState<Staff[]>([]);
   const [search, setSearch] = useState("");
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -48,6 +66,18 @@ export default function StaffManagementPage() {
   const [showPermissionsModal, setShowPermissionsModal] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
   const [permissionsLoading, setPermissionsLoading] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [viewStaff, setViewStaff] = useState<StaffViewItem | null>(null);
+
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [staffToDelete, setStaffToDelete] = useState<Staff | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editStaff, setEditStaff] = useState<Staff | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
+
+  const [savingToggle, setSavingToggle] = useState<Record<string, { active?: boolean; driver?: boolean }>>({});
 
   // SWR hook for data fetching with caching
   const {
@@ -60,6 +90,24 @@ export default function StaffManagementPage() {
   // Extract data from SWR response
   const staff = React.useMemo(() => staffResponse?.data?.staff || [], [staffResponse]);
   const loading = isLoading;
+
+  const updateStaffCache = useCallback(
+    (
+      current: StaffApiResponse | undefined,
+      updater: (prev: Staff[]) => Staff[]
+    ): StaffApiResponse => {
+      const base: StaffApiResponse = current ?? { success: true, data: { staff: [] } };
+      const prevStaff = base.data?.staff ?? [];
+      return {
+        ...base,
+        data: {
+          ...base.data,
+          staff: updater(prevStaff),
+        },
+      };
+    },
+    []
+  );
 
   // Function to refetch data (for backwards compatibility)
   const fetchStaff = useCallback(async () => {
@@ -129,10 +177,17 @@ export default function StaffManagementPage() {
     );
   }
 
-  const handleDeleteStaff = async (staffMember: Staff) => {
-    if (!window.confirm(`Remove ${staffMember.name} from your staff?`)) {
-      return;
-    }
+  const handleAskDeleteStaff = (staffMember: Staff) => {
+    setStaffToDelete(staffMember);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDeleteStaff = async () => {
+    if (!staffToDelete) return;
+    if (!isCurrentUserOwner) return;
+
+    setDeleteLoading(true);
+    const staffMember = staffToDelete;
 
     try {
       const token = localStorage.getItem("accessToken");
@@ -141,20 +196,36 @@ export default function StaffManagementPage() {
         return;
       }
 
-      const response = await fetch(`/api/merchant/staff?userId=${staffMember.userId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await mutateStaff(
+        async (current) => {
+          const response = await fetch(`/api/merchant/staff?userId=${staffMember.userId}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}` },
+          });
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || "Failed to remove staff");
-      }
+          const data = await response.json().catch(() => null);
+          if (!response.ok) {
+            throw new Error(data?.message || "Failed to remove staff");
+          }
+
+          return updateStaffCache(current, (prev) => prev.filter((s) => s.userId !== staffMember.userId));
+        },
+        {
+          optimisticData: (current) =>
+            updateStaffCache(current, (prev) => prev.filter((s) => s.userId !== staffMember.userId)),
+          rollbackOnError: true,
+          revalidate: false,
+          populateCache: true,
+        }
+      );
 
       showSuccess("Success", `${staffMember.name} removed successfully`);
-      fetchStaff();
+      setShowDeleteConfirm(false);
+      setStaffToDelete(null);
     } catch (err) {
       showError("Error", err instanceof Error ? err.message : "Failed to remove staff");
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -164,6 +235,19 @@ export default function StaffManagementPage() {
   const handleOpenPermissions = (staffMember: Staff) => {
     setSelectedStaff(staffMember);
     setShowPermissionsModal(true);
+  };
+
+  const handleOpenView = (staffMember: Staff) => {
+    setViewStaff(staffMember);
+    setShowViewModal(true);
+  };
+
+  const handleOpenEdit = (staffMember: Staff) => {
+    if (!isCurrentUserOwner) return;
+    if (staffMember.role === 'MERCHANT_OWNER') return;
+    if (staffMember.invitationStatus === 'WAITING') return;
+    setEditStaff(staffMember);
+    setShowEditModal(true);
   };
 
   /**
@@ -196,9 +280,13 @@ export default function StaffManagementPage() {
       }
 
       showSuccess("Success", t("admin.staff.permissionsSaved"));
+
+      // Fetch latest data so the permissions UI stays in sync.
+      await fetchStaff();
+
       setShowPermissionsModal(false);
       setSelectedStaff(null);
-      fetchStaff();
+      // Keep UI snappy; background revalidate is optional.
     } catch (err) {
       showError("Error", err instanceof Error ? err.message : t("admin.staff.permissionsSaveError"));
     } finally {
@@ -210,7 +298,15 @@ export default function StaffManagementPage() {
    * Toggle staff active status
    */
   const handleToggleStatus = async (staffMember: Staff) => {
+    if (!isCurrentUserOwner) return;
+    if (staffMember.role === 'MERCHANT_OWNER') return;
+
     try {
+      setSavingToggle((prev) => ({
+        ...prev,
+        [staffMember.userId]: { ...(prev[staffMember.userId] || {}), active: true },
+      }));
+
       const token = localStorage.getItem("accessToken");
       if (!token) {
         router.push("/admin/login");
@@ -218,29 +314,194 @@ export default function StaffManagementPage() {
       }
 
       // Use userId instead of id - the API expects the user ID, not the merchantUser ID
-      const response = await fetch(`/api/merchant/staff/${staffMember.userId}/permissions`, {
-        method: "PATCH",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json",
+      const nextIsActive = !staffMember.isActive;
+
+      await mutateStaff(
+        async (current) => {
+          const response = await fetch(`/api/merchant/staff/${staffMember.userId}/permissions`, {
+            method: "PATCH",
+            headers: {
+              "Authorization": `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ isActive: nextIsActive }),
+          });
+
+          const data = await response.json().catch(() => null);
+          if (!response.ok) {
+            throw new Error(data?.message || "Failed to update status");
+          }
+
+          return updateStaffCache(current, (prev) =>
+            prev.map((s) => (s.userId === staffMember.userId ? { ...s, isActive: nextIsActive } : s))
+          );
         },
-        body: JSON.stringify({ isActive: !staffMember.isActive }),
-      });
+        {
+          optimisticData: (current) =>
+            updateStaffCache(current, (prev) =>
+              prev.map((s) => (s.userId === staffMember.userId ? { ...s, isActive: nextIsActive } : s))
+            ),
+          rollbackOnError: true,
+          revalidate: false,
+          populateCache: true,
+        }
+      );
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || "Failed to update status");
-      }
-
-      showSuccess("Success", `${staffMember.name} ${!staffMember.isActive ? 'activated' : 'deactivated'}`);
-      fetchStaff();
+      showSuccess("Success", `${staffMember.name} ${nextIsActive ? 'activated' : 'deactivated'}`);
     } catch (err) {
       showError("Error", err instanceof Error ? err.message : "Failed to update status");
+    } finally {
+      setSavingToggle((prev) => ({
+        ...prev,
+        [staffMember.userId]: { ...(prev[staffMember.userId] || {}), active: false },
+      }));
     }
   };
 
-  // Check if current user is owner
-  const isCurrentUserOwner = user?.role === 'MERCHANT_OWNER';
+  const handleToggleDriverAccess = async (staffMember: Staff) => {
+    if (!isCurrentUserOwner) return;
+    if (staffMember.role === 'MERCHANT_OWNER') return;
+    if (staffMember.invitationStatus === 'WAITING') {
+      showError('Error', 'Staff invitation must be accepted before enabling driver access.');
+      return;
+    }
+
+    const current = staffMember.permissions || [];
+    const hasDriver = current.includes(STAFF_PERMISSIONS.DRIVER_DASHBOARD);
+    const next = hasDriver
+      ? current.filter((p) => p !== STAFF_PERMISSIONS.DRIVER_DASHBOARD)
+      : [...new Set([...current, STAFF_PERMISSIONS.DRIVER_DASHBOARD])];
+
+    try {
+      setSavingToggle((prev) => ({
+        ...prev,
+        [staffMember.userId]: { ...(prev[staffMember.userId] || {}), driver: true },
+      }));
+
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        router.push('/admin/login');
+        return;
+      }
+
+      const nextHasDriver = !hasDriver;
+
+      await mutateStaff(
+        async (currentResp) => {
+          const response = await fetch(`/api/merchant/staff/${staffMember.userId}/permissions`, {
+            method: 'PUT',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ permissions: next }),
+          });
+
+          const json = await response.json().catch(() => null);
+          if (!response.ok) {
+            throw new Error(json?.message || 'Failed to update driver access');
+          }
+
+          return updateStaffCache(currentResp, (prev) =>
+            prev.map((s) => (s.userId === staffMember.userId ? { ...s, permissions: next } : s))
+          );
+        },
+        {
+          optimisticData: (currentResp) =>
+            updateStaffCache(currentResp, (prev) =>
+              prev.map((s) => (s.userId === staffMember.userId ? { ...s, permissions: next } : s))
+            ),
+          rollbackOnError: true,
+          revalidate: false,
+          populateCache: true,
+        }
+      );
+
+      showSuccess('Success', nextHasDriver ? 'Driver access enabled' : 'Driver access disabled');
+    } catch (err) {
+      showError('Error', err instanceof Error ? err.message : 'Failed to update driver access');
+    } finally {
+      setSavingToggle((prev) => ({
+        ...prev,
+        [staffMember.userId]: { ...(prev[staffMember.userId] || {}), driver: false },
+      }));
+    }
+  };
+
+  const handleSaveStaffEdits = async (values: { name: string; phone?: string; newPassword?: string }) => {
+    if (!editStaff) return;
+    if (!isCurrentUserOwner) return;
+    if (editStaff.role === 'MERCHANT_OWNER') return;
+    if (editStaff.invitationStatus === 'WAITING') return;
+
+    setEditLoading(true);
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        router.push('/admin/login');
+        return;
+      }
+
+      await mutateStaff(
+        async (current) => {
+          const response = await fetch(`/api/merchant/staff/${editStaff.userId}`, {
+            method: 'PUT',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              name: values.name,
+              phone: values.phone,
+              newPassword: values.newPassword,
+            }),
+          });
+
+          const json = await response.json().catch(() => null);
+          if (!response.ok) {
+            throw new Error(json?.message || 'Failed to update staff');
+          }
+
+          return updateStaffCache(current, (prev) =>
+            prev.map((s) =>
+              s.userId === editStaff.userId
+                ? {
+                    ...s,
+                    name: values.name,
+                    phone: values.phone,
+                  }
+                : s
+            )
+          );
+        },
+        {
+          optimisticData: (current) =>
+            updateStaffCache(current, (prev) =>
+              prev.map((s) =>
+                s.userId === editStaff.userId
+                  ? {
+                      ...s,
+                      name: values.name,
+                      phone: values.phone,
+                    }
+                  : s
+              )
+            ),
+          rollbackOnError: true,
+          revalidate: false,
+          populateCache: true,
+        }
+      );
+
+      showSuccess('Success', 'Staff updated successfully');
+      setShowEditModal(false);
+      setEditStaff(null);
+    } catch (err) {
+      showError('Error', err instanceof Error ? err.message : 'Failed to update staff');
+    } finally {
+      setEditLoading(false);
+    }
+  };
 
   return (
     <div data-tutorial="staff-page">
@@ -251,7 +512,7 @@ export default function StaffManagementPage() {
         {/* Header Actions */}
         <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-white/3" data-tutorial="staff-actions">
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex-1 min-w-[200px] max-w-md">
+            <div className="flex-1 min-w-50 max-w-md">
               <div className="relative" data-tutorial="staff-search">
                 <input
                   type="text"
@@ -276,28 +537,30 @@ export default function StaffManagementPage() {
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-3" data-tutorial="staff-buttons">
-              <button
-                onClick={() => setShowAddModal(true)}
-                className="inline-flex items-center gap-2 rounded-lg border border-brand-200 bg-brand-50 px-4 py-2.5 text-sm font-medium text-brand-700 transition-all hover:bg-brand-100 dark:border-brand-800 dark:bg-brand-900/30 dark:text-brand-400"
-                data-tutorial="add-staff-btn"
-              >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                </svg>
-                {t("admin.staff.addStaff")}
-              </button>
-              <button
-                onClick={() => setShowInviteModal(true)}
-                className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white transition-all hover:bg-brand-600"
-                data-tutorial="invite-staff-btn"
-              >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                {t("admin.staff.inviteViaEmail")}
-              </button>
-            </div>
+            {isCurrentUserOwner && (
+              <div className="flex flex-wrap gap-3" data-tutorial="staff-buttons">
+                <button
+                  onClick={() => setShowAddModal(true)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-brand-200 bg-brand-50 px-4 py-2.5 text-sm font-medium text-brand-700 transition-all hover:bg-brand-100 dark:border-brand-800 dark:bg-brand-900/30 dark:text-brand-400"
+                  data-tutorial="add-staff-btn"
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                  </svg>
+                  {t("admin.staff.addStaff")}
+                </button>
+                <button
+                  onClick={() => setShowInviteModal(true)}
+                  className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white transition-all hover:bg-brand-600"
+                  data-tutorial="invite-staff-btn"
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  {t("admin.staff.inviteViaEmail")}
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -346,10 +609,16 @@ export default function StaffManagementPage() {
                       {t("admin.staff.role")}
                     </th>
                     <th className="px-6 py-3 text-xs font-semibold uppercase text-gray-600 dark:text-gray-400">
-                      {t("admin.staff.status")}
+                      Invite
                     </th>
                     <th className="px-6 py-3 text-xs font-semibold uppercase text-gray-600 dark:text-gray-400">
                       {t("admin.staff.joined")}
+                    </th>
+                    <th className="px-6 py-3 text-xs font-semibold uppercase text-gray-600 dark:text-gray-400">
+                      Active
+                    </th>
+                    <th className="px-6 py-3 text-xs font-semibold uppercase text-gray-600 dark:text-gray-400">
+                      Driver
                     </th>
                     <th className="px-6 py-3 text-xs font-semibold uppercase text-gray-600 dark:text-gray-400">
                       {t("admin.staff.actions")}
@@ -393,13 +662,19 @@ export default function StaffManagementPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${member.isActive
-                            ? 'bg-success-100 text-success-700 dark:bg-success-900/30 dark:text-success-400'
-                            : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                          }`}>
-                          <span className={`h-1.5 w-1.5 rounded-full ${member.isActive ? 'bg-success-500' : 'bg-gray-400'}`}></span>
-                          {member.isActive ? 'Active' : 'Inactive'}
-                        </span>
+                        {member.role === 'MERCHANT_OWNER' ? (
+                          <span className="text-sm text-gray-400 dark:text-gray-600">—</span>
+                        ) : (
+                          <span
+                            className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${
+                              member.invitationStatus === 'WAITING'
+                                ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
+                                : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300'
+                            }`}
+                          >
+                            {member.invitationStatus === 'WAITING' ? 'Waiting' : 'Accepted'}
+                          </span>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -411,51 +686,84 @@ export default function StaffManagementPage() {
                         </p>
                       </td>
                       <td className="px-6 py-4">
+                        {member.role === 'MERCHANT_OWNER' ? (
+                          <span className="text-sm text-gray-400 dark:text-gray-600">—</span>
+                        ) : (
+                          <IconToggle
+                            checked={member.isActive}
+                            onChange={() => handleToggleStatus(member)}
+                            disabled={!isCurrentUserOwner || Boolean(savingToggle[member.userId]?.active)}
+                            label="Active"
+                            ariaLabel={`Toggle active for ${member.name}`}
+                            size="sm"
+                            variant="iconOnly"
+                          />
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        {member.role === 'MERCHANT_OWNER' ? (
+                          <span className="text-sm text-gray-400 dark:text-gray-600">—</span>
+                        ) : (
+                          <IconToggle
+                            checked={(member.permissions || []).includes(STAFF_PERMISSIONS.DRIVER_DASHBOARD)}
+                            onChange={() => handleToggleDriverAccess(member)}
+                            disabled={
+                              !isCurrentUserOwner ||
+                              member.invitationStatus === 'WAITING' ||
+                              Boolean(savingToggle[member.userId]?.driver)
+                            }
+                            label="Driver"
+                            ariaLabel={`Toggle driver access for ${member.name}`}
+                            size="sm"
+                            variant="iconOnly"
+                          />
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleOpenView(member)}
+                            className="inline-flex items-center justify-center rounded-lg p-2 text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                            title="View staff details"
+                          >
+                            <FaEye className="h-4 w-4" />
+                          </button>
+
+                          {/* Edit staff - accepted only */}
+                          {member.role !== 'MERCHANT_OWNER' && isCurrentUserOwner && member.invitationStatus !== 'WAITING' && (
+                            <button
+                              onClick={() => handleOpenEdit(member)}
+                              className="inline-flex items-center justify-center rounded-lg p-2 text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                              title="Edit staff"
+                            >
+                              <FaEdit className="h-4 w-4" />
+                            </button>
+                          )}
+
                           {/* Permissions button - only for non-owners, and only owner can see */}
                           {member.role !== 'MERCHANT_OWNER' && isCurrentUserOwner && (
                             <button
                               onClick={() => handleOpenPermissions(member)}
-                              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-brand-600 transition-colors hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-brand-900/20"
-                              title={t("admin.staff.managePermissions")}
-                            >
-                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                              </svg>
-                              {t("admin.staff.permissions")}
-                            </button>
-                          )}
-                          {/* Toggle status button - only for non-owners, and only owner can see */}
-                          {member.role !== 'MERCHANT_OWNER' && isCurrentUserOwner && (
-                            <button
-                              onClick={() => handleToggleStatus(member)}
-                              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-                                member.isActive
-                                  ? 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
-                                  : 'text-success-600 hover:bg-success-50 dark:text-success-400 dark:hover:bg-success-900/20'
+                              disabled={member.invitationStatus === 'WAITING'}
+                              className={`inline-flex items-center justify-center rounded-lg p-2 transition-colors ${
+                                member.invitationStatus === 'WAITING'
+                                  ? 'cursor-not-allowed text-gray-400 dark:text-gray-600'
+                                  : 'text-brand-600 hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-brand-900/20'
                               }`}
-                              title={t("admin.staff.toggleStatus")}
+                              title={member.invitationStatus === 'WAITING' ? 'Invitation must be accepted first' : t("admin.staff.managePermissions")}
                             >
-                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                {member.isActive ? (
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                                ) : (
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                )}
-                              </svg>
-                              {member.isActive ? t("admin.staff.inactive") : t("admin.staff.active")}
+                              <FaUserShield className="h-4 w-4" />
                             </button>
                           )}
                           {/* Delete button - only for non-owners */}
-                          {member.role !== 'MERCHANT_OWNER' && (
+                          {member.role !== 'MERCHANT_OWNER' && isCurrentUserOwner && (
                             <button
-                              onClick={() => handleDeleteStaff(member)}
-                              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-error-600 transition-colors hover:bg-error-50 dark:text-error-400 dark:hover:bg-error-900/20"
+                              onClick={() => handleAskDeleteStaff(member)}
+                              className="inline-flex items-center justify-center rounded-lg p-2 text-error-600 transition-colors hover:bg-error-50 dark:text-error-400 dark:hover:bg-error-900/20"
+                              aria-label={`Remove ${member.name}`}
+                              title="Remove staff"
                             >
-                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
-                              
+                              <FaTrash className="h-4 w-4" />
                             </button>
                           )}
                         </div>
@@ -508,6 +816,49 @@ export default function StaffManagementPage() {
           isLoading={permissionsLoading}
         />
       )}
+
+      {showViewModal && viewStaff && (
+        <StaffViewModal
+          isOpen={showViewModal}
+          onClose={() => {
+            setShowViewModal(false);
+            setViewStaff(null);
+          }}
+          staff={viewStaff}
+        />
+      )}
+
+      {showEditModal && editStaff && (
+        <EditStaffModal
+          isOpen={showEditModal}
+          staff={editStaff}
+          isLoading={editLoading}
+          onClose={() => {
+            setShowEditModal(false);
+            setEditStaff(null);
+          }}
+          onSave={handleSaveStaffEdits}
+        />
+      )}
+
+      <ConfirmationModal
+        isOpen={showDeleteConfirm}
+        onClose={() => {
+          if (deleteLoading) return;
+          setShowDeleteConfirm(false);
+          setStaffToDelete(null);
+        }}
+        onConfirm={handleConfirmDeleteStaff}
+        title="Remove staff"
+        message={
+          staffToDelete
+            ? `Remove ${staffToDelete.name} from your staff? This will revoke their access to this merchant.`
+            : 'Remove this staff member?'
+        }
+        confirmText={deleteLoading ? 'Removing...' : 'Remove'}
+        cancelText="Cancel"
+        variant="danger"
+      />
     </div>
   );
 }

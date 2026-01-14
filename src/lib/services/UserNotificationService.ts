@@ -5,6 +5,10 @@
 
 import prisma from '@/lib/db/client';
 import type { UserRole, UserNotificationCategory } from '@prisma/client';
+import {
+    normalizeNotificationSettings,
+    type MerchantTransactionToggleKey,
+} from '@/lib/utils/notificationSettings';
 
 interface CreateNotificationParams {
     userId?: bigint;
@@ -23,10 +27,61 @@ interface NotificationFilters {
 }
 
 class UserNotificationService {
+    private resolveMerchantTransactionToggle(
+        category: UserNotificationCategory,
+        metadata?: Record<string, unknown> | null,
+        title?: string
+    ): MerchantTransactionToggleKey | null {
+        if (category === 'ORDER') return 'newOrder';
+        if (category === 'PAYMENT') return 'payment';
+        if (category === 'SUBSCRIPTION') return 'subscription';
+
+        if (category === 'STOCK') {
+            const type = typeof metadata?.type === 'string' ? metadata.type : undefined;
+            if (type === 'OUT_OF_STOCK') return 'stockOut';
+            if (type === 'LOW_STOCK') return 'lowStock';
+
+            // Fallback for older callers
+            if (title?.toLowerCase().includes('out of stock')) return 'stockOut';
+            if (title?.toLowerCase().includes('low stock')) return 'lowStock';
+
+            return 'lowStock';
+        }
+
+        return null;
+    }
+
+    private async getUserSettingsMap(userIds: bigint[]) {
+        const map = new Map<string, ReturnType<typeof normalizeNotificationSettings>>();
+        if (userIds.length === 0) return map;
+
+        const prefs = await prisma.userPreference.findMany({
+            where: { userId: { in: userIds } },
+            select: { userId: true, notificationSettings: true },
+        });
+
+        for (const p of prefs) {
+            map.set(p.userId.toString(), normalizeNotificationSettings(p.notificationSettings));
+        }
+
+        return map;
+    }
+
     /**
      * Create a notification for a specific user
      */
     async createForUser(params: CreateNotificationParams) {
+        if (params.userId) {
+            const pref = await prisma.userPreference.findUnique({
+                where: { userId: params.userId },
+                select: { notificationSettings: true },
+            });
+            const settings = normalizeNotificationSettings(pref?.notificationSettings);
+            if (!settings.account.transactions) {
+                return null;
+            }
+        }
+
         return prisma.userNotification.create({
             data: {
                 userId: params.userId,
@@ -56,17 +111,25 @@ class UserNotificationService {
             actionUrl?: string;
         } = {}
     ) {
-        // Map notification category to permission key
-        const categoryPermissionMap: Record<UserNotificationCategory, string | null> = {
-            'ORDER': 'notif_new_order',
-            'STOCK': 'notif_stock_out',
-            'STAFF': null, // Staff login always goes to owner only
-            'PAYMENT': 'notif_payment',
-            'SUBSCRIPTION': 'notif_subscription',
-            'SYSTEM': null, // System notifications go to everyone
+        // Map notification category to required permission keys.
+        // null => no permission required (everyone receives)
+        // array => staff must have ANY of these permissions
+        const categoryPermissionMap: Record<UserNotificationCategory, string[] | null> = {
+            'ORDER': ['notif_new_order'],
+            'STOCK': ['notif_stock_out', 'notif_low_stock'],
+            'STAFF': null, // Special-case below (owner-only)
+            'PAYMENT': ['notif_payment'],
+            'SUBSCRIPTION': ['notif_subscription'],
+            'SYSTEM': null,
         };
 
-        const requiredPermission = categoryPermissionMap[category];
+        const requiredPermissions = categoryPermissionMap[category];
+
+        const transactionToggleKey = this.resolveMerchantTransactionToggle(
+            category,
+            options.metadata ?? null,
+            title
+        );
 
         // Get all users associated with this merchant with permissions info
         const merchantUsers = await prisma.merchantUser.findMany({
@@ -88,16 +151,32 @@ class UserNotificationService {
             // Owners always receive all notifications
             if (mu.role === 'OWNER') return true;
 
-            // If no permission required (SYSTEM notifications), all users receive
-            if (!requiredPermission) return true;
+            // Staff-category notifications are owner-only (e.g., staff login/new staff added)
+            if (category === 'STAFF') return false;
 
-            // Staff must have the specific notification permission
-            return mu.permissions?.includes(requiredPermission) ?? false;
+            // If no permission required (SYSTEM notifications), all users receive
+            if (!requiredPermissions) return true;
+
+            // Staff must have at least one required permission
+            return requiredPermissions.some(p => mu.permissions?.includes(p) ?? false);
         });
+
+        const finalEligibleUsers = await (async () => {
+            if (!transactionToggleKey) return eligibleUsers;
+
+            const staffUserIds = eligibleUsers.filter(u => u.role === 'STAFF').map(u => u.userId);
+            const settingsMap = await this.getUserSettingsMap(staffUserIds);
+
+            return eligibleUsers.filter(mu => {
+                if (mu.role === 'OWNER') return true;
+                const settings = settingsMap.get(mu.userId.toString()) ?? normalizeNotificationSettings(undefined);
+                return settings.merchant[transactionToggleKey];
+            });
+        })();
 
         // Create notifications for each eligible user
         const notifications = await prisma.userNotification.createMany({
-            data: eligibleUsers.map(mu => ({
+            data: finalEligibleUsers.map(mu => ({
                 userId: mu.userId,
                 merchantId,
                 targetRole: options.targetRole,
@@ -121,16 +200,16 @@ class UserNotificationService {
         category: UserNotificationCategory,
         options: { targetRole?: UserRole } = {}
     ): Promise<bigint[]> {
-        const categoryPermissionMap: Record<UserNotificationCategory, string | null> = {
-            'ORDER': 'notif_new_order',
-            'STOCK': 'notif_stock_out',
+        const categoryPermissionMap: Record<UserNotificationCategory, string[] | null> = {
+            'ORDER': ['notif_new_order'],
+            'STOCK': ['notif_stock_out', 'notif_low_stock'],
             'STAFF': null,
-            'PAYMENT': 'notif_payment',
-            'SUBSCRIPTION': 'notif_subscription',
+            'PAYMENT': ['notif_payment'],
+            'SUBSCRIPTION': ['notif_subscription'],
             'SYSTEM': null,
         };
 
-        const requiredPermission = categoryPermissionMap[category];
+        const requiredPermissions = categoryPermissionMap[category];
 
         const merchantUsers = await prisma.merchantUser.findMany({
             where: {
@@ -149,10 +228,13 @@ class UserNotificationService {
             // Owners always receive notifications
             if (mu.role === 'OWNER') return true;
 
-            // If no permission required, all users receive
-            if (!requiredPermission) return true;
+            // Staff-category notifications are owner-only
+            if (category === 'STAFF') return false;
 
-            return mu.permissions?.includes(requiredPermission) ?? false;
+            // If no permission required, all users receive
+            if (!requiredPermissions) return true;
+
+            return requiredPermissions.some(p => mu.permissions?.includes(p) ?? false);
         });
 
         return eligibleUsers.map(u => u.userId);
@@ -391,7 +473,7 @@ class UserNotificationService {
 
             const customerName = order?.customer?.name || 'Customer';
 
-            await this.sendPushToMerchant(merchantId, { category: 'ORDER' }, async (pushService, subscription, merchant) => {
+            await this.sendPushToMerchant(merchantId, { category: 'ORDER', transactionToggleKey: 'newOrder' }, async (pushService, subscription, merchant) => {
                 return pushService.sendNewOrderNotification(
                     subscription,
                     orderNumber,
@@ -420,12 +502,12 @@ class UserNotificationService {
             `"${menuName}" is now out of stock.`,
             {
                 actionUrl: `/admin/dashboard/menu/edit/${menuId}`,
-                metadata: { menuId: menuId.toString(), menuName },
+                metadata: { type: 'OUT_OF_STOCK', menuId: menuId.toString(), menuName },
             }
         );
 
         // Also send push notification to all subscribed merchant users
-        await this.sendPushToMerchant(merchantId, { category: 'STOCK' }, async (pushService, subscription, merchant) => {
+        await this.sendPushToMerchant(merchantId, { category: 'STOCK', transactionToggleKey: 'stockOut' }, async (pushService, subscription, merchant) => {
             return pushService.sendOutOfStockNotification(subscription, merchant.name, menuName, 'en');
         });
     }
@@ -448,12 +530,12 @@ class UserNotificationService {
             `"${menuName}" is low on stock (${remainingQty} left; threshold ${threshold}).`,
             {
                 actionUrl: `/admin/dashboard/menu/edit/${menuId}`,
-                metadata: { menuId: menuId.toString(), menuName, remainingQty, threshold },
+                metadata: { type: 'LOW_STOCK', menuId: menuId.toString(), menuName, remainingQty, threshold },
             }
         );
 
         // Also send push notification to all subscribed merchant users
-        await this.sendPushToMerchant(merchantId, { category: 'STOCK' }, async (pushService, subscription, merchant) => {
+        await this.sendPushToMerchant(merchantId, { category: 'STOCK', transactionToggleKey: 'lowStock' }, async (pushService, subscription, merchant) => {
             return pushService.sendLowStockNotification(subscription, merchant.name, menuName, remainingQty, threshold, 'en');
         });
     }
@@ -536,7 +618,7 @@ class UserNotificationService {
         );
 
         // Also send push notification to all subscribed merchant users
-        await this.sendPushToMerchant(merchantId, { category: 'SUBSCRIPTION', targetRole: 'MERCHANT_OWNER' }, async (pushService, subscription, merchant) => {
+        await this.sendPushToMerchant(merchantId, { category: 'SUBSCRIPTION', targetRole: 'MERCHANT_OWNER', transactionToggleKey: 'subscription' }, async (pushService, subscription, merchant) => {
             return pushService.sendNegativeBalanceNotification(
                 subscription,
                 merchant.name,
@@ -553,7 +635,11 @@ class UserNotificationService {
      */
     private async sendPushToMerchant(
         merchantId: bigint,
-        options: { category: UserNotificationCategory; targetRole?: UserRole },
+        options: {
+            category: UserNotificationCategory;
+            targetRole?: UserRole;
+            transactionToggleKey?: MerchantTransactionToggleKey;
+        },
         sendFn: (
             pushService: typeof import('./WebPushService').default,
             subscription: { endpoint: string; keys: { p256dh: string; auth: string } },
@@ -578,12 +664,43 @@ class UserNotificationService {
 
             if (eligibleUserIds.length === 0) return;
 
+            const transactionToggleKey =
+                options.transactionToggleKey ?? this.resolveMerchantTransactionToggle(options.category, null);
+
+            let finalEligibleUserIds = eligibleUserIds;
+
+            if (transactionToggleKey) {
+                const merchantUsers = await prisma.merchantUser.findMany({
+                    where: {
+                        merchantId,
+                        isActive: true,
+                        userId: { in: eligibleUserIds },
+                    },
+                    select: { userId: true, role: true },
+                });
+
+                const ownerUserIds = new Set(
+                    merchantUsers.filter(mu => mu.role === 'OWNER').map(mu => mu.userId.toString())
+                );
+                const staffUserIds = merchantUsers.filter(mu => mu.role === 'STAFF').map(mu => mu.userId);
+
+                const settingsMap = await this.getUserSettingsMap(staffUserIds);
+
+                finalEligibleUserIds = eligibleUserIds.filter(uid => {
+                    if (ownerUserIds.has(uid.toString())) return true;
+                    const settings = settingsMap.get(uid.toString()) ?? normalizeNotificationSettings(undefined);
+                    return settings.merchant[transactionToggleKey];
+                });
+            }
+
+            if (finalEligibleUserIds.length === 0) return;
+
             // Get all active push subscriptions for this merchant's users
             const pushSubscriptions = await prisma.pushSubscription.findMany({
                 where: {
                     merchantId,
                     isActive: true,
-                    userId: { in: eligibleUserIds },
+                    userId: { in: finalEligibleUserIds },
                 },
                 select: {
                     userId: true,

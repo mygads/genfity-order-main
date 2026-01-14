@@ -1,4 +1,15 @@
-import { formatFullOrderNumber } from '@/lib/utils/format';
+import StoreToggleButton from './StoreToggleButton';
+import { isStoreEffectivelyOpen, type OpeningHour } from '@/lib/utils/storeStatus';
+import { STAFF_PERMISSIONS } from '@/lib/constants/permissions';
+import { hasStaffPermission } from '@/lib/utils/adminAuth';
+import { useTranslation } from '@/lib/i18n/useTranslation';
+import { useRouter } from 'next/navigation';
+import { clearAdminAuth } from '@/lib/utils/adminAuth';
+import { clearDriverAuth } from '@/lib/utils/driverAuth';
+import { useState } from 'react';
+import { ConfirmationModal } from '@/components/common/ConfirmationModal';
+import { useToast } from '@/hooks/useToast';
+import ToastContainer from '@/components/ui/ToastContainer';
 
 // Custom types based on Prisma schema
 type Merchant = {
@@ -11,29 +22,10 @@ type Merchant = {
   logoUrl?: string | null;
   isActive: boolean;
   currency?: string;
-};
-
-type Menu = {
-  id: bigint;
-  name: string;
-  price: number | { toString(): string }; // Decimal
-  imageUrl?: string | null;
-};
-
-type OrderItem = {
-  id: bigint;
-  quantity: number;
-  menuPrice: number | { toString(): string }; // Decimal
-  menu: Menu;
-};
-
-type Order = {
-  id: bigint;
-  orderNumber: string;
-  status: string;
-  totalAmount: number | { toString(): string }; // Decimal
-  createdAt: Date;
-  orderItems: OrderItem[];
+  isOpen: boolean;
+  isManualOverride: boolean;
+  openingHours: OpeningHour[];
+  timezone: string;
 };
 
 interface MerchantStaffDashboardProps {
@@ -44,11 +36,6 @@ interface MerchantStaffDashboardProps {
     totalOrders: number;
     activeMenuItems: number;
   };
-  recentOrders: Array<
-    Order & {
-      orderItems: Array<OrderItem & { menu: Menu }>;
-    }
-  >;
 }
 
 /**
@@ -60,7 +47,6 @@ interface MerchantStaffDashboardProps {
  * - Pending orders (action required)
  * - Total orders (historical context)
  * - Active menu items (inventory awareness)
- * - Recent orders (work list)
  * 
  * @note
  * Staff users DO NOT have access to revenue data
@@ -68,44 +54,125 @@ interface MerchantStaffDashboardProps {
 export default function MerchantStaffDashboard({
   merchant,
   stats,
-  recentOrders,
 }: MerchantStaffDashboardProps) {
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('en-AU', {
-      day: '2-digit',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(new Date(date));
+  const { t } = useTranslation();
+  const router = useRouter();
+  const canToggleStore = hasStaffPermission(STAFF_PERMISSIONS.STORE_TOGGLE_OPEN);
+  const [isLeaving, setIsLeaving] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const { toasts, success: showSuccess, error: showError } = useToast();
+
+  const handleLeaveStore = () => {
+    setShowLeaveConfirm(true);
   };
 
-  const formatCurrency = (amount: number) => {
-    const currency = merchant.currency || 'AUD';
-    if (currency === 'IDR') {
-      const formatted = new Intl.NumberFormat('id-ID', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(Math.round(amount));
-      return `Rp ${formatted}`;
+  const doLeaveStore = async () => {
+    try {
+      setIsLeaving(true);
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        clearAdminAuth();
+        clearDriverAuth();
+        router.push('/admin/login');
+        return;
+      }
+
+      const response = await fetch('/api/merchant/staff/leave', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ merchantId: merchant.id.toString() }),
+      });
+
+      if (!response.ok) {
+        const json = await response.json().catch(() => null);
+        throw new Error(json?.message || t('admin.staff.leaveMerchantError'));
+      }
+
+      // Leaving a merchant should log the user out of BOTH portals.
+      clearAdminAuth();
+      clearDriverAuth();
+      showSuccess('Success', t('admin.staff.leaveMerchantSuccess'));
+      router.push('/admin/login');
+    } catch (error) {
+      showError('Error', error instanceof Error ? error.message : t('admin.staff.leaveMerchantError'));
+    } finally {
+      setIsLeaving(false);
     }
-    // Default: AUD
-    return `A$${amount.toLocaleString('en-AU', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
   };
+
+  const effectivelyOpen = isStoreEffectivelyOpen({
+    isOpen: merchant.isOpen,
+    isManualOverride: merchant.isManualOverride,
+    openingHours: merchant.openingHours,
+    timezone: merchant.timezone,
+  });
 
   return (
     <div className="space-y-6">
+      <ToastContainer toasts={toasts} />
       {/* Merchant Info */}
       <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-          {merchant.name}
-        </h2>
-        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-          Staff Dashboard
-        </p>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{merchant.name}</h2>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <p className="text-sm text-gray-600 dark:text-gray-400">Staff Dashboard</p>
+              <span className="text-gray-300 dark:text-gray-600">•</span>
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${
+                  effectivelyOpen
+                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400'
+                    : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400'
+                }`}
+              >
+                <span className={`h-1.5 w-1.5 rounded-full ${effectivelyOpen ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                {effectivelyOpen ? t('common.open') : t('common.closed')}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            {canToggleStore && (
+              <StoreToggleButton
+                initialIsOpen={merchant.isOpen ?? true}
+                initialIsManualOverride={merchant.isManualOverride ?? false}
+                effectivelyOpen={effectivelyOpen}
+                merchantId={merchant.id.toString()}
+              />
+            )}
+
+            <button
+              type="button"
+              onClick={handleLeaveStore}
+              disabled={isLeaving}
+              className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-red-900/40 dark:bg-gray-900 dark:text-red-400 dark:hover:bg-red-900/10"
+              title={t('admin.staff.leaveMerchant')}
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1" />
+              </svg>
+              {isLeaving ? 'Leaving...' : t('admin.staff.leaveMerchant')}
+            </button>
+          </div>
+        </div>
       </div>
+
+      <ConfirmationModal
+        isOpen={showLeaveConfirm}
+        onClose={() => {
+          if (isLeaving) return;
+          setShowLeaveConfirm(false);
+        }}
+        onConfirm={doLeaveStore}
+        title={t('admin.staff.leaveMerchant')}
+        message={t('admin.staff.leaveMerchantConfirm')}
+        confirmText={isLeaving ? (t('common.loading') || 'Processing...') : (t('admin.staff.leaveMerchant') || 'Leave Store')}
+        cancelText={t('common.cancel') || 'Cancel'}
+        variant="danger"
+      />
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -235,91 +302,6 @@ export default function MerchantStaffDashboard({
               </svg>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Recent Orders - Work List */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Recent Orders
-          </h3>
-          <div className="flex gap-2">
-            <button
-              className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
-              type="button"
-            >
-              All Orders
-            </button>
-            <button
-              className="rounded-lg bg-brand-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-600"
-              type="button"
-            >
-              Pending Only
-            </button>
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          {recentOrders.map((order) => (
-            <div
-              key={order.id.toString()}
-              className="rounded-lg border border-gray-100 p-4 dark:border-gray-800"
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3">
-                    <p className="font-medium text-gray-900 dark:text-white">
-                      #{formatFullOrderNumber(order.orderNumber, merchant.code)}
-                    </p>
-                    <span
-                      className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${order.status === 'COMPLETED'
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                        : order.status === 'PENDING'
-                          ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
-                          : order.status === 'CANCELLED'
-                            ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                            : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
-                        }`}
-                    >
-                      {order.status}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                    {formatDate(order.createdAt)}
-                  </p>
-                  <div className="mt-2 space-y-1">
-                    {order.orderItems.slice(0, 3).map((item: OrderItem) => (
-                      <p
-                        key={item.id.toString()}
-                        className="text-sm text-gray-600 dark:text-gray-400"
-                      >
-                        • {item.quantity}x {item.menu.name} - {formatCurrency(typeof item.menuPrice === 'number' ? item.menuPrice : Number(item.menuPrice))}
-                      </p>
-                    ))}
-                    {order.orderItems.length > 3 && (
-                      <p className="text-sm text-gray-500 dark:text-gray-500">
-                        +{order.orderItems.length - 3} more items
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <div className="ml-4 text-right">
-                  <p className="font-semibold text-gray-900 dark:text-white">
-                    {formatCurrency(typeof order.totalAmount === 'number' ? order.totalAmount : Number(order.totalAmount))}
-                  </p>
-                  {order.status === 'PENDING' && (
-                    <button
-                      className="mt-2 rounded-lg bg-brand-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-600"
-                      type="button"
-                    >
-                      Process
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
         </div>
       </div>
     </div>

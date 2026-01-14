@@ -8,7 +8,7 @@
  *   - search=...: search by name/email
  *
  * POST /api/merchant/drivers
- * - Create a new delivery driver account and link to merchant (OWNER only)
+ * - Grant driver access to an existing ACCEPTED staff member (OWNER only)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -16,12 +16,8 @@ import prisma from '@/lib/db/client';
 import { withMerchantOwner, withMerchantPermission } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/middleware/auth';
 import { serializeBigInt } from '@/lib/utils/serializer';
-import userRepository from '@/lib/repositories/UserRepository';
-import merchantService from '@/lib/services/MerchantService';
-import emailService from '@/lib/services/EmailService';
-import { hashPassword } from '@/lib/utils/passwordHasher';
-import { validateEmail, validateRequired } from '@/lib/utils/validators';
-import { ConflictError, ERROR_CODES, ValidationError } from '@/lib/constants/errors';
+import { STAFF_PERMISSIONS } from '@/lib/constants/permissions';
+import { ERROR_CODES, ValidationError } from '@/lib/constants/errors';
 
 export const GET = withMerchantPermission(async (req: NextRequest, authContext: AuthContext) => {
   try {
@@ -44,8 +40,15 @@ export const GET = withMerchantPermission(async (req: NextRequest, authContext: 
     const drivers = await prisma.merchantUser.findMany({
       where: {
         merchantId: authContext.merchantId,
-        role: 'DRIVER',
         ...(includeInactive ? {} : { isActive: true }),
+        OR: [
+          { role: 'DRIVER' },
+          {
+            role: 'STAFF',
+            invitationStatus: 'ACCEPTED',
+            permissions: { has: STAFF_PERMISSIONS.DRIVER_DASHBOARD },
+          },
+        ],
         user: {
           isActive: true,
           ...(search
@@ -59,6 +62,7 @@ export const GET = withMerchantPermission(async (req: NextRequest, authContext: 
         },
       },
       select: {
+        role: true,
         isActive: true,
         createdAt: true,
         user: {
@@ -79,6 +83,7 @@ export const GET = withMerchantPermission(async (req: NextRequest, authContext: 
       ...d.user,
       isActive: d.isActive,
       joinedAt: d.createdAt,
+      source: d.role === 'DRIVER' ? 'driver' : 'staff',
     }));
 
     return NextResponse.json({
@@ -116,75 +121,80 @@ export const POST = withMerchantOwner(async (req: NextRequest, authContext: Auth
       );
     }
 
-    const body = await req.json();
-    validateRequired(body.name, 'Driver name');
-    validateRequired(body.email, 'Driver email');
-    validateRequired(body.password, 'Password');
-    validateEmail(body.email);
+    const body = await req.json().catch(() => ({}));
+    const userId = String(body?.userId ?? '').trim();
 
-    const email = String(body.email).toLowerCase();
-
-    const emailExists = await userRepository.emailExists(email);
-    if (emailExists) {
-      throw new ConflictError('Email already registered', ERROR_CODES.EMAIL_ALREADY_EXISTS);
+    if (!userId || !/^\d+$/.test(userId)) {
+      throw new ValidationError('Valid userId is required', ERROR_CODES.VALIDATION_ERROR);
     }
 
-    const merchant = await prisma.merchant.findUnique({
-      where: { id: authContext.merchantId },
-      select: { name: true, code: true, country: true },
+    const staffUserId = BigInt(userId);
+    const driverPermission = STAFF_PERMISSIONS.DRIVER_DASHBOARD;
+
+    const staffLink = await prisma.merchantUser.findFirst({
+      where: {
+        merchantId: authContext.merchantId,
+        userId: staffUserId,
+        role: 'STAFF',
+        invitationStatus: 'ACCEPTED',
+        isActive: true,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            role: true,
+          },
+        },
+      },
     });
 
-    if (!merchant) {
-      throw new ValidationError('Merchant not found', ERROR_CODES.NOT_FOUND);
+    if (!staffLink) {
+      throw new ValidationError('Eligible staff member not found (must be accepted and active)', ERROR_CODES.NOT_FOUND);
     }
 
-    const hashedPassword = await hashPassword(String(body.password));
+    if (staffLink.user.role === 'MERCHANT_OWNER') {
+      throw new ValidationError('Owner cannot be assigned as a driver', ERROR_CODES.FORBIDDEN);
+    }
 
-    const driver = await userRepository.create({
-      name: String(body.name).trim(),
-      email,
-      phone: body.phone ? String(body.phone).trim() : undefined,
-      passwordHash: hashedPassword,
-      role: 'DELIVERY',
-      isActive: true,
-      mustChangePassword: false,
+    const updated = await prisma.merchantUser.update({
+      where: { id: staffLink.id },
+      data: {
+        permissions: Array.from(new Set([...(staffLink.permissions ?? []), driverPermission])),
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+          },
+        },
+      },
     });
-
-    await merchantService.addDriver(authContext.merchantId, driver.id);
-
-    try {
-      await emailService.sendDriverWelcome({
-        to: email,
-        name: String(body.name).trim(),
-        email,
-        password: String(body.password),
-        merchantName: merchant.name,
-        merchantCode: merchant.code,
-        merchantCountry: merchant.country,
-      });
-    } catch (emailError) {
-      console.error('❌ Failed to send driver welcome email:', emailError);
-    }
 
     return NextResponse.json(
       {
         success: true,
         data: serializeBigInt({
-          id: driver.id,
-          name: driver.name,
-          email: driver.email,
-          phone: driver.phone,
+          ...updated.user,
+          isActive: updated.isActive && (updated.permissions ?? []).includes(driverPermission),
+          joinedAt: updated.createdAt,
+          source: 'staff',
         }),
-        message: 'Driver created successfully',
-        statusCode: 201,
+        message: 'Driver access granted successfully',
+        statusCode: 200,
       },
-      { status: 201 }
+      { status: 200 }
     );
   } catch (error) {
     console.error('Error creating merchant driver:', error);
 
-    // Let shared handler shape handle domain errors? This route is using manual responses.
-    if (error instanceof ConflictError || error instanceof ValidationError) {
+    if (error instanceof ValidationError) {
       return NextResponse.json(
         {
           success: false,
@@ -200,7 +210,7 @@ export const POST = withMerchantOwner(async (req: NextRequest, authContext: Auth
       {
         success: false,
         error: 'INTERNAL_ERROR',
-        message: 'Failed to create driver',
+        message: 'Failed to grant driver access',
         statusCode: 500,
       },
       { status: 500 }

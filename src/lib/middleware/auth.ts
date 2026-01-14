@@ -138,7 +138,9 @@ export function withMerchant(
     routeContext: NormalizedRouteContext
   ) => Promise<NextResponse>
 ) {
-  return withAuth(handler, ['MERCHANT_OWNER', 'MERCHANT_STAFF']);
+  // Use permission-aware middleware for all merchant API routes.
+  // Owners always pass; staff are checked against API_PERMISSION_MAP when a mapping exists.
+  return withMerchantPermission(handler);
 }
 
 /**
@@ -239,14 +241,31 @@ export function withMerchantPermission(
         return await handler(request, authContext, normalizeRouteContext(routeContext));
       }
 
-      // For staff, check permission if specified
-      if (authContext.role === 'MERCHANT_STAFF' && authContext.merchantId) {
+      // For staff, ensure merchant link is active and check permission
+      if (authContext.role === 'MERCHANT_STAFF') {
+        if (!authContext.merchantId) {
+          throw new AuthorizationError('Merchant access required', ERROR_CODES.FORBIDDEN);
+        }
+
         // Dynamically import to avoid circular dependency
         const { default: staffPermissionService } = await import('@/lib/services/StaffPermissionService');
         const { getPermissionForApi } = await import('@/lib/constants/permissions');
+
+        const staffInfo = await staffPermissionService.getStaffPermissions(
+          authContext.userId,
+          authContext.merchantId
+        );
+
+        if (!staffInfo) {
+          throw new AuthorizationError('Merchant access required', ERROR_CODES.FORBIDDEN);
+        }
+
+        if (staffInfo.isActive === false) {
+          throw new AuthorizationError('Merchant access is disabled', ERROR_CODES.FORBIDDEN);
+        }
         
         // Get permission from API path if not explicitly specified
-        const permission = requiredPermission || getPermissionForApi(request.nextUrl.pathname);
+        const permission = requiredPermission || getPermissionForApi(request.nextUrl.pathname, request.method);
         
         if (permission) {
           const hasAccess = await staffPermissionService.checkPermission(

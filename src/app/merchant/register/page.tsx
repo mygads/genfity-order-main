@@ -357,7 +357,21 @@ function MerchantRegisterContent() {
             const result = await response.json();
 
             if (!response.ok) {
-                throw new Error(result.message || "Registration failed");
+                const message = result?.message || "Registration failed";
+
+                // Treat known email/role conflicts as field validation (requested: register page validation)
+                if (result?.error === 'FORBIDDEN' || result?.error === 'EMAIL_ALREADY_EXISTS') {
+                    setFormErrors(prev => ({
+                        ...prev,
+                        ownerEmail: message,
+                    }));
+                    setStep(3);
+                    setError(null);
+                    setIsSubmitting(false);
+                    return;
+                }
+
+                throw new Error(message);
             }
 
             setSuccess(true);

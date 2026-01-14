@@ -84,6 +84,7 @@ model UserPreference {
   emailNotifications    Boolean  @default(true) @map("email_notifications")
   orderNotifications    Boolean  @default(true) @map("order_notifications")
   marketingEmails       Boolean  @default(false) @map("marketing_emails")
+  notificationSettings  Json?    @map("notification_settings")
   // Tutorial & Onboarding
   hasCompletedOnboarding Boolean  @default(false) @map("has_completed_onboarding")
   completedTutorials    String[] @default([]) @map("completed_tutorials") // Array of tutorial IDs
@@ -349,6 +350,11 @@ model MerchantUser {
   // Example: ["orders", "menu", "categories", "stock"]
   permissions String[]    @default([])
   isActive    Boolean     @default(true) @map("is_active")
+  invitationStatus MerchantUserInvitationStatus @default(ACCEPTED) @map("invitation_status")
+  invitedAt   DateTime?   @map("invited_at") @db.Timestamptz(6)
+  acceptedAt  DateTime?   @map("accepted_at") @db.Timestamptz(6)
+  inviteToken String?     @unique @map("invite_token")
+  inviteTokenExpiresAt DateTime? @map("invite_token_expires_at") @db.Timestamptz(6)
   createdAt  DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt  DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
   merchant   Merchant     @relation(fields: [merchantId], references: [id], onDelete: Cascade)
@@ -1194,6 +1200,11 @@ enum MerchantRole {
   OWNER
   STAFF
   DRIVER
+}
+
+enum MerchantUserInvitationStatus {
+  WAITING
+  ACCEPTED
 }
 
 enum SessionStatus {

@@ -657,6 +657,34 @@ class MerchantService {
    * @returns Updated merchant user link
    */
   async addStaff(merchantId: bigint, userId: bigint, role: 'OWNER' | 'STAFF' = 'STAFF'): Promise<void> {
+    const user = await userRepository.findById(userId);
+    if (!user) {
+      throw new NotFoundError('User not found', ERROR_CODES.USER_NOT_FOUND);
+    }
+
+    // Prevent role escalation paths: staff/driver accounts must not become merchant owners.
+    if (role === 'OWNER' && (user.role === 'MERCHANT_STAFF' || user.role === 'DELIVERY')) {
+      throw new ValidationError(
+        'This account type cannot be assigned as a merchant owner',
+        ERROR_CODES.FORBIDDEN
+      );
+    }
+
+    // Staff accounts must have exactly one merchant (single-merchant staff).
+    if (role === 'STAFF' && user.role === 'MERCHANT_STAFF') {
+      const activeStaffLinks = (user.merchantUsers ?? [])
+        .filter((mu) => mu.isActive && mu.merchant?.isActive)
+        .filter((mu) => mu.role === 'OWNER' || mu.role === 'STAFF');
+
+      const hasOtherMerchant = activeStaffLinks.some((mu) => mu.merchantId !== merchantId);
+      if (hasOtherMerchant) {
+        throw new ValidationError(
+          'This staff account is already linked to another merchant. Staff accounts must have exactly one merchant.',
+          ERROR_CODES.FORBIDDEN
+        );
+      }
+    }
+
     // If adding OWNER, check merchant doesn't already have one
     if (role === 'OWNER') {
       const merchant = await merchantRepository.findById(merchantId);

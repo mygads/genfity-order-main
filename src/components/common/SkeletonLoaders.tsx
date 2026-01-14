@@ -396,39 +396,52 @@ export function CustomerOrderSkeleton() {
 export function StaffPageSkeleton() {
   return (
     <div className="space-y-6 p-6">
-      {/* Header with Actions */}
-      <div className="flex items-center justify-between">
-        <div className="space-y-2">
-          <Skeleton width="w-32" height="h-8" />
-          <Skeleton width="w-64" height="h-4" />
-        </div>
-        <Skeleton width="w-36" height="h-10" className="rounded-lg" />
-      </div>
-
-      {/* Search and Filter */}
-      <div className="flex gap-3 flex-wrap">
-        <Skeleton width="w-64" height="h-10" className="rounded-lg" />
-        <Skeleton width="w-40" height="h-10" className="rounded-lg" />
-      </div>
-
-      {/* Staff Cards Grid */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-            <div className="flex items-center gap-4">
-              <Skeleton width="w-14" height="h-14" className="rounded-full shrink-0" />
-              <div className="flex-1 space-y-2">
-                <Skeleton width="w-32" height="h-5" />
-                <Skeleton width="w-24" height="h-4" />
-                <Skeleton width="w-20" height="h-6" className="rounded-full" />
-              </div>
-            </div>
-            <div className="mt-4 flex gap-2">
-              <Skeleton width="w-20" height="h-8" className="rounded-lg" />
-              <Skeleton width="w-20" height="h-8" className="rounded-lg" />
-            </div>
+      {/* Header Actions Card */}
+      <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex-1 min-w-50 max-w-md">
+            <Skeleton width="w-full" height="h-10" className="rounded-lg" />
           </div>
-        ))}
+          <div className="flex gap-3">
+            <Skeleton width="w-28" height="h-10" className="rounded-lg" />
+            <Skeleton width="w-36" height="h-10" className="rounded-lg" />
+          </div>
+        </div>
+      </div>
+
+      {/* Staff Table */}
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
+        <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-800">
+          <Skeleton width="w-44" height="h-6" />
+          <div className="mt-2">
+            <Skeleton width="w-28" height="h-4" />
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="border-b border-gray-200 bg-gray-50 text-left dark:border-gray-800 dark:bg-gray-900/50">
+              <tr>
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <th key={i} className="px-6 py-3">
+                    <Skeleton width="w-20" height="h-4" />
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {Array.from({ length: 8 }).map((_, row) => (
+                <tr key={row} className="border-b border-gray-100 last:border-0 dark:border-gray-800">
+                  {Array.from({ length: 8 }).map((_, col) => (
+                    <td key={col} className="px-6 py-4">
+                      <Skeleton width={col >= 5 ? 'w-10' : 'w-full'} height="h-4" />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

@@ -99,6 +99,11 @@ async function createUserHandler(
     throw new ValidationError('Invalid role');
   }
 
+  // Merchant roles must be linked to a merchant
+  if ((body.role === 'MERCHANT_OWNER' || body.role === 'MERCHANT_STAFF') && !body.merchantId) {
+    throw new ValidationError('merchantId is required for merchant roles', ERROR_CODES.VALIDATION_ERROR);
+  }
+
   // Check email uniqueness
   const emailExists = await userRepository.emailExists(body.email);
   if (emailExists) {

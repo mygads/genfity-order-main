@@ -9,6 +9,7 @@ import { hashPassword, comparePassword } from '@/lib/utils/passwordHasher';
 import { generateAccessToken, generateRefreshToken, verifyAccessToken, verifyRefreshToken } from '@/lib/utils/jwtManager';
 import { validateEmail, validatePassword } from '@/lib/utils/validators';
 import { AuthenticationError, NotFoundError, ERROR_CODES } from '@/lib/constants/errors';
+import { STAFF_PERMISSIONS } from '@/lib/constants/permissions';
 import type { LoginRequest, LoginResponse } from '@/lib/types/auth';
 
 class AuthService {
@@ -95,7 +96,10 @@ class AuthService {
       );
     }
 
+    const loginClient = credentials.client ?? 'admin';
+
     // Step 4: Calculate session duration based on role and rememberMe
+    // Note: we may override the token role for driver-mode sessions.
     const sessionDuration = this.getSessionDuration(user.role, credentials.rememberMe);
     const refreshDuration = this.getRefreshDuration(user.role, credentials.rememberMe);
 
@@ -125,7 +129,32 @@ class AuthService {
     // Step 6: Update last login timestamp
     await userRepository.updateLastLogin(user.id);
 
-    // Get merchant info if user is merchant owner/staff
+    // Build merchant context from merchant_users (filtered by active links + active merchants)
+    const allActiveMerchantUsers = (user.merchantUsers ?? []).filter(
+      (mu: { isActive: boolean; merchant: { isActive: boolean } }) => mu.isActive && mu.merchant.isActive
+    );
+
+    // Staff invitations must be accepted before login.
+    // We keep WAITING links out of the active context, but still detect them to show a clear error.
+    const pendingStaffInvite = allActiveMerchantUsers.find(
+      (mu: { role: string; invitationStatus?: string; inviteTokenExpiresAt?: Date | null }) =>
+        mu.role === 'STAFF' && mu.invitationStatus === 'WAITING'
+    );
+
+    const activeMerchantUsers = allActiveMerchantUsers.filter(
+      (mu: { role: string; invitationStatus?: string }) =>
+        mu.role !== 'STAFF' || mu.invitationStatus !== 'WAITING'
+    );
+
+    const adminMerchantUsers = activeMerchantUsers.filter(
+      (mu: { role: string }) => mu.role === 'OWNER' || mu.role === 'STAFF'
+    );
+
+    const driverMerchantUsers = activeMerchantUsers.filter(
+      (mu: { role: string }) => mu.role === 'DRIVER'
+    );
+
+    let effectiveRole = user.role;
     let merchantId: bigint | undefined;
     let merchantIdString: string | undefined;
     let merchants: Array<{
@@ -144,13 +173,17 @@ class AuthService {
     let currentMerchantPermissions: string[] = [];
     let currentMerchantRole: string | undefined;
 
-    if (user.merchantUsers && user.merchantUsers.length > 0) {
-      // Build merchants list from merchantUsers
-      const { STAFF_PERMISSIONS } = await import('@/lib/constants/permissions');
+    if (loginClient === 'admin') {
+      // Hard-separate the admin portal from the driver portal.
+      if (user.role === 'DELIVERY') {
+        throw new AuthenticationError(
+          'Please login via the Driver portal',
+          ERROR_CODES.FORBIDDEN
+        );
+      }
 
-      merchants = user.merchantUsers
-        .filter((mu: { isActive: boolean; merchant: { isActive: boolean } }) => mu.isActive && mu.merchant.isActive)
-        .map((mu: {
+      if (adminMerchantUsers.length > 0) {
+        merchants = adminMerchantUsers.map((mu: {
           merchantId: bigint;
           role: string;
           permissions: string[];
@@ -162,7 +195,7 @@ class AuthService {
             address: string | null;
             city: string | null;
             isOpen: boolean;
-          }
+          };
         }) => ({
           merchantId: mu.merchantId.toString(),
           merchantCode: mu.merchant.code,
@@ -176,30 +209,124 @@ class AuthService {
           isActive: mu.isActive,
         }));
 
-      // Check if user has multiple merchants
-      needsMerchantSelection = merchants.length > 1;
+        // Staff must be linked to exactly one merchant.
+        if (user.role === 'MERCHANT_STAFF' && merchants.length > 1) {
+          throw new AuthenticationError(
+            'Your account is linked to multiple merchants. Staff accounts must have exactly one merchant.',
+            ERROR_CODES.FORBIDDEN
+          );
+        }
 
-      // If specific merchantId requested, use that; otherwise use first merchant
-      if (credentials.merchantId) {
-        const targetMerchant = merchants.find(m => m.merchantId === credentials.merchantId);
-        if (targetMerchant) {
-          merchantId = BigInt(credentials.merchantId);
-          merchantIdString = credentials.merchantId;
-          currentMerchantPermissions = targetMerchant.permissions;
-          currentMerchantRole = targetMerchant.role;
+        needsMerchantSelection = user.role === 'MERCHANT_OWNER' ? merchants.length > 1 : false;
+
+        // If specific merchantId requested, use that; otherwise use first merchant
+        if (credentials.merchantId) {
+          const targetMerchant = merchants.find((m) => m.merchantId === credentials.merchantId);
+          if (targetMerchant) {
+            merchantId = BigInt(credentials.merchantId);
+            merchantIdString = credentials.merchantId;
+            currentMerchantPermissions = targetMerchant.permissions;
+            currentMerchantRole = targetMerchant.role;
+          } else {
+            merchantId = adminMerchantUsers[0].merchantId;
+            merchantIdString = merchantId.toString();
+            currentMerchantPermissions = merchants[0]?.permissions || [];
+            currentMerchantRole = merchants[0]?.role;
+          }
         } else {
-          // Fallback to first merchant if requested one not found
-          merchantId = user.merchantUsers[0].merchantId;
-          merchantIdString = merchantId?.toString();
+          merchantId = adminMerchantUsers[0].merchantId;
+          merchantIdString = merchantId.toString();
           currentMerchantPermissions = merchants[0]?.permissions || [];
           currentMerchantRole = merchants[0]?.role;
         }
       } else {
-        // Use first merchant by default
-        merchantId = user.merchantUsers[0].merchantId;
-        merchantIdString = merchantId?.toString();
-        currentMerchantPermissions = merchants[0]?.permissions || [];
-        currentMerchantRole = merchants[0]?.role;
+        // No active merchant context
+        if (user.role === 'MERCHANT_OWNER') {
+          throw new AuthenticationError(
+            'No merchant assigned to your account. Please contact support.',
+            ERROR_CODES.MERCHANT_NOT_FOUND
+          );
+        }
+
+        if (user.role === 'MERCHANT_STAFF') {
+          if (pendingStaffInvite) {
+            const isExpired =
+              pendingStaffInvite.inviteTokenExpiresAt && pendingStaffInvite.inviteTokenExpiresAt < new Date();
+            throw new AuthenticationError(
+              isExpired
+                ? 'Your staff invitation has expired. Please contact the store owner to resend an invitation.'
+                : 'Your staff invitation is pending. Please accept the invitation email before logging in.',
+              ERROR_CODES.FORBIDDEN
+            );
+          }
+
+          // Staff with an inactive merchant link can login (dashboard-only),
+          // but staff with no merchant link at all must not be able to login.
+          const hasAnyMerchantLink = (user.merchantUsers ?? []).length > 0;
+          if (!hasAnyMerchantLink) {
+            throw new AuthenticationError(
+              'No merchant assigned to your account. Please contact support.',
+              ERROR_CODES.MERCHANT_NOT_FOUND
+            );
+          }
+        }
+      }
+    } else {
+      // loginClient === 'driver'
+      if (user.role === 'DELIVERY') {
+        // Delivery drivers must have at least one active driver link to a merchant
+        if (driverMerchantUsers.length === 0) {
+          throw new AuthenticationError(
+            'Your driver access is inactive or not assigned to any merchant.',
+            ERROR_CODES.FORBIDDEN
+          );
+        }
+
+        merchantId = driverMerchantUsers[0].merchantId;
+        merchantIdString = merchantId.toString();
+      } else if (user.role === 'MERCHANT_STAFF') {
+        // Staff can access driver portal ONLY when explicitly granted.
+        if (adminMerchantUsers.length === 0) {
+          if (pendingStaffInvite) {
+            const isExpired = pendingStaffInvite.inviteTokenExpiresAt && pendingStaffInvite.inviteTokenExpiresAt < new Date();
+            throw new AuthenticationError(
+              isExpired
+                ? 'Your staff invitation has expired. Please contact the store owner to resend an invitation.'
+                : 'Your staff invitation is pending. Please accept the invitation email before accessing the driver portal.',
+              ERROR_CODES.FORBIDDEN
+            );
+          }
+
+          throw new AuthenticationError(
+            'No merchant assigned to your account. Please contact your store owner.',
+            ERROR_CODES.MERCHANT_NOT_FOUND
+          );
+        }
+
+        if (adminMerchantUsers.length > 1) {
+          throw new AuthenticationError(
+            'Your account is linked to multiple merchants. Staff accounts must have exactly one merchant.',
+            ERROR_CODES.FORBIDDEN
+          );
+        }
+
+        const staffLink = adminMerchantUsers[0];
+        const hasDriverAccess = (staffLink.permissions ?? []).includes(STAFF_PERMISSIONS.DRIVER_DASHBOARD);
+        if (!hasDriverAccess) {
+          throw new AuthenticationError(
+            'Your account does not have driver access enabled.',
+            ERROR_CODES.FORBIDDEN
+          );
+        }
+
+        effectiveRole = 'DELIVERY';
+        merchantId = staffLink.merchantId;
+        merchantIdString = merchantId.toString();
+      } else {
+        throw new AuthenticationError(
+          'Driver portal access is not available for this account.',
+          ERROR_CODES.FORBIDDEN
+        );
       }
     }
 
@@ -208,7 +335,7 @@ class AuthService {
     const accessToken = generateAccessToken({
       userId: user.id,
       sessionId: session.id,
-      role: user.role,
+      role: effectiveRole,
       email: user.email,
       merchantId,
     }, sessionDuration); // ✅ Pass dynamic duration
@@ -256,14 +383,14 @@ class AuthService {
     }
 
     // Calculate expiresIn using dynamic session duration
-    const expiresIn = this.getSessionDuration(user.role, credentials.rememberMe);
+    const expiresIn = this.getSessionDuration(effectiveRole, credentials.rememberMe);
 
     return {
       user: {
         id: user.id.toString(),
         name: user.name,
         email: user.email,
-        role: user.role,
+        role: effectiveRole,
         merchantId: merchantIdString,
         profilePictureUrl: user.profilePictureUrl ?? undefined,
       },
@@ -271,7 +398,7 @@ class AuthService {
       refreshToken,
       expiresIn,
       // Multi-merchant support
-      merchants: merchants.length > 0 ? merchants : undefined,
+      merchants: loginClient === 'admin' && merchants.length > 0 ? merchants : undefined,
       needsMerchantSelection,
       permissions: currentMerchantPermissions.length > 0 ? currentMerchantPermissions : undefined,
       merchantRole: currentMerchantRole,

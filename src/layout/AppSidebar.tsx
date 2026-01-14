@@ -319,7 +319,7 @@ const merchantNavGroups: NavGroup[] = [
         nameKey: "admin.nav.customerFeedback",
         path: "/admin/dashboard/customer-feedback",
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
-        permission: STAFF_PERMISSIONS.REPORTS, // Same permission as reports
+        permission: STAFF_PERMISSIONS.CUSTOMER_FEEDBACK,
       },
     ],
   },

@@ -11,6 +11,8 @@ import { withAuth } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/middleware/auth';
 import bcrypt from 'bcryptjs';
 import type { RouteContext } from '@/lib/utils/routeContext';
+import userNotificationService from '@/lib/services/UserNotificationService';
+import emailService from '@/lib/services/EmailService';
 
 async function updateProfileHandler(
   request: NextRequest,
@@ -20,6 +22,12 @@ async function updateProfileHandler(
   try {
     const body = await request.json();
     const { name, email, phone, currentPassword, newPassword } = body;
+
+    const userPref = await prisma.userPreference.findUnique({
+      where: { userId: authContext.userId },
+      select: { language: true },
+    });
+    const locale = userPref?.language === 'id' ? 'id' : 'en';
 
     // Validate required fields
     if (!name || !email) {
@@ -43,6 +51,8 @@ async function updateProfileHandler(
         { status: 400 }
       );
     }
+
+    const isPasswordChange = Boolean(newPassword);
 
     // If changing password, validate current password
     if (newPassword) {
@@ -99,6 +109,20 @@ async function updateProfileHandler(
           passwordHash: hashedPassword,
         },
       });
+
+      // In-app notification + email (password change)
+      userNotificationService
+        .createForUser({
+          userId: authContext.userId,
+          category: 'SYSTEM',
+          title: locale === 'id' ? 'Kata sandi diubah' : 'Password changed',
+          message:
+            locale === 'id'
+              ? 'Kata sandi akun Anda berhasil diubah.'
+              : 'Your account password was changed successfully.',
+          actionUrl: '/admin/dashboard/profile',
+        })
+        .catch((err) => console.error('Failed to create password change notification:', err));
     } else {
       // Update without password change using Prisma
       await prisma.user.update({
@@ -109,6 +133,17 @@ async function updateProfileHandler(
           phone: phone || null,
         },
       });
+
+      // In-app notification only (profile details change)
+      userNotificationService
+        .createForUser({
+          userId: authContext.userId,
+          category: 'SYSTEM',
+          title: locale === 'id' ? 'Profil diperbarui' : 'Profile updated',
+          message: locale === 'id' ? 'Detail profil Anda berhasil diperbarui.' : 'Your profile details were updated.',
+          actionUrl: '/admin/dashboard/profile',
+        })
+        .catch((err) => console.error('Failed to create profile update notification:', err));
     }
 
     // Fetch updated user data
@@ -131,6 +166,19 @@ async function updateProfileHandler(
         { success: false, message: 'User not found', error: 'USER_NOT_FOUND' },
         { status: 404 }
       );
+    }
+
+    // Email only for password changes
+    if (isPasswordChange) {
+      emailService
+        .sendPasswordChanged({
+          to: updatedUser.email,
+          name: updatedUser.name || 'User',
+          email: updatedUser.email,
+          changedByLabel: 'you',
+          locale,
+        })
+        .catch((err) => console.error('Failed to send password changed email:', err));
     }
 
     return successResponse(

@@ -10,6 +10,7 @@ import { successResponse, handleError } from '@/lib/middleware/errorHandler';
 import { withAuth } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/middleware/auth';
 import staffPermissionService from '@/lib/services/StaffPermissionService';
+import authService from '@/lib/services/AuthService';
 import { ValidationError, ERROR_CODES } from '@/lib/constants/errors';
 
 /**
@@ -40,6 +41,10 @@ async function leaveHandler(
       authContext.userId,
       BigInt(merchantId)
     );
+
+    // Force logout from all portals/devices immediately.
+    // (If the user had driver access, this also logs them out from the driver portal.)
+    await authService.logoutAll(authContext.userId);
 
     return successResponse(
       null,

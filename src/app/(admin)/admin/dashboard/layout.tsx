@@ -10,6 +10,7 @@ import Backdrop from "@/layout/Backdrop";
 import SessionGuard from "@/components/auth/SessionGuard";
 import SubscriptionAlerts from "@/components/subscription/SubscriptionAlerts";
 import AdminOrderAlertListener from "@/components/notifications/AdminOrderAlertListener";
+import PermissionGuard from "@/components/auth/PermissionGuard";
 import { useSessionSync } from "@/hooks/useSessionSync";
 import { useSubscriptionStatus } from "@/hooks/useSubscriptionStatus";
 import { useAuth } from "@/hooks/useAuth";
@@ -82,6 +83,9 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         <div className="min-h-screen xl:flex bg-gray-50 dark:bg-gray-900">
           {/* Session Guard - Auto logout on token expiry */}
           <SessionGuard />
+
+          {/* Permission Guard - Redirect staff away from restricted pages */}
+          <PermissionGuard />
 
           {/* Global admin alerts (sound + push sync for new orders) */}
           <AdminOrderAlertListener />

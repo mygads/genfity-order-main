@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { ConfirmationModal } from '@/components/common/ConfirmationModal';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 interface StoreToggleButtonProps {
   initialIsOpen: boolean;
@@ -30,10 +32,12 @@ export default function StoreToggleButton({
   merchantId: _merchantId, 
   onStatusChange 
 }: StoreToggleButtonProps) {
+  const { t } = useTranslation();
   const [_isOpen, setIsOpen] = useState(initialIsOpen);
   const [isManualOverride, setIsManualOverride] = useState(initialIsManualOverride);
   const [storeEffectivelyOpen, setStoreEffectivelyOpen] = useState(effectivelyOpen);
   const [isToggling, setIsToggling] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<'open' | 'close' | 'auto' | null>(null);
 
   // Sync with prop changes
   useEffect(() => {
@@ -203,7 +207,7 @@ export default function StoreToggleButton({
         </span>
         
         <button
-          onClick={switchToAutoMode}
+          onClick={() => setConfirmAction('auto')}
           disabled={isToggling}
           className="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
         >
@@ -224,6 +228,17 @@ export default function StoreToggleButton({
             </>
           )}
         </button>
+
+        <ConfirmationModal
+          isOpen={confirmAction === 'auto'}
+          onClose={() => setConfirmAction(null)}
+          onConfirm={switchToAutoMode}
+          title={t('admin.storeToggle.autoTitle') || 'Switch to Auto Mode'}
+          message={t('admin.storeToggle.autoMessage') || 'This will disable manual override and follow your store opening hours schedule.'}
+          confirmText={t('admin.storeToggle.autoConfirm') || 'Switch to Auto'}
+          cancelText={t('common.cancel') || 'Cancel'}
+          variant="info"
+        />
       </div>
     );
   }
@@ -235,7 +250,7 @@ export default function StoreToggleButton({
     <div className="flex items-center gap-2">
       {storeEffectivelyOpen ? (
         <button
-          onClick={closeStoreManually}
+          onClick={() => setConfirmAction('close')}
           disabled={isToggling}
           className="inline-flex items-center gap-2 rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
         >
@@ -258,7 +273,7 @@ export default function StoreToggleButton({
         </button>
       ) : (
         <button
-          onClick={openStoreManually}
+          onClick={() => setConfirmAction('open')}
           disabled={isToggling}
           className="inline-flex items-center gap-2 rounded-lg bg-green-500 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
         >
@@ -280,6 +295,28 @@ export default function StoreToggleButton({
           )}
         </button>
       )}
+
+      <ConfirmationModal
+        isOpen={confirmAction === 'open'}
+        onClose={() => setConfirmAction(null)}
+        onConfirm={openStoreManually}
+        title={t('admin.storeToggle.openTitle') || 'Open Store Manually'}
+        message={t('admin.storeToggle.openMessage') || 'This will force your store to open now (manual override), even if the schedule says closed.'}
+        confirmText={t('admin.storeToggle.openConfirm') || 'Open Store'}
+        cancelText={t('common.cancel') || 'Cancel'}
+        variant="warning"
+      />
+
+      <ConfirmationModal
+        isOpen={confirmAction === 'close'}
+        onClose={() => setConfirmAction(null)}
+        onConfirm={closeStoreManually}
+        title={t('admin.storeToggle.closeTitle') || 'Close Store Manually'}
+        message={t('admin.storeToggle.closeMessage') || 'This will force your store to close now (manual override), even if the schedule says open.'}
+        confirmText={t('admin.storeToggle.closeConfirm') || 'Close Store'}
+        cancelText={t('common.cancel') || 'Cancel'}
+        variant="warning"
+      />
     </div>
   );
 }

@@ -16,6 +16,7 @@ import { AuthContext } from '@/lib/types/auth';
 import userRepository from '@/lib/repositories/UserRepository';
 import merchantService from '@/lib/services/MerchantService';
 import emailService from '@/lib/services/EmailService';
+import authService from '@/lib/services/AuthService';
 import { hashPassword } from '@/lib/utils/passwordHasher';
 import { validateEmail, validateRequired } from '@/lib/utils/validators';
 import { ConflictError, ERROR_CODES, ValidationError } from '@/lib/constants/errors';
@@ -77,6 +78,9 @@ async function getStaffHandler(
       isActive: ms.isActive, // Use MerchantUser.isActive, not User.isActive
       joinedAt: ms.createdAt.toISOString(),
       permissions: ms.permissions, // Include permissions
+      invitationStatus: ms.invitationStatus,
+      invitedAt: ms.invitedAt ? ms.invitedAt.toISOString() : null,
+      acceptedAt: ms.acceptedAt ? ms.acceptedAt.toISOString() : null,
     }))
     .sort((a, b) => {
       // MERCHANT_OWNER always first
@@ -215,6 +219,30 @@ async function deleteStaffHandler(
   await prisma.merchantUser.delete({
     where: { id: staffToRemove.id },
   });
+
+  // Force logout from all devices
+  await authService.logoutAll(userIdToRemoveBigInt);
+
+  // Notify staff via email
+  const merchant = await prisma.merchant.findUnique({
+    where: { id: merchantId },
+    select: { name: true, code: true, country: true },
+  });
+
+  if (merchant && staffToRemove.user.email) {
+    emailService
+      .sendMerchantAccessRemoved({
+        to: staffToRemove.user.email,
+        name: staffToRemove.user.name || 'Staff',
+        email: staffToRemove.user.email,
+        merchantName: merchant.name,
+        merchantCode: merchant.code,
+        merchantCountry: merchant.country,
+      })
+      .catch((err) => {
+        console.error('Failed to send merchant access removed email:', err);
+      });
+  }
 
   return successResponse(null, 'Staff removed successfully', 200);
 }
