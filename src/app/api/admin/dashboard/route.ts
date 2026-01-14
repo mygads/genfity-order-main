@@ -132,6 +132,11 @@ async function handleGet(req: NextRequest, context: AuthContext) {
         orderStatusBreakdown,
         lowStockItems,
         last14DaysOrders,
+        firstOrderPerCustomer,
+        feedbackAgg30d,
+        badReviewsCount7d,
+        badReviewsCount30d,
+        recentBadReviews,
       ] = await Promise.all([
         prisma.menu.count({ where: { merchantId } }),
         prisma.menu.count({ where: { merchantId, isActive: true } }),
@@ -215,8 +220,61 @@ async function handleGet(req: NextRequest, context: AuthContext) {
             totalAmount: true,
             orderType: true,
             isScheduled: true,
+            customerId: true,
           },
           orderBy: { createdAt: 'asc' },
+        }),
+        prisma.order.groupBy({
+          by: ['customerId'],
+          where: {
+            merchantId,
+            customerId: { not: null },
+            status: { not: 'CANCELLED' },
+          },
+          _min: { createdAt: true },
+        }),
+        prisma.orderFeedback.aggregate({
+          where: {
+            merchantId,
+            createdAt: {
+              gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+            },
+          },
+          _avg: { overallRating: true },
+          _count: { id: true },
+        }),
+        prisma.orderFeedback.count({
+          where: {
+            merchantId,
+            overallRating: { lte: 2 },
+            createdAt: {
+              gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+            },
+          },
+        }),
+        prisma.orderFeedback.count({
+          where: {
+            merchantId,
+            overallRating: { lte: 2 },
+            createdAt: {
+              gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+            },
+          },
+        }),
+        prisma.orderFeedback.findMany({
+          where: {
+            merchantId,
+            overallRating: { lte: 2 },
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 5,
+          select: {
+            id: true,
+            orderNumber: true,
+            overallRating: true,
+            comment: true,
+            createdAt: true,
+          },
         }),
       ]);
 
@@ -252,6 +310,16 @@ async function handleGet(req: NextRequest, context: AuthContext) {
         byDay.set(key, { date: key, revenue: 0, orderCount: 0, scheduledCount: 0, completedCount: 0 });
       });
 
+      const activeCustomersByDay = new Map<string, Set<bigint>>();
+      dayKeys.forEach((key) => {
+        activeCustomersByDay.set(key, new Set());
+      });
+
+      const newCustomersByDay = new Map<string, number>();
+      dayKeys.forEach((key) => {
+        newCustomersByDay.set(key, 0);
+      });
+
       for (const o of last14DaysOrders) {
         const key = formatInTimeZone(o.createdAt, merchantTimezone, 'yyyy-MM-dd');
         const bucket = byDay.get(key);
@@ -270,6 +338,19 @@ async function handleGet(req: NextRequest, context: AuthContext) {
         if (o.isScheduled && o.status !== 'CANCELLED') {
           bucket.scheduledCount += 1;
         }
+
+        if (o.status !== 'CANCELLED' && o.customerId) {
+          const setForDay = activeCustomersByDay.get(key);
+          setForDay?.add(o.customerId);
+        }
+      }
+
+      for (const row of firstOrderPerCustomer) {
+        const firstAt = row._min.createdAt;
+        if (!firstAt) continue;
+        const key = formatInTimeZone(firstAt, merchantTimezone, 'yyyy-MM-dd');
+        if (!newCustomersByDay.has(key)) continue;
+        newCustomersByDay.set(key, (newCustomersByDay.get(key) ?? 0) + 1);
       }
 
       const revenueByDate = dayKeys.map((k) => byDay.get(k)!).map((d) => ({
@@ -280,8 +361,31 @@ async function handleGet(req: NextRequest, context: AuthContext) {
         completedCount: d.completedCount,
       }));
 
+      const customersByDate = dayKeys.map((k) => ({
+        date: k,
+        activeCustomers: activeCustomersByDay.get(k)?.size ?? 0,
+        newCustomers: newCustomersByDay.get(k) ?? 0,
+      }));
+
+      const sum = (values: number[]) => values.reduce((acc, v) => acc + (Number.isFinite(v) ? v : 0), 0);
+      const pctGrowth = (prev: number, next: number) => {
+        if (prev <= 0) return null;
+        return ((next - prev) / prev) * 100;
+      };
+
+      const first7 = revenueByDate.slice(0, 7);
+      const last7 = revenueByDate.slice(7);
+      const ordersPrev7Days = sum(first7.map((d) => d.orderCount));
+      const ordersLast7Days = sum(last7.map((d) => d.orderCount));
+
+      const customersFirst7 = customersByDate.slice(0, 7);
+      const customersLast7 = customersByDate.slice(7);
+      const newCustomersPrev7Days = sum(customersFirst7.map((d) => d.newCustomers));
+      const newCustomersLast7Days = sum(customersLast7.map((d) => d.newCustomers));
+
       const scheduledOrdersToday = revenueByDate.find((d) => d.date === todayKey)?.scheduledCount ?? 0;
       const completedOrdersToday = revenueByDate.find((d) => d.date === todayKey)?.completedCount ?? 0;
+      const nonCancelledOrdersToday = revenueByDate.find((d) => d.date === todayKey)?.orderCount ?? 0;
       const todayRevenueValue = decimalToNumber(todayRevenueAgg._sum.totalAmount);
       const avgOrderValueToday = completedOrdersToday > 0 ? todayRevenueValue / completedOrdersToday : 0;
 
@@ -291,6 +395,7 @@ async function handleGet(req: NextRequest, context: AuthContext) {
       const hoursElapsed = (Number.isFinite(hh) ? hh : 0) + (Number.isFinite(mm) ? mm : 0) / 60;
       const paceFactor = hoursElapsed > 0 ? Math.min(24 / hoursElapsed, 24) : 1;
       const projectedRevenueToday = todayRevenueValue * paceFactor;
+      const projectedOrdersToday = nonCancelledOrdersToday * paceFactor;
 
       if (role === 'MERCHANT_OWNER') {
         return NextResponse.json({
@@ -316,10 +421,27 @@ async function handleGet(req: NextRequest, context: AuthContext) {
                 timezone: merchantTimezone,
               },
               revenueByDate,
+              customersByDate,
+              growth: {
+                ordersPrev7Days,
+                ordersLast7Days,
+                ordersGrowthPct: pctGrowth(ordersPrev7Days, ordersLast7Days),
+                newCustomersPrev7Days,
+                newCustomersLast7Days,
+                newCustomersGrowthPct: pctGrowth(newCustomersPrev7Days, newCustomersLast7Days),
+              },
               kpis: {
                 scheduledOrdersToday,
                 avgOrderValueToday,
                 projectedRevenueToday,
+                projectedOrdersToday,
+                avgOverallRating30d: feedbackAgg30d._avg.overallRating ?? null,
+                totalFeedback30d: feedbackAgg30d._count.id,
+                badReviewsCount7d,
+                badReviewsCount30d,
+              },
+              alerts: {
+                recentBadReviews: serializeBigInt(recentBadReviews),
               },
             },
             recentOrders: serializeBigInt(recentOrders),

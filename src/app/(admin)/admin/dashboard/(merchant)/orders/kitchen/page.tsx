@@ -13,7 +13,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { FaSync, FaExpand, FaCompress, FaEye, FaClock, FaFire, FaPlay, FaCheck, FaShoppingBag } from 'react-icons/fa';
+import { FaSync, FaExpand, FaCompress, FaEye, FaClock, FaFire, FaPlay, FaCheck, FaShoppingBag, FaRegClock } from 'react-icons/fa';
 import { OrderDetailModal } from '@/components/orders/OrderDetailModal';
 import { OrderTimer } from '@/components/orders/OrderTimer';
 import { KitchenDisplaySkeleton } from '@/components/common/SkeletonLoaders';
@@ -24,6 +24,7 @@ import { playNotificationSound } from '@/lib/utils/soundNotification';
 import { useMerchant } from '@/context/MerchantContext';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { formatFullOrderNumber } from '@/lib/utils/format';
+import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
 
 const KITCHEN_STATUSES: OrderStatus[] = ['ACCEPTED', 'IN_PROGRESS'];
 
@@ -413,10 +414,41 @@ interface KitchenCardProps {
 }
 
 function KitchenCard({ order, onCardClick, onAction, actionLabel, actionIcon, actionColor, merchantCode, translations }: KitchenCardProps) {
+  const { merchant } = useMerchant();
   const items = 'orderItems' in order ? order.orderItems : [];
   const isUrgent = (() => {
     const elapsed = Date.now() - new Date(order.placedAt).getTime();
     return elapsed > 10 * 60 * 1000; // 10 minutes
+  })();
+
+  const isScheduled = Boolean(order.isScheduled && order.scheduledTime);
+  const scheduledLabel = (() => {
+    if (!isScheduled) return null;
+
+    const tz = merchant?.timezone || 'UTC';
+    const dateStr = order.scheduledDate ? String(order.scheduledDate).slice(0, 10) : null;
+    const timeStr = order.scheduledTime ? String(order.scheduledTime).slice(0, 5) : null;
+    if (!dateStr && timeStr) return timeStr;
+    if (!dateStr || !timeStr) return timeStr || dateStr || 'Scheduled';
+
+    const localDateTime = new Date(`${dateStr}T${timeStr}:00`);
+    if (Number.isNaN(localDateTime.getTime())) return `${dateStr} ${timeStr}`;
+
+    const scheduledAt = fromZonedTime(localDateTime, tz);
+    const now = new Date();
+    const todayKey = formatInTimeZone(now, tz, 'yyyy-MM-dd');
+    const scheduledKey = formatInTimeZone(scheduledAt, tz, 'yyyy-MM-dd');
+    const timeLabel = formatInTimeZone(scheduledAt, tz, 'HH:mm');
+
+    if (scheduledKey === todayKey) return `Today ${timeLabel}`;
+
+    const tomorrow = new Date(now);
+    tomorrow.setDate(now.getDate() + 1);
+    const tomorrowKey = formatInTimeZone(tomorrow, tz, 'yyyy-MM-dd');
+    if (scheduledKey === tomorrowKey) return `Tomorrow ${timeLabel}`;
+
+    const dateLabel = formatInTimeZone(scheduledAt, tz, 'dd MMM');
+    return `${dateLabel} ${timeLabel}`;
   })();
 
   return (
@@ -446,6 +478,15 @@ function KitchenCard({ order, onCardClick, onAction, actionLabel, actionIcon, ac
             <span className="text-lg font-bold text-gray-900 dark:text-white">
               #{formatFullOrderNumber(order.orderNumber, merchantCode)}
             </span>
+            {isScheduled && scheduledLabel && (
+              <span
+                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-semibold bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-900/30"
+                title={`Scheduled order: ${scheduledLabel}`}
+              >
+                <FaRegClock className="h-3 w-3" />
+                <span className="font-bold">{scheduledLabel}</span>
+              </span>
+            )}
             {order.tableNumber && (
               <span className="text-sm text-gray-600 dark:text-gray-400">
                 {translations.table} {order.tableNumber}

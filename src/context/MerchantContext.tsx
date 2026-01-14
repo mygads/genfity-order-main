@@ -22,6 +22,7 @@ interface Merchant {
   name: string;
   code: string;
   currency: 'AUD' | 'IDR';
+  timezone?: string;
   isOpen: boolean;
   requireTableNumberForDineIn?: boolean;
   logoUrl?: string;

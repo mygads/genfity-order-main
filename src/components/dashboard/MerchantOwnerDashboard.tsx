@@ -6,7 +6,6 @@ import { isStoreEffectivelyOpen, type OpeningHour } from '@/lib/utils/storeStatu
 import { formatFullOrderNumber } from '@/lib/utils/format';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { SetupProgress } from '@/lib/tutorial';
-import { RevenueChart } from '@/components/orders/OrderCharts';
 import {
   FaDollarSign,
   FaClock,
@@ -92,10 +91,37 @@ interface MerchantOwnerDashboardProps {
       scheduledCount: number;
       completedCount: number;
     }>;
+    customersByDate?: Array<{
+      date: string;
+      activeCustomers: number;
+      newCustomers: number;
+    }>;
+    growth?: {
+      ordersPrev7Days: number;
+      ordersLast7Days: number;
+      ordersGrowthPct: number | null;
+      newCustomersPrev7Days: number;
+      newCustomersLast7Days: number;
+      newCustomersGrowthPct: number | null;
+    };
     kpis: {
       scheduledOrdersToday: number;
       avgOrderValueToday: number;
       projectedRevenueToday: number;
+      projectedOrdersToday?: number;
+      avgOverallRating30d?: number | null;
+      totalFeedback30d?: number;
+      badReviewsCount7d?: number;
+      badReviewsCount30d?: number;
+    };
+    alerts?: {
+      recentBadReviews?: Array<{
+        id: string | bigint;
+        orderNumber: string;
+        overallRating: number;
+        comment?: string | null;
+        createdAt: string | Date;
+      }>;
     };
   };
   recentOrders: Array<
@@ -138,7 +164,6 @@ export default function MerchantOwnerDashboard({
   analytics,
   recentOrders,
   topSellingItems,
-  orderStatusBreakdown,
   lowStockItems,
 }: MerchantOwnerDashboardProps) {
   const { t } = useTranslation();
@@ -192,6 +217,22 @@ export default function MerchantOwnerDashboard({
     openingHours: merchant.openingHours,
     timezone: merchant.timezone,
   });
+
+  const formatGrowthPct = (pct: number | null | undefined) => {
+    if (pct === null || pct === undefined || !Number.isFinite(pct)) return '—';
+    const sign = pct > 0 ? '+' : '';
+    return `${sign}${pct.toFixed(1)}%`;
+  };
+
+  const rangeEndDate = analytics?.range?.endDate;
+  const customersToday = rangeEndDate
+    ? analytics?.customersByDate?.find((d) => d.date === rangeEndDate)
+    : undefined;
+
+  const badReviews7d = analytics?.kpis?.badReviewsCount7d ?? 0;
+  const avgRating30d = analytics?.kpis?.avgOverallRating30d ?? null;
+  const totalFeedback30d = analytics?.kpis?.totalFeedback30d ?? 0;
+  const recentBadReviews = analytics?.alerts?.recentBadReviews ?? [];
 
   return (
     <div className="space-y-6">
@@ -304,64 +345,55 @@ export default function MerchantOwnerDashboard({
         </div>
       </div>
 
-      {/* Trends + Projection */}
-      {analytics?.revenueByDate?.length ? (
-        <div className="grid gap-4 lg:grid-cols-3">
-          <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 lg:col-span-2">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Performance Trend</h3>
-                <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                  Last 14 days • {analytics.range.timezone}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-gray-500 dark:text-gray-400">Scheduled today</p>
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">{analytics.kpis.scheduledOrdersToday}</p>
-              </div>
+      {/* Growth Snapshot */}
+      {analytics?.growth ? (
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+          <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-gray-500 dark:text-gray-400">Orders (last 7 days)</p>
+              <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
+                {formatGrowthPct(analytics.growth.ordersGrowthPct)}
+              </span>
             </div>
-
-            <div className="mt-4">
-              <RevenueChart
-                data={analytics.revenueByDate.map((d) => ({
-                  date: d.date,
-                  revenue: d.revenue,
-                  orderCount: d.orderCount,
-                }))}
-                currency={merchant.currency || 'AUD'}
-              />
-            </div>
+            <p className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">
+              {analytics.growth.ordersLast7Days.toLocaleString()}
+            </p>
+            <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+              Prev 7d: {analytics.growth.ordersPrev7Days.toLocaleString()}
+            </p>
           </div>
 
           <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Today Projection</h3>
-            <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">If current pace continues</p>
-
-            <div className="mt-4 space-y-4">
-              <div className="rounded-lg bg-gray-50 dark:bg-gray-800/50 p-3">
-                <p className="text-xs text-gray-500 dark:text-gray-400">Avg order value (completed)</p>
-                <p className="mt-1 text-lg font-bold text-gray-900 dark:text-white">
-                  {formatCurrency(analytics.kpis.avgOrderValueToday)}
-                </p>
-              </div>
-
-              <div className="rounded-lg bg-emerald-50 dark:bg-emerald-900/10 p-3 border border-emerald-100 dark:border-emerald-900/30">
-                <p className="text-xs text-emerald-700/80 dark:text-emerald-300/80">Projected revenue (today)</p>
-                <p className="mt-1 text-xl font-bold text-emerald-800 dark:text-emerald-200">
-                  {formatCurrency(analytics.kpis.projectedRevenueToday)}
-                </p>
-                <p className="mt-1 text-[11px] text-emerald-700/70 dark:text-emerald-300/70">Current: {formatCurrency(stats.todayRevenue)}</p>
-              </div>
-
-              <div className="rounded-lg bg-amber-50 dark:bg-amber-900/10 p-3 border border-amber-100 dark:border-amber-900/30">
-                <p className="text-xs text-amber-800/80 dark:text-amber-300/80">Pending orders</p>
-                <p className="mt-1 text-xl font-bold text-amber-900 dark:text-amber-200">{stats.pendingOrders}</p>
-                <p className="mt-1 text-[11px] text-amber-800/70 dark:text-amber-300/70">Quick action: open Kanban</p>
-                <Link href="/admin/dashboard/orders" className="mt-2 inline-flex text-xs font-semibold text-amber-700 hover:text-amber-800 dark:text-amber-300 dark:hover:text-amber-200">
-                  Go to Orders →
-                </Link>
-              </div>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-gray-500 dark:text-gray-400">New customers (last 7 days)</p>
+              <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
+                {formatGrowthPct(analytics.growth.newCustomersGrowthPct)}
+              </span>
             </div>
+            <p className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">
+              {analytics.growth.newCustomersLast7Days.toLocaleString()}
+            </p>
+            <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+              Prev 7d: {analytics.growth.newCustomersPrev7Days.toLocaleString()}
+            </p>
+          </div>
+
+          <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4">
+            <p className="text-xs text-gray-500 dark:text-gray-400">Active customers (today)</p>
+            <p className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">
+              {(customersToday?.activeCustomers ?? 0).toLocaleString()}
+            </p>
+            <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">Unique customers who ordered</p>
+          </div>
+
+          <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4">
+            <p className="text-xs text-gray-500 dark:text-gray-400">Avg rating (last 30 days)</p>
+            <p className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">
+              {avgRating30d === null ? '—' : avgRating30d.toFixed(2)}
+            </p>
+            <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+              {totalFeedback30d.toLocaleString()} feedback • {badReviews7d} bad (7d)
+            </p>
           </div>
         </div>
       ) : null}
@@ -415,47 +447,6 @@ export default function MerchantOwnerDashboard({
 
       {/* Recent Orders & Top Selling */}
       <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-3">
-        {/* Opening Hours Preview */}
-        <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 sm:p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-              <FaClock className="w-4 h-4 text-gray-400" />
-              {t('admin.dashboard.openingHours')}
-            </h3>
-            <Link
-              href="/admin/dashboard/merchant/edit"
-              className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-            >
-              {t('common.edit')}
-            </Link>
-          </div>
-          <div className="space-y-1">
-            {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day, idx) => {
-              const hours = merchant.openingHours?.find(h => h.dayOfWeek === idx);
-              const today = new Date().getDay();
-              const isToday = idx === today;
-              return (
-                <div
-                  key={day}
-                  className={`flex items-center justify-between py-1.5 px-2 rounded text-sm ${isToday ? 'bg-gray-50 dark:bg-gray-800' : ''}`}
-                >
-                  <span className={`${isToday ? 'font-medium text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400'}`}>
-                    {day.slice(0, 3)}
-                    {isToday && <span className="ml-1 text-xs text-gray-400">•</span>}
-                  </span>
-                  <span className={`${hours?.isClosed ? 'text-red-500' : 'text-gray-700 dark:text-gray-300'}`}>
-                    {hours?.isClosed
-                      ? t('common.closed')
-                      : hours?.openTime && hours?.closeTime
-                        ? `${hours.openTime} - ${hours.closeTime}`
-                        : '-'}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
         {/* Recent Orders */}
         <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 sm:p-6 lg:col-span-2">
           <div className="mb-4 flex items-center justify-between">
@@ -571,53 +562,61 @@ export default function MerchantOwnerDashboard({
         </div>
       </div>
 
-      {/* Order Status & Low Stock */}
+      {/* Customers & Low Stock */}
       <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
-        {/* Order Status Breakdown */}
-        <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 sm:p-6">
-          <h3 className="mb-4 text-base font-semibold text-gray-900 dark:text-white">
-            {t('admin.dashboard.orderStatusOverview')}
-          </h3>
-          <div className="space-y-3">
-            {orderStatusBreakdown.map((item) => {
-              const percentage = stats.totalOrders > 0 ? (item.count / stats.totalOrders) * 100 : 0;
-              return (
-                <div key={item.status}>
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2">
-                      <div className={`h-2 w-2 rounded-full ${item.status === 'COMPLETED' ? 'bg-emerald-500' :
-                        item.status === 'PENDING' ? 'bg-amber-500' :
-                          item.status === 'CANCELLED' ? 'bg-red-500' :
-                            item.status === 'IN_PROGRESS' ? 'bg-blue-500' :
-                              item.status === 'READY' ? 'bg-purple-500' :
-                                'bg-gray-400'
-                        }`} />
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                        {item.status.replace(/_/g, ' ')}
-                      </span>
+        <div className="space-y-4">
+          {/* Customer Feedback Alert */}
+          <div className={`rounded-xl bg-white dark:bg-gray-900 border p-4 sm:p-6 ${badReviews7d > 0
+            ? 'border-red-200 dark:border-red-900/40'
+            : 'border-gray-200 dark:border-gray-800'
+            }`}>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-base font-semibold text-gray-900 dark:text-white">Customer feedback</h3>
+                <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                  Monitor ratings and follow up on poor experiences
+                </p>
+              </div>
+              <Link
+                href="/admin/dashboard/customer-feedback"
+                className="text-xs font-semibold text-gray-600 hover:text-gray-800 dark:text-gray-300 dark:hover:text-white"
+              >
+                View all →
+              </Link>
+            </div>
+
+            {badReviews7d > 0 ? (
+              <div className="mt-4 rounded-lg bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 p-3">
+                <p className="text-sm font-semibold text-red-800 dark:text-red-200">
+                  {badReviews7d} bad review{badReviews7d > 1 ? 's' : ''} in the last 7 days
+                </p>
+                <div className="mt-3 space-y-2">
+                  {recentBadReviews.slice(0, 3).map((r) => (
+                    <div key={String(r.id)} className="rounded-md bg-white/70 dark:bg-gray-900/30 p-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-xs font-medium text-gray-700 dark:text-gray-200">
+                          Order #{formatFullOrderNumber(r.orderNumber, merchant.code)}
+                        </p>
+                        <span className="text-xs font-semibold text-red-700 dark:text-red-300">
+                          {r.overallRating}/5
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-gray-600 dark:text-gray-300 line-clamp-2">
+                        {r.comment?.trim() ? `“${r.comment.trim()}”` : 'No comment provided'}
+                      </p>
+                      <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                        {formatDate(new Date(r.createdAt))}
+                      </p>
                     </div>
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">
-                      {item.count}
-                    </span>
-                  </div>
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
-                    <div
-                      className={`h-full rounded-full transition-all duration-500 ${item.status === 'COMPLETED' ? 'bg-emerald-500' :
-                        item.status === 'PENDING' ? 'bg-amber-500' :
-                          item.status === 'CANCELLED' ? 'bg-red-500' :
-                            item.status === 'IN_PROGRESS' ? 'bg-blue-500' :
-                              item.status === 'READY' ? 'bg-purple-500' :
-                                'bg-gray-400'
-                        }`}
-                      style={{ width: `${percentage}%` }}
-                    />
-                  </div>
+                  ))}
                 </div>
-              );
-            })}
-            {orderStatusBreakdown.length === 0 && (
-              <div className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
-                {t('admin.dashboard.noOrdersYet')}
+              </div>
+            ) : (
+              <div className="mt-4 rounded-lg bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-900/20 p-4">
+                <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">No bad reviews in the last 7 days</p>
+                <p className="mt-1 text-xs text-emerald-700/80 dark:text-emerald-300/80">
+                  Keep an eye on feedback to maintain quality.
+                </p>
               </div>
             )}
           </div>
