@@ -15,6 +15,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useToast } from "@/hooks/useToast";
 import { FaCalendar, FaPlus, FaFileImport, FaFileExport, FaChevronLeft, FaChevronRight, FaRedo, FaCopy } from "react-icons/fa";
+import IconToggle from "@/components/ui/IconToggle";
 import * as XLSX from "xlsx";
 
 interface SpecialHour {
@@ -714,15 +715,13 @@ export default function SpecialHoursManager({ token, embedded = false }: Special
                   <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Repeat Annually</p>
                   <p className="text-xs text-gray-500">Auto-copy to next year</p>
                 </div>
-                <label className="relative inline-flex cursor-pointer items-center">
-                  <input
-                    type="checkbox"
-                    checked={formData.isRecurring || false}
-                    onChange={(e) => setFormData(prev => ({ ...prev, isRecurring: e.target.checked }))}
-                    className="peer sr-only"
-                  />
-                  <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
-                </label>
+                <IconToggle
+                  checked={Boolean(formData.isRecurring)}
+                  onChange={(next) => setFormData(prev => ({ ...prev, isRecurring: next }))}
+                  label="Repeat Annually"
+                  ariaLabel="Repeat annually"
+                  variant="iconOnly"
+                />
               </div>
 
               {/* Closed Toggle */}
@@ -731,15 +730,13 @@ export default function SpecialHoursManager({ token, embedded = false }: Special
                   <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Closed All Day</p>
                   <p className="text-xs text-gray-500">Store will be completely closed</p>
                 </div>
-                <label className="relative inline-flex cursor-pointer items-center">
-                  <input
-                    type="checkbox"
-                    checked={formData.isClosed}
-                    onChange={(e) => setFormData(prev => ({ ...prev, isClosed: e.target.checked }))}
-                    className="peer sr-only"
-                  />
-                  <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-red-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
-                </label>
+                <IconToggle
+                  checked={formData.isClosed}
+                  onChange={(next) => setFormData(prev => ({ ...prev, isClosed: next }))}
+                  label="Closed All Day"
+                  ariaLabel="Closed all day"
+                  variant="iconOnly"
+                />
               </div>
 
               {/* Hours (if not closed) */}

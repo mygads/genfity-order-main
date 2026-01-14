@@ -258,6 +258,20 @@ export default function OrderClientPage({
   const [prefilledGroupCode, setPrefilledGroupCode] = useState<string | undefined>(undefined);
 
   // Customer Data Context - Initialize with ISR data for instant navigation on other pages
+
+  // If a menu gets archived/deleted, remove it from any stored carts so it doesn't keep showing.
+  useEffect(() => {
+    if (isLoading) return;
+    if (!cart || !Array.isArray(cart.items) || cart.items.length === 0) return;
+    if (!Array.isArray(allMenuItems) || allMenuItems.length === 0) return;
+
+    const availableMenuIds = new Set(allMenuItems.map((m) => m.id));
+    const invalidCartItems = cart.items.filter((item) => !availableMenuIds.has(item.menuId));
+
+    if (invalidCartItems.length === 0) return;
+    invalidCartItems.forEach((item) => removeItem(item.cartItemId));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, allMenuItems, cart?.items?.length]);
   const {
     initializeData: initializeCustomerData,
     menus: swrMenus,

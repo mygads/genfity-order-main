@@ -303,19 +303,19 @@ export default function ArchiveModal({
 
           {/* Cleanup Status Indicator */}
           {data?.retentionPolicy && (
-            <div className="mx-6 mt-4 flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-900/20">
-              <FaClock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            <div className="mx-6 mt-4 flex items-center gap-3 rounded-lg border border-gray-200 px-4 py-3 dark:border-gray-800 dark:bg-gray-900/20">
+              <FaClock className="h-4 w-4 text-gray-600 dark:text-gray-400" />
               <div className="flex-1">
-                <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
+                <p className="text-sm font-medium text-gray-800 dark:text-gray-300">
                   Auto-cleanup Schedule
                 </p>
-                <p className="text-xs text-amber-600 dark:text-amber-400">
+                <p className="text-xs text-gray-600 dark:text-gray-400">
                   {data.retentionPolicy.message}
                 </p>
               </div>
               <div className="flex items-center gap-1">
-                <FaInfoCircle className="h-3.5 w-3.5 text-amber-500" />
-                <span className="text-xs font-medium text-amber-700 dark:text-amber-300">
+                <FaInfoCircle className="h-3.5 w-3.5 text-gray-500" />
+                <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
                   {data.retentionPolicy.days} days retention
                 </span>
               </div>

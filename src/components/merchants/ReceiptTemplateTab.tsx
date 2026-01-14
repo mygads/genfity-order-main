@@ -10,6 +10,7 @@
 import React from 'react';
 import { FaPrint } from 'react-icons/fa';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import IconToggle from '@/components/ui/IconToggle';
 import {
   ReceiptSettings,
   DEFAULT_RECEIPT_SETTINGS,
@@ -224,17 +225,14 @@ export const ReceiptTemplateTab: React.FC<ReceiptTemplateTabProps> = ({
             </h3>
             <div className="space-y-2">
               {RECEIPT_SETTINGS_GROUPS.header.fields.map((field) => (
-                <label key={field.key} className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={settings[field.key as keyof ReceiptSettings] as boolean}
-                    onChange={(e) => handleChange(field.key as keyof ReceiptSettings, e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 dark:border-gray-600"
-                  />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">
-                    {t(field.labelKey)}
-                  </span>
-                </label>
+                <IconToggle
+                  key={field.key}
+                  checked={Boolean(settings[field.key as keyof ReceiptSettings])}
+                  onChange={(next) => handleChange(field.key as keyof ReceiptSettings, next)}
+                  label={t(field.labelKey)}
+                  size="sm"
+                  className="items-center gap-2"
+                />
               ))}
             </div>
           </div>
@@ -246,17 +244,14 @@ export const ReceiptTemplateTab: React.FC<ReceiptTemplateTabProps> = ({
             </h3>
             <div className="space-y-2">
               {RECEIPT_SETTINGS_GROUPS.order.fields.map((field) => (
-                <label key={field.key} className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={settings[field.key as keyof ReceiptSettings] as boolean}
-                    onChange={(e) => handleChange(field.key as keyof ReceiptSettings, e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 dark:border-gray-600"
-                  />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">
-                    {t(field.labelKey)}
-                  </span>
-                </label>
+                <IconToggle
+                  key={field.key}
+                  checked={Boolean(settings[field.key as keyof ReceiptSettings])}
+                  onChange={(next) => handleChange(field.key as keyof ReceiptSettings, next)}
+                  label={t(field.labelKey)}
+                  size="sm"
+                  className="items-center gap-2"
+                />
               ))}
             </div>
           </div>
@@ -268,17 +263,14 @@ export const ReceiptTemplateTab: React.FC<ReceiptTemplateTabProps> = ({
             </h3>
             <div className="space-y-2">
               {RECEIPT_SETTINGS_GROUPS.items.fields.map((field) => (
-                <label key={field.key} className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={settings[field.key as keyof ReceiptSettings] as boolean}
-                    onChange={(e) => handleChange(field.key as keyof ReceiptSettings, e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 dark:border-gray-600"
-                  />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">
-                    {t(field.labelKey)}
-                  </span>
-                </label>
+                <IconToggle
+                  key={field.key}
+                  checked={Boolean(settings[field.key as keyof ReceiptSettings])}
+                  onChange={(next) => handleChange(field.key as keyof ReceiptSettings, next)}
+                  label={t(field.labelKey)}
+                  size="sm"
+                  className="items-center gap-2"
+                />
               ))}
             </div>
           </div>
@@ -290,17 +282,14 @@ export const ReceiptTemplateTab: React.FC<ReceiptTemplateTabProps> = ({
             </h3>
             <div className="space-y-2">
               {RECEIPT_SETTINGS_GROUPS.footer.fields.map((field) => (
-                <label key={field.key} className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={settings[field.key as keyof ReceiptSettings] as boolean}
-                    onChange={(e) => handleChange(field.key as keyof ReceiptSettings, e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 dark:border-gray-600"
-                  />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">
-                    {t(field.labelKey)}
-                  </span>
-                </label>
+                <IconToggle
+                  key={field.key}
+                  checked={Boolean(settings[field.key as keyof ReceiptSettings])}
+                  onChange={(next) => handleChange(field.key as keyof ReceiptSettings, next)}
+                  label={t(field.labelKey)}
+                  size="sm"
+                  className="items-center gap-2"
+                />
               ))}
             </div>
           </div>
@@ -313,17 +302,14 @@ export const ReceiptTemplateTab: React.FC<ReceiptTemplateTabProps> = ({
           </h3>
           <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
             {RECEIPT_SETTINGS_GROUPS.payment.fields.map((field) => (
-              <label key={field.key} className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={settings[field.key as keyof ReceiptSettings] as boolean}
-                  onChange={(e) => handleChange(field.key as keyof ReceiptSettings, e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 dark:border-gray-600"
-                />
-                <span className="text-sm text-gray-700 dark:text-gray-300">
-                  {t(field.labelKey)}
-                </span>
-              </label>
+              <IconToggle
+                key={field.key}
+                checked={Boolean(settings[field.key as keyof ReceiptSettings])}
+                onChange={(next) => handleChange(field.key as keyof ReceiptSettings, next)}
+                label={t(field.labelKey)}
+                size="sm"
+                className="items-center gap-2"
+              />
             ))}
           </div>
         </div>

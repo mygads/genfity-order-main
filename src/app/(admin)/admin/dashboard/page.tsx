@@ -140,6 +140,7 @@ export default function AdminDashboardPage() {
       <MerchantOwnerDashboard
         merchant={dashboardData.merchant}
         stats={dashboardData.stats}
+        analytics={dashboardData.analytics}
         recentOrders={dashboardData.recentOrders}
         topSellingItems={dashboardData.topSellingItems}
         orderStatusBreakdown={dashboardData.orderStatusBreakdown}

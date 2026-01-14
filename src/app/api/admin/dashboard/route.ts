@@ -8,6 +8,7 @@ import { withAuth } from '@/lib/middleware/auth';
 import prisma from '@/lib/db/client';
 import { serializeBigInt } from '@/lib/utils/serializer';
 import type { AuthContext } from '@/lib/types/auth';
+import { formatInTimeZone } from 'date-fns-tz';
 
 /**
  * GET /api/admin/dashboard
@@ -102,6 +103,21 @@ async function handleGet(req: NextRequest, context: AuthContext) {
       }
 
       const merchantId = merchantUser.merchantId;
+      const merchantTimezone = merchantUser.merchant.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+      const decimalToNumber = (value: unknown): number => {
+        if (value === null || value === undefined) return 0;
+        if (typeof value === 'number') return value;
+        if (typeof value === 'bigint') return Number(value);
+        if (typeof value === 'string') return Number(value);
+
+        if (typeof value === 'object' && value !== null && 'toNumber' in (value as any)) {
+          const maybe = (value as any).toNumber;
+          if (typeof maybe === 'function') return maybe.call(value);
+        }
+
+        return Number(value);
+      };
 
       const [
         totalMenuItems,
@@ -115,6 +131,7 @@ async function handleGet(req: NextRequest, context: AuthContext) {
         topSellingItems,
         orderStatusBreakdown,
         lowStockItems,
+        last14DaysOrders,
       ] = await Promise.all([
         prisma.menu.count({ where: { merchantId } }),
         prisma.menu.count({ where: { merchantId, isActive: true } }),
@@ -185,25 +202,95 @@ async function handleGet(req: NextRequest, context: AuthContext) {
             imageUrl: true,
           },
         }),
+        prisma.order.findMany({
+          where: {
+            merchantId,
+            createdAt: {
+              gte: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
+            },
+          },
+          select: {
+            createdAt: true,
+            status: true,
+            totalAmount: true,
+            orderType: true,
+            isScheduled: true,
+          },
+          orderBy: { createdAt: 'asc' },
+        }),
       ]);
 
       // Only count COMPLETED orders for revenue
-      const revenue = await prisma.order.aggregate({
-        where: { merchantId, status: 'COMPLETED' },
-        _sum: { totalAmount: true },
+      const [revenueAgg, todayRevenueAgg] = await Promise.all([
+        prisma.order.aggregate({
+          where: { merchantId, status: 'COMPLETED' },
+          _sum: { totalAmount: true },
+        }),
+        prisma.order.aggregate({
+          where: {
+            merchantId,
+            status: 'COMPLETED',
+            createdAt: {
+              gte: new Date(new Date().setHours(0, 0, 0, 0)),
+            },
+          },
+          _sum: { totalAmount: true },
+        }),
+      ]);
+
+      // Build 14-day trend series in merchant timezone (simple JS aggregation)
+      const todayKey = formatInTimeZone(new Date(), merchantTimezone, 'yyyy-MM-dd');
+      const startKey = formatInTimeZone(new Date(Date.now() - 13 * 24 * 60 * 60 * 1000), merchantTimezone, 'yyyy-MM-dd');
+
+      const dayKeys: string[] = [];
+      for (let i = 13; i >= 0; i -= 1) {
+        dayKeys.push(formatInTimeZone(new Date(Date.now() - i * 24 * 60 * 60 * 1000), merchantTimezone, 'yyyy-MM-dd'));
+      }
+
+      const byDay = new Map<string, { date: string; revenue: number; orderCount: number; scheduledCount: number; completedCount: number }>();
+      dayKeys.forEach((key) => {
+        byDay.set(key, { date: key, revenue: 0, orderCount: 0, scheduledCount: 0, completedCount: 0 });
       });
 
-      // Only count COMPLETED orders for today's revenue
-      const todayRevenue = await prisma.order.aggregate({
-        where: {
-          merchantId,
-          status: 'COMPLETED',
-          createdAt: {
-            gte: new Date(new Date().setHours(0, 0, 0, 0)),
-          },
-        },
-        _sum: { totalAmount: true },
-      });
+      for (const o of last14DaysOrders) {
+        const key = formatInTimeZone(o.createdAt, merchantTimezone, 'yyyy-MM-dd');
+        const bucket = byDay.get(key);
+        if (!bucket) continue;
+
+        // Treat CANCELLED as non-contributing to revenue and count
+        if (o.status !== 'CANCELLED') {
+          bucket.orderCount += 1;
+        }
+
+        if (o.status === 'COMPLETED') {
+          bucket.completedCount += 1;
+          bucket.revenue += decimalToNumber(o.totalAmount);
+        }
+
+        if (o.isScheduled && o.status !== 'CANCELLED') {
+          bucket.scheduledCount += 1;
+        }
+      }
+
+      const revenueByDate = dayKeys.map((k) => byDay.get(k)!).map((d) => ({
+        date: d.date,
+        revenue: Number.isFinite(d.revenue) ? d.revenue : 0,
+        orderCount: d.orderCount,
+        scheduledCount: d.scheduledCount,
+        completedCount: d.completedCount,
+      }));
+
+      const scheduledOrdersToday = revenueByDate.find((d) => d.date === todayKey)?.scheduledCount ?? 0;
+      const completedOrdersToday = revenueByDate.find((d) => d.date === todayKey)?.completedCount ?? 0;
+      const todayRevenueValue = decimalToNumber(todayRevenueAgg._sum.totalAmount);
+      const avgOrderValueToday = completedOrdersToday > 0 ? todayRevenueValue / completedOrdersToday : 0;
+
+      // Simple pace projection (linear by time elapsed in merchant timezone)
+      const nowInTz = formatInTimeZone(new Date(), merchantTimezone, 'HH:mm');
+      const [hh, mm] = nowInTz.split(':').map((v) => Number(v));
+      const hoursElapsed = (Number.isFinite(hh) ? hh : 0) + (Number.isFinite(mm) ? mm : 0) / 60;
+      const paceFactor = hoursElapsed > 0 ? Math.min(24 / hoursElapsed, 24) : 1;
+      const projectedRevenueToday = todayRevenueValue * paceFactor;
 
       if (role === 'MERCHANT_OWNER') {
         return NextResponse.json({
@@ -219,8 +306,21 @@ async function handleGet(req: NextRequest, context: AuthContext) {
               totalOrders,
               todayOrders,
               pendingOrders,
-              totalRevenue: revenue._sum.totalAmount?.toNumber() || 0,
-              todayRevenue: todayRevenue._sum.totalAmount?.toNumber() || 0,
+              totalRevenue: decimalToNumber(revenueAgg._sum.totalAmount),
+              todayRevenue: todayRevenueValue,
+            },
+            analytics: {
+              range: {
+                startDate: startKey,
+                endDate: todayKey,
+                timezone: merchantTimezone,
+              },
+              revenueByDate,
+              kpis: {
+                scheduledOrdersToday,
+                avgOrderValueToday,
+                projectedRevenueToday,
+              },
             },
             recentOrders: serializeBigInt(recentOrders),
             topSellingItems: topSellingItems.map(item => ({

@@ -110,7 +110,6 @@ export default function OrderHistoryPage() {
   const [reservations, setReservations] = useState<ReservationHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [auth, setAuth] = useState<ReturnType<typeof getCustomerAuth> | null>(null);
-  const [filter, setFilter] = useState<'all' | 'pending' | 'completed' | 'cancelled'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'orders' | 'reservations'>('all');
   const [merchantCurrency, setMerchantCurrency] = useState('AUD');
   const [reorderingOrderId, setReorderingOrderId] = useState<string | null>(null);
@@ -488,44 +487,23 @@ export default function OrderHistoryPage() {
     return reservation.status;
   };
 
-  const normalizeReservationToFilterBucket = (reservation: ReservationHistoryItem): 'pending' | 'completed' | 'cancelled' => {
-    const derived = (getReservationDerivedStatus(reservation) || '').toLowerCase();
-    if (derived === 'cancelled') return 'cancelled';
-    if (derived === 'completed') return 'completed';
-    return 'pending';
-  };
+  // Orders: sort active first, then newest
+  const sortedOrders = [...orders].sort((a, b) => {
+    const aIsActive = !['completed', 'cancelled'].includes(a.status.toLowerCase());
+    const bIsActive = !['completed', 'cancelled'].includes(b.status.toLowerCase());
+    if (aIsActive && !bIsActive) return -1;
+    if (!aIsActive && bIsActive) return 1;
+    return new Date(b.placedAt).getTime() - new Date(a.placedAt).getTime();
+  });
 
-  // Filter orders based on selected filter
-  const filteredOrders = orders
-    .filter(order => {
-      if (filter === 'all') return true;
-      if (filter === 'pending') return !['completed', 'cancelled'].includes(order.status.toLowerCase());
-      if (filter === 'completed') return order.status.toLowerCase() === 'completed';
-      if (filter === 'cancelled') return order.status.toLowerCase() === 'cancelled';
-      return true;
-    })
-    // Sort: active orders first, then by newest
-    .sort((a, b) => {
-      const aIsActive = !['completed', 'cancelled'].includes(a.status.toLowerCase());
-      const bIsActive = !['completed', 'cancelled'].includes(b.status.toLowerCase());
-      // Active orders first
-      if (aIsActive && !bIsActive) return -1;
-      if (!aIsActive && bIsActive) return 1;
-      // Then by newest date
-      return new Date(b.placedAt).getTime() - new Date(a.placedAt).getTime();
-    });
-
-  const filteredReservations = reservations
-    .filter((reservation) => {
-      if (filter === 'all') return true;
-      return normalizeReservationToFilterBucket(reservation) === filter;
-    })
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const sortedReservations = [...reservations].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
 
   const hasReservations = reservations.length > 0;
   const effectiveType = hasReservations ? typeFilter : 'orders';
-  const visibleOrders = effectiveType === 'all' || effectiveType === 'orders' ? filteredOrders : [];
-  const visibleReservations = effectiveType === 'all' || effectiveType === 'reservations' ? filteredReservations : [];
+  const visibleOrders = effectiveType === 'all' || effectiveType === 'orders' ? sortedOrders : [];
+  const visibleReservations = effectiveType === 'all' || effectiveType === 'reservations' ? sortedReservations : [];
 
   // ✅ HYDRATION FIX: Show loading during SSR → CSR transition
   // if (!isMounted || !auth) {
@@ -551,67 +529,43 @@ export default function OrderHistoryPage() {
           </h1>
         </div>
 
-        {/* Filter Tabs - Evenly Spaced */}
-        <div className="flex border-t border-gray-200">
-          <button
-            onClick={() => setFilter('all')}
-            className={`flex-1 py-3 text-sm font-medium transition-colors ${filter === 'all'
-              ? 'text-orange-500 border-b-2 border-orange-500'
-              : 'text-gray-500 border-b-2 border-transparent'
-              }`}
-          >
-            {t('customer.history.allOrders')}
-          </button>
-          <button
-            onClick={() => setFilter('pending')}
-            className={`flex-1 py-3 text-sm font-medium transition-colors ${filter === 'pending'
-              ? 'text-orange-500 border-b-2 border-orange-500'
-              : 'text-gray-500 border-b-2 border-transparent'
-              }`}
-          >
-            {t('customer.history.activeOrders')}
-          </button>
-          <button
-            onClick={() => setFilter('completed')}
-            className={`flex-1 py-3 text-sm font-medium transition-colors ${filter === 'completed'
-              ? 'text-orange-500 border-b-2 border-orange-500'
-              : 'text-gray-500 border-b-2 border-transparent'
-              }`}
-          >
-            {t('customer.history.completedOrders')}
-          </button>
-        </div>
-
-        {/* Type Tabs (All / Orders / Reservations) - only if reservations exist */}
+        {/* Type Filter (All / Orders / Reservations) - compact segmented tabs */}
         {hasReservations ? (
-          <div className="flex border-t border-gray-200 bg-white">
-            <button
-              onClick={() => setTypeFilter('all')}
-              className={`flex-1 py-2 text-xs font-semibold transition-colors ${typeFilter === 'all'
-                ? 'text-gray-900'
-                : 'text-gray-500'
-                }`}
-            >
-              {tOr(t, 'customer.history.typeAll', 'All')}
-            </button>
-            <button
-              onClick={() => setTypeFilter('orders')}
-              className={`flex-1 py-2 text-xs font-semibold transition-colors ${typeFilter === 'orders'
-                ? 'text-gray-900'
-                : 'text-gray-500'
-                }`}
-            >
-              {tOr(t, 'customer.history.typeOrders', 'Orders')}
-            </button>
-            <button
-              onClick={() => setTypeFilter('reservations')}
-              className={`flex-1 py-2 text-xs font-semibold transition-colors ${typeFilter === 'reservations'
-                ? 'text-gray-900'
-                : 'text-gray-500'
-                }`}
-            >
-              {tOr(t, 'customer.history.typeReservations', 'Reservations')}
-            </button>
+          <div className="border-t border-gray-200 bg-white">
+            <div className="px-4 py-2">
+              <div className="flex w-full rounded-xl bg-gray-100 p-1">
+                <button
+                  type="button"
+                  onClick={() => setTypeFilter('all')}
+                  className={`flex-1 rounded-lg px-3 py-2 text-xs font-semibold transition-all ${typeFilter === 'all'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                >
+                  {tOr(t, 'customer.history.typeAll', 'All')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTypeFilter('orders')}
+                  className={`flex-1 rounded-lg px-3 py-2 text-xs font-semibold transition-all ${typeFilter === 'orders'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                >
+                  {tOr(t, 'customer.history.typeOrders', 'Orders')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTypeFilter('reservations')}
+                  className={`flex-1 rounded-lg px-3 py-2 text-xs font-semibold transition-all ${typeFilter === 'reservations'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                >
+                  {tOr(t, 'customer.history.typeReservations', 'Reservations')}
+                </button>
+              </div>
+            </div>
           </div>
         ) : null}
 
@@ -655,21 +609,17 @@ export default function OrderHistoryPage() {
             {/* Empty State - SVG Icon */}
             <FaClipboardList className="w-16 h-16 mx-auto mb-4 text-gray-300" />
             <p className="text-base font-semibold text-gray-900 mb-2">
-              {filter === 'all' ? t('customer.history.noOrders') : t('common.noResults')}
+              {t('customer.history.noOrders')}
             </p>
             <p className="text-sm text-gray-600 mb-6">
-              {filter === 'all'
-                ? t('customer.history.noOrdersDesc')
-                : t('customer.history.noOrdersFiltered', { filter: filter === 'pending' ? t('customer.history.activeOrders').toLowerCase() : t('customer.history.completedOrders').toLowerCase() })}
+              {t('customer.history.noOrdersDesc')}
             </p>
-            {filter === 'all' && (
-              <button
-                onClick={() => router.push('/')}
-                className="px-6 py-3 bg-orange-500 text-white text-sm font-semibold rounded-xl hover:bg-orange-600 transition-all active:scale-[0.98]"
-              >
-                {t('customer.history.startOrdering')}
-              </button>
-            )}
+            <button
+              onClick={() => router.push('/')}
+              className="px-6 py-3 bg-orange-500 text-white text-sm font-semibold rounded-xl hover:bg-orange-600 transition-all active:scale-[0.98]"
+            >
+              {t('customer.history.startOrdering')}
+            </button>
           </div>
         ) : (
           <div className="space-y-3">

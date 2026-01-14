@@ -57,7 +57,6 @@ interface OrderKanbanBoardProps {
 }
 
 const BOARD_STATUSES: OrderStatus[] = [
-  'CANCELLED',
   'PENDING',
   'ACCEPTED',
   'IN_PROGRESS',
@@ -466,7 +465,7 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
         onDragEnd={handleDragEnd}
       >
         <div className="h-full min-h-0 overflow-x-auto pb-2">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 min-w-350 h-full min-h-0">
+          <div className="grid grid-cols-1 gap-4 h-full min-h-0 md:grid-cols-2 lg:grid-cols-4 min-w-full">
             {BOARD_STATUSES.map(status => {
               const isInvalid = !!(activeId && !isValidDrop(activeId, status));
               return (

@@ -7,7 +7,8 @@
 
 'use client';
 
-import { FaList, FaTh, FaThLarge } from 'react-icons/fa';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { FaChevronDown, FaList, FaTh, FaThLarge } from 'react-icons/fa';
 
 export type ViewMode = 'list' | 'grid-2' | 'grid-3';
 
@@ -34,34 +35,90 @@ export function setStoredViewMode(mode: ViewMode): void {
 }
 
 export default function ViewModeToggle({ value, onChange }: ViewModeToggleProps) {
-    const modes: { mode: ViewMode; icon: React.ReactNode; label: string }[] = [
-        { mode: 'list', icon: <FaList size={14} />, label: 'List View' },
-        { mode: 'grid-2', icon: <FaThLarge size={14} />, label: 'Grid 2 Columns' },
-        { mode: 'grid-3', icon: <FaTh size={14} />, label: 'Grid 3 Columns' },
-    ];
+    const [open, setOpen] = useState(false);
+    const containerRef = useRef<HTMLDivElement | null>(null);
+
+    const modes = useMemo(
+        () => [
+            { mode: 'list' as const, icon: <FaList size={14} />, label: 'List View' },
+            { mode: 'grid-2' as const, icon: <FaThLarge size={14} />, label: 'Grid 2 Columns' },
+            { mode: 'grid-3' as const, icon: <FaTh size={14} />, label: 'Grid 3 Columns' },
+        ],
+        []
+    );
+
+    const current = modes.find((m) => m.mode === value) ?? modes[0];
+
+    useEffect(() => {
+        if (!open) return;
+
+        const onPointerDown = (event: MouseEvent | TouchEvent) => {
+            const el = containerRef.current;
+            if (!el) return;
+            if (event.target instanceof Node && el.contains(event.target)) return;
+            setOpen(false);
+        };
+
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') setOpen(false);
+        };
+
+        document.addEventListener('mousedown', onPointerDown);
+        document.addEventListener('touchstart', onPointerDown);
+        document.addEventListener('keydown', onKeyDown);
+        return () => {
+            document.removeEventListener('mousedown', onPointerDown);
+            document.removeEventListener('touchstart', onPointerDown);
+            document.removeEventListener('keydown', onKeyDown);
+        };
+    }, [open]);
 
     return (
-        <div
-            className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-1"
-            style={{ gap: '2px' }}
-        >
-            {modes.map(({ mode, icon, label }) => (
-                <button
-                    key={mode}
-                    onClick={() => {
-                        onChange(mode);
-                        setStoredViewMode(mode);
-                    }}
-                    className={`p-2 rounded-md transition-all duration-200 ${value === mode
-                            ? 'bg-white dark:bg-gray-700 text-orange-500 shadow-sm'
-                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                        }`}
-                    aria-label={label}
-                    title={label}
-                >
-                    {icon}
-                </button>
-            ))}
+        <div ref={containerRef} className="relative inline-flex z-[500]">
+            <button
+                type="button"
+                onClick={() => setOpen((v) => !v)}
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                aria-haspopup="menu"
+                aria-expanded={open}
+                aria-label={current.label}
+                title={current.label}
+            >
+                <span className="text-orange-500">{current.icon}</span>
+                <FaChevronDown className={`h-3.5 w-3.5 text-gray-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+            </button>
+
+            <div
+                role="menu"
+                aria-hidden={!open}
+                className={`absolute right-0 top-full z-[1000] mt-2 w-52 origin-top-right rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg p-1 transition-all duration-150 ${open ? 'opacity-100 scale-100' : 'pointer-events-none opacity-0 scale-95'}`}
+            >
+                {modes.map(({ mode, icon, label }) => {
+                    const isActive = value === mode;
+                    return (
+                        <button
+                            key={mode}
+                            type="button"
+                            role="menuitem"
+                            onClick={() => {
+                                onChange(mode);
+                                setStoredViewMode(mode);
+                                setOpen(false);
+                            }}
+                            className={`w-full flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${isActive
+                                    ? 'bg-orange-50 dark:bg-orange-500/15 text-orange-600 dark:text-orange-300'
+                                    : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                                }`}
+                        >
+                            <span className="flex items-center gap-2">
+                                <span className={`${isActive ? 'text-orange-500' : 'text-gray-400'}`}>{icon}</span>
+                                <span className="font-medium">{label}</span>
+                            </span>
+                            {isActive ? <span className="text-xs font-semibold">Active</span> : null}
+                        </button>
+                    );
+                })}
+            </div>
         </div>
     );
 }

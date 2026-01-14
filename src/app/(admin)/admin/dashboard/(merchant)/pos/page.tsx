@@ -588,9 +588,8 @@ export default function POSPage() {
         imageUrl: item.imageUrl,
       };
       setCartItems(prev => [...prev, newCartItem]);
-      showSuccess(t('pos.itemAdded'), item.name);
     }
-  }, [menuItems, t, showSuccess]);
+  }, [menuItems]);
 
   // Handle addon modal confirm
   const handleAddonConfirm = useCallback((addons: SelectedAddon[], notes: string, quantity: number) => {
@@ -618,8 +617,7 @@ export default function POSPage() {
     setShowAddonModal(false);
     setSelectedMenuItem(null);
     setSelectedMenuItemAddons([]);
-    showSuccess(t('pos.itemAdded'), selectedMenuItem.name);
-  }, [selectedMenuItem, t, showSuccess]);
+  }, [selectedMenuItem]);
 
   // Update cart item quantity
   const handleUpdateQuantity = useCallback((cartItemId: string, newQuantity: number) => {

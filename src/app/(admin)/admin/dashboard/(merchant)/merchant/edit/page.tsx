@@ -1888,7 +1888,7 @@ export default function EditMerchantPage() {
                     Delete PIN Protection
                   </h4>
                   <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    Set a 4-digit PIN to protect order deletion. When enabled, staff must enter this PIN before deleting any order.
+                    Set a 4-digit PIN to protect order deletion. When enabled, staff must enter this PIN before deleting void order.
                   </p>
                 </div>
               </div>

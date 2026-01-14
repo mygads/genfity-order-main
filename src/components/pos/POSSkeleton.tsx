@@ -21,18 +21,51 @@ export const POSSkeleton: React.FC = () => {
         <div className="flex items-center gap-4">
           <Skeleton className="w-9 h-9 rounded-lg bg-white/20" />
           <Skeleton className="w-32 h-6 rounded bg-white/20" />
+
+          {/* Offline/Sync indicator placeholder */}
+          <Skeleton className="hidden sm:block w-28 h-8 rounded-lg bg-white/20" />
         </div>
         <div className="flex items-center gap-2">
-          <Skeleton className="w-20 h-8 rounded-lg bg-white/20" />
+          {/* Grid controls */}
+          <Skeleton className="hidden md:block w-24 h-8 rounded-lg bg-white/20" />
           <Skeleton className="w-9 h-9 rounded-lg bg-white/20" />
           <Skeleton className="w-24 h-9 rounded-lg bg-white/20" />
+          <Skeleton className="hidden sm:block w-9 h-9 rounded-lg bg-white/20" />
         </div>
       </header>
 
       {/* Main Content Skeleton */}
       <div className="flex-1 flex min-h-0 overflow-hidden">
-        {/* Left Panel - Cart Skeleton */}
-        <div className="w-80 lg:w-96 shrink-0 flex flex-col overflow-hidden border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+        {/* Left Panel - Product Grid Skeleton (matches current POS layout) */}
+        <div className="flex-1 flex flex-col overflow-hidden bg-gray-100 dark:bg-gray-800 min-w-0">
+          {/* Search & Category Bar */}
+          <div className="shrink-0 p-4 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+            <Skeleton className="w-full h-10 rounded-lg mb-3" />
+            <div className="flex gap-2 overflow-hidden">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Skeleton key={i} className="w-20 h-8 rounded-full shrink-0" />
+              ))}
+            </div>
+          </div>
+
+          {/* Product Grid */}
+          <div className="flex-1 p-4 overflow-auto">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+              {Array.from({ length: 18 }).map((_, i) => (
+                <div key={i} className="bg-white dark:bg-gray-900 rounded-lg overflow-hidden shadow-sm">
+                  <Skeleton className="w-full aspect-square" />
+                  <div className="p-3">
+                    <Skeleton className="w-3/4 h-4 mb-2" />
+                    <Skeleton className="w-1/2 h-4" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Right Panel - Cart Skeleton (matches current POS layout) */}
+        <div className="w-80 lg:w-96 shrink-0 flex flex-col overflow-hidden border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
           {/* Cart Header */}
           <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
             <div className="flex items-center justify-between mb-3">
@@ -89,34 +122,6 @@ export const POSSkeleton: React.FC = () => {
             <div className="flex gap-2">
               <Skeleton className="w-20 h-10 rounded-lg" />
               <Skeleton className="flex-1 h-10 rounded-lg" />
-            </div>
-          </div>
-        </div>
-
-        {/* Right Panel - Product Grid Skeleton */}
-        <div className="flex-1 flex flex-col overflow-hidden bg-gray-100 dark:bg-gray-800">
-          {/* Search & Category Bar */}
-          <div className="shrink-0 p-4 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-            <Skeleton className="w-full h-10 rounded-lg mb-3" />
-            <div className="flex gap-2 overflow-hidden">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <Skeleton key={i} className="w-20 h-8 rounded-full shrink-0" />
-              ))}
-            </div>
-          </div>
-
-          {/* Product Grid */}
-          <div className="flex-1 p-4 overflow-auto">
-            <div className="grid grid-cols-5 gap-3">
-              {Array.from({ length: 15 }).map((_, i) => (
-                <div key={i} className="bg-white dark:bg-gray-900 rounded-lg overflow-hidden shadow-sm">
-                  <Skeleton className="w-full aspect-square" />
-                  <div className="p-3">
-                    <Skeleton className="w-3/4 h-4 mb-2" />
-                    <Skeleton className="w-1/2 h-4" />
-                  </div>
-                </div>
-              ))}
             </div>
           </div>
         </div>

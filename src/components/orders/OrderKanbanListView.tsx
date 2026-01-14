@@ -55,7 +55,6 @@ interface OrderKanbanListViewProps {
 }
 
 const ACTIVE_STATUSES: OrderStatus[] = [
-  'CANCELLED',
   'PENDING',
   'ACCEPTED',
   'IN_PROGRESS',

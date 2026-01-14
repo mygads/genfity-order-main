@@ -391,7 +391,8 @@ function OrderHistoryPageContent() {
           orderId={selectedOrderId}
           isOpen={isModalOpen}
           onClose={handleCloseModal}
-          onUpdate={handleCloseModal}
+          onUpdate={fetchOrders}
+          actionMode="history"
         />
       )}
 

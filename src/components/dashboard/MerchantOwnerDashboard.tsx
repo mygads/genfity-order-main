@@ -6,6 +6,7 @@ import { isStoreEffectivelyOpen, type OpeningHour } from '@/lib/utils/storeStatu
 import { formatFullOrderNumber } from '@/lib/utils/format';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { SetupProgress } from '@/lib/tutorial';
+import { RevenueChart } from '@/components/orders/OrderCharts';
 import {
   FaDollarSign,
   FaClock,
@@ -23,7 +24,6 @@ import {
   FaTrophy,
   FaMedal,
   FaAward,
-  FaBoxOpen
 } from 'react-icons/fa';
 
 type Merchant = {
@@ -79,6 +79,25 @@ interface MerchantOwnerDashboardProps {
     totalRevenue: number;
     todayRevenue: number;
   };
+  analytics?: {
+    range: {
+      startDate: string;
+      endDate: string;
+      timezone: string;
+    };
+    revenueByDate: Array<{
+      date: string;
+      revenue: number;
+      orderCount: number;
+      scheduledCount: number;
+      completedCount: number;
+    }>;
+    kpis: {
+      scheduledOrdersToday: number;
+      avgOrderValueToday: number;
+      projectedRevenueToday: number;
+    };
+  };
   recentOrders: Array<
     Order & {
       orderItems: Array<OrderItem & { menu: Menu }>;
@@ -116,6 +135,7 @@ interface MerchantOwnerDashboardProps {
 export default function MerchantOwnerDashboard({
   merchant,
   stats,
+  analytics,
   recentOrders,
   topSellingItems,
   orderStatusBreakdown,
@@ -283,6 +303,68 @@ export default function MerchantOwnerDashboard({
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('admin.dashboard.totalRevenue')}</p>
         </div>
       </div>
+
+      {/* Trends + Projection */}
+      {analytics?.revenueByDate?.length ? (
+        <div className="grid gap-4 lg:grid-cols-3">
+          <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 lg:col-span-2">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Performance Trend</h3>
+                <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                  Last 14 days • {analytics.range.timezone}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Scheduled today</p>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">{analytics.kpis.scheduledOrdersToday}</p>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <RevenueChart
+                data={analytics.revenueByDate.map((d) => ({
+                  date: d.date,
+                  revenue: d.revenue,
+                  orderCount: d.orderCount,
+                }))}
+                currency={merchant.currency || 'AUD'}
+              />
+            </div>
+          </div>
+
+          <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Today Projection</h3>
+            <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">If current pace continues</p>
+
+            <div className="mt-4 space-y-4">
+              <div className="rounded-lg bg-gray-50 dark:bg-gray-800/50 p-3">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Avg order value (completed)</p>
+                <p className="mt-1 text-lg font-bold text-gray-900 dark:text-white">
+                  {formatCurrency(analytics.kpis.avgOrderValueToday)}
+                </p>
+              </div>
+
+              <div className="rounded-lg bg-emerald-50 dark:bg-emerald-900/10 p-3 border border-emerald-100 dark:border-emerald-900/30">
+                <p className="text-xs text-emerald-700/80 dark:text-emerald-300/80">Projected revenue (today)</p>
+                <p className="mt-1 text-xl font-bold text-emerald-800 dark:text-emerald-200">
+                  {formatCurrency(analytics.kpis.projectedRevenueToday)}
+                </p>
+                <p className="mt-1 text-[11px] text-emerald-700/70 dark:text-emerald-300/70">Current: {formatCurrency(stats.todayRevenue)}</p>
+              </div>
+
+              <div className="rounded-lg bg-amber-50 dark:bg-amber-900/10 p-3 border border-amber-100 dark:border-amber-900/30">
+                <p className="text-xs text-amber-800/80 dark:text-amber-300/80">Pending orders</p>
+                <p className="mt-1 text-xl font-bold text-amber-900 dark:text-amber-200">{stats.pendingOrders}</p>
+                <p className="mt-1 text-[11px] text-amber-800/70 dark:text-amber-300/70">Quick action: open Kanban</p>
+                <Link href="/admin/dashboard/orders" className="mt-2 inline-flex text-xs font-semibold text-amber-700 hover:text-amber-800 dark:text-amber-300 dark:hover:text-amber-200">
+                  Go to Orders →
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* Secondary Stats Row */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">

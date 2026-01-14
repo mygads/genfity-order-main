@@ -21,6 +21,8 @@ import {
   FaCheck,
   FaReceipt,
   FaPrint,
+  FaToggleOn,
+  FaToggleOff,
   FaPercent,
   FaDollarSign,
   FaExchangeAlt,
@@ -126,6 +128,11 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
   const { t, locale } = useTranslation();
   const { merchant } = useMerchant();
 
+  const getAutoPrintStorageKey = useCallback(() => {
+    const merchantId = merchant?.id ? String(merchant.id) : '';
+    return merchantId ? `pos_auto_print_receipt:${merchantId}` : 'pos_auto_print_receipt';
+  }, [merchant?.id]);
+
   // State
   const [paymentMethod, setPaymentMethod] = useState<POSPaymentMethod>('CASH_ON_COUNTER');
   const [amount, setAmount] = useState<number>(totalAmount);
@@ -142,7 +149,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
   const [showDiscount, setShowDiscount] = useState(false);
 
   // Print receipt option
-  const [printReceipt, setPrintReceipt] = useState(true);
+  const [printReceipt, setPrintReceipt] = useState(false);
 
   // Calculate discount amount
   const discountAmount = useMemo(() => {
@@ -170,9 +177,25 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
       setDiscountType('percentage');
       setDiscountValue(0);
       setShowDiscount(false);
-      setPrintReceipt(true);
+      try {
+        if (typeof window !== 'undefined') {
+          const stored = localStorage.getItem(getAutoPrintStorageKey());
+          setPrintReceipt(stored === 'true');
+        }
+      } catch {
+        setPrintReceipt(false);
+      }
     }
-  }, [isOpen, totalAmount]);
+  }, [isOpen, totalAmount, getAutoPrintStorageKey]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(getAutoPrintStorageKey(), String(printReceipt));
+    } catch {
+      // ignore storage failures
+    }
+  }, [printReceipt, getAutoPrintStorageKey]);
 
   // Update amount when final total changes
   useEffect(() => {
@@ -695,16 +718,25 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
         <div className="shrink-0 p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
           {/* Print Receipt Toggle */}
           <div className="flex items-center justify-between mb-4 px-1">
-            <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={printReceipt}
-                onChange={(e) => setPrintReceipt(e.target.checked)}
-                className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-orange-500 focus:ring-orange-500"
-              />
-              <FaPrint className="w-4 h-4" />
-              <span>{t('pos.payment.printReceipt') || 'Print Receipt'}</span>
-            </label>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setPrintReceipt((v) => !v)}
+                className="inline-flex items-center justify-center rounded-lg p-2 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                aria-label={t('pos.payment.printReceipt') || 'Print Receipt'}
+                title={t('pos.payment.printReceipt') || 'Print Receipt'}
+              >
+                {printReceipt ? (
+                  <FaToggleOn className="w-7 h-7 text-orange-500" />
+                ) : (
+                  <FaToggleOff className="w-7 h-7 text-gray-400" />
+                )}
+              </button>
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                <FaPrint className="w-4 h-4" />
+                <span>{t('pos.payment.printReceipt') || 'Print Receipt'}</span>
+              </div>
+            </div>
 
             {/* Manual Print Button */}
             {orderDetails && merchantInfo && (

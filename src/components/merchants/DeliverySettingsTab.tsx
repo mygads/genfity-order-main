@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { BoxIcon, DownloadIcon, FileIcon, PlusIcon, PencilIcon, TrashBinIcon } from '@/icons';
+import IconToggle from '@/components/ui/IconToggle';
 
 import type { TranslationKeys } from '@/lib/i18n';
 
@@ -562,27 +563,25 @@ export default function DeliverySettingsTab({
             />
           </label>
 
-          <label className="flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900">
-            <input
-              type="checkbox"
-              className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 dark:border-gray-700"
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900">
+            <IconToggle
               checked={formData.enforceDeliveryZones !== false}
-              onChange={(e) =>
+              onChange={(next) =>
                 setFormData((prev) => ({
                   ...prev,
-                  enforceDeliveryZones: e.target.checked,
+                  enforceDeliveryZones: next,
                 }))
               }
+              label={keyOrFallback('admin.merchant.enforceDeliveryZones', 'Enforce Delivery Zones', t)}
+              description={keyOrFallback(
+                'admin.merchant.enforceDeliveryZonesDesc',
+                'If enabled, delivery is only allowed inside configured zones.',
+                t,
+              )}
+              size="sm"
+              className="w-full"
             />
-            <div>
-              <div className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                {keyOrFallback('admin.merchant.enforceDeliveryZones', 'Enforce Delivery Zones', t)}
-              </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">
-                {keyOrFallback('admin.merchant.enforceDeliveryZonesDesc', 'If enabled, delivery is only allowed inside configured zones.', t)}
-              </div>
-            </div>
-          </label>
+          </div>
 
           <label className="block">
             <span className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -711,15 +710,15 @@ export default function DeliverySettingsTab({
               {keyOrFallback('admin.merchant.importGeoJson' as TranslationKeys, 'Import', t)}
             </button>
 
-            <label className="hidden items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 sm:flex">
-              <input
-                type="checkbox"
-                className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 dark:border-gray-700"
+            <div className="hidden items-center rounded-lg border border-gray-200 bg-white px-3 py-2 dark:border-gray-800 dark:bg-gray-900 sm:flex">
+              <IconToggle
                 checked={replaceOnImport}
-                onChange={(e) => setReplaceOnImport(e.target.checked)}
+                onChange={setReplaceOnImport}
+                label={keyOrFallback('admin.merchant.replaceExistingZones' as TranslationKeys, 'Replace existing', t)}
+                size="sm"
+                className="items-center gap-2"
               />
-              {keyOrFallback('admin.merchant.replaceExistingZones' as TranslationKeys, 'Replace existing', t)}
-            </label>
+            </div>
 
             <button
               type="button"
@@ -938,7 +937,7 @@ export default function DeliverySettingsTab({
       </div>
 
       {showPreviewModal && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+        <div className="fixed inset-0 z-9999 flex items-center justify-center">
           <div
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => setShowPreviewModal(false)}
@@ -1054,22 +1053,16 @@ export default function DeliverySettingsTab({
                   </label>
                 )}
 
-                <label className="flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 dark:border-gray-700"
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900">
+                  <IconToggle
                     checked={zoneActive}
-                    onChange={(e) => setZoneActive(e.target.checked)}
+                    onChange={setZoneActive}
+                    label={keyOrFallback('admin.merchant.active', 'Active', t)}
+                    description={keyOrFallback('admin.merchant.activeDesc', 'Inactive zones are ignored for delivery validation.', t)}
+                    size="sm"
+                    className="w-full"
                   />
-                  <div>
-                    <div className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                      {keyOrFallback('admin.merchant.active', 'Active', t)}
-                    </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                      {keyOrFallback('admin.merchant.activeDesc', 'Inactive zones are ignored for delivery validation.', t)}
-                    </div>
-                  </div>
-                </label>
+                </div>
 
                 {zoneType === 'POLYGON' && (
                   <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">

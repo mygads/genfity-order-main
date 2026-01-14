@@ -50,6 +50,7 @@ interface OrderDetailModalProps {
   initialOrder?: OrderWithDetails | null;
   currency?: string;
   allowPaymentRecording?: boolean;
+  actionMode?: 'default' | 'history';
 }
 
 export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
@@ -60,6 +61,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   initialOrder = null,
   currency,
   allowPaymentRecording = true,
+  actionMode = 'default',
 }) => {
   const [order, setOrder] = useState<OrderWithDetails | null>(initialOrder);
   const [loading, setLoading] = useState(!initialOrder);
@@ -95,6 +97,9 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   const { merchant } = useMerchant();
 
   const isTableNumberEnabled = merchant?.requireTableNumberForDineIn === true;
+
+  const shouldShowFooterActions = actionMode !== 'history';
+  const shouldShowPrintOnly = actionMode === 'history';
 
   useEffect(() => {
     if (!isOpen) {
@@ -587,7 +592,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-lg max-h-[90vh] overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl dark:border-gray-800 dark:bg-gray-900"
+        className="relative w-full max-w-lg max-h-[90vh] overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl dark:border-gray-800 dark:bg-gray-900 flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {loading ? (
@@ -698,7 +703,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
             </div>
 
             {/* Scrollable Content */}
-            <div className="overflow-y-auto px-5 py-4" style={{ maxHeight: 'calc(90vh - 160px)' }}>
+            <div className="flex-1 overflow-y-auto px-5 py-4">
               {/* Payment Summary */}
               {order.payment && (
                 <div className="mb-4 flex items-center justify-between rounded-lg bg-gray-50 dark:bg-gray-800 px-4 py-3">
@@ -1126,99 +1131,112 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                 </div>
               </div>
 
-              {/* Actions */}
-              <div className="space-y-2">
-                {/* Payment Actions */}
-                {allowPaymentRecording ? (
-                  (!order.payment || order.payment.status === 'PENDING') ? (
-                    (order.payment?.paymentMethod === 'CASH_ON_DELIVERY' && (order as any).orderType === 'DELIVERY') ? (
-                      <button
-                        onClick={handleConfirmCashOnDelivery}
-                        disabled={updating}
-                        className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-success-500 text-sm font-medium text-white hover:bg-success-600 disabled:opacity-50"
-                      >
-                        <FaMoneyBillWave className="h-4 w-4" />
-                        Confirm Cash Received
-                      </button>
+            </div>
+
+            {/* Fixed Footer Actions */}
+            <div className="shrink-0 border-t border-gray-200 dark:border-gray-800 bg-white/95 dark:bg-gray-900/95 px-5 py-4">
+              {shouldShowPrintOnly ? (
+                <button
+                  onClick={handlePrintReceipt}
+                  className="flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                  <FaPrint className="h-4 w-4" />
+                  Print Receipt
+                </button>
+              ) : shouldShowFooterActions ? (
+                <div className="space-y-2">
+                  {/* Payment Actions */}
+                  {allowPaymentRecording ? (
+                    (!order.payment || order.payment.status === 'PENDING') ? (
+                      (order.payment?.paymentMethod === 'CASH_ON_DELIVERY' && (order as any).orderType === 'DELIVERY') ? (
+                        <button
+                          onClick={handleConfirmCashOnDelivery}
+                          disabled={updating}
+                          className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-success-500 text-sm font-medium text-white hover:bg-success-600 disabled:opacity-50"
+                        >
+                          <FaMoneyBillWave className="h-4 w-4" />
+                          Confirm Cash Received
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => setShowPaymentModal(true)}
+                          disabled={updating}
+                          className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-success-500 text-sm font-medium text-white hover:bg-success-600 disabled:opacity-50"
+                        >
+                          <FaMoneyBillWave className="h-4 w-4" />
+                          Record Payment
+                        </button>
+                      )
                     ) : (
                       <button
-                        onClick={() => setShowPaymentModal(true)}
-                        disabled={updating}
-                        className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-success-500 text-sm font-medium text-white hover:bg-success-600 disabled:opacity-50"
+                        onClick={handlePrintReceipt}
+                        className="flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
                       >
-                        <FaMoneyBillWave className="h-4 w-4" />
-                        Record Payment
+                        <FaPrint className="h-4 w-4" />
+                        Print Receipt
                       </button>
                     )
                   ) : (
-                    <button
-                      onClick={handlePrintReceipt}
-                      className="flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-                    >
-                      <FaPrint className="h-4 w-4" />
-                      Print Receipt
-                    </button>
-                  )
-                ) : (
-                  // Kitchen view: no payment recording. Still allow receipt printing when already paid.
-                  (order.payment && order.payment.status !== 'PENDING') ? (
-                    <button
-                      onClick={handlePrintReceipt}
-                      className="flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-                    >
-                      <FaPrint className="h-4 w-4" />
-                      Print Receipt
-                    </button>
-                  ) : null
-                )}
+                    // Kitchen view: no payment recording. Still allow receipt printing when already paid.
+                    (order.payment && order.payment.status !== 'PENDING') ? (
+                      <button
+                        onClick={handlePrintReceipt}
+                        className="flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                      >
+                        <FaPrint className="h-4 w-4" />
+                        Print Receipt
+                      </button>
+                    ) : null
+                  )}
 
-                {/* Status Actions */}
-                {order.status === 'READY' ? (
-                  <button
-                    onClick={() => handleStatusUpdate('COMPLETED' as OrderStatus)}
-                    disabled={updating}
-                    className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-success-500 text-sm font-medium text-white hover:bg-success-600 disabled:opacity-50"
-                  >
-                    {updating ? (
-                      <FaSpinner className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <>
-                        <FaCheck className="h-4 w-4" />
-                        Mark as Completed
-                      </>
-                    )}
-                  </button>
-                ) : (
-                  getNextPossibleStatuses(order.status as OrderStatus).length > 0 && (
-                    <div className="flex gap-2">
-                      {getNextPossibleStatuses(order.status as OrderStatus).map(status => {
-                        const isCancelled = status === 'CANCELLED';
-                        const isCompleted = status === 'COMPLETED';
+                  {/* Status Actions */}
+                  {order.status === 'READY' ? (
+                    <button
+                      onClick={() => handleStatusUpdate('COMPLETED' as OrderStatus)}
+                      disabled={updating}
+                      className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-success-500 text-sm font-medium text-white hover:bg-success-600 disabled:opacity-50"
+                    >
+                      {updating ? (
+                        <FaSpinner className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>
+                          <FaCheck className="h-4 w-4" />
+                          Mark as Completed
+                        </>
+                      )}
+                    </button>
+                  ) : (
+                    getNextPossibleStatuses(order.status as OrderStatus).length > 0 && (
+                      <div className="flex gap-2">
+                        {getNextPossibleStatuses(order.status as OrderStatus).map(status => {
+                          const isCancelled = status === 'CANCELLED';
+                          const isCompleted = status === 'COMPLETED';
 
-                        return (
-                          <button
-                            key={status}
-                            onClick={() => handleStatusUpdate(status)}
-                            disabled={updating}
-                            className={`flex h-10 flex-1 items-center justify-center gap-2 rounded-lg text-sm font-medium disabled:opacity-50 ${isCancelled
-                              ? 'bg-error-500 text-white hover:bg-error-600'
-                              : isCompleted
-                                ? 'bg-success-500 text-white hover:bg-success-600'
-                                : 'bg-primary-500 text-white hover:bg-primary-600'
-                              }`}
-                          >
-                            {updating ? (
-                              <FaSpinner className="h-4 w-4 animate-spin" />
-                            ) : (
-                              ORDER_STATUS_COLORS[status as keyof typeof ORDER_STATUS_COLORS].label
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )
-                )}
-              </div>
+                          return (
+                            <button
+                              key={status}
+                              onClick={() => handleStatusUpdate(status)}
+                              disabled={updating}
+                              className={`flex h-10 flex-1 items-center justify-center gap-2 rounded-lg text-sm font-medium disabled:opacity-50 ${isCancelled
+                                ? 'bg-error-500 text-white hover:bg-error-600'
+                                : isCompleted
+                                  ? 'bg-success-500 text-white hover:bg-success-600'
+                                  : 'bg-primary-500 text-white hover:bg-primary-600'
+                                }`}
+                            >
+                              {updating ? (
+                                <FaSpinner className="h-4 w-4 animate-spin" />
+                              ) : (
+                                ORDER_STATUS_COLORS[status as keyof typeof ORDER_STATUS_COLORS].label
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )
+                  )}
+                </div>
+              ) : null}
             </div>
 
             {/* Payment Modal */}

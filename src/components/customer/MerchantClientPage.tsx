@@ -11,7 +11,7 @@ import PoweredByFooter from '@/components/common/PoweredByFooter';
 import { useStoreStatus } from '@/hooks/useStoreStatus';
 import { useToast } from '@/hooks/useToast';
 import { useTranslation, tOr } from '@/lib/i18n/useTranslation';
-import { FaCalendarAlt, FaMotorcycle, FaShoppingBag, FaUtensils } from 'react-icons/fa';
+import { FaCalendarAlt } from 'react-icons/fa';
 
 interface OpeningHour {
     id: string;
@@ -65,7 +65,6 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
     const { t } = useTranslation();
     const [showOutletInfo, setShowOutletInfo] = useState(false);
     const [showLanguageModal, setShowLanguageModal] = useState(false);
-    const [showScheduledModal, setShowScheduledModal] = useState(false);
 
     // Use real-time store status hook (fetches from API, not cached ISR data)
     const {
@@ -132,17 +131,6 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                 duration: 4000
             });
         }
-    };
-
-    const handleScheduledOrderStart = () => {
-        setShowScheduledModal(true);
-    };
-
-    const handleScheduledModeSelect = (selectedMode: 'dinein' | 'takeaway') => {
-        // Scheduled orders are still dine-in/takeaway; we just carry a flag to pre-enable scheduling in checkout.
-        localStorage.setItem(`mode_${merchantCode}`, selectedMode);
-        setShowScheduledModal(false);
-        router.replace(`/${merchantCode}/order?mode=${selectedMode}&scheduled=1`);
     };
 
     const handleReservationSelect = () => {
@@ -354,20 +342,18 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                                 </button>
                             )}
 
-                            {/* Schedule Order Button - placed below Delivery, same style as other modes */}
-                            {isScheduledOrderEnabled && (isDineInEnabled || isTakeawayEnabled) && (
-                                <button
-                                    id="mode-scheduled"
-                                    onClick={handleScheduledOrderStart}
-                                    className={`w-full h-12 border rounded-lg text-base font-medium transition-colors duration-200 shadow-lg flex items-center justify-center gap-2 ${storeOpen
-                                        ? 'border-gray-300 bg-white text-gray-900 hover:bg-gray-50'
-                                        : 'border-gray-200 text-gray-700 bg-gray-100'
-                                        }`}
-                                >
-                                    <span>{tOr(t, 'customer.mode.scheduleOrder', 'Schedule Order')}</span>
-                                </button>
+                            {/* Scheduled order capability badge (below sales modes, above reservation CTA) */}
+                            {isScheduledOrderEnabled && (
+                                <div className="mt-3 flex justify-center">
+                                    <span className="inline-flex items-center gap-2 rounded-full border border-gray-200 px-3 py-1 text-xs font-medium text-gray-700">
+                                        <FaCalendarAlt className="h-3 w-3" />
+                                        <span>this merchant can scheduled order</span>
+                                    </span>
+                                </div>
                             )}
                         </div>
+
+                        
                     </div>
                 </div>
             )}
@@ -440,66 +426,6 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                     <LanguageToggle className="shadow-lg border border-gray-200" />
                 </div>
             </div>
-
-            {/* Scheduled Order Mode Picker (Bottom Sheet) */}
-            {showScheduledModal && (
-                <>
-                    <div
-                        className="fixed inset-0 bg-black/50 z-[110]"
-                        onClick={() => setShowScheduledModal(false)}
-                    />
-                    <div className="fixed inset-x-0 bottom-0 z-[111] flex justify-center animate-slideUp">
-                        <div className="w-full max-w-[500px] bg-white rounded-t-2xl shadow-2xl">
-                            <div className="px-4 py-3 border-b border-gray-200">
-                                <h2 className="text-lg font-semibold text-gray-900" style={{ margin: 0, lineHeight: 'normal' }}>
-                                    {tOr(t, 'customer.scheduledOrders.chooseModeTitle', 'Schedule Order')}
-                                </h2>
-                                <p className="text-xs text-gray-500 mt-1">
-                                    {tOr(t, 'customer.scheduledOrders.chooseModeDesc', 'Choose how you want to order for later today.')}
-                                </p>
-                            </div>
-
-                            <div className="px-4 py-4 space-y-3">
-                                {isTakeawayEnabled && (
-                                    <button
-                                        type="button"
-                                        onClick={() => handleScheduledModeSelect('takeaway')}
-                                        className="w-full h-12 border rounded-lg text-base font-medium transition-colors duration-200 shadow-lg flex items-center justify-center gap-2 border-gray-300 bg-white text-gray-900 hover:bg-gray-50"
-                                    >
-                                        <span>{takeawayLabel}</span>
-                                    </button>
-                                )}
-
-                                {isDineInEnabled && (
-                                    <button
-                                        type="button"
-                                        onClick={() => handleScheduledModeSelect('dinein')}
-                                        className="w-full h-12 border rounded-lg text-base font-medium transition-colors duration-200 shadow-lg flex items-center justify-center gap-2 border-gray-300 bg-white text-gray-900 hover:bg-gray-50"
-                                    >
-                                        <span>{dineInLabel}</span>
-                                    </button>
-                                )}
-
-                                <button
-                                    type="button"
-                                    onClick={() => setShowScheduledModal(false)}
-                                    className="w-full h-12 border rounded-lg text-base font-medium transition-colors duration-200 flex items-center justify-center border-gray-200 bg-gray-100 text-gray-700 hover:bg-gray-200"
-                                >
-                                    {tOr(t, 'common.cancel', 'Cancel')}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <style jsx>{`
-                        @keyframes slideUp {
-                            from { transform: translateY(100%); }
-                            to { transform: translateY(0); }
-                        }
-                        .animate-slideUp { animation: slideUp 250ms ease-out forwards; }
-                    `}</style>
-                </>
-            )}
         </>
     );
 }

@@ -118,23 +118,24 @@ export default function HorizontalMenuSection({
                         return (
                             <div
                                 key={item.id}
-                                className={`shrink-0 bg-white px-4 pt-4 pb-3 ${isAvailable ? '' : 'opacity-60'}`}
+                                className={`shrink-0 bg-white p-3 ${isAvailable ? '' : 'opacity-60'}`}
                                 style={{
-                                    width: '210px',
+                                    width: '170px',
                                     borderRadius: '10px',
                                     boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)',
                                     borderBottom: isInCart ? '4px solid rgb(240, 90, 40)' : 'none',
                                 }}
                             >
-                                {/* Image Container - 178px square with lazy loading */}
+                                {/* Image Container - match grid-2 card sizing */}
                                 <div
                                     onClick={() => isAvailable && onItemClick?.(item)}
                                     className={isAvailable ? 'cursor-pointer' : 'cursor-not-allowed'}
                                     style={{
                                         position: 'relative',
-                                        width: '178px',
-                                        height: '178px',
-                                        borderRadius: '10px',
+                                        width: '100%',
+                                        aspectRatio: '1',
+                                        maxHeight: '140px',
+                                        borderRadius: '8px',
                                         overflow: 'hidden',
                                         backgroundColor: '#f3f4f6',
                                     }}
@@ -143,7 +144,7 @@ export default function HorizontalMenuSection({
                                         src={item.imageThumbUrl ?? item.imageUrl}
                                         alt={item.name}
                                         className="object-cover"
-                                        sizes="178px"
+                                        sizes="140px"
                                         rootMargin="400px"
                                         scrollDirection="horizontal"
                                         priority={index < 2}

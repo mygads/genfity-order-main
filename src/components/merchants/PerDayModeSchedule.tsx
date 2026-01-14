@@ -12,6 +12,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/useToast";
 import { FaCopy, FaMagic } from "react-icons/fa";
+import IconToggle from "@/components/ui/IconToggle";
 
 interface ModeSchedule {
   id?: string;
@@ -258,15 +259,15 @@ export default function PerDayModeSchedule({ token, embedded = false }: PerDayMo
 
             return (
               <div key={dayIndex} className="flex items-center gap-2">
-                <label className="flex items-center gap-2 w-24">
-                  <input
-                    type="checkbox"
+                <div className="w-24">
+                  <IconToggle
                     checked={schedule.isActive}
-                    onChange={(e) => updateSchedule(mode, dayIndex, 'isActive', e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+                    onChange={(next) => updateSchedule(mode, dayIndex, 'isActive', next)}
+                    label={dayName.slice(0, 3)}
+                    size="sm"
+                    className="items-center gap-2"
                   />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">{dayName.slice(0, 3)}</span>
-                </label>
+                </div>
                 <input
                   type="time"
                   value={schedule.startTime}
@@ -328,22 +329,20 @@ export default function PerDayModeSchedule({ token, embedded = false }: PerDayMo
             Override global mode schedules with day-specific times
           </p>
         </div>
-        <label className="relative inline-flex cursor-pointer items-center">
-          <input
-            type="checkbox"
-            checked={enablePerDaySchedule}
-            onChange={(e) => {
-              setEnablePerDaySchedule(e.target.checked);
-              if (e.target.checked && schedules.length === 0) {
-                initializeSchedules('DINE_IN');
-                initializeSchedules('TAKEAWAY');
-                initializeSchedules('DELIVERY');
-              }
-            }}
-            className="peer sr-only"
-          />
-          <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
-        </label>
+        <IconToggle
+          checked={enablePerDaySchedule}
+          onChange={(next) => {
+            setEnablePerDaySchedule(next);
+            if (next && schedules.length === 0) {
+              initializeSchedules('DINE_IN');
+              initializeSchedules('TAKEAWAY');
+              initializeSchedules('DELIVERY');
+            }
+          }}
+          label="Enable Per-Day Schedules"
+          ariaLabel="Enable per-day schedules"
+          variant="iconOnly"
+        />
       </div>
 
       {/* Schedule Tables */}
@@ -408,7 +407,7 @@ export default function PerDayModeSchedule({ token, embedded = false }: PerDayMo
             {/* Day Checkboxes */}
             <div className="grid grid-cols-2 gap-2 mb-4">
               {DAYS.map((dayName, dayIndex) => (
-                <label
+                <div
                   key={dayIndex}
                   className={`flex items-center gap-2 p-2 rounded border cursor-pointer ${dayIndex === copySource.dayOfWeek
                       ? 'bg-gray-100 border-gray-300 cursor-not-allowed opacity-50 dark:bg-gray-800'
@@ -417,15 +416,17 @@ export default function PerDayModeSchedule({ token, embedded = false }: PerDayMo
                         : 'border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800'
                     }`}
                 >
-                  <input
-                    type="checkbox"
+                  <IconToggle
                     checked={copyTargetDays.includes(dayIndex)}
                     disabled={dayIndex === copySource.dayOfWeek}
-                    onChange={() => toggleCopyTargetDay(dayIndex)}
-                    className="h-4 w-4 rounded border-gray-300 text-brand-500"
+                    onChange={(_) => toggleCopyTargetDay(dayIndex)}
+                    label={dayName}
+                    ariaLabel={`Select ${dayName}`}
+                    variant="iconOnly"
+                    size="sm"
                   />
                   <span className="text-sm">{dayName}</span>
-                </label>
+                </div>
               ))}
             </div>
 
