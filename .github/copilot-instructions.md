@@ -3,11 +3,69 @@
 ## Overview
 This document provides comprehensive instructions for AI coding agents working on the GENFITY online ordering project. GENFITY is a comprehensive restaurant management and online ordering system built with Next.js, TypeScript, and PostgreSQL. The following guidelines cover technical constraints, authentication, BigInt serialization, route organization, currency handling, Prisma ORM usage, database schema relationships, file structure, UI/UX standards, icon usage, database update workflow, development workflow, and code quality standards.
 
+## CRITICAL: Repository Familiarization (Read-First)
+This codebase is large and role-driven. Before changing or creating anything, the agent MUST understand which layer and conventions apply.
+
+### Mandatory "read the whole file" rule
+- If you are editing an existing file: read the entire file first (not just a snippet) to learn its patterns, helpers, types, and styling conventions.
+- If you are creating a new page/component: read the closest existing page/component in the same feature area (and its imported subcomponents) and match its structure and styling.
+- If you are adding a new admin page: use the existing admin dashboard layout patterns and copy the visual/UX style from the merchant revenue page as the baseline.
+  - Reference implementation: `/src/app/(admin)/admin/dashboard/(merchant)/revenue/page.tsx`
+
+### High-level architecture map (authoritative entry points)
+- **App Router groups**:
+  - Admin dashboard: `/src/app/(admin)/admin/dashboard/**`
+  - Customer: `/src/app/(customer)/**`
+  - Driver: `/src/app/(driver)/**`
+  - Influencer: `/src/app/(influencer)/**`
+- **Admin dashboard shell**:
+  - Layout: `/src/app/(admin)/admin/dashboard/layout.tsx`
+  - Sidebar: `/src/layout/AppSidebar.tsx` (role + permission driven, translated)
+  - Session + permission UX guards: `/src/components/auth/SessionGuard.tsx`, `/src/components/auth/PermissionGuard.tsx`
+- **Permissions**:
+  - Permission keys + path mapping + API mapping: `/src/lib/constants/permissions.ts`
+- **Auth**:
+  - API middleware wrappers (enforced security boundary): `/src/lib/middleware/auth.ts`
+  - Server component auth (cookie-based): `/src/lib/auth/serverAuth.ts`
+  - Client admin auth storage: `/src/lib/utils/adminAuth.ts`
+  - Client driver auth storage: `/src/lib/utils/driverAuth.ts`
+  - Client customer auth storage (also cart/favorites/etc): `/src/lib/utils/localStorage.ts`
+  - Client hook: `/src/hooks/useAuth.ts`
+  - Auth-aware fetch helper: `/src/lib/utils/apiClient.ts`
+- **Shared API building blocks**:
+  - Error codes + `CustomError` subclasses: `/src/lib/constants/errors.ts`
+  - JWT helpers (BigInt-safe payloads): `/src/lib/utils/jwtManager.ts`
+  - Route handler params normalization: `/src/lib/utils/routeContext.ts`
+- **Data layer**:
+  - Prisma client: `/src/lib/db/client.ts`
+  - Repository pattern: `/src/lib/repositories/*`
+  - Service layer: `/src/lib/services/*`
+  - JSON-safe serialization (BigInt/Decimal/Date): `/src/lib/utils/serializer.ts`
+- **i18n / Dual language**:
+  - Hook: `/src/lib/i18n/useTranslation.ts`
+  - Providers: `/src/context/LanguageContext.tsx`
+  - Translations: `/src/lib/i18n/translations/en.ts`, `/src/lib/i18n/translations/id.ts`
+- **Formatting utilities (use these; do not reinvent)**:
+  - Currency/date/time/phone formatting: `/src/lib/utils/format.ts`
+  - Country/currency/timezone config: `/src/lib/constants/location.ts`
+  - Input validation incl. phone normalization: `/src/lib/utils/validators.ts`
+  - Design tokens (use with caution; note deprecated helpers): `/src/lib/design-system.ts`
+
+### "Do not change everything" rule (precision over refactor)
+- Prefer minimal diffs. Do not rename files/exports, reorder large blocks, or reformat unrelated code.
+- If a change would affect multiple features, STOP and ask for confirmation unless explicitly requested.
+- Preserve existing behavior unless the user explicitly requests changes.
+
+### Cleanup rule (only what you touch)
+- If you modify a file and introduce unused imports/variables/helpers, remove them.
+- Do NOT delete existing exports/files just because they look unused unless you have verified (via usage search) that they are truly unused and the user asked for cleanup.
+
 ## Technical Constraints & Rules
 
 ### Security Requirements:
 - **Password Hashing**: bcryptjs with >=10 rounds, never return password_hash
 - **JWT**: Include session ID in payload, validate against database
+- **Anti-bot (optional)**: Turnstile verification is enforced only when configured (`/src/lib/utils/turnstile.ts`)
 - **Database**: Parameterized queries only, no string concatenation
 - **Secrets**: Never hardcode, always use environment variables
 - **Error Messages**: User-friendly, never expose internal details
@@ -80,6 +138,31 @@ const adminUser = await requireSuperAdmin();
 - **API Routes**: `withAuth()`, `withMerchant()`, `withMerchantOwner()`, `withSuperAdmin()`, `withCustomer()`
 - **Server Components**: `getAuthUser()`, `requireAuth()`, `requireRole()`, `requireMerchant()`, `requireSuperAdmin()`
 - **Location**: `/src/lib/middleware/auth.ts` and `/src/lib/auth/serverAuth.ts`
+
+### Role + permission model (Admin UI)
+- **Roles** (high-level): `SUPER_ADMIN`, `MERCHANT_OWNER`, `MERCHANT_STAFF` (plus separate customer/influencer systems).
+- **Staff permissions** are separate from role:
+  - Sidebar visibility uses permission keys in `/src/lib/constants/permissions.ts`.
+  - Client-side guard blocks staff from restricted pages (UX only): `/src/components/auth/PermissionGuard.tsx`.
+  - API routes MUST enforce permissions using `withMerchant()` which internally uses permission checks.
+
+### Client auth conventions (Admin)
+- Admin auth tokens/metadata live in `localStorage` and a non-httpOnly cookie (`auth_token`) for server-side cookie auth.
+  - Source of truth helpers: `/src/lib/utils/adminAuth.ts`.
+- Prefer using `/src/lib/utils/apiClient.ts` (`fetchWithAuth`, `fetchJsonWithAuth`) for admin fetches unless a page already uses `fetch` directly.
+
+### Client auth conventions (Customer / Driver / Influencer)
+- **Customer**:
+  - Uses `/src/lib/utils/localStorage.ts` helpers (`getCustomerAuth`, `saveCustomerAuth`, `getCustomerToken`).
+  - Storage key: `genfity_customer_auth`.
+  - Customer pages broadcast auth state changes via the `customerAuthChange` event.
+- **Driver**:
+  - Uses `/src/lib/utils/driverAuth.ts` helpers (`getDriverAuth`, `saveDriverAuth`, `getDriverToken`).
+  - Storage key: `genfity_driver_auth`.
+  - Also sets a driver-only cookie `driver_auth_token` scoped to `path=/driver` for middleware/server-side checks.
+- **Influencer**:
+  - Influencer UI currently stores tokens/data directly in `localStorage` under `influencerAccessToken`, `influencerRefreshToken`, `influencerData`.
+  - Protected influencer pages fetch `GET /api/influencer/auth/me` with `Authorization: Bearer <token>` (see `/src/app/(influencer)/influencer/layout.tsx`).
 
 ---
 
@@ -155,6 +238,11 @@ src/app/
     └── public/
 ```
 
+### IMPORTANT: API routes live under App Router
+- API routes in this repo are implemented in `/src/app/api/**/route.ts`.
+- Always wrap protected routes with middleware (`withMerchant`, `withSuperAdmin`, etc.) from `/src/lib/middleware/auth.ts`.
+- Prefer throwing `CustomError` subclasses and letting middleware return standardized errors via `/src/lib/middleware/errorHandler.ts`.
+
 ### Rules for Route Groups:
 - **Super Admin pages**: `(admin)/admin/dashboard/(superadmin)/`
 - **Merchant pages**: `(admin)/admin/dashboard/(merchant)/`
@@ -175,23 +263,28 @@ src/app/
 ### ALWAYS Use Merchant Currency Settings
 **NEVER** hardcode currency. Always fetch from merchant table.
 
-```typescript
-// Fetch merchant currency
-const merchant = await prisma.merchant.findUnique({
-  where: { id: merchantId },
-  select: { currency: true }, // e.g., "AUD", "IDR", "USD"
-});
+### Use the shared formatter (REQUIRED)
+Use `/src/lib/utils/format.ts`:
 
-// Use merchant.currency in all price displays
-const formattedPrice = new Intl.NumberFormat('en-AU', {
-  style: 'currency',
-  currency: merchant.currency, // Dynamic
-}).format(price);
+```typescript
+import { formatCurrency, getCurrencySymbol } from '@/lib/utils/format';
+import { getCurrencyConfig } from '@/lib/constants/location';
+
+const label = `Max price (${getCurrencySymbol(merchant.currency)})`;
+const preview = formatCurrency(amount, merchant.currency, locale);
+const { decimals } = getCurrencyConfig(merchant.currency);
 ```
+
+Rules:
+- `AUD` must display as `A$` and uses 2 decimals.
+- `IDR` must display as `Rp` and uses 0 decimals.
+- Inputs must use currency-aware `step` (e.g., `0.01` for AUD, `1` for IDR) and normalize values accordingly.
+
+Avoid using `Intl.NumberFormat` directly in UI unless there is a specific reason; the shared formatter already encodes product rules.
 
 ### Price Storage:
 - Database: `DECIMAL(10, 2)` (Prisma Decimal type)
-- API Response: Convert to `number` using `serializeBigInt()`
+- API Response: Convert to JSON-safe types using `serializeBigInt()` (BigInt/Decimal/Date)
 - Frontend: Display with merchant's currency
 
 ---
@@ -247,6 +340,24 @@ await prisma.menu.update({
 ```
 
 ---
+
+## CRITICAL: Data Layer Conventions (Repository + Service)
+
+### Repository layer (/src/lib/repositories)
+- Repositories are responsible for Prisma queries and should return JSON-safe data (commonly via `serializeData`).
+- Prefer `prisma.$transaction` for multi-table writes.
+
+### Service layer (/src/lib/services)
+- Services encapsulate business rules/validation and call repositories.
+- API routes should call services when a service exists for that domain (e.g., `MerchantService`, `MenuService`, `OrderService`).
+
+### Standard API error/response pattern
+- Middleware wrappers in `/src/lib/middleware/auth.ts` already call `handleError()`.
+- For non-wrapped public routes, use `/src/lib/middleware/errorHandler.ts` (`handleError`, `successResponse`).
+- Prefer `ERROR_CODES` + `CustomError` subclasses from `/src/lib/constants/errors.ts` (e.g. `ValidationError`) over hand-rolled JSON error bodies.
+
+### Route param parsing (API handlers)
+- Many route handlers have dynamic params (`[id]`, `[merchantCode]`, etc). Use `/src/lib/utils/routeContext.ts` helpers (`requireBigIntRouteParam`, `requireRouteParam`, etc.) instead of assuming `context.params` is a plain object.
 
 ## CRITICAL: Database Schema Relationships
 
@@ -391,6 +502,71 @@ export function withMerchant(handler) {
 
 ---
 
+## CRITICAL: Admin Sidebar + Navigation Rules
+
+### Primary sidebar implementation
+- The active admin dashboard sidebar is `/src/layout/AppSidebar.tsx`.
+- Sidebar labels are translated using `useTranslation()` and translation keys (NOT hardcoded strings).
+- Staff access control:
+  - Sidebar items can require a staff permission (`STAFF_PERMISSIONS.*`).
+  - Permission-to-path and permission-to-API maps live in `/src/lib/constants/permissions.ts`.
+
+### Adding a new admin page (Checklist)
+When you add a new dashboard page route, you may also need to update:
+1. The page route under `/src/app/(admin)/admin/dashboard/...` (correct role grouping).
+2. Sidebar item in `/src/layout/AppSidebar.tsx` (with translation key).
+3. Translations in BOTH `/src/lib/i18n/translations/en.ts` and `/src/lib/i18n/translations/id.ts`.
+4. Staff permission mapping in `/src/lib/constants/permissions.ts`:
+   - `PATH_PERMISSION_MAP` (page)
+   - `API_PERMISSION_MAP` (API routes)
+5. If staff should be blocked client-side, ensure `isOwnerOnlyDashboardPath`/permission mapping covers it (UX only).
+
+Note: `/src/lib/constants/adminMenus.ts` exists but is currently unused by the active sidebar. Do not update it unless the UI explicitly uses it.
+
+---
+
+## CRITICAL: Dual-Language (EN/ID) Requirement
+
+### UI strings
+- Any user-facing text in admin/customer/driver/influencer UI MUST support English and Indonesian.
+- Use `useTranslation()` (`t('...')`) for labels, buttons, hints, and empty/error states.
+- When adding a new translation key:
+  - Add the key to BOTH `/src/lib/i18n/translations/en.ts` and `/src/lib/i18n/translations/id.ts`.
+  - Prefer consistent key namespaces: `admin.*`, `customer.*`, `common.*`, `auth.*`, etc.
+
+### Locale initialization & hydration safety
+- Language providers expose `isInitialized` to avoid hydration mismatch. Do not assume locale is ready on first render.
+
+### Customer locale rules (currency-driven)
+- Customer pages are wrapped by `/src/app/(customer)/layout.tsx` (forced light-mode container layout).
+- Merchant customer pages (`/src/app/(customer)/[merchantCode]/layout.tsx`) may auto-set locale based on merchant currency via `getLocaleFromCurrency()`.
+- Customer locale preference is stored under `genfity_customer_locale` (see `/src/lib/i18n/index.ts`).
+
+---
+
+## CRITICAL: UI/UX Style Consistency (Admin)
+
+### Baseline styling rules
+- Use the existing Tailwind patterns seen in `/src/app/(admin)/admin/dashboard/(merchant)/revenue/page.tsx` and its components:
+  - Clean gray/white surfaces, `rounded-lg`, subtle borders, dark-mode support.
+  - Prefer skeleton loaders (e.g., `/src/components/common/SkeletonLoaders`) over spinners.
+  - Use shared building blocks like `PageBreadcrumb` and existing feature components.
+
+### Shared components first
+- Before creating new UI primitives, search `/src/components/ui` and `/src/components/common` for an existing component.
+- For merchant settings pages, reuse the existing `merchant-edit` UI components and tabs structure.
+
+---
+
+## Formatting Utilities (REQUIRED)
+
+Use shared formatting utilities instead of ad-hoc formatting:
+- Currency/date/time/relative time/phone formatting: `/src/lib/utils/format.ts`
+- Currency config (symbols/decimals/timezones): `/src/lib/constants/location.ts`
+- Phone validation/normalization: `/src/lib/utils/validators.ts`
+
+Avoid using `src/lib/design-system.ts` helper utilities for formatting if marked `@deprecated`.
+
 ## CRITICAL: UI/UX Standards
 
 ### Design Philosophy
@@ -467,23 +643,14 @@ Check `/src/icons/index.tsx` for full list. Common ones:
 
 ## CRITICAL: Database Update Workflow
 
-### NEVER Use Migrations - Use Push Instead
+### Database schema workflow (be explicit)
+This repo contains a `prisma/migrations` folder and also provides `db:push` scripts.
 
-```bash
-# ❌ WRONG - Do NOT use migrations
-npx prisma migrate dev
+Default rule:
+- Prefer `pnpm db:push` + `pnpm exec prisma generate` for schema sync while iterating.
+- Do NOT create or run migrations unless the user explicitly requests a migration-based workflow.
 
-# ✅ CORRECT - Update workflow:
-# 1. Edit schema.prisma
-# 2. Push to database
-npx prisma db push
-
-# 3. Generate Prisma Client
-npx prisma generate
-
-# 4. Update seed data (if needed)
-# Edit: /prisma/seed.ts
-```
+If you change `schema.prisma`, you must also consider whether `/prisma/seed.ts` needs updates.
 
 ### Schema Update Pattern:
 ```prisma
@@ -521,6 +688,8 @@ async function main() {
 
 ### DO NOT Run `npm run dev` Manually
 The development server is **ALWAYS RUNNING**. Changes auto-reload via Next.js Fast Refresh.
+
+Note: This repo uses `pnpm`. Treat `pnpm dev` the same way: do not restart dev unless the user asks.
 
 ```bash
 # ❌ NEVER DO THIS
@@ -588,6 +757,23 @@ At the end of EVERY response, include:
 - Implement WebSocket for real-time updates
 - Create bulk operations for menu management
 - Add export to Excel functionality
+
+---
+
+## Added safety rules (do not skip)
+
+### Before making changes (required checklist)
+1. Identify the role + surface (admin/customer/driver/influencer) and locate the correct route group.
+2. Find the closest existing implementation and read the whole file (and key imported components) to match style and patterns.
+3. Locate existing utilities (formatting, auth, validators, error handling) and reuse them.
+4. Confirm API auth wrapper (`withMerchant`, `withSuperAdmin`, etc.) and staff permission mapping if needed.
+5. Ensure dual-language translations for all user-facing strings.
+6. Run typecheck/tests relevant to the changed area if feasible.
+
+### When refactoring
+- Only refactor within the requested scope.
+- Keep public contracts stable (component props, API response shapes, service/repo method signatures) unless explicitly asked.
+- If a change affects behavior, update all call sites or stop and ask for direction.
 ```
 
 ---
