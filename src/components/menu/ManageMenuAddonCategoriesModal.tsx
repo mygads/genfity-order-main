@@ -280,8 +280,6 @@ export default function ManageMenuAddonCategoriesModal({
     }
   };
 
-  if (!show) return null;
-
   const getCategoryInfo = (categoryId: string) => {
     return availableCategories.find((c) => c.id === categoryId);
   };
@@ -296,6 +294,8 @@ export default function ManageMenuAddonCategoriesModal({
     onClose,
     disableImplicitClose,
   });
+
+  if (!show) return null;
 
   return (
     <div

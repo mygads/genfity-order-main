@@ -80,17 +80,17 @@ function ResetPasswordContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-orange-50/30 to-slate-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-brand-50/30 to-slate-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
       {/* Background Pattern */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 -left-40 w-80 h-80 bg-orange-600/5 rounded-full blur-3xl" />
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-brand-500/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 -left-40 w-80 h-80 bg-brand-600/5 rounded-full blur-3xl" />
       </div>
 
       <div className="relative z-10 min-h-screen flex items-center justify-center p-4 md:p-8 lg:p-12">
         <div className="w-full max-w-5xl flex flex-col lg:flex-row items-stretch gap-8 lg:gap-0">
           {/* Left Side - Info Panel */}
-          <div className="hidden lg:flex flex-col justify-between flex-1 bg-gradient-to-br from-orange-500 to-orange-600 rounded-l-2xl p-10 text-white relative overflow-hidden">
+          <div className="hidden lg:flex flex-col justify-between flex-1 bg-gradient-to-br from-brand-500 to-brand-600 rounded-l-2xl p-10 text-white relative overflow-hidden">
             {/* Decorative elements */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
             <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
@@ -122,7 +122,7 @@ function ResetPasswordContent() {
                 <h2 className="text-xl font-bold">
                   Create New Password
                 </h2>
-                <p className="text-orange-100 text-sm leading-relaxed max-w-sm mx-auto">
+                <p className="text-brand-100 text-sm leading-relaxed max-w-sm mx-auto">
                   Choose a strong password to secure your account
                 </p>
               </div>
@@ -131,22 +131,22 @@ function ResetPasswordContent() {
               <div className="mt-8 space-y-3 max-w-xs mx-auto">
                 <div className="flex items-center gap-3">
                   <FaCheckCircle className="w-4 h-4 text-green-300 shrink-0" />
-                  <p className="text-sm text-orange-100">At least 8 characters long</p>
+                  <p className="text-sm text-brand-100">At least 8 characters long</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <FaCheckCircle className="w-4 h-4 text-green-300 shrink-0" />
-                  <p className="text-sm text-orange-100">Include numbers and symbols</p>
+                  <p className="text-sm text-brand-100">Include numbers and symbols</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <FaCheckCircle className="w-4 h-4 text-green-300 shrink-0" />
-                  <p className="text-sm text-orange-100">Don&apos;t reuse old passwords</p>
+                  <p className="text-sm text-brand-100">Don&apos;t reuse old passwords</p>
                 </div>
               </div>
             </div>
 
             {/* Trust Badge */}
             <div className="relative z-10 flex items-center justify-center gap-6 pt-4 border-t border-white/10">
-              <div className="flex items-center gap-2 text-sm text-orange-100">
+              <div className="flex items-center gap-2 text-sm text-brand-100">
                 <FaLock className="w-4 h-4 text-green-300" />
                 <span>256-bit Encryption</span>
               </div>
@@ -220,7 +220,7 @@ function ResetPasswordContent() {
                           minLength={8}
                           disabled={isLoading || !token}
                           className="w-full px-4 py-3 pr-12 rounded-lg border border-gray-300 dark:border-gray-600 
-                            focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm 
+                            focus:ring-2 focus:ring-brand-500 focus:border-transparent text-sm 
                             bg-white dark:bg-gray-700 dark:text-white disabled:opacity-50"
                         />
                         <button
@@ -254,7 +254,7 @@ function ResetPasswordContent() {
                           minLength={8}
                           disabled={isLoading || !token}
                           className="w-full px-4 py-3 pr-12 rounded-lg border border-gray-300 dark:border-gray-600 
-                            focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm 
+                            focus:ring-2 focus:ring-brand-500 focus:border-transparent text-sm 
                             bg-white dark:bg-gray-700 dark:text-white disabled:opacity-50"
                         />
                         <button
@@ -274,7 +274,7 @@ function ResetPasswordContent() {
                       className={`w-full py-3 px-4 rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
                         isLoading || !token
                           ? 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                          : 'bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-200 dark:shadow-none'
+                          : 'bg-brand-500 hover:bg-brand-600 text-white shadow-lg shadow-brand-200 dark:shadow-none'
                       }`}
                     >
                       {isLoading ? (
@@ -291,7 +291,7 @@ function ResetPasswordContent() {
                   {/* Back to Login Link */}
                   <p className="text-center text-gray-500 dark:text-gray-400 mt-8 text-sm">
                     Remember your password?{' '}
-                    <Link href="/influencer/login" className="text-orange-500 hover:text-orange-600 font-semibold">
+                    <Link href="/influencer/login" className="text-brand-500 hover:text-brand-600 font-semibold">
                       Back to Login
                     </Link>
                   </p>
@@ -317,7 +317,7 @@ function ResetPasswordContent() {
 
                   <Link
                     href="/influencer/login"
-                    className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg transition-all"
+                    className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-brand-500 hover:bg-brand-600 text-white font-semibold rounded-lg transition-all"
                   >
                     Go to Login Now
                   </Link>
@@ -336,7 +336,7 @@ export default function InfluencerResetPasswordPage() {
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
-          <FaSpinner className="w-8 h-8 animate-spin text-orange-500 mx-auto mb-4" />
+          <FaSpinner className="w-8 h-8 animate-spin text-brand-500 mx-auto mb-4" />
           <p className="text-gray-500 dark:text-gray-400">Loading...</p>
         </div>
       </div>

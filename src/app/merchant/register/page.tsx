@@ -653,7 +653,7 @@ function MerchantRegisterContent() {
                                         <button
                                             type="button"
                                             onClick={handleNextStep}
-                                            className="w-full py-2.5 px-4 bg-[#F07600] hover:bg-[#D96A00] text-white font-bold rounded-lg transition-colors text-sm"
+                                            className="w-full py-2.5 px-4 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-lg transition-colors text-sm"
                                         >
                                             {t("register.continue")}
                                         </button>
@@ -790,7 +790,7 @@ function MerchantRegisterContent() {
                                             <button
                                                 type="button"
                                                 onClick={handleNextStep}
-                                                className="flex-1 py-2.5 px-4 bg-[#F07600] hover:bg-[#D96A00] text-white font-bold rounded-lg transition-colors text-sm"
+                                                className="flex-1 py-2.5 px-4 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-lg transition-colors text-sm"
                                             >
                                                 {t("register.continue")}
                                             </button>
@@ -904,7 +904,7 @@ function MerchantRegisterContent() {
                                             <button
                                                 type="submit"
                                                 disabled={isSubmitting}
-                                                className="flex-1 py-2.5 px-4 bg-[#F07600] hover:bg-[#D96A00] disabled:bg-[#FED7AA] text-white font-bold rounded-lg transition-colors text-sm flex items-center justify-center gap-2 disabled:cursor-not-allowed"
+                                                className="flex-1 py-2.5 px-4 bg-brand-500 hover:bg-brand-600 disabled:bg-brand-200 text-white font-bold rounded-lg transition-colors text-sm flex items-center justify-center gap-2 disabled:cursor-not-allowed"
                                             >
                                                 {isSubmitting ? (
                                                     <>

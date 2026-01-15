@@ -71,11 +71,11 @@ export default function HeroSection() {
                 <div className="absolute -top-20 -left-20 w-[500px] h-[500px] bg-blue-50/80 dark:bg-blue-900/10 rounded-full blur-3xl animate-[float_6s_ease-in-out_infinite]" />
 
                 {/* Rotating Pattern (Bottom Right) */}
-                <div className="absolute top-1/2 -right-40 w-[600px] h-[600px] bg-orange-50/80 dark:bg-orange-900/10 rounded-full blur-3xl animate-[float_8s_ease-in-out_infinite_reverse]" />
+                <div className="absolute top-1/2 -right-40 w-[600px] h-[600px] bg-brand-50/80 dark:bg-brand-900/10 rounded-full blur-3xl animate-[float_8s_ease-in-out_infinite_reverse]" />
 
                 {/* Small floating dots/shapes */}
                 <div className="absolute top-1/4 left-1/4 w-4 h-4 bg-[#173C82] rounded-full opacity-20 animate-[pulse_4s_ease-in-out_infinite]" />
-                <div className="absolute bottom-1/3 right-1/3 w-6 h-6 bg-orange-400 rounded-full opacity-20 animate-[bounce_5s_infinite]" />
+                <div className="absolute bottom-1/3 right-1/3 w-6 h-6 bg-brand-400 rounded-full opacity-20 animate-[bounce_5s_infinite]" />
             </div>
 
             <div className="relative z-10 max-w-[1126px] mx-auto px-4 sm:px-6 lg:px-8">

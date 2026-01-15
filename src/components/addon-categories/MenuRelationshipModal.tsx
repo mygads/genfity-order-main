@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/context/ToastContext";
+import { useModalImplicitClose } from "@/hooks/useModalImplicitClose";
 
 interface MenuRelationship {
   id: string;
@@ -31,6 +32,11 @@ export default function MenuRelationshipModal({
   const [loading, setLoading] = useState(true);
   const [menus, setMenus] = useState<MenuRelationship[]>([]);
   const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
+
+  const { onBackdropMouseDown } = useModalImplicitClose({
+    isOpen: show,
+    onClose,
+  });
 
   useEffect(() => {
     if (show && categoryId) {
@@ -107,10 +113,7 @@ export default function MenuRelationshipModal({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      onMouseDown={(e) => {
-        if (e.target !== e.currentTarget) return;
-        onClose();
-      }}
+      onMouseDown={onBackdropMouseDown}
     >
       <div className="w-full max-w-3xl h-[90vh] flex flex-col rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-900">
         {/* Header */}

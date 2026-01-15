@@ -296,7 +296,7 @@ export function SetupProgress({ compact = false, onComplete }: SetupProgressProp
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-brand-50 to-orange-50 dark:from-brand-900/20 dark:to-orange-900/10 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-brand-50 to-brand-100 dark:from-brand-900/20 dark:to-brand-900/10 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 bg-brand-500 rounded-lg flex items-center justify-center">
             <FaRocket className="w-3.5 h-3.5 text-white" />
@@ -400,7 +400,7 @@ export function SetupProgress({ compact = false, onComplete }: SetupProgressProp
         {/* Progress bar at bottom */}
         <div className="mt-4 h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-brand-500 to-orange-500 rounded-full transition-all duration-500"
+            className="h-full bg-gradient-to-r from-brand-500 to-brand-600 rounded-full transition-all duration-500"
             style={{ width: `${progressPercent}%` }}
           />
         </div>

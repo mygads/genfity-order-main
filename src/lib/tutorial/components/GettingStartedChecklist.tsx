@@ -285,7 +285,7 @@ export function GettingStartedChecklist() {
     >
       {/* Compact Header */}
       <div 
-        className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-brand-50 to-orange-50 dark:from-brand-900/20 dark:to-orange-900/10 border-b border-gray-200 dark:border-gray-700 cursor-pointer"
+        className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-brand-50 to-brand-100 dark:from-brand-900/20 dark:to-brand-900/10 border-b border-gray-200 dark:border-gray-700 cursor-pointer"
         onClick={() => setExpanded(!expanded)}
       >
         <div className="flex items-center gap-2">

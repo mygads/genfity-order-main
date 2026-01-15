@@ -108,7 +108,7 @@ export default function LandingNavbar() {
                         <a href="https://genfity.com" target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-gray-600 hover:text-[#173C82] dark:text-gray-300 dark:hover:text-blue-400 transition-colors">
                             {t('landing.nav.about')}
                         </a>
-                        <Link href="/influencer/register" className="text-sm font-medium text-orange-500 hover:text-orange-600 dark:text-orange-400 dark:hover:text-orange-300 transition-colors">
+                        <Link href="/influencer/register" className="text-sm font-medium text-brand-500 hover:text-brand-600 dark:text-brand-400 dark:hover:text-brand-300 transition-colors">
                             {t('landing.nav.referral')}
                         </Link>
                     </div>
@@ -203,7 +203,7 @@ export default function LandingNavbar() {
                         <button onClick={() => scrollToSection('pricing')} className="block text-lg font-medium text-gray-900 dark:text-white">{t('landing.nav.pricing')}</button>
                         <button onClick={() => scrollToSection('howItWorks')} className="block text-lg font-medium text-gray-900 dark:text-white">{t('landing.nav.howItWorks')}</button>
                         <a href="https://genfity.com" target="_blank" rel="noopener noreferrer" className="block text-lg font-medium text-gray-900 dark:text-white">{t('landing.nav.about')}</a>
-                        <Link href="/influencer/register" className="block text-lg font-medium text-orange-500">{t('landing.nav.referral')}</Link>
+                        <Link href="/influencer/register" className="block text-lg font-medium text-brand-500">{t('landing.nav.referral')}</Link>
                     </div>
 
                     <hr className="border-gray-100 dark:border-gray-800" />

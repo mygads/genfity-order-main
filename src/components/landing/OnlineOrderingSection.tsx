@@ -215,22 +215,6 @@ export default function OnlineOrderingSection() {
                         </div>
                     </div>
                 </div>
-
-                {/* Bottom CTA */}
-                <div className="mt-16 text-center">
-                    <p className="text-gray-600 dark:text-gray-400 mb-6">
-                        {t('landing.onlineOrder.bottomCta')}
-                    </p>
-                    <Link
-                        href="/merchant/register"
-                        className="inline-flex items-center gap-2 px-8 py-3.5 bg-[#F07600] hover:bg-[#D96A00] text-white font-bold rounded-xl shadow-lg shadow-orange-200 dark:shadow-orange-900/30 transition-all hover:-translate-y-0.5 hover:shadow-xl"
-                    >
-                        {t('landing.onlineOrder.ctaFinal')}
-                        <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                        </svg>
-                    </Link>
-                </div>
             </div>
         </section>
     );

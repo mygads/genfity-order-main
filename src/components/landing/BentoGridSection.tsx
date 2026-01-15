@@ -22,9 +22,9 @@ export default function BentoGridSection() {
 
                     {/* Item 1: Large Left - Payments */}
                     <div className="md:col-span-2 md:row-span-1 bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-100 dark:border-gray-700 flex flex-col justify-between overflow-hidden relative group hover:shadow-lg transition-all hover:-translate-y-0.5">
-                        <div className="absolute top-0 right-0 w-48 h-48 bg-orange-50 dark:bg-orange-900/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 opacity-60"></div>
+                        <div className="absolute top-0 right-0 w-48 h-48 bg-brand-50 dark:bg-brand-900/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 opacity-60"></div>
                         <div className="relative z-10">
-                            <div className="text-orange-500 mb-2">
+                            <div className="text-brand-500 mb-2">
                                 <FaWallet className="w-6 h-6" />
                             </div>
                             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">{t('landing.bento.payments.title')}</h3>

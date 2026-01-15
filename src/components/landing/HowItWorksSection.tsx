@@ -15,7 +15,7 @@ export default function HowItWorksSection() {
         {
             num: 2,
             image: '/images/landing/illustration_setup.png',
-            color: 'bg-orange-500'
+            color: 'bg-brand-500'
         },
         {
             num: 3,
@@ -38,7 +38,7 @@ export default function HowItWorksSection() {
 
                 <div className="relative">
                     {/* Connecting Line (Desktop) */}
-                    <div className="hidden lg:block absolute top-20 left-[20%] right-[20%] h-0.5 bg-gradient-to-r from-[#173C82] via-orange-500 to-emerald-500 opacity-30"></div>
+                    <div className="hidden lg:block absolute top-20 left-[20%] right-[20%] h-0.5 bg-gradient-to-r from-[#173C82] via-brand-500 to-emerald-500 opacity-30"></div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-6 relative z-10">
                         {steps.map((step) => (

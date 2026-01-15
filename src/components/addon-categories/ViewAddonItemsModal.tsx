@@ -5,6 +5,7 @@ import { useToast } from "@/context/ToastContext";
 import ConfirmDialog from "@/components/modals/ConfirmDialog";
 import { TableActionButton } from "@/components/common/TableActionButton";
 import { FaTrash } from "react-icons/fa";
+import { useModalImplicitClose } from "@/hooks/useModalImplicitClose";
 
 interface AddonItem {
   id: string;
@@ -75,6 +76,19 @@ export default function ViewAddonItemsModal({
   }>({ show: false, itemId: null, itemName: "" });
 
   const isDirty = Boolean(editingItemId || stockModal.show);
+
+  const disableImplicitClose =
+    showAddItemsModal ||
+    Boolean(draggedItem) ||
+    deleteConfirm.show ||
+    outOfStockConfirm.show ||
+    isDirty;
+
+  const { onBackdropMouseDown } = useModalImplicitClose({
+    isOpen: show,
+    onClose,
+    disableImplicitClose,
+  });
 
   useEffect(() => {
     if (items.length > 0) {
@@ -420,16 +434,7 @@ export default function ViewAddonItemsModal({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      onMouseDown={(e) => {
-        if (e.target !== e.currentTarget) return;
-        // Only allow outside-click close when no nested modal is open and we're not actively dragging.
-        if (showAddItemsModal) return;
-        if (draggedItem) return;
-        if (deleteConfirm.show) return;
-        if (outOfStockConfirm.show) return;
-        if (isDirty) return;
-        onClose();
-      }}
+      onMouseDown={onBackdropMouseDown}
     >
       <div className="w-full max-w-5xl h-[90vh] rounded-2xl border border-gray-200 bg-white shadow-xl dark:border-gray-800 dark:bg-gray-900 overflow-hidden flex flex-col">
         <div className="flex items-center justify-between border-b border-gray-200 p-6 dark:border-gray-800">

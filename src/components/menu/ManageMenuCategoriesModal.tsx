@@ -172,14 +172,14 @@ export default function ManageMenuCategoriesModal({
     }
   };
 
-  if (!show) return null;
-
   const disableImplicitClose = submitting || isDirty;
   const { onBackdropMouseDown } = useModalImplicitClose({
     isOpen: show,
     onClose,
     disableImplicitClose,
   });
+
+  if (!show) return null;
 
   const getCategoryInfo = (categoryId: string) => {
     return availableCategories.find((c) => c.id === categoryId);

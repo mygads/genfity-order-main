@@ -245,7 +245,7 @@ function WithdrawalsContent() {
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
               <p className="text-red-500 mb-4">{error}</p>
-              <button onClick={fetchData} className="px-4 py-2 bg-orange-500 text-white rounded-lg">
+              <button onClick={fetchData} className="px-4 py-2 bg-brand-500 text-white rounded-lg">
                 Retry
               </button>
             </div>
@@ -265,7 +265,7 @@ function WithdrawalsContent() {
         rightContent={
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-medium"
+            className="flex items-center gap-2 px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-medium"
           >
             <FaPlus className="w-4 h-4" />
             Request Withdrawal
@@ -422,7 +422,7 @@ function WithdrawalsContent() {
                       <p className="text-sm text-gray-600 dark:text-gray-300">{bankDetails.bankAccountHolderIdr}</p>
                     </div>
                   ) : (
-                    <Link href="/influencer/settings" className="text-orange-500 text-sm font-medium">
+                    <Link href="/influencer/settings" className="text-brand-500 text-sm font-medium">
                       Set up bank details →
                     </Link>
                   )
@@ -437,7 +437,7 @@ function WithdrawalsContent() {
                       )}
                     </div>
                   ) : (
-                    <Link href="/influencer/settings" className="text-orange-500 text-sm font-medium">
+                    <Link href="/influencer/settings" className="text-brand-500 text-sm font-medium">
                       Set up bank details →
                     </Link>
                   )
@@ -462,7 +462,7 @@ function WithdrawalsContent() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full py-3 px-4 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full py-3 px-4 bg-brand-500 hover:bg-brand-600 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {isSubmitting ? (
                   <>
@@ -485,7 +485,7 @@ export default function InfluencerWithdrawalsPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-500"></div>
       </div>
     }>
       <WithdrawalsContent />

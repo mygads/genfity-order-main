@@ -54,8 +54,8 @@ function getTransactionTypeInfo(type: string): { label: string; color: string; i
     case 'WITHDRAWAL':
       return {
         label: 'Withdrawal',
-        color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
-        icon: <FaMoneyBillWave className="w-5 h-5 text-orange-500" />,
+        color: 'bg-brand-100 text-brand-800 dark:bg-brand-900/30 dark:text-brand-400',
+        icon: <FaMoneyBillWave className="w-5 h-5 text-brand-500" />,
       };
     case 'ADJUSTMENT':
       return {
@@ -186,7 +186,7 @@ export default function InfluencerTransactionsPage() {
         {error && (
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-8 text-center">
             <p className="text-red-500 mb-4">{error}</p>
-            <button onClick={fetchTransactions} className="px-4 py-2 bg-orange-500 text-white rounded-lg">
+            <button onClick={fetchTransactions} className="px-4 py-2 bg-brand-500 text-white rounded-lg">
               Retry
             </button>
           </div>

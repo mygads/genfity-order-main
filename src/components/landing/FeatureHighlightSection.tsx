@@ -11,7 +11,7 @@ export default function FeatureHighlightSection() {
             key: 'smartMenu',
             image: '/images/landing/mobile_mockup_iphone.png',
             reverse: false,
-            iconColor: 'bg-orange-500 text-white',
+            iconColor: 'bg-brand-500 text-white',
         },
         {
             key: 'powerfulDashboard',
@@ -39,7 +39,7 @@ export default function FeatureHighlightSection() {
                         {/* Image Side */}
                         <div className="w-full lg:w-1/2 relative group">
                             {/* Subtle background blur */}
-                            <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] rounded-full blur-[80px] opacity-20 -z-10 ${index % 2 === 0 ? 'bg-orange-300 dark:bg-orange-900' : 'bg-blue-300 dark:bg-blue-900'
+                            <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] rounded-full blur-[80px] opacity-20 -z-10 ${index % 2 === 0 ? 'bg-brand-300 dark:bg-brand-900' : 'bg-blue-300 dark:bg-blue-900'
                                 }`}></div>
 
                             <div className="relative w-full aspect-[4/3] transform transition-transform duration-500 hover:scale-[1.02] max-w-md mx-auto">

@@ -77,7 +77,7 @@ export default function TableNumberModal({
               value={tableNumber}
               onChange={(e) => setTableNumber(e.target.value)}
               placeholder="Contoh: 21"
-              className="w-full h-12 px-4 text-center text-lg font-semibold border border-[#E0E0E0] rounded-lg text-[#1A1A1A] placeholder-[#999999] focus:outline-none focus:ring-2 focus:ring-[#FF6B35] focus:border-transparent transition-all mb-2"
+              className="w-full h-12 px-4 text-center text-lg font-semibold border border-[#E0E0E0] rounded-lg text-[#1A1A1A] placeholder-[#999999] focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all mb-2"
               autoFocus
               required
             />
@@ -98,7 +98,7 @@ export default function TableNumberModal({
             <button
               type="submit"
               disabled={!tableNumber}
-              className="w-full h-12 bg-[#FF6B35] text-white text-base font-semibold rounded-lg hover:bg-[#E55A2B] transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full h-12 bg-brand-500 text-white text-base font-semibold rounded-lg hover:bg-brand-600 transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Simpan
             </button>

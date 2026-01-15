@@ -99,8 +99,6 @@ function CenteredModal(props: {
   disableBackdropClose?: boolean;
   disableEscapeClose?: boolean;
 }) {
-  if (!props.open) return null;
-
   useEffect(() => {
     if (!props.open) return;
 
@@ -113,6 +111,8 @@ function CenteredModal(props: {
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [props.open, props.onClose, props.disableEscapeClose]);
+
+  if (!props.open) return null;
 
   return (
     <>

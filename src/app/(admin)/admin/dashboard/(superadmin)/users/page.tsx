@@ -9,6 +9,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Image from 'next/image';
+import { TableActionButton } from '@/components/common/TableActionButton';
+import { FaEdit } from 'react-icons/fa';
 
 import EditUserModal from './EditUserModal';
 import ToastContainer from '@/components/ui/ToastContainer';
@@ -399,12 +401,14 @@ export default function UsersPage() {
                       </td>
                       <td className="px-5 py-4 text-sm text-gray-600 dark:text-gray-400">{formatDate(user.createdAt)}</td>
                       <td className="px-5 py-4 text-end">
-                        <button 
-                          onClick={() => handleEditUser(user)}
-                          className="text-sm font-medium text-brand-500 hover:text-brand-600 dark:text-brand-400"
-                        >
-                          Edit
-                        </button>
+                        <div className="flex justify-end">
+                          <TableActionButton
+                            icon={FaEdit}
+                            onClick={() => handleEditUser(user)}
+                            title="Edit"
+                            aria-label="Edit"
+                          />
+                        </div>
                       </td>
                     </tr>
                   ))

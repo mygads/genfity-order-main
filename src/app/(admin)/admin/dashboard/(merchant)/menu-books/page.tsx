@@ -6,6 +6,9 @@ import { useRouter } from "next/navigation";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useContextualHint, CONTEXTUAL_HINTS } from "@/lib/tutorial/components/ContextualHint";
+import { TableActionButton } from "@/components/common/TableActionButton";
+import { FaEdit, FaTrash } from "react-icons/fa";
+import { useModalImplicitClose } from "@/hooks/useModalImplicitClose";
 
 interface MenuBook {
     id: string;
@@ -30,6 +33,13 @@ export default function MenuBooksPage() {
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [deleting, setDeleting] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
+
+    const closeDeleteModal = useCallback(() => setDeleteId(null), []);
+    const { onBackdropMouseDown: onDeleteModalBackdropMouseDown } = useModalImplicitClose({
+        isOpen: Boolean(deleteId),
+        onClose: closeDeleteModal,
+        disableImplicitClose: deleting,
+    });
 
     // Show contextual hint on first visit or empty state
     useEffect(() => {
@@ -280,22 +290,19 @@ export default function MenuBooksPage() {
                                         </td>
                                         <td className="px-4 py-4 text-right">
                                             <div className="flex items-center justify-end gap-2">
-                                                <Link
-                                                    href={`/admin/dashboard/menu-books/${book.id}/edit`}
-                                                    className="rounded-lg border border-gray-200 bg-white p-2 text-gray-600 transition-colors hover:bg-gray-50 hover:text-brand-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
-                                                >
-                                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                                    </svg>
-                                                </Link>
-                                                <button
+                                                <TableActionButton
+                                                    icon={FaEdit}
+                                                    onClick={() => router.push(`/admin/dashboard/menu-books/${book.id}/edit`)}
+                                                    title={t("admin.menuBooks.edit")}
+                                                    aria-label={t("admin.menuBooks.edit")}
+                                                />
+                                                <TableActionButton
+                                                    icon={FaTrash}
+                                                    tone="danger"
                                                     onClick={() => setDeleteId(book.id)}
-                                                    className="rounded-lg border border-gray-200 bg-white p-2 text-gray-600 transition-colors hover:bg-red-50 hover:text-red-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-red-900/20"
-                                                >
-                                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                    </svg>
-                                                </button>
+                                                    title={t("common.delete")}
+                                                    aria-label={t("common.delete")}
+                                                />
                                             </div>
                                         </td>
                                     </tr>
@@ -308,7 +315,10 @@ export default function MenuBooksPage() {
 
             {/* Delete Confirmation Modal */}
             {deleteId && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+                    onMouseDown={onDeleteModalBackdropMouseDown}
+                >
                     <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900">
                         <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t("admin.menuBooks.deleteConfirm")}</h3>
                         <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
@@ -316,8 +326,9 @@ export default function MenuBooksPage() {
                         </p>
                         <div className="mt-6 flex justify-end gap-3">
                             <button
-                                onClick={() => setDeleteId(null)}
-                                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                                onClick={closeDeleteModal}
+                                disabled={deleting}
+                                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
                             >
                                 {t("admin.menuBooks.cancel")}
                             </button>

@@ -146,7 +146,7 @@ export default function InfluencerSettingsPage() {
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
               <p className="text-red-500 mb-4">{error || 'Failed to load data'}</p>
-              <button onClick={fetchData} className="px-4 py-2 bg-orange-500 text-white rounded-lg">
+              <button onClick={fetchData} className="px-4 py-2 bg-brand-500 text-white rounded-lg">
                 Retry
               </button>
             </div>
@@ -168,7 +168,7 @@ export default function InfluencerSettingsPage() {
           </div>
           <div className="p-5">
             <div className="flex items-center gap-4 mb-6">
-              <div className="w-16 h-16 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600 dark:text-orange-400 text-2xl font-bold">
+              <div className="w-16 h-16 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center text-brand-600 dark:text-brand-400 text-2xl font-bold">
                 {influencer.name.charAt(0).toUpperCase()}
               </div>
               <div>
@@ -332,7 +332,7 @@ export default function InfluencerSettingsPage() {
             <button
               type="submit"
               disabled={isSaving}
-              className="px-6 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+              className="px-6 py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
             >
               {isSaving ? (
                 <>

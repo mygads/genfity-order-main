@@ -44,7 +44,7 @@ export default function FooterSection() {
                             <li><Link href="#pricing" className="hover:text-[#173C82] dark:hover:text-blue-400 transition-colors">{t('landing.nav.pricing')}</Link></li>
                             <li><Link href="#how-it-works" className="hover:text-[#173C82] dark:hover:text-blue-400 transition-colors">{t('landing.nav.howItWorks')}</Link></li>
                             <li><Link href="https://genfity.com" target="_blank" className="hover:text-[#173C82] dark:hover:text-blue-400 transition-colors">{t('landing.nav.about')}</Link></li>
-                            <li><Link href="/influencer/register" className="hover:text-orange-500 transition-colors">{t('landing.nav.referral')}</Link></li>
+                            <li><Link href="/influencer/register" className="hover:text-brand-500 transition-colors">{t('landing.nav.referral')}</Link></li>
                         </ul>
                     </div>
 

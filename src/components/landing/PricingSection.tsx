@@ -153,7 +153,7 @@ export default function PricingSection() {
 
                         <Link
                             href="/merchant/register"
-                            className="w-full block text-center py-3 px-4 bg-[#F07600] hover:bg-[#D96A00] text-white font-semibold rounded-lg transition-all shadow-lg shadow-orange-200 dark:shadow-none mb-5 text-sm"
+                            className="w-full block text-center py-3 px-4 bg-[#173C82] hover:bg-[#122c60] text-white font-semibold rounded-lg transition-all shadow-lg shadow-brand-200 dark:shadow-none mb-5 text-sm"
                         >
                             {t('landing.pricing.deposit.cta')}
                         </Link>
@@ -273,7 +273,7 @@ export default function PricingSection() {
                             <div className="p-4 text-center border-l border-gray-200 dark:border-gray-700 bg-[#173C82]/5 dark:bg-[#173C82]/10">
                                 <Link
                                     href="/merchant/register"
-                                    className="inline-flex items-center justify-center px-4 py-2 text-xs font-semibold text-white bg-[#F07600] hover:bg-[#D96A00] rounded-lg transition-all shadow-md"
+                                    className="inline-flex items-center justify-center px-4 py-2 text-xs font-semibold text-white bg-[#173C82] hover:bg-[#122c60] rounded-lg transition-all shadow-md"
                                 >
                                     {t('landing.pricing.deposit.cta')}
                                 </Link>

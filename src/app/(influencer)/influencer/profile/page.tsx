@@ -231,7 +231,7 @@ export default function InfluencerProfilePage() {
               <p className="text-red-500 mb-4">{error || 'Profile not found'}</p>
               <button
                 onClick={fetchProfile}
-                className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+                className="px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600"
               >
                 Retry
               </button>
@@ -272,7 +272,7 @@ export default function InfluencerProfilePage() {
             <div className="flex flex-col items-center">
               {/* Profile Picture */}
               <div className="relative mb-4">
-                <div className="w-32 h-32 rounded-full border-4 border-orange-100 dark:border-orange-900/30 overflow-hidden bg-gray-100 dark:bg-gray-700">
+                <div className="w-32 h-32 rounded-full border-4 border-brand-100 dark:border-brand-900/30 overflow-hidden bg-gray-100 dark:bg-gray-700">
                   {profile.profilePictureUrl ? (
                     <Image
                       src={profile.profilePictureUrl}
@@ -281,8 +281,8 @@ export default function InfluencerProfilePage() {
                       className="object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-orange-100 dark:bg-orange-900/30">
-                      <span className="text-4xl font-bold text-orange-600 dark:text-orange-400">
+                    <div className="w-full h-full flex items-center justify-center bg-brand-100 dark:bg-brand-900/30">
+                      <span className="text-4xl font-bold text-brand-600 dark:text-brand-400">
                         {profile.name.charAt(0).toUpperCase()}
                       </span>
                     </div>
@@ -293,7 +293,7 @@ export default function InfluencerProfilePage() {
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isUploading}
-                  className="absolute bottom-0 right-0 w-10 h-10 rounded-full bg-orange-500 hover:bg-orange-600 text-white flex items-center justify-center shadow-lg transition-colors disabled:opacity-50"
+                  className="absolute bottom-0 right-0 w-10 h-10 rounded-full bg-brand-500 hover:bg-brand-600 text-white flex items-center justify-center shadow-lg transition-colors disabled:opacity-50"
                 >
                   {isUploading ? (
                     <FaSpinner className="w-4 h-4 animate-spin" />
@@ -403,7 +403,7 @@ export default function InfluencerProfilePage() {
                     onChange={(e) => setName(e.target.value)}
                     required
                     minLength={2}
-                    className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                     placeholder="Enter your full name"
                   />
                 </div>
@@ -435,7 +435,7 @@ export default function InfluencerProfilePage() {
                     type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                     placeholder="Enter your phone number"
                   />
                 </div>
@@ -484,7 +484,7 @@ export default function InfluencerProfilePage() {
                   <button
                     type="submit"
                     disabled={isSaving}
-                    className="px-6 py-2.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-medium flex items-center gap-2 disabled:opacity-50"
+                    className="px-6 py-2.5 rounded-lg bg-brand-500 hover:bg-brand-600 text-white font-medium flex items-center gap-2 disabled:opacity-50"
                   >
                     {isSaving ? (
                       <>

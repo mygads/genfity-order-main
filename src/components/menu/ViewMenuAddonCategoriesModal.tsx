@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useModalImplicitClose } from "@/hooks/useModalImplicitClose";
 
 interface AddonItem {
   id: string;
@@ -47,6 +48,11 @@ export default function ViewMenuAddonCategoriesModal({
 }: ViewMenuAddonCategoriesModalProps) {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
+  const { onBackdropMouseDown } = useModalImplicitClose({
+    isOpen: show,
+    onClose,
+  });
+
   if (!show) return null;
 
   const formatPrice = (price: string | number) => {
@@ -72,10 +78,7 @@ export default function ViewMenuAddonCategoriesModal({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
-      onMouseDown={(e) => {
-        if (e.target !== e.currentTarget) return;
-        onClose();
-      }}
+      onMouseDown={onBackdropMouseDown}
     >
       <div className="flex w-full max-w-5xl max-h-[90vh] flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-900">
         {/* Header */}

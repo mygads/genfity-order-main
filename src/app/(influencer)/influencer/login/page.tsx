@@ -37,15 +37,15 @@ const carouselSlides = [
  */
 function InfluencerLoginSkeleton() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-orange-50/30 to-slate-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-brand-50/30 to-slate-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl" />
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-brand-500/10 rounded-full blur-3xl" />
         <div className="absolute top-1/2 -left-40 w-80 h-80 bg-[#173C82]/5 rounded-full blur-3xl" />
       </div>
       <div className="relative z-10 min-h-screen flex items-center justify-center p-4 md:p-8 lg:p-12">
         <div className="w-full max-w-6xl flex flex-col lg:flex-row items-stretch gap-8 lg:gap-0">
           {/* Left Panel Skeleton */}
-          <div className="hidden lg:flex flex-col justify-between flex-1 bg-gradient-to-br from-orange-500 to-orange-600 rounded-l-2xl p-10 relative overflow-hidden">
+          <div className="hidden lg:flex flex-col justify-between flex-1 bg-gradient-to-br from-brand-500 to-brand-600 rounded-l-2xl p-10 relative overflow-hidden">
             <div className="h-10 w-40 bg-white/20 rounded-lg animate-pulse" />
             <div className="flex-1 flex flex-col justify-center py-8 space-y-6">
               <div className="w-full h-[220px] bg-white/10 rounded-2xl animate-pulse" />
@@ -169,17 +169,17 @@ function InfluencerLoginForm() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-orange-50/30 to-slate-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-brand-50/30 to-slate-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
       {/* Background Pattern */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl" />
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-brand-500/10 rounded-full blur-3xl" />
         <div className="absolute top-1/2 -left-40 w-80 h-80 bg-[#173C82]/5 rounded-full blur-3xl" />
       </div>
 
       <div className="relative z-10 min-h-screen flex items-center justify-center p-4 md:p-8 lg:p-12">
         <div className="w-full max-w-6xl flex flex-col lg:flex-row items-stretch gap-8 lg:gap-0">
           {/* Left Side - Info Panel with Carousel */}
-          <div className="hidden lg:flex flex-col justify-between flex-1 bg-gradient-to-br from-orange-500 to-orange-600 rounded-l-2xl p-10 text-white relative overflow-hidden">
+          <div className="hidden lg:flex flex-col justify-between flex-1 bg-gradient-to-br from-brand-500 to-brand-600 rounded-l-2xl p-10 text-white relative overflow-hidden">
             {/* Decorative elements */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
             <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
@@ -224,7 +224,7 @@ function InfluencerLoginForm() {
                 <h2 className="text-xl font-bold transition-all duration-500">
                   {carouselSlides[currentSlide].title}
                 </h2>
-                <p className="text-orange-100 text-sm leading-relaxed max-w-sm mx-auto transition-all duration-500">
+                <p className="text-brand-100 text-sm leading-relaxed max-w-sm mx-auto transition-all duration-500">
                   {carouselSlides[currentSlide].description}
                 </p>
               </div>
@@ -247,13 +247,13 @@ function InfluencerLoginForm() {
 
             {/* Trust Badges */}
             <div className="relative z-10 flex items-center justify-center gap-6 pt-4 border-t border-white/10">
-              <div className="flex items-center gap-2 text-sm text-orange-100">
+              <div className="flex items-center gap-2 text-sm text-brand-100">
                 <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                 </svg>
                 <span>Secure Login</span>
               </div>
-              <div className="flex items-center gap-2 text-sm text-orange-100">
+              <div className="flex items-center gap-2 text-sm text-brand-100">
                 <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                 </svg>
@@ -321,7 +321,7 @@ function InfluencerLoginForm() {
                     onChange={handleChange}
                     required
                     disabled={isLoading}
-                    className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm bg-white dark:bg-gray-700 dark:text-white disabled:opacity-50"
+                    className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-brand-500 focus:border-transparent text-sm bg-white dark:bg-gray-700 dark:text-white disabled:opacity-50"
                   />
                 </div>
 
@@ -333,7 +333,7 @@ function InfluencerLoginForm() {
                     </label>
                     <Link
                       href="/influencer/forgot-password"
-                      className="text-xs text-orange-500 hover:text-orange-600 font-medium"
+                      className="text-xs text-brand-500 hover:text-brand-600 font-medium"
                     >
                       Forgot Password?
                     </Link>
@@ -348,7 +348,7 @@ function InfluencerLoginForm() {
                       onChange={handleChange}
                       required
                       disabled={isLoading}
-                      className="w-full px-4 py-3 pr-10 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm bg-white dark:bg-gray-700 dark:text-white disabled:opacity-50"
+                      className="w-full px-4 py-3 pr-10 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-brand-500 focus:border-transparent text-sm bg-white dark:bg-gray-700 dark:text-white disabled:opacity-50"
                     />
                     <button
                       type="button"
@@ -380,7 +380,7 @@ function InfluencerLoginForm() {
                 <button
                   type="submit"
                   disabled={isLoading || (turnstileSiteKey ? !turnstileToken : false)}
-                  className="w-full py-3 px-4 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full py-3 px-4 bg-brand-500 hover:bg-brand-600 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isLoading ? (
                     <>
@@ -395,7 +395,7 @@ function InfluencerLoginForm() {
                 {/* Register Link */}
                 <p className="text-center text-sm text-gray-500 dark:text-gray-400">
                   Don&apos;t have an account?{' '}
-                  <Link href="/influencer/register" className="text-orange-500 hover:text-orange-600 font-medium">
+                  <Link href="/influencer/register" className="text-brand-500 hover:text-brand-600 font-medium">
                     Join Our Program
                   </Link>
                 </p>

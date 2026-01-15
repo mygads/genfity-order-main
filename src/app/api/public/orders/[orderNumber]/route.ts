@@ -70,6 +70,15 @@ export async function GET(
             addons: true,
           },
         },
+        reservation: {
+          select: {
+            status: true,
+            partySize: true,
+            reservationDate: true,
+            reservationTime: true,
+            tableNumber: true,
+          },
+        },
         customer: {
           select: {
             id: true,
@@ -153,19 +162,8 @@ export async function GET(
 
     // If this order was created from a reservation, include reservation details
     // (safe because tokenized access is already validated above).
-    const reservation = await prisma.reservation.findFirst({
-      where: { orderId: order.id },
-      select: {
-        status: true,
-        partySize: true,
-        reservationDate: true,
-        reservationTime: true,
-        tableNumber: true,
-      },
-    });
-
-    if (reservation) {
-      (serialized as any).reservation = reservation;
+    if (order.reservation) {
+      (serialized as any).reservation = order.reservation;
     }
 
     return NextResponse.json({

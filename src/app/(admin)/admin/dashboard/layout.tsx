@@ -107,7 +107,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
 
           {/* Main Content Area */}
           <div
-            className={`flex-1 transition-all duration-300 ease-in-out ${mainContentMargin}`}
+            className={`flex-1 min-w-0 transition-all duration-300 ease-in-out ${mainContentMargin}`}
           >
             {/* Subscription Alerts - Fixed at top when suspended */}
             <SubscriptionAlerts />
@@ -121,8 +121,8 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
             <div
               className={
                 isFullWidthPage
-                  ? 'pt-[70px] md:pt-[80px] lg:pt-[80px] p-4 md:p-6 overflow-x-hidden w-full max-w-none'
-                  : 'pt-[70px] md:pt-[80px] lg:pt-[80px] p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6 overflow-x-hidden'
+                  ? 'pt-[70px] md:pt-[80px] lg:pt-[80px] p-4 md:p-6 overflow-x-hidden w-full max-w-none min-w-0'
+                  : 'pt-[70px] md:pt-[80px] lg:pt-[80px] p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6 overflow-x-hidden min-w-0'
               }
             >
               {children}

@@ -78,7 +78,7 @@ function getTransactionTypeLabel(type: string): { label: string; color: string }
     case 'COMMISSION_RECURRING':
       return { label: 'Recurring Commission', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' };
     case 'WITHDRAWAL':
-      return { label: 'Withdrawal', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' };
+      return { label: 'Withdrawal', color: 'bg-brand-100 text-brand-800 dark:bg-brand-900/30 dark:text-brand-400' };
     case 'ADJUSTMENT':
       return { label: 'Adjustment', color: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' };
     default:
@@ -166,7 +166,7 @@ export default function InfluencerDashboardPage() {
               <p className="text-gray-600 dark:text-gray-400 mb-4">{error}</p>
               <button
                 onClick={fetchDashboard}
-                className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+                className="px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600"
               >
                 Retry
               </button>
@@ -199,16 +199,16 @@ export default function InfluencerDashboardPage() {
 
       <main className="p-4 lg:p-6">
         {/* Welcome Banner */}
-        <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl p-6 mb-8 text-white relative overflow-hidden">
+        <div className="bg-gradient-to-r from-brand-500 to-brand-600 rounded-2xl p-6 mb-8 text-white relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
           <div className="relative z-10">
             <h2 className="text-2xl font-bold mb-2">Welcome back, {influencer.name}!</h2>
-            <p className="text-orange-100 mb-4">Share your referral link and start earning commissions</p>
+            <p className="text-brand-100 mb-4">Share your referral link and start earning commissions</p>
             
             {/* Referral Code & Link */}
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4">
-                <p className="text-xs text-orange-100 mb-1">Your Referral Code</p>
+                <p className="text-xs text-brand-100 mb-1">Your Referral Code</p>
                 <div className="flex items-center gap-2">
                   <code className="text-lg font-mono font-bold">{influencer.referralCode}</code>
                   <button
@@ -225,7 +225,7 @@ export default function InfluencerDashboardPage() {
                 </div>
               </div>
               <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4">
-                <p className="text-xs text-orange-100 mb-1">Your Referral Link</p>
+                <p className="text-xs text-brand-100 mb-1">Your Referral Link</p>
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-medium truncate flex-1">{referralLink}</p>
                   <button
@@ -269,8 +269,8 @@ export default function InfluencerDashboardPage() {
 
           <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-3">
-              <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
-                <FaMoneyBillWave className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+              <div className="w-10 h-10 bg-brand-100 dark:bg-brand-900/30 rounded-lg flex items-center justify-center">
+                <FaMoneyBillWave className="w-5 h-5 text-brand-600 dark:text-brand-400" />
               </div>
             </div>
             <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.pendingWithdrawals}</p>
@@ -326,8 +326,8 @@ export default function InfluencerDashboardPage() {
           <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
-                  <FaClock className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                <div className="w-10 h-10 bg-brand-100 dark:bg-brand-900/30 rounded-lg flex items-center justify-center">
+                  <FaClock className="w-5 h-5 text-brand-600 dark:text-brand-400" />
                 </div>
                 <h3 className="text-base font-semibold text-gray-900 dark:text-white">Pending Withdrawal Amount</h3>
               </div>
@@ -366,7 +366,7 @@ export default function InfluencerDashboardPage() {
                     </div>
                     <Link
                       href={`/influencer/withdrawals?currency=${balance.currency}`}
-                      className="text-sm text-orange-500 hover:text-orange-600 font-medium"
+                      className="text-sm text-brand-500 hover:text-brand-600 font-medium"
                     >
                       Withdraw →
                     </Link>
@@ -444,7 +444,7 @@ export default function InfluencerDashboardPage() {
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
             <div className="p-5 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Recent Transactions</h3>
-              <Link href="/influencer/transactions" className="text-sm text-orange-500 hover:text-orange-600 font-medium">
+              <Link href="/influencer/transactions" className="text-sm text-brand-500 hover:text-brand-600 font-medium">
                 View All →
               </Link>
             </div>

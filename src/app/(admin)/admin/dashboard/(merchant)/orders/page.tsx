@@ -357,9 +357,9 @@ function MerchantOrdersPageContent() {
   }
 
   return (
-    <div data-tutorial="orders-page" className={`${displayMode !== 'normal' ? 'fixed inset-0 z-40 overflow-hidden bg-white dark:bg-gray-950 flex flex-col' : 'flex flex-col h-[calc(100vh-100px)] overflow-hidden'}`}>
+    <div data-tutorial="orders-page" className={`${displayMode !== 'normal' ? 'fixed inset-0 z-40 overflow-hidden bg-white dark:bg-gray-950 flex flex-col' : 'flex flex-col h-[calc(100vh-100px)] overflow-hidden min-w-0'}`}>
       {/* Header - Always Sticky like Kitchen Display */}
-      <div className={`sticky top-0 z-30 bg-white/95 backdrop-blur-sm dark:bg-gray-950/95 border-b border-gray-200 dark:border-gray-800 ${displayMode !== 'normal' ? 'px-6 pt-6 pb-4' : 'pb-4 -mx-6 px-6 pt-0'}`}>
+      <div className={`sticky top-0 z-30 bg-white/95 backdrop-blur-sm dark:bg-gray-950/95 border-b border-gray-200 dark:border-gray-800 ${displayMode !== 'normal' ? 'px-4 md:px-6 pt-6 pb-4' : 'pb-4 -mx-4 md:-mx-6 px-4 md:px-6 pt-0'}`}>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-800 dark:text-white/90">
@@ -520,7 +520,7 @@ function MerchantOrdersPageContent() {
       </div>
 
       {/* Content Area */}
-      <div className={`flex-1 min-h-0 flex flex-col ${displayMode !== 'normal' ? 'px-6 pb-6 pt-6' : 'pt-6'}`}>
+      <div className={`flex-1 min-h-0 min-w-0 flex flex-col ${displayMode !== 'normal' ? 'px-4 md:px-6 pb-6 pt-6' : 'pt-6'}`}>
         {activeMainTab === 'orders' ? (
           <>
             {/* Non-scroll controls (filters + bulk actions) */}

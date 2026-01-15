@@ -182,7 +182,7 @@ export default function InfluencerMerchantsPage() {
           <button
             onClick={handleExport}
             disabled={merchants.length === 0}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-500 text-white hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <FaDownload className="w-4 h-4" />
             Export CSV
@@ -278,7 +278,7 @@ export default function InfluencerMerchantsPage() {
         {error && (
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-8 text-center">
             <p className="text-red-500 mb-4">{error}</p>
-            <button onClick={fetchMerchants} className="px-4 py-2 bg-orange-500 text-white rounded-lg">
+            <button onClick={fetchMerchants} className="px-4 py-2 bg-brand-500 text-white rounded-lg">
               Retry
             </button>
           </div>
@@ -298,7 +298,7 @@ export default function InfluencerMerchantsPage() {
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">No merchants found</h3>
             <p className="text-gray-500 dark:text-gray-400">Try adjusting filters or share your referral link</p>
             <div className="mt-4">
-              <Link href="/influencer/dashboard" className="text-sm text-orange-500 hover:text-orange-600 font-medium">
+              <Link href="/influencer/dashboard" className="text-sm text-brand-500 hover:text-brand-600 font-medium">
                 Back to Dashboard →
               </Link>
             </div>

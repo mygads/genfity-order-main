@@ -302,7 +302,7 @@ export function QuickSetupWizard({
                 style={{
                   left: `${Math.random() * 100}%`,
                   animationDelay: `${Math.random() * 0.5}s`,
-                  backgroundColor: ['#FF6B35', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6'][i % 5],
+                  backgroundColor: ['var(--color-brand-500)', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6'][i % 5],
                   width: '10px',
                   height: '10px',
                   borderRadius: '2px',

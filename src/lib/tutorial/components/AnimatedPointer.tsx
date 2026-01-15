@@ -310,12 +310,12 @@ export function AnimatedPointer({
         onClick={onPointerClick}
       >
         {/* Pulsing Ring */}
-        <div className={`absolute ${sizeConfig.ring1} rounded-full bg-[#FF6B35]/20 animate-ping`} />
-        <div className={`absolute ${sizeConfig.ring2} rounded-full bg-[#FF6B35]/30 animate-pulse`} />
+        <div className={`absolute ${sizeConfig.ring1} rounded-full bg-brand-500/20 animate-ping`} />
+        <div className={`absolute ${sizeConfig.ring2} rounded-full bg-brand-500/30 animate-pulse`} />
         
         {/* Pointer Icon */}
         <div
-          className={`relative z-10 ${sizeConfig.icon} bg-[#FF6B35] rounded-full flex items-center justify-center shadow-lg animate-bounce`}
+          className={`relative z-10 ${sizeConfig.icon} bg-brand-500 rounded-full flex items-center justify-center shadow-lg animate-bounce`}
           style={{
             animationDuration: '1s',
           }}
@@ -331,12 +331,12 @@ export function AnimatedPointer({
         {/* Label - Responsive sizing */}
         {label && (
           <div
-            className={`absolute ${labelPosition} whitespace-nowrap bg-[#FF6B35] text-white ${sizeConfig.labelText} font-semibold ${sizeConfig.labelPadding} rounded-md shadow-lg animate-pulse`}
+            className={`absolute ${labelPosition} whitespace-nowrap bg-brand-500 text-white ${sizeConfig.labelText} font-semibold ${sizeConfig.labelPadding} rounded-md shadow-lg animate-pulse`}
           >
             {label}
             {/* Arrow pointing to icon */}
             <div
-              className={`absolute w-1.5 h-1.5 sm:w-2 sm:h-2 bg-[#FF6B35] transform rotate-45 ${
+              className={`absolute w-1.5 h-1.5 sm:w-2 sm:h-2 bg-brand-500 transform rotate-45 ${
                 direction === 'up' ? '-top-0.5 sm:-top-1 left-1/2 -translate-x-1/2' :
                 direction === 'down' ? '-bottom-0.5 sm:-bottom-1 left-1/2 -translate-x-1/2' :
                 direction === 'left' ? 'top-1/2 -left-0.5 sm:-left-1 -translate-y-1/2' :

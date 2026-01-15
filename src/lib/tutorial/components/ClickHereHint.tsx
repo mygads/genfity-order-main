@@ -200,7 +200,7 @@ export function ClickHereHint({ config, onDismiss, onButtonClick }: ClickHereHin
         top: targetRect.top - OFFSET,
         transform: 'translate(-50%, -100%)',
       };
-      arrowClass = 'bottom-[-6px] left-1/2 -translate-x-1/2 border-t-[#FF6B35] border-l-transparent border-r-transparent border-b-transparent';
+      arrowClass = 'bottom-[-6px] left-1/2 -translate-x-1/2 border-t-brand-500 border-l-transparent border-r-transparent border-b-transparent';
       break;
     case 'bottom':
       tooltipStyle = {
@@ -208,7 +208,7 @@ export function ClickHereHint({ config, onDismiss, onButtonClick }: ClickHereHin
         top: targetRect.bottom + OFFSET,
         transform: 'translate(-50%, 0)',
       };
-      arrowClass = 'top-[-6px] left-1/2 -translate-x-1/2 border-b-[#FF6B35] border-l-transparent border-r-transparent border-t-transparent';
+      arrowClass = 'top-[-6px] left-1/2 -translate-x-1/2 border-b-brand-500 border-l-transparent border-r-transparent border-t-transparent';
       break;
     case 'left':
       tooltipStyle = {
@@ -216,7 +216,7 @@ export function ClickHereHint({ config, onDismiss, onButtonClick }: ClickHereHin
         top: targetRect.top + targetRect.height / 2,
         transform: 'translate(-100%, -50%)',
       };
-      arrowClass = 'right-[-6px] top-1/2 -translate-y-1/2 border-l-[#FF6B35] border-t-transparent border-b-transparent border-r-transparent';
+      arrowClass = 'right-[-6px] top-1/2 -translate-y-1/2 border-l-brand-500 border-t-transparent border-b-transparent border-r-transparent';
       break;
     case 'right':
       tooltipStyle = {
@@ -224,7 +224,7 @@ export function ClickHereHint({ config, onDismiss, onButtonClick }: ClickHereHin
         top: targetRect.top + targetRect.height / 2,
         transform: 'translate(0, -50%)',
       };
-      arrowClass = 'left-[-6px] top-1/2 -translate-y-1/2 border-r-[#FF6B35] border-t-transparent border-b-transparent border-l-transparent';
+        arrowClass = 'left-[-6px] top-1/2 -translate-y-1/2 border-r-brand-500 border-t-transparent border-b-transparent border-l-transparent';
       break;
   }
 
@@ -240,8 +240,8 @@ export function ClickHereHint({ config, onDismiss, onButtonClick }: ClickHereHin
           height: targetRect.height + 8,
         }}
       >
-        <div className="absolute inset-0 rounded-lg border-2 border-[#FF6B35] animate-pulse" />
-        <div className="absolute -inset-1 rounded-xl border-2 border-[#FF6B35]/50 animate-ping" style={{ animationDuration: '1.5s' }} />
+        <div className="absolute inset-0 rounded-lg border-2 border-brand-500 animate-pulse" />
+        <div className="absolute -inset-1 rounded-xl border-2 border-brand-500/50 animate-ping" style={{ animationDuration: '1.5s' }} />
       </div>
 
       {/* Animated Pointer - Responsive */}
@@ -255,7 +255,7 @@ export function ClickHereHint({ config, onDismiss, onButtonClick }: ClickHereHin
           }}
         >
           <div className="relative">
-            <FaHandPointer className="w-5 h-5 sm:w-6 sm:h-6 text-[#FF6B35] animate-bounce drop-shadow-lg" style={{ transform: 'rotate(-30deg)' }} />
+            <FaHandPointer className="w-5 h-5 sm:w-6 sm:h-6 text-brand-500 animate-bounce drop-shadow-lg" style={{ transform: 'rotate(-30deg)' }} />
           </div>
         </div>
       )}
@@ -267,7 +267,7 @@ export function ClickHereHint({ config, onDismiss, onButtonClick }: ClickHereHin
         }`}
         style={tooltipStyle}
       >
-        <div className="relative bg-[#FF6B35] text-white rounded-lg shadow-xl px-3 py-2 sm:px-4 sm:py-3 max-w-55 sm:max-w-70">
+        <div className="relative bg-brand-500 text-white rounded-lg shadow-xl px-3 py-2 sm:px-4 sm:py-3 max-w-55 sm:max-w-70">
           {/* Close Button - Touch friendly */}
           <button
             onClick={handleDismiss}

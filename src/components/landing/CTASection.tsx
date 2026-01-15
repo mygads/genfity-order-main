@@ -12,7 +12,7 @@ export default function CTASection() {
                 <div className="bg-gradient-to-br from-[#173C82] to-[#0f2850] rounded-2xl p-8 md:p-12 text-center relative overflow-hidden">
                     {/* Subtle decorations */}
                     <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl translate-x-1/2 -translate-y-1/2"></div>
-                    <div className="absolute bottom-0 left-0 w-48 h-48 bg-orange-500/10 rounded-full blur-3xl -translate-x-1/2 translate-y-1/2"></div>
+                    <div className="absolute bottom-0 left-0 w-48 h-48 bg-brand-500/10 rounded-full blur-3xl -translate-x-1/2 translate-y-1/2"></div>
 
                     <div className="relative z-10 space-y-5">
                         <h2 className="text-2xl md:text-3xl font-bold text-white leading-tight">
@@ -25,7 +25,7 @@ export default function CTASection() {
                         <div className="flex flex-col items-center gap-3 pt-2">
                             <Link
                                 href="/merchant/register"
-                                className="inline-flex items-center justify-center px-8 py-3.5 bg-[#F07600] hover:bg-[#D96A00] text-white font-semibold rounded-lg shadow-lg shadow-orange-900/30 transition-all hover:-translate-y-0.5 hover:shadow-xl"
+                                className="inline-flex items-center justify-center px-8 py-3.5 bg-brand-500 hover:bg-brand-600 text-white font-semibold rounded-lg shadow-lg shadow-brand-900/30 transition-all hover:-translate-y-0.5 hover:shadow-xl"
                             >
                                 {t('landing.cta.button')}
                             </Link>

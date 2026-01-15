@@ -103,7 +103,7 @@ export default function OutletModal({ merchantCode, merchantData }: OutletModalP
             {merchantData.phone && (
               <a
                 href={`tel:${merchantData.phone}`}
-                className="flex-1 h-11 bg-[#FF6B35] text-white text-sm font-semibold rounded-lg flex items-center justify-center hover:bg-[#E55A2B] transition-all active:scale-[0.98]"
+                className="flex-1 h-11 bg-brand-500 text-white text-sm font-semibold rounded-lg flex items-center justify-center hover:bg-brand-600 transition-all active:scale-[0.98]"
               >
                 📞 Hubungi
               </a>
@@ -113,7 +113,7 @@ export default function OutletModal({ merchantCode, merchantData }: OutletModalP
                 href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(merchantData.address)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 h-11 bg-white border-2 border-[#FF6B35] text-[#FF6B35] text-sm font-semibold rounded-lg flex items-center justify-center hover:bg-[#FFF5F0] transition-all active:scale-[0.98]"
+                className="flex-1 h-11 bg-white border-2 border-brand-500 text-brand-500 text-sm font-semibold rounded-lg flex items-center justify-center hover:bg-brand-50 transition-all active:scale-[0.98]"
               >
                 🗺️ Kunjungi
               </a>

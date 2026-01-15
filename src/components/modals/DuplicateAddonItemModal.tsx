@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { FaTimes, FaSearch, FaCopy } from "react-icons/fa";
+import { useModalImplicitClose } from "@/hooks/useModalImplicitClose";
 
 interface AddonItem {
   id: string;
@@ -52,6 +53,13 @@ export default function DuplicateAddonItemModal({
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const isDirty = Boolean(searchQuery.trim() || filterCategory !== "all" || selectedId);
+  const disableImplicitClose = loading || isDirty;
+
+  const { onBackdropMouseDown } = useModalImplicitClose({
+    isOpen,
+    onClose,
+    disableImplicitClose,
+  });
 
   // Fetch addon items when modal opens
   useEffect(() => {
@@ -135,20 +143,6 @@ export default function DuplicateAddonItemModal({
     }
   };
 
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        if (isDirty) return;
-        onClose();
-      }
-    };
-
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [isOpen, isDirty, onClose]);
-
   if (!isOpen) return null;
 
   return (
@@ -156,11 +150,7 @@ export default function DuplicateAddonItemModal({
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onMouseDown={(e) => {
-          if (e.target !== e.currentTarget) return;
-          if (isDirty) return;
-          onClose();
-        }}
+        onMouseDown={onBackdropMouseDown}
       />
 
       {/* Modal */}
