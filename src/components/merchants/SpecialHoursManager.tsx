@@ -15,7 +15,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useToast } from "@/hooks/useToast";
 import { FaCalendar, FaPlus, FaFileImport, FaFileExport, FaChevronLeft, FaChevronRight, FaRedo, FaCopy } from "react-icons/fa";
-import IconToggle from "@/components/ui/IconToggle";
+import Switch from "@/components/ui/Switch";
 import * as XLSX from "xlsx";
 import ConfirmDialog from "@/components/modals/ConfirmDialog";
 
@@ -456,6 +456,7 @@ export default function SpecialHoursManager({ token, embedded = false }: Special
             <button
               type="button"
               onClick={() => setShowQuickAdd(!showQuickAdd)}
+              data-tutorial="special-hours-quick-add-holiday"
               className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
             >
               Quick Add Holiday
@@ -722,12 +723,11 @@ export default function SpecialHoursManager({ token, embedded = false }: Special
                   <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Repeat Annually</p>
                   <p className="text-xs text-gray-500">Auto-copy to next year</p>
                 </div>
-                <IconToggle
+                <Switch
+                  size="sm"
                   checked={Boolean(formData.isRecurring)}
-                  onChange={(next) => setFormData(prev => ({ ...prev, isRecurring: next }))}
-                  label="Repeat Annually"
-                  ariaLabel="Repeat annually"
-                  variant="iconOnly"
+                  onCheckedChange={(next) => setFormData(prev => ({ ...prev, isRecurring: next }))}
+                  aria-label="Repeat annually"
                 />
               </div>
 
@@ -737,12 +737,11 @@ export default function SpecialHoursManager({ token, embedded = false }: Special
                   <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Closed All Day</p>
                   <p className="text-xs text-gray-500">Store will be completely closed</p>
                 </div>
-                <IconToggle
+                <Switch
+                  size="sm"
                   checked={formData.isClosed}
-                  onChange={(next) => setFormData(prev => ({ ...prev, isClosed: next }))}
-                  label="Closed All Day"
-                  ariaLabel="Closed all day"
-                  variant="iconOnly"
+                  onCheckedChange={(next) => setFormData(prev => ({ ...prev, isClosed: next }))}
+                  aria-label="Closed all day"
                 />
               </div>
 

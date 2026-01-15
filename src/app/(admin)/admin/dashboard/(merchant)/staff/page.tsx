@@ -17,7 +17,7 @@ import { TableActionButton } from "@/components/common/TableActionButton";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { useContextualHint, CONTEXTUAL_HINTS, useClickHereHint, CLICK_HINTS } from "@/lib/tutorial";
 import { STAFF_PERMISSIONS } from "@/lib/constants/permissions";
-import IconToggle from "@/components/ui/IconToggle";
+import Switch from "@/components/ui/Switch";
 import { ConfirmationModal } from "@/components/common/ConfirmationModal";
 import { FaEye, FaTrash, FaUserShield, FaEdit } from "react-icons/fa";
 
@@ -690,14 +690,14 @@ export default function StaffManagementPage() {
                         {member.role === 'MERCHANT_OWNER' ? (
                           <span className="text-sm text-gray-400 dark:text-gray-600">—</span>
                         ) : (
-                          <IconToggle
+                          <Switch
                             checked={member.isActive}
-                            onChange={() => handleToggleStatus(member)}
+                            onCheckedChange={() => {
+                              void handleToggleStatus(member);
+                            }}
                             disabled={!isCurrentUserOwner || Boolean(savingToggle[member.userId]?.active)}
-                            label="Active"
-                            ariaLabel={`Toggle active for ${member.name}`}
                             size="sm"
-                            variant="iconOnly"
+                            aria-label={`Toggle active for ${member.name}`}
                           />
                         )}
                       </td>
@@ -705,18 +705,18 @@ export default function StaffManagementPage() {
                         {member.role === 'MERCHANT_OWNER' ? (
                           <span className="text-sm text-gray-400 dark:text-gray-600">—</span>
                         ) : (
-                          <IconToggle
+                          <Switch
                             checked={(member.permissions || []).includes(STAFF_PERMISSIONS.DRIVER_DASHBOARD)}
-                            onChange={() => handleToggleDriverAccess(member)}
+                            onCheckedChange={() => {
+                              void handleToggleDriverAccess(member);
+                            }}
                             disabled={
                               !isCurrentUserOwner ||
                               member.invitationStatus === 'WAITING' ||
                               Boolean(savingToggle[member.userId]?.driver)
                             }
-                            label="Driver"
-                            ariaLabel={`Toggle driver access for ${member.name}`}
                             size="sm"
-                            variant="iconOnly"
+                            aria-label={`Toggle driver access for ${member.name}`}
                           />
                         )}
                       </td>

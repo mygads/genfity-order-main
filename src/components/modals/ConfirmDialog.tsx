@@ -6,6 +6,7 @@
 "use client";
 
 import React from "react";
+import { createPortal } from "react-dom";
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -31,6 +32,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   onCancel,
 }) => {
   if (!isOpen) return null;
+  if (typeof document === 'undefined') return null;
 
   const variantColors = {
     danger: "bg-error-500 hover:bg-error-600 focus:ring-error-500/20",
@@ -38,10 +40,10 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     info: "bg-brand-500 hover:bg-brand-600 focus:ring-brand-500/20",
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-9999 flex items-center justify-center">
       {/* Backdrop */}
-      <div 
+      <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={onCancel}
       />
@@ -82,7 +84,8 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useToast } from "@/context/ToastContext";
 import ConfirmDialog from "@/components/modals/ConfirmDialog";
 import { TableActionButton } from "@/components/common/TableActionButton";
@@ -105,6 +106,7 @@ export default function ViewAddonItemsModal({
   }, [items]);
 
   if (!show) return null;
+  if (typeof document === 'undefined') return null;
 
   const formatPrice = (price: string | number): string => {
     const numPrice = typeof price === 'string' ? parseFloat(price) : price;
@@ -431,7 +433,7 @@ export default function ViewAddonItemsModal({
     }
   };
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
       onMouseDown={onBackdropMouseDown}
@@ -876,6 +878,7 @@ export default function ViewAddonItemsModal({
           </div>
         </div>
       )}
-    </div>
+    </div>,
+    document.body
   );
 }

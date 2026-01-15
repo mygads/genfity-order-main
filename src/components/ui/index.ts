@@ -40,3 +40,5 @@ export { default as Input } from './Input';
 export { default as Toast } from './Toast';
 export { default as ToastContainer } from './ToastContainer';
 export { default as BottomSheet } from './BottomSheet';
+
+export { default as Switch } from './Switch';

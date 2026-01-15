@@ -342,8 +342,8 @@ export function TipsOfTheDay({
       // Check if first step has navigateTo and we're not already there
       if (tutorial?.steps?.[0]?.navigateTo) {
         const targetPath = tutorial.steps[0].navigateTo;
-        // Strict equality check ensures we are on the exact target page
-        const isAlreadyOnPage = pathname === targetPath;
+        const currentPath = typeof window !== 'undefined' ? `${window.location.pathname}${window.location.search}` : pathname;
+        const isAlreadyOnPage = currentPath === targetPath || currentPath.startsWith(targetPath);
 
         if (!isAlreadyOnPage) {
           // Prefetch for smoother navigation

@@ -155,6 +155,33 @@ export function TutorialSpotlight() {
   // Ref to store previous spotlight rect for animations (avoids infinite loop)
   const prevSpotlightRectRef = useRef<SpotlightRect | null>(null);
 
+  const getCurrentPathWithSearch = useCallback((): string => {
+    if (typeof window === 'undefined') return pathname || '';
+    return `${window.location.pathname}${window.location.search}`;
+  }, [pathname]);
+
+  const findTargetElement = useCallback((selector: string): HTMLElement | null => {
+    if (typeof document === 'undefined') return null;
+
+    const candidates = Array.from(document.querySelectorAll(selector));
+    const isVisible = (el: HTMLElement) => {
+      const rect = el.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return false;
+      const style = window.getComputedStyle(el);
+      if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+      return true;
+    };
+
+    for (const candidate of candidates) {
+      if (candidate instanceof HTMLElement && isVisible(candidate)) {
+        return candidate;
+      }
+    }
+
+    const first = candidates[0];
+    return first instanceof HTMLElement ? first : null;
+  }, []);
+
   // Calculate spotlight position with smooth animation
   const calculateSpotlight = useCallback(() => {
     if (!currentStep?.targetSelector) {
@@ -162,7 +189,7 @@ export function TutorialSpotlight() {
       return;
     }
 
-    const element = document.querySelector(currentStep.targetSelector);
+    const element = findTargetElement(currentStep.targetSelector);
     if (!element) {
       console.warn(`Tutorial: Element not found for selector "${currentStep.targetSelector}"`);
       setSpotlightRect(null);
@@ -194,10 +221,11 @@ export function TutorialSpotlight() {
       return newRect;
     });
 
-    // Check if element is in sidebar and scroll sidebar to show it
-    const sidebar = document.querySelector('[data-sidebar]');
-    const sidebarScrollContainer = document.querySelector('[data-sidebar-scroll]');
-    if (sidebar && sidebar.contains(element)) {
+    // Check if element is in a sidebar and scroll the *closest* sidebar container
+    // (supports nested/page-level sidebars in addition to the main AppSidebar)
+    const sidebar = (element as HTMLElement).closest('[data-sidebar]');
+    const sidebarScrollContainer = sidebar?.querySelector('[data-sidebar-scroll]') as HTMLElement | null;
+    if (sidebar) {
       // Scroll sidebar scroll container to make element visible
       if (sidebarScrollContainer) {
         const scrollRect = sidebarScrollContainer.getBoundingClientRect();
@@ -274,7 +302,7 @@ export function TutorialSpotlight() {
         }, 500);
       }
     }
-  }, [currentStep]);
+  }, [currentStep, findTargetElement]);
 
   // Calculate tooltip position
   const calculateTooltip = useCallback(() => {
@@ -411,36 +439,55 @@ export function TutorialSpotlight() {
       });
     };
 
-    // Only listen to sidebar scroll, not body/window scroll
-    const sidebar = document.querySelector('[data-sidebar]');
-    const sidebarScrollContainer = document.querySelector('[data-sidebar-scroll]');
-    const handleSidebarScroll = () => {
-      // Only recalculate if target element is inside sidebar
-      if (currentStep?.targetSelector) {
-        const targetElement = document.querySelector(currentStep.targetSelector);
-        if (targetElement && sidebar?.contains(targetElement)) {
-          handleResize();
-        }
+    // Only listen to sidebar scroll, not body/window scroll.
+    // Attach to all sidebar scroll containers so nested sidebars work too.
+    const sidebarScrollContainers = Array.from(document.querySelectorAll('[data-sidebar-scroll]')) as HTMLElement[];
+    const handleSidebarScroll = (event: Event) => {
+      if (!currentStep?.targetSelector) return;
+      const targetElement = findTargetElement(currentStep.targetSelector);
+      if (!targetElement) return;
+
+      const scrollContainer = event.currentTarget as HTMLElement | null;
+      if (scrollContainer && scrollContainer.contains(targetElement)) {
+        handleResize();
       }
     };
 
     window.addEventListener('resize', handleResize);
 
-    // Listen to sidebar scroll container specifically (the actual scrollable element)
-    if (sidebarScrollContainer) {
-      sidebarScrollContainer.addEventListener('scroll', handleSidebarScroll, { passive: true });
-    }
+    // Listen to sidebar scroll containers (the actual scrollable elements)
+    sidebarScrollContainers.forEach((scrollContainer) => {
+      scrollContainer.addEventListener('scroll', handleSidebarScroll, { passive: true });
+    });
 
     return () => {
       window.removeEventListener('resize', handleResize);
-      if (sidebarScrollContainer) {
-        sidebarScrollContainer.removeEventListener('scroll', handleSidebarScroll);
-      }
+      sidebarScrollContainers.forEach((scrollContainer) => {
+        scrollContainer.removeEventListener('scroll', handleSidebarScroll);
+      });
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [calculateSpotlight, calculateTooltip, currentStep?.targetSelector]);
+  }, [calculateSpotlight, calculateTooltip, currentStep?.targetSelector, findTargetElement]);
+
+  // Auto-navigate when a step specifies navigateTo.
+  // This keeps the spotlight on the intended UI even for tab-based pages that use query params.
+  useEffect(() => {
+    if (!activeTutorial || !currentStep?.navigateTo) return;
+    if (isNavigating) return;
+
+    const currentPath = getCurrentPathWithSearch();
+    const targetPath = currentStep.navigateTo;
+
+    if (currentPath !== targetPath) {
+      setIsNavigating(true);
+      router.push(targetPath);
+      setTimeout(() => {
+        setIsNavigating(false);
+      }, 600);
+    }
+  }, [activeTutorial, currentStep?.navigateTo, getCurrentPathWithSearch, isNavigating, router]);
 
   // Handle navigation with action - Use Next.js router to preserve tutorial state
   const handleNext = useCallback(() => {
@@ -450,7 +497,7 @@ export function TutorialSpotlight() {
     // Check if current step has actionText - this means we should click the target element
     // When actionText is present and target selector exists, clicking Next should trigger the action
     if (currentStep.actionText && currentStep.targetSelector) {
-      const targetElement = document.querySelector(currentStep.targetSelector) as HTMLElement;
+      const targetElement = findTargetElement(currentStep.targetSelector);
       if (targetElement) {
         // Click the target element to trigger the action (e.g., open modal)
         targetElement.click();
@@ -458,7 +505,8 @@ export function TutorialSpotlight() {
         // If there's also a navigateTo, navigate after clicking
         if (currentStep.navigateTo) {
           const targetPath = currentStep.navigateTo;
-          const isAlreadyOnPage = pathname === targetPath || pathname?.startsWith(targetPath);
+          const currentPath = getCurrentPathWithSearch();
+          const isAlreadyOnPage = currentPath === targetPath || currentPath.startsWith(targetPath);
 
           if (!isAlreadyOnPage) {
             setIsNavigating(true);
@@ -491,7 +539,8 @@ export function TutorialSpotlight() {
     if (currentStep.navigateTo) {
       // Check if we're already on the target page
       const targetPath = currentStep.navigateTo;
-      const isAlreadyOnPage = pathname === targetPath || pathname?.startsWith(targetPath);
+      const currentPath = getCurrentPathWithSearch();
+      const isAlreadyOnPage = currentPath === targetPath || currentPath.startsWith(targetPath);
 
       if (isAlreadyOnPage) {
         // Already on the page, skip to next step
@@ -525,7 +574,7 @@ export function TutorialSpotlight() {
     } else {
       nextStep();
     }
-  }, [activeTutorial, currentStep, currentStepIndex, nextStep, completeTutorial, pathname, router, isNavigating]);
+  }, [activeTutorial, currentStep, currentStepIndex, nextStep, completeTutorial, router, isNavigating, findTargetElement, getCurrentPathWithSearch]);
 
   // Handle previous step
   const handlePrevious = useCallback(() => {

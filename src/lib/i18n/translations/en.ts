@@ -1780,6 +1780,10 @@ const en = {
 
   // Merchant Edit Form
   "admin.merchantEdit.pageTitle": "Edit Merchant",
+  "admin.merchantEdit.features.navLabel": "Features",
+  "admin.merchantEdit.features.navDesc": "Scheduled orders and reservations",
+  "admin.merchantEdit.features.title": "Optional features",
+  "admin.merchantEdit.features.desc": "Enable optional customer flows such as scheduled orders and reservations.",
   "admin.merchantEdit.storeLogo": "Store Logo",
   "admin.merchantEdit.logoDesc": "Square image (1:1 ratio). Displayed on mode selection page and header.",
   "admin.merchantEdit.uploadingLogo": "Uploading...",

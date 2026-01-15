@@ -2,9 +2,45 @@
 
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import IconToggle from "@/components/ui/IconToggle";
+import Button from "@/components/ui/Button";
+import Switch from "@/components/ui/Switch";
 import { useModalImplicitClose } from "@/hooks/useModalImplicitClose";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+
+function NotificationToggleRow({
+  label,
+  description,
+  checked,
+  onCheckedChange,
+  disabled,
+  size = 'md',
+}: {
+  label: string;
+  description?: string;
+  checked: boolean;
+  onCheckedChange: (nextValue: boolean) => void;
+  disabled?: boolean;
+  size?: 'sm' | 'md';
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4 rounded-xl border border-gray-200 p-4 dark:border-gray-800">
+      <div className="min-w-0 flex-1">
+        <div className="text-sm font-semibold text-gray-900 dark:text-white">{label}</div>
+        {description ? (
+          <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">{description}</div>
+        ) : null}
+      </div>
+
+      <Switch
+        checked={checked}
+        onCheckedChange={onCheckedChange}
+        disabled={disabled}
+        size={size}
+        aria-label={label}
+      />
+    </div>
+  );
+}
 
 export type MerchantTransactionToggleKey = "newOrder" | "stockOut" | "lowStock" | "payment" | "subscription";
 export type StaffActivityToggleKey = "login" | "logout";
@@ -101,15 +137,15 @@ export default function NotificationSettingsModal({
             </div>
           ) : data ? (
             <div className="grid gap-4">
-              <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-800">
-                <IconToggle
-                  checked={data.settings.accountTransactions}
-                  onChange={onToggleAccountTransactions}
-                  disabled={savingKey === "accountTransactions"}
-                  label={t("notifications.settings.account.title") || "Account transaction notifications"}
-                  description={t("notifications.settings.account.desc") || "Profile and security updates for your account."}
-                />
-              </div>
+              <NotificationToggleRow
+                checked={data.settings.accountTransactions}
+                onCheckedChange={(v) => {
+                  void onToggleAccountTransactions(v);
+                }}
+                disabled={savingKey === "accountTransactions"}
+                label={t("notifications.settings.account.title") || "Account transaction notifications"}
+                description={t("notifications.settings.account.desc") || "Profile and security updates for your account."}
+              />
 
               <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-800">
                 <div className="text-sm font-semibold text-gray-900 dark:text-white">
@@ -121,9 +157,11 @@ export default function NotificationSettingsModal({
 
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   {data.availability.merchant.newOrder ? (
-                    <IconToggle
+                    <NotificationToggleRow
                       checked={data.settings.merchant.newOrder}
-                      onChange={(v) => onToggleMerchantKey("newOrder", v)}
+                      onCheckedChange={(v) => {
+                        void onToggleMerchantKey("newOrder", v);
+                      }}
                       disabled={savingKey === "merchant:newOrder"}
                       size="sm"
                       label={t("notifications.settings.merchant.newOrder") || "New orders"}
@@ -132,9 +170,11 @@ export default function NotificationSettingsModal({
                   ) : null}
 
                   {data.availability.merchant.stockOut ? (
-                    <IconToggle
+                    <NotificationToggleRow
                       checked={data.settings.merchant.stockOut}
-                      onChange={(v) => onToggleMerchantKey("stockOut", v)}
+                      onCheckedChange={(v) => {
+                        void onToggleMerchantKey("stockOut", v);
+                      }}
                       disabled={savingKey === "merchant:stockOut"}
                       size="sm"
                       label={t("notifications.settings.merchant.stockOut") || "Out of stock"}
@@ -143,9 +183,11 @@ export default function NotificationSettingsModal({
                   ) : null}
 
                   {data.availability.merchant.lowStock ? (
-                    <IconToggle
+                    <NotificationToggleRow
                       checked={data.settings.merchant.lowStock}
-                      onChange={(v) => onToggleMerchantKey("lowStock", v)}
+                      onCheckedChange={(v) => {
+                        void onToggleMerchantKey("lowStock", v);
+                      }}
                       disabled={savingKey === "merchant:lowStock"}
                       size="sm"
                       label={t("notifications.settings.merchant.lowStock") || "Low stock"}
@@ -154,9 +196,11 @@ export default function NotificationSettingsModal({
                   ) : null}
 
                   {data.availability.merchant.payment ? (
-                    <IconToggle
+                    <NotificationToggleRow
                       checked={data.settings.merchant.payment}
-                      onChange={(v) => onToggleMerchantKey("payment", v)}
+                      onCheckedChange={(v) => {
+                        void onToggleMerchantKey("payment", v);
+                      }}
                       disabled={savingKey === "merchant:payment"}
                       size="sm"
                       label={t("notifications.settings.merchant.payment") || "Payments"}
@@ -165,9 +209,11 @@ export default function NotificationSettingsModal({
                   ) : null}
 
                   {data.availability.merchant.subscription ? (
-                    <IconToggle
+                    <NotificationToggleRow
                       checked={data.settings.merchant.subscription}
-                      onChange={(v) => onToggleMerchantKey("subscription", v)}
+                      onCheckedChange={(v) => {
+                        void onToggleMerchantKey("subscription", v);
+                      }}
                       disabled={savingKey === "merchant:subscription"}
                       size="sm"
                       label={t("notifications.settings.merchant.subscription") || "Subscription"}
@@ -193,9 +239,11 @@ export default function NotificationSettingsModal({
 
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   {staffAvailability.login ? (
-                    <IconToggle
+                    <NotificationToggleRow
                       checked={staffSettings.login}
-                      onChange={(v) => onToggleStaffKey("login", v)}
+                      onCheckedChange={(v) => {
+                        void onToggleStaffKey("login", v);
+                      }}
                       disabled={savingKey === "staff:login"}
                       size="sm"
                       label={t("notifications.settings.staff.login") || "Staff login"}
@@ -204,9 +252,11 @@ export default function NotificationSettingsModal({
                   ) : null}
 
                   {staffAvailability.logout ? (
-                    <IconToggle
+                    <NotificationToggleRow
                       checked={staffSettings.logout}
-                      onChange={(v) => onToggleStaffKey("logout", v)}
+                      onCheckedChange={(v) => {
+                        void onToggleStaffKey("logout", v);
+                      }}
                       disabled={savingKey === "staff:logout"}
                       size="sm"
                       label={t("notifications.settings.staff.logout") || "Staff logout"}
@@ -230,12 +280,9 @@ export default function NotificationSettingsModal({
         </div>
 
         <div className="flex items-center justify-end gap-3 border-t border-gray-200 p-5 dark:border-gray-800">
-          <button
-            onClick={onClose}
-            className="h-10 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-          >
+          <Button variant="outline" onClick={onClose}>
             {t("common.close") || "Close"}
-          </button>
+          </Button>
         </div>
       </div>
     </div>,

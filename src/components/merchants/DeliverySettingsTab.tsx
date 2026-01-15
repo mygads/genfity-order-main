@@ -4,8 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { BoxIcon, DownloadIcon, FileIcon, PlusIcon, PencilIcon, TrashBinIcon } from '@/icons';
-import IconToggle from '@/components/ui/IconToggle';
 import ConfirmDialog from '@/components/modals/ConfirmDialog';
+import Switch from '@/components/ui/Switch';
+import Button from '@/components/ui/Button';
+import { getCurrencyConfig } from '@/lib/constants/location';
+import { formatCurrency } from '@/lib/utils/format';
 
 import type { TranslationKeys } from '@/lib/i18n';
 
@@ -91,6 +94,16 @@ export default function DeliverySettingsTab({
   showError: ToastFn;
 }) {
   const { t } = useTranslation();
+
+  const currency = formData.currency || 'AUD';
+  const currencyConfig = getCurrencyConfig(currency);
+  const decimals = currencyConfig?.decimals ?? 2;
+  const moneyStep = decimals === 0 ? '1' : (1 / Math.pow(10, decimals)).toFixed(decimals);
+
+  const normalizeMoney = (value: number): number => {
+    if (!Number.isFinite(value)) return 0;
+    return decimals === 0 ? Math.floor(value) : value;
+  };
 
   const [zones, setZones] = useState<DeliveryZone[]>([]);
   const [zonesLoading, setZonesLoading] = useState(false);
@@ -207,14 +220,7 @@ export default function DeliverySettingsTab({
     }
   };
 
-  const formatMoney = (amount: number) => {
-    const currency = formData.currency || 'USD';
-    try {
-      return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(amount);
-    } catch {
-      return `${amount.toFixed(2)} ${currency}`;
-    }
-  };
+  const formatMoney = (amount: number) => formatCurrency(amount, currency);
 
   type GeoJsonFeatureCollection = {
     type: 'FeatureCollection';
@@ -601,7 +607,10 @@ export default function DeliverySettingsTab({
           await performDeleteZone(zone);
         }}
       />
-      <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/3">
+      <div
+        className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/3"
+        data-tutorial="delivery-fee-settings"
+      >
         <div className="flex items-start justify-between gap-6">
           <div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -647,28 +656,35 @@ export default function DeliverySettingsTab({
                 }))
               }
               className="h-10 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-              placeholder="5"
             />
           </label>
 
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900">
-            <IconToggle
-              checked={formData.enforceDeliveryZones !== false}
-              onChange={(next) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  enforceDeliveryZones: next,
-                }))
-              }
-              label={keyOrFallback('admin.merchant.enforceDeliveryZones', 'Enforce Delivery Zones', t)}
-              description={keyOrFallback(
-                'admin.merchant.enforceDeliveryZonesDesc',
-                'If enabled, delivery is only allowed inside configured zones.',
-                t,
-              )}
-              size="sm"
-              className="w-full"
-            />
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                  {keyOrFallback('admin.merchant.enforceDeliveryZones', 'Enforce Delivery Zones', t)}
+                </p>
+                <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                  {keyOrFallback(
+                    'admin.merchant.enforceDeliveryZonesDesc',
+                    'If enabled, delivery is only allowed inside configured zones.',
+                    t,
+                  )}
+                </p>
+              </div>
+              <Switch
+                size="sm"
+                checked={formData.enforceDeliveryZones !== false}
+                onCheckedChange={(next) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    enforceDeliveryZones: next,
+                  }))
+                }
+                aria-label={keyOrFallback('admin.merchant.enforceDeliveryZones', 'Enforce Delivery Zones', t)}
+              />
+            </div>
           </div>
 
           <label className="block">
@@ -678,18 +694,18 @@ export default function DeliverySettingsTab({
             <input
               type="number"
               inputMode="decimal"
-              step="0.01"
+              step={moneyStep}
               min={0}
               value={formData.deliveryFeeBase ?? 0}
               onChange={(e) =>
                 setFormData((prev) => ({
                   ...prev,
-                  deliveryFeeBase: Number(e.target.value),
+                  deliveryFeeBase: normalizeMoney(Number(e.target.value)),
                 }))
               }
               className="h-10 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-              placeholder="2.00"
             />
+            <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">Preview: {formatCurrency(formData.deliveryFeeBase || 0, currency)}</p>
           </label>
 
           <label className="block">
@@ -699,18 +715,18 @@ export default function DeliverySettingsTab({
             <input
               type="number"
               inputMode="decimal"
-              step="0.01"
+              step={moneyStep}
               min={0}
               value={formData.deliveryFeePerKm ?? 0}
               onChange={(e) =>
                 setFormData((prev) => ({
                   ...prev,
-                  deliveryFeePerKm: Number(e.target.value),
+                  deliveryFeePerKm: normalizeMoney(Number(e.target.value)),
                 }))
               }
               className="h-10 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-              placeholder="1.50"
             />
+            <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">Preview: {formatCurrency(formData.deliveryFeePerKm || 0, currency)} / km</p>
           </label>
 
           <label className="block">
@@ -720,18 +736,22 @@ export default function DeliverySettingsTab({
             <input
               type="number"
               inputMode="decimal"
-              step="0.01"
+              step={moneyStep}
               min={0}
               value={formData.deliveryFeeMin ?? ''}
               onChange={(e) =>
                 setFormData((prev) => ({
                   ...prev,
-                  deliveryFeeMin: e.target.value === '' ? null : Number(e.target.value),
+                  deliveryFeeMin: e.target.value === '' ? null : normalizeMoney(Number(e.target.value)),
                 }))
               }
               className="h-10 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-              placeholder="0.00"
             />
+            <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+              {formData.deliveryFeeMin === null
+                ? 'Not set'
+                : `Preview: ${formatCurrency(formData.deliveryFeeMin || 0, currency)}`}
+            </p>
           </label>
 
           <label className="block">
@@ -741,18 +761,22 @@ export default function DeliverySettingsTab({
             <input
               type="number"
               inputMode="decimal"
-              step="0.01"
+              step={moneyStep}
               min={0}
               value={formData.deliveryFeeMax ?? ''}
               onChange={(e) =>
                 setFormData((prev) => ({
                   ...prev,
-                  deliveryFeeMax: e.target.value === '' ? null : Number(e.target.value),
+                  deliveryFeeMax: e.target.value === '' ? null : normalizeMoney(Number(e.target.value)),
                 }))
               }
               className="h-10 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-              placeholder="20.00"
             />
+            <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+              {formData.deliveryFeeMax === null
+                ? 'Not set'
+                : `Preview: ${formatCurrency(formData.deliveryFeeMax || 0, currency)}`}
+            </p>
           </label>
         </div>
 
@@ -763,7 +787,10 @@ export default function DeliverySettingsTab({
         )}
       </div>
 
-      <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/3">
+      <div
+        className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/3"
+        data-tutorial="delivery-zones-section"
+      >
         <div className="flex items-center justify-between gap-4">
           <div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -787,58 +814,70 @@ export default function DeliverySettingsTab({
               }}
             />
 
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
+              className="h-10"
               onClick={() => importFileRef.current?.click()}
               disabled={bulkImporting}
-              className="inline-flex h-10 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+              leftIcon={<FileIcon className="h-4 w-4" />}
               title={keyOrFallback('admin.merchant.importGeoJson' as TranslationKeys, 'Import GeoJSON', t)}
             >
-              <FileIcon className="h-4 w-4" />
               {keyOrFallback('admin.merchant.importGeoJson' as TranslationKeys, 'Import', t)}
-            </button>
+            </Button>
 
             <div className="hidden items-center rounded-lg border border-gray-200 bg-white px-3 py-2 dark:border-gray-800 dark:bg-gray-900 sm:flex">
-              <IconToggle
-                checked={replaceOnImport}
-                onChange={setReplaceOnImport}
-                label={keyOrFallback('admin.merchant.replaceExistingZones' as TranslationKeys, 'Replace existing', t)}
-                size="sm"
-                className="items-center gap-2"
-              />
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {keyOrFallback('admin.merchant.replaceExistingZones' as TranslationKeys, 'Replace existing', t)}
+                </span>
+                <Switch
+                  size="sm"
+                  checked={replaceOnImport}
+                  onCheckedChange={setReplaceOnImport}
+                  aria-label={keyOrFallback('admin.merchant.replaceExistingZones' as TranslationKeys, 'Replace existing', t)}
+                />
+              </div>
             </div>
 
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
+              className="h-10"
               onClick={exportZonesGeoJson}
               disabled={zones.length === 0}
-              className="inline-flex h-10 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+              leftIcon={<DownloadIcon className="h-4 w-4" />}
               title={keyOrFallback('admin.merchant.exportGeoJson' as TranslationKeys, 'Export GeoJSON', t)}
             >
-              <DownloadIcon className="h-4 w-4" />
               {keyOrFallback('admin.merchant.exportGeoJson' as TranslationKeys, 'Export', t)}
-            </button>
+            </Button>
 
             {undoGeoJson && (
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="sm"
+                className="h-10 border-warning-200 bg-warning-50 text-warning-800 hover:bg-warning-100 dark:border-warning-900/40 dark:bg-warning-900/10 dark:text-warning-200 dark:hover:bg-warning-900/20"
                 onClick={undoLastImport}
                 disabled={bulkImporting || !undoAvailable}
-                className="inline-flex h-10 items-center gap-2 rounded-lg border border-warning-200 bg-warning-50 px-3 text-sm font-medium text-warning-800 hover:bg-warning-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-warning-900/40 dark:bg-warning-900/10 dark:text-warning-200 dark:hover:bg-warning-900/20"
                 title={keyOrFallback('admin.merchant.undoLastImport' as TranslationKeys, 'Undo last import', t)}
               >
                 {keyOrFallback('admin.merchant.undoLastImport' as TranslationKeys, 'Undo', t)}
-              </button>
+              </Button>
             )}
 
-            <button
+            <Button
               type="button"
+              variant="primary"
+              size="sm"
+              className="h-10"
               onClick={openCreateZone}
-              className="inline-flex h-10 items-center gap-2 rounded-lg bg-brand-500 px-4 text-sm font-medium text-white hover:bg-brand-600"
+              leftIcon={<PlusIcon className="h-4 w-4" />}
             >
-              <PlusIcon className="h-4 w-4" />
               {keyOrFallback('admin.merchant.addZone', 'Add Zone', t)}
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -871,22 +910,26 @@ export default function DeliverySettingsTab({
                   {keyOrFallback('admin.merchant.noZones' as TranslationKeys, 'No zones yet. Add one to start restricting delivery areas.', t)}
                 </div>
                 <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
-                  <button
+                  <Button
                     type="button"
+                    variant="primary"
+                    size="sm"
+                    className="h-10"
                     onClick={openCreateZone}
-                    className="inline-flex h-10 items-center gap-2 rounded-lg bg-brand-500 px-4 text-sm font-medium text-white hover:bg-brand-600"
+                    leftIcon={<PlusIcon className="h-4 w-4" />}
                   >
-                    <PlusIcon className="h-4 w-4" />
                     {keyOrFallback('admin.merchant.addZone', 'Add Zone', t)}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-10"
                     onClick={() => importFileRef.current?.click()}
-                    className="inline-flex h-10 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+                    leftIcon={<FileIcon className="h-4 w-4" />}
                   >
-                    <FileIcon className="h-4 w-4" />
                     {keyOrFallback('admin.merchant.importGeoJson' as TranslationKeys, 'Import GeoJSON', t)}
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
@@ -908,22 +951,28 @@ export default function DeliverySettingsTab({
                     </span>
                   </div>
                   <div className="col-span-2 flex items-center justify-end gap-2">
-                    <button
+                    <Button
                       type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-9 w-9 px-0"
                       onClick={() => openEditZone(z)}
-                      className="inline-flex h-9 items-center justify-center rounded-lg border border-gray-200 bg-white px-3 text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+                      aria-label="Edit"
                       title="Edit"
                     >
                       <PencilIcon className="h-4 w-4" />
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-9 w-9 px-0 border-gray-200 text-error-600 hover:bg-error-50 dark:border-gray-800 dark:text-error-300 dark:hover:bg-error-900/10"
                       onClick={() => requestDeleteZone(z)}
-                      className="inline-flex h-9 items-center justify-center rounded-lg border border-gray-200 bg-white px-3 text-error-600 hover:bg-error-50 dark:border-gray-800 dark:bg-gray-900 dark:text-error-300 dark:hover:bg-error-900/10"
+                      aria-label="Delete"
                       title="Delete"
                     >
                       <TrashBinIcon className="h-4 w-4" />
-                    </button>
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -959,8 +1008,11 @@ export default function DeliverySettingsTab({
           </div>
 
           <div className="flex gap-2">
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
+              className="h-10"
               onClick={() => {
                 setPreviewError('');
                 setPreviewResult(null);
@@ -969,19 +1021,21 @@ export default function DeliverySettingsTab({
                   setPreviewPoint({ lat: Number(formData.latitude), lng: Number(formData.longitude) });
                 }
               }}
-              className="h-10 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
             >
               Pick on map
-            </button>
+            </Button>
 
-            <button
+            <Button
               type="button"
+              variant="primary"
+              size="sm"
+              className="h-10"
               onClick={runPreviewQuote}
               disabled={previewLoading}
-              className="h-10 rounded-lg bg-brand-500 px-4 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
+              isLoading={previewLoading}
             >
-              {previewLoading ? keyOrFallback('common.loading', 'Loading...', t) : keyOrFallback('admin.merchant.previewQuote' as TranslationKeys, 'Preview Quote', t)}
-            </button>
+              {keyOrFallback('admin.merchant.previewQuote' as TranslationKeys, 'Preview Quote', t)}
+            </Button>
           </div>
         </div>
 
@@ -1036,13 +1090,15 @@ export default function DeliverySettingsTab({
                 <div className="text-base font-semibold text-gray-900 dark:text-white">Pick customer location</div>
                 <div className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">Click on the map to set a test point for quote preview.</div>
               </div>
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="sm"
+                className="h-10"
                 onClick={() => setShowPreviewModal(false)}
-                className="rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
               >
                 Close
-              </button>
+              </Button>
             </div>
 
             <div className="p-5">
@@ -1054,13 +1110,15 @@ export default function DeliverySettingsTab({
               />
 
               <div className="mt-4 flex justify-end gap-2">
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-10"
                   onClick={() => setShowPreviewModal(false)}
-                  className="h-10 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
                 >
                   Done
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -1106,7 +1164,6 @@ export default function DeliverySettingsTab({
                     value={zoneName}
                     onChange={(e) => setZoneName(e.target.value)}
                     className="h-10 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                    placeholder="e.g. City Center"
                   />
                 </label>
 
@@ -1142,14 +1199,22 @@ export default function DeliverySettingsTab({
                 )}
 
                 <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900">
-                  <IconToggle
-                    checked={zoneActive}
-                    onChange={setZoneActive}
-                    label={keyOrFallback('admin.merchant.active', 'Active', t)}
-                    description={keyOrFallback('admin.merchant.activeDesc', 'Inactive zones are ignored for delivery validation.', t)}
-                    size="sm"
-                    className="w-full"
-                  />
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">
+                        {keyOrFallback('admin.merchant.active', 'Active', t)}
+                      </p>
+                      <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                        {keyOrFallback('admin.merchant.activeDesc', 'Inactive zones are ignored for delivery validation.', t)}
+                      </p>
+                    </div>
+                    <Switch
+                      size="sm"
+                      checked={zoneActive}
+                      onCheckedChange={setZoneActive}
+                      aria-label={keyOrFallback('admin.merchant.active', 'Active', t)}
+                    />
+                  </div>
                 </div>
 
                 {zoneType === 'POLYGON' && (
@@ -1161,22 +1226,26 @@ export default function DeliverySettingsTab({
                       <div className="text-xs text-gray-500 dark:text-gray-400">{zonePolygon.length}</div>
                     </div>
                     <div className="mt-3 flex gap-2">
-                      <button
+                      <Button
                         type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-9 flex-1"
                         onClick={() => setZonePolygon((prev) => prev.slice(0, -1))}
                         disabled={zonePolygon.length === 0}
-                        className="h-9 flex-1 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
                       >
                         {keyOrFallback('admin.merchant.undoPoint', 'Undo', t)}
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-9 flex-1"
                         onClick={() => setZonePolygon([])}
                         disabled={zonePolygon.length === 0}
-                        className="h-9 flex-1 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
                       >
                         {keyOrFallback('admin.merchant.clearPoints', 'Clear', t)}
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 )}
@@ -1188,21 +1257,26 @@ export default function DeliverySettingsTab({
                 )}
 
                 <div className="flex gap-3">
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="md"
+                    className="h-11 flex-1"
                     onClick={closeZoneModal}
-                    className="h-11 flex-1 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
                   >
                     {keyOrFallback('common.cancel', 'Cancel', t)}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
+                    variant="primary"
+                    size="md"
+                    className="h-11 flex-1"
                     onClick={saveZone}
                     disabled={savingZone}
-                    className="h-11 flex-1 rounded-lg bg-brand-500 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
+                    isLoading={savingZone}
                   >
-                    {savingZone ? keyOrFallback('common.saving', 'Saving...', t) : keyOrFallback('common.save', 'Save', t)}
-                  </button>
+                    {keyOrFallback('common.save', 'Save', t)}
+                  </Button>
                 </div>
               </div>
 

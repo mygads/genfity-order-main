@@ -1775,6 +1775,10 @@ const id = {
 
   // Merchant Edit Form
   "admin.merchantEdit.pageTitle": "Ubah Merchant",
+  "admin.merchantEdit.features.navLabel": "Fitur",
+  "admin.merchantEdit.features.navDesc": "Pesanan terjadwal dan reservasi",
+  "admin.merchantEdit.features.title": "Fitur opsional",
+  "admin.merchantEdit.features.desc": "Aktifkan alur pelanggan opsional seperti pesanan terjadwal dan reservasi.",
   "admin.merchantEdit.storeLogo": "Logo Toko",
   "admin.merchantEdit.logoDesc": "Gambar persegi (rasio 1:1). Ditampilkan di halaman pemilihan mode dan header.",
   "admin.merchantEdit.uploadingLogo": "Mengunggah...",

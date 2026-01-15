@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/context/ToastContext";
 import { useModalImplicitClose } from "@/hooks/useModalImplicitClose";
@@ -109,8 +110,9 @@ export default function MenuRelationshipModal({
   };
 
   if (!show) return null;
+  if (typeof document === 'undefined') return null;
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
       onMouseDown={onBackdropMouseDown}
@@ -346,6 +348,7 @@ export default function MenuRelationshipModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

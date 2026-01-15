@@ -12,7 +12,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/useToast";
 import { FaCopy, FaMagic } from "react-icons/fa";
-import IconToggle from "@/components/ui/IconToggle";
+import Switch from "@/components/ui/Switch";
 
 interface ModeSchedule {
   id?: string;
@@ -260,13 +260,15 @@ export default function PerDayModeSchedule({ token, embedded = false }: PerDayMo
             return (
               <div key={dayIndex} className="flex items-center gap-2">
                 <div className="w-24">
-                  <IconToggle
-                    checked={schedule.isActive}
-                    onChange={(next) => updateSchedule(mode, dayIndex, 'isActive', next)}
-                    label={dayName.slice(0, 3)}
-                    size="sm"
-                    className="items-center gap-2"
-                  />
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{dayName.slice(0, 3)}</span>
+                    <Switch
+                      size="sm"
+                      checked={schedule.isActive}
+                      onCheckedChange={(next) => updateSchedule(mode, dayIndex, 'isActive', next)}
+                      aria-label={`${dayName} active`}
+                    />
+                  </div>
                 </div>
                 <input
                   type="time"
@@ -322,16 +324,20 @@ export default function PerDayModeSchedule({ token, embedded = false }: PerDayMo
       )}
 
       {/* Enable Toggle */}
-      <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-900/50">
+      <div
+        className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-900/50"
+        data-tutorial="per-day-schedule-enable"
+      >
         <div>
           <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Enable Per-Day Schedules</p>
           <p className="text-xs text-gray-500 dark:text-gray-400">
             Override global mode schedules with day-specific times
           </p>
         </div>
-        <IconToggle
+        <Switch
+          size="sm"
           checked={enablePerDaySchedule}
-          onChange={(next) => {
+          onCheckedChange={(next) => {
             setEnablePerDaySchedule(next);
             if (next && schedules.length === 0) {
               initializeSchedules('DINE_IN');
@@ -339,9 +345,7 @@ export default function PerDayModeSchedule({ token, embedded = false }: PerDayMo
               initializeSchedules('DELIVERY');
             }
           }}
-          label="Enable Per-Day Schedules"
-          ariaLabel="Enable per-day schedules"
-          variant="iconOnly"
+          aria-label="Enable per-day schedules"
         />
       </div>
 
@@ -358,6 +362,7 @@ export default function PerDayModeSchedule({ token, embedded = false }: PerDayMo
               type="button"
               onClick={saveSchedules}
               disabled={saving}
+              data-tutorial="per-day-schedule-save"
               className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50"
             >
               {saving ? 'Saving...' : 'Save Per-Day Schedules'}
@@ -416,14 +421,12 @@ export default function PerDayModeSchedule({ token, embedded = false }: PerDayMo
                         : 'border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800'
                     }`}
                 >
-                  <IconToggle
+                  <Switch
+                    size="sm"
                     checked={copyTargetDays.includes(dayIndex)}
                     disabled={dayIndex === copySource.dayOfWeek}
-                    onChange={(_) => toggleCopyTargetDay(dayIndex)}
-                    label={dayName}
-                    ariaLabel={`Select ${dayName}`}
-                    variant="iconOnly"
-                    size="sm"
+                    onCheckedChange={() => toggleCopyTargetDay(dayIndex)}
+                    aria-label={`Select ${dayName}`}
                   />
                   <span className="text-sm">{dayName}</span>
                 </div>

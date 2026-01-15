@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { FaTrashRestore, FaTimes, FaCalendarAlt, FaBox, FaTag, FaLayerGroup, FaPuzzlePiece, FaClock, FaInfoCircle, FaTrashAlt } from "react-icons/fa";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 
@@ -264,10 +265,11 @@ export default function ArchiveModal({
   const shouldShowTabs = filterType === 'all';
 
   if (!isOpen) return null;
+  if (typeof document === 'undefined') return null;
 
   const currentItems = getCurrentItems();
 
-  return (
+  return createPortal(
     <>
       {/* Overlay */}
       <div
@@ -502,6 +504,7 @@ export default function ArchiveModal({
           </div>
         </>
       )}
-    </>
+    </>,
+    document.body
   );
 }
