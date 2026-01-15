@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { FaTimes, FaUser, FaPhone, FaEnvelope, FaChair, FaStickyNote } from 'react-icons/fa';
+import { FaTimes, FaUser, FaPhone, FaEnvelope, FaChair, FaStickyNote, FaTag, FaDollarSign, FaHashtag } from 'react-icons/fa';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { useModalImplicitClose } from '@/hooks/useModalImplicitClose';
+import { formatCurrency } from '@/lib/utils/format';
 
 // ============================================
 // BASE MODAL COMPONENT
@@ -185,6 +186,181 @@ export const CustomerInfoModal: React.FC<CustomerInfoModalProps> = ({
           className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium bg-brand-500 text-white hover:bg-brand-600 transition-colors"
         >
           {t('common.confirm')}
+        </button>
+      </div>
+    </BaseModal>
+  );
+};
+
+// ============================================
+// CUSTOM ITEM MODAL (POS)
+// ============================================
+
+export interface CustomItemDraft {
+  name: string;
+  price: number;
+  quantity: number;
+  notes?: string;
+}
+
+interface CustomItemModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: (item: CustomItemDraft) => void;
+  currency: string;
+}
+
+export const CustomItemModal: React.FC<CustomItemModalProps> = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  currency,
+}) => {
+  const { t, locale } = useTranslation();
+  const [name, setName] = useState('');
+  const [priceText, setPriceText] = useState('');
+  const [quantityText, setQuantityText] = useState('1');
+  const [notes, setNotes] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setName('');
+    setPriceText('');
+    setQuantityText('1');
+    setNotes('');
+    setTimeout(() => inputRef.current?.focus(), 100);
+  }, [isOpen]);
+
+  const parsedPrice = useMemo(() => {
+    const n = Number(priceText);
+    return Number.isFinite(n) ? n : NaN;
+  }, [priceText]);
+
+  const parsedQty = useMemo(() => {
+    const n = Number(quantityText);
+    return Number.isFinite(n) ? n : NaN;
+  }, [quantityText]);
+
+  const isValid = useMemo(() => {
+    const trimmedName = name.trim();
+    if (!trimmedName) return false;
+    if (!Number.isFinite(parsedPrice) || parsedPrice < 0) return false;
+    if (!Number.isFinite(parsedQty) || parsedQty <= 0) return false;
+    return true;
+  }, [name, parsedPrice, parsedQty]);
+
+  const isDirty = useMemo(() => {
+    return Boolean(name.trim() || priceText.trim() || notes.trim() || (quantityText.trim() && quantityText.trim() !== '1'));
+  }, [name, notes, priceText, quantityText]);
+
+  const handleConfirm = () => {
+    if (!isValid) return;
+    onConfirm({
+      name: name.trim(),
+      price: Number(parsedPrice),
+      quantity: Math.max(1, Math.floor(Number(parsedQty))),
+      notes: notes.trim() || undefined,
+    });
+    onClose();
+  };
+
+  const formattedPreview = Number.isFinite(parsedPrice)
+    ? formatCurrency(parsedPrice, currency, locale)
+    : t('pos.customItemPricePlaceholder');
+
+  return (
+    <BaseModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={t('pos.customItemTitle')}
+      disableImplicitClose={isDirty}
+    >
+      <div className="p-4 space-y-4">
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+            <FaTag className="w-3.5 h-3.5 inline mr-2" />
+            {t('pos.customItemName')}
+          </label>
+          <input
+            ref={inputRef}
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder={t('pos.customItemNamePlaceholder')}
+            className="w-full px-3 py-2.5 rounded-lg bg-gray-100 dark:bg-gray-800 border-none text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-brand-300 dark:focus:ring-brand-600"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              <FaDollarSign className="w-3.5 h-3.5 inline mr-2" />
+              {t('pos.customItemPrice')}
+            </label>
+            <input
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              min={0}
+              value={priceText}
+              onChange={(e) => setPriceText(e.target.value)}
+              placeholder={t('pos.customItemPricePlaceholder')}
+              className="w-full px-3 py-2.5 rounded-lg bg-gray-100 dark:bg-gray-800 border-none text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-600"
+            />
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{formattedPreview}</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              <FaHashtag className="w-3.5 h-3.5 inline mr-2" />
+              {t('pos.quantity')}
+            </label>
+            <input
+              type="number"
+              inputMode="numeric"
+              step="1"
+              min={1}
+              value={quantityText}
+              onChange={(e) => setQuantityText(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-lg bg-gray-100 dark:bg-gray-800 border-none text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-600"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+            <FaStickyNote className="w-3.5 h-3.5 inline mr-2" />
+            {t('pos.note')}
+          </label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder={t('pos.itemNotes')}
+            rows={3}
+            className="w-full px-3 py-2.5 rounded-lg bg-gray-100 dark:bg-gray-800 border-none text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-600 resize-none"
+          />
+        </div>
+      </div>
+
+      <div className="flex gap-2 p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+        <button
+          onClick={onClose}
+          className="py-2.5 px-4 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+        >
+          {t('common.cancel')}
+        </button>
+        <button
+          onClick={handleConfirm}
+          disabled={!isValid}
+          className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-colors ${
+            isValid
+              ? 'bg-brand-500 text-white hover:bg-brand-600'
+              : 'bg-gray-200 text-gray-500 dark:bg-gray-800 dark:text-gray-500 cursor-not-allowed'
+          }`}
+        >
+          {t('pos.customItemAdd')}
         </button>
       </div>
     </BaseModal>

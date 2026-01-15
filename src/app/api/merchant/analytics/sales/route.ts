@@ -169,30 +169,40 @@ export const GET = withMerchant(async (
       .sort((a, b) => a.date.localeCompare(b.date));
 
     // Top selling items
-    const itemSalesMap = new Map<string, { menuId: bigint; menuName: string; quantity: number; revenue: number }>();
+    // Note: POS custom items are stored using a hidden placeholder Menu record, but the real name/price
+    // are stored on OrderItem.menuName/menuPrice. We group custom items by their stored name.
+    const POS_CUSTOM_PLACEHOLDER_MENU_NAME = '[POS] __CUSTOM_ITEM_PLACEHOLDER__';
+    const itemSalesMap = new Map<string, { key: string; menuName: string; quantity: number; revenue: number }>();
     completedOrders.forEach(order => {
       order.orderItems.forEach(item => {
-        if (item.menu) {
-          const key = item.menu.id.toString();
-          const current = itemSalesMap.get(key) || {
-            menuId: item.menu.id,
-            menuName: item.menu.name,
-            quantity: 0,
-            revenue: 0,
-          };
-          itemSalesMap.set(key, {
-            ...current,
-            quantity: current.quantity + item.quantity,
-            revenue: current.revenue + decimalToNumber(item.subtotal),
-          });
-        }
+        if (!item.menu) return;
+
+        const isCustom = item.menu.name === POS_CUSTOM_PLACEHOLDER_MENU_NAME;
+        const displayName = (item.menuName || item.menu.name) as string;
+
+        // For normal menu items, aggregate by menuId.
+        // For custom items, aggregate by name so they don't all merge together.
+        const key = isCustom ? `CUSTOM::${displayName}` : item.menu.id.toString();
+
+        const current = itemSalesMap.get(key) || {
+          key,
+          menuName: displayName,
+          quantity: 0,
+          revenue: 0,
+        };
+
+        itemSalesMap.set(key, {
+          ...current,
+          quantity: current.quantity + item.quantity,
+          revenue: current.revenue + decimalToNumber(item.subtotal),
+        });
       });
     });
 
     const totalItemRevenue = Array.from(itemSalesMap.values()).reduce((sum, item) => sum + item.revenue, 0);
     const topSellingItems = Array.from(itemSalesMap.values())
       .map(item => ({
-        menuId: item.menuId.toString(),
+        menuId: item.key,
         menuName: item.menuName,
         quantity: item.quantity,
         revenue: item.revenue,

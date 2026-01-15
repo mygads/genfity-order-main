@@ -101,6 +101,15 @@ class BalanceService {
                 `Order fee for #${orderNumber}`
             );
 
+            if ((result as any).wasDuplicate) {
+                // Idempotent duplicate (race/retry). Balance already reflects the correct deduction.
+                return {
+                    success: true,
+                    newBalance: (result as any).newBalance,
+                    shouldSuspend: false,
+                };
+            }
+
             // Log to subscription history
             await subscriptionHistoryService.recordOrderFeeDeducted(
                 merchantId,

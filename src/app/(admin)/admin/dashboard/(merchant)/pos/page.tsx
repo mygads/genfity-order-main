@@ -43,6 +43,7 @@ import {
   POSCartPanel,
   POSProductGrid,
   POSAddonModal,
+  CustomItemModal,
   POSPaymentModal,
   POSSkeleton,
   POSOrderHistoryPanel,
@@ -64,6 +65,7 @@ import {
   type AddonCategory,
   type SelectedAddon,
   type POSPaymentData,
+  type CustomItemDraft,
 } from '@/components/pos';
 
 import ConfirmDialog from '@/components/modals/ConfirmDialog';
@@ -87,6 +89,11 @@ interface MerchantSettings {
   totalTables: number | null;
   requireTableNumberForDineIn: boolean;
   posPayImmediately: boolean;
+  posCustomItems?: {
+    enabled: boolean;
+    maxNameLength: number;
+    maxPrice: number;
+  };
 }
 
 interface POSMenuData {
@@ -178,6 +185,8 @@ export default function POSPage() {
   const [showAddonModal, setShowAddonModal] = useState(false);
   const [selectedMenuItem, setSelectedMenuItem] = useState<ProductMenuItem | null>(null);
   const [selectedMenuItemAddons, setSelectedMenuItemAddons] = useState<AddonCategory[]>([]);
+
+  const [showCustomItemModal, setShowCustomItemModal] = useState(false);
 
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showCustomerLookup, setShowCustomerLookup] = useState(false);
@@ -444,20 +453,26 @@ export default function POSPage() {
     const order = pendingOrders.find(o => o.id === orderId);
     if (!order) return;
 
-    const newCartItems: CartItem[] = order.items.map(item => ({
-      id: `cart-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-      menuId: item.menuId,
-      menuName: item.menuName,
-      menuPrice: item.menuPrice,
-      quantity: item.quantity,
-      notes: item.notes,
-      addons: (item.addons || []).map(a => ({
-        addonItemId: a.addonItemId,
-        addonName: a.addonName,
-        addonPrice: a.addonPrice,
-        quantity: a.quantity,
-      })),
-    }));
+    const newCartItems: CartItem[] = order.items.map(item => {
+      const kind = item.type || 'MENU';
+      return {
+        id: `cart-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+        type: kind,
+        menuId: item.menuId,
+        menuName: item.menuName,
+        menuPrice: item.menuPrice,
+        quantity: item.quantity,
+        notes: item.notes,
+        addons: kind === 'CUSTOM'
+          ? []
+          : (item.addons || []).map(a => ({
+            addonItemId: a.addonItemId,
+            addonName: a.addonName,
+            addonPrice: a.addonPrice,
+            quantity: a.quantity,
+          })),
+      };
+    });
 
     setCartItems(newCartItems);
     setOrderType(order.orderType);
@@ -625,6 +640,7 @@ export default function POSPage() {
       // Add directly to cart
       const newCartItem: CartItem = {
         id: generateCartItemId(),
+        type: 'MENU',
         menuId: item.id,
         menuName: item.name,
         menuPrice: item.promoPrice ?? item.price,
@@ -650,6 +666,7 @@ export default function POSPage() {
 
     const newCartItem: CartItem = {
       id: generateCartItemId(),
+      type: 'MENU',
       menuId: selectedMenuItem.id,
       menuName: selectedMenuItem.name,
       menuPrice: selectedMenuItem.promoPrice ?? selectedMenuItem.price,
@@ -664,6 +681,24 @@ export default function POSPage() {
     setSelectedMenuItem(null);
     setSelectedMenuItemAddons([]);
   }, [selectedMenuItem]);
+
+  const handleAddCustomItem = useCallback(() => {
+    setShowCustomItemModal(true);
+  }, []);
+
+  const handleCustomItemConfirm = useCallback((item: CustomItemDraft) => {
+    const newCartItem: CartItem = {
+      id: generateCartItemId(),
+      type: 'CUSTOM',
+      menuId: '__custom__',
+      menuName: item.name,
+      menuPrice: item.price,
+      quantity: item.quantity,
+      notes: item.notes || '',
+      addons: [],
+    };
+    setCartItems(prev => [...prev, newCartItem]);
+  }, []);
 
   // Update cart item quantity
   const handleUpdateQuantity = useCallback((cartItemId: string, newQuantity: number) => {
@@ -748,9 +783,12 @@ export default function POSPage() {
 
     // Build order items with names and prices for offline display
     const orderItems = cartItems.map(item => ({
+      type: item.type || 'MENU',
       menuId: item.menuId,
       menuName: item.menuName,
       menuPrice: item.menuPrice,
+      customName: (item.type || 'MENU') === 'CUSTOM' ? item.menuName : undefined,
+      customPrice: (item.type || 'MENU') === 'CUSTOM' ? item.menuPrice : undefined,
       quantity: item.quantity,
       notes: item.notes || undefined,
       addons: item.addons.length > 0
@@ -807,17 +845,31 @@ export default function POSPage() {
         customer: (customerInfo.name || customerInfo.phone || customerInfo.email)
           ? customerInfo
           : undefined,
-        items: cartItems.map(item => ({
-          menuId: item.menuId,
-          quantity: item.quantity,
-          notes: item.notes || undefined,
-          addons: item.addons.length > 0
-            ? item.addons.map((a: CartAddon) => ({
-              addonItemId: a.addonItemId,
-              quantity: a.quantity,
-            }))
-            : undefined,
-        })),
+        items: cartItems.map(item => {
+          const kind = item.type || 'MENU';
+          if (kind === 'CUSTOM') {
+            return {
+              type: 'CUSTOM' as const,
+              customName: (item.menuName || '').trim(),
+              customPrice: item.menuPrice,
+              quantity: item.quantity,
+              notes: item.notes || undefined,
+            };
+          }
+
+          return {
+            type: 'MENU' as const,
+            menuId: item.menuId,
+            quantity: item.quantity,
+            notes: item.notes || undefined,
+            addons: item.addons.length > 0
+              ? item.addons.map((a: CartAddon) => ({
+                addonItemId: a.addonItemId,
+                quantity: a.quantity,
+              }))
+              : undefined,
+          };
+        }),
       };
 
       const response = await fetch('/api/merchant/orders/pos', {
@@ -893,7 +945,37 @@ export default function POSPage() {
         // Clear cart (order is already created)
         handleClearCart();
       } else {
-        showError(data.message || t('pos.orderFailed'), t('common.error'));
+        const errorCode = typeof data?.errorCode === 'string' ? data.errorCode : undefined;
+        const fallback = data?.message || t('pos.orderFailed') || 'Failed to create order';
+
+        const friendly = (() => {
+          switch (errorCode) {
+            case 'POS_CUSTOM_ITEMS_DISABLED':
+              return t('pos.errors.customItemsDisabled') || 'Custom items are disabled for this merchant.';
+            case 'CUSTOM_ITEM_NAME_REQUIRED':
+              return t('pos.errors.customItemNameRequired') || 'Custom item name is required.';
+            case 'CUSTOM_ITEM_PRICE_INVALID':
+              return t('pos.errors.customItemPriceInvalid') || 'Custom item price is invalid.';
+            case 'CUSTOM_ITEM_ADDONS_NOT_ALLOWED':
+              return t('pos.errors.customItemAddonsNotAllowed') || 'Custom items do not support addons.';
+            case 'INVALID_QUANTITY':
+              return t('pos.errors.invalidQuantity') || 'Invalid quantity.';
+            case 'INSUFFICIENT_STOCK':
+              return t('pos.errors.insufficientStock') || fallback;
+            case 'MENU_NOT_AVAILABLE':
+              return t('pos.errors.menuNotAvailable') || fallback;
+            case 'MENU_NOT_FOUND':
+              return t('pos.errors.menuNotFound') || fallback;
+            // Keep server-provided message for dynamic limits (includes max values)
+            case 'CUSTOM_ITEM_NAME_TOO_LONG':
+            case 'CUSTOM_ITEM_PRICE_TOO_HIGH':
+              return fallback;
+            default:
+              return fallback;
+          }
+        })();
+
+        showError(friendly, t('common.error'));
       }
     } catch (error) {
       console.error('[POS] Place order error:', error);
@@ -1386,6 +1468,7 @@ export default function POSPage() {
             currency={currency}
             isLoading={posLoading}
             onAddItem={handleAddItem}
+            onAddCustomItem={merchantSettings?.posCustomItems?.enabled === false ? undefined : handleAddCustomItem}
             gridColumns={gridColumns}
             popularMenuIds={popularMenuIds}
           />
@@ -1438,6 +1521,13 @@ export default function POSPage() {
         onConfirm={handleAddonConfirm}
         menuItem={selectedMenuItem || { id: 0, name: '', price: 0 }}
         addonCategories={selectedMenuItemAddons}
+        currency={currency}
+      />
+
+      <CustomItemModal
+        isOpen={showCustomItemModal}
+        onClose={() => setShowCustomItemModal(false)}
+        onConfirm={handleCustomItemConfirm}
         currency={currency}
       />
 

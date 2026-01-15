@@ -16,7 +16,8 @@ import Image from 'next/image';
 import {
   FaSearch,
   FaTimes,
-  FaUtensils
+  FaUtensils,
+  FaPlus
 } from 'react-icons/fa';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { formatCurrency } from '@/lib/utils/format';
@@ -50,6 +51,7 @@ interface POSProductGridProps {
   currency: string;
   isLoading?: boolean;
   onAddItem: (item: MenuItem) => void;
+  onAddCustomItem?: () => void;
   gridColumns?: number;
   popularMenuIds?: (number | string)[]; // IDs of frequently ordered items
 }
@@ -58,6 +60,7 @@ interface POSProductGridProps {
 const SPECIAL_CATEGORIES = {
   POPULAR: '__popular__',
   BEST_SELLER: '__bestseller__',
+  CUSTOM: '__custom__',
 };
 
 export const POSProductGrid: React.FC<POSProductGridProps> = ({
@@ -66,6 +69,7 @@ export const POSProductGrid: React.FC<POSProductGridProps> = ({
   currency,
   isLoading = false,
   onAddItem,
+  onAddCustomItem,
   gridColumns = 5,
   popularMenuIds = [],
 }) => {
@@ -89,6 +93,9 @@ export const POSProductGrid: React.FC<POSProductGridProps> = ({
     }
     // Filter by regular category
     else if (selectedCategory) {
+      if (selectedCategory === SPECIAL_CATEGORIES.CUSTOM) {
+        return [];
+      }
       items = items.filter(item => 
         String(item.categoryId) === String(selectedCategory)
       );
@@ -104,16 +111,13 @@ export const POSProductGrid: React.FC<POSProductGridProps> = ({
     }
 
     return items;
-  }, [menuItems, selectedCategory, searchQuery]);
+  }, [menuItems, popularMenuIds, selectedCategory, searchQuery]);
+
+  const shouldShowCustomCard = Boolean(onAddCustomItem);
 
   // Check if item is out of stock
   const isOutOfStock = (item: MenuItem): boolean => {
     return item.trackStock === true && (item.stockQty === null || item.stockQty === undefined || item.stockQty <= 0);
-  };
-
-  // Check if item has low stock (5 or less)
-  const isLowStock = (item: MenuItem): boolean => {
-    return item.trackStock === true && item.stockQty !== null && item.stockQty !== undefined && item.stockQty > 0 && item.stockQty <= 5;
   };
 
   // Get stock status label
@@ -217,6 +221,21 @@ export const POSProductGrid: React.FC<POSProductGridProps> = ({
               {t('pos.bestSellers') || 'Best Sellers'}
             </button>
           )}
+
+          {/* Custom Items */}
+          {onAddCustomItem && (
+            <button
+              onClick={() => setSelectedCategory(SPECIAL_CATEGORIES.CUSTOM)}
+              className={`shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                selectedCategory === SPECIAL_CATEGORIES.CUSTOM
+                  ? 'bg-brand-500 text-white'
+                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+              }`}
+            >
+              <FaPlus className="w-3.5 h-3.5" />
+              {t('pos.customItem')}
+            </button>
+          )}
           
           {categories.map((category) => (
             <button
@@ -252,7 +271,7 @@ export const POSProductGrid: React.FC<POSProductGridProps> = ({
               </div>
             ))}
           </div>
-        ) : filteredItems.length === 0 ? (
+        ) : filteredItems.length === 0 && !shouldShowCustomCard ? (
           // Empty state
           <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500">
             <FaSearch className="w-12 h-12 mb-3" />
@@ -406,6 +425,42 @@ export const POSProductGrid: React.FC<POSProductGridProps> = ({
                 </button>
               );
             })}
+
+            {shouldShowCustomCard && (
+              <button
+                type="button"
+                onClick={() => onAddCustomItem?.()}
+                className="bg-white dark:bg-gray-900 rounded-lg overflow-hidden text-left transition-all hover:shadow-lg shadow-md hover:scale-[1.02] focus:ring-2 focus:ring-brand-300 dark:focus:ring-brand-600 cursor-pointer"
+              >
+                {/* Image area - same aspect as products */}
+                <div className="aspect-square relative bg-gray-100 dark:bg-gray-800">
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-14 h-14 rounded-2xl bg-white dark:bg-gray-900 shadow-sm border border-gray-200 dark:border-gray-700 flex items-center justify-center">
+                      <FaPlus className="w-6 h-6 text-brand-500" />
+                    </div>
+                  </div>
+
+                  {/* Custom badge */}
+                  <div className="absolute top-2 right-2">
+                    <span className="px-1.5 py-0.5 bg-brand-500 text-white text-xs font-medium rounded">
+                      {t('pos.customItem') || 'Custom'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Info area - match product card */}
+                <div className="p-3">
+                  <h3 className="font-medium text-sm text-gray-900 dark:text-white truncate">
+                    {t('pos.customItemTitle')}
+                  </h3>
+                  <div className="mt-1">
+                    <span className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
+                      {t('pos.customItemDesc')}
+                    </span>
+                  </div>
+                </div>
+              </button>
+            )}
           </div>
         )}
       </div>

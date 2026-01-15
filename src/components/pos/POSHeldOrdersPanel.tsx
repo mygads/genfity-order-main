@@ -38,6 +38,7 @@ interface CartAddon {
 
 interface CartItem {
   id: string;
+  type?: 'MENU' | 'CUSTOM';
   menuId: number | string;
   menuName: string;
   menuPrice: number;

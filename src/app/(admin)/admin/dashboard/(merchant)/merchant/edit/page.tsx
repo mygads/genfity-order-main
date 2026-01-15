@@ -10,7 +10,7 @@ import AdminFormFooter from "@/components/common/AdminFormFooter";
 import TabsNavigation from "@/components/common/TabsNavigation";
 import { useToast } from "@/hooks/useToast";
 import ToastContainer from "@/components/ui/ToastContainer";
-import { COUNTRIES, CURRENCIES, getCurrencyForCountry, getDefaultTimezoneForCountry, getTimezonesForCountry } from "@/lib/constants/location";
+import { COUNTRIES, CURRENCIES, getCurrencyConfig, getCurrencyForCountry, getDefaultTimezoneForCountry, getTimezonesForCountry } from "@/lib/constants/location";
 import PerDayModeSchedule from "@/components/merchants/PerDayModeSchedule";
 import SpecialHoursManager from "@/components/merchants/SpecialHoursManager";
 import { ReceiptTemplateTab } from "@/components/merchants/ReceiptTemplateTab";
@@ -21,6 +21,8 @@ import { TranslationKeys } from "@/lib/i18n";
 import SubscriptionRequired from "@/components/subscription/SubscriptionRequired";
 import { useContextualHint, CONTEXTUAL_HINTS } from "@/lib/tutorial";
 import ConfirmDialog from "@/components/modals/ConfirmDialog";
+import { getPosCustomItemsSettings } from "@/lib/utils/posCustomItemsSettings";
+import { formatCurrency } from "@/lib/utils/format";
 
 // Dynamically import map component
 const MapLocationPicker = dynamic(() => import("@/components/maps/MapLocationPicker"), { ssr: false });
@@ -99,6 +101,7 @@ const TAB_KEYS: Array<{ id: string; key: TranslationKeys }> = [
   { id: "hours", key: "admin.merchant.openingHours" },
   { id: "receipt", key: "admin.merchant.customReceipt" },
   { id: "table-settings", key: "admin.merchant.tableSetting" },
+  { id: "pos-settings", key: "admin.merchant.posSettings" },
   { id: "pin", key: "admin.merchant.pin" },
 ];
 
@@ -118,6 +121,10 @@ export default function EditMerchantPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
+
+  const [posCustomItemsEnabled, setPosCustomItemsEnabled] = useState(true);
+  const [posCustomItemsMaxNameLength, setPosCustomItemsMaxNameLength] = useState<number>(80);
+  const [posCustomItemsMaxPrice, setPosCustomItemsMaxPrice] = useState<number>(1);
 
   const [receiptBillingInfo, setReceiptBillingInfo] = useState<{
     balance: number;
@@ -272,6 +279,40 @@ export default function EditMerchantPage() {
         completedOrderEmailFee: Number.isFinite(completedOrderEmailFee) ? completedOrderEmailFee : 0,
         currency: merchantCurrency,
       });
+
+      // POS settings hydration via dedicated endpoint (avoids relying on profile payload shape)
+      try {
+        const posSettingsResponse = await fetch("/api/merchant/pos-settings", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const posSettingsData = await posSettingsResponse.json();
+
+        if (posSettingsResponse.ok && posSettingsData?.data?.customItems) {
+          setPosCustomItemsEnabled(Boolean(posSettingsData.data.customItems.enabled));
+          setPosCustomItemsMaxNameLength(Number(posSettingsData.data.customItems.maxNameLength ?? 80));
+          setPosCustomItemsMaxPrice(Number(posSettingsData.data.customItems.maxPrice ?? 1));
+        } else {
+          // Fallback to computed defaults
+          const posCustomItems = getPosCustomItemsSettings({
+            features: merchant.features,
+            currency: merchantCurrency,
+          });
+          setPosCustomItemsEnabled(posCustomItems.enabled);
+          setPosCustomItemsMaxNameLength(posCustomItems.maxNameLength);
+          setPosCustomItemsMaxPrice(posCustomItems.maxPrice);
+        }
+      } catch {
+        const posCustomItems = getPosCustomItemsSettings({
+          features: merchant.features,
+          currency: merchantCurrency,
+        });
+        setPosCustomItemsEnabled(posCustomItems.enabled);
+        setPosCustomItemsMaxNameLength(posCustomItems.maxNameLength);
+        setPosCustomItemsMaxPrice(posCustomItems.maxPrice);
+      }
 
       setFormData({
         name: merchant.name || "",
@@ -636,6 +677,30 @@ export default function EditMerchantPage() {
 
       if (!merchantResponse.ok) {
         throw new Error(merchantData.message || "Failed to update merchant");
+      }
+
+      const posSettingsResponse = await fetch("/api/merchant/pos-settings", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          customItems: {
+            enabled: posCustomItemsEnabled,
+            ...(Number.isFinite(posCustomItemsMaxNameLength) && posCustomItemsMaxNameLength >= 10
+              ? { maxNameLength: Math.floor(posCustomItemsMaxNameLength) }
+              : {}),
+            ...(Number.isFinite(posCustomItemsMaxPrice) && posCustomItemsMaxPrice > 0
+              ? { maxPrice: posCustomItemsMaxPrice }
+              : {}),
+          },
+        }),
+      });
+
+      const posSettingsData = await posSettingsResponse.json();
+      if (!posSettingsResponse.ok) {
+        throw new Error(posSettingsData.message || "Failed to update POS settings");
       }
 
       // Update opening hours
@@ -1413,49 +1478,8 @@ export default function EditMerchantPage() {
             </div>
           </div>
 
-          {/* Right: POS + Features */}
+          {/* Right: Features */}
           <div className="space-y-6">
-            <div className="rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-950">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-                {tOr(t, 'admin.merchantEdit.pos.sectionTitle', 'POS & checkout')}
-              </h3>
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                Control cashier flow and POS order creation behavior.
-              </p>
-
-              <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/40">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">
-                      {tOr(t, 'admin.merchantEdit.pos.payBehaviorTitle', 'POS payment behavior')}
-                    </p>
-                    <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                      {formData.posPayImmediately
-                        ? tOr(
-                            t,
-                            'admin.merchantEdit.pos.payBehaviorDescPayNow',
-                            'Pay immediately: show the payment modal right after creating an order in POS.'
-                          )
-                        : tOr(
-                            t,
-                            'admin.merchantEdit.pos.payBehaviorDescPayLater',
-                            'Pay later: show “Order created” first, with options to print receipt or record payment.'
-                          )}
-                    </p>
-                  </div>
-                  <label className="relative inline-flex cursor-pointer items-center">
-                    <input
-                      type="checkbox"
-                      checked={formData.posPayImmediately}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, posPayImmediately: e.target.checked }))}
-                      className="peer sr-only"
-                    />
-                    <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
-                  </label>
-                </div>
-              </div>
-            </div>
-
             <div className="rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-950">
               <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Features</h3>
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -1565,6 +1589,128 @@ export default function EditMerchantPage() {
         </div>
       </div>
     );
+
+  };
+
+  const PosSettingsTab = () => {
+      const currencyConfig = getCurrencyConfig(formData.currency || 'AUD');
+      const decimals = currencyConfig?.decimals ?? 2;
+      const step = decimals === 0 ? '1' : (1 / Math.pow(10, decimals)).toFixed(decimals);
+      const normalizedValue = decimals === 0 ? Math.floor(posCustomItemsMaxPrice) : posCustomItemsMaxPrice;
+
+      return (
+        <div className="space-y-6">
+          <div className="rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-950">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+              {tOr(t, 'admin.merchantEdit.pos.sectionTitle', 'POS settings')}
+            </h3>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              {tOr(t, 'admin.merchantEdit.pos.sectionDesc', 'Control cashier flow and POS order creation behavior.')}
+            </p>
+
+            <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/40">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+                    {tOr(t, 'admin.merchantEdit.pos.payBehaviorTitle', 'POS payment behavior')}
+                  </p>
+                  <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                    {formData.posPayImmediately
+                      ? tOr(
+                          t,
+                          'admin.merchantEdit.pos.payBehaviorDescPayNow',
+                          'Pay immediately: show the payment modal right after creating an order in POS.'
+                        )
+                      : tOr(
+                          t,
+                          'admin.merchantEdit.pos.payBehaviorDescPayLater',
+                          'Pay later: show “Order created” first, with options to print receipt or record payment.'
+                        )}
+                  </p>
+                </div>
+                <label className="relative inline-flex cursor-pointer items-center">
+                  <input
+                    type="checkbox"
+                    checked={formData.posPayImmediately}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, posPayImmediately: e.target.checked }))}
+                    className="peer sr-only"
+                  />
+                  <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
+                </label>
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/40">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+                    {tOr(t, 'admin.merchantEdit.pos.customItemsTitle', 'POS custom items')}
+                  </p>
+                  <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                    {posCustomItemsEnabled
+                      ? tOr(t, 'admin.merchantEdit.pos.customItemsDescEnabled', 'Allow cashiers to add a custom item with a custom name and price.')
+                      : tOr(t, 'admin.merchantEdit.pos.customItemsDescDisabled', 'Hide the Custom tab and block custom items from being created in POS.')}
+                  </p>
+                </div>
+                <label className="relative inline-flex cursor-pointer items-center">
+                  <input
+                    type="checkbox"
+                    checked={posCustomItemsEnabled}
+                    onChange={(e) => setPosCustomItemsEnabled(e.target.checked)}
+                    className="peer sr-only"
+                  />
+                  <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
+                </label>
+              </div>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">
+                    {tOr(t, 'admin.merchantEdit.pos.customItemsMaxNameLength', 'Max custom item name length')}
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={200}
+                    value={posCustomItemsMaxNameLength}
+                    onChange={(e) => setPosCustomItemsMaxNameLength(Number(e.target.value))}
+                    disabled={!posCustomItemsEnabled}
+                    className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-800 dark:bg-gray-900 dark:text-white dark:disabled:bg-gray-900/60"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">
+                    {tOr(t, 'admin.merchantEdit.pos.customItemsMaxPrice', 'Max custom item price')}
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={step}
+                    value={normalizedValue}
+                    onChange={(e) => {
+                      const next = Number(e.target.value);
+                      if (!Number.isFinite(next)) {
+                        setPosCustomItemsMaxPrice(0);
+                        return;
+                      }
+                      setPosCustomItemsMaxPrice(decimals === 0 ? Math.floor(next) : next);
+                    }}
+                    disabled={!posCustomItemsEnabled}
+                    className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-800 dark:bg-gray-900 dark:text-white dark:disabled:bg-gray-900/60"
+                  />
+                  <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                    {tOr(t, 'admin.merchantEdit.pos.customItemsMaxPriceHint', 'Applies to the unit price (before quantity).')} {formData.currency ? `(${formData.currency})` : null}
+                    {normalizedValue > 0
+                      ? ` • ${tOr(t, 'admin.merchantEdit.pos.customItemsMaxPricePreview', 'Preview')}: ${formatCurrency(normalizedValue, formData.currency || 'AUD')}`
+                      : ` • ${tOr(t, 'admin.merchantEdit.pos.customItemsMaxPriceDefault', 'Set 0 to use default')}`}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
   };
 
   /**
@@ -2041,6 +2187,8 @@ export default function EditMerchantPage() {
     switch (activeTab) {
       case "basic":
         return <BasicInfoTab />;
+      case "pos-settings":
+        return <PosSettingsTab />;
       case "sale-modes":
         return <SaleModesTab />;
       case "table-settings":

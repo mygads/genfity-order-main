@@ -1152,6 +1152,7 @@ model BalanceTransaction {
   @@index([balanceId])
   @@index([type])
   @@index([createdAt])
+  @@unique([type, orderId])
   @@map("balance_transactions")
 }
 

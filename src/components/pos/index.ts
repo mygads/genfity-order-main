@@ -31,7 +31,10 @@ export {
   OrderNotesModal,
   ItemNotesModal,
   OrderSuccessModal,
+  CustomItemModal,
 } from './POSModals';
+
+export type { CustomItemDraft } from './POSModals';
 
 export { default as CustomerLookupModal } from './CustomerLookupModal';
 export { default as OfflineSyncIndicator } from './OfflineSyncIndicator';

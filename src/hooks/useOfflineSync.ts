@@ -29,9 +29,12 @@ export interface PendingOrder {
     email?: string;
   };
   items: {
+    type?: 'MENU' | 'CUSTOM';
     menuId: number | string;
     menuName: string;
     menuPrice: number;
+    customName?: string;
+    customPrice?: number;
     quantity: number;
     notes?: string;
     addons?: {
@@ -144,12 +147,19 @@ function calculatePendingOrderTotal(order: Pick<PendingOrder, 'items'>): number 
 function normalizePendingItems(items: PendingOrder['items']): PendingOrder['items'] {
   // Smart merge: same menuId + notes + same addons => combine quantities.
   const keyForItem = (item: PendingOrder['items'][number]): string => {
+    const kind = item.type || 'MENU';
+    if (kind === 'CUSTOM') {
+      const name = (item.customName || item.menuName || '').trim();
+      const price = typeof item.customPrice === 'number' ? item.customPrice : item.menuPrice;
+      return `CUSTOM::${name}::${price}::${item.notes || ''}`;
+    }
+
     const normalizedAddons = (item.addons || [])
       .slice()
       .sort((a, b) => a.addonItemId.toString().localeCompare(b.addonItemId.toString()))
       .map(a => `${a.addonItemId}:${a.quantity}`)
       .join('|');
-    return `${item.menuId.toString()}::${item.notes || ''}::${normalizedAddons}`;
+    return `MENU::${item.menuId.toString()}::${item.notes || ''}::${normalizedAddons}`;
   };
 
   const merged = new Map<string, PendingOrder['items'][number]>();
@@ -492,6 +502,9 @@ export function useOfflineSync(options: OfflineSyncOptions = {}): UseOfflineSync
           const orderConflicts: OfflineOrderItemConflict[] = [];
 
           for (const item of order.items) {
+            if ((item.type || 'MENU') === 'CUSTOM') {
+              continue;
+            }
             const menuId = item.menuId.toString();
             const menu = menuMap.get(menuId);
 
@@ -564,15 +577,29 @@ export function useOfflineSync(options: OfflineSyncOptions = {}): UseOfflineSync
             tableNumber: order.tableNumber,
             notes: order.notes,
             customer: order.customer,
-            items: order.items.map(item => ({
-              menuId: item.menuId,
-              quantity: item.quantity,
-              notes: item.notes,
-              addons: item.addons?.map(a => ({
-                addonItemId: a.addonItemId,
-                quantity: a.quantity,
-              })),
-            })),
+            items: order.items.map(item => {
+              const kind = item.type || 'MENU';
+              if (kind === 'CUSTOM') {
+                return {
+                  type: 'CUSTOM' as const,
+                  customName: (item.customName || item.menuName || '').trim(),
+                  customPrice: typeof item.customPrice === 'number' ? item.customPrice : item.menuPrice,
+                  quantity: item.quantity,
+                  notes: item.notes,
+                };
+              }
+
+              return {
+                type: 'MENU' as const,
+                menuId: item.menuId,
+                quantity: item.quantity,
+                notes: item.notes,
+                addons: item.addons?.map(a => ({
+                  addonItemId: a.addonItemId,
+                  quantity: a.quantity,
+                })),
+              };
+            }),
             offlineOrderId: order.id, // Send original ID for tracking
             offlineCreatedAt: order.createdAt, // Send original timestamp
           }),

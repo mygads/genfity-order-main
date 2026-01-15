@@ -38,6 +38,7 @@ export interface CartAddon {
 
 export interface CartItem {
   id: string; // Unique cart item ID (for tracking same menu with different addons)
+  type?: 'MENU' | 'CUSTOM';
   menuId: number | string;
   menuName: string;
   menuPrice: number;

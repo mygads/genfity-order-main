@@ -4,7 +4,7 @@
  */
 
 import prisma from '@/lib/db/client';
-import type { Prisma, BalanceTransactionType } from '@prisma/client';
+import { Prisma, type BalanceTransactionType } from '@prisma/client';
 
 class BalanceRepository {
     /**
@@ -130,48 +130,95 @@ class BalanceRepository {
         orderId: bigint,
         description: string
     ) {
-        return prisma.$transaction(async (tx) => {
-            const balance = await tx.merchantBalance.findUnique({
-                where: { merchantId },
-            });
+        try {
+            return await prisma.$transaction(async (tx) => {
+                const balance = await tx.merchantBalance.findUnique({
+                    where: { merchantId },
+                });
 
-            if (!balance) {
-                throw new Error('Balance not found');
+                if (!balance) {
+                    throw new Error('Balance not found');
+                }
+
+                const balanceBefore = Number(balance.balance);
+                // Allow negative balance - cron job will handle at midnight
+                const balanceAfter = balanceBefore - amount;
+
+                // Best-effort idempotency guard (fully race-safe once @@unique([type, orderId]) is applied)
+                const existing = await tx.balanceTransaction.findFirst({
+                    where: { type: 'ORDER_FEE', orderId },
+                    select: { id: true },
+                });
+                if (existing) {
+                    console.warn('[BALANCE] Duplicate ORDER_FEE prevented', {
+                        merchantId: merchantId.toString(),
+                        orderId: orderId.toString(),
+                        type: 'ORDER_FEE',
+                        balanceTransactionId: existing.id.toString(),
+                    });
+                    return {
+                        balance,
+                        balanceBefore,
+                        newBalance: balanceBefore,
+                        isZero: balanceBefore <= 0,
+                        isNegative: balanceBefore < 0,
+                        wasDuplicate: true as const,
+                    };
+                }
+
+                // Update balance
+                const updatedBalance = await tx.merchantBalance.update({
+                    where: { merchantId },
+                    data: {
+                        balance: balanceAfter,
+                    },
+                });
+
+                // Create transaction record (unique(type, orderId) ensures idempotency)
+                await tx.balanceTransaction.create({
+                    data: {
+                        balanceId: balance.id,
+                        type: 'ORDER_FEE',
+                        amount: -amount, // Negative for deductions
+                        balanceBefore,
+                        balanceAfter,
+                        description,
+                        orderId,
+                    },
+                });
+
+                return {
+                    balance: updatedBalance,
+                    balanceBefore,
+                    newBalance: balanceAfter,
+                    isZero: balanceAfter <= 0,
+                    isNegative: balanceAfter < 0,
+                    wasDuplicate: false as const,
+                };
+            });
+        } catch (error) {
+            // If this deduction was already recorded (race/retry), treat as idempotent success.
+            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+                console.warn('[BALANCE] Duplicate ORDER_FEE prevented (unique constraint)', {
+                    merchantId: merchantId.toString(),
+                    orderId: orderId.toString(),
+                    type: 'ORDER_FEE',
+                });
+                const current = await prisma.merchantBalance.findUnique({ where: { merchantId } });
+                const currentBalance = current ? Number(current.balance) : 0;
+
+                return {
+                    balance: current,
+                    balanceBefore: currentBalance,
+                    newBalance: currentBalance,
+                    isZero: currentBalance <= 0,
+                    isNegative: currentBalance < 0,
+                    wasDuplicate: true as const,
+                };
             }
 
-            const balanceBefore = Number(balance.balance);
-            // Allow negative balance - cron job will handle at midnight
-            const balanceAfter = balanceBefore - amount;
-
-            // Update balance
-            const updatedBalance = await tx.merchantBalance.update({
-                where: { merchantId },
-                data: {
-                    balance: balanceAfter,
-                },
-            });
-
-            // Create transaction record
-            await tx.balanceTransaction.create({
-                data: {
-                    balanceId: balance.id,
-                    type: 'ORDER_FEE',
-                    amount: -amount, // Negative for deductions
-                    balanceBefore,
-                    balanceAfter,
-                    description,
-                    orderId,
-                },
-            });
-
-            return {
-                balance: updatedBalance,
-                balanceBefore,
-                newBalance: balanceAfter,
-                isZero: balanceAfter <= 0,
-                isNegative: balanceAfter < 0,
-            };
-        });
+            throw error;
+        }
     }
 
     /**
@@ -190,52 +237,97 @@ class BalanceRepository {
     ) {
         const { amount, type, description, orderId, allowNegative = false } = options;
 
-        return prisma.$transaction(async (tx) => {
-            let balance = await tx.merchantBalance.findUnique({
-                where: { merchantId },
-            });
+        try {
+            return await prisma.$transaction(async (tx) => {
+                let balance = await tx.merchantBalance.findUnique({
+                    where: { merchantId },
+                });
 
-            if (!balance) {
-                balance = await tx.merchantBalance.create({
+                if (!balance) {
+                    balance = await tx.merchantBalance.create({
+                        data: {
+                            merchantId,
+                            balance: 0,
+                        },
+                    });
+                }
+
+                const balanceBefore = Number(balance.balance);
+                const balanceAfter = balanceBefore - amount;
+
+                // Best-effort idempotency guard (fully race-safe once @@unique([type, orderId]) is applied)
+                if (typeof orderId !== 'undefined') {
+                    const existing = await tx.balanceTransaction.findFirst({
+                        where: { type, orderId },
+                        select: { id: true },
+                    });
+                    if (existing) {
+                        console.warn('[BALANCE] Duplicate transaction prevented', {
+                            merchantId: merchantId.toString(),
+                            orderId: orderId.toString(),
+                            type,
+                            balanceTransactionId: existing.id.toString(),
+                        });
+                        return {
+                            balance,
+                            balanceBefore,
+                            newBalance: balanceBefore,
+                            wasDuplicate: true as const,
+                        };
+                    }
+                }
+
+                if (!allowNegative && balanceAfter < 0) {
+                    throw new Error('Insufficient balance');
+                }
+
+                const updatedBalance = await tx.merchantBalance.update({
+                    where: { merchantId },
                     data: {
-                        merchantId,
-                        balance: 0,
+                        balance: balanceAfter,
                     },
                 });
-            }
 
-            const balanceBefore = Number(balance.balance);
-            const balanceAfter = balanceBefore - amount;
+                // Create transaction record (unique(type, orderId) ensures idempotency)
+                await tx.balanceTransaction.create({
+                    data: {
+                        balanceId: balance.id,
+                        type,
+                        amount: -amount,
+                        balanceBefore,
+                        balanceAfter,
+                        description,
+                        orderId,
+                    },
+                });
 
-            if (!allowNegative && balanceAfter < 0) {
-                throw new Error('Insufficient balance');
-            }
-
-            const updatedBalance = await tx.merchantBalance.update({
-                where: { merchantId },
-                data: {
-                    balance: balanceAfter,
-                },
-            });
-
-            await tx.balanceTransaction.create({
-                data: {
-                    balanceId: balance.id,
-                    type,
-                    amount: -amount,
+                return {
+                    balance: updatedBalance,
                     balanceBefore,
-                    balanceAfter,
-                    description,
-                    orderId,
-                },
+                    newBalance: balanceAfter,
+                    wasDuplicate: false as const,
+                };
             });
+        } catch (error) {
+            // If this deduction was already recorded (race/retry), treat as idempotent success.
+            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+                console.warn('[BALANCE] Duplicate transaction prevented (unique constraint)', {
+                    merchantId: merchantId.toString(),
+                    orderId: typeof orderId === 'undefined' ? null : orderId.toString(),
+                    type,
+                });
+                const current = await prisma.merchantBalance.findUnique({ where: { merchantId } });
+                const currentBalance = current ? Number(current.balance) : 0;
+                return {
+                    balance: current,
+                    balanceBefore: currentBalance,
+                    newBalance: currentBalance,
+                    wasDuplicate: true as const,
+                };
+            }
 
-            return {
-                balance: updatedBalance,
-                balanceBefore,
-                newBalance: balanceAfter,
-            };
-        });
+            throw error;
+        }
     }
 
     /**

@@ -18,6 +18,57 @@ import type { AuthContext } from '@/lib/middleware/auth';
 import prisma from '@/lib/db/client';
 import { serializeBigInt, decimalToNumber } from '@/lib/utils/serializer';
 import userNotificationService from '@/lib/services/UserNotificationService';
+import { getPosCustomItemsSettings } from '@/lib/utils/posCustomItemsSettings';
+
+const POS_CUSTOM_PLACEHOLDER_MENU_NAME = '[POS] __CUSTOM_ITEM_PLACEHOLDER__';
+
+function isNumericId(value: unknown): boolean {
+  if (typeof value === 'number') return Number.isFinite(value) && value >= 0;
+  if (typeof value === 'string') return /^\d+$/.test(value);
+  return false;
+}
+
+function toBigIntId(value: number | string, fieldName: string): bigint {
+  if (!isNumericId(value)) {
+    throw new PosValidationError('INVALID_ID', `Invalid ${fieldName}.`);
+  }
+  return BigInt(value);
+}
+
+async function getOrCreatePosCustomPlaceholderMenuId(params: {
+  merchantId: bigint;
+  userId?: bigint;
+}): Promise<bigint> {
+  const existing = await prisma.menu.findFirst({
+    where: {
+      merchantId: params.merchantId,
+      name: POS_CUSTOM_PLACEHOLDER_MENU_NAME,
+      deletedAt: { not: null },
+    },
+    select: { id: true },
+  });
+
+  if (existing) return existing.id;
+
+  const now = new Date();
+  const created = await prisma.menu.create({
+    data: {
+      merchantId: params.merchantId,
+      name: POS_CUSTOM_PLACEHOLDER_MENU_NAME,
+      description: 'Internal placeholder for POS custom items',
+      price: 0,
+      isActive: false,
+      trackStock: false,
+      stockQty: null,
+      deletedAt: now,
+      deletedByUserId: params.userId,
+      createdByUserId: params.userId,
+    },
+    select: { id: true },
+  });
+
+  return created.id;
+}
 
 /**
  * Helper function to round to 2 decimal places
@@ -29,10 +80,13 @@ function round2(value: number): number {
 /**
  * Validation Error Class
  */
-class ValidationError extends Error {
-  constructor(message: string) {
+class PosValidationError extends Error {
+  public readonly errorCode: string;
+
+  constructor(errorCode: string, message: string) {
     super(message);
-    this.name = 'ValidationError';
+    this.name = 'PosValidationError';
+    this.errorCode = errorCode;
   }
 }
 
@@ -44,7 +98,13 @@ interface POSOrderRequest {
   tableNumber?: string;
   notes?: string;
   items: Array<{
-    menuId: number | string;
+    type?: 'MENU' | 'CUSTOM';
+    // MENU item
+    menuId?: number | string;
+    // CUSTOM item
+    customName?: string;
+    customPrice?: number;
+    // common
     quantity: number;
     notes?: string;
     addons?: Array<{
@@ -110,12 +170,18 @@ async function handlePost(req: NextRequest, context: AuthContext) {
     // ========================================
 
     if (!body.orderType || !['DINE_IN', 'TAKEAWAY'].includes(body.orderType)) {
-      throw new ValidationError('Invalid order type. Must be DINE_IN or TAKEAWAY.');
+      throw new PosValidationError('INVALID_ORDER_TYPE', 'Invalid order type. Must be DINE_IN or TAKEAWAY.');
     }
 
     if (!body.items || !Array.isArray(body.items) || body.items.length === 0) {
-      throw new ValidationError('Order must have at least one item.');
+      throw new PosValidationError('EMPTY_ITEMS', 'Order must have at least one item.');
     }
+
+    // Normalize items (default type = MENU)
+    const normalizedItems = body.items.map((item) => ({
+      ...item,
+      type: item.type === 'CUSTOM' ? 'CUSTOM' : 'MENU',
+    }));
 
     // ========================================
     // STEP 1: Get merchant data
@@ -128,6 +194,7 @@ async function handlePost(req: NextRequest, context: AuthContext) {
         code: true,
         name: true,
         currency: true,
+        features: true,
         enableTax: true,
         taxPercentage: true,
         enableServiceCharge: true,
@@ -140,8 +207,13 @@ async function handlePost(req: NextRequest, context: AuthContext) {
     });
 
     if (!merchant) {
-      throw new ValidationError('Merchant not found.');
+      throw new PosValidationError('MERCHANT_NOT_FOUND', 'Merchant not found.');
     }
+
+    const posCustomItems = getPosCustomItemsSettings({
+      features: merchant.features,
+      currency: merchant.currency,
+    });
 
     // ========================================
     // STEP 2: Handle customer (optional)
@@ -202,44 +274,51 @@ async function handlePost(req: NextRequest, context: AuthContext) {
     // STEP 3: Fetch menu items and addons
     // ========================================
 
-    const menuIds = body.items.map(item => BigInt(item.menuId));
+    const menuItemsOnly = normalizedItems.filter(i => i.type === 'MENU');
+    const customItemsOnly = normalizedItems.filter(i => i.type === 'CUSTOM');
+
+    const menuIds = menuItemsOnly.map(item => toBigIntId(item.menuId as any, 'menuId'));
     const addonItemIds: bigint[] = [];
 
-    body.items.forEach(item => {
+    menuItemsOnly.forEach(item => {
       if (item.addons && item.addons.length > 0) {
         item.addons.forEach(addon => {
-          addonItemIds.push(BigInt(addon.addonItemId));
+          addonItemIds.push(toBigIntId(addon.addonItemId, 'addonItemId'));
         });
       }
     });
 
     const [menus, addons, specialPrices] = await Promise.all([
-      prisma.menu.findMany({
-        where: {
-          id: { in: menuIds },
-          merchantId: merchantId,
-        },
-      }),
+      menuIds.length > 0
+        ? prisma.menu.findMany({
+            where: {
+              id: { in: menuIds },
+              merchantId: merchantId,
+            },
+          })
+        : [],
       addonItemIds.length > 0
         ? prisma.addonItem.findMany({
             where: { id: { in: addonItemIds } },
           })
         : [],
       // Fetch active special prices
-      prisma.specialPriceItem.findMany({
-        where: {
-          menuId: { in: menuIds },
-          specialPrice: {
-            merchantId: merchantId,
-            isActive: true,
-            startDate: { lte: new Date() },
-            endDate: { gte: new Date() },
-          },
-        },
-        include: {
-          specialPrice: true,
-        },
-      }),
+      menuIds.length > 0
+        ? prisma.specialPriceItem.findMany({
+            where: {
+              menuId: { in: menuIds },
+              specialPrice: {
+                merchantId: merchantId,
+                isActive: true,
+                startDate: { lte: new Date() },
+                endDate: { gte: new Date() },
+              },
+            },
+            include: {
+              specialPrice: true,
+            },
+          })
+        : [],
     ]);
 
     // Create maps for efficient lookup
@@ -261,20 +340,80 @@ async function handlePost(req: NextRequest, context: AuthContext) {
     let subtotal = 0;
     const orderItemsData: OrderItemData[] = [];
 
-    for (const item of body.items) {
-      const menu = menuMap.get(item.menuId.toString());
+    // If there are any custom items, ensure we have a hidden placeholder Menu to satisfy FK constraints.
+    const customPlaceholderMenuId = customItemsOnly.length > 0
+      ? await getOrCreatePosCustomPlaceholderMenuId({ merchantId: merchant.id, userId })
+      : null;
+
+    for (const item of normalizedItems) {
+      if (item.type === 'CUSTOM') {
+        if (!posCustomItems.enabled) {
+          throw new PosValidationError('POS_CUSTOM_ITEMS_DISABLED', 'Custom items are disabled for this merchant.');
+        }
+
+        if (item.addons && item.addons.length > 0) {
+          throw new PosValidationError('CUSTOM_ITEM_ADDONS_NOT_ALLOWED', 'Custom items do not support addons.');
+        }
+
+        const name = (item.customName || '').trim();
+        if (!name) {
+          throw new PosValidationError('CUSTOM_ITEM_NAME_REQUIRED', 'Custom item name is required.');
+        }
+
+        if (name.length > posCustomItems.maxNameLength) {
+          throw new PosValidationError(
+            'CUSTOM_ITEM_NAME_TOO_LONG',
+            `Custom item name is too long (max ${posCustomItems.maxNameLength} characters).`
+          );
+        }
+
+        const price = typeof item.customPrice === 'number' ? item.customPrice : Number(item.customPrice);
+        if (!Number.isFinite(price) || price <= 0) {
+          throw new PosValidationError('CUSTOM_ITEM_PRICE_INVALID', 'Custom item price must be a valid number.');
+        }
+
+        if (price > posCustomItems.maxPrice) {
+          throw new PosValidationError(
+            'CUSTOM_ITEM_PRICE_TOO_HIGH',
+            `Custom item price is too high (max ${posCustomItems.maxPrice}).`
+          );
+        }
+
+        if (!Number.isFinite(item.quantity) || !Number.isInteger(item.quantity) || item.quantity <= 0) {
+          throw new PosValidationError('INVALID_QUANTITY', 'Invalid quantity.');
+        }
+
+        const menuPrice = round2(price);
+        const itemTotal = round2(menuPrice * item.quantity);
+
+        subtotal = round2(subtotal + itemTotal);
+        orderItemsData.push({
+          menuId: customPlaceholderMenuId as bigint,
+          menuName: name,
+          menuPrice,
+          quantity: item.quantity,
+          subtotal: itemTotal,
+          notes: item.notes || null,
+          addons: [],
+        });
+
+        continue;
+      }
+
+      const menuId = toBigIntId(item.menuId as any, 'menuId');
+      const menu = menuMap.get(menuId.toString());
 
       if (!menu) {
-        throw new ValidationError(`Menu item with ID ${item.menuId} not found.`);
+        throw new PosValidationError('MENU_NOT_FOUND', `Menu item with ID ${item.menuId} not found.`);
       }
 
       if (!menu.isActive || menu.deletedAt) {
-        throw new ValidationError(`Menu item "${menu.name}" is not available.`);
+        throw new PosValidationError('MENU_NOT_AVAILABLE', `Menu item "${menu.name}" is not available.`);
       }
 
       // Check stock
       if (menu.trackStock && (menu.stockQty === null || menu.stockQty < item.quantity)) {
-        throw new ValidationError(`Insufficient stock for "${menu.name}".`);
+        throw new PosValidationError('INSUFFICIENT_STOCK', `Insufficient stock for "${menu.name}".`);
       }
 
       // Use promo price if available
@@ -481,10 +620,10 @@ async function handlePost(req: NextRequest, context: AuthContext) {
     // STEP 8: Decrement stock (non-blocking)
     // ========================================
 
-    for (const item of body.items) {
+    for (const item of menuItemsOnly) {
       try {
         const menu = await prisma.menu.findUnique({
-          where: { id: BigInt(item.menuId) },
+          where: { id: toBigIntId(item.menuId as any, 'menuId') },
           select: {
             id: true,
             name: true,
@@ -543,11 +682,12 @@ async function handlePost(req: NextRequest, context: AuthContext) {
   } catch (error) {
     console.error('[POS] Error:', error);
 
-    if (error instanceof ValidationError) {
+    if (error instanceof PosValidationError) {
       return NextResponse.json(
         {
           success: false,
-          error: 'VALIDATION_ERROR',
+          error: 'POS_VALIDATION_ERROR',
+          errorCode: error.errorCode,
           message: error.message,
           statusCode: 400,
         },

@@ -150,6 +150,9 @@ export async function GET(req: NextRequest) {
             for (const item of order.orderItems) {
                 if (!item.menu) continue;
 
+                // POS custom items are stored using a hidden placeholder menu; exclude from recent/reorder suggestions.
+                if (item.menu.name === '[POS] __CUSTOM_ITEM_PLACEHOLDER__') continue;
+
                 const menuIdStr = item.menu.id.toString();
                 const existing = menuMap.get(menuIdStr);
 
