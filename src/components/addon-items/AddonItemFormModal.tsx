@@ -52,7 +52,7 @@ export default function AddonItemFormModal({
 
   // Check if form has changes (only for edit mode)
   const hasChanges = (): boolean => {
-    if (!editingId || !originalFormData) return true; // For create, always allow
+    if (!originalFormData) return true;
     return (
       formData.addonCategoryId !== originalFormData.addonCategoryId ||
       formData.name !== originalFormData.name ||
@@ -69,7 +69,16 @@ export default function AddonItemFormModal({
   const formChanged = hasChanges();
 
   return (
-    <div data-tutorial="addon-item-modal" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div
+      data-tutorial="addon-item-modal"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onMouseDown={(e) => {
+        if (e.target !== e.currentTarget) return;
+        if (submitting) return;
+        if (formChanged) return;
+        onCancel();
+      }}
+    >
       <div className="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl border border-gray-200 bg-white shadow-xl dark:border-gray-800 dark:bg-gray-900">
         {/* Fixed Header */}
         <div className="shrink-0 border-b border-gray-200 px-6 py-4 dark:border-gray-800">
@@ -286,7 +295,7 @@ export default function AddonItemFormModal({
                     type="submit"
                     disabled={submitting}
                     data-tutorial="addon-item-save-btn"
-                    className="flex-1 h-11 rounded-xl bg-primary-500 text-sm font-medium text-white shadow-lg shadow-primary-500/25 transition-all hover:bg-primary-600 hover:shadow-primary-500/30 focus:outline-none focus:ring-4 focus:ring-primary-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex-1 h-11 rounded-xl bg-brand-500 text-sm font-medium text-white shadow-lg shadow-brand-500/25 transition-all hover:bg-brand-600 hover:shadow-brand-500/30 focus:outline-none focus:ring-4 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {submitting ? "Saving..." : "Update Item"}
                   </button>
@@ -300,7 +309,7 @@ export default function AddonItemFormModal({
                   type="submit"
                   disabled={submitting}
                   data-tutorial="addon-item-save-btn"
-                  className="flex-1 h-11 rounded-xl bg-primary-500 text-sm font-medium text-white shadow-lg shadow-primary-500/25 transition-all hover:bg-primary-600 hover:shadow-primary-500/30 focus:outline-none focus:ring-4 focus:ring-primary-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex-1 h-11 rounded-xl bg-brand-500 text-sm font-medium text-white shadow-lg shadow-brand-500/25 transition-all hover:bg-brand-600 hover:shadow-brand-500/30 focus:outline-none focus:ring-4 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {submitting ? "Saving..." : "Create Item"}
                 </button>

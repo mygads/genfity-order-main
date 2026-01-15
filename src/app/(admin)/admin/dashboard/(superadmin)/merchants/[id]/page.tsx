@@ -7,6 +7,7 @@ import dynamic from "next/dynamic";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import ComponentCard from "@/components/common/ComponentCard";
 import BalanceSubscriptionModal from "@/components/merchants/BalanceSubscriptionModal";
+import AlertDialog from "@/components/modals/AlertDialog";
 
 // Dynamically import map component
 const MapContent = dynamic(() => import("@/components/maps/MapContent"), { ssr: false });
@@ -57,6 +58,8 @@ export default function MerchantDetailsPage() {
   const [error, setError] = useState<string | null>(null);
   const [isTogglingOpen, setIsTogglingOpen] = useState(false);
   const [isBalanceModalOpen, setIsBalanceModalOpen] = useState(false);
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [alertMessage, setAlertMessage] = useState<string>("");
 
   useEffect(() => {
     const fetchMerchant = async () => {
@@ -129,7 +132,8 @@ export default function MerchantDetailsPage() {
       // Update local state
       setMerchant({ ...merchant, isActive: !merchant.isActive });
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to toggle status");
+      setAlertMessage(err instanceof Error ? err.message : "Failed to toggle status");
+      setAlertOpen(true);
     }
   };
 
@@ -159,7 +163,8 @@ export default function MerchantDetailsPage() {
         throw new Error("Failed to toggle store open status");
       }
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to toggle store open status");
+      setAlertMessage(err instanceof Error ? err.message : "Failed to toggle store open status");
+      setAlertOpen(true);
     } finally {
       setIsTogglingOpen(false);
     }
@@ -181,7 +186,7 @@ export default function MerchantDetailsPage() {
     return (
       <div>
         <PageBreadcrumb pageTitle="Merchant Details" />
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6">
           <h3 className="mb-4 text-lg font-semibold text-gray-800 dark:text-white/90">Error</h3>
           <div className="rounded-lg bg-error-50 p-4 dark:bg-error-900/20">
             <p className="text-sm text-error-600 dark:text-error-400">
@@ -203,12 +208,20 @@ export default function MerchantDetailsPage() {
     <div>
       <PageBreadcrumb pageTitle={merchant.name} />
 
+      <AlertDialog
+        isOpen={alertOpen}
+        title="Error"
+        message={alertMessage}
+        variant="danger"
+        onClose={() => setAlertOpen(false)}
+      />
+
       <ComponentCard title="Merchant Details" className="space-y-6">
         {/* Merchant Logo & Header */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6">
           <div className="flex flex-col items-center gap-4 md:flex-row md:items-start">
             {/* Logo */}
-            <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-xl border-4 border-gray-200 dark:border-gray-700 md:h-32 md:w-32">
+            <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl border-4 border-gray-200 dark:border-gray-700 md:h-32 md:w-32">
               {merchant.logoUrl ? (
                 <Image
                   src={merchant.logoUrl}
@@ -269,7 +282,7 @@ export default function MerchantDetailsPage() {
         </div>
 
         {/* Basic Information */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6">
           <h3 className="mb-5 text-lg font-semibold text-gray-800 dark:text-white/90">Contact Information</h3>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div>
@@ -349,7 +362,7 @@ export default function MerchantDetailsPage() {
               disabled={isTogglingOpen || !merchant.isActive}
               className={`h-11 rounded-lg px-6 text-sm font-medium text-white focus:outline-none focus:ring-3 disabled:cursor-not-allowed disabled:opacity-50 ${
                 merchant.isOpen
-                  ? 'bg-orange-500 hover:bg-orange-600 focus:ring-orange-500/20'
+                  ? 'bg-brand-500 hover:bg-brand-600 focus:ring-brand-500/20'
                   : 'bg-green-500 hover:bg-green-600 focus:ring-green-500/20'
               }`}
             >
@@ -357,7 +370,7 @@ export default function MerchantDetailsPage() {
             </button>
             <button
               onClick={() => router.push("/admin/dashboard/merchants")}
-              className="h-11 rounded-lg border border-gray-200 bg-white px-6 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-white/[0.03] dark:text-gray-300 dark:hover:bg-white/[0.05]"
+              className="h-11 rounded-lg border border-gray-200 bg-white px-6 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-white/3 dark:text-gray-300 dark:hover:bg-white/5"
             >
               Back to List
             </button>
@@ -404,7 +417,7 @@ export default function MerchantDetailsPage() {
         )}
 
         {/* Opening Hours */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6">
           <h3 className="mb-5 text-lg font-semibold text-gray-800 dark:text-white/90">Opening Hours</h3>
           {merchant.openingHours && merchant.openingHours.length > 0 ? (
             <div className="space-y-3">
@@ -432,7 +445,7 @@ export default function MerchantDetailsPage() {
         </div>
 
         {/* Staff/Owners */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6">
           <h3 className="mb-5 text-lg font-semibold text-gray-800 dark:text-white/90">Staff & Owners</h3>
           {merchant.merchantUsers && merchant.merchantUsers.length > 0 ? (
             <div className="overflow-x-auto">
@@ -481,7 +494,7 @@ export default function MerchantDetailsPage() {
         </div>
 
         {/* Metadata */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6">
           <h3 className="mb-5 text-lg font-semibold text-gray-800 dark:text-white/90">Metadata</h3>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div>

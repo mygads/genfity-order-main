@@ -68,7 +68,7 @@ export default function LoadingState({
      */
     const Spinner = () => (
         <div
-            className={`${spinnerClass} border-orange-500 border-t-transparent rounded-full animate-spin`}
+            className={`${spinnerClass} border-brand-500 border-t-transparent rounded-full animate-spin`}
             role="status"
             aria-label={message}
         />
@@ -90,7 +90,7 @@ export default function LoadingState({
      */
     if (type === 'page') {
         return (
-            <div className="flex flex-col min-h-screen max-w-[420px] mx-auto bg-white items-center justify-center">
+            <div className="flex flex-col min-h-screen max-w-105 mx-auto bg-white items-center justify-center">
                 <Spinner />
                 <Message />
             </div>

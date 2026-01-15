@@ -6,6 +6,7 @@ import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { useSWRStatic } from "@/hooks/useSWRWithAuth";
 import SuspendedAlert from "@/components/subscription/SuspendedAlert";
 import ConfirmDialog from "@/components/modals/ConfirmDialog";
+import AlertDialog from "@/components/modals/AlertDialog";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useContextualHint, CONTEXTUAL_HINTS } from "@/lib/tutorial/components/ContextualHint";
 import { FaWallet, FaCalendarAlt, FaClock, FaExchangeAlt, FaArrowRight, FaCheckCircle, FaExclamationTriangle, FaHistory, FaCreditCard, FaInfoCircle, FaTicketAlt } from "react-icons/fa";
@@ -78,6 +79,8 @@ export default function SubscriptionPage() {
     const { showHint } = useContextualHint();
     const [switching, setSwitching] = useState(false);
     const [switchModalOpen, setSwitchModalOpen] = useState(false);
+    const [switchErrorOpen, setSwitchErrorOpen] = useState(false);
+    const [switchErrorMessage, setSwitchErrorMessage] = useState<string>("");
     const [pendingSwitchType, setPendingSwitchType] = useState<'DEPOSIT' | 'MONTHLY' | null>(null);
     
     // Voucher redeem modal state
@@ -230,10 +233,12 @@ export default function SubscriptionPage() {
             if (data.success) {
                 window.location.reload();
             } else {
-                alert(data.message);
+                setSwitchErrorMessage(data.message || (locale === 'id' ? 'Gagal mengganti tipe langganan' : 'Failed to switch subscription type'));
+                setSwitchErrorOpen(true);
             }
         } catch {
-            alert(locale === 'id' ? 'Gagal mengganti tipe langganan' : 'Failed to switch subscription type');
+            setSwitchErrorMessage(locale === 'id' ? 'Gagal mengganti tipe langganan' : 'Failed to switch subscription type');
+            setSwitchErrorOpen(true);
         } finally {
             setSwitching(false);
         }
@@ -321,13 +326,21 @@ export default function SubscriptionPage() {
         <div className="space-y-4">
             <PageBreadcrumb pageTitle={locale === 'id' ? 'Langganan' : 'Subscription'} />
 
+            <AlertDialog
+                isOpen={switchErrorOpen}
+                title={t('common.error') || 'Error'}
+                message={switchErrorMessage || (locale === 'id' ? 'Gagal mengganti tipe langganan' : 'Failed to switch subscription type')}
+                variant="danger"
+                onClose={() => setSwitchErrorOpen(false)}
+            />
+
             {/* Suspended Alert */}
             {subscription.status === 'SUSPENDED' && (
                 <SuspendedAlert type={subscription.type} reason={subscription.suspendReason || undefined} />
             )}
 
             {/* Hero Card - Main Status */}
-            <div className={`relative overflow-hidden rounded-xl bg-gradient-to-r ${getStatusColor()} p-4 sm:p-6 text-white`}>
+            <div className={`relative overflow-hidden rounded-xl bg-linear-to-r ${getStatusColor()} p-4 sm:p-6 text-white`}>
                 <div className="absolute top-0 right-0 w-64 h-64 transform translate-x-1/3 -translate-y-1/3">
                     <div className="w-full h-full rounded-full bg-white/10" />
                 </div>
@@ -474,8 +487,8 @@ export default function SubscriptionPage() {
                 {isDeposit && (
                     <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
                         <div className="flex items-center gap-2 mb-2">
-                            <div className="w-8 h-8 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
-                                <FaHistory className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                            <div className="w-8 h-8 rounded-lg bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center">
+                                <FaHistory className="w-4 h-4 text-brand-600 dark:text-brand-400" />
                             </div>
                             <span className="text-xs text-gray-500 dark:text-gray-400">
                                 {locale === 'id' ? 'Tagihan Kemarin' : 'Yesterday'}
@@ -764,8 +777,8 @@ export default function SubscriptionPage() {
                         <div className="p-6 border-b border-gray-200 dark:border-gray-800">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
-                                        <FaTicketAlt className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                                    <div className="w-10 h-10 rounded-lg bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center">
+                                        <FaTicketAlt className="w-5 h-5 text-brand-600 dark:text-brand-400" />
                                     </div>
                                     <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                                         {locale === 'id' ? 'Tukar Voucher' : 'Redeem Voucher'}
@@ -839,7 +852,7 @@ export default function SubscriptionPage() {
                                                 value={voucherCode}
                                                 onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
                                                 placeholder={locale === 'id' ? 'Masukkan kode voucher' : 'Enter voucher code'}
-                                                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent font-mono text-center text-lg tracking-wider"
+                                                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent font-mono text-center text-lg tracking-wider"
                                                 disabled={redeeming}
                                                 onKeyDown={(e) => {
                                                     if (e.key === 'Enter' && voucherCode.trim()) {
@@ -869,7 +882,7 @@ export default function SubscriptionPage() {
                                 <button
                                     onClick={handleRedeemVoucher}
                                     disabled={redeeming || !voucherCode.trim()}
-                                    className="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 font-medium flex items-center justify-center gap-2"
+                                    className="flex-1 px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors disabled:opacity-50 font-medium flex items-center justify-center gap-2"
                                 >
                                     {redeeming ? (
                                         <>

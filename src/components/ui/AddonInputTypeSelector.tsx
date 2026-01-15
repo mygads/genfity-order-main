@@ -125,22 +125,6 @@ export default function AddonInputTypeSelector({
           </button>
         ))}
       </div>
-
-      {/* Help Text */}
-      <div className="rounded-lg bg-blue-50 p-3 dark:bg-blue-900/20">
-        <div className="flex gap-2">
-          <svg className="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <div className="text-xs text-blue-700 dark:text-blue-300">
-            <p className="font-medium">How input types work:</p>
-            <ul className="mt-1 space-y-0.5 text-blue-600 dark:text-blue-400">
-              <li>• <strong>Checkbox/Radio:</strong> Use with category Max Selection. Max=1 shows radio buttons (choose 1), Max&gt;1 shows checkboxes.</li>
-              <li>• <strong>Quantity (+/-):</strong> Shows +/- buttons. Customer can add multiple of the same item (e.g., Extra Cheese x3).</li>
-            </ul>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

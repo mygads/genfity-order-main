@@ -251,8 +251,8 @@ export const OrderTabListView: React.FC<OrderTabListViewProps> = ({
               >
                 {/* Status Indicator Dot */}
                 <div className={`w-2 h-2 rounded-full ${status === 'PENDING' ? 'bg-warning-500' :
-                  status === 'ACCEPTED' ? 'bg-blue-500' :
-                    status === 'IN_PROGRESS' ? 'bg-orange-500' :
+                  status === 'ACCEPTED' ? 'bg-brand-500' :
+                    status === 'IN_PROGRESS' ? 'bg-brand-500' :
                       status === 'READY' ? 'bg-success-500' :
                         'bg-gray-400'
                   } ${isActive && status === 'PENDING' ? 'animate-pulse' : ''}`} />

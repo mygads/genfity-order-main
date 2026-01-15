@@ -179,7 +179,17 @@ export const PaymentVerificationModal: React.FC<PaymentVerificationModalProps> =
     verifiedOrder?.payment?.status === 'COMPLETED';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      onMouseDown={(e) => {
+        if (e.target !== e.currentTarget) return;
+        // Only close by outside click when nothing has been entered yet.
+        if (isLoading || isRecording) return;
+        if (step !== 'input') return;
+        if (orderNumber.trim().length > 0) return;
+        handleClose();
+      }}
+    >
       <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 rounded-2xl shadow-2xl">
         {/* Header */}
         <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 p-6">

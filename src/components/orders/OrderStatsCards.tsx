@@ -44,9 +44,9 @@ interface StatCardProps {
 const StatCard: React.FC<StatCardProps> = ({ title, value, subtitle, icon, trend, color }) => {
   const colorClasses = {
     blue: {
-      bg: 'bg-blue-100 dark:bg-blue-900/20',
-      icon: 'text-blue-600 dark:text-blue-400',
-      border: 'border-blue-200 dark:border-blue-800',
+      bg: 'bg-brand-100 dark:bg-brand-900/20',
+      icon: 'text-brand-600 dark:text-brand-400',
+      border: 'border-brand-200 dark:border-brand-800',
     },
     green: {
       bg: 'bg-success-100 dark:bg-success-900/20',

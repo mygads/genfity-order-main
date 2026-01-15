@@ -144,7 +144,7 @@ export default function OrderBreakdownCards({
                   className={`rounded-lg border p-4 ${
                     isDineIn 
                       ? 'border-brand-200 bg-brand-50 dark:border-brand-800 dark:bg-brand-900/20'
-                      : 'border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-900/20'
+                      : 'border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20'
                   }`}
                 >
                   <div className="flex items-start justify-between">
@@ -153,7 +153,7 @@ export default function OrderBreakdownCards({
                         <div className={`text-2xl ${
                           isDineIn 
                             ? 'text-brand-600 dark:text-brand-400'
-                            : 'text-orange-600 dark:text-orange-400'
+                            : 'text-amber-600 dark:text-amber-400'
                         }`}>
                           {isDineIn ? '🍽️' : '🛍️'}
                         </div>
@@ -161,7 +161,7 @@ export default function OrderBreakdownCards({
                           <div className={`text-lg font-semibold ${
                             isDineIn 
                               ? 'text-brand-700 dark:text-brand-400'
-                              : 'text-orange-700 dark:text-orange-400'
+                              : 'text-amber-800 dark:text-amber-300'
                           }`}>
                             {item.type === 'DINE_IN' ? 'Dine In' : 'Takeaway'}
                           </div>
@@ -179,7 +179,7 @@ export default function OrderBreakdownCards({
                           <div className={`text-xl font-bold ${
                             isDineIn 
                               ? 'text-brand-700 dark:text-brand-400'
-                              : 'text-orange-700 dark:text-orange-400'
+                              : 'text-amber-800 dark:text-amber-300'
                           }`}>
                             {item.count}
                           </div>
@@ -191,7 +191,7 @@ export default function OrderBreakdownCards({
                           <div className={`text-xl font-bold ${
                             isDineIn 
                               ? 'text-brand-700 dark:text-brand-400'
-                              : 'text-orange-700 dark:text-orange-400'
+                              : 'text-amber-800 dark:text-amber-300'
                           }`}>
                             {formatCurrency(item.revenue, currency)}
                           </div>
@@ -203,7 +203,7 @@ export default function OrderBreakdownCards({
                   {/* Progress Bar */}
                   <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
                     <div 
-                      className={isDineIn ? 'bg-brand-500' : 'bg-orange-500'}
+                      className={isDineIn ? 'bg-brand-500' : 'bg-amber-500'}
                       style={{ width: `${percentage}%` }}
                     />
                   </div>

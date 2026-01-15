@@ -5,6 +5,7 @@ import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { useToast } from "@/hooks/useToast";
 import ToastContainer from "@/components/ui/ToastContainer";
 import ConfirmDialog from "@/components/modals/ConfirmDialog";
+import { TableActionButton } from "@/components/common/TableActionButton";
 import { useSWRWithAuth } from "@/hooks/useSWRWithAuth";
 import Image from "next/image";
 import Link from "next/link";
@@ -676,20 +677,14 @@ export default function StockPhotosPage() {
                 />
                 {/* Overlay on hover */}
                 <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/60 opacity-0 transition-opacity group-hover:opacity-100">
-                  <button
-                    onClick={() => openEditModal(photo)}
-                    className="rounded-lg bg-white p-2 text-gray-700 hover:bg-gray-100"
-                    title="Edit"
-                  >
-                    <FaEdit className="h-4 w-4" />
-                  </button>
-                  <button
+                  <TableActionButton icon={FaEdit} onClick={() => openEditModal(photo)} title="Edit" aria-label="Edit" />
+                  <TableActionButton
+                    icon={FaTrash}
+                    tone="danger"
                     onClick={() => openDeleteDialog(photo)}
-                    className="rounded-lg bg-white p-2 text-red-600 hover:bg-red-50"
                     title="Delete"
-                  >
-                    <FaTrash className="h-4 w-4" />
-                  </button>
+                    aria-label="Delete"
+                  />
                 </div>
               </div>
 

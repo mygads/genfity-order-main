@@ -12,6 +12,7 @@ import { useToast } from '@/context/ToastContext';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { clearAdminAuth } from '@/lib/utils/adminAuth';
 import { clearDriverAuth } from '@/lib/utils/driverAuth';
+import ConfirmDialog from '@/components/modals/ConfirmDialog';
 
 /**
  * GENFITY Admin Dashboard Page (CSR + SWR)
@@ -34,13 +35,13 @@ export default function AdminDashboardPage() {
   const [isMounted, setIsMounted] = useState(false);
   const [hasToken, setHasToken] = useState(true); // Assume true to prevent flash
   const [isLeaving, setIsLeaving] = useState(false);
+  const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
+  const [pendingLeaveMerchantId, setPendingLeaveMerchantId] = useState<string | null>(null);
   const { showError } = useToast();
   const { t } = useTranslation();
 
-  const handleLeaveDisabledMerchant = async (merchantId: string) => {
+  const executeLeaveDisabledMerchant = async (merchantId: string) => {
     if (!merchantId) return;
-    if (!window.confirm('Leave this merchant?')) return;
-
     setIsLeaving(true);
     try {
       const token = localStorage.getItem('accessToken');
@@ -73,6 +74,20 @@ export default function AdminDashboardPage() {
     } finally {
       setIsLeaving(false);
     }
+  };
+
+  const handleLeaveDisabledMerchant = (merchantId: string) => {
+    if (!merchantId || isLeaving) return;
+    setPendingLeaveMerchantId(merchantId);
+    setLeaveConfirmOpen(true);
+  };
+
+  const handleConfirmLeaveDisabledMerchant = async () => {
+    if (!pendingLeaveMerchantId || isLeaving) return;
+    setLeaveConfirmOpen(false);
+    const merchantId = pendingLeaveMerchantId;
+    setPendingLeaveMerchantId(null);
+    await executeLeaveDisabledMerchant(merchantId);
   };
 
   // Handle mount state to avoid hydration errors
@@ -163,6 +178,21 @@ export default function AdminDashboardPage() {
               {isLeaving ? 'Leaving...' : 'Leave Store'}
             </button>
           )}
+
+          <ConfirmDialog
+            isOpen={leaveConfirmOpen}
+            title="Leave store"
+            message="Are you sure you want to leave this merchant? You will be logged out and can be invited to another store."
+            confirmText={isLeaving ? 'Leaving...' : 'Leave'}
+            cancelText="Cancel"
+            variant="warning"
+            onConfirm={handleConfirmLeaveDisabledMerchant}
+            onCancel={() => {
+              if (isLeaving) return;
+              setLeaveConfirmOpen(false);
+              setPendingLeaveMerchantId(null);
+            }}
+          />
 
           <div className="rounded-lg bg-blue-50 p-4 dark:bg-blue-900/20">
             <div className="flex items-start gap-3">

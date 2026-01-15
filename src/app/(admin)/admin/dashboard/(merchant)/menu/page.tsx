@@ -19,6 +19,8 @@ import ArchiveModal from "@/components/common/ArchiveModal";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { formatCurrency as formatCurrencyUtil } from "@/lib/utils/format";
 import { useContextualHint, CONTEXTUAL_HINTS, useClickHereHint, CLICK_HINTS } from "@/lib/tutorial";
+import { TableActionButton } from "@/components/common/TableActionButton";
+import { FaEllipsisV } from "react-icons/fa";
 
 interface MenuAddonCategory {
   addonCategoryId: string;
@@ -309,7 +311,7 @@ function MerchantMenuPageContent() {
           </p>
           <button
             onClick={() => fetchData()}
-            className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+            className="px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors"
           >
             {t("common.retry")}
           </button>
@@ -680,7 +682,7 @@ function MerchantMenuPageContent() {
               <button
                 onClick={() => setShowCreateOptionModal(true)}
                 data-tutorial="add-menu-btn"
-                className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary-500 px-6 text-sm font-medium text-white hover:bg-primary-600 focus:outline-none focus:ring-3 focus:ring-primary-500/20"
+                className="inline-flex h-11 items-center gap-2 rounded-lg bg-brand-500 px-6 text-sm font-medium text-white hover:bg-brand-600 focus:outline-none focus:ring-3 focus:ring-brand-500/20"
               >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -703,7 +705,7 @@ function MerchantMenuPageContent() {
                   placeholder={t("admin.menu.searchPlaceholder")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-11 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                  className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-11 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
                 />
                 {searchQuery && (
                   <button
@@ -723,7 +725,7 @@ function MerchantMenuPageContent() {
               <select
                 value={filterCategory}
                 onChange={(e) => setFilterCategory(e.target.value)}
-                className="h-10 rounded-lg border border-gray-200 bg-white px-3 pr-8 text-sm text-gray-700 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                className="h-10 rounded-lg border border-gray-200 bg-white px-3 pr-8 text-sm text-gray-700 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
               >
                 <option value="all">{t("admin.menu.allCategories")}</option>
                 {categories.map((cat) => (
@@ -735,7 +737,7 @@ function MerchantMenuPageContent() {
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="h-10 rounded-lg border border-gray-200 bg-white px-3 pr-8 text-sm text-gray-700 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                className="h-10 rounded-lg border border-gray-200 bg-white px-3 pr-8 text-sm text-gray-700 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
               >
                 <option value="all">{t("admin.menu.allStatus")}</option>
                 <option value="active">✓ {t("common.active")}</option>
@@ -747,7 +749,7 @@ function MerchantMenuPageContent() {
                 <button
                   type="button"
                   onClick={() => setIsStockDropdownOpen(!isStockDropdownOpen)}
-                  className="flex h-10 min-w-[140px] items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 hover:bg-gray-50 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                  className="flex h-10 min-w-[140px] items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 hover:bg-gray-50 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
                 >
                   <span>
                     {filterStock.length === 0
@@ -869,7 +871,7 @@ function MerchantMenuPageContent() {
                         type="checkbox"
                         checked={selectedItems.length === currentItems.length && currentItems.length > 0}
                         onChange={(e) => handleSelectAll(e.target.checked)}
-                        className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                        className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
                       />
                     </th>
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">{t("admin.menu.table.image")}</th>
@@ -889,7 +891,7 @@ function MerchantMenuPageContent() {
                           type="checkbox"
                           checked={selectedItems.includes(item.id)}
                           onChange={(e) => handleSelectItem(item.id, e.target.checked)}
-                          className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                          className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
                         />
                       </td>
                       <td className="px-4 py-4">
@@ -941,7 +943,7 @@ function MerchantMenuPageContent() {
                         <div className="flex flex-wrap gap-1.5">
                           {item.isSpicy && (
                             <div
-                              className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-orange-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
+                              className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-brand-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
                               title={t("admin.menu.badges.spicy")}
                             >
                               <Image
@@ -1018,15 +1020,12 @@ function MerchantMenuPageContent() {
                       </td>
                       <td className="px-4 py-4">
                         <div className="relative">
-                          <button
+                          <TableActionButton
+                            icon={FaEllipsisV}
                             onClick={() => setOpenDropdownId(openDropdownId === item.id ? null : item.id)}
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
                             title="Actions"
-                          >
-                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                            </svg>
-                          </button>
+                            aria-label="Actions"
+                          />
 
                           {openDropdownId === item.id && (
                             <>
@@ -1146,7 +1145,7 @@ function MerchantMenuPageContent() {
                         key={page}
                         onClick={() => paginate(page)}
                         className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border text-sm font-medium ${currentPage === page
-                          ? 'border-primary-500 bg-primary-500 text-white'
+                          ? 'border-brand-500 bg-brand-500 text-white'
                           : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
                           }`}
                       >

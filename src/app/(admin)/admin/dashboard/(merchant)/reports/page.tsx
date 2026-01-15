@@ -13,6 +13,7 @@ import { TopMenuItemsChart, HourlyDistributionChart } from '@/components/revenue
 import { ReportsPageSkeleton } from '@/components/common/SkeletonLoaders';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { useContextualHint, CONTEXTUAL_HINTS, useClickHereHint, CLICK_HINTS } from "@/lib/tutorial";
+import AlertDialog from '@/components/modals/AlertDialog';
 
 export default function ReportsPage() {
   const router = useRouter();
@@ -21,6 +22,7 @@ export default function ReportsPage() {
   const { showClickHint } = useClickHereHint();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [exportSoonOpen, setExportSoonOpen] = useState(false);
   const [data, setData] = useState<{
     periodComparison?: {
       metrics: Array<{
@@ -119,7 +121,7 @@ export default function ReportsPage() {
 
   const handleExportPDF = () => {
     // TODO: Implement PDF export
-    alert(t("admin.reports.exportPDFSoon"));
+    setExportSoonOpen(true);
   };
 
   if (loading) {
@@ -128,6 +130,14 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6" data-tutorial="reports-page">
+      <AlertDialog
+        isOpen={exportSoonOpen}
+        title={t("common.comingSoon") || "Coming soon"}
+        message={t("admin.reports.exportPDFSoon")}
+        variant="info"
+        onClose={() => setExportSoonOpen(false)}
+      />
+
       {/* Page Title */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">

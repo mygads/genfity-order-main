@@ -59,8 +59,8 @@ export const KitchenOrderCard: React.FC<KitchenOrderCardProps> = ({
               </h2>
               {order.reservation ? (
                 <div className="flex items-center gap-1.5" title="Reservation order">
-                  <FaCalendarCheck className="h-4 w-4 text-purple-600" />
-                  <span className="inline-flex items-center gap-1 rounded-md border border-purple-200 bg-purple-50 px-2 py-0.5 text-[11px] font-semibold text-purple-700">
+                  <FaCalendarCheck className="h-4 w-4 text-brand-600" />
+                  <span className="inline-flex items-center gap-1 rounded-md border border-brand-200 bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-700">
                     <FaUsers className="h-3 w-3" />
                     {order.reservation.partySize}
                   </span>
@@ -189,7 +189,7 @@ export const KitchenOrderCard: React.FC<KitchenOrderCardProps> = ({
               onClick={() => onMarkInProgress(String(order.id))}
               className="
                 flex-1 h-10 px-4 rounded-lg
-                bg-blue-500 hover:bg-blue-600
+                bg-brand-500 hover:bg-brand-600
                 text-white font-semibold text-sm
                 transition-colors duration-150
                 shadow-sm hover:shadow

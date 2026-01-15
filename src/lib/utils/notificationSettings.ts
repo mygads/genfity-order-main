@@ -7,12 +7,15 @@ export type MerchantTransactionToggleKey =
   | 'payment'
   | 'subscription';
 
+export type StaffActivityToggleKey = 'login' | 'logout';
+
 export interface NotificationSettingsV1 {
   version: 1;
   account: {
     transactions: boolean;
   };
   merchant: Record<MerchantTransactionToggleKey, boolean>;
+  staff: Record<StaffActivityToggleKey, boolean>;
 }
 
 export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettingsV1 = {
@@ -26,6 +29,10 @@ export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettingsV1 = {
     lowStock: true,
     payment: true,
     subscription: true,
+  },
+  staff: {
+    login: true,
+    logout: true,
   },
 };
 
@@ -44,6 +51,7 @@ export function normalizeNotificationSettings(
 
   const accountRaw = isRecord(raw.account) ? raw.account : {};
   const merchantRaw = isRecord(raw.merchant) ? raw.merchant : {};
+  const staffRaw = isRecord(raw.staff) ? raw.staff : {};
 
   const normalized: NotificationSettingsV1 = {
     version,
@@ -75,6 +83,16 @@ export function normalizeNotificationSettings(
           ? merchantRaw.subscription
           : DEFAULT_NOTIFICATION_SETTINGS.merchant.subscription,
     },
+    staff: {
+      login:
+        typeof staffRaw.login === 'boolean'
+          ? staffRaw.login
+          : DEFAULT_NOTIFICATION_SETTINGS.staff.login,
+      logout:
+        typeof staffRaw.logout === 'boolean'
+          ? staffRaw.logout
+          : DEFAULT_NOTIFICATION_SETTINGS.staff.logout,
+    },
   };
 
   return normalized;
@@ -85,6 +103,7 @@ export function mergeNotificationSettings(
   patch: Partial<{
     account: Partial<NotificationSettingsV1['account']>;
     merchant: Partial<NotificationSettingsV1['merchant']>;
+    staff: Partial<NotificationSettingsV1['staff']>;
   }>
 ): NotificationSettingsV1 {
   return {
@@ -96,6 +115,10 @@ export function mergeNotificationSettings(
     merchant: {
       ...current.merchant,
       ...(patch.merchant || {}),
+    },
+    staff: {
+      ...current.staff,
+      ...(patch.staff || {}),
     },
   };
 }

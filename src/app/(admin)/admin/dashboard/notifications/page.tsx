@@ -5,8 +5,11 @@ import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useSWRStatic } from "@/hooks/useSWRWithAuth";
 import Link from "next/link";
-import IconToggle from "@/components/ui/IconToggle";
 import { useToast } from "@/context/ToastContext";
+import NotificationSettingsModal, {
+    type MerchantTransactionToggleKey,
+    type StaffActivityToggleKey,
+} from "@/components/notifications/NotificationSettingsModal";
 import { 
     FaBell, 
     FaCheckDouble,
@@ -39,17 +42,17 @@ interface NotificationsResponse {
 
 const categories = ["ALL", "SYSTEM", "SUBSCRIPTION", "ORDER", "STOCK", "STAFF", "PAYMENT"];
 
-type MerchantTransactionToggleKey = 'newOrder' | 'stockOut' | 'lowStock' | 'payment' | 'subscription';
-
 interface NotificationSettingsResponse {
     success: boolean;
     data: {
         settings: {
             accountTransactions: boolean;
             merchant: Record<MerchantTransactionToggleKey, boolean>;
+            staff: Record<StaffActivityToggleKey, boolean>;
         };
         availability: {
             merchant: Record<MerchantTransactionToggleKey, boolean>;
+            staff: Record<StaffActivityToggleKey, boolean>;
         };
     };
 }
@@ -82,6 +85,7 @@ export default function NotificationsPage() {
     const [filter, setFilter] = useState<string>("ALL");
     const [showUnreadOnly, setShowUnreadOnly] = useState(false);
     const [savingKey, setSavingKey] = useState<string | null>(null);
+    const [settingsOpen, setSettingsOpen] = useState(false);
 
     const queryParams = new URLSearchParams({
         page: page.toString(),
@@ -130,6 +134,7 @@ export default function NotificationsPage() {
     const updateSettings = async (patch: {
         accountTransactions?: boolean;
         merchant?: Partial<Record<MerchantTransactionToggleKey, boolean>>;
+        staff?: Partial<Record<StaffActivityToggleKey, boolean>>;
     }) => {
         const token = localStorage.getItem('accessToken');
         const res = await fetch('/api/notifications/settings', {
@@ -183,6 +188,22 @@ export default function NotificationsPage() {
         }
     };
 
+    const onToggleStaffKey = async (key: StaffActivityToggleKey, nextValue: boolean) => {
+        try {
+            setSavingKey(`staff:${key}`);
+            await mutateSettings(async (current) => {
+                await updateSettings({ staff: { [key]: nextValue } });
+                return current;
+            }, { revalidate: true });
+            showSuccess(t('notifications.settings.saved') || 'Saved');
+        } catch (err) {
+            console.error('Failed to update notification settings:', err);
+            showError(t('notifications.settings.saveFailed') || 'Failed to save');
+        } finally {
+            setSavingKey(null);
+        }
+    };
+
     const categoryLabels: Record<string, string> = {
         SYSTEM: t('notifications.category.system') || 'System',
         SUBSCRIPTION: t('notifications.category.subscription') || 'Subscription',
@@ -198,112 +219,36 @@ export default function NotificationsPage() {
 
             {/* Main Card */}
             <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
-                {/* Notification Settings */}
+                {/* Top Bar */}
                 <div className="border-b border-gray-200 dark:border-gray-800 p-4 sm:p-6">
-                    <div>
-                        <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
-                            {t('notifications.settings.title') || 'Notification Settings'}
-                        </h2>
-                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                            {t('notifications.settings.subtitle') || 'Control which notifications you receive.'}
-                        </p>
+                    <div className="flex items-start justify-between gap-4">
+                        <div>
+                            <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
+                                {t('notifications.title') || 'Notifications'}
+                            </h2>
+                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                {t('notifications.subtitle') || 'Stay updated with system and merchant activity.'}
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => setSettingsOpen(true)}
+                            className="h-10 rounded-lg bg-brand-500 px-4 text-sm font-medium text-white hover:bg-brand-600"
+                        >
+                            {t('notifications.settings.button') || 'Settings'}
+                        </button>
                     </div>
-
-                    {isSettingsLoading ? (
-                        <div className="mt-4 grid gap-3 sm:grid-cols-2 animate-pulse">
-                            <div className="h-12 rounded-xl bg-gray-100 dark:bg-gray-800" />
-                            <div className="h-12 rounded-xl bg-gray-100 dark:bg-gray-800" />
-                        </div>
-                    ) : settingsData?.data ? (
-                        <div className="mt-4 grid gap-4">
-                            <div className="rounded-xl border border-gray-200 dark:border-gray-800 p-4">
-                                <IconToggle
-                                    checked={settingsData.data.settings.accountTransactions}
-                                    onChange={onToggleAccountTransactions}
-                                    disabled={savingKey === 'accountTransactions'}
-                                    label={t('notifications.settings.account.title') || 'Account transaction notifications'}
-                                    description={t('notifications.settings.account.desc') || 'Profile and security updates for your account.'}
-                                />
-                            </div>
-
-                            <div className="rounded-xl border border-gray-200 dark:border-gray-800 p-4">
-                                <div className="text-sm font-semibold text-gray-900 dark:text-white">
-                                    {t('notifications.settings.merchant.title') || 'Merchant transaction notifications'}
-                                </div>
-                                <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                    {t('notifications.settings.merchant.desc') || 'Order, stock, payment, and subscription updates for your store.'}
-                                </div>
-
-                                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                                    {settingsData.data.availability.merchant.newOrder ? (
-                                        <IconToggle
-                                            checked={settingsData.data.settings.merchant.newOrder}
-                                            onChange={(v) => onToggleMerchantKey('newOrder', v)}
-                                            disabled={savingKey === 'merchant:newOrder'}
-                                            size="sm"
-                                            label={t('notifications.settings.merchant.newOrder') || 'New orders'}
-                                            description={t('notifications.settings.merchant.newOrderDesc') || 'Get notified when a new order arrives.'}
-                                        />
-                                    ) : null}
-
-                                    {settingsData.data.availability.merchant.stockOut ? (
-                                        <IconToggle
-                                            checked={settingsData.data.settings.merchant.stockOut}
-                                            onChange={(v) => onToggleMerchantKey('stockOut', v)}
-                                            disabled={savingKey === 'merchant:stockOut'}
-                                            size="sm"
-                                            label={t('notifications.settings.merchant.stockOut') || 'Out of stock'}
-                                            description={t('notifications.settings.merchant.stockOutDesc') || 'Items that become out of stock.'}
-                                        />
-                                    ) : null}
-
-                                    {settingsData.data.availability.merchant.lowStock ? (
-                                        <IconToggle
-                                            checked={settingsData.data.settings.merchant.lowStock}
-                                            onChange={(v) => onToggleMerchantKey('lowStock', v)}
-                                            disabled={savingKey === 'merchant:lowStock'}
-                                            size="sm"
-                                            label={t('notifications.settings.merchant.lowStock') || 'Low stock'}
-                                            description={t('notifications.settings.merchant.lowStockDesc') || 'Items that are running low.'}
-                                        />
-                                    ) : null}
-
-                                    {settingsData.data.availability.merchant.payment ? (
-                                        <IconToggle
-                                            checked={settingsData.data.settings.merchant.payment}
-                                            onChange={(v) => onToggleMerchantKey('payment', v)}
-                                            disabled={savingKey === 'merchant:payment'}
-                                            size="sm"
-                                            label={t('notifications.settings.merchant.payment') || 'Payments'}
-                                            description={t('notifications.settings.merchant.paymentDesc') || 'Payment status updates.'}
-                                        />
-                                    ) : null}
-
-                                    {settingsData.data.availability.merchant.subscription ? (
-                                        <IconToggle
-                                            checked={settingsData.data.settings.merchant.subscription}
-                                            onChange={(v) => onToggleMerchantKey('subscription', v)}
-                                            disabled={savingKey === 'merchant:subscription'}
-                                            size="sm"
-                                            label={t('notifications.settings.merchant.subscription') || 'Subscription'}
-                                            description={t('notifications.settings.merchant.subscriptionDesc') || 'Trial and subscription reminders.'}
-                                        />
-                                    ) : null}
-
-                                    {!Object.values(settingsData.data.availability.merchant).some(Boolean) ? (
-                                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                                            {t('notifications.settings.merchant.none') || 'No merchant notification toggles available for your role.'}
-                                        </div>
-                                    ) : null}
-                                </div>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="mt-4 text-sm text-gray-500 dark:text-gray-400">
-                            {t('notifications.settings.loadFailed') || 'Failed to load notification settings.'}
-                        </div>
-                    )}
                 </div>
+
+                <NotificationSettingsModal
+                    open={settingsOpen}
+                    onClose={() => setSettingsOpen(false)}
+                    isLoading={isSettingsLoading}
+                    savingKey={savingKey}
+                    data={settingsData?.data}
+                    onToggleAccountTransactions={onToggleAccountTransactions}
+                    onToggleMerchantKey={onToggleMerchantKey}
+                    onToggleStaffKey={onToggleStaffKey}
+                />
 
                 {/* Header with Filters */}
                 <div className="border-b border-gray-200 dark:border-gray-800 p-4 sm:p-6">
@@ -316,7 +261,7 @@ export default function NotificationsPage() {
                                     onClick={() => { setFilter(cat); setPage(1); }}
                                     className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                                         filter === cat
-                                            ? "bg-orange-500 text-white"
+                                            ? "bg-brand-500 text-white"
                                             : "text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
                                     }`}
                                 >
@@ -332,13 +277,13 @@ export default function NotificationsPage() {
                                     type="checkbox"
                                     checked={showUnreadOnly}
                                     onChange={(e) => { setShowUnreadOnly(e.target.checked); setPage(1); }}
-                                    className="w-4 h-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                                    className="w-4 h-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
                                 />
                                 {t('notifications.unreadOnly') || 'Unread only'}
                             </label>
                             <button
                                 onClick={handleMarkAllAsRead}
-                                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 transition-colors"
+                                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 transition-colors"
                             >
                                 <FaCheckDouble className="w-3.5 h-3.5" />
                                 {t('notifications.markAllRead') || 'Mark all as read'}
@@ -389,7 +334,7 @@ export default function NotificationsPage() {
                                 key={notification.id}
                                 className={`p-4 sm:p-6 transition-colors ${
                                     !notification.isRead 
-                                        ? "bg-orange-50/50 dark:bg-orange-900/5" 
+                                        ? "bg-brand-50/50 dark:bg-brand-900/5" 
                                         : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
                                 }`}
                             >
@@ -400,7 +345,7 @@ export default function NotificationsPage() {
                                             <FaBell className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                                         </div>
                                         {!notification.isRead && (
-                                            <FaCircle className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 text-orange-500" />
+                                            <FaCircle className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 text-brand-500" />
                                         )}
                                     </div>
 
@@ -431,7 +376,7 @@ export default function NotificationsPage() {
                                             {notification.actionUrl && (
                                                 <Link
                                                     href={notification.actionUrl}
-                                                    className="text-sm font-medium text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300"
+                                                    className="text-sm font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
                                                 >
                                                     {(t('notifications.viewDetails') || 'View details')} →
                                                 </Link>

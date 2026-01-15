@@ -117,7 +117,7 @@ export default function BalanceCard({
             <Link
                 href="/admin/dashboard/subscription/topup"
                 className="mt-4 block w-full py-2.5 px-4 rounded-lg text-center font-medium
-          bg-orange-500 hover:bg-orange-600 text-white transition-colors"
+                    bg-brand-500 hover:bg-brand-600 text-white transition-colors"
             >
                 Top Up Sekarang
             </Link>

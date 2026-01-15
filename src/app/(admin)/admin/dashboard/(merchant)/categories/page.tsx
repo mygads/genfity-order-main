@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import EmptyState from "@/components/ui/EmptyState";
 import { exportCategories } from "@/lib/utils/excelExport";
@@ -12,6 +13,8 @@ import { useMerchant } from "@/context/MerchantContext";
 import { useToast } from "@/context/ToastContext";
 import ArchiveModal from "@/components/common/ArchiveModal";
 import { useContextualHint, CONTEXTUAL_HINTS, useClickHereHint, CLICK_HINTS } from "@/lib/tutorial";
+import { TableActionButton } from "@/components/common/TableActionButton";
+import { FaCogs, FaEdit, FaTrash } from "react-icons/fa";
 
 interface Category {
   id: string;
@@ -53,6 +56,7 @@ export default function MerchantCategoriesPage() {
   const { showHint } = useContextualHint();
   const { showClickHint } = useClickHereHint();
   const [submitting, setSubmitting] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   const [filteredCategories, setFilteredCategories] = useState<Category[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -97,6 +101,10 @@ export default function MerchantCategoriesPage() {
   const [itemsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // SWR hook for data fetching with caching
   const {
@@ -221,7 +229,7 @@ export default function MerchantCategoriesPage() {
           </p>
           <button
             onClick={() => fetchCategories()}
-            className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+            className="px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors"
           >
             Retry
           </button>
@@ -672,72 +680,82 @@ export default function MerchantCategoriesPage() {
   return (
     <div data-tutorial="categories-page">
       <div className="space-y-6">
-        {showForm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-800 dark:bg-gray-900" data-tutorial="category-form-modal">
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-                  {editingId ? t("admin.categories.editCategory") : t("admin.categories.createNew")}
-                </h3>
-                <button
-                  onClick={handleCancel}
-                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                >
-                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
+        {showForm && isMounted
+          ? createPortal(
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+                onMouseDown={(e) => {
+                  if (e.target === e.currentTarget) handleCancel();
+                }}
+              >
+                <div className="w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-800 dark:bg-gray-900" data-tutorial="category-form-modal">
+                  <div onMouseDown={(e) => e.stopPropagation()}>
+                  <div className="mb-4 flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
+                      {editingId ? t("admin.categories.editCategory") : t("admin.categories.createNew")}
+                    </h3>
+                    <button
+                      onClick={handleCancel}
+                      className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                    >
+                      <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
 
-              <form onSubmit={handleSubmit} className="space-y-4" data-tutorial="category-form">
-                <div data-tutorial="category-name-field">
-                  <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {t("admin.categories.categoryName")} <span className="text-error-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    required
-                    className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                  />
-                </div>
+                  <form onSubmit={handleSubmit} className="space-y-4" data-tutorial="category-form">
+                    <div data-tutorial="category-name-field">
+                      <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {t("admin.categories.categoryName")} <span className="text-error-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleChange}
+                        required
+                        className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                      />
+                    </div>
 
-                <div data-tutorial="category-description-field">
-                  <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {t("admin.categories.description")}
-                  </label>
-                  <textarea
-                    name="description"
-                    value={formData.description}
-                    onChange={handleChange}
-                    rows={3}
-                    className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                  />
-                </div>
+                    <div data-tutorial="category-description-field">
+                      <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {t("admin.categories.description")}
+                      </label>
+                      <textarea
+                        name="description"
+                        value={formData.description}
+                        onChange={handleChange}
+                        rows={3}
+                        className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                      />
+                    </div>
 
-                <div className="flex gap-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={handleCancel}
-                    className="flex-1 h-11 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                  >
-                    {t("admin.categories.cancel")}
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    data-tutorial="category-save-btn"
-                    className="flex-1 h-11 rounded-lg bg-primary-500 text-sm font-medium text-white hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {submitting ? t("admin.categories.saving") : editingId ? t("admin.categories.updateCategory") : t("admin.categories.createCategory")}
-                  </button>
+                    <div className="flex gap-3 pt-4">
+                      <button
+                        type="button"
+                        onClick={handleCancel}
+                        className="flex-1 h-11 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                      >
+                        {t("admin.categories.cancel")}
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={submitting}
+                        data-tutorial="category-save-btn"
+                        className="flex-1 h-11 rounded-lg bg-brand-500 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {submitting ? t("admin.categories.saving") : editingId ? t("admin.categories.updateCategory") : t("admin.categories.createCategory")}
+                      </button>
+                    </div>
+                  </form>
+                  </div>
                 </div>
-              </form>
-            </div>
-          </div>
-        )}
+              </div>,
+              document.body
+            )
+          : null}
 
         <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
           {/* Tab Navigation */}
@@ -746,7 +764,7 @@ export default function MerchantCategoriesPage() {
               <button
                 onClick={() => setActiveTab("list")}
                 className={`border-b-2 pb-3 text-sm font-medium transition-colors ${activeTab === "list"
-                  ? "border-primary-500 text-primary-600 dark:text-primary-400"
+                  ? "border-brand-500 text-brand-600 dark:text-brand-400"
                   : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
                   }`}
               >
@@ -755,7 +773,7 @@ export default function MerchantCategoriesPage() {
               <button
                 onClick={() => setActiveTab("display")}
                 className={`border-b-2 pb-3 text-sm font-medium transition-colors ${activeTab === "display"
-                  ? "border-primary-500 text-primary-600 dark:text-primary-400"
+                  ? "border-brand-500 text-brand-600 dark:text-brand-400"
                   : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
                   }`}
               >
@@ -818,7 +836,7 @@ export default function MerchantCategoriesPage() {
                   <button
                     data-tutorial="add-category-btn"
                     onClick={() => setShowForm(true)}
-                    className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary-500 px-6 text-sm font-medium text-white hover:bg-primary-600 focus:outline-none focus:ring-3 focus:ring-primary-500/20"
+                    className="inline-flex h-11 items-center gap-2 rounded-lg bg-brand-500 px-6 text-sm font-medium text-white hover:bg-brand-600 focus:outline-none focus:ring-3 focus:ring-brand-500/20"
                   >
                     <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -836,14 +854,14 @@ export default function MerchantCategoriesPage() {
                     placeholder={t("admin.categories.searchPlaceholder")}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                    className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
                   />
                 </div>
                 <div>
                   <select
                     value={filterStatus}
                     onChange={(e) => setFilterStatus(e.target.value)}
-                    className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
+                    className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
                   >
                     <option value="all">{t("admin.categories.allStatus")}</option>
                     <option value="active">{t("common.active")}</option>
@@ -854,7 +872,7 @@ export default function MerchantCategoriesPage() {
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
-                    className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
+                    className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
                   >
                     <option value="manual">{t("admin.categories.sortManual")}</option>
                     <option value="name-asc">{t("admin.categories.sortNameAsc")}</option>
@@ -914,34 +932,26 @@ export default function MerchantCategoriesPage() {
                           </td>
                           <td className="px-4 py-4">
                             <div className="flex items-center gap-2">
-                              <button
+                              <TableActionButton
+                                icon={FaCogs}
                                 onClick={() => handleManageMenus(category)}
-                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-brand-200 bg-brand-50 text-primary-600 hover:bg-brand-100 dark:border-brand-900/50 dark:bg-brand-900/20 dark:text-brand-400 dark:hover:bg-brand-900/30"
                                 title={t("admin.categories.manageMenus")}
-                              >
-                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                                </svg>
-                              </button>
-                              <button
+                                aria-label={t("admin.categories.manageMenus")}
+                              />
+                              <TableActionButton
+                                icon={FaEdit}
                                 onClick={() => handleEdit(category)}
                                 data-tutorial="category-edit-btn"
-                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
                                 title={t("admin.categories.edit")}
-                              >
-                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                </svg>
-                              </button>
-                              <button
+                                aria-label={t("admin.categories.edit")}
+                              />
+                              <TableActionButton
+                                icon={FaTrash}
+                                tone="danger"
                                 onClick={() => handleDelete(category.id, category.name)}
-                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-error-200 bg-error-50 text-error-600 hover:bg-error-100 dark:border-error-900/50 dark:bg-error-900/20 dark:text-error-400 dark:hover:bg-error-900/30"
                                 title={t("admin.categories.delete")}
-                              >
-                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                              </button>
+                                aria-label={t("admin.categories.delete")}
+                              />
                             </div>
                           </td>
                         </tr>
@@ -970,7 +980,7 @@ export default function MerchantCategoriesPage() {
                             key={page}
                             onClick={() => paginate(page)}
                             className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border text-sm font-medium ${currentPage === page
-                              ? 'border-primary-500 bg-primary-500 text-white'
+                              ? 'border-brand-500 bg-brand-500 text-white'
                               : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
                               }`}
                           >
@@ -1048,14 +1058,14 @@ export default function MerchantCategoriesPage() {
                       }}
                       onDragOver={(e) => {
                         e.preventDefault();
-                        e.currentTarget.classList.add("border-primary-300", "border-dashed");
+                        e.currentTarget.classList.add("border-brand-300", "border-dashed");
                       }}
                       onDragLeave={(e) => {
-                        e.currentTarget.classList.remove("border-primary-300", "border-dashed");
+                        e.currentTarget.classList.remove("border-brand-300", "border-dashed");
                       }}
                       onDrop={(e) => {
                         e.preventDefault();
-                        e.currentTarget.classList.remove("border-primary-300", "border-dashed");
+                        e.currentTarget.classList.remove("border-brand-300", "border-dashed");
                         const fromIndex = parseInt(e.dataTransfer.getData("text/plain"));
                         const toIndex = index;
                         if (fromIndex !== toIndex) {
@@ -1112,22 +1122,29 @@ export default function MerchantCategoriesPage() {
 
 
         {/* Manage Menus Modal */}
-        {selectedCategory && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-4xl rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-800 dark:bg-gray-900 max-h-[80vh] overflow-y-auto">
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-                  Manage Menus: {selectedCategory.name}
-                </h3>
-                <button
-                  onClick={() => setSelectedCategory(null)}
-                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                >
-                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
+        {selectedCategory && isMounted
+          ? createPortal(
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+                onMouseDown={(e) => {
+                  if (e.target === e.currentTarget) setSelectedCategory(null);
+                }}
+              >
+                <div className="w-full max-w-4xl rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-800 dark:bg-gray-900 max-h-[80vh] overflow-y-auto">
+                  <div onMouseDown={(e) => e.stopPropagation()}>
+                  <div className="mb-4 flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
+                      Manage Menus: {selectedCategory.name}
+                    </h3>
+                    <button
+                      onClick={() => setSelectedCategory(null)}
+                      className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                    >
+                      <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
 
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 {/* Available Menus */}
@@ -1140,7 +1157,7 @@ export default function MerchantCategoriesPage() {
                     placeholder="Search available menus..."
                     value={availableMenuSearch}
                     onChange={(e) => setAvailableMenuSearch(e.target.value)}
-                    className="mb-3 h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90 dark:placeholder:text-white/30"
+                    className="mb-3 h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90 dark:placeholder:text-white/30"
                   />
                   <div className="space-y-2 max-h-80 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-3">
                     {loadingMenus ? (
@@ -1200,7 +1217,7 @@ export default function MerchantCategoriesPage() {
                               </div>
                               <button
                                 onClick={() => handleAddMenuToCategory(menu.id)}
-                                className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-primary-500 text-white hover:bg-primary-600"
+                                className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-brand-500 text-white hover:bg-brand-600"
                                 title="Add to category"
                               >
                                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1229,7 +1246,7 @@ export default function MerchantCategoriesPage() {
                     placeholder="Search menus in category..."
                     value={categoryMenuSearch}
                     onChange={(e) => setCategoryMenuSearch(e.target.value)}
-                    className="mb-3 h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90 dark:placeholder:text-white/30"
+                    className="mb-3 h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90 dark:placeholder:text-white/30"
                   />
                   <div className="space-y-2 max-h-80 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-3">
                     {loadingMenus ? (
@@ -1311,19 +1328,29 @@ export default function MerchantCategoriesPage() {
               <div className="mt-6 flex justify-end">
                 <button
                   onClick={() => setSelectedCategory(null)}
-                  className="h-11 rounded-lg bg-primary-500 px-6 text-sm font-medium text-white hover:bg-primary-600"
+                  className="h-11 rounded-lg bg-brand-500 px-6 text-sm font-medium text-white hover:bg-brand-600"
                 >
                   Done
                 </button>
               </div>
-            </div>
-          </div>
-        )}
+                  </div>
+                </div>
+              </div>,
+              document.body
+            )
+          : null}
 
         {/* Bulk Delete Confirmation Modal */}
-        {showBulkDeleteConfirm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-lg dark:border-gray-800 dark:bg-gray-900">
+        {showBulkDeleteConfirm && isMounted
+          ? createPortal(
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+                onMouseDown={(e) => {
+                  if (e.target === e.currentTarget) setShowBulkDeleteConfirm(false);
+                }}
+              >
+                <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-lg dark:border-gray-800 dark:bg-gray-900">
+                  <div onMouseDown={(e) => e.stopPropagation()}>
               <div className="mb-4 flex items-center gap-3">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-error-100 dark:bg-error-900/20">
                   <svg className="h-6 w-6 text-error-600 dark:text-error-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1359,33 +1386,41 @@ export default function MerchantCategoriesPage() {
                   Delete {selectedCategories.length} Category{selectedCategories.length > 1 ? 's' : ''}
                 </button>
               </div>
-            </div>
-          </div>
-        )}
+                  </div>
+                </div>
+              </div>,
+              document.body
+            )
+          : null}
 
         {/* Single Delete Confirmation Modal with Preview */}
-        {deleteConfirm.show && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-lg dark:border-gray-800 dark:bg-gray-900">
-              <div className="mb-4 flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-error-100 dark:bg-error-900/20">
-                  <svg className="h-6 w-6 text-error-600 dark:text-error-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    Delete Category
-                  </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    This action cannot be undone
-                  </p>
-                </div>
-              </div>
+        {deleteConfirm.show && isMounted
+          ? createPortal(
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+                onMouseDown={(e) => {
+                  if (e.target === e.currentTarget) setDeleteConfirm({ show: false, id: '', name: '', menuItemsCount: 0, menuList: '', loading: false });
+                }}
+              >
+                <div
+                  className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-lg dark:border-gray-800 dark:bg-gray-900"
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
+                  <div className="mb-4 flex items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-error-100 dark:bg-error-900/20">
+                      <svg className="h-6 w-6 text-error-600 dark:text-error-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Delete Category</h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">This action cannot be undone.</p>
+                    </div>
+                  </div>
 
               {deleteConfirm.loading ? (
                 <div className="mb-6 flex items-center justify-center py-4">
-                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-primary-500"></div>
+                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-brand-500"></div>
                   <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">Loading preview...</span>
                 </div>
               ) : (
@@ -1435,9 +1470,11 @@ export default function MerchantCategoriesPage() {
                   Delete Category
                 </button>
               </div>
-            </div>
-          </div>
-        )}
+                </div>
+              </div>,
+              document.body
+            )
+          : null}
       </div>
 
       {/* Archive Modal */}

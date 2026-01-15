@@ -2,6 +2,9 @@
 
 import React, { useState, useEffect } from "react";
 import { useToast } from "@/context/ToastContext";
+import ConfirmDialog from "@/components/modals/ConfirmDialog";
+import { TableActionButton } from "@/components/common/TableActionButton";
+import { FaTrash } from "react-icons/fa";
 
 interface AddonItem {
   id: string;
@@ -64,6 +67,14 @@ export default function ViewAddonItemsModal({
     itemId: string | null;
     itemName: string;
   }>({ show: false, itemId: null, itemName: "" });
+
+  const [outOfStockConfirm, setOutOfStockConfirm] = useState<{
+    show: boolean;
+    itemId: string | null;
+    itemName: string;
+  }>({ show: false, itemId: null, itemName: "" });
+
+  const isDirty = Boolean(editingItemId || stockModal.show);
 
   useEffect(() => {
     if (items.length > 0) {
@@ -222,9 +233,7 @@ export default function ViewAddonItemsModal({
     }
   };
 
-  const _handleSetOutOfStock = async (id: string, name: string) => {
-    if (!confirm(`Set "${name}" to out of stock?`)) return;
-
+  const _handleSetOutOfStock = async (id: string) => {
     try {
       const token = localStorage.getItem("accessToken");
       if (!token) return;
@@ -409,7 +418,19 @@ export default function ViewAddonItemsModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onMouseDown={(e) => {
+        if (e.target !== e.currentTarget) return;
+        // Only allow outside-click close when no nested modal is open and we're not actively dragging.
+        if (showAddItemsModal) return;
+        if (draggedItem) return;
+        if (deleteConfirm.show) return;
+        if (outOfStockConfirm.show) return;
+        if (isDirty) return;
+        onClose();
+      }}
+    >
       <div className="w-full max-w-5xl h-[90vh] rounded-2xl border border-gray-200 bg-white shadow-xl dark:border-gray-800 dark:bg-gray-900 overflow-hidden flex flex-col">
         <div className="flex items-center justify-between border-b border-gray-200 p-6 dark:border-gray-800">
           <div>
@@ -426,7 +447,7 @@ export default function ViewAddonItemsModal({
                 setShowAddItemsModal(true);
                 fetchAvailableItems();
               }}
-              className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary-500 px-5 text-sm font-medium text-white shadow-lg shadow-primary-500/25 transition-all hover:bg-primary-600 hover:shadow-primary-500/30 focus:outline-none focus:ring-4 focus:ring-primary-500/20"
+              className="inline-flex h-11 items-center gap-2 rounded-xl bg-brand-500 px-5 text-sm font-medium text-white shadow-lg shadow-brand-500/25 transition-all hover:bg-brand-600 hover:shadow-brand-500/30 focus:outline-none focus:ring-4 focus:ring-brand-500/20"
             >
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -573,15 +594,13 @@ export default function ViewAddonItemsModal({
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-2">
-                          <button
+                          <TableActionButton
+                            icon={FaTrash}
+                            tone="danger"
                             onClick={() => setDeleteConfirm({ show: true, itemId: item.id, itemName: item.name })}
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-error-200 bg-error-50 text-error-600 hover:bg-error-100 dark:border-error-900/50 dark:bg-error-900/20 dark:text-error-400"
                             title="Delete"
-                          >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
+                            aria-label="Delete"
+                          />
                         </div>
                       </td>
 
@@ -596,7 +615,7 @@ export default function ViewAddonItemsModal({
         <div className="border-t border-gray-200 p-6 dark:border-gray-800">
           <button
             onClick={onClose}
-            className="h-11 w-full rounded-xl bg-primary-500 text-sm font-medium text-white shadow-lg shadow-primary-500/25 transition-all hover:bg-primary-600 hover:shadow-primary-500/30 focus:outline-none focus:ring-4 focus:ring-primary-500/20"
+            className="h-11 w-full rounded-xl bg-brand-500 text-sm font-medium text-white shadow-lg shadow-brand-500/25 transition-all hover:bg-brand-600 hover:shadow-brand-500/30 focus:outline-none focus:ring-4 focus:ring-brand-500/20"
           >
             Close
           </button>
@@ -687,6 +706,22 @@ export default function ViewAddonItemsModal({
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={outOfStockConfirm.show}
+        title="Set out of stock"
+        message={outOfStockConfirm.itemName ? `Set "${outOfStockConfirm.itemName}" to out of stock (stock = 0)?` : 'Set item to out of stock (stock = 0)?'}
+        confirmText="Set to 0"
+        cancelText="Cancel"
+        variant="warning"
+        onCancel={() => setOutOfStockConfirm({ show: false, itemId: null, itemName: '' })}
+        onConfirm={async () => {
+          const itemId = outOfStockConfirm.itemId;
+          setOutOfStockConfirm({ show: false, itemId: null, itemName: '' });
+          if (!itemId) return;
+          await _handleSetOutOfStock(itemId);
+        }}
+      />
 
       {/* Add Items Modal */}
       {showAddItemsModal && (
@@ -796,7 +831,7 @@ export default function ViewAddonItemsModal({
                             ) : (
                               <button
                                 onClick={() => handleAddItem(item, false)}
-                                className="inline-flex h-10 items-center gap-2 rounded-xl border border-primary-200 bg-primary-50 px-4 text-sm font-medium text-primary-700 shadow-sm transition-all hover:bg-primary-100 hover:shadow-md dark:border-primary-900/50 dark:bg-primary-900/20 dark:text-primary-400"
+                                className="inline-flex h-10 items-center gap-2 rounded-xl border border-brand-200 bg-brand-50 px-4 text-sm font-medium text-brand-700 shadow-sm transition-all hover:bg-brand-100 hover:shadow-md dark:border-brand-900/50 dark:bg-brand-900/20 dark:text-brand-400"
                               >
                                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -828,7 +863,7 @@ export default function ViewAddonItemsModal({
                   setShowAddItemsModal(false);
                   setSearchQuery("");
                 }}
-                className="h-11 w-full rounded-xl bg-primary-500 text-sm font-medium text-white shadow-lg shadow-primary-500/25 transition-all hover:bg-primary-600 hover:shadow-primary-500/30 focus:outline-none focus:ring-4 focus:ring-primary-500/20"
+                className="h-11 w-full rounded-xl bg-brand-500 text-sm font-medium text-white shadow-lg shadow-brand-500/25 transition-all hover:bg-brand-600 hover:shadow-brand-500/30 focus:outline-none focus:ring-4 focus:ring-brand-500/20"
               >
                 Close
               </button>

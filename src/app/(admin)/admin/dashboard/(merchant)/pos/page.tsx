@@ -3,7 +3,7 @@
  * 
  * Full-screen POS terminal for creating orders
  * - Split layout: Cart (left) + Product Grid (right)
- * - Professional, clean, minimalist design with orange-500 theme
+ * - Professional, clean, minimalist design with brand theme
  * - Fullwidth/Fullscreen toggle like Kanban orders page
  * - Fixed viewport height with no page scroll
  * - Adjustable grid columns for product display
@@ -66,6 +66,8 @@ import {
   type POSPaymentData,
 } from '@/components/pos';
 
+import ConfirmDialog from '@/components/modals/ConfirmDialog';
+
 import { printReceipt } from '@/lib/utils/unifiedReceipt';
 import type { ReceiptSettings } from '@/lib/types/receiptSettings';
 
@@ -127,6 +129,10 @@ export default function POSPage() {
   const { merchant, isLoading: merchantLoading } = useMerchant();
   const { showSuccess, showError, showWarning } = useToast();
 
+  type ReplaceCartAction =
+    | { kind: 'PENDING_OFFLINE_ORDER'; orderId: string }
+    | { kind: 'HELD_ORDER'; orderId: string };
+
   // ========================================
   // OFFLINE SYNC
   // ========================================
@@ -180,6 +186,9 @@ export default function POSPage() {
   const [showOrderNotesModal, setShowOrderNotesModal] = useState(false);
   const [showItemNotesModal, setShowItemNotesModal] = useState(false);
   const [editingCartItemId, setEditingCartItemId] = useState<string | null>(null);
+
+  const [replaceCartConfirmOpen, setReplaceCartConfirmOpen] = useState(false);
+  const [pendingReplaceCartAction, setPendingReplaceCartAction] = useState<ReplaceCartAction | null>(null);
 
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [lastOrderNumber, setLastOrderNumber] = useState('');
@@ -431,15 +440,9 @@ export default function POSPage() {
     }
   }, [syncConflicts.length]);
 
-  const handleEditPendingOfflineOrder = useCallback((orderId: string) => {
+  const executeEditPendingOfflineOrder = useCallback((orderId: string) => {
     const order = pendingOrders.find(o => o.id === orderId);
     if (!order) return;
-
-    if (cartItems.length > 0) {
-      if (!confirm(t('pos.recallOrderConfirm') || 'This will replace current cart. Continue?')) {
-        return;
-      }
-    }
 
     const newCartItems: CartItem[] = order.items.map(item => ({
       id: `cart-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
@@ -464,19 +467,25 @@ export default function POSPage() {
     setEditingPendingOfflineOrderId(order.id);
     setShowPendingOrdersPanel(false);
     showSuccess(t('pos.orderRecalled') || 'Order recalled');
-  }, [pendingOrders, cartItems.length, showSuccess, t]);
+  }, [pendingOrders, showSuccess, t]);
 
-  // Recall a held order
-  const handleRecallOrder = useCallback((orderId: string) => {
-    const order = heldOrders.find(o => o.id === orderId);
+  const handleEditPendingOfflineOrder = useCallback((orderId: string) => {
+    const order = pendingOrders.find(o => o.id === orderId);
     if (!order) return;
 
-    // If cart has items, ask for confirmation
     if (cartItems.length > 0) {
-      if (!confirm(t('pos.recallOrderConfirm') || 'This will replace current cart. Continue?')) {
-        return;
-      }
+      setPendingReplaceCartAction({ kind: 'PENDING_OFFLINE_ORDER', orderId });
+      setReplaceCartConfirmOpen(true);
+      return;
     }
+
+    executeEditPendingOfflineOrder(orderId);
+  }, [cartItems.length, executeEditPendingOfflineOrder, pendingOrders]);
+
+  // Recall a held order
+  const executeRecallHeldOrder = useCallback((orderId: string) => {
+    const order = heldOrders.find(o => o.id === orderId);
+    if (!order) return;
 
     setCartItems(order.items);
     setOrderType(order.orderType);
@@ -488,7 +497,40 @@ export default function POSPage() {
     setHeldOrders(prev => prev.filter(o => o.id !== orderId));
     setShowHeldOrdersPanel(false);
     showSuccess(t('pos.orderRecalled') || 'Order recalled');
-  }, [heldOrders, cartItems.length, showSuccess, t]);
+  }, [heldOrders, showSuccess, t]);
+
+  const handleRecallOrder = useCallback((orderId: string) => {
+    const order = heldOrders.find(o => o.id === orderId);
+    if (!order) return;
+
+    if (cartItems.length > 0) {
+      setPendingReplaceCartAction({ kind: 'HELD_ORDER', orderId });
+      setReplaceCartConfirmOpen(true);
+      return;
+    }
+
+    executeRecallHeldOrder(orderId);
+  }, [cartItems.length, executeRecallHeldOrder, heldOrders]);
+
+  const handleReplaceCartConfirm = useCallback(() => {
+    const action = pendingReplaceCartAction;
+    if (!action) return;
+
+    setReplaceCartConfirmOpen(false);
+    setPendingReplaceCartAction(null);
+
+    if (action.kind === 'PENDING_OFFLINE_ORDER') {
+      executeEditPendingOfflineOrder(action.orderId);
+      return;
+    }
+
+    executeRecallHeldOrder(action.orderId);
+  }, [executeEditPendingOfflineOrder, executeRecallHeldOrder, pendingReplaceCartAction]);
+
+  const handleReplaceCartCancel = useCallback(() => {
+    setReplaceCartConfirmOpen(false);
+    setPendingReplaceCartAction(null);
+  }, []);
 
   // Delete a held order
   const handleDeleteHeldOrder = useCallback((orderId: string) => {
@@ -698,7 +740,6 @@ export default function POSPage() {
     if (cartItems.length === 0) return;
 
     if (isTableNumberEnabled && !tableNumber.trim()) {
-      showError(t('pos.tableNumberRequired') || 'Table number is required', t('common.error'));
       setShowTableModal(true);
       return;
     }
@@ -1186,7 +1227,7 @@ export default function POSPage() {
           <p className="text-red-500 mb-4">{t('pos.loadError')}</p>
           <button
             onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+            className="px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors"
           >
             {t('common.retry')}
           </button>
@@ -1219,7 +1260,7 @@ export default function POSPage() {
       }
     >
       {/* Header - Orange theme */}
-      <header className="shrink-0 h-14 bg-orange-500 dark:bg-orange-600 flex items-center justify-between px-4 shadow-md">
+      <header className="shrink-0 h-14 bg-brand-500 dark:bg-brand-600 flex items-center justify-between px-4 shadow-md">
         <div className="flex items-center gap-4">
           <button
             onClick={() => router.push('/admin/dashboard/orders')}
@@ -1326,7 +1367,7 @@ export default function POSPage() {
             >
               <FaWifi className={`w-4 h-4 ${!isOnline ? 'opacity-50' : ''}`} />
               {pendingCount > 0 && (
-                <span className="bg-white text-orange-600 text-xs font-bold px-1.5 py-0.5 rounded-full">
+                <span className="bg-white text-brand-600 text-xs font-bold px-1.5 py-0.5 rounded-full">
                   {pendingCount}
                 </span>
               )}
@@ -1538,6 +1579,17 @@ export default function POSPage() {
             syncPendingOrders().catch(() => undefined);
           }
         }}
+      />
+
+      <ConfirmDialog
+        isOpen={replaceCartConfirmOpen}
+        title={t('pos.recallOrderConfirmTitle') || 'Replace current cart?'}
+        message={t('pos.recallOrderConfirm') || 'This will replace current cart. Continue?'}
+        confirmText={t('common.continue') || 'Continue'}
+        cancelText={t('common.cancel') || 'Cancel'}
+        variant="warning"
+        onConfirm={handleReplaceCartConfirm}
+        onCancel={handleReplaceCartCancel}
       />
     </div>
   );

@@ -17,7 +17,7 @@ export const POSSkeleton: React.FC = () => {
   return (
     <div className="flex flex-col overflow-hidden -mb-6" style={{ height: 'calc(100vh - 90px)' }}>
       {/* Header Skeleton */}
-      <header className="shrink-0 h-14 bg-orange-500 dark:bg-orange-600 flex items-center justify-between px-4">
+      <header className="shrink-0 h-14 bg-brand-500 dark:bg-brand-600 flex items-center justify-between px-4">
         <div className="flex items-center gap-4">
           <Skeleton className="w-9 h-9 rounded-lg bg-white/20" />
           <Skeleton className="w-32 h-6 rounded bg-white/20" />

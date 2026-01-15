@@ -196,7 +196,7 @@ export default function PaymentVerificationPage() {
                                         </div>
                                         <div>
                                             <span className="text-gray-500 dark:text-gray-400">{t("admin.paymentVerification.amount")}:</span>
-                                            <span className="ml-2 font-bold text-orange-600">
+                                            <span className="ml-2 font-bold text-brand-600 dark:text-brand-400">
                                                 {formatCurrency(req.amount, req.currency)}
                                             </span>
                                         </div>

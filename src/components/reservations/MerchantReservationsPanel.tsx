@@ -14,7 +14,6 @@ import {
   FaCalendarAlt,
   FaClock,
   FaUsers,
-  FaUser,
   FaPhone,
   FaEnvelope,
   FaSearch,
@@ -24,12 +23,21 @@ import {
 } from 'react-icons/fa';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { useMerchant } from '@/context/MerchantContext';
+import { TableActionButton } from '@/components/common/TableActionButton';
 
 type ReservationStatus = 'PENDING' | 'ACCEPTED' | 'CANCELLED';
 type ReservationDisplayStatus = ReservationStatus | 'IN_PROGRESS' | 'COMPLETED';
 
 type StatusFilter = 'ALL' | ReservationStatus;
 type DatePreset = 'ALL' | 'TODAY' | 'TOMORROW' | 'CUSTOM';
+
+type ReservationPreorderItem = {
+  quantity?: number | string | null;
+};
+
+type ReservationPreorder = {
+  items?: ReservationPreorderItem[] | null;
+} | null;
 
 export type ReservationListItem = {
   id: string;
@@ -40,7 +48,7 @@ export type ReservationListItem = {
   reservationTime: string; // HH:MM
   tableNumber?: string | null;
   notes: string | null;
-  preorder: any;
+  preorder: ReservationPreorder;
   acceptedAt?: string | null;
   cancelledAt?: string | null;
   createdAt: string;
@@ -88,12 +96,34 @@ function CenteredModal(props: {
   title: string;
   children: React.ReactNode;
   onClose: () => void;
+  disableBackdropClose?: boolean;
+  disableEscapeClose?: boolean;
 }) {
   if (!props.open) return null;
 
+  useEffect(() => {
+    if (!props.open) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      if (props.disableEscapeClose) return;
+      props.onClose();
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [props.open, props.onClose, props.disableEscapeClose]);
+
   return (
     <>
-      <div className="fixed inset-0 z-200 bg-black/40" onClick={props.onClose} />
+      <div
+        className="fixed inset-0 z-200 bg-black/40"
+        onMouseDown={(e) => {
+          if (e.target !== e.currentTarget) return;
+          if (props.disableBackdropClose) return;
+          props.onClose();
+        }}
+      />
       <div className="fixed inset-0 z-201 flex items-center justify-center p-4">
         <div
           className="w-full max-w-130 rounded-2xl bg-white shadow-xl border border-gray-200 dark:bg-gray-900 dark:border-gray-700"
@@ -129,9 +159,11 @@ export default function MerchantReservationsPanel(props: {
   const { merchant } = useMerchant();
   const isTableNumberEnabled = merchant?.requireTableNumberForDineIn === true;
 
-  const embedded = props.embedded === true;
-  const limit = props.limit ?? 100;
-  const pollMs = props.pollMs ?? 15_000;
+  const { embedded: embeddedProp, limit: limitProp, pollMs: pollMsProp, onOrderCreated, onPendingCountChange } = props;
+
+  const embedded = embeddedProp === true;
+  const limit = limitProp ?? 100;
+  const pollMs = pollMsProp ?? 15_000;
 
   const [reservations, setReservations] = useState<ReservationListItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -171,12 +203,12 @@ export default function MerchantReservationsPanel(props: {
         headers: { Authorization: `Bearer ${token}` },
       });
       const json = (await res.json()) as ApiResponse<{ pending: number }>;
-      const pending = Number((json as any)?.data?.pending ?? 0);
-      props.onPendingCountChange?.(Number.isFinite(pending) ? pending : 0);
+      const pending = Number(json.data?.pending ?? 0);
+      onPendingCountChange?.(Number.isFinite(pending) ? pending : 0);
     } catch {
       // Don't surface count errors as UI errors; the list fetch covers that.
     }
-  }, [token, props.onPendingCountChange]);
+  }, [token, onPendingCountChange]);
 
   const fetchActive = useCallback(async () => {
     if (!token) return;
@@ -269,7 +301,10 @@ export default function MerchantReservationsPanel(props: {
         body: JSON.stringify({ tableNumber: isTableNumberEnabled ? trimmed : null }),
       });
 
-      const json = (await res.json()) as ApiResponse<{ reservation: any; order: { id: string; orderNumber: string } }>;
+      const json = (await res.json()) as ApiResponse<{
+        reservation: unknown;
+        order: { id: string; orderNumber: string };
+      }>;
       if (!res.ok || !json.success) {
         throw new Error(json.message || t('admin.reservations.errorAccept'));
       }
@@ -278,10 +313,10 @@ export default function MerchantReservationsPanel(props: {
       await fetchPendingCount();
       closeModals();
 
-      const createdOrderId = (json.data as any)?.order?.id as string | undefined;
+      const createdOrderId = json.data?.order?.id;
       if (createdOrderId) {
-        props.onOrderCreated?.(createdOrderId);
-        if (!props.onOrderCreated) {
+        onOrderCreated?.(createdOrderId);
+        if (!onOrderCreated) {
           router.push(`/admin/dashboard/orders?orderId=${encodeURIComponent(createdOrderId)}`);
         }
       }
@@ -304,7 +339,7 @@ export default function MerchantReservationsPanel(props: {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      const json = (await res.json()) as ApiResponse<any>;
+      const json = (await res.json()) as ApiResponse<unknown>;
       if (!res.ok || !json.success) {
         throw new Error(json.message || t('admin.reservations.errorCancel'));
       }
@@ -386,7 +421,6 @@ export default function MerchantReservationsPanel(props: {
           onClick={() => fetchActive()}
           className="inline-flex h-11 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
         >
-          <FaSyncAlt className="h-4 w-4" />
           {t('common.refresh')}
         </button>
       </div>
@@ -401,7 +435,7 @@ export default function MerchantReservationsPanel(props: {
               value={filterQuery}
               onChange={(e) => setFilterQuery(e.target.value)}
               placeholder={t('admin.reservations.searchPlaceholder')}
-              className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-11 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+              className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-11 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
             />
             {filterQuery && (
               <button
@@ -417,7 +451,7 @@ export default function MerchantReservationsPanel(props: {
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value as StatusFilter)}
-            className="h-10 rounded-lg border border-gray-200 bg-white px-3 pr-8 text-sm text-gray-700 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+            className="h-10 rounded-lg border border-gray-200 bg-white px-3 pr-8 text-sm text-gray-700 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
           >
             <option value="ALL">{t('admin.reservations.statusAll')}</option>
             <option value="PENDING">{t('admin.reservations.statusPending')}</option>
@@ -434,7 +468,7 @@ export default function MerchantReservationsPanel(props: {
               setFilterDateTo(todayYmd);
             }}
             className={`h-10 px-4 rounded-lg border text-sm font-medium transition-colors ${datePreset === 'TODAY'
-              ? 'border-primary-300 bg-primary-50 text-primary-700 dark:border-primary-700 dark:bg-primary-900/20 dark:text-primary-400'
+              ? 'border-brand-300 bg-brand-50 text-brand-700 dark:border-brand-700 dark:bg-brand-900/20 dark:text-brand-400'
               : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-300'
               }`}
           >
@@ -448,7 +482,7 @@ export default function MerchantReservationsPanel(props: {
               setFilterDateTo(tomorrowYmd);
             }}
             className={`h-10 px-4 rounded-lg border text-sm font-medium transition-colors ${datePreset === 'TOMORROW'
-              ? 'border-primary-300 bg-primary-50 text-primary-700 dark:border-primary-700 dark:bg-primary-900/20 dark:text-primary-400'
+              ? 'border-brand-300 bg-brand-50 text-brand-700 dark:border-brand-700 dark:bg-brand-900/20 dark:text-brand-400'
               : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-300'
               }`}
           >
@@ -463,7 +497,7 @@ export default function MerchantReservationsPanel(props: {
               setFilterDateTo('');
             }}
             className={`h-10 px-4 rounded-lg border text-sm font-medium transition-colors ${datePreset === 'ALL'
-              ? 'border-primary-300 bg-primary-50 text-primary-700 dark:border-primary-700 dark:bg-primary-900/20 dark:text-primary-400'
+              ? 'border-brand-300 bg-brand-50 text-brand-700 dark:border-brand-700 dark:bg-brand-900/20 dark:text-brand-400'
               : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-300'
               }`}
           >
@@ -502,7 +536,7 @@ export default function MerchantReservationsPanel(props: {
                 setDatePreset('CUSTOM');
                 setFilterDateFrom(e.target.value);
               }}
-              className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-10 pr-3 text-sm text-gray-800 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
+              className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-10 pr-3 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
             />
           </div>
 
@@ -515,7 +549,7 @@ export default function MerchantReservationsPanel(props: {
                 setDatePreset('CUSTOM');
                 setFilterDateTo(e.target.value);
               }}
-              className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-10 pr-3 text-sm text-gray-800 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
+              className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-10 pr-3 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
             />
           </div>
 
@@ -525,7 +559,7 @@ export default function MerchantReservationsPanel(props: {
               type="time"
               value={filterTimeFrom}
               onChange={(e) => setFilterTimeFrom(e.target.value)}
-              className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-10 pr-3 text-sm text-gray-800 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
+              className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-10 pr-3 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
             />
           </div>
 
@@ -535,7 +569,7 @@ export default function MerchantReservationsPanel(props: {
               type="time"
               value={filterTimeTo}
               onChange={(e) => setFilterTimeTo(e.target.value)}
-              className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-10 pr-3 text-sm text-gray-800 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
+              className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-10 pr-3 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
             />
           </div>
         </div>
@@ -574,34 +608,22 @@ export default function MerchantReservationsPanel(props: {
             <thead>
               <tr className="bg-gray-50 text-left dark:bg-gray-900/50">
                 <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">
-                  <span className="flex items-center gap-2">
-                    <FaCalendarAlt className="h-3 w-3" />
-                    {t('admin.reservations.tableDate')}
-                  </span>
+                  {t('admin.reservations.tableDate')}
                 </th>
                 <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">
-                  <span className="flex items-center gap-2">
-                    <FaUser className="h-3 w-3" />
-                    {t('admin.reservations.tableCustomer')}
-                  </span>
+                  {t('admin.reservations.tableCustomer')}
                 </th>
                 <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">
-                  <span className="flex items-center gap-2">
-                    <FaUsers className="h-3 w-3" />
-                    {t('admin.reservations.tablePartySize')}
-                  </span>
+                  {t('admin.reservations.tablePartySize')}
                 </th>
                 <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">
-                  <span className="flex items-center gap-2">
-                    <FaTable className="h-3 w-3" />
-                    {t('admin.reservations.tableTableNumber')}
-                  </span>
+                  {t('admin.reservations.tableTableNumber')}
                 </th>
                 <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">
                   {t('admin.reservations.tableStatus')}
                 </th>
                 <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">
-                  {t('admin.reservations.tableNotes')}
+                  {t('admin.reservations.totalItems') || 'Total Items'}
                 </th>
                 <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">
                   {t('admin.reservations.tableActions')}
@@ -611,7 +633,10 @@ export default function MerchantReservationsPanel(props: {
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {paginatedReservations.map((r) => {
                 const preorderItems = Array.isArray(r.preorder?.items) ? r.preorder.items : [];
-                const preorderCount = preorderItems.reduce((sum: number, it: any) => sum + (Number(it?.quantity) || 1), 0);
+                const preorderCount = preorderItems.reduce(
+                  (sum: number, it: ReservationPreorderItem) => sum + (Number(it?.quantity) || 1),
+                  0
+                );
                 const rowError = actionError[r.id];
 
                 return (
@@ -678,23 +703,15 @@ export default function MerchantReservationsPanel(props: {
                       )}
                     </td>
 
-                    {/* Notes/Preorder Column */}
+                    {/* Total Items Column */}
                     <td className="px-4 py-4">
-                      <div className="max-w-37.5">
-                        {r.notes && (
-                          <div className="text-xs text-gray-600 dark:text-gray-400 truncate" title={r.notes}>
-                            {r.notes}
-                          </div>
-                        )}
-                        {preorderCount > 0 && (
-                          <div className="text-xs text-primary-600 dark:text-primary-400">
-                            {preorderCount} {t('admin.reservations.itemsLabel')}
-                          </div>
-                        )}
-                        {!r.notes && preorderCount === 0 && (
-                          <span className="text-xs text-gray-400 dark:text-gray-500">-</span>
-                        )}
-                      </div>
+                      {preorderCount > 0 ? (
+                        <span className="inline-flex items-center rounded-full bg-brand-100 px-2.5 py-1 text-xs font-medium text-brand-700 dark:bg-brand-900/20 dark:text-brand-400">
+                          {preorderCount} {t('admin.reservations.itemsLabel')}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-400 dark:text-gray-500">-</span>
+                      )}
                     </td>
 
                     {/* Actions Column */}
@@ -702,30 +719,25 @@ export default function MerchantReservationsPanel(props: {
                       <div className="flex flex-wrap items-center gap-2">
                         {r.status === 'PENDING' ? (
                           <>
-                            <button
-                              type="button"
+                            <TableActionButton
+                              icon={FaCheckCircle}
+                              label={t('admin.reservations.accept')}
                               onClick={() => openAcceptModal(r.id)}
                               disabled={acceptingId === r.id || cancellingId === r.id}
-                              className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg bg-primary-500 text-white text-sm font-medium hover:bg-primary-600 focus:outline-none focus:ring-3 focus:ring-primary-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              <FaCheckCircle className="h-3 w-3" />
-                              {t('admin.reservations.accept')}
-                            </button>
-                            <button
-                              type="button"
+                            />
+                            <TableActionButton
+                              icon={FaBan}
+                              label={t('admin.reservations.cancel')}
                               onClick={() => openCancelModal(r.id)}
                               disabled={acceptingId === r.id || cancellingId === r.id}
-                              className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-gray-200 bg-white text-gray-700 text-sm font-medium hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              <FaBan className="h-3 w-3" />
-                              {t('admin.reservations.cancel')}
-                            </button>
+                            />
                           </>
                         ) : (
                           <>
                             {r.order?.id && (
-                              <button
-                                type="button"
+                              <TableActionButton
+                                icon={FaExternalLinkAlt}
+                                label={t('admin.reservations.viewOrder')}
                                 onClick={() => {
                                   const displayStatus = normalizeDisplayStatus(r.displayStatus || r.status);
                                   const target =
@@ -734,11 +746,7 @@ export default function MerchantReservationsPanel(props: {
                                       : `/admin/dashboard/orders?orderId=${encodeURIComponent(r.order!.id)}`;
                                   router.push(target);
                                 }}
-                                className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-gray-200 bg-white text-gray-700 text-sm font-medium hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                              >
-                                <FaExternalLinkAlt className="h-3 w-3" />
-                                {t('admin.reservations.viewOrder')}
-                              </button>
+                              />
                             )}
                           </>
                         )}
@@ -799,6 +807,8 @@ export default function MerchantReservationsPanel(props: {
           if (acceptingId) return;
           closeModals();
         }}
+        disableBackdropClose={Boolean(tableNumber.trim())}
+        disableEscapeClose={Boolean(tableNumber.trim())}
       >
         <div className="space-y-4">
           {isTableNumberEnabled ? (
@@ -814,7 +824,7 @@ export default function MerchantReservationsPanel(props: {
                   value={tableNumber}
                   onChange={(e) => setTableNumber(e.target.value)}
                   maxLength={50}
-                  className="w-full h-11 pl-10 pr-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 dark:bg-gray-800 dark:text-white"
+                  className="w-full h-11 pl-10 pr-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-400 dark:bg-gray-800 dark:text-white"
                   placeholder={t('admin.reservations.tableNumberPlaceholder')}
                 />
               </div>
@@ -834,7 +844,7 @@ export default function MerchantReservationsPanel(props: {
               type="button"
               onClick={handleAccept}
               disabled={Boolean(acceptingId)}
-              className="h-10 px-4 rounded-lg bg-primary-500 hover:bg-primary-600 text-white text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              className="h-10 px-4 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {acceptingId ? t('admin.reservations.accepting') : t('admin.reservations.accept')}
             </button>

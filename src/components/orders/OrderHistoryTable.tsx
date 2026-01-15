@@ -25,6 +25,7 @@ import {
   FaUtensils,
   FaShoppingBag,
 } from 'react-icons/fa';
+import { TableActionButton } from '@/components/common/TableActionButton';
 import { OrderStatus, PaymentStatus, OrderType } from '@prisma/client';
 import { exportOrdersToCSV, exportOrdersToExcel } from '@/lib/utils/exportOrders';
 import { useMerchant } from '@/context/MerchantContext';
@@ -94,9 +95,9 @@ const getAdminStatusKey = (status: OrderStatus): string => {
 
 const OrderStatusBadge: React.FC<{ status: OrderStatus; label: string }> = ({ status, label }) => {
   const statusConfig = {
-    PENDING: { bg: 'bg-warning-100 dark:bg-warning-900/20', text: 'text-warning-700 dark:text-warning-400' },
+    PENDING: { bg: 'bg-brand-100 dark:bg-brand-900/20', text: 'text-brand-700 dark:text-brand-400' },
     ACCEPTED: { bg: 'bg-brand-100 dark:bg-brand-900/20', text: 'text-brand-700 dark:text-brand-400' },
-    IN_PROGRESS: { bg: 'bg-blue-100 dark:bg-blue-900/20', text: 'text-blue-700 dark:text-blue-400' },
+    IN_PROGRESS: { bg: 'bg-brand-100 dark:bg-brand-900/20', text: 'text-brand-700 dark:text-brand-400' },
     READY: { bg: 'bg-success-100 dark:bg-success-900/20', text: 'text-success-700 dark:text-success-400' },
     COMPLETED: { bg: 'bg-gray-100 dark:bg-gray-800', text: 'text-gray-700 dark:text-gray-300' },
     CANCELLED: { bg: 'bg-error-100 dark:bg-error-900/20', text: 'text-error-700 dark:text-error-400' },
@@ -113,10 +114,10 @@ const OrderStatusBadge: React.FC<{ status: OrderStatus; label: string }> = ({ st
 
 const PaymentStatusBadge: React.FC<{ status: PaymentStatus; label: string }> = ({ status, label }) => {
   const statusConfig = {
-    PENDING: { bg: 'bg-warning-100', text: 'text-warning-700' },
+    PENDING: { bg: 'bg-brand-100', text: 'text-brand-700' },
     COMPLETED: { bg: 'bg-success-100', text: 'text-success-700' },
     FAILED: { bg: 'bg-error-100', text: 'text-error-700' },
-    REFUNDED: { bg: 'bg-blue-100', text: 'text-blue-700' },
+    REFUNDED: { bg: 'bg-brand-100', text: 'text-brand-700' },
     CANCELLED: { bg: 'bg-gray-100', text: 'text-gray-700' },
   };
 
@@ -217,6 +218,7 @@ export const OrderHistoryTable: React.FC<OrderHistoryTableProps> = ({
     return filtered;
   }, [orders, typeFilter, searchQuery, statusFilter, paymentFilter, sortField, sortDirection]);
 
+
   // Pagination
   const totalPages = Math.ceil(filteredAndSortedOrders.length / itemsPerPage);
   const paginatedOrders = filteredAndSortedOrders.slice(
@@ -275,7 +277,7 @@ export const OrderHistoryTable: React.FC<OrderHistoryTableProps> = ({
             placeholder={t('admin.history.filters.searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-11 pr-10 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+            className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-11 pr-10 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
           />
           <FaSearch className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
           {searchQuery && (
@@ -294,7 +296,7 @@ export const OrderHistoryTable: React.FC<OrderHistoryTableProps> = ({
         <select
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value as OrderTypeFilter)}
-          className="h-10 rounded-lg border border-gray-200 bg-white px-3 pr-8 text-sm text-gray-700 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+          className="h-10 rounded-lg border border-gray-200 bg-white px-3 pr-8 text-sm text-gray-700 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
         >
           <option value="ALL">{t('admin.history.filters.allTypes')}</option>
           <option value="RESERVATION">{t('admin.history.filters.reservationsOnly')}</option>
@@ -305,7 +307,7 @@ export const OrderHistoryTable: React.FC<OrderHistoryTableProps> = ({
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as OrderStatus | 'ALL')}
-          className="h-10 rounded-lg border border-gray-200 bg-white px-3 pr-8 text-sm text-gray-700 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+          className="h-10 rounded-lg border border-gray-200 bg-white px-3 pr-8 text-sm text-gray-700 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
         >
           <option value="ALL">{t('admin.history.filters.allStatuses')}</option>
           <option value="PENDING">{t('admin.status.pending')}</option>
@@ -320,7 +322,7 @@ export const OrderHistoryTable: React.FC<OrderHistoryTableProps> = ({
         <select
           value={paymentFilter}
           onChange={(e) => setPaymentFilter(e.target.value as PaymentStatus | 'ALL')}
-          className="h-10 rounded-lg border border-gray-200 bg-white px-3 pr-8 text-sm text-gray-700 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+          className="h-10 rounded-lg border border-gray-200 bg-white px-3 pr-8 text-sm text-gray-700 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
         >
           <option value="ALL">{t('admin.history.filters.allPayments')}</option>
           <option value="PENDING">{t('admin.payment.unpaid')}</option>
@@ -341,7 +343,7 @@ export const OrderHistoryTable: React.FC<OrderHistoryTableProps> = ({
           </button>
           <button
             onClick={handleExportExcel}
-            className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary-500 px-3 text-sm font-medium text-white hover:bg-primary-600 focus:outline-none focus:ring-3 focus:ring-primary-500/20"
+            className="inline-flex h-10 items-center gap-2 rounded-lg bg-brand-500 px-3 text-sm font-medium text-white hover:bg-brand-600 focus:outline-none focus:ring-3 focus:ring-brand-500/20"
             title={t('admin.history.export.excel')}
           >
             <FaFileExport />
@@ -507,29 +509,26 @@ export const OrderHistoryTable: React.FC<OrderHistoryTableProps> = ({
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button
+                        <TableActionButton
+                          icon={FaEye}
+                          label={t('common.view')}
                           onClick={() => onViewOrder?.(order.id)}
-                          className="inline-flex h-9 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                        >
-                          <FaEye />
-                          {t('common.view')}
-                        </button>
+                        />
                         {onPrintReceipt && (
-                          <button
+                          <TableActionButton
+                            icon={FaPrint}
                             onClick={() => onPrintReceipt(order.id)}
-                            className="inline-flex h-9 items-center justify-center rounded-lg border border-gray-200 bg-white px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
                             title={t('admin.history.actions.printReceipt')}
-                          >
-                            <FaPrint />
-                          </button>
+                            aria-label={t('admin.history.actions.printReceipt')}
+                          />
                         )}
-                        <button
+                        <TableActionButton
+                          icon={FaTrash}
+                          tone="danger"
                           onClick={() => onDeleteOrder?.(order.id)}
-                          className="inline-flex h-9 items-center justify-center rounded-lg border border-error-300 bg-error-50 px-3 text-sm font-medium text-error-700 hover:bg-error-100 dark:border-error-700 dark:bg-error-900/20 dark:text-error-400 dark:hover:bg-error-900/30"
                           title={hasDeletePin ? t('admin.history.actions.voidTransaction') : t('admin.history.actions.deleteOrder')}
-                        >
-                          <FaTrash />
-                        </button>
+                          aria-label={hasDeletePin ? t('admin.history.actions.voidTransaction') : t('admin.history.actions.deleteOrder')}
+                        />
                       </div>
                     </td>
                   </tr>

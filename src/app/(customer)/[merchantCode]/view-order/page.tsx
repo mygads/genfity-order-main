@@ -15,6 +15,7 @@ import { useTranslation } from '@/lib/i18n/useTranslation';
 import { useModeAvailability } from '@/hooks/useModeAvailability';
 import UpsellSection from '@/components/customer/UpsellSection';
 import { customerOrderUrl } from '@/lib/utils/customerRoutes';
+import AlertDialog from '@/components/modals/AlertDialog';
 import { FaArrowLeft, FaCheckCircle, FaChevronDown, FaEdit, FaExclamationTriangle, FaMinusCircle, FaPlusCircle, FaStickyNote, FaTrash } from 'react-icons/fa';
 
 interface MenuItem {
@@ -77,6 +78,11 @@ export default function ViewOrderPage() {
   const [editingCartItem, setEditingCartItem] = useState<CartItem | null>(null);
   const [removeItemId, setRemoveItemId] = useState<string | null>(null);
   const [removeItemName, setRemoveItemName] = useState<string>('');
+  const [alertState, setAlertState] = useState<{ isOpen: boolean; title: string; message: string }>({
+    isOpen: false,
+    title: '',
+    message: ''
+  });
   const [_relatedMenus, _setRelatedMenus] = useState<RelatedMenuItem[]>([]);
   const [showNotesModal, setShowNotesModal] = useState(false);
 
@@ -292,12 +298,20 @@ export default function ViewOrderPage() {
 
       const itemCount = (cart?.items || []).reduce((sum, item) => sum + (item.quantity || 0), 0);
       if (requiresPreorder && itemCount === 0) {
-        alert(t('customer.reservation.preorderRequired') || 'Preorder is required for reservations.');
+        setAlertState({
+          isOpen: true,
+          title: 'Preorder Required',
+          message: t('customer.reservation.preorderRequired') || 'Preorder is required for reservations.'
+        });
         return;
       }
       if (minItems > 0 && itemCount < minItems) {
-        alert((t('customer.reservation.minItems') || 'Minimum items for reservation: {min}')
-          .replace('{min}', String(minItems)));
+        setAlertState({
+          isOpen: true,
+          title: 'Minimum Items Required',
+          message: (t('customer.reservation.minItems') || 'Minimum items for reservation: {min}')
+            .replace('{min}', String(minItems))
+        });
         return;
       }
     }
@@ -1028,6 +1042,14 @@ export default function ViewOrderPage() {
         onClose={() => setShowNotesModal(false)}
         onAdd={(notes) => setGeneralNotes(notes)}
         initialNotes={generalNotes}
+      />
+
+      <AlertDialog
+        isOpen={alertState.isOpen}
+        title={alertState.title}
+        message={alertState.message}
+        variant="warning"
+        onClose={() => setAlertState({ isOpen: false, title: '', message: '' })}
       />
     </div >
   );

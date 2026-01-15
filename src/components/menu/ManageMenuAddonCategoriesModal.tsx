@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { useMerchant } from "@/context/MerchantContext";
+import { useModalImplicitClose } from "@/hooks/useModalImplicitClose";
 
 interface AddonItem {
   id: string;
@@ -68,6 +69,30 @@ export default function ManageMenuAddonCategoriesModal({
   const [draggedItem, setDraggedItem] = useState<string | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+
+  const initialSelectionSnapshot = useMemo(() => {
+    const normalized = currentAddonCategories
+      .map((cat, index) => ({
+        id: cat.addonCategoryId,
+        isRequired: cat.isRequired,
+        displayOrder: cat.displayOrder ?? index,
+      }))
+      .sort((a, b) => a.displayOrder - b.displayOrder)
+      .map((c) => `${c.id}:${c.isRequired ? 1 : 0}`);
+    return normalized;
+  }, [currentAddonCategories]);
+
+  const isDirty = useMemo(() => {
+    const current = [...selectedCategories]
+      .sort((a, b) => a.displayOrder - b.displayOrder)
+      .map((c) => `${c.id}:${c.isRequired ? 1 : 0}`);
+
+    if (current.length !== initialSelectionSnapshot.length) return true;
+    for (let i = 0; i < current.length; i += 1) {
+      if (current[i] !== initialSelectionSnapshot[i]) return true;
+    }
+    return false;
+  }, [selectedCategories, initialSelectionSnapshot]);
 
   useEffect(() => {
     if (show) {
@@ -265,8 +290,18 @@ export default function ManageMenuAddonCategoriesModal({
     setExpandedCategory(expandedCategory === categoryId ? null : categoryId);
   };
 
+  const disableImplicitClose = submitting || isDirty;
+  const { onBackdropMouseDown } = useModalImplicitClose({
+    isOpen: show,
+    onClose,
+    disableImplicitClose,
+  });
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onMouseDown={onBackdropMouseDown}
+    >
       <div className="w-full max-w-6xl rounded-2xl border border-gray-200 bg-white shadow-xl dark:border-gray-800 dark:bg-gray-900 max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-200 p-6 dark:border-gray-800">
@@ -289,7 +324,7 @@ export default function ManageMenuAddonCategoriesModal({
         </div>
 
         {(success || error) && (
-          <div className="px-6 pt-4">
+          <div className="px-6 pt-4 space-y-2">
             {success && (
               <div className="rounded-lg bg-success-50 p-3 dark:bg-success-900/20">
                 <p className="text-sm text-success-600 dark:text-success-400">{success}</p>
@@ -665,7 +700,7 @@ export default function ManageMenuAddonCategoriesModal({
             <button
               onClick={handleSubmit}
               disabled={submitting}
-              className="h-11 flex-1 rounded-lg bg-orange-500 text-sm font-medium text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
+              className="h-11 flex-1 rounded-lg bg-brand-500 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {submitting ? "Saving..." : "Save Changes"}
             </button>

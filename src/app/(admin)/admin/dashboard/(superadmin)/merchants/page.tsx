@@ -12,6 +12,8 @@ import SubscriptionStatusBadge from "@/components/subscription/SubscriptionStatu
 import Image from "next/image";
 import { useSWRWithAuth } from "@/hooks/useSWRWithAuth";
 import { MerchantsPageSkeleton } from "@/components/common/SkeletonLoaders";
+import { TableActionButton } from "@/components/common/TableActionButton";
+import { FaEdit, FaEye, FaTrash, FaUserPlus, FaUsers } from "react-icons/fa";
 
 interface Merchant {
   id: string;
@@ -174,7 +176,7 @@ export default function MerchantsPage() {
           </p>
           <button
             onClick={() => fetchMerchants()}
-            className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+            className="px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors"
           >
             Retry
           </button>
@@ -284,7 +286,7 @@ export default function MerchantsPage() {
       />
       <PageBreadcrumb pageTitle="Merchants Management" />
 
-      <div className="min-w-0 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
+      <div className="min-w-0 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6">
         <div className="mb-5">
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
             All Merchants
@@ -361,7 +363,7 @@ export default function MerchantsPage() {
                   setStatusFilter('all');
                   setSubscriptionFilter('all');
                 }}
-                className="h-9 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-gray-800 dark:bg-white/[0.03] dark:text-red-400 dark:hover:bg-red-900/20"
+                className="h-9 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-gray-800 dark:bg-white/3 dark:text-red-400 dark:hover:bg-red-900/20"
               >
                 Clear Filters
               </button>
@@ -384,47 +386,47 @@ export default function MerchantsPage() {
 
         {/* Merchants Table */}
         {!loading && !merchantsError && (
-          <div className="relative rounded-xl border border-gray-200 dark:border-white/[0.05]" style={{ contain: 'inline-size' }}>
+          <div className="relative rounded-xl border border-gray-200 dark:border-white/5" style={{ contain: 'inline-size' }}>
             <div className="overflow-x-auto">
               <table className="w-full whitespace-nowrap" style={{ minWidth: '1200px' }}>
                 <thead>
-                  <tr className="border-b border-gray-100 bg-gray-50 text-left dark:border-white/[0.05] dark:bg-white/[0.02]">
-                    <th className="w-[60px] min-w-[60px] px-4 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
+                  <tr className="border-b border-gray-100 bg-gray-50 text-left dark:border-white/5 dark:bg-white/2">
+                    <th className="w-15 min-w-15 px-4 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
                       Logo
                     </th>
-                    <th className="w-[100px] min-w-[100px] px-4 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
+                    <th className="w-25 min-w-25 px-4 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
                       Code
                     </th>
-                    <th className="w-[160px] min-w-[160px] px-4 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
+                    <th className="w-40 min-w-40 px-4 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
                       Merchant Name
                     </th>
-                    <th className="w-[200px] min-w-[200px] px-4 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
+                    <th className="w-50 min-w-50 px-4 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
                       Email
                     </th>
-                    <th className="w-[130px] min-w-[130px] px-4 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
+                    <th className="w-32.5 min-w-32.5 px-4 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
                       Phone
                     </th>
-                    <th className="w-[100px] min-w-[100px] px-4 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
+                    <th className="w-25 min-w-25 px-4 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
                       Country
                     </th>
-                    <th className="w-[80px] min-w-[80px] px-4 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
+                    <th className="w-20 min-w-20 px-4 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
                       Currency
                     </th>
-                    <th className="w-[100px] min-w-[100px] px-4 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
+                    <th className="w-25 min-w-25 px-4 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
                       Subscription
                     </th>
-                    <th className="w-[100px] min-w-[100px] px-4 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
+                    <th className="w-25 min-w-25 px-4 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
                       Store Status
                     </th>
-                    <th className="w-[100px] min-w-[100px] px-4 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
+                    <th className="w-25 min-w-25 px-4 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
                       Active Status
                     </th>
-                    <th className="w-[120px] min-w-[120px] px-4 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
+                    <th className="w-30 min-w-30 px-4 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
+                <tbody className="divide-y divide-gray-100 dark:divide-white/5">
                   {merchants.length === 0 ? (
                     <tr>
                       <td colSpan={11} className="py-10 text-center">
@@ -443,7 +445,7 @@ export default function MerchantsPage() {
 
                       return (
                         <tr key={merchant.id}>
-                          <td className="w-[60px] min-w-[60px] px-4 py-4">
+                          <td className="w-15 min-w-15 px-4 py-4">
                             {/* Merchant Logo */}
                             <div className="relative h-10 w-10 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
                               {merchant.logoUrl ? (
@@ -460,31 +462,31 @@ export default function MerchantsPage() {
                               )}
                             </div>
                           </td>
-                          <td className="w-[100px] min-w-[100px] px-4 py-4">
+                          <td className="w-25 min-w-25 px-4 py-4">
                             <span className="font-mono text-sm text-gray-600 dark:text-gray-400">
                               {merchant.code}
                             </span>
                           </td>
-                          <td className="w-[160px] min-w-[160px] px-4 py-4">
+                          <td className="w-40 min-w-40 px-4 py-4">
                             <p className="text-sm font-medium text-gray-800 dark:text-white/90 truncate" title={merchant.name}>
                               {merchant.name}
                             </p>
                           </td>
-                          <td className="w-[200px] min-w-[200px] px-4 py-4 text-sm text-gray-600 dark:text-gray-400">
+                          <td className="w-50 min-w-50 px-4 py-4 text-sm text-gray-600 dark:text-gray-400">
                             <span className="truncate block" title={merchant.email}>{merchant.email}</span>
                           </td>
-                          <td className="w-[130px] min-w-[130px] px-4 py-4 text-sm text-gray-600 dark:text-gray-400">{merchant.phone}</td>
-                          <td className="w-[100px] min-w-[100px] px-4 py-4">
+                          <td className="w-32.5 min-w-32.5 px-4 py-4 text-sm text-gray-600 dark:text-gray-400">{merchant.phone}</td>
+                          <td className="w-25 min-w-25 px-4 py-4">
                             <span className="text-sm text-gray-600 dark:text-gray-400">
                               {merchant.country || 'Australia'}
                             </span>
                           </td>
-                          <td className="w-[80px] min-w-[80px] px-4 py-4">
+                          <td className="w-20 min-w-20 px-4 py-4">
                             <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
                               {merchant.currency || 'AUD'}
                             </span>
                           </td>
-                          <td className="w-[100px] min-w-[100px] px-4 py-4">
+                          <td className="w-25 min-w-25 px-4 py-4">
                             {merchant.subscriptionStatus ? (
                               <SubscriptionStatusBadge
                                 type={merchant.subscriptionStatus.type}
@@ -494,7 +496,7 @@ export default function MerchantsPage() {
                               <span className="text-xs text-gray-400">No subscription</span>
                             )}
                           </td>
-                          <td className="w-[100px] min-w-[100px] px-4 py-4">
+                          <td className="w-25 min-w-25 px-4 py-4">
                             {/* Store Open/Closed Status */}
                             <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${storeStatus.isOpen
                               ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
@@ -504,7 +506,7 @@ export default function MerchantsPage() {
                               {storeStatus.text}
                             </span>
                           </td>
-                          <td className="w-[100px] min-w-[100px] px-4 py-4">
+                          <td className="w-25 min-w-25 px-4 py-4">
                             {/* Active/Inactive Toggle */}
                             <button
                               onClick={() => handleToggleStatus(merchant.id, merchant.isActive)}
@@ -518,74 +520,30 @@ export default function MerchantsPage() {
                               {merchant.isActive ? "Active" : "Inactive"}
                             </button>
                           </td>
-                          <td className="w-[120px] min-w-[120px] px-4 py-4">
-                            <div className="flex items-center gap-1.5">
-                              <button
+                          <td className="w-30 min-w-30 px-4 py-4">
+                            <div className="flex items-center gap-2">
+                              <TableActionButton
+                                icon={FaEye}
                                 onClick={() => router.push(`/admin/dashboard/merchants/${merchant.id}`)}
-                                className="text-brand-500 hover:text-brand-600 dark:text-brand-400"
+                                aria-label="View merchant details"
                                 title="View Details"
-                              >
-                                <svg
-                                  className="h-4 w-4"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                  />
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                                  />
-                                </svg>
-                              </button>
-                              <button
+                              />
+                              <TableActionButton
+                                icon={FaEdit}
                                 onClick={() => router.push(`/admin/dashboard/merchants/${merchant.id}/edit`)}
-                                className="text-orange-500 hover:text-orange-600 dark:text-orange-400"
+                                aria-label="Edit merchant"
                                 title="Edit Merchant"
-                              >
-                                <svg
-                                  className="h-4 w-4"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                  />
-                                </svg>
-                              </button>
-                              <button
+                              />
+                              <TableActionButton
+                                icon={FaTrash}
+                                tone="danger"
                                 onClick={() => handleDelete(merchant.id, merchant.name)}
-                                className="text-error-600 hover:text-error-700 dark:text-error-400"
+                                aria-label="Delete merchant"
                                 title="Delete"
-                              >
-                                <svg
-                                  className="h-4 w-4"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                  />
-                                </svg>
-                              </button>
-                              <button
+                              />
+                              <TableActionButton
+                                icon={FaUserPlus}
                                 onClick={() => {
-                                  // Find current owner
                                   const owner = merchant.merchantUsers?.find(mu => mu.role === 'OWNER');
                                   setAddOwnerModal({
                                     isOpen: true,
@@ -597,46 +555,19 @@ export default function MerchantsPage() {
                                     } : null,
                                   });
                                 }}
-                                className="text-purple-500 hover:text-purple-600 dark:text-purple-400"
+                                aria-label="Add merchant owner"
                                 title="Add Owner"
-                              >
-                                <svg
-                                  className="h-4 w-4"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
-                                  />
-                                </svg>
-                              </button>
-                              <button
+                              />
+                              <TableActionButton
+                                icon={FaUsers}
                                 onClick={() => setViewUsersModal({
                                   isOpen: true,
                                   merchantId: merchant.id,
                                   merchantName: merchant.name,
                                 })}
-                                className="text-blue-light-500 hover:text-blue-light-600 dark:text-blue-light-400"
+                                aria-label="View merchant users"
                                 title="View Users"
-                              >
-                                <svg
-                                  className="h-4 w-4"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-                                  />
-                                </svg>
-                              </button>
+                              />
                             </div>
                           </td>
                         </tr>

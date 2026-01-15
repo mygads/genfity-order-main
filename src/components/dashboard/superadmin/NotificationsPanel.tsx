@@ -139,8 +139,8 @@ export default function NotificationsPanel({
       case 'NEW_MERCHANT':
         return {
           icon: '🏪',
-          bgColor: 'bg-orange-100 dark:bg-orange-900/30',
-          textColor: 'text-orange-600 dark:text-orange-400',
+          bgColor: 'bg-brand-100 dark:bg-brand-900/30',
+          textColor: 'text-brand-600 dark:text-brand-400',
         };
       case 'MERCHANT_SUBSCRIPTION':
         return {

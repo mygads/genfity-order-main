@@ -22,21 +22,21 @@ export default function SuspendedAlert({ reason, type, graceDaysRemaining }: Sus
     // If in grace period, show grace period warning instead
     if (graceDaysRemaining !== undefined && graceDaysRemaining > 0) {
         return (
-            <div className="fixed top-0 left-0 right-0 z-60 border-b-2 border-orange-200 bg-orange-50 px-4 py-3 dark:border-orange-800/50 dark:bg-orange-900/95 shadow-lg">
+            <div className="fixed top-0 left-0 right-0 z-60 border-b-2 border-brand-200 bg-brand-50 px-4 py-3 dark:border-brand-800/50 dark:bg-brand-900/95 shadow-lg">
                 <div className="max-w-screen-2xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div className="flex items-start gap-3">
-                        <div className="shrink-0 w-10 h-10 rounded-lg bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center">
-                            <svg className="w-6 h-6 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="shrink-0 w-10 h-10 rounded-lg bg-brand-100 dark:bg-brand-900/40 flex items-center justify-center">
+                            <svg className="w-6 h-6 text-brand-600 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                                     d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                                 />
                             </svg>
                         </div>
                         <div>
-                            <h3 className="font-semibold text-orange-800 dark:text-orange-200">
+                            <h3 className="font-semibold text-brand-800 dark:text-brand-200">
                                 {t("subscription.grace.title")}
                             </h3>
-                            <p className="text-sm text-orange-700 dark:text-orange-300 mt-1">
+                            <p className="text-sm text-brand-700 dark:text-brand-300 mt-1">
                                 {graceDaysRemaining === 1 
                                     ? t("subscription.grace.lastDay")
                                     : t("subscription.grace.message").replace("{days}", String(graceDaysRemaining))
@@ -47,7 +47,7 @@ export default function SuspendedAlert({ reason, type, graceDaysRemaining }: Sus
                     <Link
                         href="/admin/dashboard/subscription/topup"
                         className="shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2 
-                            bg-orange-600 hover:bg-orange-700 text-white font-medium rounded-lg transition-colors
+                            bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-lg transition-colors
                             text-sm sm:text-base"
                     >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

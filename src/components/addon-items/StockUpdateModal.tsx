@@ -23,8 +23,18 @@ export default function StockUpdateModal({
 }: StockUpdateModalProps) {
   if (!show) return null;
 
+  const normalizedNewStock = String(newStock ?? '').trim();
+  const isDirty = normalizedNewStock !== '' && normalizedNewStock !== String(currentStock);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onMouseDown={(e) => {
+        if (e.target !== e.currentTarget) return;
+        if (isDirty) return;
+        onClose();
+      }}
+    >
       <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-800 dark:bg-gray-900">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">

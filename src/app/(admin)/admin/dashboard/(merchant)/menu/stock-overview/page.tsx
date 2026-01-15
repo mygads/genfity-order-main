@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import StockStatusCard, { StockStatusCardSkeleton } from '@/components/menu/StockStatusCard';
 import BulkStockActions from '@/components/menu/BulkStockActions';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import ConfirmDialog from '@/components/modals/ConfirmDialog';
+import AlertDialog from '@/components/modals/AlertDialog';
 
 interface StockItem {
   id: number | string;
@@ -52,6 +54,13 @@ export default function StockOverviewPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showQuickActions, setShowQuickActions] = useState(false);
+
+  const [bulkAddConfirmOpen, setBulkAddConfirmOpen] = useState(false);
+  const [pendingBulkAddAmount, setPendingBulkAddAmount] = useState<number | null>(null);
+
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+  const [pendingResetCount, setPendingResetCount] = useState<number>(0);
+  const [noTemplateAlertOpen, setNoTemplateAlertOpen] = useState(false);
 
   // Fetch stock data
   useEffect(() => {
@@ -314,10 +323,7 @@ export default function StockOverviewPage() {
     window.URL.revokeObjectURL(url);
   };
 
-  // Optimistic bulk add stock
-  const handleBulkAddStock = (amount: number) => {
-    if (!confirm(`Add ${amount} units to ALL items?`)) return;
-
+  const performBulkAddStock = (amount: number) => {
     // Update UI immediately
     const updatedItems = stockItems.map((item) => ({
       ...item,
@@ -348,16 +354,20 @@ export default function StockOverviewPage() {
     });
   };
 
+  // Optimistic bulk add stock
+  const handleBulkAddStock = (amount: number) => {
+    setPendingBulkAddAmount(amount);
+    setBulkAddConfirmOpen(true);
+  };
+
   // Optimistic reset all to template
-  const handleResetAllToTemplate = () => {
+  const performResetAllToTemplate = () => {
     const itemsWithTemplate = stockItems.filter(item => item.dailyStockTemplate !== null);
 
     if (itemsWithTemplate.length === 0) {
-      alert('No items have a daily stock template set');
+      setNoTemplateAlertOpen(true);
       return;
     }
-
-    if (!confirm(`Reset ${itemsWithTemplate.length} items to their template values?`)) return;
 
     // Update UI immediately
     const updatedItems = stockItems.map((item) => {
@@ -389,6 +399,16 @@ export default function StockOverviewPage() {
     }).catch((error) => {
       console.error('Background reset all failed:', error);
     });
+  };
+
+  const handleResetAllToTemplate = () => {
+    const itemsWithTemplateCount = stockItems.filter(item => item.dailyStockTemplate !== null).length;
+    if (itemsWithTemplateCount === 0) {
+      setNoTemplateAlertOpen(true);
+      return;
+    }
+    setPendingResetCount(itemsWithTemplateCount);
+    setResetConfirmOpen(true);
   };
 
   if (isLoading) {
@@ -451,6 +471,59 @@ export default function StockOverviewPage() {
 
   return (
     <div data-tutorial="stock-overview-page">
+      <AlertDialog
+        isOpen={noTemplateAlertOpen}
+        title={t('common.error') || 'Error'}
+        message={t('admin.stock.noTemplateSet') || 'No items have a daily stock template set'}
+        variant="warning"
+        onClose={() => setNoTemplateAlertOpen(false)}
+      />
+
+      <ConfirmDialog
+        isOpen={bulkAddConfirmOpen}
+        title={t('admin.stock.bulkAddTitle') || 'Add stock to all'}
+        message={
+          pendingBulkAddAmount !== null
+            ? (t('admin.stock.bulkAddConfirmMessage', { amount: pendingBulkAddAmount }) || `Add ${pendingBulkAddAmount} units to ALL items?`)
+            : (t('admin.stock.bulkAddConfirmFallback') || 'Add stock to ALL items?')
+        }
+        confirmText={t('common.confirm') || 'Confirm'}
+        cancelText={t('common.cancel') || 'Cancel'}
+        variant="warning"
+        onConfirm={() => {
+          if (pendingBulkAddAmount === null) return;
+          const amount = pendingBulkAddAmount;
+          setBulkAddConfirmOpen(false);
+          setPendingBulkAddAmount(null);
+          performBulkAddStock(amount);
+        }}
+        onCancel={() => {
+          setBulkAddConfirmOpen(false);
+          setPendingBulkAddAmount(null);
+        }}
+      />
+
+      <ConfirmDialog
+        isOpen={resetConfirmOpen}
+        title={t('admin.stock.resetAllTitle') || 'Reset all to template'}
+        message={
+          t('admin.stock.resetAllConfirmMessage', { count: pendingResetCount })
+            || `Reset ${pendingResetCount} items to their template values?`
+        }
+        confirmText={t('common.confirm') || 'Confirm'}
+        cancelText={t('common.cancel') || 'Cancel'}
+        variant="warning"
+        onConfirm={() => {
+          setResetConfirmOpen(false);
+          setPendingResetCount(0);
+          performResetAllToTemplate();
+        }}
+        onCancel={() => {
+          setResetConfirmOpen(false);
+          setPendingResetCount(0);
+        }}
+      />
+
       <div className="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-950">
         {/* Header */}
         <div className="border-b border-gray-200 bg-gray-50/50 px-6 py-5 dark:border-gray-800 dark:bg-gray-900/50" data-tutorial="stock-overview-header">
@@ -467,7 +540,7 @@ export default function StockOverviewPage() {
               <div className="relative">
                 <button
                   onClick={() => setShowQuickActions(!showQuickActions)}
-                  className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary-500 px-4 text-sm font-medium text-white shadow-lg shadow-primary-500/25 transition-all hover:bg-primary-600"
+                  className="inline-flex h-11 items-center gap-2 rounded-xl bg-brand-500 px-4 text-sm font-medium text-white shadow-lg shadow-brand-500/25 transition-all hover:bg-brand-600"
                 >
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -498,7 +571,7 @@ export default function StockOverviewPage() {
                       onClick={() => { handleResetAllToTemplate(); setShowQuickActions(false); }}
                       className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
                     >
-                      <svg className="h-4 w-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="h-4 w-4 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                       </svg>
                       Reset all to template
@@ -596,13 +669,13 @@ export default function StockOverviewPage() {
                   placeholder="Search items..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-12 w-full rounded-xl border border-gray-200 bg-white pl-11 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                  className="h-12 w-full rounded-xl border border-gray-200 bg-white pl-11 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
                 />
               </div>
               <select
                 value={activeFilter}
                 onChange={(e) => setActiveFilter(e.target.value as FilterType)}
-                className="h-12 rounded-xl border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                className="h-12 rounded-xl border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-brand-400 focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
               >
                 <option value="all">All Status</option>
                 <option value="healthy">Healthy ({stats.healthy})</option>
@@ -627,7 +700,7 @@ export default function StockOverviewPage() {
               {activeFilter !== 'all' && (
                 <button
                   onClick={() => setActiveFilter('all')}
-                  className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white hover:bg-primary-600"
+                  className="mt-4 inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
                 >
                   Show all items
                 </button>

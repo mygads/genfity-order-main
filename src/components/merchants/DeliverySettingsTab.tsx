@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { BoxIcon, DownloadIcon, FileIcon, PlusIcon, PencilIcon, TrashBinIcon } from '@/icons';
 import IconToggle from '@/components/ui/IconToggle';
+import ConfirmDialog from '@/components/modals/ConfirmDialog';
 
 import type { TranslationKeys } from '@/lib/i18n';
 
@@ -326,32 +327,14 @@ export default function DeliverySettingsTab({
         ? `Import ${json.features.length} zones and replace ${zones.length} existing zones?`
         : `Import ${json.features.length} zones from GeoJSON?`;
 
-      const ok = confirm(confirmMsg);
-      if (!ok) return;
-
-      setUndoGeoJson(backup);
-      setUndoAvailable(false);
-
-      const res = await fetch('/api/merchant/delivery/zones/bulk-import', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${authToken}`,
-        },
-        body: JSON.stringify({
-          geojson: json,
-          replaceExisting: replaceOnImport,
-        }),
+      setImportConfirm({
+        open: true,
+        message: confirmMsg,
+        geojson: json,
+        backup,
+        replaceExisting: replaceOnImport,
       });
-
-      const apiJson = await res.json();
-      if (!res.ok || !apiJson?.success) {
-        throw new Error(apiJson?.message || 'Failed to import zones');
-      }
-
-      setZones((apiJson.data?.zones || []) as DeliveryZone[]);
-      setUndoAvailable(true);
-      showSuccess('Success', `Imported ${Number(apiJson.data?.importedCount ?? json.features.length)} zones`);
+      return;
     } catch (e) {
       const msg = (e as Error).message || 'Failed to import GeoJSON';
       setBulkImportError(msg);
@@ -364,9 +347,11 @@ export default function DeliverySettingsTab({
 
   const undoLastImport = async () => {
     if (!undoGeoJson) return;
-    const ok = confirm('Undo last import? This will restore the previous zone list.');
-    if (!ok) return;
+    setUndoConfirmOpen(true);
+  };
 
+  const performUndoLastImport = async () => {
+    if (!undoGeoJson) return;
     setBulkImportError('');
     setBulkImporting(true);
     try {
@@ -482,10 +467,11 @@ export default function DeliverySettingsTab({
     }
   };
 
-  const deleteZone = async (zone: DeliveryZone) => {
-    const ok = confirm(`Delete zone "${zone.name}"?`);
-    if (!ok) return;
+  const requestDeleteZone = (zone: DeliveryZone) => {
+    setDeleteZoneConfirm({ open: true, zone });
+  };
 
+  const performDeleteZone = async (zone: DeliveryZone) => {
     try {
       const res = await fetch(`/api/merchant/delivery/zones?id=${encodeURIComponent(zone.id)}`, {
         method: 'DELETE',
@@ -504,6 +490,27 @@ export default function DeliverySettingsTab({
     }
   };
 
+  const [importConfirm, setImportConfirm] = useState<{
+    open: boolean;
+    message: string;
+    geojson: GeoJsonFeatureCollection | null;
+    backup: GeoJsonFeatureCollection | null;
+    replaceExisting: boolean;
+  }>({
+    open: false,
+    message: '',
+    geojson: null,
+    backup: null,
+    replaceExisting: false,
+  });
+
+  const [undoConfirmOpen, setUndoConfirmOpen] = useState(false);
+
+  const [deleteZoneConfirm, setDeleteZoneConfirm] = useState<{ open: boolean; zone: DeliveryZone | null }>({
+    open: false,
+    zone: null,
+  });
+
   const deliveryHelpText = useMemo(() => {
     if (!merchantHasLocation) {
       return keyOrFallback('admin.merchant.deliveryRequiresLocation', 'Set merchant location first (Location tab) to enable delivery.', t);
@@ -513,6 +520,87 @@ export default function DeliverySettingsTab({
 
   return (
     <div className="space-y-6">
+      <ConfirmDialog
+        isOpen={importConfirm.open}
+        title={keyOrFallback('common.warning' as TranslationKeys, 'Warning', t)}
+        message={importConfirm.message}
+        confirmText={keyOrFallback('common.confirm' as TranslationKeys, 'Confirm', t)}
+        cancelText={keyOrFallback('common.cancel' as TranslationKeys, 'Cancel', t)}
+        variant={importConfirm.replaceExisting ? 'warning' : 'info'}
+        onCancel={() => setImportConfirm({ open: false, message: '', geojson: null, backup: null, replaceExisting: false })}
+        onConfirm={async () => {
+          const geojson = importConfirm.geojson;
+          const backup = importConfirm.backup;
+          const replaceExisting = importConfirm.replaceExisting;
+
+          setImportConfirm({ open: false, message: '', geojson: null, backup: null, replaceExisting: false });
+          if (!geojson || !backup) return;
+
+          setBulkImportError('');
+          setBulkImporting(true);
+          try {
+            setUndoGeoJson(backup);
+            setUndoAvailable(false);
+
+            const res = await fetch('/api/merchant/delivery/zones/bulk-import', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${authToken}`,
+              },
+              body: JSON.stringify({
+                geojson,
+                replaceExisting,
+              }),
+            });
+
+            const apiJson = await res.json();
+            if (!res.ok || !apiJson?.success) {
+              throw new Error(apiJson?.message || 'Failed to import zones');
+            }
+
+            setZones((apiJson.data?.zones || []) as DeliveryZone[]);
+            setUndoAvailable(true);
+            showSuccess('Success', `Imported ${Number(apiJson.data?.importedCount ?? geojson.features.length)} zones`);
+          } catch (e) {
+            const msg = (e as Error).message || 'Failed to import GeoJSON';
+            setBulkImportError(msg);
+            showError('Error', msg);
+          } finally {
+            setBulkImporting(false);
+          }
+        }}
+      />
+
+      <ConfirmDialog
+        isOpen={undoConfirmOpen}
+        title={keyOrFallback('common.warning' as TranslationKeys, 'Warning', t)}
+        message="Undo last import? This will restore the previous zone list."
+        confirmText={keyOrFallback('common.confirm' as TranslationKeys, 'Confirm', t)}
+        cancelText={keyOrFallback('common.cancel' as TranslationKeys, 'Cancel', t)}
+        variant="warning"
+        onCancel={() => setUndoConfirmOpen(false)}
+        onConfirm={async () => {
+          setUndoConfirmOpen(false);
+          await performUndoLastImport();
+        }}
+      />
+
+      <ConfirmDialog
+        isOpen={deleteZoneConfirm.open}
+        title={keyOrFallback('common.warning' as TranslationKeys, 'Warning', t)}
+        message={deleteZoneConfirm.zone ? `Delete zone "${deleteZoneConfirm.zone.name}"?` : 'Delete this zone?'}
+        confirmText={keyOrFallback('common.delete' as TranslationKeys, 'Delete', t)}
+        cancelText={keyOrFallback('common.cancel' as TranslationKeys, 'Cancel', t)}
+        variant="danger"
+        onCancel={() => setDeleteZoneConfirm({ open: false, zone: null })}
+        onConfirm={async () => {
+          const zone = deleteZoneConfirm.zone;
+          setDeleteZoneConfirm({ open: false, zone: null });
+          if (!zone) return;
+          await performDeleteZone(zone);
+        }}
+      />
       <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/3">
         <div className="flex items-start justify-between gap-6">
           <div>
@@ -830,7 +918,7 @@ export default function DeliverySettingsTab({
                     </button>
                     <button
                       type="button"
-                      onClick={() => deleteZone(z)}
+                      onClick={() => requestDeleteZone(z)}
                       className="inline-flex h-9 items-center justify-center rounded-lg border border-gray-200 bg-white px-3 text-error-600 hover:bg-error-50 dark:border-gray-800 dark:bg-gray-900 dark:text-error-300 dark:hover:bg-error-900/10"
                       title="Delete"
                     >

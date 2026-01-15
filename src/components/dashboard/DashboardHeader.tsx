@@ -47,7 +47,7 @@ export default function DashboardHeader({ user }: DashboardHeaderProps) {
         </div>
 
         {/* User Avatar */}
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-100 text-orange-600">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-100 text-brand-600">
           <span className="text-xl">👤</span>
         </div>
 

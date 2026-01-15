@@ -122,7 +122,7 @@ export default function MenuPreviewCard({
           <div className="mb-2 flex flex-wrap gap-1.5">
             {isSpicy && (
               <div
-                className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-orange-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
+                className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-brand-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
                 title="Spicy"
               >
                 <Image

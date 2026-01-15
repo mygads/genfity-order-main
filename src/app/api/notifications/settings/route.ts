@@ -11,9 +11,11 @@ import {
   normalizeNotificationSettings,
   mergeNotificationSettings,
   type MerchantTransactionToggleKey,
+  type StaffActivityToggleKey,
 } from '@/lib/utils/notificationSettings';
 
 type MerchantToggleAvailability = Record<MerchantTransactionToggleKey, boolean>;
+type StaffToggleAvailability = Record<StaffActivityToggleKey, boolean>;
 
 function emptyAvailability(): MerchantToggleAvailability {
   return {
@@ -22,6 +24,23 @@ function emptyAvailability(): MerchantToggleAvailability {
     lowStock: false,
     payment: false,
     subscription: false,
+  };
+}
+
+function emptyStaffAvailability(): StaffToggleAvailability {
+  return {
+    login: false,
+    logout: false,
+  };
+}
+
+function getStaffToggleAvailability(auth: AuthContext): StaffToggleAvailability {
+  if (!auth.merchantId) return emptyStaffAvailability();
+  if (auth.role !== 'MERCHANT_OWNER') return emptyStaffAvailability();
+
+  return {
+    login: true,
+    logout: true,
   };
 }
 
@@ -73,6 +92,7 @@ async function handleGet(_req: NextRequest, auth: AuthContext) {
 
   const settings = normalizeNotificationSettings(pref?.notificationSettings);
   const availability = await getMerchantToggleAvailability(auth);
+  const staffAvailability = getStaffToggleAvailability(auth);
 
   return NextResponse.json({
     success: true,
@@ -80,9 +100,11 @@ async function handleGet(_req: NextRequest, auth: AuthContext) {
       settings: {
         accountTransactions: settings.account.transactions,
         merchant: settings.merchant,
+        staff: settings.staff,
       },
       availability: {
         merchant: availability,
+        staff: staffAvailability,
       },
     },
   });
@@ -108,6 +130,7 @@ async function handlePut(req: NextRequest, auth: AuthContext) {
   const patch = body as {
     accountTransactions?: boolean;
     merchant?: Partial<Record<MerchantTransactionToggleKey, boolean>>;
+    staff?: Partial<Record<StaffActivityToggleKey, boolean>>;
   };
 
   const next = mergeNotificationSettings(current, {
@@ -117,6 +140,7 @@ async function handlePut(req: NextRequest, auth: AuthContext) {
         : {}),
     },
     merchant: patch.merchant || {},
+    staff: patch.staff || {},
   });
 
   // Enforce: staff can only update merchant toggles they have access to.
@@ -126,6 +150,14 @@ async function handlePut(req: NextRequest, auth: AuthContext) {
         next.merchant[key] = current.merchant[key];
       }
     }
+
+    // Staff cannot modify staff activity notification settings.
+    next.staff = current.staff;
+  }
+
+  // Enforce: only merchant owners can modify staff activity notification settings.
+  if (auth.role !== 'MERCHANT_OWNER') {
+    next.staff = current.staff;
   }
 
   await prisma.userPreference.upsert({
@@ -145,6 +177,7 @@ async function handlePut(req: NextRequest, auth: AuthContext) {
       settings: {
         accountTransactions: next.account.transactions,
         merchant: next.merchant,
+        staff: next.staff,
       },
     },
   });

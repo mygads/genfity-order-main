@@ -230,7 +230,7 @@ function TopUpPageContent() {
                             <label
                                 className={`block p-4 rounded-xl border-2 cursor-pointer transition-all
                                     ${selectedPlan === 'deposit'
-                                        ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20'
+                                        ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20'
                                         : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
                                     }`}
                             >
@@ -241,7 +241,7 @@ function TopUpPageContent() {
                                         value="deposit"
                                         checked={selectedPlan === 'deposit'}
                                         onChange={() => setSelectedPlan('deposit')}
-                                        className="mt-1 text-orange-500 focus:ring-orange-500"
+                                        className="mt-1 text-brand-500 focus:ring-brand-500"
                                     />
                                     <div className="flex-1">
                                         <div className="flex items-center justify-between">
@@ -271,7 +271,7 @@ function TopUpPageContent() {
                                                     step={currency === 'AUD' ? 5 : 10000}
                                                     className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 
                                                         bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                                                        focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                                        focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                                                 />
                                                 {depositAmount < (pricing?.depositMinimum || 0) && (
                                                     <p className="text-sm text-red-500 mt-1">
@@ -289,7 +289,7 @@ function TopUpPageContent() {
                             <label
                                 className={`block p-4 rounded-xl border-2 cursor-pointer transition-all
                                     ${selectedPlan === 'monthly'
-                                        ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20'
+                                        ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20'
                                         : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
                                     }`}
                             >
@@ -300,7 +300,7 @@ function TopUpPageContent() {
                                         value="monthly"
                                         checked={selectedPlan === 'monthly'}
                                         onChange={() => setSelectedPlan('monthly')}
-                                        className="mt-1 text-orange-500 focus:ring-orange-500"
+                                        className="mt-1 text-brand-500 focus:ring-brand-500"
                                     />
                                     <div className="flex-1">
                                         <div className="flex items-center justify-between">
@@ -328,7 +328,7 @@ function TopUpPageContent() {
                                                             onClick={() => setMonthsSelected(months)}
                                                             className={`py-2 px-3 rounded-lg text-sm font-medium transition-colors
                                                                 ${monthsSelected === months
-                                                                    ? 'bg-orange-500 text-white'
+                                                                    ? 'bg-brand-500 text-white'
                                                                     : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200'
                                                                 }`}
                                                         >
@@ -359,7 +359,7 @@ function TopUpPageContent() {
                             onClick={handleCreatePaymentRequest}
                             disabled={isSubmitting || !isValidDeposit()}
                             className="w-full py-3 px-4 rounded-lg font-semibold text-white
-                                bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 disabled:cursor-not-allowed
+                                bg-brand-500 hover:bg-brand-600 disabled:bg-gray-400 disabled:cursor-not-allowed
                                 transition-colors"
                         >
                             {isSubmitting ? t('subscription.topup.processing') : t('subscription.topup.continuePayment')}
@@ -423,7 +423,7 @@ function TopUpPageContent() {
                                 <span className="text-gray-600 dark:text-gray-400">
                                     {t('subscription.transfer.amount')}
                                 </span>
-                                <span className="text-xl font-bold text-orange-600">
+                                <span className="text-xl font-bold text-brand-600">
                                     {formatCurrency(paymentRequest.amount)}
                                 </span>
                             </div>
@@ -441,7 +441,7 @@ function TopUpPageContent() {
                                 rows={3}
                                 className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 
                                     bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                                    focus:ring-2 focus:ring-orange-500 focus:border-orange-500
+                                    focus:ring-2 focus:ring-brand-500 focus:border-brand-500
                                     placeholder:text-gray-400"
                             />
                         </div>
@@ -505,7 +505,7 @@ function TopUpPageContent() {
                                 type="button"
                                 onClick={() => router.push('/admin/dashboard/subscription')}
                                 className="py-3 px-4 rounded-lg font-semibold text-white
-                                    bg-orange-500 hover:bg-orange-600 transition-colors"
+                                    bg-brand-500 hover:bg-brand-600 transition-colors"
                             >
                                 {t('subscription.confirm.backToSubscription')}
                             </button>

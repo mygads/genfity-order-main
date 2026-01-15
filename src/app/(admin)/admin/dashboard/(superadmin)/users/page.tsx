@@ -107,7 +107,7 @@ export default function UsersPage() {
           </p>
           <button
             onClick={() => fetchUsers()}
-            className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+            className="px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors"
           >
             Retry
           </button>
@@ -249,7 +249,7 @@ export default function UsersPage() {
     <div>
       <PageBreadcrumb pageTitle="User Management" />
 
-      <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
+      <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6">
         <div className="mb-5">
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
             Admin Users
@@ -298,11 +298,11 @@ export default function UsersPage() {
         </div>
 
         {/* Users Table */}
-        <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-white/[0.05]">
+        <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-white/5">
           <div className="max-w-full overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-100 bg-gray-50 text-left dark:border-white/[0.05] dark:bg-white/[0.02]">
+                <tr className="border-b border-gray-100 bg-gray-50 text-left dark:border-white/5 dark:bg-white/2">
                   <th className="px-5 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
                     Photo
                   </th>
@@ -329,7 +329,7 @@ export default function UsersPage() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
+              <tbody className="divide-y divide-gray-100 dark:divide-white/5">
                 {isLoading ? (
                   <tr>
                     <td colSpan={8} className="px-5 py-8 text-center">
@@ -423,7 +423,7 @@ export default function UsersPage() {
             <button 
               onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
               disabled={currentPage === 1}
-              className="h-9 rounded-lg border border-gray-200 px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.05]"
+              className="h-9 rounded-lg border border-gray-200 px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-gray-800 dark:text-gray-300 dark:hover:bg-white/5"
             >
               Previous
             </button>
@@ -450,7 +450,7 @@ export default function UsersPage() {
                   className={`h-9 rounded-lg px-3 text-sm font-medium ${
                     currentPage === page
                       ? 'bg-brand-500 text-white'
-                      : 'border border-gray-200 text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.05]'
+                      : 'border border-gray-200 text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-300 dark:hover:bg-white/5'
                   }`}
                 >
                   {page}
@@ -461,7 +461,7 @@ export default function UsersPage() {
             <button 
               onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
               disabled={currentPage === totalPages || totalPages === 0}
-              className="h-9 rounded-lg border border-gray-200 px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.05]"
+              className="h-9 rounded-lg border border-gray-200 px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-gray-800 dark:text-gray-300 dark:hover:bg-white/5"
             >
               Next
             </button>

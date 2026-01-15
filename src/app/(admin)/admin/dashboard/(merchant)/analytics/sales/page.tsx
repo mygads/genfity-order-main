@@ -301,7 +301,7 @@ export default function SalesAnalyticsPage() {
               onClick={() => setPeriod(p)}
               className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
                 period === p
-                  ? 'bg-orange-500 text-white'
+                  ? 'bg-brand-500 text-white'
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
             >
@@ -393,7 +393,7 @@ export default function SalesAnalyticsPage() {
           <div className="space-y-3">
             {analytics?.topSellingItems.slice(0, 5).map((item, index) => (
               <div key={item.menuId} className="flex items-center gap-3">
-                <div className="w-6 h-6 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-xs font-medium text-orange-600">
+                <div className="w-6 h-6 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center text-xs font-medium text-brand-600">
                   {index + 1}
                 </div>
                 <div className="flex-1 min-w-0">

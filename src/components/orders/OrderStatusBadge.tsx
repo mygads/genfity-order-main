@@ -31,8 +31,8 @@ const STATUS_CONFIG: Record<OrderStatus, { bg: string; text: string; label: stri
     icon: '✓',
   },
   IN_PROGRESS: {
-    bg: 'bg-blue-100 dark:bg-blue-900/20',
-    text: 'text-blue-700 dark:text-blue-400',
+    bg: 'bg-brand-100 dark:bg-brand-900/20',
+    text: 'text-brand-700 dark:text-brand-400',
     label: 'In Progress',
     icon: '🔥',
   },
@@ -72,3 +72,4 @@ export const OrderStatusBadge: React.FC<OrderStatusBadgeProps> = ({ status, clas
 };
 
 export default OrderStatusBadge;
+

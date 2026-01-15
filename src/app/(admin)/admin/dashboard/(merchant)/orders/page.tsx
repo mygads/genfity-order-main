@@ -378,7 +378,7 @@ function MerchantOrdersPageContent() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t("admin.orders.searchPlaceholder")}
-                className="w-full h-11 pl-11 pr-10 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 placeholder-gray-400 shadow-sm focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:placeholder-gray-500 dark:focus:border-primary-500"
+                className="w-full h-11 pl-11 pr-10 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 placeholder-gray-400 shadow-sm focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:placeholder-gray-500 dark:focus:border-brand-500"
               />
               {searchQuery && (
                 <button
@@ -406,7 +406,7 @@ function MerchantOrdersPageContent() {
                 <button
                   onClick={() => setViewMode('kanban-card')}
                   className={`flex h-8 items-center gap-2 rounded-md px-3 text-xs font-semibold transition-all ${viewMode === 'kanban-card'
-                    ? 'bg-primary-500 text-white shadow-sm'
+                    ? 'bg-brand-500 text-white shadow-sm'
                     : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
                     }`}
                   title={t('admin.orders.viewCardTitle')}
@@ -417,7 +417,7 @@ function MerchantOrdersPageContent() {
                 <button
                   onClick={() => setViewMode('kanban-list')}
                   className={`flex h-8 items-center gap-2 rounded-md px-3 text-xs font-semibold transition-all ${viewMode === 'kanban-list'
-                    ? 'bg-primary-500 text-white shadow-sm'
+                    ? 'bg-brand-500 text-white shadow-sm'
                     : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
                     }`}
                   title={t('admin.orders.viewListTitle')}
@@ -428,7 +428,7 @@ function MerchantOrdersPageContent() {
                 <button
                   onClick={() => setViewMode('tab-list')}
                   className={`flex h-8 items-center gap-2 rounded-md px-3 text-xs font-semibold transition-all ${viewMode === 'tab-list'
-                    ? 'bg-primary-500 text-white shadow-sm'
+                    ? 'bg-brand-500 text-white shadow-sm'
                     : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
                     }`}
                   title={t('admin.orders.viewTabsTitle')}
@@ -445,7 +445,7 @@ function MerchantOrdersPageContent() {
               data-tutorial="order-filters-btn"
               onClick={() => setShowFilters(!showFilters)}
               className={`flex h-10 items-center gap-2 rounded-lg border px-4 text-sm font-medium transition-colors ${showFilters
-                ? 'border-primary-200 bg-primary-50 text-primary-700 dark:border-primary-800 dark:bg-primary-900/20 dark:text-primary-400'
+                ? 'border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-800 dark:bg-brand-900/20 dark:text-brand-400'
                 : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800'
                 }`}
             >
@@ -460,7 +460,7 @@ function MerchantOrdersPageContent() {
               data-tutorial="order-bulk-mode"
               onClick={toggleBulkMode}
               className={`flex h-10 items-center gap-2 rounded-lg border px-4 text-sm font-medium transition-colors ${bulkMode
-                ? 'border-primary-200 bg-primary-50 text-primary-700 dark:border-primary-800 dark:bg-primary-900/20 dark:text-primary-400'
+                ? 'border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-800 dark:bg-brand-900/20 dark:text-brand-400'
                 : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800'
                 }`}
             >
@@ -497,7 +497,7 @@ function MerchantOrdersPageContent() {
                 }
               }}
               className={`flex h-10 items-center gap-2 rounded-lg border px-4 text-sm font-medium transition-colors ${displayMode !== 'normal'
-                ? 'border-primary-200 bg-primary-50 text-primary-700 dark:border-primary-800 dark:bg-primary-900/20 dark:text-primary-400'
+                ? 'border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-800 dark:bg-brand-900/20 dark:text-brand-400'
                 : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800'
                 }`}
               title={
@@ -536,15 +536,15 @@ function MerchantOrdersPageContent() {
               )}
 
               {bulkMode && selectedOrders.size > 0 && (
-                <div className="rounded-xl border border-primary-200 bg-primary-50 p-4 dark:border-primary-800 dark:bg-primary-900/20">
+                <div className="rounded-xl border border-brand-200 bg-brand-50 p-4 dark:border-brand-800 dark:bg-brand-900/20">
                   <div className="flex flex-wrap items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
-                      <span className="text-sm font-semibold text-primary-700 dark:text-primary-400">
+                      <span className="text-sm font-semibold text-brand-700 dark:text-brand-400">
                         {t("admin.orders.ordersSelected", { count: selectedOrders.size })}
                       </span>
                       <button
                         onClick={() => setSelectedOrders(new Set())}
-                        className="flex h-8 items-center gap-1.5 rounded-lg border border-primary-300 bg-white px-3 text-xs font-medium text-primary-700 hover:bg-primary-50 dark:border-primary-700 dark:bg-primary-900 dark:text-primary-400 dark:hover:bg-primary-800"
+                        className="flex h-8 items-center gap-1.5 rounded-lg border border-brand-300 bg-white px-3 text-xs font-medium text-brand-700 hover:bg-brand-50 dark:border-brand-700 dark:bg-brand-900 dark:text-brand-400 dark:hover:bg-brand-800"
                       >
                         <FaTimes className="h-3 w-3" />
                         {t("common.clear")}
@@ -555,7 +555,7 @@ function MerchantOrdersPageContent() {
                       <select
                         value={bulkStatusUpdate}
                         onChange={(e) => setBulkStatusUpdate(e.target.value as OrderStatus)}
-                        className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
+                        className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
                       >
                         <option value="">{t("admin.orders.selectStatus")}</option>
                         <option value="PENDING">{t("admin.status.pending")}</option>
@@ -569,7 +569,7 @@ function MerchantOrdersPageContent() {
                       <button
                         onClick={handleBulkStatusUpdate}
                         disabled={!bulkStatusUpdate}
-                        className="h-9 rounded-lg bg-primary-500 px-4 text-sm font-semibold text-white hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-primary-600 dark:hover:bg-primary-700"
+                        className="h-9 rounded-lg bg-brand-500 px-4 text-sm font-semibold text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-brand-600 dark:hover:bg-brand-700"
                       >
                         {t("admin.orders.updateStatus")}
                       </button>

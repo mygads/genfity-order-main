@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback, useEffect, useRef, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { createPortal } from "react-dom";
 import ViewAddonItemsModal from "@/components/addon-categories/ViewAddonItemsModal";
 import MenuRelationshipModal from "@/components/addon-categories/MenuRelationshipModal";
 import EmptyState from "@/components/ui/EmptyState";
@@ -13,6 +14,9 @@ import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useToast } from "@/context/ToastContext";
 import ArchiveModal from "@/components/common/ArchiveModal";
 import { useContextualHint, CONTEXTUAL_HINTS, useClickHereHint, CLICK_HINTS } from "@/lib/tutorial";
+import ConfirmDialog from "@/components/modals/ConfirmDialog";
+import { TableActionButton } from "@/components/common/TableActionButton";
+import { FaEye, FaLink, FaPencilAlt, FaTrash } from "react-icons/fa";
 
 interface AddonCategory {
   id: string;
@@ -60,6 +64,7 @@ function AddonCategoriesPageContent() {
   const { showHint } = useContextualHint();
   const { showClickHint } = useClickHereHint();
   const [submitting, setSubmitting] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   const [filteredCategories, setFilteredCategories] = useState<AddonCategory[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -102,6 +107,10 @@ function AddonCategoriesPageContent() {
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [showArchiveModal, setShowArchiveModal] = useState(false);
 
+  const [bulkRelationshipConfirmOpen, setBulkRelationshipConfirmOpen] = useState(false);
+  const [bulkRelationshipConfirmMessage, setBulkRelationshipConfirmMessage] = useState<string>("");
+  const [pendingBulkDeleteIds, setPendingBulkDeleteIds] = useState<string[]>([]);
+
   // Initialize pagination from URL search params
   const initialPage = parseInt(searchParams.get('page') || '1', 10);
 
@@ -110,6 +119,10 @@ function AddonCategoriesPageContent() {
   const [itemsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Update URL when page changes (for persistence)
   useEffect(() => {
@@ -231,7 +244,7 @@ function AddonCategoriesPageContent() {
           </p>
           <button
             onClick={() => fetchCategories()}
-            className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+            className="px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors"
           >
             Retry
           </button>
@@ -408,6 +421,39 @@ function AddonCategoriesPageContent() {
     }
   };
 
+  const executeBulkDelete = async (ids: string[]) => {
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) {
+        router.push("/admin/login");
+        return;
+      }
+      const response = await fetch("/api/merchant/addon-categories/bulk-delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          ids,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || "Failed to delete addon categories");
+      }
+
+      showSuccess(`${ids.length} addon category(ies) deleted successfully`);
+      setSelectedCategories([]);
+      setShowBulkDeleteConfirm(false);
+      fetchCategories();
+    } catch (err) {
+      showError(err instanceof Error ? err.message : "An error occurred");
+      setShowBulkDeleteConfirm(false);
+    }
+  };
+
   const handleBulkDeleteCategories = async () => {
     if (selectedCategories.length === 0) return;
 
@@ -436,34 +482,15 @@ function AddonCategoriesPageContent() {
       const totalMenusAffected = categoriesWithMenus.reduce((sum, c) => sum + c.menuCount, 0);
 
       if (categoriesWithMenus.length > 0) {
-        const confirmMessage = `⚠️ WARNING: ${categoriesWithMenus.length} of ${selectedCategories.length} selected addon categories are currently in use.\n\nTotal menus affected: ${totalMenusAffected}\n\nDeleting these categories will break menu configurations. Are you sure you want to continue?`;
-
-        if (!confirm(confirmMessage)) {
-          setShowBulkDeleteConfirm(false);
-          return;
-        }
+        const message = `⚠️ WARNING: ${categoriesWithMenus.length} of ${selectedCategories.length} selected addon categories are currently in use.\n\nTotal menus affected: ${totalMenusAffected}\n\nDeleting these categories will break menu configurations. Are you sure you want to continue?`;
+        setPendingBulkDeleteIds([...selectedCategories]);
+        setBulkRelationshipConfirmMessage(message);
+        setBulkRelationshipConfirmOpen(true);
+        setShowBulkDeleteConfirm(false);
+        return;
       }
 
-      const response = await fetch("/api/merchant/addon-categories/bulk-delete", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          ids: selectedCategories,
-        }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || "Failed to delete addon categories");
-      }
-
-      showSuccess(`${selectedCategories.length} addon category(ies) deleted successfully`);
-      setSelectedCategories([]);
-      setShowBulkDeleteConfirm(false);
-      fetchCategories();
+      await executeBulkDelete(selectedCategories);
     } catch (err) {
       showError(err instanceof Error ? err.message : "An error occurred");
       setShowBulkDeleteConfirm(false);
@@ -558,106 +585,118 @@ function AddonCategoriesPageContent() {
   return (
     <div data-tutorial="addon-categories-page">
       <div className="space-y-6">
-        {showForm && (
-          <div data-tutorial="addon-category-form-modal" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-800 dark:bg-gray-900">
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-                  {editingCategoryId ? t("admin.addonCategories.editCategory") : t("admin.addonCategories.createNew")}
-                </h3>
-                <button
-                  onClick={handleCancel}
-                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+        {showForm && isMounted
+          ? createPortal(
+              <div
+                data-tutorial="addon-category-form-modal"
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+                onMouseDown={(e) => {
+                  if (e.target === e.currentTarget) handleCancel();
+                }}
+              >
+                <div
+                  className="w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-800 dark:bg-gray-900"
+                  onMouseDown={(e) => e.stopPropagation()}
                 >
-                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-
-              <form data-tutorial="addon-category-form" onSubmit={handleSubmit} className="space-y-4">
-                <div data-tutorial="addon-category-name-field">
-                  <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {t("admin.addonCategories.categoryName")} <span className="text-error-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    required
-                    placeholder="e.g., Size, Toppings, Extras"
-                    className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {t("admin.addonCategories.description")}
-                  </label>
-                  <textarea
-                    name="description"
-                    value={formData.description}
-                    onChange={handleChange}
-                    rows={3}
-                    placeholder="Describe this addon category"
-                    className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                  />
-                </div>
-
-                <div data-tutorial="addon-category-selection-rules" className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      {t("admin.addonCategories.minSelection")} <span className="text-error-500">*</span>
-                    </label>
-                    <input
-                      type="number"
-                      name="minSelection"
-                      value={formData.minSelection}
-                      onChange={handleChange}
-                      required
-                      min="0"
-                      placeholder="0"
-                      className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                    />
+                  <div className="mb-4 flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
+                      {editingCategoryId ? t("admin.addonCategories.editCategory") : t("admin.addonCategories.createNew")}
+                    </h3>
+                    <button
+                      onClick={handleCancel}
+                      className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                    >
+                      <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
                   </div>
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      {t("admin.addonCategories.maxSelection")}
-                    </label>
-                    <input
-                      type="number"
-                      name="maxSelection"
-                      value={formData.maxSelection}
-                      onChange={handleChange}
-                      min="0"
-                      placeholder={t("admin.addonCategories.leaveEmpty")}
-                      className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
-                    />
-                  </div>
-                </div>
 
-                <div className="flex gap-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={handleCancel}
-                    className="flex-1 h-11 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                  >
-                    {t("admin.addonCategories.cancel")}
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    data-tutorial="addon-category-save-btn"
-                    className="flex-1 h-11 rounded-lg bg-primary-500 text-sm font-medium text-white hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {submitting ? t("admin.addonCategories.saving") : (editingCategoryId ? t("admin.addonCategories.updateCategory") : t("admin.addonCategories.createCategory"))}
-                  </button>
+                  <form data-tutorial="addon-category-form" onSubmit={handleSubmit} className="space-y-4">
+                    <div data-tutorial="addon-category-name-field">
+                      <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {t("admin.addonCategories.categoryName")} <span className="text-error-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleChange}
+                        required
+                        placeholder="e.g., Size, Toppings, Extras"
+                        className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {t("admin.addonCategories.description")}
+                      </label>
+                      <textarea
+                        name="description"
+                        value={formData.description}
+                        onChange={handleChange}
+                        rows={3}
+                        placeholder="Describe this addon category"
+                        className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                      />
+                    </div>
+
+                    <div data-tutorial="addon-category-selection-rules" className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          {t("admin.addonCategories.minSelection")} <span className="text-error-500">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          name="minSelection"
+                          value={formData.minSelection}
+                          onChange={handleChange}
+                          required
+                          min="0"
+                          placeholder="0"
+                          className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          {t("admin.addonCategories.maxSelection")}
+                        </label>
+                        <input
+                          type="number"
+                          name="maxSelection"
+                          value={formData.maxSelection}
+                          onChange={handleChange}
+                          min="0"
+                          placeholder={t("admin.addonCategories.leaveEmpty")}
+                          className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3 pt-4">
+                      <button
+                        type="button"
+                        onClick={handleCancel}
+                        className="flex-1 h-11 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                      >
+                        {t("admin.addonCategories.cancel")}
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={submitting}
+                        data-tutorial="addon-category-save-btn"
+                        className="flex-1 h-11 rounded-lg bg-brand-500 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {submitting ? t("admin.addonCategories.saving") : (editingCategoryId ? t("admin.addonCategories.updateCategory") : t("admin.addonCategories.createCategory"))}
+                      </button>
+                    </div>
+                  </form>
                 </div>
-              </form>
-            </div>
-          </div>
-        )}
+              </div>,
+              document.body
+            )
+          : null}
 
         {/* View Addon Items Modal */}
         {viewItemsModal.show && viewItemsModal.categoryId && (
@@ -741,7 +780,7 @@ function AddonCategoriesPageContent() {
               <button
                 data-tutorial="add-addon-category-btn"
                 onClick={() => setShowForm(true)}
-                className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary-500 px-6 text-sm font-medium text-white hover:bg-primary-600 focus:outline-none focus:ring-3 focus:ring-primary-500/20"
+                className="inline-flex h-11 items-center gap-2 rounded-lg bg-brand-500 px-6 text-sm font-medium text-white hover:bg-brand-600 focus:outline-none focus:ring-3 focus:ring-brand-500/20"
               >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -759,14 +798,14 @@ function AddonCategoriesPageContent() {
                 placeholder={t("admin.addonCategories.searchPlaceholder")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
               />
             </div>
             <div>
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-primary-300 focus:outline-none focus:ring-3 focus:ring-primary-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
+                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
               >
                 <option value="all">{t("admin.addonCategories.allStatus")}</option>
                 <option value="active">{t("common.active")}</option>
@@ -797,7 +836,7 @@ function AddonCategoriesPageContent() {
                         type="checkbox"
                         checked={selectedCategories.length === currentItems.length && currentItems.length > 0}
                         onChange={(e) => handleSelectAllCategories(e.target.checked)}
-                        className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                        className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
                       />
                     </th>
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">{t("admin.addonCategories.table.name")}</th>
@@ -817,7 +856,7 @@ function AddonCategoriesPageContent() {
                           type="checkbox"
                           checked={selectedCategories.includes(category.id)}
                           onChange={(e) => handleSelectCategory(category.id, e.target.checked)}
-                          className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                          className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
                         />
                       </td>
                       <td className="px-4 py-4 text-sm font-medium text-gray-800 dark:text-white/90">{category.name}</td>
@@ -847,43 +886,31 @@ function AddonCategoriesPageContent() {
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-2">
-                          <button
+                          <TableActionButton
                             onClick={() => handleViewItems(category)}
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100 dark:border-blue-900/50 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30"
+                            icon={FaEye}
                             title={t("admin.addonCategories.viewItems")}
-                          >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                          </button>
-                          <button
+                            aria-label={t("admin.addonCategories.viewItems")}
+                          />
+                          <TableActionButton
                             onClick={() => handleViewRelationships(category)}
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-purple-200 bg-purple-50 text-purple-600 hover:bg-purple-100 dark:border-purple-900/50 dark:bg-purple-900/20 dark:text-purple-400 dark:hover:bg-purple-900/30"
+                            icon={FaLink}
                             title={t("admin.addonCategories.viewMenus")}
-                          >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                            </svg>
-                          </button>
-                          <button
+                            aria-label={t("admin.addonCategories.viewMenus")}
+                          />
+                          <TableActionButton
                             onClick={() => handleEdit(category)}
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                            icon={FaPencilAlt}
                             title={t("admin.addonCategories.edit")}
-                          >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                          </button>
-                          <button
+                            aria-label={t("admin.addonCategories.edit")}
+                          />
+                          <TableActionButton
                             onClick={() => handleDelete(category.id, category.name)}
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-error-200 bg-error-50 text-error-600 hover:bg-error-100 dark:border-error-900/50 dark:bg-error-900/20 dark:text-error-400 dark:hover:bg-error-900/30"
+                            icon={FaTrash}
+                            tone="danger"
                             title={t("admin.addonCategories.delete")}
-                          >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
+                            aria-label={t("admin.addonCategories.delete")}
+                          />
                         </div>
                       </td>
                     </tr>
@@ -912,7 +939,7 @@ function AddonCategoriesPageContent() {
                         key={page}
                         onClick={() => paginate(page)}
                         className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border text-sm font-medium ${currentPage === page
-                          ? 'border-primary-500 bg-primary-500 text-white'
+                          ? 'border-brand-500 bg-brand-500 text-white'
                           : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
                           }`}
                       >
@@ -935,10 +962,40 @@ function AddonCategoriesPageContent() {
           )}
         </div>
 
+        <ConfirmDialog
+          isOpen={bulkRelationshipConfirmOpen}
+          title={t('common.warning') || 'Warning'}
+          message={bulkRelationshipConfirmMessage}
+          confirmText={t('common.delete') || 'Delete'}
+          cancelText={t('common.cancel') || 'Cancel'}
+          variant="warning"
+          onConfirm={async () => {
+            const ids = pendingBulkDeleteIds;
+            setBulkRelationshipConfirmOpen(false);
+            setBulkRelationshipConfirmMessage("");
+            setPendingBulkDeleteIds([]);
+            if (ids.length === 0) return;
+            await executeBulkDelete(ids);
+          }}
+          onCancel={() => {
+            setBulkRelationshipConfirmOpen(false);
+            setBulkRelationshipConfirmMessage("");
+            setPendingBulkDeleteIds([]);
+          }}
+        />
+
         {/* Bulk Delete Confirmation Modal */}
         {showBulkDeleteConfirm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-lg dark:border-gray-800 dark:bg-gray-900">
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget) setShowBulkDeleteConfirm(false);
+            }}
+          >
+            <div
+              className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-lg dark:border-gray-800 dark:bg-gray-900"
+              onMouseDown={(e) => e.stopPropagation()}
+            >
               <div className="mb-4 flex items-center gap-3">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-error-100 dark:bg-error-900/20">
                   <svg className="h-6 w-6 text-error-600 dark:text-error-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -989,8 +1046,16 @@ function AddonCategoriesPageContent() {
 
         {/* Single Delete Confirmation Modal */}
         {deleteConfirm.show && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-lg dark:border-gray-800 dark:bg-gray-900">
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget) setDeleteConfirm({ show: false, id: "", name: "", loading: false, menuCount: 0, menuList: "", addonItemsCount: 0 });
+            }}
+          >
+            <div
+              className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-lg dark:border-gray-800 dark:bg-gray-900"
+              onMouseDown={(e) => e.stopPropagation()}
+            >
               <div className="mb-4 flex items-center gap-3">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-error-100 dark:bg-error-900/20">
                   <svg className="h-6 w-6 text-error-600 dark:text-error-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useSidebar } from "@/context/SidebarContext";
 import { MerchantProvider } from "@/context/MerchantContext";
 import { ToastProvider } from "@/context/ToastContext";
@@ -44,6 +45,7 @@ import React from "react";
 function DashboardContent({ children }: { children: React.ReactNode }) {
   const { isExpanded, isHovered, isMobileOpen } = useSidebar();
   const { user } = useAuth();
+  const pathname = usePathname();
 
   // Only check subscription status for merchant users
   const isMerchantUser = user?.role === 'MERCHANT_OWNER' || user?.role === 'MERCHANT_STAFF';
@@ -61,6 +63,9 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
 
   // Only show padding if merchant user is suspended
   const showSuspendedBannerPadding = isMerchantUser && isSuspended;
+
+  // Some pages need more horizontal space (e.g., Orders tab/list views)
+  const isFullWidthPage = pathname?.startsWith('/admin/dashboard/orders');
 
   // Get user permissions from localStorage (same as useAuth hook)
   const userPermissions = React.useMemo(() => {
@@ -113,7 +118,13 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
             </div>
 
             {/* Page Content - Add top padding for fixed header (h-[56px] on mobile, h-[64px] on lg) */}
-            <div className="pt-[70px] md:pt-[80px] lg:pt-[80px] p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6 overflow-x-hidden">
+            <div
+              className={
+                isFullWidthPage
+                  ? 'pt-[70px] md:pt-[80px] lg:pt-[80px] p-4 md:p-6 overflow-x-hidden w-full max-w-none'
+                  : 'pt-[70px] md:pt-[80px] lg:pt-[80px] p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6 overflow-x-hidden'
+              }
+            >
               {children}
             </div>
           </div>

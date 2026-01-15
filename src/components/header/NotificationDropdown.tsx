@@ -33,7 +33,7 @@ interface UnreadCountResponse {
 
 const categoryIcons: Record<string, { icon: React.ReactNode; color: string }> = {
   SYSTEM: { icon: <FaCog className="w-4 h-4" />, color: "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" },
-  SUBSCRIPTION: { icon: <FaCreditCard className="w-4 h-4" />, color: "bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400" },
+  SUBSCRIPTION: { icon: <FaCreditCard className="w-4 h-4" />, color: "bg-brand-100 text-brand-600 dark:bg-brand-900/30 dark:text-brand-400" },
   ORDER: { icon: <FaShoppingCart className="w-4 h-4" />, color: "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400" },
   STOCK: { icon: <FaBox className="w-4 h-4" />, color: "bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400" },
   STAFF: { icon: <FaUser className="w-4 h-4" />, color: "bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400" },
@@ -190,7 +190,7 @@ export default function NotificationDropdown() {
         onClick={toggleDropdown}
       >
         {unreadCount > 0 && (
-          <span className="absolute -right-1 -top-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-xs font-bold text-white">
+          <span className="absolute -right-1 -top-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-brand-500 text-xs font-bold text-white">
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
@@ -199,7 +199,7 @@ export default function NotificationDropdown() {
       <Dropdown
         isOpen={isOpen}
         onClose={closeDropdown}
-        className="fixed left-1/2 top-16 -translate-x-1/2 sm:absolute sm:left-auto sm:top-auto sm:-translate-x-0 sm:right-0 mt-[17px] flex h-auto max-h-[480px] w-[calc(100vw-1rem)] max-w-[361px] flex-col rounded-2xl border border-gray-200 bg-white p-3 shadow-theme-lg dark:border-gray-800 dark:bg-gray-dark z-[99]"
+        className="fixed left-1/2 top-16 -translate-x-1/2 sm:absolute sm:left-auto sm:top-auto sm:translate-x-0 sm:right-0 mt-4.25 flex h-auto max-h-120 w-[calc(100vw-1rem)] max-w-90.25 flex-col rounded-2xl border border-gray-200 bg-white p-3 shadow-theme-lg dark:border-gray-800 dark:bg-gray-dark z-99"
       >
         <div className="flex items-center justify-between pb-3 mb-3 border-b border-gray-100 dark:border-gray-700">
           <h5 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
@@ -209,7 +209,7 @@ export default function NotificationDropdown() {
             {unreadCount > 0 && (
               <button
                 onClick={handleMarkAllAsRead}
-                className="flex items-center justify-center w-8 h-8 rounded-full text-orange-500 hover:text-orange-600 hover:bg-orange-50 dark:text-orange-400 dark:hover:bg-orange-900/20 transition-colors"
+                className="flex items-center justify-center w-8 h-8 rounded-full text-brand-500 hover:text-brand-600 hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-brand-900/20 transition-colors"
                 title={t("notifications.markAllRead") || "Mark all read"}
               >
                 <FaCheckDouble className="w-4 h-4" />
@@ -244,7 +244,7 @@ export default function NotificationDropdown() {
                       closeDropdown();
                     }}
                     href={notification.actionUrl || undefined}
-                    className={`flex gap-3 rounded-lg border-b border-gray-100 p-3 hover:bg-gray-100 dark:border-gray-800 dark:hover:bg-white/5 ${!notification.isRead ? "bg-orange-50/50 dark:bg-orange-900/10" : ""
+                    className={`flex gap-3 rounded-lg border-b border-gray-100 p-3 hover:bg-gray-100 dark:border-gray-800 dark:hover:bg-white/5 ${!notification.isRead ? "bg-brand-50/50 dark:bg-brand-900/10" : ""
                       }`}
                   >
                     <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${iconConfig.color}`}>
@@ -256,7 +256,7 @@ export default function NotificationDropdown() {
                           {notification.title}
                         </span>
                         {!notification.isRead && (
-                          <span className="w-2 h-2 shrink-0 rounded-full bg-orange-500" />
+                          <span className="w-2 h-2 shrink-0 rounded-full bg-brand-500" />
                         )}
                       </span>
                       <span className="block text-xs text-gray-500 dark:text-gray-400 line-clamp-2">

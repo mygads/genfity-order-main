@@ -309,8 +309,8 @@ export default function QueueDisplayPage() {
                   <div className={`mt-2 inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${index === 0
                     ? 'bg-white/20 text-white'
                     : order.orderType === 'DINE_IN'
-                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                      : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
+                      ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400'
+                      : 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400'
                     }`}>
                     {order.orderType === 'DINE_IN' ? `🍽️ ${t("admin.queue.dineIn")}` : `🥡 ${t("admin.queue.takeaway")}`}
                     {order.orderType === 'DINE_IN' && (order as unknown as { tableNumber?: string }).tableNumber && ` - ${t("admin.queue.table")} ${(order as unknown as { tableNumber?: string }).tableNumber}`}

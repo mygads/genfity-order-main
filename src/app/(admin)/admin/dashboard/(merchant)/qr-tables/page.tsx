@@ -325,7 +325,7 @@ export default function QRTablesPage() {
                 value={tableCount || ""}
                 onChange={(e) => setTableCount(parseInt(e.target.value) || 0)}
                 placeholder="e.g. 20"
-                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
               />
             </div>
 
@@ -337,7 +337,7 @@ export default function QRTablesPage() {
               <select
                 value={downloadSize}
                 onChange={(e) => setDownloadSize(parseInt(e.target.value))}
-                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
               >
                 <option value={150}>Small (150px)</option>
                 <option value={200}>Medium (200px)</option>
@@ -364,7 +364,7 @@ export default function QRTablesPage() {
                 type="button"
                 onClick={handleDownloadAll}
                 disabled={tableCount === 0 || downloading}
-                className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-orange-500 px-4 text-sm font-medium text-white transition-colors hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 text-sm font-medium text-white transition-colors hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <FaDownload className="h-4 w-4" />
                 {downloading ? `Downloading...` : `Download All (${tableCount})`}
@@ -392,7 +392,7 @@ export default function QRTablesPage() {
               {Array.from({ length: tableCount }, (_, i) => i + 1).map((tableNumber) => (
                 <div
                   key={tableNumber}
-                  className="flex flex-col items-center rounded-xl border border-gray-200 bg-gray-50 p-3 transition-all hover:border-orange-400 hover:shadow-md dark:border-gray-700 dark:bg-gray-900"
+                  className="flex flex-col items-center rounded-xl border border-gray-200 bg-gray-50 p-3 transition-all hover:border-brand-400 hover:shadow-md dark:border-gray-700 dark:bg-gray-900"
                 >
                   {/* QR Code Preview - Fixed size */}
                   <div className="rounded-lg bg-white p-2">
@@ -417,7 +417,7 @@ export default function QRTablesPage() {
                     type="button"
                     onClick={() => handleDownloadSingle(tableNumber)}
                     disabled={downloadingTable === tableNumber}
-                    className="mt-2 flex h-8 w-full items-center justify-center gap-1.5 rounded-lg bg-orange-500 text-xs font-medium text-white transition-colors hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="mt-2 flex h-8 w-full items-center justify-center gap-1.5 rounded-lg bg-brand-500 text-xs font-medium text-white transition-colors hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <FaDownload className="h-3.5 w-3.5" />
                     {downloadingTable === tableNumber ? "..." : t("admin.qrTables.download")}
@@ -431,9 +431,9 @@ export default function QRTablesPage() {
         {/* Empty State */}
         {tableCount === 0 && (
           <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center sm:p-12 dark:border-gray-800 dark:bg-white/3">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900/30">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-brand-100 dark:bg-brand-900/30">
               <svg
-                className="h-8 w-8 text-orange-500"
+                className="h-8 w-8 text-brand-500"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"

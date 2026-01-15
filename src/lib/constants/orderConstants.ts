@@ -24,10 +24,10 @@ export const ORDER_STATUS_COLORS = {
     label: 'Accepted',
   },
   IN_PROGRESS: {
-    bg: 'bg-blue-100 dark:bg-blue-900/20',
-    text: 'text-blue-700 dark:text-blue-400',
-    border: 'border-blue-300 dark:border-blue-700',
-    badge: 'bg-blue-500',
+    bg: 'bg-brand-100 dark:bg-brand-900/20',
+    text: 'text-brand-700 dark:text-brand-400',
+    border: 'border-brand-300 dark:border-brand-700',
+    badge: 'bg-brand-500',
     label: 'In Progress',
   },
   READY: {

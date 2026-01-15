@@ -165,6 +165,15 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
     return Math.max(0, totalAmount - discountAmount);
   }, [totalAmount, discountAmount]);
 
+  const isDirty = useMemo(() => {
+    const hasNotes = Boolean(notes.trim());
+    const hasDiscount = showDiscount || discountValue > 0;
+    const methodChanged = paymentMethod !== 'CASH_ON_COUNTER';
+    const splitChanged = paymentMethod === 'SPLIT' ? cashAmount > 0 || cardAmount > 0 : false;
+    const amountChanged = paymentMethod !== 'SPLIT' ? amount !== finalTotal : false;
+    return hasNotes || hasDiscount || methodChanged || splitChanged || amountChanged;
+  }, [notes, showDiscount, discountValue, paymentMethod, cashAmount, cardAmount, amount, finalTotal]);
+
   // Reset state when modal opens
   useEffect(() => {
     if (isOpen) {
@@ -187,6 +196,20 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
       }
     }
   }, [isOpen, totalAmount, getAutoPrintStorageKey]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      if (isSubmitting) return;
+      if (isDirty) return;
+      onClose();
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, onClose, isDirty, isSubmitting]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -390,12 +413,20 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div
+        className="absolute inset-0 bg-black/50"
+        onMouseDown={(e) => {
+          if (e.target !== e.currentTarget) return;
+          if (isSubmitting) return;
+          if (isDirty) return;
+          onClose();
+        }}
+      />
 
       {/* Modal */}
       <div className="relative w-full max-w-lg mx-4 max-h-[90vh] bg-white dark:bg-gray-900 rounded-xl shadow-2xl flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="shrink-0 flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-orange-500 dark:bg-orange-600">
+        <div className="shrink-0 flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-brand-500 dark:bg-brand-600">
           <div className="flex items-center gap-3">
             <FaReceipt className="w-5 h-5 text-white" />
             <h2 className="text-lg font-semibold text-white">
@@ -423,19 +454,19 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
           </div>
 
           {/* Total Amount */}
-          <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4 border border-orange-200 dark:border-orange-800">
+          <div className="bg-brand-50 dark:bg-brand-900/20 rounded-lg p-4 border border-brand-200 dark:border-brand-800">
             <div className="text-center">
-              <p className="text-sm text-orange-600 dark:text-orange-400 font-medium mb-1">
+              <p className="text-sm text-brand-600 dark:text-brand-400 font-medium mb-1">
                 {t('pos.payment.totalAmount') || 'Total Amount'}
               </p>
-              <p className={`text-3xl font-bold ${discountAmount > 0 ? 'text-gray-400 line-through text-2xl' : 'text-orange-600 dark:text-orange-400'}`}>
+              <p className={`text-3xl font-bold ${discountAmount > 0 ? 'text-gray-400 line-through text-2xl' : 'text-brand-600 dark:text-brand-400'}`}>
                 {formatMoney(totalAmount)}
               </p>
             </div>
 
             {/* Discount Section */}
             {discountAmount > 0 && (
-              <div className="mt-2 pt-2 border-t border-orange-200 dark:border-orange-700">
+              <div className="mt-2 pt-2 border-t border-brand-200 dark:border-brand-700">
                 <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
                   <span>
                     {t('pos.payment.discount') || 'Discount'}
@@ -443,7 +474,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
                   </span>
                   <span>-{formatMoney(discountAmount)}</span>
                 </div>
-                <div className="flex justify-between text-xl font-bold text-orange-600 dark:text-orange-400 mt-1">
+                <div className="flex justify-between text-xl font-bold text-brand-600 dark:text-brand-400 mt-1">
                   <span>{t('pos.payment.finalTotal') || 'Final Total'}</span>
                   <span>{formatMoney(finalTotal)}</span>
                 </div>
@@ -454,7 +485,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
             <button
               type="button"
               onClick={() => setShowDiscount(!showDiscount)}
-              className="mt-3 w-full py-2 text-sm text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 transition-colors flex items-center justify-center gap-2"
+              className="mt-3 w-full py-2 text-sm text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 transition-colors flex items-center justify-center gap-2"
             >
               <FaPercent className="w-3 h-3" />
               {showDiscount ? (t('pos.payment.hideDiscount') || 'Hide Discount') : (t('pos.payment.addDiscount') || 'Add Discount')}
@@ -462,13 +493,13 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
 
             {/* Discount Input */}
             {showDiscount && (
-              <div className="mt-3 pt-3 border-t border-orange-200 dark:border-orange-700">
+              <div className="mt-3 pt-3 border-t border-brand-200 dark:border-brand-700">
                 <div className="flex gap-2 mb-2">
                   <button
                     type="button"
                     onClick={() => setDiscountType('percentage')}
                     className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${discountType === 'percentage'
-                        ? 'bg-orange-500 text-white'
+                        ? 'bg-brand-500 text-white'
                         : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
                       }`}
                   >
@@ -479,7 +510,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
                     type="button"
                     onClick={() => setDiscountType('fixed')}
                     className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${discountType === 'fixed'
-                        ? 'bg-orange-500 text-white'
+                        ? 'bg-brand-500 text-white'
                         : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
                       }`}
                   >
@@ -496,7 +527,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
                     value={discountValue || ''}
                     onChange={(e) => setDiscountValue(parseFloat(e.target.value) || 0)}
                     placeholder={discountType === 'percentage' ? '0' : formatMoney(0)}
-                    className="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 border-none text-sm font-semibold text-gray-900 dark:text-white text-center focus:ring-2 focus:ring-orange-300 dark:focus:ring-orange-600"
+                    className="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 border-none text-sm font-semibold text-gray-900 dark:text-white text-center focus:ring-2 focus:ring-brand-300 dark:focus:ring-brand-600"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
                     {discountType === 'percentage' ? '%' : currency}
@@ -511,7 +542,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
                         type="button"
                         onClick={() => setDiscountValue(pct)}
                         className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${discountValue === pct
-                            ? 'bg-orange-500 text-white'
+                            ? 'bg-brand-500 text-white'
                             : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
                           }`}
                       >
@@ -539,19 +570,19 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
                   className={`
                     relative p-4 rounded-lg border-2 text-center transition-all duration-150
                     ${paymentMethod === method.value
-                      ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20'
+                      ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20'
                       : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'
                     }
                     ${!method.enabled
                       ? 'opacity-50 cursor-not-allowed'
-                      : 'hover:border-orange-300 dark:hover:border-orange-700 cursor-pointer'
+                      : 'hover:border-brand-300 dark:hover:border-brand-700 cursor-pointer'
                     }
                   `}
                 >
                   <div className={`
                     flex flex-col items-center gap-2
                     ${paymentMethod === method.value
-                      ? 'text-orange-600 dark:text-orange-400'
+                      ? 'text-brand-600 dark:text-brand-400'
                       : 'text-gray-600 dark:text-gray-400'
                     }
                   `}>
@@ -561,7 +592,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
                     </span>
                   </div>
                   {paymentMethod === method.value && (
-                    <span className="absolute top-2 right-2 w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center">
+                    <span className="absolute top-2 right-2 w-5 h-5 bg-brand-500 rounded-full flex items-center justify-center">
                       <FaCheck className="w-3 h-3 text-white" />
                     </span>
                   )}
@@ -592,14 +623,14 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
                   value={cashAmount || ''}
                   onChange={(e) => setCashAmount(parseFloat(e.target.value) || 0)}
                   placeholder={formatMoney(0)}
-                  className="w-full px-4 py-3 rounded-lg bg-gray-100 dark:bg-gray-800 border-none text-lg font-semibold text-gray-900 dark:text-white text-center focus:ring-2 focus:ring-orange-300 dark:focus:ring-orange-600"
+                  className="w-full px-4 py-3 rounded-lg bg-gray-100 dark:bg-gray-800 border-none text-lg font-semibold text-gray-900 dark:text-white text-center focus:ring-2 focus:ring-brand-300 dark:focus:ring-brand-600"
                 />
               </div>
 
               {/* Card Amount */}
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <FaCreditCard className="w-4 h-4 text-blue-600" />
+                  <FaCreditCard className="w-4 h-4 text-brand-600 dark:text-brand-400" />
                   <span className="text-sm text-gray-600 dark:text-gray-400">
                     {t('pos.payment.card') || 'Card'}
                   </span>
@@ -611,7 +642,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
                   value={cardAmount || ''}
                   onChange={(e) => setCardAmount(parseFloat(e.target.value) || 0)}
                   placeholder={formatMoney(0)}
-                  className="w-full px-4 py-3 rounded-lg bg-gray-100 dark:bg-gray-800 border-none text-lg font-semibold text-gray-900 dark:text-white text-center focus:ring-2 focus:ring-orange-300 dark:focus:ring-orange-600"
+                  className="w-full px-4 py-3 rounded-lg bg-gray-100 dark:bg-gray-800 border-none text-lg font-semibold text-gray-900 dark:text-white text-center focus:ring-2 focus:ring-brand-300 dark:focus:ring-brand-600"
                 />
               </div>
 
@@ -654,7 +685,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
                   type="button"
                   onClick={() => setAmount(finalTotal)}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${amount === finalTotal
-                      ? 'bg-orange-500 text-white'
+                      ? 'bg-brand-500 text-white'
                       : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                     }`}
                 >
@@ -666,7 +697,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
                     type="button"
                     onClick={() => setAmount(value)}
                     className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${amount === value
-                        ? 'bg-orange-500 text-white'
+                        ? 'bg-brand-500 text-white'
                         : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                       }`}
                   >
@@ -682,7 +713,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
                 min={finalTotal}
                 value={amount}
                 onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
-                className="w-full px-4 py-3 rounded-lg bg-gray-100 dark:bg-gray-800 border-none text-lg font-semibold text-gray-900 dark:text-white text-center focus:ring-2 focus:ring-orange-300 dark:focus:ring-orange-600"
+                className="w-full px-4 py-3 rounded-lg bg-gray-100 dark:bg-gray-800 border-none text-lg font-semibold text-gray-900 dark:text-white text-center focus:ring-2 focus:ring-brand-300 dark:focus:ring-brand-600"
               />
 
               {/* Change */}
@@ -708,7 +739,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder={t('pos.payment.notesPlaceholder') || 'Add payment notes...'}
-              className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 border-none text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 resize-none focus:ring-2 focus:ring-orange-300 dark:focus:ring-orange-600"
+              className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 border-none text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 resize-none focus:ring-2 focus:ring-brand-300 dark:focus:ring-brand-600"
               rows={2}
             />
           </div>
@@ -727,7 +758,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
                 title={t('pos.payment.printReceipt') || 'Print Receipt'}
               >
                 {printReceipt ? (
-                  <FaToggleOn className="w-7 h-7 text-orange-500" />
+                  <FaToggleOn className="w-7 h-7 text-brand-500" />
                 ) : (
                   <FaToggleOff className="w-7 h-7 text-gray-400" />
                 )}

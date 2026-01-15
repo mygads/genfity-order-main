@@ -211,7 +211,7 @@ export default function CreateSpecialPricePage() {
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
                                 placeholder="e.g., Lunch Special"
-                                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-primary-400 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-brand-400 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                             />
                         </div>
                         <div>
@@ -221,7 +221,7 @@ export default function CreateSpecialPricePage() {
                             <select
                                 value={selectedMenuBookId}
                                 onChange={(e) => handleMenuBookChange(e.target.value)}
-                                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-primary-400 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-brand-400 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                             >
                                 <option value="">Select a menu book</option>
                                 {menuBooks.map(book => (
@@ -243,7 +243,7 @@ export default function CreateSpecialPricePage() {
                                 type="date"
                                 value={startDate}
                                 onChange={(e) => setStartDate(e.target.value)}
-                                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-primary-400 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-brand-400 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                             />
                         </div>
                         <div>
@@ -254,7 +254,7 @@ export default function CreateSpecialPricePage() {
                                 type="date"
                                 value={endDate}
                                 onChange={(e) => setEndDate(e.target.value)}
-                                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-primary-400 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-brand-400 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                             />
                         </div>
                     </div>
@@ -271,7 +271,7 @@ export default function CreateSpecialPricePage() {
                                     type="button"
                                     onClick={() => handleDayToggle(day.value)}
                                     className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${applicableDays.includes(day.value)
-                                        ? "bg-primary-500 text-white"
+                                        ? "bg-brand-500 text-white"
                                         : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
                                         }`}
                                 >
@@ -291,7 +291,7 @@ export default function CreateSpecialPricePage() {
                                     onChange={(e) => setIsAllDay(e.target.checked)}
                                     className="peer sr-only"
                                 />
-                                <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all peer-checked:bg-primary-500 peer-checked:after:translate-x-full dark:bg-gray-700"></div>
+                                <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all peer-checked:bg-brand-500 peer-checked:after:translate-x-full dark:bg-gray-700"></div>
                             </label>
                             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">All Day</span>
                         </div>
@@ -355,7 +355,7 @@ export default function CreateSpecialPricePage() {
                                                             value={item.promoPrice}
                                                             onChange={(e) => handlePromoPriceChange(item.menuId, Number(e.target.value))}
                                                             min="0"
-                                                            className="h-9 w-32 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 focus:border-primary-400 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                                            className="h-9 w-32 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 focus:border-brand-400 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                                                         />
                                                     </td>
                                                     <td className="px-4 py-3">

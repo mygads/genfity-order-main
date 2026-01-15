@@ -34,13 +34,13 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ) => {
     // Variant styles
     const variantStyles = {
-      primary: 'bg-[#FF6B35] text-white hover:bg-[#E55A2B] disabled:bg-[#FFB399] disabled:cursor-not-allowed',
+      primary: 'bg-brand-500 text-white hover:bg-brand-600 disabled:bg-brand-200 disabled:cursor-not-allowed',
       secondary:
-        'bg-transparent text-[#FF6B35] border-2 border-[#FF6B35] hover:bg-[#FFF5F0] disabled:opacity-50 disabled:cursor-not-allowed',
+        'bg-transparent text-brand-600 border-2 border-brand-500 hover:bg-brand-50 disabled:opacity-50 disabled:cursor-not-allowed',
       ghost:
         'bg-transparent text-[#1A1A1A] hover:bg-[#F5F5F5] disabled:opacity-50 disabled:cursor-not-allowed',
       danger:
-        'bg-[#FF5252] text-white hover:bg-[#E04444] disabled:opacity-50 disabled:cursor-not-allowed',
+        'bg-error-600 text-white hover:bg-error-700 disabled:opacity-50 disabled:cursor-not-allowed',
     };
 
     // Size styles
@@ -60,7 +60,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           'inline-flex items-center justify-center gap-2',
           'rounded-lg font-semibold',
           'transition-all duration-200 ease-in-out',
-          'focus:outline-none focus:ring-2 focus:ring-[#FF6B35] focus:ring-offset-2',
+          'focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2',
           'active:scale-[0.98]',
 
           // Variant styles

@@ -670,14 +670,14 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                             onChange={(e) => setTableNumberDraft(e.target.value)}
                             maxLength={50}
                             placeholder="Table number"
-                            className="h-9 w-40 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 outline-none focus:border-primary-300 focus:ring-2 focus:ring-primary-200 dark:border-gray-800 dark:bg-gray-900 dark:text-white dark:focus:border-primary-700 dark:focus:ring-primary-900/40"
+                            className="h-9 w-40 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-200 dark:border-gray-800 dark:bg-gray-900 dark:text-white dark:focus:border-brand-700 dark:focus:ring-brand-900/40"
                             autoFocus
                           />
                           <button
                             type="button"
                             onClick={handleSaveTableNumber}
                             disabled={savingTableNumber}
-                            className="inline-flex h-9 items-center justify-center rounded-lg bg-primary-600 px-3 text-xs font-semibold text-white hover:bg-primary-700 disabled:opacity-60"
+                            className="inline-flex h-9 items-center justify-center rounded-lg bg-brand-600 px-3 text-xs font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
                             title="Save"
                           >
                             {savingTableNumber ? <FaSpinner className="h-3.5 w-3.5 animate-spin" /> : <FaCheck className="h-3.5 w-3.5" />}
@@ -740,7 +740,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                   </p>
                   <div className="mt-2 grid grid-cols-2 gap-3">
                     <div className="flex items-start gap-2">
-                      <FaCalendarCheck className="mt-0.5 h-4 w-4 text-purple-600 dark:text-purple-400" />
+                      <FaCalendarCheck className="mt-0.5 h-4 w-4 text-brand-600 dark:text-brand-400" />
                       <div>
                         <p className="text-xs text-gray-500 dark:text-gray-400">Date & time</p>
                         <p className="text-sm font-semibold text-gray-900 dark:text-white">
@@ -752,7 +752,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                       </div>
                     </div>
                     <div className="flex items-start gap-2">
-                      <FaUsers className="mt-0.5 h-4 w-4 text-purple-600 dark:text-purple-400" />
+                      <FaUsers className="mt-0.5 h-4 w-4 text-brand-600 dark:text-brand-400" />
                       <div>
                         <p className="text-xs text-gray-500 dark:text-gray-400">Party size</p>
                         <p className="text-sm font-semibold text-gray-900 dark:text-white">
@@ -932,7 +932,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                             )}
                           </div>
                           {/* Qty Badge */}
-                          <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-orange-500 text-xs font-bold text-white shadow-sm">
+                          <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-brand-500 text-xs font-bold text-white shadow-sm">
                             {item.quantity}
                           </span>
                         </div>
@@ -1127,10 +1127,10 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                 </div>
 
                 {/* Total */}
-                <div className="border-t-2 border-primary-200 dark:border-primary-800 bg-primary-50 dark:bg-primary-900/20 px-4 py-3">
+                <div className="border-t-2 border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-900/20 px-4 py-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Total</span>
-                    <span className="text-xl font-bold text-primary-600 dark:text-primary-400">
+                    <span className="text-xl font-bold text-brand-600 dark:text-brand-400">
                       {formatCurrency(Number(order.totalAmount))}
                     </span>
                   </div>
@@ -1231,7 +1231,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                                 ? 'bg-error-500 text-white hover:bg-error-600'
                                 : isCompleted
                                   ? 'bg-success-500 text-white hover:bg-success-600'
-                                  : 'bg-primary-500 text-white hover:bg-primary-600'
+                                  : 'bg-brand-500 text-white hover:bg-brand-600'
                                 }`}
                             >
                               {updating ? (
@@ -1263,7 +1263,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
             {/* Payment Modal */}
             {allowPaymentRecording && showPaymentModal && (
               <div
-                className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-[1px] p-4"
+                className="fixed inset-0 z-60 flex items-center justify-center bg-black/50 backdrop-blur-[1px] p-4"
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowPaymentModal(false);
@@ -1293,7 +1293,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                     <button
                       onClick={() => handleRecordPayment('CARD_ON_COUNTER', Number(order.totalAmount))}
                       disabled={updating}
-                      className="flex h-14 w-full items-center justify-center gap-3 rounded-lg bg-primary-500 px-4 text-white hover:bg-primary-600 disabled:opacity-50"
+                      className="flex h-14 w-full items-center justify-center gap-3 rounded-lg bg-brand-500 px-4 text-white hover:bg-brand-600 disabled:opacity-50"
                     >
                       <FaCreditCard className="h-5 w-5" />
                       <div className="text-left">

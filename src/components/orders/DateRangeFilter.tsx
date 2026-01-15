@@ -113,7 +113,7 @@ export const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
             onClick={() => handlePresetClick(preset.id)}
             className={`h-10 px-4 rounded-lg text-sm font-medium transition-colors duration-150 ${
               selectedPreset === preset.id
-                ? 'bg-primary-500 text-white'
+                ? 'bg-brand-500 text-white'
                 : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
             }`}
           >

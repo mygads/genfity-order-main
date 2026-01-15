@@ -6,6 +6,7 @@ import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { useToast } from "@/hooks/useToast";
 import ToastContainer from "@/components/ui/ToastContainer";
 import ConfirmDialog from "@/components/modals/ConfirmDialog";
+import { TableActionButton } from "@/components/common/TableActionButton";
 import { FaUpload, FaTrash, FaTimes, FaSave, FaArrowLeft, FaPlus, FaCheck } from "react-icons/fa";
 
 interface PendingPhoto {
@@ -575,15 +576,14 @@ export default function BulkUploadStockPhotosPage() {
 
                     {/* Actions */}
                     <td className="px-4 py-3 text-right">
-                      <button
-                        type="button"
+                      <TableActionButton
+                        icon={FaTrash}
+                        tone="danger"
                         onClick={() => setShowDeleteConfirm(photo.id)}
                         disabled={photo.uploadStatus === "uploading" || isSaving}
-                        className="inline-flex items-center justify-center rounded-lg p-2 text-red-600 hover:bg-red-50 disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-900/20"
                         title="Remove"
-                      >
-                        <FaTrash className="h-4 w-4" />
-                      </button>
+                        aria-label="Remove"
+                      />
                     </td>
                   </tr>
                 ))}

@@ -96,7 +96,7 @@ export default function DashboardSidebar({ role }: DashboardSidebarProps) {
                 <Link
                   href={item.href}
                   className={`flex items-center gap-3 rounded-lg px-4 py-3 transition ${isActive
-                    ? 'bg-orange-500 text-white'
+                    ? 'bg-brand-500 text-white'
                     : 'text-gray-300 hover:bg-gray-800 hover:text-white'
                     }`}
                 >

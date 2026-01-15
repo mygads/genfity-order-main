@@ -8,6 +8,7 @@ import type { UserRole, UserNotificationCategory } from '@prisma/client';
 import {
     normalizeNotificationSettings,
     type MerchantTransactionToggleKey,
+    type StaffActivityToggleKey,
 } from '@/lib/utils/notificationSettings';
 
 interface CreateNotificationParams {
@@ -47,6 +48,24 @@ class UserNotificationService {
 
             return 'lowStock';
         }
+
+        return null;
+    }
+
+    private resolveStaffActivityToggle(
+        category: UserNotificationCategory,
+        metadata?: Record<string, unknown> | null,
+        title?: string
+    ): StaffActivityToggleKey | null {
+        if (category !== 'STAFF') return null;
+
+        const type = typeof metadata?.type === 'string' ? metadata.type : undefined;
+        if (type === 'STAFF_LOGIN') return 'login';
+        if (type === 'STAFF_LOGOUT') return 'logout';
+
+        const lower = title?.toLowerCase();
+        if (lower?.includes('logged out')) return 'logout';
+        if (lower?.includes('logged in')) return 'login';
 
         return null;
     }
@@ -131,6 +150,12 @@ class UserNotificationService {
             title
         );
 
+        const staffActivityToggleKey = this.resolveStaffActivityToggle(
+            category,
+            options.metadata ?? null,
+            title
+        );
+
         // Get all users associated with this merchant with permissions info
         const merchantUsers = await prisma.merchantUser.findMany({
             where: {
@@ -162,16 +187,31 @@ class UserNotificationService {
         });
 
         const finalEligibleUsers = await (async () => {
-            if (!transactionToggleKey) return eligibleUsers;
+            let filtered = eligibleUsers;
 
-            const staffUserIds = eligibleUsers.filter(u => u.role === 'STAFF').map(u => u.userId);
-            const settingsMap = await this.getUserSettingsMap(staffUserIds);
+            if (transactionToggleKey) {
+                const staffUserIds = filtered.filter(u => u.role === 'STAFF').map(u => u.userId);
+                const settingsMap = await this.getUserSettingsMap(staffUserIds);
 
-            return eligibleUsers.filter(mu => {
-                if (mu.role === 'OWNER') return true;
-                const settings = settingsMap.get(mu.userId.toString()) ?? normalizeNotificationSettings(undefined);
-                return settings.merchant[transactionToggleKey];
-            });
+                filtered = filtered.filter(mu => {
+                    if (mu.role === 'OWNER') return true;
+                    const settings = settingsMap.get(mu.userId.toString()) ?? normalizeNotificationSettings(undefined);
+                    return settings.merchant[transactionToggleKey];
+                });
+            }
+
+            if (staffActivityToggleKey) {
+                const ownerUserIds = filtered.filter(u => u.role === 'OWNER').map(u => u.userId);
+                const settingsMap = await this.getUserSettingsMap(ownerUserIds);
+
+                filtered = filtered.filter(mu => {
+                    if (mu.role !== 'OWNER') return false;
+                    const settings = settingsMap.get(mu.userId.toString()) ?? normalizeNotificationSettings(undefined);
+                    return settings.staff[staffActivityToggleKey];
+                });
+            }
+
+            return filtered;
         })();
 
         // Create notifications for each eligible user
@@ -552,7 +592,24 @@ class UserNotificationService {
             {
                 targetRole: 'MERCHANT_OWNER',
                 actionUrl: '/admin/dashboard/staff',
-                metadata: { staffName, staffEmail },
+                metadata: { type: 'STAFF_LOGIN', staffName, staffEmail },
+            }
+        );
+    }
+
+    /**
+     * Notify merchant owner about staff logout
+     */
+    async notifyStaffLogout(merchantId: bigint, staffName: string, staffEmail: string) {
+        return this.createForMerchant(
+            merchantId,
+            'STAFF',
+            'Staff Logged Out',
+            `${staffName} (${staffEmail}) has logged out.`,
+            {
+                targetRole: 'MERCHANT_OWNER',
+                actionUrl: '/admin/dashboard/staff',
+                metadata: { type: 'STAFF_LOGOUT', staffName, staffEmail },
             }
         );
     }

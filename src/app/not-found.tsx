@@ -4,11 +4,17 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import AlertDialog from "@/components/modals/AlertDialog";
 
 export default function NotFound() {
   const router = useRouter();
   const [merchantCode, setMerchantCode] = useState('');
   const [showScanner, setShowScanner] = useState(false);
+  const [alertState, setAlertState] = useState<{ isOpen: boolean; title: string; message: string }>({
+    isOpen: false,
+    title: '',
+    message: ''
+  });
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -35,7 +41,11 @@ export default function NotFound() {
     } catch (err) {
       console.error('Camera access denied:', err);
       setShowScanner(false);
-      alert('Unable to access camera. Please check permissions.');
+      setAlertState({
+        isOpen: true,
+        title: 'Camera Access Required',
+        message: 'Unable to access camera. Please check permissions.'
+      });
     }
   };
 
@@ -102,7 +112,7 @@ export default function NotFound() {
             <label className="block text-sm font-medium text-gray-700 mb-2 text-center">
               Enter Merchant Code
             </label>
-            <div className="flex items-center bg-gray-50 border border-gray-300 rounded-xl overflow-hidden focus-within:border-orange-500 focus-within:ring-1 focus-within:ring-orange-500 transition-all">
+            <div className="flex items-center bg-gray-50 border border-gray-300 rounded-xl overflow-hidden focus-within:border-brand-500 focus-within:ring-1 focus-within:ring-brand-500 transition-all">
               <input
                 type="text"
                 value={merchantCode}
@@ -115,7 +125,7 @@ export default function NotFound() {
                 <button
                   type="button"
                   onClick={startScanner}
-                  className="p-3 text-gray-400 hover:text-orange-500 transition-colors hover:bg-gray-100"
+                  className="p-3 text-gray-400 hover:text-brand-500 transition-colors hover:bg-gray-100"
                   title="Scan QR Code"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -131,7 +141,7 @@ export default function NotFound() {
                 <button
                   type="submit"
                   disabled={!merchantCode.trim()}
-                  className="p-3 text-gray-400 hover:text-orange-500 transition-colors disabled:opacity-30 hover:bg-gray-100"
+                  className="p-3 text-gray-400 hover:text-brand-500 transition-colors disabled:opacity-30 hover:bg-gray-100"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -152,7 +162,7 @@ export default function NotFound() {
           {/* Back to Home Button */}
           <Link
             href="/"
-            className="w-full max-w-xs h-12 flex items-center justify-center bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm rounded-xl transition-colors shadow-sm"
+            className="w-full max-w-xs h-12 flex items-center justify-center bg-brand-500 hover:bg-brand-600 text-white font-semibold text-sm rounded-xl transition-colors shadow-sm"
           >
             Back to Home Page
           </Link>
@@ -205,7 +215,7 @@ export default function NotFound() {
                     <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-white rounded-br"></div>
                     {/* Scan line animation */}
                     <div
-                      className="absolute inset-x-0 h-0.5 bg-orange-500"
+                      className="absolute inset-x-0 h-0.5 bg-brand-500"
                       style={{
                         animation: 'scan 2s ease-in-out infinite'
                       }}
@@ -232,6 +242,13 @@ export default function NotFound() {
           50% { top: calc(100% - 2px); }
         }
       `}</style>
+      <AlertDialog
+        isOpen={alertState.isOpen}
+        title={alertState.title}
+        message={alertState.message}
+        variant="warning"
+        onClose={() => setAlertState({ isOpen: false, title: '', message: '' })}
+      />
     </div>
   );
 }

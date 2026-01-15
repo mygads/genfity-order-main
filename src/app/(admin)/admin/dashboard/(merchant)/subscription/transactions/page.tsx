@@ -5,6 +5,7 @@ import Link from "next/link";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { useSWRWithAuth } from "@/hooks/useSWRWithAuth";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import AlertDialog from "@/components/modals/AlertDialog";
 import { FaDownload, FaSearch, FaChevronLeft, FaChevronRight, FaTimes } from "react-icons/fa";
 
 interface TransactionData {
@@ -54,6 +55,8 @@ type FilterType = 'all' | 'DEPOSIT' | 'ORDER_FEE' | 'SUBSCRIPTION' | 'ADJUSTMENT
  */
 export default function TransactionsPage() {
     const { t, locale } = useTranslation();
+
+    const [exportErrorOpen, setExportErrorOpen] = useState(false);
     
     // Filter states
     const [filterType, setFilterType] = useState<FilterType>('all');
@@ -187,7 +190,7 @@ export default function TransactionsPage() {
             document.body.removeChild(a);
         } catch (err) {
             console.error('Export error:', err);
-            alert(t('subscription.history.exportError') || 'Failed to export transactions');
+            setExportErrorOpen(true);
         }
     };
 
@@ -272,7 +275,7 @@ export default function TransactionsPage() {
                     </p>
                     <button
                         onClick={() => window.location.reload()}
-                        className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+                        className="px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600"
                     >
                         {t('subscription.tryAgain')}
                     </button>
@@ -284,6 +287,14 @@ export default function TransactionsPage() {
     return (
         <div>
             <PageBreadcrumb pageTitle={t('subscription.history.pageTitle')} />
+
+            <AlertDialog
+                isOpen={exportErrorOpen}
+                title={t('common.error') || 'Error'}
+                message={t('subscription.history.exportError') || 'Failed to export transactions'}
+                variant="danger"
+                onClose={() => setExportErrorOpen(false)}
+            />
 
             {/* Header with Balance and Export */}
             <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -305,7 +316,7 @@ export default function TransactionsPage() {
                     )}
                     <button
                         onClick={handleExport}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-500 text-white hover:bg-orange-600 transition-colors"
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-500 text-white hover:bg-brand-600 transition-colors"
                     >
                         <FaDownload className="w-4 h-4" />
                         <span className="hidden sm:inline">{t('subscription.history.export') || 'Export'}</span>
@@ -328,7 +339,7 @@ export default function TransactionsPage() {
                                 onChange={(e) => handleSearchChange(e.target.value)}
                                 className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 
                                     bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                                    focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                    focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                             />
                         </div>
                         
@@ -340,7 +351,7 @@ export default function TransactionsPage() {
                                 onChange={(e) => handleDateChange('start', e.target.value)}
                                 className="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 
                                     bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                                    focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                    focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                             />
                             <span className="self-center text-gray-500 hidden sm:block">-</span>
                             <input
@@ -349,7 +360,7 @@ export default function TransactionsPage() {
                                 onChange={(e) => handleDateChange('end', e.target.value)}
                                 className="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 
                                     bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                                    focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                    focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                             />
                         </div>
 
@@ -376,7 +387,7 @@ export default function TransactionsPage() {
                                 onClick={() => handleFilterChange(tab.key)}
                                 className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors
                                     ${filterType === tab.key
-                                        ? 'bg-orange-500 text-white'
+                                        ? 'bg-brand-500 text-white'
                                         : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                                     }`}
                             >

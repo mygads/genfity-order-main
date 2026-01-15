@@ -138,7 +138,7 @@ export default function InfluencerSettingsPage() {
                         onClick={() => setActiveTab('commission')}
                         className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2
               ${activeTab === 'commission'
-                                ? 'bg-orange-500 text-white'
+                                ? 'bg-brand-500 text-white'
                                 : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200'
                             }`}
                     >
@@ -149,7 +149,7 @@ export default function InfluencerSettingsPage() {
                         onClick={() => setActiveTab('withdrawal')}
                         className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2
               ${activeTab === 'withdrawal'
-                                ? 'bg-orange-500 text-white'
+                                ? 'bg-brand-500 text-white'
                                 : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200'
                             }`}
                     >
@@ -160,7 +160,7 @@ export default function InfluencerSettingsPage() {
                         onClick={() => setActiveTab('platformFees')}
                         className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2
               ${activeTab === 'platformFees'
-                                ? 'bg-orange-500 text-white'
+                                ? 'bg-brand-500 text-white'
                                 : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200'
                             }`}
                     >
@@ -171,7 +171,7 @@ export default function InfluencerSettingsPage() {
                         onClick={() => setActiveTab('merchantWithdrawal')}
                         className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2
               ${activeTab === 'merchantWithdrawal'
-                                ? 'bg-orange-500 text-white'
+                                ? 'bg-brand-500 text-white'
                                 : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200'
                             }`}
                     >
@@ -192,12 +192,12 @@ export default function InfluencerSettingsPage() {
 
                         {/* Commission Info Cards */}
                         <div className="grid gap-4 sm:grid-cols-2 mb-6">
-                            <div className="p-4 rounded-lg bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800">
+                            <div className="p-4 rounded-lg bg-brand-50 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-800">
                                 <div className="flex items-center gap-2 mb-2">
-                                    <FaDollarSign className="w-5 h-5 text-orange-600 dark:text-orange-400" />
-                                    <span className="font-medium text-orange-900 dark:text-orange-200">First Payment</span>
+                                    <FaDollarSign className="w-5 h-5 text-brand-600 dark:text-brand-400" />
+                                    <span className="font-medium text-brand-900 dark:text-brand-200">First Payment</span>
                                 </div>
-                                <p className="text-xs text-orange-700 dark:text-orange-300">
+                                <p className="text-xs text-brand-700 dark:text-brand-300">
                                     Commission when merchant makes their first deposit or subscription payment after signing up via referral.
                                 </p>
                             </div>
@@ -228,7 +228,7 @@ export default function InfluencerSettingsPage() {
                                         step={0.5}
                                         className="w-full px-4 py-2 pr-12 rounded-lg border border-gray-300 dark:border-gray-600 
                       bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                      focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                      focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                                     />
                                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500">%</span>
                                 </div>
@@ -250,7 +250,7 @@ export default function InfluencerSettingsPage() {
                                         step={0.5}
                                         className="w-full px-4 py-2 pr-12 rounded-lg border border-gray-300 dark:border-gray-600 
                       bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                      focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                      focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                                     />
                                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500">%</span>
                                 </div>
@@ -264,7 +264,7 @@ export default function InfluencerSettingsPage() {
                             onClick={handleSubmit}
                             disabled={isSubmitting}
                             className="px-6 py-2 rounded-lg font-medium text-white
-                bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 transition-colors"
+                    bg-brand-500 hover:bg-brand-600 disabled:bg-gray-400 transition-colors"
                         >
                             {isSubmitting ? t("admin.influencerSettings.saving") : t("admin.influencerSettings.saveChanges")}
                         </button>
@@ -298,7 +298,7 @@ export default function InfluencerSettingsPage() {
                                         onChange={(e) => handleChange('influencerMinWithdrawalIdr', Number(e.target.value))}
                                         className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 
                       bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                      focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                      focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                                     />
                                 </div>
                                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -323,7 +323,7 @@ export default function InfluencerSettingsPage() {
                                         step="0.01"
                                         className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 
                       bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                      focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                      focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                                     />
                                 </div>
                                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -336,7 +336,7 @@ export default function InfluencerSettingsPage() {
                             onClick={handleSubmit}
                             disabled={isSubmitting}
                             className="px-6 py-2 rounded-lg font-medium text-white
-                bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 transition-colors"
+                    bg-brand-500 hover:bg-brand-600 disabled:bg-gray-400 transition-colors"
                         >
                             {isSubmitting ? t("admin.influencerSettings.saving") : t("admin.influencerSettings.saveChanges")}
                         </button>
@@ -355,12 +355,12 @@ export default function InfluencerSettingsPage() {
 
                         {/* Info Cards */}
                         <div className="grid gap-4 sm:grid-cols-2 mb-6">
-                            <div className="p-4 rounded-lg bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800">
+                            <div className="p-4 rounded-lg bg-brand-50 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-800">
                                 <div className="flex items-center gap-2 mb-2">
-                                    <FaPercent className="w-4 h-4 text-orange-600 dark:text-orange-400" />
-                                    <span className="font-medium text-orange-900 dark:text-orange-200">First Payment Fee</span>
+                                    <FaPercent className="w-4 h-4 text-brand-600 dark:text-brand-400" />
+                                    <span className="font-medium text-brand-900 dark:text-brand-200">First Payment Fee</span>
                                 </div>
-                                <p className="text-xs text-orange-700 dark:text-orange-300">
+                                <p className="text-xs text-brand-700 dark:text-brand-300">
                                     Platform fee taken from influencer&apos;s first payment commission.
                                 </p>
                             </div>
@@ -391,7 +391,7 @@ export default function InfluencerSettingsPage() {
                                         step={1}
                                         className="w-full px-4 py-2 pr-12 rounded-lg border border-gray-300 dark:border-gray-600 
                                             bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                                            focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                            focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                                     />
                                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500">%</span>
                                 </div>
@@ -413,7 +413,7 @@ export default function InfluencerSettingsPage() {
                                         step={1}
                                         className="w-full px-4 py-2 pr-12 rounded-lg border border-gray-300 dark:border-gray-600 
                                             bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                                            focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                            focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                                     />
                                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500">%</span>
                                 </div>
@@ -445,7 +445,7 @@ export default function InfluencerSettingsPage() {
                             onClick={handleSubmit}
                             disabled={isSubmitting}
                             className="px-6 py-2 rounded-lg font-medium text-white
-                bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 transition-colors"
+                    bg-brand-500 hover:bg-brand-600 disabled:bg-gray-400 transition-colors"
                         >
                             {isSubmitting ? t("admin.influencerSettings.saving") : t("admin.influencerSettings.saveChanges")}
                         </button>
@@ -495,7 +495,7 @@ export default function InfluencerSettingsPage() {
                                         step={10000}
                                         className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 
                       bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                      focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                      focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                                     />
                                 </div>
                                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -521,7 +521,7 @@ export default function InfluencerSettingsPage() {
                                         step={5}
                                         className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 
                       bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                      focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                      focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                                     />
                                 </div>
                                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -534,7 +534,7 @@ export default function InfluencerSettingsPage() {
                             onClick={handleSubmit}
                             disabled={isSubmitting}
                             className="px-6 py-2 rounded-lg font-medium text-white
-                bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 transition-colors"
+                    bg-brand-500 hover:bg-brand-600 disabled:bg-gray-400 transition-colors"
                         >
                             {isSubmitting ? t("admin.influencerSettings.saving") : t("admin.influencerSettings.saveChanges")}
                         </button>

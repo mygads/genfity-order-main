@@ -235,7 +235,7 @@ export default function BulkOperationsPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-500" />
       </div>
     );
   }
@@ -302,9 +302,9 @@ export default function BulkOperationsPage() {
 
       {/* Selection Info & Operations */}
       {selectedIds.length > 0 && (
-        <div className="bg-primary-50 dark:bg-primary-900/20 rounded-lg border border-primary-200 dark:border-primary-700 p-4 mb-4">
+        <div className="bg-brand-50 dark:bg-brand-900/20 rounded-lg border border-brand-200 dark:border-brand-700 p-4 mb-4">
           <div className="flex flex-wrap items-center gap-4">
-            <span className="text-sm font-medium text-primary-700 dark:text-primary-300">
+            <span className="text-sm font-medium text-brand-700 dark:text-brand-300">
               {selectedIds.length} item(s) selected
             </span>
 
@@ -381,7 +381,7 @@ export default function BulkOperationsPage() {
               className={`px-4 py-2 rounded-lg text-sm font-medium text-white
                         ${operation === 'DELETE' 
                           ? 'bg-red-500 hover:bg-red-600' 
-                          : 'bg-primary-500 hover:bg-primary-600'}
+                          : 'bg-brand-500 hover:bg-brand-600'}
                         disabled:opacity-50 disabled:cursor-not-allowed`}
             >
               {isProcessing ? 'Processing...' : 
@@ -414,7 +414,7 @@ export default function BulkOperationsPage() {
                       type="checkbox"
                       checked={selectAll}
                       onChange={handleSelectAll}
-                      className="w-4 h-4 rounded border-gray-300 text-primary-500 focus:ring-primary-500"
+                      className="w-4 h-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
                     />
                     <span className="text-xs font-medium text-gray-500 uppercase">Select All</span>
                   </label>
@@ -441,7 +441,7 @@ export default function BulkOperationsPage() {
                 <tr
                   key={menu.id}
                   className={`hover:bg-gray-50 dark:hover:bg-gray-700/50 ${
-                    selectedIds.includes(menu.id) ? 'bg-primary-50 dark:bg-primary-900/20' : ''
+                    selectedIds.includes(menu.id) ? 'bg-brand-50 dark:bg-brand-900/20' : ''
                   }`}
                 >
                   <td className="px-4 py-3">
@@ -449,7 +449,7 @@ export default function BulkOperationsPage() {
                       type="checkbox"
                       checked={selectedIds.includes(menu.id)}
                       onChange={() => handleSelect(menu.id)}
-                      className="w-4 h-4 rounded border-gray-300 text-primary-500 focus:ring-primary-500"
+                      className="w-4 h-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
                     />
                   </td>
                   <td className="px-4 py-3">

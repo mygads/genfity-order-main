@@ -13,6 +13,7 @@ import EditStaffModal from "@/components/staff/EditStaffModal";
 import { useSWRStatic } from "@/hooks/useSWRWithAuth";
 import { StaffPageSkeleton } from "@/components/common/SkeletonLoaders";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { TableActionButton } from "@/components/common/TableActionButton";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { useContextualHint, CONTEXTUAL_HINTS, useClickHereHint, CLICK_HINTS } from "@/lib/tutorial";
 import { STAFF_PERMISSIONS } from "@/lib/constants/permissions";
@@ -168,7 +169,7 @@ export default function StaffManagementPage() {
           </p>
           <button
             onClick={() => fetchStaff()}
-            className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+            className="px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors"
           >
             Retry
           </button>
@@ -721,50 +722,46 @@ export default function StaffManagementPage() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
-                          <button
+                          <TableActionButton
+                            icon={FaEye}
                             onClick={() => handleOpenView(member)}
-                            className="inline-flex items-center justify-center rounded-lg p-2 text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
                             title="View staff details"
-                          >
-                            <FaEye className="h-4 w-4" />
-                          </button>
+                            aria-label="View staff details"
+                          />
 
                           {/* Edit staff - accepted only */}
                           {member.role !== 'MERCHANT_OWNER' && isCurrentUserOwner && member.invitationStatus !== 'WAITING' && (
-                            <button
+                            <TableActionButton
+                              icon={FaEdit}
                               onClick={() => handleOpenEdit(member)}
-                              className="inline-flex items-center justify-center rounded-lg p-2 text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
                               title="Edit staff"
-                            >
-                              <FaEdit className="h-4 w-4" />
-                            </button>
+                              aria-label="Edit staff"
+                            />
                           )}
 
                           {/* Permissions button - only for non-owners, and only owner can see */}
                           {member.role !== 'MERCHANT_OWNER' && isCurrentUserOwner && (
-                            <button
+                            <TableActionButton
+                              icon={FaUserShield}
                               onClick={() => handleOpenPermissions(member)}
                               disabled={member.invitationStatus === 'WAITING'}
-                              className={`inline-flex items-center justify-center rounded-lg p-2 transition-colors ${
+                              title={
                                 member.invitationStatus === 'WAITING'
-                                  ? 'cursor-not-allowed text-gray-400 dark:text-gray-600'
-                                  : 'text-brand-600 hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-brand-900/20'
-                              }`}
-                              title={member.invitationStatus === 'WAITING' ? 'Invitation must be accepted first' : t("admin.staff.managePermissions")}
-                            >
-                              <FaUserShield className="h-4 w-4" />
-                            </button>
+                                  ? 'Invitation must be accepted first'
+                                  : t("admin.staff.managePermissions")
+                              }
+                              aria-label={t("admin.staff.managePermissions")}
+                            />
                           )}
                           {/* Delete button - only for non-owners */}
                           {member.role !== 'MERCHANT_OWNER' && isCurrentUserOwner && (
-                            <button
+                            <TableActionButton
+                              icon={FaTrash}
+                              tone="danger"
                               onClick={() => handleAskDeleteStaff(member)}
-                              className="inline-flex items-center justify-center rounded-lg p-2 text-error-600 transition-colors hover:bg-error-50 dark:text-error-400 dark:hover:bg-error-900/20"
                               aria-label={`Remove ${member.name}`}
                               title="Remove staff"
-                            >
-                              <FaTrash className="h-4 w-4" />
-                            </button>
+                            />
                           )}
                         </div>
                       </td>

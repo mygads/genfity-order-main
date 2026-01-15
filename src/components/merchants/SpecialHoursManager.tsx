@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/useToast";
 import { FaCalendar, FaPlus, FaFileImport, FaFileExport, FaChevronLeft, FaChevronRight, FaRedo, FaCopy } from "react-icons/fa";
 import IconToggle from "@/components/ui/IconToggle";
 import * as XLSX from "xlsx";
+import ConfirmDialog from "@/components/modals/ConfirmDialog";
 
 interface SpecialHour {
   id?: string;
@@ -53,6 +54,10 @@ export default function SpecialHoursManager({ token, embedded = false }: Special
   const { error: showError, success: showSuccess } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; id: string | null }>({
+    open: false,
+    id: null,
+  });
   const [specialHours, setSpecialHours] = useState<SpecialHour[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingHour, setEditingHour] = useState<SpecialHour | null>(null);
@@ -234,9 +239,7 @@ export default function SpecialHoursManager({ token, embedded = false }: Special
   };
 
   // Delete special hour
-  const deleteSpecialHour = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this special hour?')) return;
-
+  const performDeleteSpecialHour = async (id: string) => {
     try {
       const response = await fetch(`/api/merchant/special-hours/${id}`, {
         method: 'DELETE',
@@ -253,6 +256,10 @@ export default function SpecialHoursManager({ token, embedded = false }: Special
       console.error('Error deleting special hour:', error);
       showError('Error', 'Failed to delete');
     }
+  };
+
+  const deleteSpecialHour = (id: string) => {
+    setDeleteConfirm({ open: true, id });
   };
 
   // Copy existing special hour to new date
@@ -785,6 +792,22 @@ export default function SpecialHoursManager({ token, embedded = false }: Special
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={deleteConfirm.open}
+        title="Delete special hour"
+        message="Are you sure you want to delete this special hour?"
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+        onCancel={() => setDeleteConfirm({ open: false, id: null })}
+        onConfirm={async () => {
+          const id = deleteConfirm.id;
+          setDeleteConfirm({ open: false, id: null });
+          if (!id) return;
+          await performDeleteSpecialHour(id);
+        }}
+      />
     </div>
   );
 }

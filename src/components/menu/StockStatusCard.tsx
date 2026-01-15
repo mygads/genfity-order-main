@@ -90,7 +90,7 @@ export default function StockStatusCard({
   return (
     <div
       className={`relative flex flex-col rounded-2xl border-2 bg-white p-5 shadow-sm transition-all hover:shadow-md dark:bg-gray-900 ${isSelected
-          ? 'border-primary-400 ring-2 ring-primary-500/20 dark:border-primary-600'
+          ? 'border-brand-400 ring-2 ring-brand-500/20 dark:border-brand-600'
           : 'border-gray-200 dark:border-gray-800'
         }`}
     >
@@ -102,7 +102,7 @@ export default function StockStatusCard({
               type="checkbox"
               checked={isSelected}
               onChange={() => onSelect(id, type)}
-              className="mt-1 h-4 w-4 rounded border-gray-300 text-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-gray-700 dark:bg-gray-800"
+              className="mt-1 h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800"
             />
           )}
           <div className="flex-1 min-w-0">
@@ -117,7 +117,7 @@ export default function StockStatusCard({
             {/* Auto Reset Badge - always reserve space */}
             <div className="mt-2 h-6">
               {autoResetStock && dailyStockTemplate !== null ? (
-                <span className="inline-flex items-center gap-1 rounded-lg bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900/20 dark:text-blue-400">
+                <span className="inline-flex items-center gap-1 rounded-lg bg-brand-100 px-2 py-1 text-xs font-medium text-brand-700 dark:bg-brand-900/20 dark:text-brand-400">
                   <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
@@ -165,13 +165,13 @@ export default function StockStatusCard({
               type="number"
               value={newQty}
               onChange={(e) => setNewQty(parseInt(e.target.value) || 0)}
-              className="h-10 w-20 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+              className="h-10 w-20 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
               min="0"
               autoFocus
             />
             <button
               onClick={handleUpdate}
-              className="inline-flex h-10 items-center justify-center rounded-lg bg-primary-500 px-3 text-sm font-medium text-white hover:bg-primary-600"
+              className="inline-flex h-10 items-center justify-center rounded-lg bg-brand-500 px-3 text-sm font-medium text-white hover:bg-brand-600"
             >
               Save
             </button>
@@ -213,7 +213,7 @@ export default function StockStatusCard({
           <div className="flex gap-2">
             <button
               onClick={() => setIsEditing(true)}
-              className="flex-1 inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-primary-500 px-3 text-sm font-medium text-white transition-colors hover:bg-primary-600"
+              className="flex-1 inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-brand-500 px-3 text-sm font-medium text-white transition-colors hover:bg-brand-600"
             >
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />

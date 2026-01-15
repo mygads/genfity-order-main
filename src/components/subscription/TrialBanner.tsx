@@ -47,14 +47,14 @@ export default function TrialBanner({ daysRemaining, onDismiss }: TrialBannerPro
     const urgencyLevel = daysRemaining <= 3 ? 'urgent' : daysRemaining <= 7 ? 'warning' : 'normal';
 
     const bgClass = {
-        urgent: 'from-red-500 to-orange-500',
-        warning: 'from-orange-500 to-amber-500',
+        urgent: 'from-red-500 to-brand-500',
+        warning: 'from-brand-500 to-amber-500',
         normal: 'from-amber-500 to-yellow-500',
     }[urgencyLevel];
 
     const textClass = {
         urgent: 'text-red-50',
-        warning: 'text-orange-50',
+        warning: 'text-white',
         normal: 'text-amber-50',
     }[urgencyLevel];
 
@@ -64,7 +64,7 @@ export default function TrialBanner({ daysRemaining, onDismiss }: TrialBannerPro
         ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}
       `}
         >
-            <div className={`bg-gradient-to-r ${bgClass} rounded-xl shadow-lg p-4 min-w-[280px] max-w-[320px]`}>
+            <div className={`bg-linear-to-r ${bgClass} rounded-xl shadow-lg p-4 min-w-70 max-w-[320px]`}>
                 {/* Close button */}
                 <button
                     onClick={handleDismiss}
@@ -79,7 +79,7 @@ export default function TrialBanner({ daysRemaining, onDismiss }: TrialBannerPro
 
                 {/* Gift icon */}
                 <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
+                    <div className="shrink-0 w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
                         <svg className={`w-6 h-6 ${textClass}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                                 d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"

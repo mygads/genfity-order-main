@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { CloseIcon } from '@/icons';
+import { useModalImplicitClose } from '@/hooks/useModalImplicitClose';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { PERMISSION_GROUPS, STAFF_PERMISSIONS } from '@/lib/constants/permissions';
 import { getPermissionDescriptionFromT, getPermissionLabelFromT } from '@/lib/utils/permissionDisplay';
@@ -41,16 +42,11 @@ function formatDate(value?: string | null): string {
 export default function StaffViewModal({ isOpen, onClose, staff }: StaffViewModalProps) {
   const { t } = useTranslation();
 
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  const { onBackdropMouseDown } = useModalImplicitClose({
+    isOpen,
+    onClose,
+    disableImplicitClose: false,
+  });
 
   if (!isOpen || !staff) return null;
 
@@ -97,7 +93,7 @@ export default function StaffViewModal({ isOpen, onClose, staff }: StaffViewModa
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4"
-      onMouseDown={onClose}
+      onMouseDown={onBackdropMouseDown}
     >
       <div
         role="dialog"

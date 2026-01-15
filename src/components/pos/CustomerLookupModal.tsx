@@ -301,12 +301,34 @@ export const CustomerLookupModal: React.FC<CustomerLookupModalProps> = ({
         return date.toLocaleDateString();
     };
 
+    const isDirty = searchQuery.trim().length > 0;
+
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key !== 'Escape') return;
+            if (isDirty) return;
+            onClose();
+        };
+
+        document.addEventListener('keydown', onKeyDown);
+        return () => document.removeEventListener('keydown', onKeyDown);
+    }, [isOpen, onClose, isDirty]);
+
     if (!isOpen) return null;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
             {/* Backdrop */}
-            <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+            <div
+                className="absolute inset-0 bg-black/50"
+                onMouseDown={(e) => {
+                    if (e.target !== e.currentTarget) return;
+                    if (isDirty) return;
+                    onClose();
+                }}
+            />
 
             {/* Modal */}
             <div className="relative w-full max-w-md mx-4 max-h-[80vh] bg-white dark:bg-gray-900 rounded-xl shadow-2xl flex flex-col overflow-hidden">

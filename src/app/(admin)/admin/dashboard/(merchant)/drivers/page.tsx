@@ -116,7 +116,7 @@ export default function DriversManagementPage() {
           <p className="mb-6 text-sm leading-relaxed text-gray-600 dark:text-gray-400">{driversError?.message || "Failed to load drivers"}</p>
           <button
             onClick={() => fetchDrivers()}
-            className="rounded-lg bg-orange-500 px-4 py-2 text-white transition-colors hover:bg-orange-600"
+            className="rounded-lg bg-brand-500 px-4 py-2 text-white transition-colors hover:bg-brand-600"
           >
             Retry
           </button>

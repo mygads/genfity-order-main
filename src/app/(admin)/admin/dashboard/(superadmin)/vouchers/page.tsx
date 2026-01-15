@@ -4,6 +4,9 @@ import React, { useState } from "react";
 import { useSWRWithAuth } from "@/hooks/useSWRWithAuth";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
+import { TableActionButton } from "@/components/common/TableActionButton";
+import ConfirmDialog from "@/components/modals/ConfirmDialog";
+import AlertDialog from "@/components/modals/AlertDialog";
 import { FaTicketAlt, FaPlus, FaWallet, FaCalendarPlus, FaSearch, FaFilter, FaTimes, FaEdit, FaTrash, FaEye, FaHistory } from "react-icons/fa";
 
 interface Voucher {
@@ -81,6 +84,21 @@ interface RedemptionsApiResponse {
 
 export default function VouchersPage() {
     const { t, locale } = useTranslation();
+
+    const [alertOpen, setAlertOpen] = useState(false);
+    const [alertTitle, setAlertTitle] = useState<string>(locale === "id" ? "Gagal" : "Error");
+    const [alertMessage, setAlertMessage] = useState<string>("");
+    const [alertVariant, setAlertVariant] = useState<"danger" | "warning" | "info">("danger");
+
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+    const [pendingDeleteVoucher, setPendingDeleteVoucher] = useState<Voucher | null>(null);
+
+    const showAlert = (message: string, variant: "danger" | "warning" | "info" = "danger", title?: string) => {
+        setAlertTitle(title || (locale === "id" ? "Gagal" : "Error"));
+        setAlertMessage(message);
+        setAlertVariant(variant);
+        setAlertOpen(true);
+    };
     
     // Tab state
     const [activeTab, setActiveTab] = useState<"vouchers" | "redemptions">("vouchers");
@@ -173,11 +191,11 @@ export default function VouchersPage() {
                 resetForm();
                 mutateVouchers();
             } else {
-                alert(data.message || "Failed to create voucher");
+                showAlert(data.message || "Failed to create voucher");
             }
         } catch (error) {
             console.error("Error creating voucher:", error);
-            alert("Failed to create voucher");
+            showAlert("Failed to create voucher");
         } finally {
             setIsSubmitting(false);
         }
@@ -215,11 +233,11 @@ export default function VouchersPage() {
                 resetForm();
                 mutateVouchers();
             } else {
-                alert(data.message || "Failed to update voucher");
+                showAlert(data.message || "Failed to update voucher");
             }
         } catch (error) {
             console.error("Error updating voucher:", error);
-            alert("Failed to update voucher");
+            showAlert("Failed to update voucher");
         } finally {
             setIsSubmitting(false);
         }
@@ -242,21 +260,16 @@ export default function VouchersPage() {
             if (data.success) {
                 mutateVouchers();
             } else {
-                alert(data.message || "Failed to update voucher");
+                showAlert(data.message || "Failed to update voucher");
             }
         } catch (error) {
             console.error("Error updating voucher:", error);
+            showAlert("Failed to update voucher");
         }
     };
 
     // Handle delete voucher
-    const handleDelete = async (voucher: Voucher) => {
-        if (!confirm(locale === "id" 
-            ? `Hapus voucher "${voucher.code}"?` 
-            : `Delete voucher "${voucher.code}"?`)) {
-            return;
-        }
-
+    const performDelete = async (voucher: Voucher) => {
         try {
             const token = localStorage.getItem("accessToken");
             const response = await fetch(`/api/superadmin/vouchers/${voucher.id}`, {
@@ -268,11 +281,25 @@ export default function VouchersPage() {
             if (data.success) {
                 mutateVouchers();
             } else {
-                alert(data.message || "Failed to delete voucher");
+                showAlert(data.message || "Failed to delete voucher");
             }
         } catch (error) {
             console.error("Error deleting voucher:", error);
+            showAlert("Failed to delete voucher");
         }
+    };
+
+    const handleDelete = (voucher: Voucher) => {
+        setPendingDeleteVoucher(voucher);
+        setDeleteConfirmOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!pendingDeleteVoucher) return;
+        const voucher = pendingDeleteVoucher;
+        setDeleteConfirmOpen(false);
+        setPendingDeleteVoucher(null);
+        await performDelete(voucher);
     };
 
     // Open edit modal
@@ -345,7 +372,7 @@ export default function VouchersPage() {
             return <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">{locale === "id" ? "Kedaluwarsa" : "Expired"}</span>;
         }
         if (voucher.maxUsage && voucher.currentUsage >= voucher.maxUsage) {
-            return <span className="px-2 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400">{locale === "id" ? "Habis" : "Exhausted"}</span>;
+            return <span className="px-2 py-1 text-xs font-medium rounded-full bg-brand-100 text-brand-600 dark:bg-brand-900/30 dark:text-brand-400">{locale === "id" ? "Habis" : "Exhausted"}</span>;
         }
         return <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400">{locale === "id" ? "Aktif" : "Active"}</span>;
     };
@@ -381,7 +408,7 @@ export default function VouchersPage() {
                         <FaTimes className="w-8 h-8 text-red-500" />
                     </div>
                     <p className="text-red-500 dark:text-red-400">{locale === "id" ? "Gagal memuat data voucher" : "Failed to load vouchers"}</p>
-                    <button onClick={() => mutateVouchers()} className="mt-4 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors">
+                    <button onClick={() => mutateVouchers()} className="mt-4 px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors">
                         {t("common.retry")}
                     </button>
                 </div>
@@ -392,6 +419,34 @@ export default function VouchersPage() {
     return (
         <div className="space-y-4">
             <PageBreadcrumb pageTitle={locale === "id" ? "Voucher" : "Vouchers"} />
+
+            <AlertDialog
+                isOpen={alertOpen}
+                title={alertTitle}
+                message={alertMessage}
+                variant={alertVariant}
+                onClose={() => setAlertOpen(false)}
+            />
+
+            <ConfirmDialog
+                isOpen={deleteConfirmOpen}
+                title={locale === "id" ? "Hapus Voucher" : "Delete Voucher"}
+                message={
+                    pendingDeleteVoucher
+                        ? (locale === "id"
+                            ? `Hapus voucher "${pendingDeleteVoucher.code}"?`
+                            : `Delete voucher "${pendingDeleteVoucher.code}"?`)
+                        : (locale === "id" ? "Hapus voucher ini?" : "Delete this voucher?")
+                }
+                confirmText={locale === "id" ? "Hapus" : "Delete"}
+                cancelText={locale === "id" ? "Batal" : "Cancel"}
+                variant="danger"
+                onConfirm={confirmDelete}
+                onCancel={() => {
+                    setDeleteConfirmOpen(false);
+                    setPendingDeleteVoucher(null);
+                }}
+            />
 
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -410,7 +465,7 @@ export default function VouchersPage() {
                         resetForm();
                         setShowCreateModal(true);
                     }}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-medium"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors font-medium"
                 >
                     <FaPlus className="w-4 h-4" />
                     {locale === "id" ? "Buat Voucher" : "Create Voucher"}
@@ -423,7 +478,7 @@ export default function VouchersPage() {
                     onClick={() => setActiveTab("vouchers")}
                     className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                         activeTab === "vouchers"
-                            ? "border-orange-500 text-orange-600 dark:text-orange-400"
+                            ? "border-brand-500 text-brand-600 dark:text-brand-400"
                             : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
                     }`}
                 >
@@ -436,7 +491,7 @@ export default function VouchersPage() {
                     onClick={() => setActiveTab("redemptions")}
                     className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                         activeTab === "redemptions"
-                            ? "border-orange-500 text-orange-600 dark:text-orange-400"
+                            ? "border-brand-500 text-brand-600 dark:text-brand-400"
                             : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
                     }`}
                 >
@@ -461,7 +516,7 @@ export default function VouchersPage() {
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     placeholder={locale === "id" ? "Cari kode voucher..." : "Search voucher code..."}
-                                    className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                    className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                                 />
                             </div>
 
@@ -469,7 +524,7 @@ export default function VouchersPage() {
                             <select
                                 value={typeFilter}
                                 onChange={(e) => setTypeFilter(e.target.value)}
-                                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                             >
                                 <option value="ALL">{locale === "id" ? "Semua Tipe" : "All Types"}</option>
                                 <option value="BALANCE">{locale === "id" ? "Saldo" : "Balance"}</option>
@@ -480,7 +535,7 @@ export default function VouchersPage() {
                             <select
                                 value={currencyFilter}
                                 onChange={(e) => setCurrencyFilter(e.target.value)}
-                                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                             >
                                 <option value="ALL">{locale === "id" ? "Semua Mata Uang" : "All Currencies"}</option>
                                 <option value="IDR">IDR</option>
@@ -493,7 +548,7 @@ export default function VouchersPage() {
                                     type="checkbox"
                                     checked={showInactive}
                                     onChange={(e) => setShowInactive(e.target.checked)}
-                                    className="rounded text-orange-500 focus:ring-orange-500"
+                                    className="rounded text-brand-500 focus:ring-brand-500"
                                 />
                                 {locale === "id" ? "Tampilkan nonaktif" : "Show inactive"}
                             </label>
@@ -519,7 +574,7 @@ export default function VouchersPage() {
                                     resetForm();
                                     setShowCreateModal(true);
                                 }}
-                                className="inline-flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+                                className="inline-flex items-center gap-2 px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors"
                             >
                                 <FaPlus className="w-4 h-4" />
                                 {locale === "id" ? "Buat Voucher" : "Create Voucher"}
@@ -591,13 +646,12 @@ export default function VouchersPage() {
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <div className="flex items-center justify-end gap-2">
-                                                        <button
+                                                        <TableActionButton
+                                                            icon={FaEdit}
                                                             onClick={() => openEditModal(voucher)}
-                                                            className="p-1.5 text-gray-500 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded transition-colors"
+                                                            aria-label={locale === "id" ? "Edit" : "Edit"}
                                                             title={locale === "id" ? "Edit" : "Edit"}
-                                                        >
-                                                            <FaEdit className="w-4 h-4" />
-                                                        </button>
+                                                        />
                                                         <button
                                                             onClick={() => handleToggleActive(voucher)}
                                                             className={`px-2 py-1 text-xs rounded transition-colors ${
@@ -611,13 +665,13 @@ export default function VouchersPage() {
                                                                 : (locale === "id" ? "Aktifkan" : "Activate")
                                                             }
                                                         </button>
-                                                        <button
+                                                        <TableActionButton
+                                                            icon={FaTrash}
+                                                            tone="danger"
                                                             onClick={() => handleDelete(voucher)}
-                                                            className="p-1.5 text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                                                            aria-label={locale === "id" ? "Hapus" : "Delete"}
                                                             title={locale === "id" ? "Hapus" : "Delete"}
-                                                        >
-                                                            <FaTrash className="w-4 h-4" />
-                                                        </button>
+                                                        />
                                                     </div>
                                                 </td>
                                             </tr>
@@ -756,7 +810,7 @@ export default function VouchersPage() {
                                     type="text"
                                     value={formData.code}
                                     onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent font-mono"
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent font-mono"
                                     placeholder="WELCOME2024"
                                 />
                             </div>
@@ -769,7 +823,7 @@ export default function VouchersPage() {
                                 <select
                                     value={formData.type}
                                     onChange={(e) => setFormData({ ...formData, type: e.target.value as "BALANCE" | "SUBSCRIPTION_DAYS" })}
-                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                                 >
                                     <option value="BALANCE">{locale === "id" ? "Tambah Saldo" : "Add Balance"}</option>
                                     <option value="SUBSCRIPTION_DAYS">{locale === "id" ? "Tambah Hari Langganan" : "Add Subscription Days"}</option>
@@ -788,7 +842,7 @@ export default function VouchersPage() {
                                     type="number"
                                     value={formData.value}
                                     onChange={(e) => setFormData({ ...formData, value: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                                     placeholder={formData.type === "BALANCE" ? "100000" : "30"}
                                     min="0"
                                     step={formData.type === "BALANCE" ? "0.01" : "1"}
@@ -804,7 +858,7 @@ export default function VouchersPage() {
                                     <select
                                         value={formData.currency}
                                         onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                                     >
                                         <option value="">{locale === "id" ? "Semua (Universal)" : "All (Universal)"}</option>
                                         <option value="IDR">IDR (Rupiah)</option>
@@ -827,7 +881,7 @@ export default function VouchersPage() {
                                     type="text"
                                     value={formData.description}
                                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                                     placeholder={locale === "id" ? "Voucher promo launching" : "Launch promo voucher"}
                                 />
                             </div>
@@ -841,7 +895,7 @@ export default function VouchersPage() {
                                     type="number"
                                     value={formData.maxUsage}
                                     onChange={(e) => setFormData({ ...formData, maxUsage: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                                     placeholder={locale === "id" ? "Kosongkan untuk unlimited" : "Leave empty for unlimited"}
                                     min="1"
                                 />
@@ -857,7 +911,7 @@ export default function VouchersPage() {
                                         type="date"
                                         value={formData.validFrom}
                                         onChange={(e) => setFormData({ ...formData, validFrom: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                                     />
                                 </div>
                                 <div>
@@ -868,7 +922,7 @@ export default function VouchersPage() {
                                         type="date"
                                         value={formData.validUntil}
                                         onChange={(e) => setFormData({ ...formData, validUntil: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                                     />
                                 </div>
                             </div>
@@ -883,7 +937,7 @@ export default function VouchersPage() {
                             <button
                                 onClick={handleCreate}
                                 disabled={isSubmitting || !formData.code || !formData.value}
-                                className="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 font-medium"
+                                className="flex-1 px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors disabled:opacity-50 font-medium"
                             >
                                 {isSubmitting ? t("common.saving") : t("common.create")}
                             </button>
@@ -916,7 +970,7 @@ export default function VouchersPage() {
                                     type="text"
                                     value={formData.code}
                                     onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent font-mono"
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent font-mono"
                                 />
                             </div>
 
@@ -927,7 +981,7 @@ export default function VouchersPage() {
                                 <select
                                     value={formData.type}
                                     onChange={(e) => setFormData({ ...formData, type: e.target.value as "BALANCE" | "SUBSCRIPTION_DAYS" })}
-                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                                 >
                                     <option value="BALANCE">{locale === "id" ? "Tambah Saldo" : "Add Balance"}</option>
                                     <option value="SUBSCRIPTION_DAYS">{locale === "id" ? "Tambah Hari Langganan" : "Add Subscription Days"}</option>
@@ -945,7 +999,7 @@ export default function VouchersPage() {
                                     type="number"
                                     value={formData.value}
                                     onChange={(e) => setFormData({ ...formData, value: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                                     min="0"
                                     step={formData.type === "BALANCE" ? "0.01" : "1"}
                                 />
@@ -959,7 +1013,7 @@ export default function VouchersPage() {
                                     <select
                                         value={formData.currency}
                                         onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                                     >
                                         <option value="">{locale === "id" ? "Semua (Universal)" : "All (Universal)"}</option>
                                         <option value="IDR">IDR (Rupiah)</option>
@@ -976,7 +1030,7 @@ export default function VouchersPage() {
                                     type="text"
                                     value={formData.description}
                                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                                 />
                             </div>
 
@@ -988,7 +1042,7 @@ export default function VouchersPage() {
                                     type="number"
                                     value={formData.maxUsage}
                                     onChange={(e) => setFormData({ ...formData, maxUsage: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                                     min="1"
                                 />
                                 <p className="mt-1 text-xs text-gray-500">
@@ -1005,7 +1059,7 @@ export default function VouchersPage() {
                                         type="date"
                                         value={formData.validFrom}
                                         onChange={(e) => setFormData({ ...formData, validFrom: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                                     />
                                 </div>
                                 <div>
@@ -1016,7 +1070,7 @@ export default function VouchersPage() {
                                         type="date"
                                         value={formData.validUntil}
                                         onChange={(e) => setFormData({ ...formData, validUntil: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                                     />
                                 </div>
                             </div>
@@ -1031,7 +1085,7 @@ export default function VouchersPage() {
                             <button
                                 onClick={handleEdit}
                                 disabled={isSubmitting || !formData.code || !formData.value}
-                                className="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 font-medium"
+                                className="flex-1 px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors disabled:opacity-50 font-medium"
                             >
                                 {isSubmitting ? t("common.saving") : t("common.save")}
                             </button>

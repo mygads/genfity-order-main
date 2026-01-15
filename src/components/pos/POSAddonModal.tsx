@@ -9,7 +9,7 @@
  * - Shows "FREE" for 0 price addons
  * - Auto-scroll to required categories when Add to Cart with missing selection
  * - Entire addon row is clickable
- * - orange-500 primary color theme
+ * - Brand primary color theme
  */
 
 'use client';
@@ -22,6 +22,7 @@ import {
   FaStickyNote,
   FaCheck,
   FaExclamationCircle,
+  FaUtensils
 } from 'react-icons/fa';
 import Image from 'next/image';
 import { useTranslation } from '@/lib/i18n/useTranslation';
@@ -384,7 +385,7 @@ export const POSAddonModal: React.FC<POSAddonModalProps> = ({
                 </div>
               ) : (
                 <div className="w-20 h-20 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
-                  <span className="text-3xl">🍽️</span>
+                  <FaUtensils className="text-gray-300 dark:text-gray-600" />
                 </div>
               )}
               <div className="flex-1 min-w-0">
@@ -405,7 +406,7 @@ export const POSAddonModal: React.FC<POSAddonModalProps> = ({
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="w-8 h-8 rounded-lg bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:bg-orange-200 dark:hover:bg-orange-900/50 flex items-center justify-center transition-colors"
+                  className="w-8 h-8 rounded-lg bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 hover:bg-brand-200 dark:hover:bg-brand-900/50 flex items-center justify-center transition-colors"
                 >
                   <FaMinus className="w-3 h-3" />
                 </button>
@@ -414,7 +415,7 @@ export const POSAddonModal: React.FC<POSAddonModalProps> = ({
                 </span>
                 <button
                   onClick={() => setQuantity(quantity + 1)}
-                  className="w-8 h-8 rounded-lg bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:bg-orange-200 dark:hover:bg-orange-900/50 flex items-center justify-center transition-colors"
+                  className="w-8 h-8 rounded-lg bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 hover:bg-brand-200 dark:hover:bg-brand-900/50 flex items-center justify-center transition-colors"
                 >
                   <FaPlus className="w-3 h-3" />
                 </button>
@@ -456,7 +457,7 @@ export const POSAddonModal: React.FC<POSAddonModalProps> = ({
                         : 'text-gray-500 dark:text-gray-400'
                     }`}>
                       {category.minSelection > 0 && (
-                        <span className={!isValid && !isHighlighted ? 'text-orange-500 font-medium' : ''}>
+                        <span className={!isValid && !isHighlighted ? 'text-brand-500 font-medium' : ''}>
                           {singleSelect 
                             ? t('pos.selectOne') || 'Select one'
                             : t('pos.minSelection', { min: category.minSelection })
@@ -480,7 +481,7 @@ export const POSAddonModal: React.FC<POSAddonModalProps> = ({
                         ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 animate-pulse'
                         : isValid
                         ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
-                        : 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'
+                        : 'bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400'
                     }`}>
                       {singleSelect 
                         ? (isValid ? '✓' : t('pos.required') || 'Required')
@@ -505,7 +506,7 @@ export const POSAddonModal: React.FC<POSAddonModalProps> = ({
                         className={`
                           flex items-center justify-between p-3 rounded-lg transition-all cursor-pointer
                           ${isSelected
-                            ? 'bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800'
+                            ? 'bg-brand-50 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-800'
                             : 'bg-gray-50 dark:bg-gray-800/50 border border-transparent hover:bg-gray-100 dark:hover:bg-gray-800'
                           }
                           ${outOfStock ? 'opacity-50 cursor-not-allowed' : ''}
@@ -519,7 +520,7 @@ export const POSAddonModal: React.FC<POSAddonModalProps> = ({
                             // Radio button
                             <div className={`shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
                               isSelected
-                                ? 'border-orange-500 bg-orange-500'
+                                ? 'border-brand-500 bg-brand-500'
                                 : 'border-gray-300 dark:border-gray-600'
                             }`}>
                               {isSelected && (
@@ -530,7 +531,7 @@ export const POSAddonModal: React.FC<POSAddonModalProps> = ({
                             // Checkbox
                             <div className={`shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
                               isSelected
-                                ? 'bg-orange-500 border-orange-500'
+                                ? 'bg-brand-500 border-brand-500'
                                 : 'border-gray-300 dark:border-gray-600'
                             }`}>
                               {isSelected && (
@@ -568,7 +569,7 @@ export const POSAddonModal: React.FC<POSAddonModalProps> = ({
                             <div className="flex items-center gap-1">
                               <button
                                 onClick={(e) => handleAddonQtyChange(addonId, category, -1, e)}
-                                className="w-7 h-7 rounded bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:bg-orange-200 dark:hover:bg-orange-900/50 flex items-center justify-center transition-colors"
+                                className="w-7 h-7 rounded bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 hover:bg-brand-200 dark:hover:bg-brand-900/50 flex items-center justify-center transition-colors"
                               >
                                 <FaMinus className="w-2.5 h-2.5" />
                               </button>
@@ -578,7 +579,7 @@ export const POSAddonModal: React.FC<POSAddonModalProps> = ({
                               <button
                                 onClick={(e) => handleAddonQtyChange(addonId, category, 1, e)}
                                 disabled={category.maxSelection !== null && categoryCount >= category.maxSelection && !isSelected}
-                                className="w-7 h-7 rounded bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:bg-orange-200 dark:hover:bg-orange-900/50 flex items-center justify-center transition-colors disabled:opacity-50"
+                                className="w-7 h-7 rounded bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 hover:bg-brand-200 dark:hover:bg-brand-900/50 flex items-center justify-center transition-colors disabled:opacity-50"
                               >
                                 <FaPlus className="w-2.5 h-2.5" />
                               </button>
@@ -615,7 +616,7 @@ export const POSAddonModal: React.FC<POSAddonModalProps> = ({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder={t('pos.itemNotesPlaceholder')}
-              className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 border-none text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 resize-none focus:ring-2 focus:ring-orange-300 dark:focus:ring-orange-600"
+              className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 border-none text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 resize-none focus:ring-2 focus:ring-brand-300 dark:focus:ring-brand-600"
               rows={2}
             />
           </div>
@@ -625,7 +626,7 @@ export const POSAddonModal: React.FC<POSAddonModalProps> = ({
         <div className="shrink-0 p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
           <button
             onClick={handleConfirm}
-            className="w-full py-3 rounded-lg text-sm font-medium bg-orange-500 text-white hover:bg-orange-600 transition-colors flex items-center justify-center gap-2"
+            className="w-full py-3 rounded-lg text-sm font-medium bg-brand-500 text-white hover:bg-brand-600 transition-colors flex items-center justify-center gap-2"
           >
             <span>{t('pos.addToCart')}</span>
             <span>•</span>

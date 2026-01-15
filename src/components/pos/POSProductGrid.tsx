@@ -1,8 +1,8 @@
 /**
  * POS Product Grid Component
  * 
- * Right side panel showing menu items
- * - Category tabs with orange-500 theme
+ * Right side grid showing menu items for selection
+ * - Category tabs with brand theme
  * - Search functionality
  * - Product cards with images
  * - Adjustable grid columns 1-12 (image size changes, name/price fixed)
@@ -16,6 +16,7 @@ import Image from 'next/image';
 import {
   FaSearch,
   FaTimes,
+  FaUtensils
 } from 'react-icons/fa';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { formatCurrency } from '@/lib/utils/format';
@@ -162,7 +163,7 @@ export const POSProductGrid: React.FC<POSProductGridProps> = ({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t('pos.searchMenu')}
-            className="w-full pl-10 pr-10 py-2.5 rounded-lg bg-gray-100 dark:bg-gray-800 border-none text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-orange-300 dark:focus:ring-orange-600 transition-all"
+            className="w-full pl-10 pr-10 py-2.5 rounded-lg bg-gray-100 dark:bg-gray-800 border-none text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-brand-300 dark:focus:ring-brand-600 transition-all"
           />
           {searchQuery && (
             <button
@@ -180,7 +181,7 @@ export const POSProductGrid: React.FC<POSProductGridProps> = ({
             onClick={() => setSelectedCategory(null)}
             className={`shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               selectedCategory === null
-                ? 'bg-orange-500 text-white'
+                  ? 'bg-brand-500 text-white'
                 : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
             }`}
           >
@@ -193,8 +194,8 @@ export const POSProductGrid: React.FC<POSProductGridProps> = ({
               onClick={() => setSelectedCategory(SPECIAL_CATEGORIES.POPULAR)}
               className={`shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
                 selectedCategory === SPECIAL_CATEGORIES.POPULAR
-                  ? 'bg-orange-500 text-white'
-                  : 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/30 border border-orange-200 dark:border-orange-800'
+                  ? 'bg-brand-500 text-white'
+                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
               }`}
             >
               <span>🔥</span>
@@ -208,8 +209,8 @@ export const POSProductGrid: React.FC<POSProductGridProps> = ({
               onClick={() => setSelectedCategory(SPECIAL_CATEGORIES.BEST_SELLER)}
               className={`shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
                 selectedCategory === SPECIAL_CATEGORIES.BEST_SELLER
-                  ? 'bg-orange-500 text-white'
-                  : 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-100 dark:hover:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800'
+                  ? 'bg-brand-500 text-white'
+                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
               }`}
             >
               <span>⭐</span>
@@ -223,7 +224,7 @@ export const POSProductGrid: React.FC<POSProductGridProps> = ({
               onClick={() => setSelectedCategory(String(category.id))}
               className={`shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 String(selectedCategory) === String(category.id)
-                  ? 'bg-orange-500 text-white'
+                  ? 'bg-brand-500 text-white'
                   : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
               }`}
             >
@@ -234,7 +235,7 @@ export const POSProductGrid: React.FC<POSProductGridProps> = ({
       </div>
 
       {/* Product Grid */}
-      <div className="flex-1 overflow-y-auto p-4 min-h-0">
+      <div className="flex-1 overflow-y-auto p-4 min-h-0 bg-white dark:bg-gray-900">
         {isLoading ? (
           // Loading skeleton
           <div className={`grid ${getGridClasses()} gap-3`}>
@@ -270,7 +271,7 @@ export const POSProductGrid: React.FC<POSProductGridProps> = ({
                   key={item.id}
                   onClick={() => !outOfStock && onAddItem(item)}
                   disabled={outOfStock}
-                  className={`bg-white dark:bg-gray-900 rounded-lg overflow-hidden text-left transition-all hover:shadow-lg hover:scale-[1.02] focus:ring-2 focus:ring-orange-300 dark:focus:ring-orange-600 ${
+                  className={`bg-white dark:bg-gray-900 rounded-lg overflow-hidden text-left transition-all hover:shadow-lg shadow-md hover:scale-[1.02] focus:ring-2 focus:ring-brand-300 dark:focus:ring-brand-600 ${
                     outOfStock ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
                   }`}
                 >
@@ -285,9 +286,9 @@ export const POSProductGrid: React.FC<POSProductGridProps> = ({
                         sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 20vw"
                       />
                     ) : (
-                      <div className="absolute inset-0 flex items-center justify-center bg-linear-to-br from-orange-100 to-orange-200 dark:from-orange-900/30 dark:to-orange-800/30">
+                      <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
                         <div className="text-4xl">
-                          🍽️
+                          <FaUtensils className="text-gray-300 dark:text-gray-600" />
                         </div>
                       </div>
                     )}
@@ -388,7 +389,7 @@ export const POSProductGrid: React.FC<POSProductGridProps> = ({
                     <div className="flex items-center gap-2 mt-1">
                       {hasPromo ? (
                         <>
-                          <span className="text-sm font-bold text-orange-600 dark:text-orange-400">
+                          <span className="text-sm font-bold text-brand-600 dark:text-brand-400">
                             {formatMoney(item.promoPrice!)}
                           </span>
                           <span className="text-xs text-gray-400 line-through">

@@ -7,7 +7,7 @@
 'use client';
 
 import React, { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { FaHistory } from 'react-icons/fa';
 import OrderHistoryTable from '@/components/orders/OrderHistoryTable';
 import { OrderDetailModal } from '@/components/orders/OrderDetailModal';
@@ -59,6 +59,7 @@ export default function OrderHistoryPage() {
 function OrderHistoryPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
   const { t } = useTranslation();
   const { showSuccess, showError } = useToast();
   const [loading, setLoading] = useState(true);
@@ -152,12 +153,14 @@ function OrderHistoryPageContent() {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedOrderId(null);
-    // Clear deep-link param so closing the modal doesn't immediately re-open it.
+    // Clear deep-link param without triggering a route refresh/refetch.
     if (searchParams.get('orderId')) {
-      router.replace('/admin/dashboard/orders/history');
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete('orderId');
+      const qs = params.toString();
+      const nextUrl = qs ? `${pathname}?${qs}` : pathname;
+      window.history.replaceState(null, '', nextUrl);
     }
-    // Refresh data after modal closes
-    fetchOrders();
   };
 
   const handleDeleteOrder = (orderId: string | number) => {

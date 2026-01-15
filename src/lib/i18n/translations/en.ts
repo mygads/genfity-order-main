@@ -1009,6 +1009,7 @@ const en = {
   "admin.reservations.tableTableNumber": "Table",
   "admin.reservations.tableStatus": "Status",
   "admin.reservations.tableNotes": "Notes",
+  "admin.reservations.tableItems": "Total items",
   "admin.reservations.tableActions": "Actions",
   "admin.reservations.paginationShowing": "Showing {from} to {to} of {total} reservations",
   "admin.reservations.paginationPage": "Page {page} of {totalPages}",
@@ -1607,6 +1608,8 @@ const en = {
   "admin.permissions.driverDashboardDesc": "Allow access to the Driver portal dashboard",
   "admin.permissions.storeToggleOpen": "Store Open/Close",
   "admin.permissions.storeToggleOpenDesc": "Allow manual open/close override on the dashboard",
+  "admin.permissions.subscription": "Subscription",
+  "admin.permissions.subscriptionDesc": "View subscription status, billing, and top-ups",
 
   "admin.storeToggle.openTitle": "Open Store Manually",
   "admin.storeToggle.openMessage": "This will force your store to open now (manual override), even if the schedule says closed.",
@@ -2967,6 +2970,7 @@ const en = {
   "notifications.category.staff": "Staff",
   "notifications.category.payment": "Payment",
 
+  "notifications.settings.button": "Settings",
   "notifications.settings.title": "Notification Settings",
   "notifications.settings.subtitle": "Control which notifications you receive.",
   "notifications.settings.saved": "Saved",
@@ -2990,6 +2994,14 @@ const en = {
   "notifications.settings.merchant.paymentDesc": "Payment status updates.",
   "notifications.settings.merchant.subscription": "Subscription",
   "notifications.settings.merchant.subscriptionDesc": "Trial and subscription reminders.",
+
+  "notifications.settings.staff.title": "Staff activity notifications",
+  "notifications.settings.staff.desc": "Get notified when staff members log in or out.",
+  "notifications.settings.staff.login": "Staff login",
+  "notifications.settings.staff.loginDesc": "When a staff member logs in.",
+  "notifications.settings.staff.logout": "Staff logout",
+  "notifications.settings.staff.logoutDesc": "When a staff member logs out.",
+  "notifications.settings.staff.none": "Staff activity toggles are only available to merchant owners.",
 
   // ============================================================================
   // GROUP ORDER / SPLIT BILL
@@ -3252,6 +3264,7 @@ const en = {
   "pos.tableNumber": "Table Number",
   "pos.tableNumberLabel": "Table Number / Name",
   "pos.tableNumberPlaceholder": "Enter table number",
+  "pos.tableNumberRequired": "Table number is required",
   "pos.quickSelect": "Quick Select",
   "pos.clearTable": "Clear",
   "pos.orderNotes": "Order Notes",

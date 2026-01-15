@@ -245,7 +245,7 @@ export default function EditSpecialPricePage() {
                                 type="text"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
-                                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-primary-400 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-brand-400 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                             />
                         </div>
                         <div>
@@ -255,7 +255,7 @@ export default function EditSpecialPricePage() {
                             <select
                                 value={selectedMenuBookId}
                                 onChange={(e) => handleMenuBookChange(e.target.value)}
-                                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-primary-400 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-brand-400 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                             >
                                 {menuBooks.map(book => (
                                     <option key={book.id} value={book.id}>
@@ -314,7 +314,7 @@ export default function EditSpecialPricePage() {
                                     type="button"
                                     onClick={() => handleDayToggle(day.value)}
                                     className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${applicableDays.includes(day.value)
-                                        ? "bg-primary-500 text-white"
+                                        ? "bg-brand-500 text-white"
                                         : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
                                         }`}
                                 >
@@ -334,7 +334,7 @@ export default function EditSpecialPricePage() {
                                     onChange={(e) => setIsAllDay(e.target.checked)}
                                     className="peer sr-only"
                                 />
-                                <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all peer-checked:bg-primary-500 peer-checked:after:translate-x-full dark:bg-gray-700"></div>
+                                <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all peer-checked:bg-brand-500 peer-checked:after:translate-x-full dark:bg-gray-700"></div>
                             </label>
                             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">All Day</span>
                         </div>

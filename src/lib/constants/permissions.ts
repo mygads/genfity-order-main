@@ -41,6 +41,7 @@ export const STAFF_PERMISSIONS = {
   MERCHANT_SETTINGS: 'merchant_settings', // Merchant profile settings
   QR_TABLES: 'qr_tables',              // QR codes and table management
   STORE_TOGGLE_OPEN: 'store_toggle_open', // Allow manual open/close (override schedule)
+  SUBSCRIPTION: 'subscription',        // Subscription/billing access
 
   // Notification Settings (which notifications staff can receive)
   NOTIF_NEW_ORDER: 'notif_new_order',        // New order notifications
@@ -121,6 +122,7 @@ export const PERMISSION_TEMPLATES = {
       STAFF_PERMISSIONS.REPORTS,
       STAFF_PERMISSIONS.REVENUE,
       STAFF_PERMISSIONS.CUSTOMER_FEEDBACK,
+      STAFF_PERMISSIONS.SUBSCRIPTION,
     ] as StaffPermission[],
   },
 } as const;
@@ -173,6 +175,7 @@ export const PERMISSION_GROUPS = {
       { key: STAFF_PERMISSIONS.MERCHANT_SETTINGS, nameKey: 'admin.permissions.merchantSettings', descKey: 'admin.permissions.merchantSettingsDesc' },
       { key: STAFF_PERMISSIONS.QR_TABLES, nameKey: 'admin.permissions.qrTables', descKey: 'admin.permissions.qrTablesDesc' },
       { key: STAFF_PERMISSIONS.STORE_TOGGLE_OPEN, nameKey: 'admin.permissions.storeToggleOpen', descKey: 'admin.permissions.storeToggleOpenDesc' },
+      { key: STAFF_PERMISSIONS.SUBSCRIPTION, nameKey: 'admin.permissions.subscription', descKey: 'admin.permissions.subscriptionDesc' },
     ],
   },
   notifications: {
@@ -220,6 +223,7 @@ export const PATH_PERMISSION_MAP: Record<string, StaffPermission> = {
   '/admin/dashboard/merchant/view': STAFF_PERMISSIONS.MERCHANT_SETTINGS,
   '/admin/dashboard/merchant/edit': STAFF_PERMISSIONS.MERCHANT_SETTINGS,
   '/admin/dashboard/qr-tables': STAFF_PERMISSIONS.QR_TABLES,
+  '/admin/dashboard/subscription': STAFF_PERMISSIONS.SUBSCRIPTION,
 };
 
 /**
@@ -227,7 +231,6 @@ export const PATH_PERMISSION_MAP: Record<string, StaffPermission> = {
  * These are role-based restrictions (not staff permissions) and should be blocked for staff.
  */
 export const OWNER_ONLY_DASHBOARD_PATH_PREFIXES = [
-  '/admin/dashboard/subscription',
   '/admin/dashboard/drivers',
   '/admin/dashboard/staff',
 ] as const;
@@ -272,6 +275,7 @@ export const API_PERMISSION_MAP: Record<string, StaffPermission> = {
   '/api/merchant/special-hours': STAFF_PERMISSIONS.MERCHANT_SETTINGS,
   '/api/merchant/mode-schedules': STAFF_PERMISSIONS.MERCHANT_SETTINGS,
   '/api/merchant/toggle-open': STAFF_PERMISSIONS.STORE_TOGGLE_OPEN,
+  '/api/merchant/subscription': STAFF_PERMISSIONS.SUBSCRIPTION,
 };
 
 /**

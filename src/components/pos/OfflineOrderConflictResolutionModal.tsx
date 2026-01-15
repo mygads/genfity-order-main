@@ -26,6 +26,7 @@ import type {
   OfflineOrderConflictResolution,
   OfflineOrderConflictResolutionAction,
 } from '@/hooks/useOfflineSync';
+import { useModalImplicitClose } from '@/hooks/useModalImplicitClose';
 
 interface OfflineOrderConflictResolutionModalProps {
   isOpen: boolean;
@@ -135,11 +136,28 @@ export const OfflineOrderConflictResolutionModal: React.FC<OfflineOrderConflictR
     onClose();
   };
 
+  const isDirty = useMemo(() => {
+    if (choices.size !== initialChoices.size) return true;
+    for (const [key, value] of initialChoices.entries()) {
+      if (choices.get(key) !== value) return true;
+    }
+    return false;
+  }, [choices, initialChoices]);
+
+  const { onBackdropMouseDown } = useModalImplicitClose({
+    isOpen,
+    onClose,
+    disableImplicitClose: isDirty,
+  });
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onMouseDown={onBackdropMouseDown}
+      />
 
       <div className="relative w-full max-w-3xl mx-4 max-h-[85vh] bg-white dark:bg-gray-900 rounded-xl shadow-2xl flex flex-col overflow-hidden">
         {/* Header */}

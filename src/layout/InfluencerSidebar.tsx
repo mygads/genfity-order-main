@@ -166,18 +166,18 @@ const InfluencerSidebar: React.FC<InfluencerSidebarProps> = ({
 
         {/* Influencer Badge */}
         <div className="px-4 py-3">
-          <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-3 text-white">
+          <div className="bg-gradient-to-r from-brand-500 to-brand-600 rounded-xl p-3 text-white">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center font-bold text-lg">
                 {influencer?.name?.charAt(0).toUpperCase() || "I"}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold truncate">{influencer?.name || "Influencer"}</p>
-                <p className="text-xs text-orange-100 truncate">{influencer?.referralCode || "---"}</p>
+                <p className="text-xs text-brand-100 truncate">{influencer?.referralCode || "---"}</p>
               </div>
             </div>
             {influencer && !influencer.isApproved && (
-              <div className="mt-2 flex items-center gap-1.5 text-xs text-orange-100 bg-white/10 rounded-lg px-2 py-1">
+              <div className="mt-2 flex items-center gap-1.5 text-xs text-amber-100 bg-amber-500/20 rounded-lg px-2 py-1">
                 <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
                 </svg>
@@ -205,11 +205,11 @@ const InfluencerSidebar: React.FC<InfluencerSidebarProps> = ({
                       onClick={() => window.innerWidth < 1024 && onClose()}
                       className={`flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200
                         ${isActive(nav.path)
-                          ? "bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 shadow-sm"
+                          ? "bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400 shadow-sm"
                           : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
                         }`}
                     >
-                      <span className={`text-lg ${isActive(nav.path) ? "text-orange-500" : "text-gray-500 dark:text-gray-400"}`}>
+                      <span className={`text-lg ${isActive(nav.path) ? "text-brand-500" : "text-gray-500 dark:text-gray-400"}`}>
                         {nav.icon}
                       </span>
                       <span>{nav.name}</span>

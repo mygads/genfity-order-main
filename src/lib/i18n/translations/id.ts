@@ -748,6 +748,7 @@ const id = {
   "admin.reservations.tableTableNumber": "Meja",
   "admin.reservations.tableStatus": "Status",
   "admin.reservations.tableNotes": "Catatan",
+  "admin.reservations.tableItems": "Total item",
   "admin.reservations.tableActions": "Aksi",
   "admin.reservations.paginationShowing": "Menampilkan {from} sampai {to} dari {total} reservasi",
   "admin.reservations.paginationPage": "Halaman {page} dari {totalPages}",
@@ -1602,6 +1603,8 @@ const id = {
   "admin.permissions.driverDashboardDesc": "Izinkan akses ke portal Dashboard Driver",
   "admin.permissions.storeToggleOpen": "Buka/Tutup Toko",
   "admin.permissions.storeToggleOpenDesc": "Izinkan buka/tutup toko secara manual (override jadwal)",
+  "admin.permissions.subscription": "Subscription",
+  "admin.permissions.subscriptionDesc": "Lihat status subscription, billing, dan top up",
 
   "admin.storeToggle.openTitle": "Buka Toko (Manual)",
   "admin.storeToggle.openMessage": "Ini akan memaksa toko Anda buka sekarang (override manual), meskipun jadwal menyatakan tutup.",
@@ -2962,6 +2965,7 @@ const id = {
   "notifications.category.staff": "Staf",
   "notifications.category.payment": "Pembayaran",
 
+  "notifications.settings.button": "Pengaturan",
   "notifications.settings.title": "Pengaturan Notifikasi",
   "notifications.settings.subtitle": "Atur notifikasi yang ingin Anda terima.",
   "notifications.settings.saved": "Tersimpan",
@@ -2985,6 +2989,14 @@ const id = {
   "notifications.settings.merchant.paymentDesc": "Update status pembayaran.",
   "notifications.settings.merchant.subscription": "Langganan",
   "notifications.settings.merchant.subscriptionDesc": "Pengingat trial dan langganan.",
+
+  "notifications.settings.staff.title": "Notifikasi aktivitas staf",
+  "notifications.settings.staff.desc": "Dapatkan notifikasi saat staf masuk atau keluar.",
+  "notifications.settings.staff.login": "Staf masuk",
+  "notifications.settings.staff.loginDesc": "Saat staf melakukan login.",
+  "notifications.settings.staff.logout": "Staf keluar",
+  "notifications.settings.staff.logoutDesc": "Saat staf melakukan logout.",
+  "notifications.settings.staff.none": "Pengaturan aktivitas staf hanya tersedia untuk pemilik merchant.",
 
   // ============================================================================
   // GROUP ORDER / SPLIT BILL
@@ -3247,6 +3259,7 @@ const id = {
   "pos.tableNumber": "Nomor Meja",
   "pos.tableNumberLabel": "Nomor / Nama Meja",
   "pos.tableNumberPlaceholder": "Masukkan nomor meja",
+  "pos.tableNumberRequired": "Nomor meja wajib diisi",
   "pos.quickSelect": "Pilih Cepat",
   "pos.clearTable": "Hapus",
   "pos.orderNotes": "Catatan Pesanan",

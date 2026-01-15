@@ -166,7 +166,7 @@ export default function SubscriptionSettingsPage() {
                         onClick={() => setActiveTab('pricing')}
                         className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2
               ${activeTab === 'pricing'
-                                ? 'bg-orange-500 text-white'
+                                ? 'bg-brand-500 text-white'
                                 : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200'
                             }`}
                     >
@@ -177,7 +177,7 @@ export default function SubscriptionSettingsPage() {
                         onClick={() => setActiveTab('bank')}
                         className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2
               ${activeTab === 'bank'
-                                ? 'bg-orange-500 text-white'
+                                ? 'bg-brand-500 text-white'
                                 : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200'
                             }`}
                     >
@@ -188,7 +188,7 @@ export default function SubscriptionSettingsPage() {
                         onClick={() => setActiveTab('deposit')}
                         className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2
               ${activeTab === 'deposit'
-                                ? 'bg-orange-500 text-white'
+                                ? 'bg-brand-500 text-white'
                                 : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200'
                             }`}
                     >
@@ -217,7 +217,7 @@ export default function SubscriptionSettingsPage() {
                                 max={365}
                                 className="w-full max-w-xs px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 
                   bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                  focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                             />
                         </div>
 
@@ -342,7 +342,7 @@ export default function SubscriptionSettingsPage() {
                             onClick={handleSubmit}
                             disabled={isSubmitting}
                             className="px-6 py-2 rounded-lg font-medium text-white
-                bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 transition-colors"
+                bg-brand-500 hover:bg-brand-600 disabled:bg-gray-400 transition-colors"
                         >
                             {isSubmitting ? t("admin.subscriptionSettings.saving") : t("admin.subscriptionSettings.saveChanges")}
                         </button>
@@ -462,7 +462,7 @@ export default function SubscriptionSettingsPage() {
                             onClick={handleSubmit}
                             disabled={isSubmitting}
                             className="px-6 py-2 rounded-lg font-medium text-white
-                bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 transition-colors"
+                bg-brand-500 hover:bg-brand-600 disabled:bg-gray-400 transition-colors"
                         >
                             {isSubmitting ? t("admin.subscriptionSettings.saving") : t("admin.subscriptionSettings.saveChanges")}
                         </button>
@@ -509,7 +509,7 @@ export default function SubscriptionSettingsPage() {
                                         step={1000}
                                         className="w-full px-4 py-2 pl-12 rounded-lg border border-gray-300 dark:border-gray-600 
                                             bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                                            focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                            focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                                     />
                                 </div>
                                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -530,7 +530,7 @@ export default function SubscriptionSettingsPage() {
                                         step={1}
                                         className="w-full px-4 py-2 pl-12 rounded-lg border border-gray-300 dark:border-gray-600 
                                             bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                                            focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                            focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                                     />
                                 </div>
                                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -544,7 +544,7 @@ export default function SubscriptionSettingsPage() {
                             onClick={handleSubmit}
                             disabled={isSubmitting}
                             className="px-6 py-2 rounded-lg font-medium text-white
-                bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 transition-colors"
+                bg-brand-500 hover:bg-brand-600 disabled:bg-gray-400 transition-colors"
                         >
                             {isSubmitting ? t("admin.subscriptionSettings.saving") : t("admin.subscriptionSettings.saveChanges")}
                         </button>

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
+import { useModalImplicitClose } from "@/hooks/useModalImplicitClose";
 
 interface MenuCategory {
   id: string;
@@ -45,6 +46,20 @@ export default function ManageMenuCategoriesModal({
 
   const [availableCategories, setAvailableCategories] = useState<MenuCategory[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+
+  const initialSelectedCategoryIds = useMemo(
+    () => currentCategories.map((cat) => cat.categoryId).slice().sort(),
+    [currentCategories]
+  );
+
+  const isDirty = useMemo(() => {
+    const current = [...selectedCategories].sort();
+    if (current.length !== initialSelectedCategoryIds.length) return true;
+    for (let i = 0; i < current.length; i += 1) {
+      if (current[i] !== initialSelectedCategoryIds[i]) return true;
+    }
+    return false;
+  }, [selectedCategories, initialSelectedCategoryIds]);
 
   useEffect(() => {
     if (show) {
@@ -159,12 +174,22 @@ export default function ManageMenuCategoriesModal({
 
   if (!show) return null;
 
+  const disableImplicitClose = submitting || isDirty;
+  const { onBackdropMouseDown } = useModalImplicitClose({
+    isOpen: show,
+    onClose,
+    disableImplicitClose,
+  });
+
   const getCategoryInfo = (categoryId: string) => {
     return availableCategories.find((c) => c.id === categoryId);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onMouseDown={onBackdropMouseDown}
+    >
       <div className="w-full max-w-4xl rounded-2xl border border-gray-200 bg-white shadow-xl dark:border-gray-800 dark:bg-gray-900 max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-200 p-6 dark:border-gray-800">
@@ -187,7 +212,7 @@ export default function ManageMenuCategoriesModal({
         </div>
 
         {(success || error) && (
-          <div className="px-6 pt-4">
+          <div className="px-6 pt-4 space-y-2">
             {success && (
               <div className="rounded-lg bg-success-50 p-3 dark:bg-success-900/20">
                 <p className="text-sm text-success-600 dark:text-success-400">{success}</p>
@@ -370,7 +395,7 @@ export default function ManageMenuCategoriesModal({
             <button
               onClick={handleSubmit}
               disabled={submitting || selectedCategories.length === 0}
-              className="h-11 flex-1 rounded-lg bg-orange-500 text-sm font-medium text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
+              className="h-11 flex-1 rounded-lg bg-brand-500 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {submitting ? "Saving..." : "Save Changes"}
             </button>

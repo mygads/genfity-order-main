@@ -129,7 +129,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
               <span className="truncate max-w-30" title={timeAgo}>{timeAgo}</span>
               {isScheduled && (
                 <span
-                  className="ml-2 inline-flex items-center gap-1.5 rounded-md border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-700"
+                  className="ml-2 inline-flex items-center gap-1.5 rounded-md border border-brand-200 bg-brand-50 px-2 py-0.5 text-[10px] font-semibold text-brand-700"
                   title="Scheduled order"
                 >
                   <FaRegClock className="h-3 w-3" />
@@ -141,16 +141,16 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           <div className="flex items-center gap-2 shrink-0">
             {order.reservation ? (
               <div className="flex items-center gap-1.5" title="Reservation order">
-                <FaCalendarCheck className="h-4 w-4 text-purple-600" />
-                <span className="inline-flex items-center gap-1 rounded-md border border-purple-200 bg-purple-50 px-2 py-0.5 text-[11px] font-semibold text-purple-700">
+                <FaCalendarCheck className="h-4 w-4 text-brand-600" />
+                <span className="inline-flex items-center gap-1 rounded-md border border-brand-200 bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-700">
                   <FaUsers className="h-3 w-3" />
                   {order.reservation.partySize}
                 </span>
               </div>
             ) : order.orderType === 'DINE_IN' ? (
-              <FaUtensils className="h-4 w-4 text-primary-500" title="Dine In" />
+              <FaUtensils className="h-4 w-4 text-brand-500" title="Dine In" />
             ) : order.orderType === 'DELIVERY' ? (
-              <FaTruck className="h-4 w-4 text-blue-500" title="Delivery" />
+              <FaTruck className="h-4 w-4 text-brand-500" title="Delivery" />
             ) : (
               <FaShoppingBag className="h-4 w-4 text-success-500" title="Takeaway" />
             )}

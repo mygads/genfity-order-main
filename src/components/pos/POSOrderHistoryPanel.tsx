@@ -195,9 +195,9 @@ export const POSOrderHistoryPanel: React.FC<POSOrderHistoryPanelProps> = ({
         return <FaMoneyBillWave className="w-3 h-3 text-green-600" />;
       case 'CARD_ON_COUNTER':
       case 'CARD':
-        return <FaCreditCard className="w-3 h-3 text-blue-600" />;
+        return <FaCreditCard className="w-3 h-3 text-brand-600 dark:text-brand-400" />;
       case 'SPLIT':
-        return <FaExchangeAlt className="w-3 h-3 text-purple-600" />;
+        return <FaExchangeAlt className="w-3 h-3 text-brand-600 dark:text-brand-400" />;
       default:
         return <FaClock className="w-3 h-3 text-gray-400" />;
     }
@@ -358,7 +358,7 @@ export const POSOrderHistoryPanel: React.FC<POSOrderHistoryPanelProps> = ({
         {/* Panel */}
         <div className="relative ml-auto w-full max-w-md bg-white dark:bg-gray-900 shadow-2xl flex flex-col overflow-hidden">
           {/* Header */}
-          <div className="shrink-0 flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-orange-500 dark:bg-orange-600">
+          <div className="shrink-0 flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-brand-500 dark:bg-brand-600">
             <div className="flex items-center gap-3">
               <FaHistory className="w-5 h-5 text-white" />
               <h2 className="text-lg font-semibold text-white">
@@ -382,7 +382,7 @@ export const POSOrderHistoryPanel: React.FC<POSOrderHistoryPanelProps> = ({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t('pos.searchOrders') || 'Search by order #, name, phone...'}
-                className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-gray-100 dark:bg-gray-800 border-none text-sm text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-orange-300"
+                className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-gray-100 dark:bg-gray-800 border-none text-sm text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-brand-300"
               />
             </div>
           </div>
@@ -391,7 +391,7 @@ export const POSOrderHistoryPanel: React.FC<POSOrderHistoryPanelProps> = ({
           <div className="flex-1 overflow-y-auto">
             {isLoading ? (
               <div className="flex items-center justify-center h-full">
-                <div className="w-8 h-8 border-3 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                <div className="w-8 h-8 border-3 border-brand-500 border-t-transparent rounded-full animate-spin" />
               </div>
             ) : error ? (
               <div className="flex flex-col items-center justify-center h-full p-8 text-center">
@@ -403,7 +403,7 @@ export const POSOrderHistoryPanel: React.FC<POSOrderHistoryPanelProps> = ({
               <div className="p-4">
                 <button
                   onClick={() => setSelectedOrder(null)}
-                  className="mb-4 text-sm text-orange-600 dark:text-orange-400 hover:underline flex items-center gap-1"
+                  className="mb-4 text-sm text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1"
                 >
                   ← {t('common.back') || 'Back'}
                 </button>
@@ -428,7 +428,7 @@ export const POSOrderHistoryPanel: React.FC<POSOrderHistoryPanelProps> = ({
                       )}
                       <span>{selectedOrder.orderType === 'DINE_IN' ? t('pos.dineIn') : t('pos.takeaway')}</span>
                       {selectedOrder.tableNumber && (
-                        <span className="ml-2 px-2 py-0.5 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded text-xs">
+                        <span className="ml-2 px-2 py-0.5 bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 rounded text-xs">
                           {t('pos.table')} {selectedOrder.tableNumber}
                         </span>
                       )}
@@ -471,7 +471,7 @@ export const POSOrderHistoryPanel: React.FC<POSOrderHistoryPanelProps> = ({
                         {item.addons && item.addons.length > 0 && (
                           <div className="mt-1 space-y-0.5">
                             {item.addons.map((addon, aidx) => (
-                              <p key={aidx} className="text-xs text-orange-600 dark:text-orange-400">
+                              <p key={aidx} className="text-xs text-brand-600 dark:text-brand-400">
                                 + {addon.addonName}
                               </p>
                             ))}
@@ -610,7 +610,7 @@ export const POSOrderHistoryPanel: React.FC<POSOrderHistoryPanelProps> = ({
                 {t('pos.todayOrders') || "Today's Orders"}: <span className="font-medium text-gray-900 dark:text-white">{orders?.length || 0}</span>
               </div>
               <div className="text-gray-600 dark:text-gray-400">
-                {t('pos.total')}: <span className="font-medium text-orange-600 dark:text-orange-400">
+                {t('pos.total')}: <span className="font-medium text-brand-600 dark:text-brand-400">
                   {formatMoney(orders?.reduce((sum, o) => sum + (o.status !== 'CANCELLED' && o.status !== 'REFUNDED' ? o.totalAmount : 0), 0) || 0)}
                 </span>
               </div>

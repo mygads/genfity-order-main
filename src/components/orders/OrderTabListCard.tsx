@@ -98,11 +98,11 @@ export const OrderTabListCard: React.FC<OrderTabListCardProps> = ({
   const getNextAction = () => {
     switch (order.status) {
       case 'PENDING':
-        return { label: 'Accept', status: 'ACCEPTED' as OrderStatus, color: 'bg-blue-500 hover:bg-blue-600' };
+        return { label: 'Accept', status: 'ACCEPTED' as OrderStatus, color: 'bg-brand-500 hover:bg-brand-600' };
       case 'ACCEPTED':
-        return { label: 'Start', status: 'IN_PROGRESS' as OrderStatus, color: 'bg-orange-500 hover:bg-orange-600' };
+        return { label: 'Start', status: 'IN_PROGRESS' as OrderStatus, color: 'bg-brand-500 hover:bg-brand-600' };
       case 'IN_PROGRESS':
-        return { label: 'Ready', status: 'READY' as OrderStatus, color: 'bg-purple-500 hover:bg-purple-600' };
+        return { label: 'Ready', status: 'READY' as OrderStatus, color: 'bg-brand-500 hover:bg-brand-600' };
       case 'READY':
         return { label: 'Done', status: 'COMPLETED' as OrderStatus, color: 'bg-success-500 hover:bg-success-600' };
       default:
@@ -153,12 +153,12 @@ export const OrderTabListCard: React.FC<OrderTabListCardProps> = ({
             {/* Table Number or Takeaway */}
             {order.reservation ? (
               <div className="flex items-center gap-1.5" title="Reservation order">
-                <FaCalendarCheck className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
-                <span className="inline-flex items-center gap-1 text-sm font-semibold text-purple-700 dark:text-purple-300">
+                <FaCalendarCheck className="h-3.5 w-3.5 text-brand-600 dark:text-brand-400" />
+                <span className="inline-flex items-center gap-1 text-sm font-semibold text-brand-700 dark:text-brand-300">
                   <FaUsers className="h-3.5 w-3.5" />
                   {order.reservation.partySize}
                 </span>
-                <span className="text-sm font-semibold text-purple-700 dark:text-purple-300">
+                <span className="text-sm font-semibold text-brand-700 dark:text-brand-300">
                   Table {order.tableNumber || order.reservation.tableNumber || '-'}
                 </span>
               </div>
@@ -169,8 +169,8 @@ export const OrderTabListCard: React.FC<OrderTabListCardProps> = ({
               </div>
             ) : order.orderType === 'DELIVERY' ? (
               <div className="flex items-center gap-1.5">
-                <FaTruck className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
-                <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">Delivery</span>
+                <FaTruck className="h-3.5 w-3.5 text-brand-600 dark:text-brand-400" />
+                <span className="text-sm font-semibold text-brand-700 dark:text-brand-300">Delivery</span>
               </div>
             ) : (
               <div className="flex items-center gap-1.5">

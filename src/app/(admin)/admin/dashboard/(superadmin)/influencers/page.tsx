@@ -214,7 +214,7 @@ export default function SuperAdminInfluencersPage() {
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700">
           <p className="text-sm text-gray-500 dark:text-gray-400">Pending Withdrawals</p>
-          <p className="text-2xl font-bold text-orange-600 dark:text-orange-400 mt-1">
+          <p className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1">
             {influencers.reduce((sum, i) => sum + i.pendingWithdrawals, 0)}
           </p>
         </div>
@@ -328,7 +328,7 @@ export default function SuperAdminInfluencersPage() {
                           </span>
                         )}
                         {influencer.pendingWithdrawals > 0 && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
                             {influencer.pendingWithdrawals} withdrawal(s)
                           </span>
                         )}
@@ -408,7 +408,7 @@ export default function SuperAdminInfluencersPage() {
             <div className="p-6 space-y-6">
               {/* Profile */}
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600 dark:text-orange-400 text-2xl font-bold">
+                <div className="w-16 h-16 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center text-brand-600 dark:text-brand-400 text-2xl font-bold">
                   {selectedInfluencer.name.charAt(0).toUpperCase()}
                 </div>
                 <div>

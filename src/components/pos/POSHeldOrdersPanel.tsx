@@ -6,12 +6,12 @@
  * - Recall order to current cart
  * - Delete held order
  * - Shows time since hold
- * - Orange theme consistent with POS
+ * - Brand theme consistent with admin styling
  */
 
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   FaTimes,
   FaPlay,
@@ -23,6 +23,7 @@ import {
 } from 'react-icons/fa';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { formatCurrency } from '@/lib/utils/format';
+import ConfirmDialog from '@/components/modals/ConfirmDialog';
 
 // ============================================
 // TYPES
@@ -86,6 +87,11 @@ export const POSHeldOrdersPanel: React.FC<POSHeldOrdersPanelProps> = ({
 }) => {
   const { t, locale } = useTranslation();
 
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; orderId: string | null }>({
+    open: false,
+    orderId: null,
+  });
+
   const formatMoney = (amount: number): string => formatCurrency(amount, currency, locale);
 
   // Format time ago
@@ -133,7 +139,7 @@ export const POSHeldOrdersPanel: React.FC<POSHeldOrdersPanelProps> = ({
       {/* Panel */}
       <div className="absolute right-0 top-0 bottom-0 w-full max-w-md bg-white dark:bg-gray-900 shadow-2xl flex flex-col">
         {/* Header */}
-        <div className="shrink-0 flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-orange-500 dark:bg-orange-600">
+        <div className="shrink-0 flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-brand-500 dark:bg-brand-600">
           <div className="flex items-center gap-3">
             <FaShoppingCart className="w-5 h-5 text-white" />
             <h2 className="text-lg font-semibold text-white">
@@ -172,7 +178,7 @@ export const POSHeldOrdersPanel: React.FC<POSHeldOrdersPanelProps> = ({
                       <div className="flex items-center gap-2">
                         <span className={`px-2 py-0.5 rounded text-xs font-medium ${
                           order.orderType === 'DINE_IN' 
-                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                            ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400'
                             : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                         }`}>
                           {order.orderType === 'DINE_IN'
@@ -245,16 +251,14 @@ export const POSHeldOrdersPanel: React.FC<POSHeldOrdersPanelProps> = ({
                     <div className="flex gap-2">
                       <button
                         onClick={() => onRecallOrder(order.id)}
-                        className="flex-1 py-2 px-3 rounded-lg text-sm font-medium bg-orange-500 text-white hover:bg-orange-600 transition-colors flex items-center justify-center gap-2"
+                        className="flex-1 py-2 px-3 rounded-lg text-sm font-medium bg-brand-500 text-white hover:bg-brand-600 transition-colors flex items-center justify-center gap-2"
                       >
                         <FaPlay className="w-3 h-3" />
                         {t('pos.recall') || 'Recall'}
                       </button>
                       <button
                         onClick={() => {
-                          if (confirm(t('pos.confirmDeleteHeldOrder') || 'Delete this held order?')) {
-                            onDeleteOrder(order.id);
-                          }
+                          setDeleteConfirm({ open: true, orderId: order.id });
                         }}
                         className="py-2 px-3 rounded-lg text-sm font-medium bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
                       >
@@ -267,6 +271,21 @@ export const POSHeldOrdersPanel: React.FC<POSHeldOrdersPanelProps> = ({
             </div>
           )}
         </div>
+
+        <ConfirmDialog
+          isOpen={deleteConfirm.open}
+          title={t('common.warning') || 'Warning'}
+          message={t('pos.confirmDeleteHeldOrder') || 'Delete this held order?'}
+          confirmText={t('common.delete') || 'Delete'}
+          cancelText={t('common.cancel') || 'Cancel'}
+          variant="danger"
+          onCancel={() => setDeleteConfirm({ open: false, orderId: null })}
+          onConfirm={() => {
+            const orderId = deleteConfirm.orderId;
+            setDeleteConfirm({ open: false, orderId: null });
+            if (orderId) onDeleteOrder(orderId);
+          }}
+        />
 
         {/* Footer */}
         <div className="shrink-0 p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">

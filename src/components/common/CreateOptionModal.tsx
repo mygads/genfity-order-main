@@ -71,9 +71,9 @@ export default function CreateOptionModal({
                 onClose();
                 onSingleCreate();
               }}
-              className="group flex items-center gap-4 rounded-xl border-2 border-gray-200 p-5 transition-all hover:border-primary-500 hover:bg-primary-50 dark:border-gray-700 dark:hover:border-primary-500 dark:hover:bg-primary-900/20"
+              className="group flex items-center gap-4 rounded-xl border-2 border-gray-200 p-5 transition-all hover:border-brand-500 hover:bg-brand-50 dark:border-gray-700 dark:hover:border-brand-500 dark:hover:bg-brand-900/20"
             >
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-100 text-primary-600 group-hover:bg-primary-500 group-hover:text-white dark:bg-primary-900/30 dark:text-primary-400">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-100 text-brand-600 group-hover:bg-brand-500 group-hover:text-white dark:bg-brand-900/30 dark:text-brand-400">
                 <FaPlus className="h-5 w-5" />
               </div>
               <div className="flex-1 text-left">
@@ -85,7 +85,7 @@ export default function CreateOptionModal({
                 </p>
               </div>
               <svg
-                className="h-5 w-5 text-gray-400 group-hover:text-primary-500"
+                className="h-5 w-5 text-gray-400 group-hover:text-brand-500"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"

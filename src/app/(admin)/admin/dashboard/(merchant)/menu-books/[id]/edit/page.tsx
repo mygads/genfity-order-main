@@ -159,7 +159,7 @@ export default function EditMenuBookPage() {
                                 type="text"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
-                                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                             />
                         </div>
                         <div>
@@ -170,7 +170,7 @@ export default function EditMenuBookPage() {
                                 type="text"
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
-                                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                             />
                         </div>
                     </div>
@@ -209,12 +209,12 @@ export default function EditMenuBookPage() {
                                 {selectedMenuIds.map(id => {
                                     const menu = menus.find(m => m.id === id);
                                     return menu ? (
-                                        <span key={id} className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                                                                                <span key={id} className="inline-flex items-center gap-1.5 rounded-full bg-brand-100 px-3 py-1 text-xs font-medium text-brand-700 dark:bg-brand-900/30 dark:text-brand-400">
                                             {menu.name}
                                             <button
                                                 type="button"
                                                 onClick={() => setSelectedMenuIds(prev => prev.filter(x => x !== id))}
-                                                className="hover:text-blue-900"
+                                                                                            className="hover:text-brand-900"
                                             >
                                                 <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -234,7 +234,7 @@ export default function EditMenuBookPage() {
                                     {filteredMenus.map(menu => {
                                         const isSelected = selectedMenuIds.includes(menu.id);
                                         return (
-                                            <label key={menu.id} className={`flex cursor-pointer items-center gap-3 p-3 transition-colors ${isSelected ? "bg-blue-50 dark:bg-blue-900/20" : "hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
+                                            <label key={menu.id} className={`flex cursor-pointer items-center gap-3 p-3 transition-colors ${isSelected ? "bg-brand-50 dark:bg-brand-900/20" : "hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
                                                 <input
                                                     type="checkbox"
                                                     checked={isSelected}
@@ -245,7 +245,7 @@ export default function EditMenuBookPage() {
                                                             setSelectedMenuIds(prev => [...prev, menu.id]);
                                                         }
                                                     }}
-                                                    className="h-4 w-4 rounded border-gray-300 text-primary-600"
+                                                    className="h-4 w-4 rounded border-gray-300 text-brand-600"
                                                 />
                                                 <div className="flex-1">
                                                     <p className="text-sm font-medium text-gray-900 dark:text-white">{menu.name}</p>

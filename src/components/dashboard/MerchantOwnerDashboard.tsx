@@ -510,11 +510,11 @@ export default function MerchantOwnerDashboard({
                 {/* Rank */}
                 <div className="shrink-0">
                   {index === 0 ? (
-                    <FaTrophy className="w-5 h-5 text-amber-500" />
+                    <FaTrophy className="w-5 h-5 text-brand-600" />
                   ) : index === 1 ? (
                     <FaMedal className="w-5 h-5 text-gray-400" />
                   ) : index === 2 ? (
-                    <FaAward className="w-5 h-5 text-orange-400" />
+                    <FaAward className="w-5 h-5 text-brand-500" />
                   ) : (
                     <span className="w-5 h-5 flex items-center justify-center text-xs font-medium text-gray-400">{index + 1}</span>
                   )}

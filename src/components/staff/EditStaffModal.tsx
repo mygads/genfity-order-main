@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { FaTimes, FaSave, FaLock } from 'react-icons/fa';
+import { useModalImplicitClose } from '@/hooks/useModalImplicitClose';
 
 interface EditStaffModalProps {
   isOpen: boolean;
@@ -36,6 +37,18 @@ export default function EditStaffModal({
   const [phone, setPhone] = useState(initial.phone);
   const [newPassword, setNewPassword] = useState(initial.newPassword);
 
+  const isDirty =
+    name !== initial.name ||
+    phone !== initial.phone ||
+    (newPassword || '').trim().length > 0;
+
+  const disableImplicitClose = isLoading || isDirty;
+  const { onBackdropMouseDown } = useModalImplicitClose({
+    isOpen,
+    onClose,
+    disableImplicitClose,
+  });
+
   useEffect(() => {
     if (!isOpen) return;
 
@@ -44,23 +57,15 @@ export default function EditStaffModal({
     setNewPassword('');
   }, [isOpen, initial.name, initial.phone]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
-
   if (!isOpen) return null;
 
   const disabledByInvite = staff.invitationStatus === 'WAITING';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onMouseDown={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onMouseDown={onBackdropMouseDown}
+    >
       <div
         role="dialog"
         aria-modal="true"

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { FaLocationArrow, FaSpinner } from 'react-icons/fa';
+import AlertDialog from '@/components/modals/AlertDialog';
 
 // Import the map content as a separate component to handle SSR
 const MapContent = dynamic(() => import('./MapContent'), { ssr: false });
@@ -32,6 +33,15 @@ export default function MapLocationPicker({
   const [searchQuery, setSearchQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
+  const [alertState, setAlertState] = useState<{ open: boolean; title: string; message: string }>({
+    open: false,
+    title: 'Notice',
+    message: '',
+  });
+
+  const showAlert = (title: string, message: string) => {
+    setAlertState({ open: true, title, message });
+  };
 
   const handleSearch = async (e?: React.MouseEvent | React.KeyboardEvent) => {
     // Prevent form submission
@@ -51,11 +61,11 @@ export default function MapLocationPicker({
         const { lat, lon } = data[0];
         onLocationChange(parseFloat(lat), parseFloat(lon));
       } else {
-        alert('Location not found. Please try a different search term.');
+        showAlert('Not found', 'Location not found. Please try a different search term.');
       }
     } catch (error) {
       console.error('Geocoding error:', error);
-      alert('Failed to search location. Please try again.');
+      showAlert('Error', 'Failed to search location. Please try again.');
     } finally {
       setSearching(false);
     }
@@ -73,7 +83,7 @@ export default function MapLocationPicker({
     e?.preventDefault();
     
     if (!navigator.geolocation) {
-      alert('Geolocation is not supported by your browser');
+      showAlert('Not supported', 'Geolocation is not supported by your browser');
       return;
     }
 
@@ -85,7 +95,7 @@ export default function MapLocationPicker({
       },
       (error) => {
         console.error('Geolocation error:', error);
-        alert('Failed to get your location. Please check your browser permissions.');
+        showAlert('Error', 'Failed to get your location. Please check your browser permissions.');
         setGettingLocation(false);
       }
     );
@@ -145,6 +155,15 @@ export default function MapLocationPicker({
       {latitude && longitude && (
         <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
           <div>
+
+          <AlertDialog
+            isOpen={alertState.open}
+            title={alertState.title}
+            message={alertState.message}
+            confirmText="OK"
+            variant="info"
+            onClose={() => setAlertState(prev => ({ ...prev, open: false }))}
+          />
             <span className="font-medium">Latitude:</span> {latitude.toFixed(6)}
           </div>
           <div>

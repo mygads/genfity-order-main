@@ -344,7 +344,8 @@ const merchantNavGroups: NavGroup[] = [
         icon: <FaCreditCard />,
         nameKey: "admin.nav.subscription",
         path: "/admin/dashboard/subscription",
-        roles: ["MERCHANT_OWNER"],
+        roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+        permission: STAFF_PERMISSIONS.SUBSCRIPTION,
       },
     ],
   },
@@ -744,7 +745,7 @@ const AppSidebar: React.FC = () => {
                 href="https://genfity.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[10px] text-gray-400 hover:text-primary dark:text-gray-500 dark:hover:text-primary transition-colors"
+                className="text-[10px] text-gray-400 hover:text-brand-600 dark:text-gray-500 dark:hover:text-brand-400 transition-colors"
               >
                 Powered by <span className="font-semibold">Genfity</span>
               </a>

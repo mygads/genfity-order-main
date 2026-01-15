@@ -402,7 +402,7 @@ function MerchantRegisterContent() {
                     <p className="text-gray-500 text-sm mb-6">{t("register.redirecting")}</p>
                     <Link
                         href="/admin/login"
-                        className="inline-block px-6 py-3 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors"
+                        className="inline-block px-6 py-3 bg-brand-500 text-white rounded-lg font-medium hover:bg-brand-600 transition-colors"
                     >
                         {t("register.loginNow")}
                     </Link>
@@ -416,7 +416,7 @@ function MerchantRegisterContent() {
             {/* Background Pattern */}
             <div className="fixed inset-0 pointer-events-none overflow-hidden">
                 <div className="absolute -top-40 -right-40 w-96 h-96 bg-[#173C82]/5 rounded-full blur-3xl" />
-                <div className="absolute top-1/2 -left-40 w-80 h-80 bg-orange-500/5 rounded-full blur-3xl" />
+                <div className="absolute top-1/2 -left-40 w-80 h-80 bg-brand-500/5 rounded-full blur-3xl" />
             </div>
 
             <div className="relative z-10 min-h-screen flex items-center justify-center p-4 md:p-8 lg:p-12">
@@ -470,7 +470,7 @@ function MerchantRegisterContent() {
                                         key={index}
                                         onClick={() => setCurrentSlide(index)}
                                         className={`transition-all duration-300 rounded-full ${currentSlide === index
-                                                ? "w-6 h-2 bg-orange-400"
+                                                ? "w-6 h-2 bg-brand-400"
                                                 : "w-2 h-2 bg-white/30 hover:bg-white/50"
                                             }`}
                                         aria-label={`Go to slide ${index + 1}`}

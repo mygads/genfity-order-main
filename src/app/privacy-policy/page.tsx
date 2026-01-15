@@ -9,8 +9,8 @@ export default function PrivacyPage() {
             <main className="flex-grow pt-32 pb-16 px-4 max-w-4xl mx-auto w-full">
                 {/* Hero Section */}
                 <div className="text-center mb-12">
-                    <div className="inline-flex items-center justify-center w-16 h-16 bg-orange-100 dark:bg-orange-900/30 rounded-full mb-4">
-                        <FaShieldAlt className="w-8 h-8 text-orange-500" />
+                    <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-100 dark:bg-brand-900/30 rounded-full mb-4">
+                        <FaShieldAlt className="w-8 h-8 text-brand-500" />
                     </div>
                     <h1 className="text-4xl md:text-5xl font-bold mb-4">Privacy Policy</h1>
                     <p className="text-gray-600 dark:text-gray-300 text-lg">
@@ -24,19 +24,19 @@ export default function PrivacyPage() {
                 {/* Quick Links */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
                     <a href="#collection" className="flex flex-col items-center p-4 bg-gray-50 dark:bg-gray-800 rounded-xl hover:shadow-md transition-shadow">
-                        <FaFileAlt className="w-6 h-6 text-orange-500 mb-2" />
+                        <FaFileAlt className="w-6 h-6 text-brand-500 mb-2" />
                         <span className="text-sm font-medium text-center">Data Collection</span>
                     </a>
                     <a href="#security" className="flex flex-col items-center p-4 bg-gray-50 dark:bg-gray-800 rounded-xl hover:shadow-md transition-shadow">
-                        <FaUserLock className="w-6 h-6 text-orange-500 mb-2" />
+                        <FaUserLock className="w-6 h-6 text-brand-500 mb-2" />
                         <span className="text-sm font-medium text-center">Data Security</span>
                     </a>
                     <a href="#rights" className="flex flex-col items-center p-4 bg-gray-50 dark:bg-gray-800 rounded-xl hover:shadow-md transition-shadow">
-                        <FaShieldAlt className="w-6 h-6 text-orange-500 mb-2" />
+                        <FaShieldAlt className="w-6 h-6 text-brand-500 mb-2" />
                         <span className="text-sm font-medium text-center">Your Rights</span>
                     </a>
                     <a href="#contact" className="flex flex-col items-center p-4 bg-gray-50 dark:bg-gray-800 rounded-xl hover:shadow-md transition-shadow">
-                        <FaEnvelope className="w-6 h-6 text-orange-500 mb-2" />
+                        <FaEnvelope className="w-6 h-6 text-brand-500 mb-2" />
                         <span className="text-sm font-medium text-center">Contact Us</span>
                     </a>
                 </div>
@@ -66,19 +66,19 @@ export default function PrivacyPage() {
                         </p>
                         <ul className="space-y-3">
                             <li className="flex items-start gap-3">
-                                <span className="w-2 h-2 bg-orange-500 rounded-full mt-2 shrink-0"></span>
+                                <span className="w-2 h-2 bg-brand-500 rounded-full mt-2 shrink-0"></span>
                                 <span className="text-gray-600 dark:text-gray-300"><strong>Personal Information:</strong> Name, email address, phone number</span>
                             </li>
                             <li className="flex items-start gap-3">
-                                <span className="w-2 h-2 bg-orange-500 rounded-full mt-2 shrink-0"></span>
+                                <span className="w-2 h-2 bg-brand-500 rounded-full mt-2 shrink-0"></span>
                                 <span className="text-gray-600 dark:text-gray-300"><strong>Order Information:</strong> Transaction history, delivery addresses</span>
                             </li>
                             <li className="flex items-start gap-3">
-                                <span className="w-2 h-2 bg-orange-500 rounded-full mt-2 shrink-0"></span>
+                                <span className="w-2 h-2 bg-brand-500 rounded-full mt-2 shrink-0"></span>
                                 <span className="text-gray-600 dark:text-gray-300"><strong>Technical Data:</strong> Device information, browser type, IP address</span>
                             </li>
                             <li className="flex items-start gap-3">
-                                <span className="w-2 h-2 bg-orange-500 rounded-full mt-2 shrink-0"></span>
+                                <span className="w-2 h-2 bg-brand-500 rounded-full mt-2 shrink-0"></span>
                                 <span className="text-gray-600 dark:text-gray-300"><strong>Usage Data:</strong> How you interact with our platform</span>
                             </li>
                         </ul>
@@ -112,8 +112,8 @@ export default function PrivacyPage() {
                                 <span className="text-sm text-gray-700 dark:text-gray-300">Regular security audits</span>
                             </div>
                             <div className="flex items-center gap-3 p-3 bg-white dark:bg-gray-700 rounded-lg">
-                                <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center">
-                                    <FaFileAlt className="w-5 h-5 text-orange-600" />
+                                <div className="w-10 h-10 bg-brand-100 dark:bg-brand-900/30 rounded-full flex items-center justify-center">
+                                    <FaFileAlt className="w-5 h-5 text-brand-600" />
                                 </div>
                                 <span className="text-sm text-gray-700 dark:text-gray-300">Access control & monitoring</span>
                             </div>
@@ -130,23 +130,23 @@ export default function PrivacyPage() {
                         </p>
                         <ul className="space-y-3">
                             <li className="flex items-start gap-3">
-                                <span className="text-orange-500 font-bold">✓</span>
+                                <span className="text-brand-500 font-bold">✓</span>
                                 <span className="text-gray-600 dark:text-gray-300"><strong>Access:</strong> Request a copy of your personal data</span>
                             </li>
                             <li className="flex items-start gap-3">
-                                <span className="text-orange-500 font-bold">✓</span>
+                                <span className="text-brand-500 font-bold">✓</span>
                                 <span className="text-gray-600 dark:text-gray-300"><strong>Correction:</strong> Update or correct inaccurate data</span>
                             </li>
                             <li className="flex items-start gap-3">
-                                <span className="text-orange-500 font-bold">✓</span>
+                                <span className="text-brand-500 font-bold">✓</span>
                                 <span className="text-gray-600 dark:text-gray-300"><strong>Deletion:</strong> Request deletion of your data (with certain limitations)</span>
                             </li>
                             <li className="flex items-start gap-3">
-                                <span className="text-orange-500 font-bold">✓</span>
+                                <span className="text-brand-500 font-bold">✓</span>
                                 <span className="text-gray-600 dark:text-gray-300"><strong>Portability:</strong> Receive your data in a portable format</span>
                             </li>
                             <li className="flex items-start gap-3">
-                                <span className="text-orange-500 font-bold">✓</span>
+                                <span className="text-brand-500 font-bold">✓</span>
                                 <span className="text-gray-600 dark:text-gray-300"><strong>Withdraw Consent:</strong> Opt out of marketing communications</span>
                             </li>
                         </ul>
@@ -156,30 +156,30 @@ export default function PrivacyPage() {
                 {/* Contact Section */}
                 <section id="contact" className="mb-10 scroll-mt-24">
                     <h2 className="text-2xl font-bold mb-4">Contact Us</h2>
-                    <div className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6">
+                    <div className="bg-gradient-to-br from-brand-50 to-brand-100 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6">
                         <p className="text-gray-600 dark:text-gray-300 mb-6">
                             If you have any questions about this Privacy Policy or wish to exercise your rights, please contact us:
                         </p>
                         <div className="grid md:grid-cols-2 gap-6">
                             <div className="space-y-4">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
+                                    <div className="w-10 h-10 bg-brand-500 rounded-full flex items-center justify-center">
                                         <FaEnvelope className="w-5 h-5 text-white" />
                                     </div>
                                     <div>
                                         <p className="text-sm text-gray-500 dark:text-gray-400">Email</p>
-                                        <a href="mailto:genfity@gmail.com" className="text-orange-600 dark:text-orange-400 font-medium hover:underline">
+                                        <a href="mailto:genfity@gmail.com" className="text-brand-600 dark:text-brand-400 font-medium hover:underline">
                                             genfity@gmail.com
                                         </a>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
+                                    <div className="w-10 h-10 bg-brand-500 rounded-full flex items-center justify-center">
                                         <FaPhone className="w-5 h-5 text-white" />
                                     </div>
                                     <div>
                                         <p className="text-sm text-gray-500 dark:text-gray-400">Phone / WhatsApp</p>
-                                        <a href="tel:+6285174314023" className="text-orange-600 dark:text-orange-400 font-medium hover:underline">
+                                        <a href="tel:+6285174314023" className="text-brand-600 dark:text-brand-400 font-medium hover:underline">
                                             +62 851 7431 4023
                                         </a>
                                     </div>
@@ -187,7 +187,7 @@ export default function PrivacyPage() {
                             </div>
                             <div className="space-y-4">
                                 <div className="flex items-start gap-3">
-                                    <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center shrink-0">
+                                    <div className="w-10 h-10 bg-brand-500 rounded-full flex items-center justify-center shrink-0">
                                         <FaBuilding className="w-5 h-5 text-white" />
                                     </div>
                                     <div>

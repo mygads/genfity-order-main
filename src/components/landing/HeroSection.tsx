@@ -5,12 +5,18 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import AlertDialog from '@/components/modals/AlertDialog';
 
 export default function HeroSection() {
     const { t } = useTranslation();
     const router = useRouter();
     const [merchantCode, setMerchantCode] = useState('');
     const [showScanner, setShowScanner] = useState(false);
+    const [alertState, setAlertState] = useState<{ isOpen: boolean; title: string; message: string }>({
+        isOpen: false,
+        title: '',
+        message: ''
+    });
     const videoRef = useRef<HTMLVideoElement>(null);
     const streamRef = useRef<MediaStream | null>(null);
 
@@ -38,7 +44,11 @@ export default function HeroSection() {
         } catch (err) {
             console.error('Camera access denied:', err);
             setShowScanner(false);
-            alert('Unable to access camera. Please check permissions.');
+            setAlertState({
+                isOpen: true,
+                title: 'Camera Access Required',
+                message: 'Unable to access camera. Please check permissions.'
+            });
         }
     };
 
@@ -230,6 +240,14 @@ export default function HeroSection() {
                     </div>
                 </div>
             )}
+
+            <AlertDialog
+                isOpen={alertState.isOpen}
+                title={alertState.title}
+                message={alertState.message}
+                variant="warning"
+                onClose={() => setAlertState({ isOpen: false, title: '', message: '' })}
+            />
         </section>
     );
 }

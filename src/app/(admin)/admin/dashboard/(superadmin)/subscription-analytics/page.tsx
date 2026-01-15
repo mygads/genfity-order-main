@@ -93,7 +93,7 @@ function getEventTypeDisplay(eventType: string): { label: string; color: string;
     const eventMap: Record<string, { label: string; color: string; bgColor: string }> = {
         'CREATED': { label: 'Created', color: 'text-blue-600 dark:text-blue-400', bgColor: 'bg-blue-100 dark:bg-blue-900/30' },
         'TRIAL_EXPIRED': { label: 'Trial Expired', color: 'text-yellow-600 dark:text-yellow-400', bgColor: 'bg-yellow-100 dark:bg-yellow-900/30' },
-        'AUTO_SWITCHED': { label: 'Auto Switch', color: 'text-orange-600 dark:text-orange-400', bgColor: 'bg-orange-100 dark:bg-orange-900/30' },
+        'AUTO_SWITCHED': { label: 'Auto Switch', color: 'text-brand-600 dark:text-brand-400', bgColor: 'bg-brand-100 dark:bg-brand-900/30' },
         'SUSPENDED': { label: 'Suspended', color: 'text-red-600 dark:text-red-400', bgColor: 'bg-red-100 dark:bg-red-900/30' },
         'REACTIVATED': { label: 'Reactivated', color: 'text-green-600 dark:text-green-400', bgColor: 'bg-green-100 dark:bg-green-900/30' },
         'PAYMENT_RECEIVED': { label: 'Payment', color: 'text-emerald-600 dark:text-emerald-400', bgColor: 'bg-emerald-100 dark:bg-emerald-900/30' },
@@ -131,15 +131,15 @@ function StatCard({
     value: string | number;
     subtitle?: string;
     icon: React.ReactNode;
-    color?: 'blue' | 'green' | 'yellow' | 'red' | 'purple' | 'orange';
+    color?: 'brand' | 'blue' | 'green' | 'yellow' | 'red' | 'purple';
 }) {
     const colorClasses = {
+        brand: 'bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400',
         blue: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400',
         green: 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400',
         yellow: 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400',
         red: 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400',
         purple: 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400',
-        orange: 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400',
     };
 
     return (
@@ -174,12 +174,12 @@ function ProgressBar({
 }) {
     const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
     const colorMap: Record<string, string> = {
+        brand: 'bg-brand-500',
         blue: 'bg-blue-500',
         green: 'bg-green-500',
         yellow: 'bg-yellow-500',
         red: 'bg-red-500',
         purple: 'bg-purple-500',
-        orange: 'bg-orange-500',
     };
 
     return (
@@ -411,7 +411,7 @@ export default function SubscriptionAnalyticsPage() {
                         title={t('subscription.analytics.avgDeposit')}
                         value={formatCurrency(metrics.revenue.avgDepositAmount, metrics.revenue.currency)}
                         icon={<svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>}
-                        color="orange"
+                        color="brand"
                     />
                 </div>
             </section>

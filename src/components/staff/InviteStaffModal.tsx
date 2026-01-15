@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useModalImplicitClose } from "@/hooks/useModalImplicitClose";
 
 interface InviteStaffModalProps {
   show: boolean;
@@ -25,8 +26,6 @@ export default function InviteStaffModal({
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  if (!show) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,8 +77,22 @@ export default function InviteStaffModal({
     }
   };
 
+  const isDirty = email.trim().length > 0;
+
+  const disableImplicitClose = loading || isDirty;
+  const { onBackdropMouseDown } = useModalImplicitClose({
+    isOpen: show,
+    onClose: handleClose,
+    disableImplicitClose,
+  });
+
+  if (!show) return null;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+      onMouseDown={onBackdropMouseDown}
+    >
       <div className="w-full max-w-md overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-900">
         {/* Header */}
         <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-800">

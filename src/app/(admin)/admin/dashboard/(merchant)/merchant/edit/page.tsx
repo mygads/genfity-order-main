@@ -20,6 +20,7 @@ import { useTranslation, tOr } from "@/lib/i18n/useTranslation";
 import { TranslationKeys } from "@/lib/i18n";
 import SubscriptionRequired from "@/components/subscription/SubscriptionRequired";
 import { useContextualHint, CONTEXTUAL_HINTS } from "@/lib/tutorial";
+import ConfirmDialog from "@/components/modals/ConfirmDialog";
 
 // Dynamically import map component
 const MapLocationPicker = dynamic(() => import("@/components/maps/MapLocationPicker"), { ssr: false });
@@ -144,6 +145,7 @@ export default function EditMerchantPage() {
   const [hasExistingPin, setHasExistingPin] = useState(false);
   const [showPin, setShowPin] = useState(false);
   const [savingPin, setSavingPin] = useState(false);
+  const [removePinConfirmOpen, setRemovePinConfirmOpen] = useState(false);
 
   const [formData, setFormData] = useState<MerchantFormData>({
     name: "",
@@ -947,7 +949,7 @@ export default function EditMerchantPage() {
                         }}
                         className="peer sr-only"
                       />
-                      <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
+                      <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
                     </label>
                   </div>
 
@@ -976,7 +978,7 @@ export default function EditMerchantPage() {
                             }
                             className="peer sr-only"
                           />
-                          <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
+                          <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
                         </label>
                       </div>
                     </div>
@@ -1005,7 +1007,7 @@ export default function EditMerchantPage() {
                         }}
                         className="peer sr-only"
                       />
-                      <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
+                      <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
                     </label>
                   </div>
                 </div>
@@ -1045,7 +1047,7 @@ export default function EditMerchantPage() {
                         }}
                         className="peer sr-only"
                       />
-                      <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-disabled:cursor-not-allowed peer-disabled:opacity-50 dark:bg-gray-700" />
+                      <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-disabled:cursor-not-allowed peer-disabled:opacity-50 dark:bg-gray-700" />
                     </label>
                   </div>
                 </div>
@@ -1425,7 +1427,7 @@ export default function EditMerchantPage() {
                       onChange={(e) => setFormData((prev) => ({ ...prev, posPayImmediately: e.target.checked }))}
                       className="peer sr-only"
                     />
-                    <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
+                    <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
                   </label>
                 </div>
               </div>
@@ -1454,7 +1456,7 @@ export default function EditMerchantPage() {
                         }
                         className="peer sr-only"
                       />
-                      <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
+                      <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
                     </label>
                   </div>
                 </div>
@@ -1480,7 +1482,7 @@ export default function EditMerchantPage() {
                         }}
                         className="peer sr-only"
                       />
-                      <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
+                      <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
                     </label>
                   </div>
 
@@ -1501,7 +1503,7 @@ export default function EditMerchantPage() {
                               }
                               className="peer sr-only"
                             />
-                            <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
+                            <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
                           </label>
                         </div>
                       </div>
@@ -1524,7 +1526,7 @@ export default function EditMerchantPage() {
                                   : 1,
                               }))
                             }
-                            className="h-10 w-full max-w-[220px] rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                              className="h-10 w-full max-w-55 rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
                           />
                           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                             {t('admin.merchantEdit.reservations.minPreorderItemsHelp')}
@@ -1570,7 +1572,7 @@ export default function EditMerchantPage() {
           value={formData.totalTables ?? ""}
           onChange={(e) => setFormData(prev => ({ ...prev, totalTables: e.target.value ? parseInt(e.target.value) : null }))}
           placeholder="e.g. 20"
-          className="h-10 w-full max-w-[200px] rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+          className="h-10 w-full max-w-50 rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
         />
         <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Number of tables for QR code generation. Leave empty if not applicable.</p>
       </div>
@@ -1600,7 +1602,7 @@ export default function EditMerchantPage() {
               onChange={(e) => setFormData(prev => ({ ...prev, enableTax: e.target.checked }))}
               className="peer sr-only"
             />
-            <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
+            <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
           </label>
         </div>
         {formData.enableTax && (
@@ -1636,7 +1638,7 @@ export default function EditMerchantPage() {
               onChange={(e) => setFormData(prev => ({ ...prev, enableServiceCharge: e.target.checked }))}
               className="peer sr-only"
             />
-            <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
+            <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
           </label>
         </div>
         {formData.enableServiceCharge && (
@@ -1672,7 +1674,7 @@ export default function EditMerchantPage() {
               onChange={(e) => setFormData(prev => ({ ...prev, enablePackagingFee: e.target.checked }))}
               className="peer sr-only"
             />
-            <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
+            <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
           </label>
         </div>
         {formData.enablePackagingFee && (
@@ -1738,20 +1740,6 @@ export default function EditMerchantPage() {
           />
         </div>
 
-        {/* Regional Settings Info */}
-        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
-          <div className="flex items-start gap-3">
-            <FaInfoCircle className="w-5 h-5 text-blue-500 mt-0.5" />
-            <div>
-              <p className="text-sm font-medium text-blue-800 dark:text-blue-300">
-                {t("admin.merchantEdit.regionInfo") || "Regional Settings"}
-              </p>
-              <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                {t("admin.merchantEdit.regionInfoDesc") || "Currency and timezone are automatically set based on country. Only Indonesia (IDR) and Australia (AUD) are supported."}
-              </p>
-            </div>
-          </div>
-        </div>
 
         {/* Regional Settings */}
         <div className="grid gap-5 md:grid-cols-3">
@@ -1987,11 +1975,7 @@ export default function EditMerchantPage() {
     }
   };
 
-  const handleRemovePin = async () => {
-    if (!confirm("Are you sure you want to remove the delete PIN? Orders can be deleted without verification.")) {
-      return;
-    }
-
+  const executeRemovePin = async () => {
     setSavingPin(true);
     try {
       const token = localStorage.getItem("accessToken");
@@ -2021,6 +2005,11 @@ export default function EditMerchantPage() {
     } finally {
       setSavingPin(false);
     }
+  };
+
+  const handleRemovePin = () => {
+    if (savingPin) return;
+    setRemovePinConfirmOpen(true);
   };
 
   // ==================== RENDER ACTIVE TAB CONTENT ====================
@@ -2085,9 +2074,6 @@ export default function EditMerchantPage() {
                     Delete PIN is currently enabled
                   </span>
                 </div>
-                <p className="mt-2 text-sm text-green-600 dark:text-green-500">
-                  Enter a new PIN below to change it, or click Remove PIN to disable.
-                </p>
               </div>
             )}
 
@@ -2255,6 +2241,27 @@ export default function EditMerchantPage() {
         <ToastContainer toasts={toasts} />
         <PageBreadcrumb pageTitle="Edit Merchant" />
 
+        <ConfirmDialog
+          isOpen={removePinConfirmOpen}
+          title={t("common.confirm") || "Confirm"}
+          message={
+            t("admin.merchantEdit.removeDeletePinConfirm")
+              || "Are you sure you want to remove the delete PIN? Orders can be deleted without verification."
+          }
+          confirmText={t("common.remove") || "Remove"}
+          cancelText={t("common.cancel") || "Cancel"}
+          variant="warning"
+          onConfirm={async () => {
+            if (savingPin) return;
+            setRemovePinConfirmOpen(false);
+            await executeRemovePin();
+          }}
+          onCancel={() => {
+            if (savingPin) return;
+            setRemovePinConfirmOpen(false);
+          }}
+        />
+
         <div className="mt-6 rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/3">
           {/* Header */}
           <div className="border-b border-gray-200 p-6 dark:border-gray-800">
@@ -2321,7 +2328,7 @@ export default function EditMerchantPage() {
                             onChange={(e) => setReservationsWizardRequirePreorder(e.target.checked)}
                             className="peer sr-only"
                           />
-                          <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
+                          <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-brand-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700" />
                         </label>
                       </div>
 
@@ -2334,7 +2341,7 @@ export default function EditMerchantPage() {
                             max="99"
                             value={reservationsWizardMinItems}
                             onChange={(e) => setReservationsWizardMinItems(parseInt(e.target.value || '1', 10) || 1)}
-                            className="h-10 w-full max-w-[220px] rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                            className="h-10 w-full max-w-55 rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
                           />
                           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                             If preorder is required, customers must select at least this many items.

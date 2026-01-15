@@ -103,11 +103,11 @@ export const OrderListCard: React.FC<OrderListCardProps> = ({
   const getNextAction = () => {
     switch (order.status) {
       case 'PENDING':
-        return { label: 'Accept', status: 'ACCEPTED' as OrderStatus, color: 'bg-blue-500 hover:bg-blue-600' };
+        return { label: 'Accept', status: 'ACCEPTED' as OrderStatus, color: 'bg-brand-500 hover:bg-brand-600' };
       case 'ACCEPTED':
-        return { label: 'Start', status: 'IN_PROGRESS' as OrderStatus, color: 'bg-orange-500 hover:bg-orange-600' };
+        return { label: 'Start', status: 'IN_PROGRESS' as OrderStatus, color: 'bg-brand-500 hover:bg-brand-600' };
       case 'IN_PROGRESS':
-        return { label: 'Ready', status: 'READY' as OrderStatus, color: 'bg-purple-500 hover:bg-purple-600' };
+        return { label: 'Ready', status: 'READY' as OrderStatus, color: 'bg-brand-500 hover:bg-brand-600' };
       case 'READY':
         return { label: 'Done', status: 'COMPLETED' as OrderStatus, color: 'bg-success-500 hover:bg-success-600' };
       default:
@@ -157,13 +157,13 @@ export const OrderListCard: React.FC<OrderListCardProps> = ({
           {/* Order Type */}
           <div className="shrink-0">
             {order.reservation ? (
-              <div className="flex items-center gap-1 px-2 py-1 rounded bg-purple-50 dark:bg-purple-900/30" title="Reservation order">
-                <FaCalendarCheck className="h-3 w-3 text-purple-600 dark:text-purple-400" />
-                <span className="inline-flex items-center gap-1 text-xs font-semibold text-purple-700 dark:text-purple-300">
+              <div className="flex items-center gap-1 px-2 py-1 rounded bg-brand-50 dark:bg-brand-900/30" title="Reservation order">
+                <FaCalendarCheck className="h-3 w-3 text-brand-600 dark:text-brand-400" />
+                <span className="inline-flex items-center gap-1 text-xs font-semibold text-brand-700 dark:text-brand-300">
                   <FaUsers className="h-3 w-3" />
                   {order.reservation.partySize}
                 </span>
-                <span className="text-xs font-semibold text-purple-700 dark:text-purple-300">
+                <span className="text-xs font-semibold text-brand-700 dark:text-brand-300">
                   T{order.tableNumber || order.reservation.tableNumber || '-'}
                 </span>
               </div>
@@ -173,9 +173,9 @@ export const OrderListCard: React.FC<OrderListCardProps> = ({
                 <span className="text-xs font-semibold text-brand-700 dark:text-brand-300">T{order.tableNumber || '-'}</span>
               </div>
             ) : order.orderType === 'DELIVERY' ? (
-              <div className="flex items-center gap-1 px-2 py-1 rounded bg-blue-50 dark:bg-blue-900/30">
-                <FaTruck className="h-3 w-3 text-blue-600 dark:text-blue-400" />
-                <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">DEL</span>
+              <div className="flex items-center gap-1 px-2 py-1 rounded bg-brand-50 dark:bg-brand-900/30">
+                <FaTruck className="h-3 w-3 text-brand-600 dark:text-brand-400" />
+                <span className="text-xs font-semibold text-brand-700 dark:text-brand-300">DEL</span>
               </div>
             ) : (
               <div className="flex items-center gap-1 px-2 py-1 rounded bg-success-50 dark:bg-success-900/30">

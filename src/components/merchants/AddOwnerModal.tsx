@@ -9,6 +9,7 @@
 
 import { useState, useEffect } from 'react';
 import { getAdminToken } from '@/lib/utils/adminAuth';
+import { useModalImplicitClose } from '@/hooks/useModalImplicitClose';
 
 interface AddOwnerModalProps {
   isOpen: boolean;
@@ -159,6 +160,14 @@ export default function AddOwnerModal({
     }
   };
 
+  const isDirty = selectedUserId.trim().length > 0;
+  const disableImplicitClose = isLoading || isFetching || isDirty;
+  const { onBackdropMouseDown } = useModalImplicitClose({
+    isOpen,
+    onClose,
+    disableImplicitClose,
+  });
+
   if (!isOpen) return null;
 
   return (
@@ -166,7 +175,7 @@ export default function AddOwnerModal({
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
+        onMouseDown={onBackdropMouseDown}
       />
 
       {/* Modal */}
@@ -220,7 +229,7 @@ export default function AddOwnerModal({
             {currentOwner && activeTab === 'owner' && (
               <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 dark:bg-amber-900/20 dark:border-amber-800">
                 <div className="flex gap-2">
-                  <svg className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="h-5 w-5 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
                   <div>
@@ -284,7 +293,7 @@ export default function AddOwnerModal({
             <button
               type="button"
               onClick={onClose}
-              className="h-11 flex-1 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-3 focus:ring-gray-500/10 dark:border-gray-800 dark:text-gray-300 dark:hover:bg-white/[0.05]"
+              className="h-11 flex-1 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-3 focus:ring-gray-500/10 dark:border-gray-800 dark:text-gray-300 dark:hover:bg-white/5"
             >
               Cancel
             </button>

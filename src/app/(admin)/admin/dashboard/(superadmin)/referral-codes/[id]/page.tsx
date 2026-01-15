@@ -238,7 +238,7 @@ export default function ReferralCodeDetailPage() {
                             <button
                                 onClick={handleSave}
                                 disabled={isSaving}
-                                className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50"
+                                className="px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors disabled:opacity-50"
                             >
                                 {isSaving ? t("common.saving") : t("common.save")}
                             </button>
@@ -290,7 +290,7 @@ export default function ReferralCodeDetailPage() {
                                 type="text"
                                 value={editData.description}
                                 onChange={(e) => setEditData({ ...editData, description: e.target.value })}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                             />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
@@ -299,7 +299,7 @@ export default function ReferralCodeDetailPage() {
                                 <select
                                     value={editData.discountType}
                                     onChange={(e) => setEditData({ ...editData, discountType: e.target.value as typeof editData.discountType })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                                 >
                                     <option value="NONE">{t("referral.discountType.none")}</option>
                                     <option value="PERCENTAGE">{t("referral.discountType.percentage")}</option>
@@ -314,7 +314,7 @@ export default function ReferralCodeDetailPage() {
                                         type="number"
                                         value={editData.discountValue}
                                         onChange={(e) => setEditData({ ...editData, discountValue: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                                     />
                                 </div>
                             )}
@@ -325,7 +325,7 @@ export default function ReferralCodeDetailPage() {
                                 type="number"
                                 value={editData.maxUsage}
                                 onChange={(e) => setEditData({ ...editData, maxUsage: e.target.value })}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                                 placeholder={t("referral.maxUsageHint")}
                             />
                         </div>
@@ -335,7 +335,7 @@ export default function ReferralCodeDetailPage() {
                                 id="isActive"
                                 checked={editData.isActive}
                                 onChange={(e) => setEditData({ ...editData, isActive: e.target.checked })}
-                                className="rounded text-orange-500 focus:ring-orange-500"
+                                className="rounded text-brand-500 focus:ring-brand-500"
                             />
                             <label htmlFor="isActive" className="text-sm">{t("referral.active")}</label>
                         </div>

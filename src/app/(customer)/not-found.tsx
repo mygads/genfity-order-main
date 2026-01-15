@@ -4,11 +4,17 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import AlertDialog from "@/components/modals/AlertDialog";
 
 export default function NotFound() {
   const router = useRouter();
   const [merchantCode, setMerchantCode] = useState('');
   const [showScanner, setShowScanner] = useState(false);
+  const [alertState, setAlertState] = useState<{ isOpen: boolean; title: string; message: string }>({
+    isOpen: false,
+    title: '',
+    message: ''
+  });
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -35,7 +41,11 @@ export default function NotFound() {
     } catch (err) {
       console.error('Camera access denied:', err);
       setShowScanner(false);
-      alert('Unable to access camera. Please check permissions.');
+      setAlertState({
+        isOpen: true,
+        title: 'Camera Access Required',
+        message: 'Unable to access camera. Please check permissions.'
+      });
     }
   };
 
@@ -232,6 +242,13 @@ export default function NotFound() {
           50% { top: calc(100% - 2px); }
         }
       `}</style>
+      <AlertDialog
+        isOpen={alertState.isOpen}
+        title={alertState.title}
+        message={alertState.message}
+        variant="warning"
+        onClose={() => setAlertState({ isOpen: false, title: '', message: '' })}
+      />
     </div>
   );
 }

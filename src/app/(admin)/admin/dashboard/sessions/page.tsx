@@ -12,14 +12,15 @@
 
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import ToastContainer from '@/components/ui/ToastContainer';
 import { useToast } from '@/hooks/useToast';
 import { useSWRWithAuth } from '@/hooks/useSWRWithAuth';
 import { getAdminToken } from '@/lib/utils/adminAuth';
 import { useTranslation } from '@/lib/i18n/useTranslation';
-import { FaDesktop, FaMobileAlt, FaTabletAlt, FaSignOutAlt, FaCheckCircle, FaExclamationTriangle } from 'react-icons/fa';
+import { TableActionButton } from '@/components/common/TableActionButton';
+import { FaDesktop, FaMobileAlt, FaTabletAlt, FaSignOutAlt, FaCheckCircle, FaExclamationTriangle, FaTimes } from 'react-icons/fa';
 import { UAParser } from 'ua-parser-js';
 
 interface Session {
@@ -41,6 +42,7 @@ export default function SessionsPage() {
     const { t } = useTranslation();
     const { toasts, success: showSuccessToast, error: showErrorToast } = useToast();
     const [revokingId, setRevokingId] = useState<string | null>(null);
+    const [confirmSessionId, setConfirmSessionId] = useState<string | null>(null);
 
     // Fetch sessions using SWR
     const {
@@ -52,7 +54,45 @@ export default function SessionsPage() {
         refreshInterval: 30000, // Auto-refresh every 30 seconds
     });
 
-    const sessions = sessionsResponse?.success ? sessionsResponse.data : [];
+    const sessions = useMemo(() => {
+        return sessionsResponse?.success ? sessionsResponse.data : [];
+    }, [sessionsResponse]);
+
+    const getJwtSessionId = useCallback((token: string | null): string | null => {
+        if (!token) return null;
+        const parts = token.split('.');
+        if (parts.length < 2) return null;
+
+        try {
+            const base64Url = parts[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+
+            // Decode base64 to UTF-8
+            const json = decodeURIComponent(
+                atob(padded)
+                    .split('')
+                    .map((c) => `%${`00${c.charCodeAt(0).toString(16)}`.slice(-2)}`)
+                    .join(''),
+            );
+
+            const payload = JSON.parse(json) as Record<string, unknown>;
+            const sessionId = payload.sessionId ?? payload.sid;
+            return typeof sessionId === 'string' ? sessionId : null;
+        } catch {
+            return null;
+        }
+    }, []);
+
+    const currentSessionId = useMemo(() => {
+        const token = typeof window !== 'undefined' ? getAdminToken() : null;
+        return getJwtSessionId(token);
+    }, [getJwtSessionId]);
+
+    const resolvedSessions = useMemo(() => {
+        if (!currentSessionId) return sessions;
+        return sessions.map((s) => ({ ...s, isCurrent: s.isCurrent || s.id === currentSessionId }));
+    }, [sessions, currentSessionId]);
 
     // Parse user agent to get readable device info
     const parseDeviceInfo = (userAgent: string) => {
@@ -117,11 +157,7 @@ export default function SessionsPage() {
     };
 
     // Revoke session
-    const handleRevokeSession = async (sessionId: string) => {
-        if (!confirm(t('admin.sessions.confirmRevoke'))) {
-            return;
-        }
-
+    const revokeSession = async (sessionId: string) => {
         setRevokingId(sessionId);
 
         try {
@@ -150,6 +186,25 @@ export default function SessionsPage() {
             setRevokingId(null);
         }
     };
+
+    const openRevokeModal = (sessionId: string) => {
+        setConfirmSessionId(sessionId);
+    };
+
+    const closeRevokeModal = () => {
+        setConfirmSessionId(null);
+    };
+
+    useEffect(() => {
+        if (!confirmSessionId) return;
+
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') closeRevokeModal();
+        };
+
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [confirmSessionId]);
 
     // Loading skeleton
     if (isLoading) {
@@ -187,7 +242,7 @@ export default function SessionsPage() {
                         </p>
                         <button
                             onClick={() => mutateSessions()}
-                            className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+                            className="px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors"
                         >
                             {t('admin.sessions.retry')}
                         </button>
@@ -247,7 +302,7 @@ export default function SessionsPage() {
                                         </td>
                                     </tr>
                                 ) : (
-                                    sessions.map((session) => (
+                                    resolvedSessions.map((session) => (
                                         <tr
                                             key={session.id}
                                             className={session.isCurrent ? 'bg-brand-50/30 dark:bg-brand-900/10' : ''}
@@ -302,14 +357,13 @@ export default function SessionsPage() {
                                             </td>
                                             <td className="px-4 py-4 text-end">
                                                 {!session.isCurrent && (
-                                                    <button
-                                                        onClick={() => handleRevokeSession(session.id)}
+                                                    <TableActionButton
+                                                        icon={FaSignOutAlt}
+                                                        tone="danger"
+                                                        onClick={() => openRevokeModal(session.id)}
                                                         disabled={revokingId === session.id}
-                                                        className="inline-flex items-center gap-2 text-sm font-medium text-red-600 hover:text-red-700 disabled:opacity-50 dark:text-red-400 dark:hover:text-red-300"
-                                                    >
-                                                        <FaSignOutAlt className="h-3.5 w-3.5" />
-                                                        {revokingId === session.id ? t('admin.sessions.revoking') : t('admin.sessions.signOut')}
-                                                    </button>
+                                                        label={revokingId === session.id ? t('admin.sessions.revoking') : t('admin.sessions.signOut')}
+                                                    />
                                                 )}
                                                 {session.isCurrent && (
                                                     <span className="text-sm text-gray-400 dark:text-gray-500">
@@ -330,6 +384,63 @@ export default function SessionsPage() {
                     {sessions.length} {sessions.length === 1 ? t('admin.sessions.sessionCount') : t('admin.sessions.sessionCountPlural')}
                 </div>
             </div>
+
+            {/* Revoke/Sign-out Confirmation Modal */}
+            {confirmSessionId && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/50" onClick={closeRevokeModal} />
+                    <div
+                        className="relative w-full max-w-md rounded-2xl border border-gray-200 bg-white p-5 shadow-xl dark:border-gray-800 dark:bg-gray-900"
+                        onClick={(e) => e.stopPropagation()}
+                        role="dialog"
+                        aria-modal="true"
+                    >
+                        <div className="flex items-start gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 dark:bg-red-900/20">
+                                <FaExclamationTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+                                    {t('admin.sessions.signOut') || 'Sign out'}
+                                </h3>
+                                <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                                    {t('admin.sessions.confirmRevoke') || 'Are you sure you want to sign out this device?'}
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={closeRevokeModal}
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
+                                aria-label={t('common.close') || 'Close'}
+                            >
+                                <FaTimes className="h-4 w-4" />
+                            </button>
+                        </div>
+
+                        <div className="mt-5 flex justify-end gap-2">
+                            <button
+                                type="button"
+                                onClick={closeRevokeModal}
+                                className="inline-flex h-9 items-center justify-center rounded-lg border border-gray-200 bg-white px-3 text-sm font-medium text-gray-800 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
+                            >
+                                {t('common.cancel') || 'Cancel'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={async () => {
+                                    const id = confirmSessionId;
+                                    closeRevokeModal();
+                                    await revokeSession(id);
+                                }}
+                                className="inline-flex h-9 items-center justify-center rounded-lg bg-red-600 px-3 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+                                disabled={revokingId === confirmSessionId}
+                            >
+                                {t('admin.sessions.signOut') || 'Sign out'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Toast Notifications */}
             <ToastContainer toasts={toasts} />

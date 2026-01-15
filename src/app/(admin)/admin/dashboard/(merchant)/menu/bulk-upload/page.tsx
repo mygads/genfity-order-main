@@ -4,6 +4,7 @@ import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { useToast } from "@/context/ToastContext";
+import { TableActionButton } from "@/components/common/TableActionButton";
 import { FaDownload, FaTrash, FaEdit, FaCheck, FaTimes, FaArrowLeft, FaSave, FaFileExcel, FaChevronDown, FaChevronUp, FaExclamationCircle, FaUpload, FaExclamationTriangle } from "react-icons/fa";
 import * as XLSX from "xlsx";
 import { useMerchant } from "@/context/MerchantContext";
@@ -687,7 +688,7 @@ export default function MenuBulkUploadPage() {
         {/* Step 1: Download Template */}
         <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6" data-tutorial="template-guide">
           <div className="flex items-start gap-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-100 text-brand-600 dark:bg-brand-900/30 dark:text-brand-400">
               <span className="text-sm font-bold">1</span>
             </div>
             <div className="flex-1">
@@ -707,7 +708,7 @@ export default function MenuBulkUploadPage() {
                 <button
                   onClick={exportCurrentMenu}
                   disabled={exporting}
-                  className="inline-flex items-center gap-2 rounded-lg border border-primary-200 bg-primary-50 px-4 py-2.5 text-sm font-medium text-primary-700 hover:bg-primary-100 disabled:opacity-50 dark:border-primary-800 dark:bg-primary-900/30 dark:text-primary-400"
+                  className="inline-flex items-center gap-2 rounded-lg border border-brand-200 bg-brand-50 px-4 py-2.5 text-sm font-medium text-brand-700 hover:bg-brand-100 disabled:opacity-50 dark:border-brand-800 dark:bg-brand-900/30 dark:text-brand-400"
                 >
                   {exporting ? (
                     <>
@@ -732,7 +733,7 @@ export default function MenuBulkUploadPage() {
         {/* Step 2: Upload File */}
         <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6">
           <div className="flex items-start gap-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-100 text-brand-600 dark:bg-brand-900/30 dark:text-brand-400">
               <span className="text-sm font-bold">2</span>
             </div>
             <div className="flex-1">
@@ -745,7 +746,7 @@ export default function MenuBulkUploadPage() {
               <div
                 data-tutorial="upload-zone"
                 className={`mt-4 relative rounded-xl border-2 border-dashed p-8 text-center transition-colors ${dragActive
-                  ? "border-primary-500 bg-primary-50 dark:bg-primary-900/20"
+                  ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20"
                   : "border-gray-300 dark:border-gray-700"
                   }`}
                 onDragEnter={handleDrag}
@@ -774,7 +775,7 @@ export default function MenuBulkUploadPage() {
                   ) : (
                     <div className="text-center">
                       <p className="text-gray-700 dark:text-gray-300">
-                        <span className="font-medium text-primary-600 dark:text-primary-400">Click to upload</span> or drag and drop
+                        <span className="font-medium text-brand-600 dark:text-brand-400">Click to upload</span> or drag and drop
                       </p>
                       <p className="text-sm text-gray-500">Excel or CSV file (max 10MB)</p>
                     </div>
@@ -799,7 +800,7 @@ export default function MenuBulkUploadPage() {
         {items.length > 0 && (
           <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6" data-tutorial="preview-table">
             <div className="flex items-start gap-4 mb-6">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-100 text-brand-600 dark:bg-brand-900/30 dark:text-brand-400">
                 <span className="text-sm font-bold">3</span>
               </div>
               <div className="flex-1">
@@ -843,7 +844,7 @@ export default function MenuBulkUploadPage() {
                       onClick={handleSave}
                       disabled={saving || errorCount > 0}
                       data-tutorial="confirm-upload"
-                      className="inline-flex items-center gap-2 rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {saving ? (
                         <>
@@ -895,7 +896,7 @@ export default function MenuBulkUploadPage() {
                             type="text"
                             value={item.name}
                             onChange={(e) => updateItem(index, "name", e.target.value)}
-                            className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                            className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                             placeholder="Menu name"
                           />
                         ) : (
@@ -910,7 +911,7 @@ export default function MenuBulkUploadPage() {
                             type="number"
                             value={item.price}
                             onChange={(e) => updateItem(index, "price", Number(e.target.value))}
-                            className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                            className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                             min="0"
                             step="0.01"
                           />
@@ -961,30 +962,25 @@ export default function MenuBulkUploadPage() {
 
                       {/* Actions */}
                       <div className="col-span-2 lg:col-span-1 flex items-center justify-end gap-1">
-                        <button
+                        <TableActionButton
+                          icon={item.isExpanded ? FaChevronUp : FaChevronDown}
                           onClick={() => toggleExpanded(index)}
-                          className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
                           title={item.isExpanded ? "Collapse" : "Expand"}
-                        >
-                          {item.isExpanded ? <FaChevronUp className="h-3 w-3" /> : <FaChevronDown className="h-3 w-3" />}
-                        </button>
-                        <button
+                          aria-label={item.isExpanded ? "Collapse" : "Expand"}
+                        />
+                        <TableActionButton
+                          icon={item.isEditing ? FaCheck : FaEdit}
                           onClick={() => toggleEdit(index)}
-                          className={`rounded-lg p-2 ${item.isEditing
-                            ? "bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400"
-                            : "text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
-                            }`}
                           title={item.isEditing ? "Done" : "Edit"}
-                        >
-                          {item.isEditing ? <FaCheck className="h-3 w-3" /> : <FaEdit className="h-3 w-3" />}
-                        </button>
-                        <button
+                          aria-label={item.isEditing ? "Done" : "Edit"}
+                        />
+                        <TableActionButton
+                          icon={FaTrash}
+                          tone="danger"
                           onClick={() => removeItem(index)}
-                          className="rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400"
                           title="Remove"
-                        >
-                          <FaTrash className="h-3 w-3" />
-                        </button>
+                          aria-label="Remove"
+                        />
                       </div>
                     </div>
 
@@ -1011,7 +1007,7 @@ export default function MenuBulkUploadPage() {
                               <textarea
                                 value={item.description}
                                 onChange={(e) => updateItem(index, "description", e.target.value)}
-                                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                                 rows={2}
                                 placeholder="Optional description"
                               />
@@ -1035,7 +1031,7 @@ export default function MenuBulkUploadPage() {
                                           type="checkbox"
                                           checked={item.selectedCategoryIds.includes(cat.id)}
                                           onChange={() => toggleCategory(index, cat.id)}
-                                          className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700"
+                                          className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-700"
                                         />
                                         <span className="text-sm text-gray-700 dark:text-gray-300">{cat.name}</span>
                                       </label>
@@ -1070,7 +1066,7 @@ export default function MenuBulkUploadPage() {
                                       type="checkbox"
                                       checked={item[flag.key as keyof MenuUploadItem] as boolean}
                                       onChange={(e) => updateItem(index, flag.key as keyof MenuUploadItem, e.target.checked)}
-                                      className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700"
+                                      className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-700"
                                     />
                                     <span className="text-sm text-gray-700 dark:text-gray-300">{flag.label}</span>
                                   </label>
@@ -1100,7 +1096,7 @@ export default function MenuBulkUploadPage() {
                                     type="checkbox"
                                     checked={item.trackStock}
                                     onChange={(e) => updateItem(index, "trackStock", e.target.checked)}
-                                    className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700"
+                                    className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-700"
                                   />
                                   <span className="text-sm text-gray-700 dark:text-gray-300">Track Stock</span>
                                 </label>
@@ -1112,7 +1108,7 @@ export default function MenuBulkUploadPage() {
                                         type="number"
                                         value={item.stockQty ?? ""}
                                         onChange={(e) => updateItem(index, "stockQty", e.target.value ? Number(e.target.value) : null)}
-                                        className="w-20 rounded-lg border border-gray-200 bg-white px-2 py-1 text-sm focus:border-primary-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                                        className="w-20 rounded-lg border border-gray-200 bg-white px-2 py-1 text-sm focus:border-brand-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                                         min="0"
                                       />
                                     </div>
@@ -1122,7 +1118,7 @@ export default function MenuBulkUploadPage() {
                                         type="number"
                                         value={item.dailyStockTemplate ?? ""}
                                         onChange={(e) => updateItem(index, "dailyStockTemplate", e.target.value ? Number(e.target.value) : null)}
-                                        className="w-20 rounded-lg border border-gray-200 bg-white px-2 py-1 text-sm focus:border-primary-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                                        className="w-20 rounded-lg border border-gray-200 bg-white px-2 py-1 text-sm focus:border-brand-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                                         min="0"
                                       />
                                     </div>
@@ -1131,7 +1127,7 @@ export default function MenuBulkUploadPage() {
                                         type="checkbox"
                                         checked={item.autoResetStock}
                                         onChange={(e) => updateItem(index, "autoResetStock", e.target.checked)}
-                                        className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700"
+                                        className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-700"
                                       />
                                       <span className="text-sm text-gray-700 dark:text-gray-300">Auto Reset</span>
                                     </label>

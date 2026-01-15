@@ -51,6 +51,8 @@ export default function DuplicateAddonItemModal({
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
+  const isDirty = Boolean(searchQuery.trim() || filterCategory !== "all" || selectedId);
+
   // Fetch addon items when modal opens
   useEffect(() => {
     if (isOpen && token) {
@@ -133,6 +135,20 @@ export default function DuplicateAddonItemModal({
     }
   };
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (isDirty) return;
+        onClose();
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [isOpen, isDirty, onClose]);
+
   if (!isOpen) return null;
 
   return (
@@ -140,7 +156,11 @@ export default function DuplicateAddonItemModal({
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
+        onMouseDown={(e) => {
+          if (e.target !== e.currentTarget) return;
+          if (isDirty) return;
+          onClose();
+        }}
       />
 
       {/* Modal */}
@@ -148,7 +168,7 @@ export default function DuplicateAddonItemModal({
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-800">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-100 text-brand-600 dark:bg-brand-900/30 dark:text-brand-400">
               <FaCopy className="h-5 w-5" />
             </div>
             <div>
@@ -178,7 +198,7 @@ export default function DuplicateAddonItemModal({
               placeholder="Search addon items..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 pl-10 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-500"
+              className="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 pl-10 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-500"
             />
           </div>
 
@@ -186,7 +206,7 @@ export default function DuplicateAddonItemModal({
           <select
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
-            className="h-10 rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-gray-800 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+            className="h-10 rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-gray-800 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
           >
             <option value="all">All Categories</option>
             {categories.map((cat) => (
@@ -201,7 +221,7 @@ export default function DuplicateAddonItemModal({
         <div className="max-h-96 overflow-y-auto p-4">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-500 border-t-transparent" />
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" />
             </div>
           ) : filteredItems.length === 0 ? (
             <div className="py-12 text-center text-gray-500 dark:text-gray-400">
@@ -223,7 +243,7 @@ export default function DuplicateAddonItemModal({
                         onClick={() => setSelectedId(item.id)}
                         className={`flex items-center gap-4 rounded-xl border-2 p-3 text-left transition-all ${
                           selectedId === item.id
-                            ? "border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/20"
+                            ? "border-brand-500 bg-brand-50 dark:border-brand-400 dark:bg-brand-900/20"
                             : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600 dark:hover:bg-gray-750"
                         }`}
                       >
@@ -256,7 +276,7 @@ export default function DuplicateAddonItemModal({
                         <div
                           className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
                             selectedId === item.id
-                              ? "border-primary-500 bg-primary-500 text-white"
+                              ? "border-brand-500 bg-brand-500 text-white"
                               : "border-gray-300 dark:border-gray-600"
                           }`}
                         >
@@ -296,7 +316,7 @@ export default function DuplicateAddonItemModal({
           <button
             onClick={handleConfirm}
             disabled={!selectedId}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <FaCopy className="h-4 w-4" />
             Duplicate

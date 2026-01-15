@@ -337,12 +337,12 @@ export default function KitchenDisplayPage() {
             <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <FaFire className="h-4 w-4 text-orange-500" />
+                  <FaFire className="h-4 w-4 text-brand-500" />
                   <h2 className="font-semibold text-gray-900 dark:text-white">
                     {t("admin.kitchen.cooking")}
                   </h2>
                 </div>
-                <span className="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full bg-orange-100 dark:bg-orange-900/30 text-xs font-semibold text-orange-700 dark:text-orange-300">
+                <span className="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full bg-brand-100 dark:bg-brand-900/30 text-xs font-semibold text-brand-700 dark:text-brand-300">
                   {inProgressOrders.length}
                 </span>
               </div>
@@ -568,7 +568,7 @@ function KitchenCard({ order, onCardClick, onAction, actionLabel, actionIcon, ac
             mt-4 w-full flex items-center justify-center gap-2 py-2.5 rounded-lg 
             text-sm font-semibold transition-colors
             ${actionColor === 'primary'
-              ? 'bg-primary-500 hover:bg-primary-600 text-white'
+              ? 'bg-brand-500 hover:bg-brand-600 text-white'
               : 'bg-success-500 hover:bg-success-600 text-white'
             }
           `}

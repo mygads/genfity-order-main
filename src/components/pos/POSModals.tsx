@@ -1,18 +1,9 @@
-/**
- * POS Input Modals Component
- * 
- * Collection of simple input modals for POS:
- * - Customer Info Modal
- * - Table Number Modal
- * - Order Notes Modal
- * - Item Notes Modal
- */
+"use client";
 
-'use client';
-
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { FaTimes, FaUser, FaPhone, FaEnvelope, FaChair, FaStickyNote } from 'react-icons/fa';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import { useModalImplicitClose } from '@/hooks/useModalImplicitClose';
 
 // ============================================
 // BASE MODAL COMPONENT
@@ -23,14 +14,30 @@ interface BaseModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  disableImplicitClose?: boolean;
 }
 
-const BaseModal: React.FC<BaseModalProps> = ({ isOpen, onClose, title, children }) => {
+const BaseModal: React.FC<BaseModalProps> = ({
+  isOpen,
+  onClose,
+  title,
+  children,
+  disableImplicitClose = false,
+}) => {
+  const { onBackdropMouseDown } = useModalImplicitClose({
+    isOpen,
+    onClose,
+    disableImplicitClose,
+  });
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div
+        className="absolute inset-0 bg-black/50"
+        onMouseDown={onBackdropMouseDown}
+      />
       <div className="relative w-full max-w-md mx-4 bg-white dark:bg-gray-900 rounded-xl shadow-2xl overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
@@ -44,7 +51,6 @@ const BaseModal: React.FC<BaseModalProps> = ({ isOpen, onClose, title, children 
             <FaTimes className="w-4 h-4" />
           </button>
         </div>
-        {/* Content */}
         {children}
       </div>
     </div>
@@ -81,13 +87,19 @@ export const CustomerInfoModal: React.FC<CustomerInfoModalProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (isOpen) {
-      setName(initialValue.name || '');
-      setPhone(initialValue.phone || '');
-      setEmail(initialValue.email || '');
-      setTimeout(() => inputRef.current?.focus(), 100);
-    }
-  }, [isOpen, initialValue]);
+    if (!isOpen) return;
+    setName(initialValue.name || '');
+    setPhone(initialValue.phone || '');
+    setEmail(initialValue.email || '');
+    setTimeout(() => inputRef.current?.focus(), 100);
+  }, [initialValue, isOpen]);
+
+  const isDirty = useMemo(() => {
+    const initialName = initialValue.name || '';
+    const initialPhone = initialValue.phone || '';
+    const initialEmail = initialValue.email || '';
+    return name !== initialName || phone !== initialPhone || email !== initialEmail;
+  }, [email, initialValue, name, phone]);
 
   const handleConfirm = () => {
     onConfirm({ name: name.trim(), phone: phone.trim(), email: email.trim() });
@@ -100,7 +112,12 @@ export const CustomerInfoModal: React.FC<CustomerInfoModalProps> = ({
   };
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} title={t('pos.customerInfo')}>
+    <BaseModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={t('pos.customerInfo')}
+      disableImplicitClose={isDirty}
+    >
       <div className="p-4 space-y-4">
         {/* Name */}
         <div>
@@ -114,7 +131,7 @@ export const CustomerInfoModal: React.FC<CustomerInfoModalProps> = ({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={t('pos.customerNamePlaceholder')}
-            className="w-full px-3 py-2.5 rounded-lg bg-gray-100 dark:bg-gray-800 border-none text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-orange-300 dark:focus:ring-orange-600"
+            className="w-full px-3 py-2.5 rounded-lg bg-gray-100 dark:bg-gray-800 border-none text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-brand-300 dark:focus:ring-brand-600"
           />
         </div>
 
@@ -165,7 +182,7 @@ export const CustomerInfoModal: React.FC<CustomerInfoModalProps> = ({
         )}
         <button
           onClick={handleConfirm}
-          className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium bg-orange-500 text-white hover:bg-orange-600 transition-colors"
+          className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium bg-brand-500 text-white hover:bg-brand-600 transition-colors"
         >
           {t('common.confirm')}
         </button>
@@ -195,17 +212,29 @@ export const TableNumberModal: React.FC<TableNumberModalProps> = ({
 }) => {
   const { t } = useTranslation();
   const [tableNumber, setTableNumber] = useState(initialValue);
+  const [showRequiredError, setShowRequiredError] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const isDirty = useMemo(
+    () => tableNumber.trim() !== (initialValue || '').trim(),
+    [initialValue, tableNumber]
+  );
 
   useEffect(() => {
     if (isOpen) {
       setTableNumber(initialValue);
+      setShowRequiredError(false);
       setTimeout(() => inputRef.current?.focus(), 100);
     }
   }, [isOpen, initialValue]);
 
   const handleConfirm = () => {
-    onConfirm(tableNumber.trim());
+    const trimmed = tableNumber.trim();
+    if (!trimmed) {
+      setShowRequiredError(true);
+      return;
+    }
+    onConfirm(trimmed);
     onClose();
   };
 
@@ -220,7 +249,12 @@ export const TableNumberModal: React.FC<TableNumberModalProps> = ({
     : [];
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} title={t('pos.tableNumber')}>
+    <BaseModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={t('pos.tableNumber')}
+      disableImplicitClose={isDirty}
+    >
       <div className="p-4 space-y-4">
         {/* Input */}
         <div>
@@ -232,10 +266,20 @@ export const TableNumberModal: React.FC<TableNumberModalProps> = ({
             ref={inputRef}
             type="text"
             value={tableNumber}
-            onChange={(e) => setTableNumber(e.target.value)}
+            onChange={(e) => {
+              const nextValue = e.target.value;
+              setTableNumber(nextValue);
+              if (showRequiredError && nextValue.trim()) setShowRequiredError(false);
+            }}
             placeholder={t('pos.tableNumberPlaceholder')}
             className="w-full px-3 py-2.5 rounded-lg bg-gray-100 dark:bg-gray-800 border-none text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-600"
           />
+
+          {showRequiredError ? (
+            <p className="mt-2 text-xs text-error-600 dark:text-error-400">
+              {t('pos.tableNumberRequired')}
+            </p>
+          ) : null}
         </div>
 
         {/* Quick Select */}
@@ -248,10 +292,13 @@ export const TableNumberModal: React.FC<TableNumberModalProps> = ({
               {quickSelectTables.map((num) => (
                 <button
                   key={num}
-                  onClick={() => setTableNumber(num)}
+                  onClick={() => {
+                    setTableNumber(num);
+                    if (showRequiredError) setShowRequiredError(false);
+                  }}
                   className={`w-10 h-10 rounded-lg text-sm font-medium transition-colors ${
                     tableNumber === num
-                      ? 'bg-orange-500 text-white'
+                      ? 'bg-brand-500 text-white'
                       : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
                   }`}
                 >
@@ -275,7 +322,8 @@ export const TableNumberModal: React.FC<TableNumberModalProps> = ({
         )}
         <button
           onClick={handleConfirm}
-          className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium bg-orange-500 text-white hover:bg-orange-600 transition-colors"
+          disabled={!tableNumber.trim()}
+          className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium bg-brand-500 text-white hover:bg-brand-600 transition-colors"
         >
           {t('common.confirm')}
         </button>
@@ -305,6 +353,11 @@ export const OrderNotesModal: React.FC<OrderNotesModalProps> = ({
   const [notes, setNotes] = useState(initialValue);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  const isDirty = useMemo(
+    () => notes.trim() !== (initialValue || '').trim(),
+    [initialValue, notes]
+  );
+
   useEffect(() => {
     if (isOpen) {
       setNotes(initialValue);
@@ -323,7 +376,12 @@ export const OrderNotesModal: React.FC<OrderNotesModalProps> = ({
   };
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} title={t('pos.orderNotes')}>
+    <BaseModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={t('pos.orderNotes')}
+      disableImplicitClose={isDirty}
+    >
       <div className="p-4">
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
           <FaStickyNote className="w-3.5 h-3.5 inline mr-2" />
@@ -351,7 +409,7 @@ export const OrderNotesModal: React.FC<OrderNotesModalProps> = ({
         )}
         <button
           onClick={handleConfirm}
-          className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium bg-orange-500 text-white hover:bg-orange-600 transition-colors"
+          className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium bg-brand-500 text-white hover:bg-brand-600 transition-colors"
         >
           {t('common.confirm')}
         </button>
@@ -383,6 +441,11 @@ export const ItemNotesModal: React.FC<ItemNotesModalProps> = ({
   const [notes, setNotes] = useState(initialValue);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  const isDirty = useMemo(
+    () => notes.trim() !== (initialValue || '').trim(),
+    [initialValue, notes]
+  );
+
   useEffect(() => {
     if (isOpen) {
       setNotes(initialValue);
@@ -401,7 +464,12 @@ export const ItemNotesModal: React.FC<ItemNotesModalProps> = ({
   };
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} title={t('pos.itemNotes')}>
+    <BaseModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={t('pos.itemNotes')}
+      disableImplicitClose={isDirty}
+    >
       <div className="p-4">
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
           {t('pos.notesFor')}: <span className="font-medium text-gray-900 dark:text-white">{itemName}</span>
@@ -428,7 +496,7 @@ export const ItemNotesModal: React.FC<ItemNotesModalProps> = ({
         )}
         <button
           onClick={handleConfirm}
-          className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium bg-orange-500 text-white hover:bg-orange-600 transition-colors"
+          className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium bg-brand-500 text-white hover:bg-brand-600 transition-colors"
         >
           {t('common.confirm')}
         </button>
@@ -524,7 +592,7 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
               {canMakePayment && onMakePayment && (
                 <button
                   onClick={onMakePayment}
-                  className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium bg-orange-500 text-white hover:bg-orange-600 transition-colors"
+                  className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium bg-brand-500 text-white hover:bg-brand-600 transition-colors"
                 >
                   {t('pos.makePayment') || 'Make Payment'}
                 </button>
@@ -541,7 +609,7 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
             </button>
             <button
               onClick={onNewOrder}
-              className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium bg-orange-500 text-white hover:bg-orange-600 transition-colors"
+              className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium bg-brand-500 text-white hover:bg-brand-600 transition-colors"
             >
               {t('pos.newOrder')}
             </button>

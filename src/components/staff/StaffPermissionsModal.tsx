@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import { useModalImplicitClose } from '@/hooks/useModalImplicitClose';
 import {
   STAFF_PERMISSIONS,
   PERMISSION_GROUPS,
@@ -36,13 +37,39 @@ export default function StaffPermissionsModal({
 }: StaffPermissionsModalProps) {
   const { t } = useTranslation();
   const [permissions, setPermissions] = useState<string[]>([]);
+  const [initialPermissions, setInitialPermissions] = useState<string[]>([]);
+
+  const normalizePermissions = (perms: string[]) => {
+    return Array.from(new Set(perms)).sort();
+  };
+
+  const arePermissionsEqual = (a: string[], b: string[]) => {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      if (a[i] !== b[i]) return false;
+    }
+    return true;
+  };
 
   // Initialize permissions when modal opens
   useEffect(() => {
     if (isOpen) {
-      setPermissions([...currentPermissions]);
+      const normalized = normalizePermissions(currentPermissions);
+      setPermissions(normalized);
+      setInitialPermissions(normalized);
     }
   }, [isOpen, currentPermissions]);
+
+  const allPermissions = Object.values(STAFF_PERMISSIONS);
+  const allSelected = permissions.length === allPermissions.length;
+  const isDirty = !arePermissionsEqual(normalizePermissions(permissions), initialPermissions);
+
+  const disableImplicitClose = isDirty || isLoading;
+  const { onBackdropMouseDown } = useModalImplicitClose({
+    isOpen,
+    onClose,
+    disableImplicitClose,
+  });
 
   if (!isOpen) return null;
 
@@ -118,11 +145,11 @@ export default function StaffPermissionsModal({
     onSave(permissions);
   };
 
-  const allPermissions = Object.values(STAFF_PERMISSIONS);
-  const allSelected = permissions.length === allPermissions.length;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4"
+      onMouseDown={onBackdropMouseDown}
+    >
       <div className="w-full max-w-2xl rounded-xl bg-white shadow-2xl dark:bg-gray-900">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">

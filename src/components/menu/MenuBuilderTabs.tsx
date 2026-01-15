@@ -653,16 +653,16 @@ export default function MenuBuilderTabs({
                 {/* Spicy */}
                 <label
                   htmlFor="isSpicy"
-                  className="flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 bg-white p-3 transition-all hover:border-orange-300 hover:shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:hover:border-orange-500"
+                  className="flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 bg-white p-3 transition-all hover:border-brand-300 hover:shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:hover:border-brand-500"
                 >
                   <input
                     type="checkbox"
                     {...register('isSpicy')}
                     id="isSpicy"
-                    className="h-4 w-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                    className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
                   />
                   <div className="flex items-center gap-2">
-                    <div className="group relative h-5 w-5 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-orange-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800">
+                    <div className="group relative h-5 w-5 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-brand-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800">
                       <Image
                         src="/images/menu-badges/spicy.png"
                         alt="Spicy"
@@ -929,7 +929,7 @@ export default function MenuBuilderTabs({
                   <div className="mt-3 flex flex-wrap gap-1.5">
                     {watch('isSpicy') && (
                       <div
-                        className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-orange-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
+                        className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-brand-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
                         title="Spicy"
                       >
                         <Image

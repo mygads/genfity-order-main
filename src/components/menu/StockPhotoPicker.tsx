@@ -4,6 +4,7 @@ import React, { useState, useMemo, useCallback } from "react";
 import Image from "next/image";
 import { FaSearch, FaTimes, FaImages, FaUpload, FaExchangeAlt, FaCheck } from "react-icons/fa";
 import { useSWRWithAuth } from "@/hooks/useSWRWithAuth";
+import { useModalImplicitClose } from "@/hooks/useModalImplicitClose";
 
 interface StockPhoto {
   id: string;
@@ -123,17 +124,20 @@ export default function StockPhotoPicker({
     onClose();
   }, [onClose]);
 
+  const isDirty = Boolean(selectedPhoto);
+
+  const { onBackdropMouseDown } = useModalImplicitClose({
+    isOpen,
+    onClose: handleClose,
+    disableImplicitClose: isDirty,
+  });
+
   if (!isOpen) return null;
 
   return (
     <div 
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      onClick={(e) => {
-        // Close only if clicking on backdrop (not modal content)
-        if (e.target === e.currentTarget) {
-          handleClose();
-        }
-      }}
+      onMouseDown={onBackdropMouseDown}
     >
       <div 
         className="flex h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl bg-white dark:bg-gray-900"

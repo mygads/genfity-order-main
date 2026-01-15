@@ -120,7 +120,7 @@ const InfluencerHeader: React.FC<InfluencerHeaderProps> = ({
               className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             >
               {/* Profile Picture */}
-              <div className="w-8 h-8 rounded-full overflow-hidden bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full overflow-hidden bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center">
                 {influencer?.profilePictureUrl ? (
                   <Image
                     src={influencer.profilePictureUrl}
@@ -130,7 +130,7 @@ const InfluencerHeader: React.FC<InfluencerHeaderProps> = ({
                     className="object-cover w-full h-full"
                   />
                 ) : (
-                  <span className="text-sm font-bold text-orange-600 dark:text-orange-400">
+                  <span className="text-sm font-bold text-brand-600 dark:text-brand-400">
                     {influencer?.name?.charAt(0).toUpperCase() || 'U'}
                   </span>
                 )}

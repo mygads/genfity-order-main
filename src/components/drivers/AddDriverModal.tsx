@@ -134,8 +134,17 @@ export default function AddDriverModal({ show, onClose, onSuccess }: AddDriverMo
     }
   };
 
+  const isDirty = selectedUserId.trim().length > 0;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+      onMouseDown={(e) => {
+        if (e.target !== e.currentTarget) return;
+        if (isDirty) return;
+        handleClose();
+      }}
+    >
       <div className="w-full max-w-md overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-900">
         <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-800">
           <div className="flex items-center justify-between">

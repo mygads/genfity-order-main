@@ -2,7 +2,7 @@
  * POS Cart Panel Component
  * 
  * Left side panel showing current order items
- * - Clean, professional design with orange-500 theme
+ * - Clean, professional design with brand theme
  * - Shows items, addons, quantities, prices
  * - Per-item notes display
  * - Order notes section
@@ -142,13 +142,13 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
           {/* Order type badge */}
           <div className="flex items-center gap-2">
             <span className={`px-2 py-1 rounded-full text-xs font-medium ${orderType === 'DINE_IN'
-              ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
-              : 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'
+              ? 'bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400'
+              : 'bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400'
               }`}>
               {orderType === 'DINE_IN' ? t('pos.dineIn') : t('pos.takeaway')}
             </span>
             {isTableNumberEnabled && tableNumber && (
-              <span className="px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-full text-xs font-medium">
+              <span className="px-2 py-1 bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 rounded-full text-xs font-medium">
                 {t('pos.table')} {tableNumber}
               </span>
             )}
@@ -160,7 +160,7 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
           <button
             onClick={() => onSetOrderType('DINE_IN')}
             className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${orderType === 'DINE_IN'
-              ? 'bg-orange-500 text-white'
+              ? 'bg-brand-500 text-white'
               : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
               }`}
           >
@@ -170,7 +170,7 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
           <button
             onClick={() => onSetOrderType('TAKEAWAY')}
             className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${orderType === 'TAKEAWAY'
-              ? 'bg-orange-500 text-white'
+              ? 'bg-brand-500 text-white'
               : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
               }`}
           >
@@ -184,7 +184,7 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
             <button
               onClick={onSetTableNumber}
               className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5 ${tableNumber
-                ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-800'
+                ? 'bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400 border border-brand-200 dark:border-brand-800'
                 : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
                 }`}
             >
@@ -197,7 +197,7 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
             <button
               onClick={onSetCustomerInfo}
               className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5 truncate ${customerInfo?.name || customerInfo?.phone
-                ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-800'
+                ? 'bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400 border border-brand-200 dark:border-brand-800'
                 : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
                 }`}
             >
@@ -220,7 +220,7 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
           <button
             onClick={onSetOrderNotes}
             className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5 ${orderNotes
-              ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-800'
+              ? 'bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400 border border-brand-200 dark:border-brand-800'
               : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
               }`}
           >
@@ -250,7 +250,7 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
                   className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 relative"
                 >
                   {/* Item number badge */}
-                  <div className="absolute -left-1 -top-1 w-6 h-6 rounded-full bg-orange-500 text-white text-xs font-bold flex items-center justify-center shadow">
+                  <div className="absolute -left-1 -top-1 w-6 h-6 rounded-full bg-brand-500 text-white text-xs font-bold flex items-center justify-center shadow">
                     {index + 1}
                   </div>
 
@@ -268,7 +268,7 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
                       {item.addons.length > 0 && (
                         <div className="mt-1.5 space-y-0.5">
                           {item.addons.map((addon, idx) => (
-                            <p key={idx} className="text-xs text-orange-600 dark:text-orange-400">
+                            <p key={idx} className="text-xs text-brand-600 dark:text-brand-400">
                               + {addon.addonName} {addon.addonPrice > 0 && `(${formatMoney(addon.addonPrice)})`}
                             </p>
                           ))}
@@ -277,7 +277,7 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
 
                       {/* Notes */}
                       {item.notes && (
-                        <p className="text-xs text-orange-600 dark:text-orange-400 mt-1.5 italic">
+                        <p className="text-xs text-brand-600 dark:text-brand-400 mt-1.5 italic">
                           {t('pos.note') || 'Note'}: {item.notes}
                         </p>
                       )}
@@ -288,7 +288,7 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
-                          className="w-7 h-7 rounded-md bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:bg-orange-200 dark:hover:bg-orange-900/50 flex items-center justify-center transition-colors"
+                          className="w-7 h-7 rounded-md bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 hover:bg-brand-200 dark:hover:bg-brand-900/50 flex items-center justify-center transition-colors"
                         >
                           <FaMinus className="w-3 h-3" />
                         </button>
@@ -297,7 +297,7 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
                         </span>
                         <button
                           onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
-                          className="w-7 h-7 rounded-md bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:bg-orange-200 dark:hover:bg-orange-900/50 flex items-center justify-center transition-colors"
+                          className="w-7 h-7 rounded-md bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 hover:bg-brand-200 dark:hover:bg-brand-900/50 flex items-center justify-center transition-colors"
                         >
                           <FaPlus className="w-3 h-3" />
                         </button>
@@ -306,7 +306,7 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => onEditItemNotes(item.id)}
-                          className="w-6 h-6 rounded text-gray-400 hover:text-orange-600 dark:hover:text-orange-400 flex items-center justify-center transition-colors"
+                          className="w-6 h-6 rounded text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 flex items-center justify-center transition-colors"
                           title={t('pos.editNotes')}
                         >
                           <FaEdit className="w-3 h-3" />
@@ -382,7 +382,7 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
               <button
                 onClick={onHoldOrder}
                 disabled={items.length === 0 || isPlacingOrder}
-                className="flex-1 py-2 px-3 rounded-lg text-sm font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1"
+                className="flex-1 py-2 px-3 rounded-lg text-sm font-medium bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 hover:bg-brand-200 dark:hover:bg-brand-900/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1"
               >
                 <FaStickyNote className="w-3 h-3" />
                 {t('pos.hold') || 'Hold'}
@@ -396,7 +396,6 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
               onClick={onShowHeldOrders}
               className="w-full py-2 px-3 rounded-lg text-sm font-medium bg-yellow-100 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-200 dark:hover:bg-yellow-900/30 transition-colors flex items-center justify-center gap-2"
             >
-              <span>📋</span>
               {t('pos.heldOrders') || 'Held Orders'} ({heldOrdersCount})
             </button>
           )}
@@ -405,7 +404,7 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
           <button
             onClick={onPlaceOrder}
             disabled={items.length === 0 || isPlacingOrder}
-            className="w-full py-3 px-4 rounded-lg text-sm font-medium bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+            className="w-full py-3 px-4 rounded-lg text-sm font-medium bg-brand-500 text-white hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
           >
             {isPlacingOrder ? (
               <>

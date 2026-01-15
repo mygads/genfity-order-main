@@ -4,6 +4,7 @@ import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { useToast } from "@/context/ToastContext";
+import { TableActionButton } from "@/components/common/TableActionButton";
 import { FaDownload, FaTrash, FaEdit, FaCheck, FaTimes, FaArrowLeft, FaSave, FaFileExcel, FaExclamationTriangle, FaUpload } from "react-icons/fa";
 import * as XLSX from "xlsx";
 
@@ -658,7 +659,7 @@ export default function AddonItemsBulkUploadPage() {
               </button>
               <button
                 onClick={handleSave}
-                className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600"
+                className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
               >
                 Yes, Update {duplicateCount} Item(s)
               </button>
@@ -692,7 +693,7 @@ export default function AddonItemsBulkUploadPage() {
         {/* Step 1: Download Template or Export */}
         <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6">
           <div className="flex items-start gap-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-100 text-brand-600 dark:bg-brand-900/30 dark:text-brand-400">
               <span className="text-sm font-bold">1</span>
             </div>
             <div className="flex-1">
@@ -744,7 +745,7 @@ export default function AddonItemsBulkUploadPage() {
         {/* Step 2: Upload File */}
         <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6">
           <div className="flex items-start gap-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-100 text-brand-600 dark:bg-brand-900/30 dark:text-brand-400">
               <span className="text-sm font-bold">2</span>
             </div>
             <div className="flex-1">
@@ -757,7 +758,7 @@ export default function AddonItemsBulkUploadPage() {
               <div
                 className={`mt-4 relative rounded-xl border-2 border-dashed p-8 text-center transition-colors ${
                   dragActive
-                    ? "border-primary-500 bg-primary-50 dark:bg-primary-900/20"
+                    ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20"
                     : "border-gray-300 dark:border-gray-700"
                 }`}
                 onDragEnter={handleDrag}
@@ -786,7 +787,7 @@ export default function AddonItemsBulkUploadPage() {
                   ) : (
                     <div className="text-center">
                       <p className="text-gray-700 dark:text-gray-300">
-                        <span className="font-medium text-primary-600 dark:text-primary-400">Click to upload</span> or drag and drop
+                        <span className="font-medium text-brand-600 dark:text-brand-400">Click to upload</span> or drag and drop
                       </p>
                       <p className="text-sm text-gray-500">Excel or CSV file (max 10MB)</p>
                     </div>
@@ -811,7 +812,7 @@ export default function AddonItemsBulkUploadPage() {
         {items.length > 0 && (
           <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6">
             <div className="flex items-start gap-4 mb-6">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-100 text-brand-600 dark:bg-brand-900/30 dark:text-brand-400">
                 <span className="text-sm font-bold">3</span>
               </div>
               <div className="flex-1">
@@ -859,7 +860,7 @@ export default function AddonItemsBulkUploadPage() {
                     <button
                       onClick={handleSave}
                       disabled={saving || errorCount > 0}
-                      className="inline-flex items-center gap-2 rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {saving ? (
                         <>
@@ -907,7 +908,7 @@ export default function AddonItemsBulkUploadPage() {
                           <select
                             value={item.addonCategoryName}
                             onChange={(e) => updateItem(index, "addonCategoryName", e.target.value)}
-                            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                           >
                             <option value="">Select Category</option>
                             {categories.map(cat => (
@@ -924,7 +925,7 @@ export default function AddonItemsBulkUploadPage() {
                             type="text"
                             value={item.name}
                             onChange={(e) => updateItem(index, "name", e.target.value)}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                            className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                           />
                         ) : (
                           <span className="text-sm font-medium text-gray-900 dark:text-white">{item.name || "-"}</span>
@@ -936,7 +937,7 @@ export default function AddonItemsBulkUploadPage() {
                             type="number"
                             value={item.price}
                             onChange={(e) => updateItem(index, "price", Number(e.target.value))}
-                            className="w-24 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                            className="w-24 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                           />
                         ) : (
                           <span className="text-sm text-gray-600 dark:text-gray-400">{item.price?.toLocaleString() || "0"}</span>
@@ -947,7 +948,7 @@ export default function AddonItemsBulkUploadPage() {
                           <select
                             value={item.inputType}
                             onChange={(e) => updateItem(index, "inputType", e.target.value)}
-                            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                           >
                             <option value="SELECT">SELECT</option>
                             <option value="QTY">QTY</option>
@@ -991,24 +992,19 @@ export default function AddonItemsBulkUploadPage() {
                       </td>
                       <td className="py-3 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <button
+                          <TableActionButton
+                            icon={item.isEditing ? FaCheck : FaEdit}
                             onClick={() => toggleEdit(index)}
-                            className={`rounded-lg p-2 text-sm ${
-                              item.isEditing
-                                ? "bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400"
-                                : "text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-300"
-                            }`}
                             title={item.isEditing ? "Done editing" : "Edit"}
-                          >
-                            {item.isEditing ? <FaCheck className="h-4 w-4" /> : <FaEdit className="h-4 w-4" />}
-                          </button>
-                          <button
+                            aria-label={item.isEditing ? "Done editing" : "Edit"}
+                          />
+                          <TableActionButton
+                            icon={FaTrash}
+                            tone="danger"
                             onClick={() => removeItem(index)}
-                            className="rounded-lg p-2 text-sm text-gray-500 hover:bg-red-50 hover:text-red-600 dark:text-gray-400 dark:hover:bg-red-900/20 dark:hover:text-red-400"
                             title="Remove"
-                          >
-                            <FaTrash className="h-4 w-4" />
-                          </button>
+                            aria-label="Remove"
+                          />
                         </div>
                       </td>
                     </tr>

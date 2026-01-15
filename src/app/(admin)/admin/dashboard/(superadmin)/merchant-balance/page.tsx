@@ -298,7 +298,7 @@ export default function MerchantBalancePage() {
           </p>
           <button
             onClick={() => fetchMerchants()}
-            className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+            className="px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors"
           >
             {t("admin.superadmin.merchantBalance.retry")}
           </button>
@@ -312,7 +312,7 @@ export default function MerchantBalancePage() {
       <ToastContainer toasts={toasts} />
       <PageBreadcrumb pageTitle={t("admin.superadmin.merchantBalance.title")} />
 
-      <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] lg:p-6">
+      <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6">
         <div className="mb-5">
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
             {t("admin.superadmin.merchantBalance.allMerchants")}
@@ -373,7 +373,7 @@ export default function MerchantBalancePage() {
                   setSearchQuery('');
                   setSubscriptionFilter('all');
                 }}
-                className="h-9 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-gray-800 dark:bg-white/[0.03] dark:text-red-400 dark:hover:bg-red-900/20"
+                className="h-9 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-gray-800 dark:bg-white/3 dark:text-red-400 dark:hover:bg-red-900/20"
               >
                 {t("admin.superadmin.merchantBalance.clearFilters")}
               </button>
@@ -387,11 +387,11 @@ export default function MerchantBalancePage() {
         </div>
 
         {/* Merchants Table */}
-        <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-white/[0.05]">
+        <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-white/5">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1000px]">
+            <table className="w-full min-w-250">
               <thead>
-                <tr className="border-b border-gray-100 bg-gray-50 text-left dark:border-white/[0.05] dark:bg-white/[0.02]">
+                <tr className="border-b border-gray-100 bg-gray-50 text-left dark:border-white/5 dark:bg-white/2">
                   <th 
                     className="px-5 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300"
                     onClick={() => handleSort('code')}
@@ -448,7 +448,7 @@ export default function MerchantBalancePage() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
+              <tbody className="divide-y divide-gray-100 dark:divide-white/5">
                 {merchants.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="py-10 text-center">
@@ -459,7 +459,7 @@ export default function MerchantBalancePage() {
                   merchants.map((merchant) => {
                     const daysRemaining = calculateDaysRemaining(merchant.subscriptionEndsAt);
                     return (
-                    <tr key={merchant.id} className="hover:bg-gray-50 dark:hover:bg-white/[0.02]">
+                    <tr key={merchant.id} className="hover:bg-gray-50 dark:hover:bg-white/2">
                       <td className="px-5 py-4">
                         <span className="font-mono text-sm text-gray-600 dark:text-gray-400">
                           {merchant.code}
@@ -501,7 +501,7 @@ export default function MerchantBalancePage() {
                             daysRemaining <= 0
                               ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
                               : daysRemaining <= 7
-                              ? "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
+                              ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
                               : daysRemaining <= 14
                               ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
                               : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
