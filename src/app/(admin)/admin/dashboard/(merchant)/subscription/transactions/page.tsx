@@ -39,7 +39,14 @@ interface ApiResponse<T> {
     data: T;
 }
 
-type FilterType = 'all' | 'DEPOSIT' | 'ORDER_FEE' | 'SUBSCRIPTION' | 'ADJUSTMENT' | 'REFUND';
+type FilterType =
+    | 'all'
+    | 'DEPOSIT'
+    | 'ORDER_FEE'
+    | 'COMPLETED_ORDER_EMAIL_FEE'
+    | 'SUBSCRIPTION'
+    | 'ADJUSTMENT'
+    | 'REFUND';
 
 /**
  * Transaction History Page
@@ -216,6 +223,7 @@ export default function TransactionsPage() {
         switch (type) {
             case 'DEPOSIT': return t('subscription.transactions.type.deposit');
             case 'ORDER_FEE': return t('subscription.transactions.type.orderFee');
+            case 'COMPLETED_ORDER_EMAIL_FEE': return t('subscription.transactions.type.completedOrderEmailFee');
             case 'SUBSCRIPTION': return t('subscription.transactions.type.subscription');
             case 'REFUND': return t('subscription.transactions.type.refund');
             case 'ADJUSTMENT': return t('subscription.transactions.type.adjustment');
@@ -247,6 +255,7 @@ export default function TransactionsPage() {
         { key: 'all', label: t('subscription.history.filter.all') },
         { key: 'DEPOSIT', label: t('subscription.history.filter.deposit') },
         { key: 'ORDER_FEE', label: t('subscription.history.filter.orderFee') },
+        { key: 'COMPLETED_ORDER_EMAIL_FEE', label: t('subscription.history.filter.completedOrderEmailFee') },
         { key: 'SUBSCRIPTION', label: t('subscription.history.filter.subscription') },
     ];
 

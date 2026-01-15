@@ -771,10 +771,12 @@ async function main() {
         depositMinimumIdr: 100000,
         orderFeeIdr: 250,
         monthlyPriceIdr: 100000,
+        completedOrderEmailFeeIdr: 0,
         // AUD Pricing
         depositMinimumAud: 15,
         orderFeeAud: 0.04,
         monthlyPriceAud: 15,
+        completedOrderEmailFeeAud: 0,
         // Bank Account Info (placeholder - to be configured by admin)
         bankNameIdr: 'BCA',
         bankAccountIdr: '1234567890',
@@ -793,6 +795,8 @@ async function main() {
       data: {
         monthlyDays: 31,
         gracePeriodDays: 3,
+        completedOrderEmailFeeIdr: existingPlan.completedOrderEmailFeeIdr ?? 0,
+        completedOrderEmailFeeAud: existingPlan.completedOrderEmailFeeAud ?? 0,
       },
     });
     console.log('✅ Subscription plan updated with monthlyDays and gracePeriodDays');

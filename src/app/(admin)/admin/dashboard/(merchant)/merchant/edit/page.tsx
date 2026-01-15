@@ -118,6 +118,12 @@ export default function EditMerchantPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
+
+  const [receiptBillingInfo, setReceiptBillingInfo] = useState<{
+    balance: number;
+    completedOrderEmailFee: number;
+    currency: string;
+  } | null>(null);
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
   const [authToken, setAuthToken] = useState<string>("");
@@ -250,6 +256,23 @@ export default function EditMerchantPage() {
       }
 
       const merchant = data.data;
+
+      const merchantCurrency = merchant.currency || 'AUD';
+      const balanceAmount = merchant?.merchantBalance?.balance
+        ? parseFloat(merchant.merchantBalance.balance)
+        : 0;
+      const completedOrderEmailFee = typeof merchant?.completedOrderEmailFee === 'number'
+        ? merchant.completedOrderEmailFee
+        : merchant?.completedOrderEmailFee
+          ? parseFloat(merchant.completedOrderEmailFee)
+          : 0;
+
+      setReceiptBillingInfo({
+        balance: Number.isFinite(balanceAmount) ? balanceAmount : 0,
+        completedOrderEmailFee: Number.isFinite(completedOrderEmailFee) ? completedOrderEmailFee : 0,
+        currency: merchantCurrency,
+      });
+
       setFormData({
         name: merchant.name || "",
         code: merchant.code || "",
@@ -260,7 +283,7 @@ export default function EditMerchantPage() {
         logoUrl: merchant.logoUrl || "",
         bannerUrl: merchant.bannerUrl || "",
         country: merchant.country || "Australia",
-        currency: merchant.currency || "AUD",
+        currency: merchantCurrency,
         timezone: merchant.timezone || "Australia/Sydney",
         latitude: merchant.latitude ? parseFloat(merchant.latitude) : null,
         longitude: merchant.longitude ? parseFloat(merchant.longitude) : null,
@@ -2035,6 +2058,7 @@ export default function EditMerchantPage() {
           <ReceiptTemplateTab
             settings={formData.receiptSettings}
             onChange={(settings) => setFormData(prev => ({ ...prev, receiptSettings: settings }))}
+            billingInfo={receiptBillingInfo}
             merchantInfo={{
               name: formData.name,
               code: formData.code,

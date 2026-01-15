@@ -32,6 +32,7 @@ export interface SubscriptionPlanPricing {
     depositMinimum: number;
     orderFee: number;
     monthlyPrice: number;
+    completedOrderEmailFee: number;
     bankName: string | null;
     bankAccount: string | null;
     bankAccountName: string | null;
@@ -53,6 +54,7 @@ class SubscriptionService {
                 depositMinimum: currency === 'IDR' ? 100000 : 15,
                 orderFee: currency === 'IDR' ? 250 : 0.04,
                 monthlyPrice: currency === 'IDR' ? 100000 : 15,
+                completedOrderEmailFee: 0,
                 bankName: null,
                 bankAccount: null,
                 bankAccountName: null,
@@ -65,6 +67,7 @@ class SubscriptionService {
                 depositMinimum: Number(plan.depositMinimumAud),
                 orderFee: Number(plan.orderFeeAud),
                 monthlyPrice: Number(plan.monthlyPriceAud),
+                completedOrderEmailFee: Number((plan as any).completedOrderEmailFeeAud ?? 0),
                 bankName: plan.bankNameAud,
                 bankAccount: plan.bankAccountAud,
                 bankAccountName: plan.bankAccountNameAud,
@@ -77,6 +80,7 @@ class SubscriptionService {
             depositMinimum: Number(plan.depositMinimumIdr),
             orderFee: Number(plan.orderFeeIdr),
             monthlyPrice: Number(plan.monthlyPriceIdr),
+            completedOrderEmailFee: Number((plan as any).completedOrderEmailFeeIdr ?? 0),
             bankName: plan.bankNameIdr,
             bankAccount: plan.bankAccountIdr,
             bankAccountName: plan.bankAccountNameIdr,

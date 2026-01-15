@@ -11,6 +11,7 @@ import { withMerchant } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/middleware/auth';
 import { ValidationError } from '@/lib/constants/errors';
 import { serializeBigInt } from '@/lib/utils/serializer';
+import subscriptionService from '@/lib/services/SubscriptionService';
 
 /**
  * GET /api/merchant/profile
@@ -59,6 +60,8 @@ async function handleGet(req: NextRequest, authContext: AuthContext) {
       ...restMerchantData,
       phoneNumber: phone || '', // Map phone -> phoneNumber for frontend
       hasDeletePin: !!merchant.deletePin,
+      completedOrderEmailFee: (await subscriptionService.getPlanPricing((merchant as any)?.currency || 'IDR'))
+        .completedOrderEmailFee,
     };
 
     return NextResponse.json({
@@ -107,6 +110,36 @@ async function handlePut(req: NextRequest, authContext: AuthContext) {
     }
 
     const body = await req.json();
+
+    // Server-side enforcement for paid completed-order email toggle.
+    // UI already disables the toggle when invalid, but API must also reject bypass attempts.
+    const nextReceiptSettings = body?.receiptSettings as Record<string, unknown> | undefined;
+    const wantsPaidCompletedEmail = Boolean(nextReceiptSettings?.sendCompletedOrderEmailToCustomer);
+
+    if (wantsPaidCompletedEmail) {
+      const merchantCurrency = (merchantUser.merchant as any)?.currency || 'IDR';
+      const pricing = await subscriptionService.getPlanPricing(merchantCurrency);
+      const completedEmailFee = pricing.completedOrderEmailFee;
+
+      const isFeeConfigured =
+        typeof completedEmailFee === 'number' && Number.isFinite(completedEmailFee) && completedEmailFee > 0;
+
+      if (!isFeeConfigured) {
+        throw new ValidationError('Completed-order email fee is not configured. Please contact support.');
+      }
+
+      const balanceRecord = await prisma.merchantBalance.findUnique({
+        where: { merchantId: merchantUser.merchantId },
+        select: { balance: true },
+      });
+
+      const currentBalance = balanceRecord ? Number(balanceRecord.balance) : 0;
+      const hasSufficientBalance = currentBalance > 0 && currentBalance >= completedEmailFee;
+
+      if (!hasSufficientBalance) {
+        throw new ValidationError('Insufficient balance to enable completed-order email.');
+      }
+    }
 
     // Update merchant (isActive is excluded - only super admin can change it)
     const updatedMerchant = await merchantService.updateMerchant(

@@ -60,7 +60,7 @@ export default function OnlineOrderingSection() {
     ];
 
     return (
-        <section className="py-16 lg:py-24 bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-900/80">
+        <section className="py-16 lg:py-24 bg-linear-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-900/80">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
                 {/* Hero Header */}
@@ -119,7 +119,7 @@ export default function OnlineOrderingSection() {
                         {benefits.map((benefit) => (
                             <div
                                 key={benefit.key}
-                                className="bg-gradient-to-br from-[#173C82] to-[#1e4a9a] rounded-2xl p-6 text-white group hover:shadow-2xl hover:-translate-y-1 transition-all duration-300"
+                                className="bg-linear-to-br from-[#173C82] to-[#1e4a9a] rounded-2xl p-6 text-white group hover:shadow-2xl hover:-translate-y-1 transition-all duration-300"
                             >
                                 <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-white/20 mb-4">
                                     {benefit.icon}
@@ -177,13 +177,13 @@ export default function OnlineOrderingSection() {
                         </div>
 
                         {/* Right Visual */}
-                        <div className="bg-gradient-to-br from-[#173C82] to-[#0f2a5c] flex items-center justify-center relative overflow-hidden min-h-[400px]">
+                        <div className="bg-linear-to-br from-[#173C82] to-[#0f2a5c] flex items-center justify-center relative overflow-hidden min-h-100">
                             {/* Background Decorative Elements */}
                             <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl -mr-16 -mt-16"></div>
                             <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/20 rounded-full blur-3xl -ml-16 -mb-16"></div>
 
                             <div className="relative z-10 w-full h-full p-8 flex items-center justify-center">
-                                <div className="relative w-full max-w-[400px] aspect-square transition-transform duration-500 hover:scale-105">
+                                <div className="relative w-full max-w-100 aspect-square transition-transform duration-500 hover:scale-105">
                                     <Image
                                         key={activeMode} // Triggers animation on change
                                         src={

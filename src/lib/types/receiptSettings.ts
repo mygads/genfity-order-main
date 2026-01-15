@@ -5,6 +5,10 @@
  */
 
 export interface ReceiptSettings {
+  // Customer notifications
+  // When enabled, a completed-order email is sent to the customer (subject to billing/balance rules)
+  sendCompletedOrderEmailToCustomer: boolean;
+
   // Global Preferences
   paperSize: '58mm' | '80mm';
   receiptLanguage: 'en' | 'id';
@@ -60,6 +64,9 @@ export interface ReceiptSettings {
  * Default receipt settings used when merchant hasn't configured
  */
 export const DEFAULT_RECEIPT_SETTINGS: ReceiptSettings = {
+  // Customer notifications
+  sendCompletedOrderEmailToCustomer: false,
+
   // Global Preferences
   paperSize: '80mm',
   receiptLanguage: 'en',

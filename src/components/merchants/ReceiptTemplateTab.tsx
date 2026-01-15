@@ -25,6 +25,11 @@ import { generateReceiptHTML, printReceipt, ReceiptOrderData, ReceiptMerchantInf
 interface ReceiptTemplateTabProps {
   settings: Partial<ReceiptSettings> | null;
   onChange: (settings: ReceiptSettings) => void;
+  billingInfo?: {
+    balance: number;
+    completedOrderEmailFee: number;
+    currency: string;
+  } | null;
   merchantInfo: {
     name: string;
     code?: string;
@@ -92,6 +97,7 @@ const MOCK_ORDER: ReceiptOrderData = {
 export const ReceiptTemplateTab: React.FC<ReceiptTemplateTabProps> = ({
   settings: initialSettings,
   onChange,
+  billingInfo,
   merchantInfo,
 }) => {
   const { t, locale } = useTranslation();
@@ -112,6 +118,32 @@ export const ReceiptTemplateTab: React.FC<ReceiptTemplateTabProps> = ({
   const paperWidthPx = paperSize === '58mm' ? 200 : 280;
 
   const receiptLanguage: 'en' | 'id' = settings.receiptLanguage;
+
+  const currency = billingInfo?.currency || merchantInfo.currency || 'AUD';
+  const completedEmailFee = billingInfo?.completedOrderEmailFee ?? 0;
+  const currentBalance = billingInfo?.balance ?? 0;
+
+  const isCompletedEmailPriceConfigured = completedEmailFee > 0;
+  const hasSufficientBalanceForCompletedEmail = currentBalance >= completedEmailFee && currentBalance > 0;
+
+  const completedEmailToggleDisabled =
+    !isCompletedEmailPriceConfigured ||
+    !hasSufficientBalanceForCompletedEmail;
+
+  const formatMoney = (amount: number) => {
+    try {
+      return new Intl.NumberFormat(currency === 'IDR' ? 'id-ID' : 'en-AU', {
+        style: 'currency',
+        currency,
+        minimumFractionDigits: currency === 'IDR' ? 0 : 2,
+        maximumFractionDigits: currency === 'IDR' ? 0 : 2,
+      }).format(amount);
+    } catch {
+      return currency === 'IDR'
+        ? `Rp ${amount.toLocaleString('id-ID')}`
+        : `A$${amount.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+  };
 
   // Handle checkbox change
   const handleChange = (key: keyof ReceiptSettings, value: boolean) => {
@@ -213,6 +245,63 @@ export const ReceiptTemplateTab: React.FC<ReceiptTemplateTabProps> = ({
             >
               {t('admin.receipt.resetDefaults')}
             </button>
+          </div>
+        </div>
+
+        {/* Customer Completed Email (Paid) */}
+        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                {t('admin.receipt.completedEmail.title')}
+              </h3>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                {t('admin.receipt.completedEmail.subtitle')}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-800 dark:bg-gray-900/50">
+              <div className="text-xs text-gray-500 dark:text-gray-400">{t('admin.receipt.completedEmail.price')}</div>
+              <div className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
+                {isCompletedEmailPriceConfigured ? formatMoney(completedEmailFee) : t('admin.receipt.completedEmail.notConfigured')}
+              </div>
+            </div>
+            <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-800 dark:bg-gray-900/50">
+              <div className="text-xs text-gray-500 dark:text-gray-400">{t('admin.receipt.completedEmail.balance')}</div>
+              <div className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
+                {formatMoney(currentBalance)}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <IconToggle
+              checked={Boolean(settings.sendCompletedOrderEmailToCustomer)}
+              disabled={completedEmailToggleDisabled}
+              onChange={(next) => {
+                if (completedEmailToggleDisabled) return;
+                onChange({
+                  ...settings,
+                  sendCompletedOrderEmailToCustomer: next,
+                });
+              }}
+              label={t('admin.receipt.completedEmail.toggleLabel')}
+              description={
+                !isCompletedEmailPriceConfigured
+                  ? t('admin.receipt.completedEmail.disabledReason.notConfigured')
+                  : !hasSufficientBalanceForCompletedEmail
+                    ? t('admin.receipt.completedEmail.disabledReason.noBalance')
+                    : t('admin.receipt.completedEmail.toggleHelp')
+              }
+              size="sm"
+              className="items-start gap-2"
+            />
+
+            <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+              {t('admin.receipt.completedEmail.note')}
+            </p>
           </div>
         </div>
 

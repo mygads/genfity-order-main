@@ -20,6 +20,13 @@ export class MerchantRepository {
             dayOfWeek: 'asc',
           },
         },
+        merchantBalance: {
+          select: {
+            id: true,
+            balance: true,
+            lastTopupAt: true,
+          },
+        },
         merchantUsers: {
           include: {
             user: {

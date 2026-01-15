@@ -139,6 +139,46 @@ class BalanceService {
     }
 
     /**
+     * Deduct completed-order email fee (paid customer email).
+     * This is independent of subscription type and never allows negative balances.
+     */
+    async deductCompletedOrderEmailFee(
+        merchantId: bigint,
+        orderId: bigint,
+        orderNumber: string,
+        amount: number,
+        sentToEmail?: string
+    ): Promise<{
+        success: boolean;
+        newBalance: number;
+    }> {
+        if (!(typeof amount === 'number' && Number.isFinite(amount)) || amount <= 0) {
+            return { success: true, newBalance: 0 };
+        }
+
+        const description = sentToEmail
+            ? `Completed-order email fee for #${orderNumber} (to ${sentToEmail})`
+            : `Completed-order email fee for #${orderNumber}`;
+
+        try {
+            const result = await balanceRepository.deductBalanceWithType(merchantId, {
+                amount,
+                type: 'COMPLETED_ORDER_EMAIL_FEE',
+                description,
+                orderId,
+                allowNegative: false,
+            });
+
+            return { success: true, newBalance: result.newBalance };
+        } catch (error) {
+            if (error instanceof Error && error.message === 'Insufficient balance') {
+                return { success: false, newBalance: 0 };
+            }
+            throw error;
+        }
+    }
+
+    /**
      * Admin manual balance adjustment
      */
     async adjustBalance(

@@ -362,7 +362,7 @@ export default function ManageMenuAddonCategoriesModal({
                     className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90 dark:placeholder:text-white/40"
                   />
                 </div>
-                <div className="space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/50 max-h-[400px] overflow-y-auto">
+                <div className="space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/50 max-h-100 overflow-y-auto">
                   {filteredAvailableCategories.length === 0 ? (
                     <p className="py-4 text-center text-sm text-gray-500 dark:text-gray-400">
                       {availableSearch ? "No matching categories" : "No addon categories available"}
@@ -513,7 +513,7 @@ export default function ManageMenuAddonCategoriesModal({
                     className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90 dark:placeholder:text-white/40"
                   />
                 </div>
-                <div className="space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/50 max-h-[400px] overflow-y-auto">
+                <div className="space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/50 max-h-100 overflow-y-auto">
                   {filteredSelectedCategories.length === 0 ? (
                     <p className="py-4 text-center text-sm text-gray-500 dark:text-gray-400">
                       {selectedSearch ? "No matching categories" : "No categories selected"}

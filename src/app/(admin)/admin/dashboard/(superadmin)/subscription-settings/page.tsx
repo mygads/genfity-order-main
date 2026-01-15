@@ -24,6 +24,8 @@ interface SubscriptionPlan {
     orderFeeAud: number;
     monthlyPriceAud: number;
     minDepositAud: number;
+    completedOrderEmailFeeIdr?: number;
+    completedOrderEmailFeeAud?: number;
     // Bank Info
     bankNameIdr: string | null;
     bankAccountIdr: string | null;
@@ -73,6 +75,8 @@ export default function SubscriptionSettingsPage() {
         orderFeeAud: 0.04,
         monthlyPriceAud: 15,
         minDepositAud: 10,
+        completedOrderEmailFeeIdr: 0,
+        completedOrderEmailFeeAud: 0,
         // Bank IDR
         bankNameIdr: '',
         bankAccountIdr: '',
@@ -91,10 +95,12 @@ export default function SubscriptionSettingsPage() {
                 depositMinimumIdr: plan.depositMinimumIdr,
                 orderFeeIdr: plan.orderFeeIdr,
                 monthlyPriceIdr: plan.monthlyPriceIdr,
+                completedOrderEmailFeeIdr: plan.completedOrderEmailFeeIdr ?? 0,
                 minDepositIdr: plan.minDepositIdr || 50000,
                 depositMinimumAud: plan.depositMinimumAud,
                 orderFeeAud: plan.orderFeeAud,
                 monthlyPriceAud: plan.monthlyPriceAud,
+                completedOrderEmailFeeAud: plan.completedOrderEmailFeeAud ?? 0,
                 minDepositAud: plan.minDepositAud || 10,
                 bankNameIdr: plan.bankNameIdr || '',
                 bankAccountIdr: plan.bankAccountIdr || '',
@@ -318,6 +324,23 @@ export default function SubscriptionSettingsPage() {
                         bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                         />
                                     </div>
+
+                                <div>
+                                    <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
+                                        {t("admin.subscriptionSettings.completedEmailFee")}
+                                    </label>
+                                    <div className="relative">
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">Rp</span>
+                                        <input
+                                            type="number"
+                                            value={formData.completedOrderEmailFeeIdr}
+                                            onChange={(e) => handleChange('completedOrderEmailFeeIdr', Number(e.target.value))}
+                                            min={0}
+                                            className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 
+                        bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                        />
+                                    </div>
+                                </div>
                                 </div>
                                 <div>
                                     <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
@@ -487,6 +510,24 @@ export default function SubscriptionSettingsPage() {
                                     <p className="font-medium text-blue-900 dark:text-blue-200">About Minimum Deposit</p>
                                     <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
                                         This is the minimum amount merchants must deposit to top up their balance.
+
+                                <div>
+                                    <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
+                                        {t("admin.subscriptionSettings.completedEmailFee")}
+                                    </label>
+                                    <div className="relative">
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">A$</span>
+                                        <input
+                                            type="number"
+                                            value={formData.completedOrderEmailFeeAud}
+                                            onChange={(e) => handleChange('completedOrderEmailFeeAud', Number(e.target.value))}
+                                            step={0.01}
+                                            min={0}
+                                            className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 
+                        bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                        />
+                                    </div>
+                                </div>
                                         Set appropriate amounts based on local currency values.
                                     </p>
                                 </div>

@@ -113,7 +113,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
             <SubscriptionAlerts />
 
             {/* Header - Add top padding when suspended alert is shown */}
-            <div className={showSuspendedBannerPadding ? "pt-[72px]" : ""}>
+            <div className={showSuspendedBannerPadding ? 'pt-18' : ''}>
               <AppHeader />
             </div>
 
@@ -121,8 +121,8 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
             <div
               className={
                 isFullWidthPage
-                  ? 'pt-[70px] md:pt-[80px] lg:pt-[80px] p-4 md:p-6 overflow-x-hidden w-full max-w-none min-w-0'
-                  : 'pt-[70px] md:pt-[80px] lg:pt-[80px] p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6 overflow-x-hidden min-w-0'
+                  ? 'pt-17.5 md:pt-20 lg:pt-20 p-4 md:p-6 overflow-x-hidden w-full max-w-none min-w-0'
+                  : 'pt-17.5 md:pt-20 lg:pt-20 p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6 overflow-x-hidden min-w-0'
               }
             >
               {children}

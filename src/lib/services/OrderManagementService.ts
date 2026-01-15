@@ -30,6 +30,7 @@ import {
 import { validateStatusTransition } from '@/lib/utils/orderStatusRules';
 import emailService from '@/lib/services/EmailService';
 import balanceService from '@/lib/services/BalanceService';
+import subscriptionService from '@/lib/services/SubscriptionService';
 import subscriptionHistoryService from '@/lib/services/SubscriptionHistoryService';
 import CustomerPushService from '@/lib/services/CustomerPushService';
 import { shouldSendCustomerEmail } from '@/lib/utils/emailGuards';
@@ -493,7 +494,7 @@ export class OrderManagementService {
     // - POS walk-in orders: customer is null (no email)
     // - POS orders with placeholder/guest email: filtered out here
     const completedCustomerEmail = updated.customer?.email;
-    if (data.status === 'COMPLETED') {
+    if (data.status === 'COMPLETED' && order.status !== 'COMPLETED') {
       if (!completedCustomerEmail) {
         console.warn(`[Order ${order.orderNumber}] Completed email skipped: missing customer email`);
       } else if (!shouldSendCustomerEmail(completedCustomerEmail)) {
@@ -501,58 +502,114 @@ export class OrderManagementService {
           `[Order ${order.orderNumber}] Completed email skipped: guest/placeholder email (${redactEmailForLogs(completedCustomerEmail)})`
         );
       } else {
-        try {
-          const sent = await emailService.sendOrderCompleted({
-          to: completedCustomerEmail,
-          customerName: updated.customer?.name || 'Customer',
-          orderNumber: updated.orderNumber,
-          merchantName: updated.merchant?.name || 'Restaurant',
-          merchantCode: updated.merchant?.code || '',
-          merchantLogoUrl: (updated.merchant as any)?.logoUrl,
-          merchantAddress: (updated.merchant as any)?.address,
-          merchantPhone: (updated.merchant as any)?.phone,
-          merchantEmail: (updated.merchant as any)?.email,
-          receiptSettings: (updated.merchant as any)?.receiptSettings,
-          merchantCountry: updated.merchant?.country,
-          merchantTimezone: updated.merchant?.timezone,
-          currency: updated.merchant?.currency,
-          orderType: updated.orderType as 'DINE_IN' | 'TAKEAWAY',
-          tableNumber: updated.tableNumber,
-          customerPhone: updated.customer?.phone,
-          customerEmail: updated.customer?.email,
-          items: updated.orderItems?.map((item: any) => ({
-            menuName: item.menuName,
-            quantity: item.quantity,
-            unitPrice: Number(item.menuPrice),
-            subtotal: Number(item.subtotal),
-            notes: item.notes,
-            addons: (item.addons || []).map((addon: any) => ({
-              addonName: addon.addonName,
-              addonPrice: Number(addon.addonPrice),
-              quantity: addon.quantity,
-              subtotal: Number(addon.subtotal),
-            })),
-          })) || [],
-          subtotal: Number((updated as any).subtotal),
-          taxAmount: Number((updated as any).taxAmount || 0),
-          serviceChargeAmount: Number((updated as any).serviceChargeAmount || 0),
-          packagingFeeAmount: Number((updated as any).packagingFeeAmount || 0),
-          discountAmount: typeof (updated as any).discountAmount !== 'undefined' ? Number((updated as any).discountAmount) : undefined,
-          totalAmount: Number(updated.totalAmount),
-          paymentMethod: updated.payment?.paymentMethod || null,
-          completedAt: updated.completedAt || new Date(),
-        });
+        const receiptSettings = (updated.merchant as any)?.receiptSettings as any;
+        const isPaidCompletedEmailEnabled = Boolean(receiptSettings?.sendCompletedOrderEmailToCustomer);
 
-          if (sent) {
-            console.log(`✅ [Order ${order.orderNumber}] Completed email sent to ${redactEmailForLogs(completedCustomerEmail)}`);
-          } else {
-            console.error(
-              `❌ [Order ${order.orderNumber}] Completed email failed (EmailService returned false) for ${redactEmailForLogs(completedCustomerEmail)}`
-            );
+        if (!isPaidCompletedEmailEnabled) {
+          console.log(`ℹ️ [Order ${order.orderNumber}] Completed email skipped: disabled by merchant settings`);
+        } else {
+          try {
+            const currency = updated.merchant?.currency || 'IDR';
+            const pricing = await subscriptionService.getPlanPricing(currency);
+            const completedEmailFee = pricing.completedOrderEmailFee;
+
+            const isFeeConfigured =
+              typeof completedEmailFee === 'number' && Number.isFinite(completedEmailFee) && completedEmailFee > 0;
+
+            if (!isFeeConfigured) {
+              console.warn(`ℹ️ [Order ${order.orderNumber}] Completed email skipped: email fee not configured`);
+            } else {
+              const balanceRecord = await prisma.merchantBalance.findUnique({
+                where: { merchantId: order.merchantId },
+                select: { balance: true },
+              });
+
+              const currentBalance = balanceRecord ? Number(balanceRecord.balance) : 0;
+              const hasSufficientBalance = currentBalance > 0 && currentBalance >= completedEmailFee;
+
+              if (!hasSufficientBalance) {
+                console.warn(
+                  `ℹ️ [Order ${order.orderNumber}] Completed email skipped: insufficient balance (${currentBalance} < ${completedEmailFee})`
+                );
+              } else {
+                const sent = await emailService.sendOrderCompleted({
+                  to: completedCustomerEmail,
+                  customerName: updated.customer?.name || 'Customer',
+                  orderNumber: updated.orderNumber,
+                  merchantName: updated.merchant?.name || 'Restaurant',
+                  merchantCode: updated.merchant?.code || '',
+                  merchantLogoUrl: (updated.merchant as any)?.logoUrl,
+                  merchantAddress: (updated.merchant as any)?.address,
+                  merchantPhone: (updated.merchant as any)?.phone,
+                  merchantEmail: (updated.merchant as any)?.email,
+                  receiptSettings: (updated.merchant as any)?.receiptSettings,
+                  merchantCountry: updated.merchant?.country,
+                  merchantTimezone: updated.merchant?.timezone,
+                  currency: updated.merchant?.currency,
+                  orderType: updated.orderType as 'DINE_IN' | 'TAKEAWAY',
+                  tableNumber: updated.tableNumber,
+                  customerPhone: updated.customer?.phone,
+                  customerEmail: updated.customer?.email,
+                  items:
+                    updated.orderItems?.map((item: any) => ({
+                      menuName: item.menuName,
+                      quantity: item.quantity,
+                      unitPrice: Number(item.menuPrice),
+                      subtotal: Number(item.subtotal),
+                      notes: item.notes,
+                      addons: (item.addons || []).map((addon: any) => ({
+                        addonName: addon.addonName,
+                        addonPrice: Number(addon.addonPrice),
+                        quantity: addon.quantity,
+                        subtotal: Number(addon.subtotal),
+                      })),
+                    })) || [],
+                  subtotal: Number((updated as any).subtotal),
+                  taxAmount: Number((updated as any).taxAmount || 0),
+                  serviceChargeAmount: Number((updated as any).serviceChargeAmount || 0),
+                  packagingFeeAmount: Number((updated as any).packagingFeeAmount || 0),
+                  discountAmount:
+                    typeof (updated as any).discountAmount !== 'undefined'
+                      ? Number((updated as any).discountAmount)
+                      : undefined,
+                  totalAmount: Number(updated.totalAmount),
+                  paymentMethod: updated.payment?.paymentMethod || null,
+                  completedAt: updated.completedAt || new Date(),
+                });
+
+                if (sent) {
+                  try {
+                    const charged = await balanceService.deductCompletedOrderEmailFee(
+                      order.merchantId,
+                      orderId,
+                      order.orderNumber,
+                      completedEmailFee,
+                      completedCustomerEmail
+                    );
+
+                    if (!charged.success) {
+                      console.error(
+                        `❌ [Order ${order.orderNumber}] Completed email sent but charge failed: insufficient balance during deduction`
+                      );
+                    }
+                  } catch (chargeError) {
+                    console.error(`[Order ${order.orderNumber}] Completed email charge failed:`, chargeError);
+                  }
+
+                  console.log(
+                    `✅ [Order ${order.orderNumber}] Completed email sent to ${redactEmailForLogs(completedCustomerEmail)}`
+                  );
+                } else {
+                  console.error(
+                    `❌ [Order ${order.orderNumber}] Completed email failed (EmailService returned false) for ${redactEmailForLogs(completedCustomerEmail)}`
+                  );
+                }
+              }
+            }
+          } catch (emailError) {
+            console.error(`[Order ${order.orderNumber}] Failed to send order completed email:`, emailError);
+            // Don't throw - email failure shouldn't block the status update
           }
-        } catch (emailError) {
-          console.error(`[Order ${order.orderNumber}] Failed to send order completed email:`, emailError);
-          // Don't throw - email failure shouldn't block the status update
         }
       }
     }

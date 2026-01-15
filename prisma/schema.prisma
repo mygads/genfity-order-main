@@ -1066,10 +1066,12 @@ model SubscriptionPlan {
   depositMinimumIdr   Decimal  @default(100000) @map("deposit_minimum_idr") @db.Decimal(12, 2)
   orderFeeIdr         Decimal  @default(250) @map("order_fee_idr") @db.Decimal(12, 2)
   monthlyPriceIdr     Decimal  @default(100000) @map("monthly_price_idr") @db.Decimal(12, 2)
+  completedOrderEmailFeeIdr Decimal @default(0) @map("completed_order_email_fee_idr") @db.Decimal(12, 2)
   // AUD Pricing
   depositMinimumAud   Decimal  @default(15) @map("deposit_minimum_aud") @db.Decimal(12, 2)
   orderFeeAud         Decimal  @default(0.04) @map("order_fee_aud") @db.Decimal(12, 2)
   monthlyPriceAud     Decimal  @default(15) @map("monthly_price_aud") @db.Decimal(12, 2)
+  completedOrderEmailFeeAud Decimal @default(0) @map("completed_order_email_fee_aud") @db.Decimal(12, 2)
   // Bank Account Info (for manual transfer)
   bankNameIdr         String?  @map("bank_name_idr")
   bankAccountIdr      String?  @map("bank_account_idr")
@@ -1286,6 +1288,7 @@ enum SubscriptionStatus {
 enum BalanceTransactionType {
   DEPOSIT         // Top up balance
   ORDER_FEE       // Deduction per order (for deposit mode)
+  COMPLETED_ORDER_EMAIL_FEE // Deduction per completed-order customer email
   SUBSCRIPTION    // Monthly subscription payment
   REFUND          // Admin refund
   ADJUSTMENT      // Manual admin adjustment

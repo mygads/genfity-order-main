@@ -175,6 +175,70 @@ class BalanceRepository {
     }
 
     /**
+     * Deduct balance with a custom transaction type.
+     * By default this enforces non-negative balances (used for paid add-ons like completed-order emails).
+     */
+    async deductBalanceWithType(
+        merchantId: bigint,
+        options: {
+            amount: number;
+            type: BalanceTransactionType;
+            description: string;
+            orderId?: bigint;
+            allowNegative?: boolean;
+        }
+    ) {
+        const { amount, type, description, orderId, allowNegative = false } = options;
+
+        return prisma.$transaction(async (tx) => {
+            let balance = await tx.merchantBalance.findUnique({
+                where: { merchantId },
+            });
+
+            if (!balance) {
+                balance = await tx.merchantBalance.create({
+                    data: {
+                        merchantId,
+                        balance: 0,
+                    },
+                });
+            }
+
+            const balanceBefore = Number(balance.balance);
+            const balanceAfter = balanceBefore - amount;
+
+            if (!allowNegative && balanceAfter < 0) {
+                throw new Error('Insufficient balance');
+            }
+
+            const updatedBalance = await tx.merchantBalance.update({
+                where: { merchantId },
+                data: {
+                    balance: balanceAfter,
+                },
+            });
+
+            await tx.balanceTransaction.create({
+                data: {
+                    balanceId: balance.id,
+                    type,
+                    amount: -amount,
+                    balanceBefore,
+                    balanceAfter,
+                    description,
+                    orderId,
+                },
+            });
+
+            return {
+                balance: updatedBalance,
+                balanceBefore,
+                newBalance: balanceAfter,
+            };
+        });
+    }
+
+    /**
      * Adjust balance (admin manual adjustment)
      */
     async adjustBalance(
