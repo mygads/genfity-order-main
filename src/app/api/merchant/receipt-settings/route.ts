@@ -36,6 +36,7 @@ const ReceiptSettingsSchema = z
     showTax: z.boolean().optional(),
     showServiceCharge: z.boolean().optional(),
     showPackagingFee: z.boolean().optional(),
+    showDeliveryFee: z.boolean().optional(),
     showDiscount: z.boolean().optional(),
     showTotal: z.boolean().optional(),
     showAmountPaid: z.boolean().optional(),

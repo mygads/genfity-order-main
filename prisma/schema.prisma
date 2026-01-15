@@ -47,6 +47,7 @@ model User {
   stockPhotosUploaded StockPhoto[]       @relation("StockPhotoUploadedBy")
   deliveryOrdersAssigned Order[]          @relation("DeliveryDriver")
   influencerApprovalLogs InfluencerApprovalLog[] @relation("InfluencerApprovalActedBy")
+  orderDiscountsApplied OrderDiscount[]
 
   @@index([email])
   @@index([role])
@@ -291,6 +292,7 @@ model Customer {
   lastOrderAt         DateTime?         @map("last_order_at") @db.Timestamptz(6)
   
   orders              Order[]
+  orderDiscountsApplied OrderDiscount[]
   reservations        Reservation[]
   sessions            CustomerSession[]
   favorites           CustomerFavorite[]
@@ -440,6 +442,9 @@ model Merchant {
   specialHours           MerchantSpecialHour[]
   merchantUsers          MerchantUser[]
   orders                 Order[]
+  orderDiscounts          OrderDiscount[]
+  orderVoucherTemplates   OrderVoucherTemplate[]
+  orderVoucherCodes       OrderVoucherCode[]
   reservations           Reservation[]
   deliveryZones          MerchantDeliveryZone[]
   menuBooks              MenuBook[]
@@ -592,6 +597,7 @@ model MenuCategory {
   restoredBy       User?              @relation("CategoryRestoredBy", fields: [restoredByUserId], references: [id])
   menuItems        MenuCategoryItem[]
   menus            Menu[]
+  orderVoucherTemplateCategories OrderVoucherTemplateCategory[]
 
   @@index([merchantId])
   @@index([sortOrder])
@@ -660,6 +666,7 @@ model Menu {
   updatedBy          User?               @relation("MenuUpdatedBy", fields: [updatedByUserId], references: [id])
   restoredBy         User?               @relation("MenuRestoredBy", fields: [restoredByUserId], references: [id])
   orderItems         OrderItem[]
+  orderVoucherTemplateMenus OrderVoucherTemplateMenu[]
   menuBookItems      MenuBookItem[]
   specialPriceItems  SpecialPriceItem[]
 
@@ -796,6 +803,8 @@ model Order {
   taxAmount            Decimal     @default(0) @map("tax_amount") @db.Decimal(10, 2)
   serviceChargeAmount  Decimal     @default(0) @map("service_charge_amount") @db.Decimal(10, 2)
   packagingFeeAmount   Decimal     @default(0) @map("packaging_fee") @db.Decimal(10, 2)
+  // Total discount applied on this order (sum of order_discounts.discount_amount)
+  discountAmount       Decimal     @default(0) @map("discount_amount") @db.Decimal(10, 2)
   totalAmount          Decimal     @map("total_amount") @db.Decimal(10, 2)
   notes                String?
   // Admin-only note (NOT shown to customers)
@@ -813,6 +822,7 @@ model Order {
   completedAt          DateTime?   @map("completed_at") @db.Timestamptz(6)
   estimatedReadyAt     DateTime?   @map("estimated_ready_at") @db.Timestamptz(6)
   orderItems           OrderItem[]
+  orderDiscounts       OrderDiscount[]
   customer             Customer?   @relation(fields: [customerId], references: [id])
   reservation          Reservation?
   merchant             Merchant    @relation(fields: [merchantId], references: [id], onDelete: Cascade)
@@ -868,6 +878,156 @@ model Reservation {
   @@index([reservationDate])
   @@index([reservationTime])
   @@map("reservations")
+}
+
+model OrderVoucherTemplate {
+  id                    BigInt                   @id @default(autoincrement())
+  merchantId            BigInt                   @map("merchant_id")
+  name                  String
+  description           String?                  @db.Text
+  audience              OrderVoucherAudience
+
+  discountType          OrderVoucherDiscountType @map("discount_type")
+  discountValue         Decimal                  @map("discount_value") @db.Decimal(12, 2)
+  maxDiscountAmount     Decimal?                 @map("max_discount_amount") @db.Decimal(12, 2)
+
+  minOrderAmount        Decimal?                 @map("min_order_amount") @db.Decimal(12, 2)
+
+  // Usage limits
+  maxUsesTotal          Int?                     @map("max_uses_total")
+  maxUsesPerCustomer    Int?                     @map("max_uses_per_customer")
+  maxUsesPerOrder       Int                      @default(1) @map("max_uses_per_order")
+  totalDiscountCap      Decimal?                 @map("total_discount_cap") @db.Decimal(14, 2)
+
+  requiresCustomerLogin Boolean                  @default(false) @map("requires_customer_login")
+
+  // Combinability rules (one discount mode per order: voucher OR manual)
+
+  // Sales channel applicability
+  allowedOrderTypes      OrderType[]             @default([]) @map("allowed_order_types")
+
+  // Time/date rules (evaluated in merchant timezone)
+  validFrom              DateTime?               @map("valid_from") @db.Timestamptz(6)
+  validUntil             DateTime?               @map("valid_until") @db.Timestamptz(6)
+  daysOfWeek             Int[]                   @default([]) @map("days_of_week")
+  startTime              String?                 @map("start_time") // HH:MM
+  endTime                String?                 @map("end_time")   // HH:MM
+
+  // Item scoping
+  includeAllItems        Boolean                 @default(true) @map("include_all_items")
+
+  // Reporting tag/category
+  reportCategory         String?                 @map("report_category")
+
+  isActive               Boolean                 @default(true) @map("is_active")
+  createdAt              DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime                @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  merchant               Merchant                @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  codes                  OrderVoucherCode[]
+  menuScopes             OrderVoucherTemplateMenu[]
+  categoryScopes         OrderVoucherTemplateCategory[]
+  orderDiscounts         OrderDiscount[]
+
+  @@index([merchantId])
+  @@index([audience])
+  @@index([isActive])
+  @@index([validFrom])
+  @@index([validUntil])
+  @@map("order_voucher_templates")
+}
+
+model OrderVoucherCode {
+  id                  BigInt               @id @default(autoincrement())
+  merchantId          BigInt               @map("merchant_id")
+  templateId          BigInt               @map("template_id")
+  code                String
+  isActive            Boolean              @default(true) @map("is_active")
+  maxUsesTotal        Int?                 @map("max_uses_total")
+  maxUsesPerCustomer  Int?                 @map("max_uses_per_customer")
+  validFrom           DateTime?            @map("valid_from") @db.Timestamptz(6)
+  validUntil          DateTime?            @map("valid_until") @db.Timestamptz(6)
+  createdAt           DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  merchant            Merchant             @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  template            OrderVoucherTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  orderDiscounts      OrderDiscount[]
+
+  @@unique([merchantId, code])
+  @@index([merchantId])
+  @@index([templateId])
+  @@index([isActive])
+  @@index([validFrom])
+  @@index([validUntil])
+  @@map("order_voucher_codes")
+}
+
+model OrderVoucherTemplateMenu {
+  templateId BigInt   @map("template_id")
+  menuId     BigInt   @map("menu_id")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  template   OrderVoucherTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  menu       Menu                @relation(fields: [menuId], references: [id], onDelete: Cascade)
+
+  @@id([templateId, menuId])
+  @@index([templateId])
+  @@index([menuId])
+  @@map("order_voucher_template_menus")
+}
+
+model OrderVoucherTemplateCategory {
+  templateId BigInt   @map("template_id")
+  categoryId BigInt   @map("category_id")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  template   OrderVoucherTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  category   MenuCategory         @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([templateId, categoryId])
+  @@index([templateId])
+  @@index([categoryId])
+  @@map("order_voucher_template_categories")
+}
+
+model OrderDiscount {
+  id                  BigInt                   @id @default(autoincrement())
+  merchantId          BigInt                   @map("merchant_id")
+  orderId             BigInt                   @map("order_id")
+
+  source              OrderDiscountSource
+
+  voucherTemplateId   BigInt?                  @map("voucher_template_id")
+  voucherCodeId       BigInt?                  @map("voucher_code_id")
+
+  label               String                   @map("label")
+  discountType        OrderVoucherDiscountType @map("discount_type")
+  discountValue       Decimal?                 @map("discount_value") @db.Decimal(12, 2)
+  discountAmount      Decimal                  @map("discount_amount") @db.Decimal(12, 2)
+
+  appliedByUserId     BigInt?                  @map("applied_by_user_id")
+  appliedByCustomerId BigInt?                  @map("applied_by_customer_id")
+
+  metadata            Json?                    @map("metadata") @db.JsonB
+  createdAt           DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  merchant            Merchant                 @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  order               Order                    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  voucherTemplate     OrderVoucherTemplate?    @relation(fields: [voucherTemplateId], references: [id])
+  voucherCode         OrderVoucherCode?        @relation(fields: [voucherCodeId], references: [id])
+  appliedByUser       User?                    @relation(fields: [appliedByUserId], references: [id])
+  appliedByCustomer   Customer?                @relation(fields: [appliedByCustomerId], references: [id])
+
+  @@index([merchantId])
+  @@index([orderId])
+  @@index([source])
+  @@index([voucherTemplateId])
+  @@index([voucherCodeId])
+  @@index([appliedByUserId])
+  @@index([appliedByCustomerId])
+  @@index([createdAt])
+  @@map("order_discounts")
 }
 
 model OrderItem {
@@ -1220,6 +1380,27 @@ enum OrderType {
   DINE_IN
   TAKEAWAY
   DELIVERY
+}
+
+// ============================================
+// ORDER DISCOUNTS / VOUCHERS (POS + CUSTOMER)
+// ============================================
+
+enum OrderVoucherAudience {
+  POS
+  CUSTOMER
+  BOTH
+}
+
+enum OrderVoucherDiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+enum OrderDiscountSource {
+  POS_VOUCHER
+  CUSTOMER_VOUCHER
+  MANUAL
 }
 
 enum DeliveryZoneType {

@@ -107,6 +107,13 @@ export const PaymentVerificationModal: React.FC<PaymentVerificationModalProps> =
           ? await mintTrackingToken(orderId)
           : null;
 
+        const discountLabel = Array.isArray((verifiedOrder as any).orderDiscounts)
+          ? ((verifiedOrder as any).orderDiscounts
+              .map((d: any) => (typeof d?.label === 'string' ? d.label : ''))
+              .filter((s: string) => s.trim() !== '')
+              .join(' + ') || undefined)
+          : undefined;
+
         printReceipt({
           order: {
             orderId: orderId != null ? String(orderId) : undefined,
@@ -140,6 +147,7 @@ export const PaymentVerificationModal: React.FC<PaymentVerificationModalProps> =
             serviceChargeAmount: Number((verifiedOrder as any).serviceChargeAmount) || 0,
             packagingFeeAmount: Number((verifiedOrder as any).packagingFeeAmount) || 0,
             discountAmount: Number((verifiedOrder as any).discountAmount) || 0,
+            discountLabel,
             totalAmount: Number((verifiedOrder as any).totalAmount) || 0,
             amountPaid: data.amount,
             changeAmount: 0,

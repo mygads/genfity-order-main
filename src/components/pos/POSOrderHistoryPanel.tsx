@@ -290,6 +290,27 @@ export const POSOrderHistoryPanel: React.FC<POSOrderHistoryPanelProps> = ({
         trackingToken = null;
       }
     }
+
+    let discountLabel: string | undefined;
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (token && order?.id && order.discountAmount && order.discountAmount > 0) {
+        const detailRes = await fetch(`/api/merchant/orders/${order.id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const detailJson = await detailRes.json();
+        const orderDiscounts = detailJson?.data?.orderDiscounts;
+        if (detailRes.ok && detailJson?.success && Array.isArray(orderDiscounts)) {
+          const joined = orderDiscounts
+            .map((d: any) => (typeof d?.label === 'string' ? d.label : ''))
+            .filter((s: string) => s.trim() !== '')
+            .join(' + ');
+          discountLabel = joined || undefined;
+        }
+      }
+    } catch {
+      discountLabel = undefined;
+    }
     
     // Print using unified receipt generator
     printReceipt({
@@ -326,6 +347,7 @@ export const POSOrderHistoryPanel: React.FC<POSOrderHistoryPanelProps> = ({
         serviceChargeAmount: order.serviceChargeAmount,
         packagingFeeAmount: order.packagingFeeAmount,
         discountAmount: order.discountAmount,
+        discountLabel,
         totalAmount: order.totalAmount,
         amountPaid: order.amountPaid,
         changeAmount: order.changeAmount,

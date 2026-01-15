@@ -14,6 +14,7 @@ import {
   FaReceipt,
   FaChair,
   FaLock,
+  FaTag,
   FaExclamationTriangle,
 } from "react-icons/fa";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
@@ -38,6 +39,7 @@ import DeliveryTab from "@/components/merchants/merchant-edit/tabs/DeliveryTab";
 import LocationTabComponent from "@/components/merchants/merchant-edit/tabs/LocationTab";
 import SaleModesTabComponent from "@/components/merchants/merchant-edit/tabs/SaleModesTab";
 import FeaturesTab from "@/components/merchants/merchant-edit/tabs/FeaturesTab";
+import DiscountVoucherTab from "@/components/merchants/merchant-edit/tabs/DiscountVoucherTab";
 import OpeningHoursTabComponent from "@/components/merchants/merchant-edit/tabs/OpeningHoursTab";
 import TableSettingsTabComponent from "@/components/merchants/merchant-edit/tabs/TableSettingsTab";
 import FeesTabComponent from "@/components/merchants/merchant-edit/tabs/FeesTab";
@@ -76,6 +78,14 @@ export default function EditMerchantPage() {
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
   const [authToken, setAuthToken] = useState<string>("");
+
+  // Discount & voucher feature toggles
+  const [posDiscountsEnabled, setPosDiscountsEnabled] = useState<boolean>(true);
+  const [customerVouchersEnabled, setCustomerVouchersEnabled] = useState<boolean>(true);
+  const [originalDiscountVoucherSettings, setOriginalDiscountVoucherSettings] = useState<{
+    posDiscountsEnabled: boolean;
+    customerVouchersEnabled: boolean;
+  } | null>(null);
 
   // Unsaved changes tracking
   const [originalFormData, setOriginalFormData] = useState<MerchantFormData | null>(null);
@@ -184,6 +194,7 @@ export default function EditMerchantPage() {
       'delivery',
       'table-settings',
       'fees',
+      'discount-voucher',
       'pos-settings',
       'receipt',
       'pin',
@@ -364,6 +375,34 @@ export default function EditMerchantPage() {
         setOriginalOpeningHours(JSON.parse(JSON.stringify(initialHours)));
       }
 
+      // Discount/voucher feature flags
+      try {
+        const settingsRes = await fetch('/api/merchant/order-vouchers/settings', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const settingsJson = await settingsRes.json();
+        const nextPos =
+          settingsRes.ok && settingsJson?.success && typeof settingsJson?.data?.posDiscountsEnabled === 'boolean'
+            ? settingsJson.data.posDiscountsEnabled
+            : true;
+        const nextCustomerRaw =
+          settingsRes.ok && settingsJson?.success && typeof settingsJson?.data?.customerVouchersEnabled === 'boolean'
+            ? settingsJson.data.customerVouchersEnabled
+            : true;
+        const nextCustomer = nextPos ? nextCustomerRaw : false;
+
+        setPosDiscountsEnabled(nextPos);
+        setCustomerVouchersEnabled(nextCustomer);
+        setOriginalDiscountVoucherSettings({ posDiscountsEnabled: nextPos, customerVouchersEnabled: nextCustomer });
+      } catch {
+        setPosDiscountsEnabled(true);
+        setCustomerVouchersEnabled(true);
+        setOriginalDiscountVoucherSettings({ posDiscountsEnabled: true, customerVouchersEnabled: true });
+      }
+
       // Save original form data for change detection
       const originalData = {
         name: merchant.name || "",
@@ -431,8 +470,10 @@ export default function EditMerchantPage() {
       originalFormData,
       openingHours,
       originalOpeningHours,
+      discountVoucherSettings: { posDiscountsEnabled, customerVouchersEnabled },
+      originalDiscountVoucherSettings,
     });
-  }, [formData, originalFormData, openingHours, originalOpeningHours]);
+  }, [formData, originalFormData, openingHours, originalOpeningHours, posDiscountsEnabled, customerVouchersEnabled, originalDiscountVoucherSettings]);
 
   const syncActiveTabToUrl = useCallback((tabId: string) => {
     if (typeof window === 'undefined') return;
@@ -471,6 +512,10 @@ export default function EditMerchantPage() {
       setFormData(originalFormData);
     }
     setOpeningHours(JSON.parse(JSON.stringify(originalOpeningHours)));
+    if (originalDiscountVoucherSettings) {
+      setPosDiscountsEnabled(originalDiscountVoucherSettings.posDiscountsEnabled);
+      setCustomerVouchersEnabled(originalDiscountVoucherSettings.customerVouchersEnabled);
+    }
     confirmTabChange();
   };
 
@@ -695,6 +740,40 @@ export default function EditMerchantPage() {
         throw new Error(hoursData.message || "Failed to update opening hours");
       }
 
+      // Update discount/voucher feature settings
+      const discountVoucherResponse = await fetch('/api/merchant/order-vouchers/settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          posDiscountsEnabled,
+          customerVouchersEnabled,
+        }),
+      });
+
+      const discountVoucherData = await discountVoucherResponse.json();
+      if (!discountVoucherResponse.ok || !discountVoucherData?.success) {
+        throw new Error(discountVoucherData?.message || 'Failed to update discount/voucher settings');
+      }
+
+      const savedPosDiscountsEnabled =
+        typeof discountVoucherData?.data?.posDiscountsEnabled === 'boolean'
+          ? discountVoucherData.data.posDiscountsEnabled
+          : posDiscountsEnabled;
+      const savedCustomerVouchersEnabled =
+        typeof discountVoucherData?.data?.customerVouchersEnabled === 'boolean'
+          ? discountVoucherData.data.customerVouchersEnabled
+          : customerVouchersEnabled;
+
+      setPosDiscountsEnabled(savedPosDiscountsEnabled);
+      setCustomerVouchersEnabled(savedCustomerVouchersEnabled);
+      setOriginalDiscountVoucherSettings({
+        posDiscountsEnabled: savedPosDiscountsEnabled,
+        customerVouchersEnabled: savedCustomerVouchersEnabled,
+      });
+
       // Update original data to reflect saved state
       setOriginalFormData({ ...formData });
       setOriginalOpeningHours(JSON.parse(JSON.stringify(openingHours)));
@@ -852,6 +931,24 @@ export default function EditMerchantPage() {
         return <TableSettingsTabComponent formData={formData} setFormData={setFormData} />;
       case "fees":
         return <FeesTabComponent formData={formData} setFormData={setFormData} />;
+      case 'discount-voucher':
+        return (
+          <DiscountVoucherTab
+            t={t}
+            posDiscountsEnabled={posDiscountsEnabled}
+            onPosDiscountsEnabledChange={(next) => {
+              setPosDiscountsEnabled(next);
+              if (!next) {
+                setCustomerVouchersEnabled(false);
+              }
+            }}
+            customerVouchersEnabled={customerVouchersEnabled}
+            onCustomerVouchersEnabledChange={(next) => {
+              if (!posDiscountsEnabled) return;
+              setCustomerVouchersEnabled(next);
+            }}
+          />
+        );
       case "delivery":
         return (
           <DeliveryTab
@@ -987,6 +1084,12 @@ export default function EditMerchantPage() {
           label: t('admin.merchant.feesCharges'),
           description: tOr(t, 'admin.merchantEdit.nav.feesDesc', 'Tax, service charge, packaging fee'),
           icon: <FaMoneyBillWave className="h-4 w-4" />,
+        },
+        {
+          id: 'discount-voucher',
+          label: tOr(t, 'admin.merchantEdit.discountVoucher.navLabel', 'Discount & voucher'),
+          description: tOr(t, 'admin.merchantEdit.discountVoucher.navDesc', 'Enable/disable POS discounts and customer vouchers'),
+          icon: <FaTag className="h-4 w-4" />,
         },
         {
           id: 'pos-settings',

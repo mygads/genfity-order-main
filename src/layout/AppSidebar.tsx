@@ -294,6 +294,13 @@ const merchantNavGroups: NavGroup[] = [
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
         permission: STAFF_PERMISSIONS.SPECIAL_PRICES,
       },
+      {
+        icon: <FaTicketAlt />,
+        nameKey: "admin.nav.orderVouchers",
+        path: "/admin/dashboard/order-vouchers",
+        roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+        permission: STAFF_PERMISSIONS.ORDER_VOUCHERS,
+      },
     ],
   },
 

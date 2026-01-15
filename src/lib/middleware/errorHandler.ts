@@ -27,6 +27,7 @@ export function handleError(error: unknown): NextResponse<ApiErrorResponse> {
         error: error.errorCode,
         message: error.message,
         statusCode: error.statusCode,
+        ...(error.details ? { details: serializeData(error.details) } : {}),
       },
       { status: error.statusCode }
     );

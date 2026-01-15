@@ -345,6 +345,14 @@ export const ORDER_DETAIL_INCLUDE: Prisma.OrderInclude = {
       },
     },
   },
+  orderDiscounts: {
+    select: {
+      id: true,
+      source: true,
+      label: true,
+      discountAmount: true,
+    },
+  },
 } as const;
 
 /**

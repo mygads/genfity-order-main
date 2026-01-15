@@ -41,6 +41,7 @@ import { printReceipt } from '@/lib/utils/unifiedReceipt';
 import { DEFAULT_RECEIPT_SETTINGS, type ReceiptSettings } from '@/lib/types/receiptSettings';
 import { formatFullOrderNumber } from '@/lib/utils/format';
 import { formatPaymentMethodLabel } from '@/lib/utils/paymentDisplay';
+import OrderTotalsBreakdown from '@/components/orders/OrderTotalsBreakdown';
 
 interface OrderDetailModalProps {
   orderId: string;
@@ -484,6 +485,13 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   const handlePrintReceipt = async () => {
     if (!order) return;
 
+    const stripDiscountCodeSuffix = (label: string): string => {
+      const trimmed = label.trim();
+      const match = trimmed.match(/^(.*)\(([A-Z0-9_-]{3,})\)\s*$/);
+      if (!match) return trimmed;
+      return match[1].trim();
+    };
+
     const rawSettings = (merchantProfile?.receiptSettings || {}) as Partial<ReceiptSettings>;
     const inferredLanguage: 'en' | 'id' = merchantCurrency === 'IDR' ? 'id' : 'en';
     const language: 'en' | 'id' =
@@ -506,6 +514,13 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
       (order as unknown as { placedAt?: string }).placedAt ||
       (order as unknown as { createdAt?: string }).createdAt ||
       new Date().toISOString();
+
+    const discountLabel = Array.isArray((order as any).orderDiscounts)
+      ? ((order as any).orderDiscounts
+        .map((d: any) => (typeof d?.label === 'string' ? stripDiscountCodeSuffix(d.label) : ''))
+          .filter((s: string) => s.trim() !== '')
+          .join(' + ') || undefined)
+      : undefined;
 
     const payment = (order as unknown as { payment?: any }).payment;
 
@@ -543,6 +558,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
         serviceChargeAmount: Number((order as any).serviceChargeAmount) || 0,
         packagingFeeAmount: Number((order as any).packagingFeeAmount) || 0,
         discountAmount: Number((order as any).discountAmount) || 0,
+        discountLabel,
         totalAmount: Number((order as any).totalAmount) || 0,
         amountPaid: payment?.amountPaid ? Number(payment.amountPaid) : undefined,
         changeAmount: payment?.changeAmount ? Number(payment.changeAmount) : undefined,
@@ -1086,44 +1102,30 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
 
               {/* Price Breakdown */}
               <div className="mb-4 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                <div className="px-4 py-3 space-y-2">
-                  {/* Subtotal */}
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">Subtotal</span>
-                    <span className="text-gray-900 dark:text-white font-medium">
-                      {formatCurrency(Number(order.subtotal))}
-                    </span>
-                  </div>
-
-                  {/* Tax */}
-                  {Number(order.taxAmount) > 0 && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Tax</span>
-                      <span className="text-gray-900 dark:text-white">
-                        {formatCurrency(Number(order.taxAmount))}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Service Charge - cast for new schema fields */}
-                  {Number((order as unknown as { serviceChargeAmount?: number }).serviceChargeAmount) > 0 && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Service Charge</span>
-                      <span className="text-gray-900 dark:text-white">
-                        {formatCurrency(Number((order as unknown as { serviceChargeAmount?: number }).serviceChargeAmount))}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Packaging Fee */}
-                  {Number((order as unknown as { packagingFeeAmount?: number }).packagingFeeAmount) > 0 && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Packaging Fee</span>
-                      <span className="text-gray-900 dark:text-white">
-                        {formatCurrency(Number((order as unknown as { packagingFeeAmount?: number }).packagingFeeAmount))}
-                      </span>
-                    </div>
-                  )}
+                <div className="px-4 py-3">
+                  <OrderTotalsBreakdown
+                    amounts={{
+                      subtotal: Number(order.subtotal) || 0,
+                      taxAmount: Number(order.taxAmount) || 0,
+                      serviceChargeAmount: Number((order as any).serviceChargeAmount || 0),
+                      packagingFeeAmount: Number((order as any).packagingFeeAmount || 0),
+                      deliveryFeeAmount:
+                        String(order.orderType) === 'DELIVERY' ? Number((order as any).deliveryFeeAmount || 0) : 0,
+                      discountAmount: Number((order as any).discountAmount || 0),
+                      totalAmount: Number(order.totalAmount) || 0,
+                    }}
+                    currency={merchantCurrency}
+                    formatAmount={(amount) => formatCurrency(amount)}
+                    options={{
+                      showDeliveryFee: String(order.orderType) === 'DELIVERY',
+                    }}
+                    showTotalRow={false}
+                    rowsContainerClassName="space-y-2"
+                    rowClassName="flex items-center justify-between text-sm"
+                    labelClassName="text-gray-600 dark:text-gray-400"
+                    valueClassName="text-gray-900 dark:text-white"
+                    discountValueClassName="text-green-700 dark:text-green-400 font-medium"
+                  />
                 </div>
 
                 {/* Total */}

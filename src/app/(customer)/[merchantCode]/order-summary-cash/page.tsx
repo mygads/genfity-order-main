@@ -16,6 +16,7 @@ import { customerTrackUrl } from '@/lib/utils/customerRoutes';
 import { getPublicAppOrigin } from '@/lib/utils/publicAppOrigin';
 import { FaBell, FaCheck, FaCheckCircle, FaChevronDown, FaCopy, FaInfoCircle, FaMoneyBillWave, FaMotorcycle, FaQrcode, FaStickyNote, FaTimes } from 'react-icons/fa';
 import { formatPaymentMethodLabel, formatPaymentStatusLabel } from '@/lib/utils/paymentDisplay';
+import OrderTotalsBreakdown from '@/components/orders/OrderTotalsBreakdown';
 
 // ✅ Order Summary Data Interface
 interface OrderSummaryData {
@@ -53,6 +54,7 @@ interface OrderSummaryData {
   taxAmount: number;
   serviceChargeAmount: number;
   packagingFeeAmount: number;
+  discountAmount: number;
   totalAmount: number;
   createdAt: string;
 }
@@ -257,6 +259,7 @@ export default function OrderSummaryCashPage() {
           taxAmount: convertDecimal(data.data.taxAmount),
           serviceChargeAmount: convertDecimal(data.data.serviceChargeAmount),
           packagingFeeAmount: convertDecimal(data.data.packagingFeeAmount),
+          discountAmount: convertDecimal(data.data.discountAmount),
           totalAmount: convertDecimal(data.data.totalAmount),
           createdAt: data.data.createdAt,
         };
@@ -824,6 +827,43 @@ export default function OrderSummaryCashPage() {
             lineHeight: '20px'
           }}
         >
+          {/* Voucher/Discount */}
+          <OrderTotalsBreakdown
+            amounts={{
+              subtotal: Number(order.subtotalAmount || 0),
+              taxAmount: Number(order.taxAmount || 0),
+              serviceChargeAmount: Number(order.serviceChargeAmount || 0),
+              packagingFeeAmount: Number(order.packagingFeeAmount || 0),
+              deliveryFeeAmount:
+                effectiveMode === 'delivery' ? Number(order.deliveryFeeAmount || 0) : 0,
+              discountAmount: Number(order.discountAmount || 0),
+              totalAmount: Number(order.totalAmount || 0),
+            }}
+            currency={merchantInfo?.currency || 'AUD'}
+            locale={locale}
+            formatAmount={formatCurrency}
+            labels={{
+              discount: tOr('customer.payment.voucher.discount', 'Voucher discount'),
+              deliveryFee: tOr('customer.track.deliveryFee', 'Delivery fee'),
+              total: t('customer.payment.total'),
+            }}
+            options={{
+              showSubtotal: false,
+              showTax: false,
+              showServiceCharge: false,
+              showPackagingFee: false,
+              showDeliveryFee: effectiveMode === 'delivery',
+            }}
+            rowsContainerClassName="text-sm"
+            rowClassName="flex justify-between items-center py-2 border-b border-dashed border-[#e4e7ec]"
+            labelClassName="text-[#aeb3be] font-normal"
+            valueClassName="font-semibold text-[#212529]"
+            discountValueClassName="font-semibold text-[#1ca406]"
+            totalRowClassName="flex pt-3 font-bold text-[1em] leading-[17px]"
+            totalLabelClassName="grow text-[#212529]"
+            totalValueClassName="text-[#f05a28] font-bold"
+          />
+
           {/* Inclusive Fees - Expandable */}
           {(order.taxAmount > 0 || order.serviceChargeAmount > 0 || order.packagingFeeAmount > 0) && (
             <>
@@ -911,26 +951,6 @@ export default function OrderSummaryCashPage() {
             </>
           )}
 
-          {/* Total Section - ESB Style */}
-          <section
-            className="flex"
-            style={{
-              paddingTop: '12px',
-              fontWeight: 700,
-              fontSize: '1em',
-              lineHeight: '17px'
-            }}
-          >
-            <div
-              className="grow"
-              style={{ color: '#212529' }}
-            >
-              {t('customer.payment.total')}
-            </div>
-            <div style={{ color: '#f05a28', fontWeight: 700 }}>
-              {formatCurrency(order.totalAmount)}
-            </div>
-          </section>
         </div>
         {/* New Order Button - ESB Style */}
         <button

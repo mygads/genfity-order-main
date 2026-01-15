@@ -30,6 +30,9 @@ export const STAFF_PERMISSIONS = {
   MENU_BOOKS: 'menu_books',            // Menu books
   SPECIAL_PRICES: 'special_prices',    // Special prices/promos
 
+  // Promotions / Discounts
+  ORDER_VOUCHERS: 'order_vouchers',    // Order discount vouchers (POS + customer)
+
   // Reports (typically owner-only, but can be granted)
   REPORTS: 'reports',                  // Sales reports
   REVENUE: 'revenue',                  // Revenue analytics
@@ -119,6 +122,7 @@ export const PERMISSION_TEMPLATES = {
       STAFF_PERMISSIONS.ADDON_ITEMS,
       STAFF_PERMISSIONS.MENU_BOOKS,
       STAFF_PERMISSIONS.SPECIAL_PRICES,
+      STAFF_PERMISSIONS.ORDER_VOUCHERS,
       STAFF_PERMISSIONS.REPORTS,
       STAFF_PERMISSIONS.REVENUE,
       STAFF_PERMISSIONS.CUSTOMER_FEEDBACK,
@@ -159,6 +163,7 @@ export const PERMISSION_GROUPS = {
       { key: STAFF_PERMISSIONS.ADDON_ITEMS, nameKey: 'admin.permissions.addonItems', descKey: 'admin.permissions.addonItemsDesc' },
       { key: STAFF_PERMISSIONS.MENU_BOOKS, nameKey: 'admin.permissions.menuBooks', descKey: 'admin.permissions.menuBooksDesc' },
       { key: STAFF_PERMISSIONS.SPECIAL_PRICES, nameKey: 'admin.permissions.specialPrices', descKey: 'admin.permissions.specialPricesDesc' },
+      { key: STAFF_PERMISSIONS.ORDER_VOUCHERS, nameKey: 'admin.permissions.orderVouchers', descKey: 'admin.permissions.orderVouchersDesc' },
     ],
   },
   reportsAnalytics: {
@@ -217,6 +222,7 @@ export const PATH_PERMISSION_MAP: Record<string, StaffPermission> = {
   '/admin/dashboard/menu-books/create': STAFF_PERMISSIONS.MENU_BOOKS,
   '/admin/dashboard/special-prices': STAFF_PERMISSIONS.SPECIAL_PRICES,
   '/admin/dashboard/special-prices/create': STAFF_PERMISSIONS.SPECIAL_PRICES,
+  '/admin/dashboard/order-vouchers': STAFF_PERMISSIONS.ORDER_VOUCHERS,
   '/admin/dashboard/reports': STAFF_PERMISSIONS.REPORTS,
   '/admin/dashboard/revenue': STAFF_PERMISSIONS.REVENUE,
   '/admin/dashboard/analytics/sales': STAFF_PERMISSIONS.REVENUE,
@@ -266,6 +272,7 @@ export const API_PERMISSION_MAP: Record<string, StaffPermission> = {
   '/api/merchant/bulk/menu': STAFF_PERMISSIONS.MENU,
   '/api/merchant/menu-books': STAFF_PERMISSIONS.MENU_BOOKS,
   '/api/merchant/special-prices': STAFF_PERMISSIONS.SPECIAL_PRICES,
+  '/api/merchant/order-vouchers': STAFF_PERMISSIONS.ORDER_VOUCHERS,
   '/api/merchant/feedback': STAFF_PERMISSIONS.CUSTOMER_FEEDBACK,
   '/api/merchant/analytics': STAFF_PERMISSIONS.REVENUE,
   '/api/merchant/reports': STAFF_PERMISSIONS.REPORTS,

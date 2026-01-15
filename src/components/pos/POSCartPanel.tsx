@@ -28,6 +28,7 @@ import {
 } from 'react-icons/fa';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { formatCurrency } from '@/lib/utils/format';
+import OrderTotalsBreakdown from '@/components/orders/OrderTotalsBreakdown';
 
 export interface CartAddon {
   addonItemId: number | string;
@@ -342,30 +343,39 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
         </div>
 
         {/* Totals */}
-        <div className="space-y-1.5 text-sm border-t border-gray-200 dark:border-gray-700 pt-2">
-          <div className="flex justify-between text-gray-600 dark:text-gray-400">
-            <span>{t('pos.subtotal')}</span>
-            <span>{formatMoney(subtotal)}</span>
-          </div>
-          {enableTax && taxAmount > 0 && (
-            <div className="flex justify-between text-gray-600 dark:text-gray-400">
-              <span>{t('pos.tax')} ({taxPercentage}%)</span>
-              <span>{formatMoney(taxAmount)}</span>
-            </div>
-          )}
-          {enableServiceCharge && serviceChargeAmount > 0 && (
-            <div className="flex justify-between text-gray-600 dark:text-gray-400">
-              <span>{t('pos.serviceCharge')} ({serviceChargePercent}%)</span>
-              <span>{formatMoney(serviceChargeAmount)}</span>
-            </div>
-          )}
-          {packagingFee > 0 && (
-            <div className="flex justify-between text-gray-600 dark:text-gray-400">
-              <span>{t('pos.packagingFee')}</span>
-              <span>{formatMoney(packagingFee)}</span>
-            </div>
-          )}
-        </div>
+        <OrderTotalsBreakdown
+          amounts={{
+            subtotal,
+            taxAmount,
+            serviceChargeAmount,
+            packagingFeeAmount: packagingFee,
+            deliveryFeeAmount: 0,
+            discountAmount: 0,
+            totalAmount: total,
+          }}
+          currency={currency}
+          locale={locale}
+          formatAmount={formatMoney}
+          labels={{
+            subtotal: t('pos.subtotal'),
+            tax: `${t('pos.tax')} (${taxPercentage}%)`,
+            serviceCharge: `${t('pos.serviceCharge')} (${serviceChargePercent}%)`,
+            packagingFee: t('pos.packagingFee'),
+          }}
+          options={{
+            showTax: enableTax,
+            showServiceCharge: enableServiceCharge,
+            showPackagingFee: true,
+            showDeliveryFee: false,
+            showDiscount: false,
+          }}
+          showTotalRow={false}
+          className="border-t border-gray-200 dark:border-gray-700 pt-2"
+          rowsContainerClassName="space-y-1.5 text-sm"
+          rowClassName="flex justify-between"
+          labelClassName="text-gray-600 dark:text-gray-400"
+          valueClassName="text-gray-600 dark:text-gray-400"
+        />
 
         {/* Action Buttons */}
         <div className="flex flex-col gap-2 mt-4">

@@ -121,6 +121,20 @@ const HELD_ORDERS_EXPIRY_DAYS = 1; // Auto-expire after 1 day
 
 type DisplayMode = 'normal' | 'clean' | 'fullscreen';
 
+function normalizeTableNumber(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+
+  if (value && typeof value === 'object') {
+    const obj = value as Record<string, unknown>;
+    const candidate = obj.tableNumber ?? obj.value ?? obj.label;
+    if (typeof candidate === 'string') return candidate;
+    if (typeof candidate === 'number' && Number.isFinite(candidate)) return String(candidate);
+  }
+
+  return '';
+}
+
 // Grid columns options (min 1 for large cards, max 12 for small cards)
 const MIN_GRID_COLUMNS = 1;
 const MAX_GRID_COLUMNS = 12;
@@ -191,6 +205,7 @@ export default function POSPage() {
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showCustomerLookup, setShowCustomerLookup] = useState(false);
   const [showTableModal, setShowTableModal] = useState(false);
+  const [autoPlaceAfterTableConfirm, setAutoPlaceAfterTableConfirm] = useState(false);
   const [showConflictModal, setShowConflictModal] = useState(false); // Placeholder for future conflict integration
   const [showOrderNotesModal, setShowOrderNotesModal] = useState(false);
   const [showItemNotesModal, setShowItemNotesModal] = useState(false);
@@ -198,6 +213,10 @@ export default function POSPage() {
 
   const [replaceCartConfirmOpen, setReplaceCartConfirmOpen] = useState(false);
   const [pendingReplaceCartAction, setPendingReplaceCartAction] = useState<ReplaceCartAction | null>(null);
+
+  const [placeOrderConfirmOpen, setPlaceOrderConfirmOpen] = useState(false);
+  const [placeOrderConfirmMessage, setPlaceOrderConfirmMessage] = useState('');
+  const [pendingPlaceOrderTableNumber, setPendingPlaceOrderTableNumber] = useState<string | undefined>(undefined);
 
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [lastOrderNumber, setLastOrderNumber] = useState('');
@@ -404,7 +423,7 @@ export default function POSPage() {
       if (diffHours < 4) {
         setCartItems(savedCart.items as CartItem[]);
         setOrderType(savedCart.orderType);
-        setTableNumber(savedCart.tableNumber);
+        setTableNumber(normalizeTableNumber(savedCart.tableNumber));
         setOrderNotes(savedCart.orderNotes);
         setCustomerInfo(savedCart.customerInfo);
       } else {
@@ -476,7 +495,7 @@ export default function POSPage() {
 
     setCartItems(newCartItems);
     setOrderType(order.orderType);
-    setTableNumber(order.tableNumber || '');
+    setTableNumber(normalizeTableNumber(order.tableNumber));
     setOrderNotes(order.notes || '');
     setCustomerInfo(order.customer || {});
     setEditingPendingOfflineOrderId(order.id);
@@ -504,7 +523,7 @@ export default function POSPage() {
 
     setCartItems(order.items);
     setOrderType(order.orderType);
-    setTableNumber(order.tableNumber || '');
+    setTableNumber(normalizeTableNumber(order.tableNumber));
     setOrderNotes(order.notes || '');
     setCustomerInfo(order.customerInfo || {});
 
@@ -771,10 +790,15 @@ export default function POSPage() {
   }, [cartItems, merchantSettings, orderType]);
 
   // Place order - with offline support
-  const handlePlaceOrder = useCallback(async () => {
+  const executePlaceOrder = useCallback(async (overrideTableNumber?: string) => {
     if (cartItems.length === 0) return;
 
-    if (isTableNumberEnabled && !tableNumber.trim()) {
+    const effectiveTableNumber = isTableNumberEnabled
+      ? normalizeTableNumber(overrideTableNumber ?? tableNumber).trim()
+      : '';
+
+    if (isTableNumberEnabled && !effectiveTableNumber) {
+      setAutoPlaceAfterTableConfirm(true);
       setShowTableModal(true);
       return;
     }
@@ -805,7 +829,7 @@ export default function POSPage() {
     if (!isOnline) {
       const pendingOrder: Omit<PendingOrder, 'id' | 'createdAt'> = {
         orderType,
-        tableNumber: isTableNumberEnabled ? (tableNumber || undefined) : undefined,
+        tableNumber: isTableNumberEnabled ? (effectiveTableNumber || undefined) : undefined,
         notes: orderNotes || undefined,
         customer: (customerInfo.name || customerInfo.phone || customerInfo.email)
           ? customerInfo
@@ -840,7 +864,7 @@ export default function POSPage() {
       // Build request body
       const requestBody = {
         orderType,
-        tableNumber: isTableNumberEnabled ? (tableNumber || undefined) : undefined,
+        tableNumber: isTableNumberEnabled ? (effectiveTableNumber || undefined) : undefined,
         notes: orderNotes || undefined,
         customer: (customerInfo.name || customerInfo.phone || customerInfo.email)
           ? customerInfo
@@ -906,7 +930,7 @@ export default function POSPage() {
         // Store order details for receipt printing
         setPendingOrderDetails({
           orderType,
-          tableNumber: tableNumber || undefined,
+          tableNumber: effectiveTableNumber || undefined,
           placedAt: new Date(),
           items: cartItems.map(item => ({
             menuName: item.menuName,
@@ -984,7 +1008,7 @@ export default function POSPage() {
       if (!navigator.onLine) {
         const pendingOrder: Omit<PendingOrder, 'id' | 'createdAt'> = {
           orderType,
-          tableNumber: isTableNumberEnabled ? (tableNumber || undefined) : undefined,
+          tableNumber: isTableNumberEnabled ? (effectiveTableNumber || undefined) : undefined,
           notes: orderNotes || undefined,
           customer: (customerInfo.name || customerInfo.phone || customerInfo.email)
             ? customerInfo
@@ -1030,6 +1054,81 @@ export default function POSPage() {
     updatePendingOrder,
     editingPendingOfflineOrderId,
     merchantSettings,
+    t,
+  ]);
+
+  const handlePlaceOrder = useCallback((overrideTableNumber?: string) => {
+    if (cartItems.length === 0 || isPlacingOrder) return;
+
+    const effectiveTableNumber = isTableNumberEnabled
+      ? normalizeTableNumber(overrideTableNumber ?? tableNumber).trim()
+      : '';
+
+    if (isTableNumberEnabled && !effectiveTableNumber) {
+      setAutoPlaceAfterTableConfirm(true);
+      setShowTableModal(true);
+      return;
+    }
+
+    const lines: string[] = [];
+
+    if (isTableNumberEnabled) {
+      lines.push(`${t('pos.orderConfirm.table') || 'Table'}: ${effectiveTableNumber || '0'}`);
+      lines.push('');
+    }
+
+    lines.push(t('pos.orderConfirm.items') || 'Items');
+
+    cartItems.forEach((item) => {
+      const addonsTotal = item.addons.reduce((sum: number, addon: CartAddon) => {
+        return sum + (addon.addonPrice * addon.quantity);
+      }, 0);
+      const itemTotal = (item.menuPrice * item.quantity) + addonsTotal;
+      lines.push(`- ${item.quantity}x ${item.menuName}  ${formatCurrency(itemTotal)}`);
+
+      if (item.addons.length > 0) {
+        item.addons.forEach((addon) => {
+          const addonLine = addon.addonPrice * addon.quantity;
+          lines.push(`   + ${addon.quantity}x ${addon.addonName}  ${formatCurrency(addonLine)}`);
+        });
+      }
+    });
+
+    const subtotal = cartItems.reduce((total: number, item: CartItem) => {
+      const itemTotal = item.menuPrice * item.quantity;
+      const addonsTotal = item.addons.reduce((sum: number, addon: CartAddon) => sum + (addon.addonPrice * addon.quantity), 0);
+      return total + itemTotal + addonsTotal;
+    }, 0);
+
+    const taxAmount = merchantSettings?.enableTax
+      ? subtotal * ((merchantSettings.taxPercentage || 0) / 100)
+      : 0;
+    const serviceChargeAmount = merchantSettings?.enableServiceCharge
+      ? subtotal * ((merchantSettings.serviceChargePercent || 0) / 100)
+      : 0;
+    const packagingFeeAmount = (orderType === 'TAKEAWAY' && merchantSettings?.enablePackagingFee)
+      ? (merchantSettings.packagingFeeAmount || 0)
+      : 0;
+
+    lines.push('');
+    lines.push(`${t('pos.orderConfirm.subtotal') || 'Subtotal'}: ${formatCurrency(subtotal)}`);
+    if (taxAmount > 0) lines.push(`${t('pos.orderConfirm.tax') || 'Tax'}: ${formatCurrency(taxAmount)}`);
+    if (serviceChargeAmount > 0) lines.push(`${t('pos.orderConfirm.service') || 'Service'}: ${formatCurrency(serviceChargeAmount)}`);
+    if (packagingFeeAmount > 0) lines.push(`${t('pos.orderConfirm.packaging') || 'Packaging'}: ${formatCurrency(packagingFeeAmount)}`);
+    lines.push(`${t('pos.orderConfirm.total') || 'Total'}: ${formatCurrency(calculateOrderTotal())}`);
+
+    setPendingPlaceOrderTableNumber(isTableNumberEnabled ? (effectiveTableNumber || '0') : undefined);
+    setPlaceOrderConfirmMessage(lines.join('\n'));
+    setPlaceOrderConfirmOpen(true);
+  }, [
+    cartItems,
+    calculateOrderTotal,
+    formatCurrency,
+    isPlacingOrder,
+    isTableNumberEnabled,
+    merchantSettings,
+    orderType,
+    tableNumber,
     t,
   ]);
 
@@ -1120,13 +1219,14 @@ export default function POSPage() {
           amountPaid: paymentData.amountPaid,
           changeAmount: paymentData.change,
           notes: paymentData.notes,
+          voucherTemplateId: paymentData.voucherTemplateId,
           // Split payment details
           cashAmount: paymentData.cashAmount,
           cardAmount: paymentData.cardAmount,
           // Discount details
-          discountType: paymentData.discountType,
-          discountValue: paymentData.discountValue,
-          discountAmount: paymentData.discountAmount,
+          discountType: paymentData.voucherTemplateId ? undefined : paymentData.discountType,
+          discountValue: paymentData.voucherTemplateId ? undefined : paymentData.discountValue,
+          discountAmount: paymentData.voucherTemplateId ? undefined : paymentData.discountAmount,
           finalTotal: paymentData.finalTotal,
         }),
       });
@@ -1541,8 +1641,19 @@ export default function POSPage() {
       {isTableNumberEnabled ? (
         <TableNumberModal
           isOpen={showTableModal}
-          onClose={() => setShowTableModal(false)}
-          onConfirm={(num) => setTableNumber(num)}
+          onClose={() => {
+            setShowTableModal(false);
+            setAutoPlaceAfterTableConfirm(false);
+          }}
+          onConfirm={(num) => {
+            const normalized = normalizeTableNumber(num).trim();
+            setTableNumber(normalized);
+
+            if (autoPlaceAfterTableConfirm && cartItems.length > 0 && !isPlacingOrder) {
+              setAutoPlaceAfterTableConfirm(false);
+              handlePlaceOrder(normalized);
+            }
+          }}
           initialValue={tableNumber}
           totalTables={merchantSettings?.totalTables}
         />
@@ -1668,6 +1779,24 @@ export default function POSPage() {
           if (isOnline) {
             syncPendingOrders().catch(() => undefined);
           }
+        }}
+      />
+
+      <ConfirmDialog
+        isOpen={placeOrderConfirmOpen}
+        title={t('pos.orderConfirm.title') || 'Confirm Create Order'}
+        message={placeOrderConfirmMessage}
+        variant="info"
+        confirmText={t('pos.orderConfirm.confirm') || t('pos.createOrder') || 'Create Order'}
+        cancelText={t('common.cancel') || 'Cancel'}
+        onCancel={() => {
+          setPlaceOrderConfirmOpen(false);
+          setPendingPlaceOrderTableNumber(undefined);
+        }}
+        onConfirm={() => {
+          setPlaceOrderConfirmOpen(false);
+          executePlaceOrder(pendingPlaceOrderTableNumber);
+          setPendingPlaceOrderTableNumber(undefined);
         }}
       />
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams, useParams } from 'next/navigation';
 import { getCustomerAuth } from '@/lib/utils/localStorage';
 import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';
@@ -22,6 +22,7 @@ interface OrderHistoryItem {
   isScheduled?: boolean;
   scheduledTime?: string | null;
   status: string;
+  discountAmount?: number;
   totalAmount: number;
   placedAt: string;
   itemsCount: number;
@@ -380,6 +381,7 @@ export default function OrderHistoryPage() {
         serviceChargeAmount: Number(orderData.serviceChargeAmount) || 0,
         packagingFeeAmount: Number(orderData.packagingFeeAmount) || 0,
         deliveryFeeAmount: Number(orderData.deliveryFeeAmount) || 0,
+        discountAmount: Number(orderData.discountAmount) || 0,
         totalAmount: Number(orderData.totalAmount) || order.totalAmount,
         paymentMethod: orderData.payment?.paymentMethod,
         paymentStatus: orderData.payment?.status,
@@ -487,23 +489,75 @@ export default function OrderHistoryPage() {
     return reservation.status;
   };
 
-  // Orders: sort active first, then newest
-  const sortedOrders = [...orders].sort((a, b) => {
-    const aIsActive = !['completed', 'cancelled'].includes(a.status.toLowerCase());
-    const bIsActive = !['completed', 'cancelled'].includes(b.status.toLowerCase());
-    if (aIsActive && !bIsActive) return -1;
-    if (!aIsActive && bIsActive) return 1;
-    return new Date(b.placedAt).getTime() - new Date(a.placedAt).getTime();
-  });
+  const getStatusPriority = (statusRaw: string): number => {
+    const s = statusRaw.toLowerCase();
+    if (s === 'pending') return 0;
+    if (s === 'accepted' || s === 'confirmed' || s === 'in_progress') return 1;
+    if (s === 'ready') return 2;
+    if (s === 'completed') return 3;
+    if (s === 'cancelled') return 4;
+    return 0;
+  };
 
-  const sortedReservations = [...reservations].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
+  type UnifiedHistoryItem =
+    | {
+        kind: 'order';
+        key: string;
+        status: string;
+        sortDate: string;
+        order: OrderHistoryItem;
+      }
+    | {
+        kind: 'reservation';
+        key: string;
+        status: string;
+        sortDate: string;
+        reservation: ReservationHistoryItem;
+      };
 
   const hasReservations = reservations.length > 0;
   const effectiveType = hasReservations ? typeFilter : 'orders';
-  const visibleOrders = effectiveType === 'all' || effectiveType === 'orders' ? sortedOrders : [];
-  const visibleReservations = effectiveType === 'all' || effectiveType === 'reservations' ? sortedReservations : [];
+
+  const visibleItems = useMemo<UnifiedHistoryItem[]>(() => {
+    const items: UnifiedHistoryItem[] = [];
+
+    if (effectiveType === 'all' || effectiveType === 'orders') {
+      for (const order of orders) {
+        items.push({
+          kind: 'order',
+          key: `order_${order.id}`,
+          status: order.status,
+          sortDate: order.placedAt,
+          order,
+        });
+      }
+    }
+
+    if (effectiveType === 'all' || effectiveType === 'reservations') {
+      for (const reservation of reservations) {
+        const derivedStatus = getReservationDerivedStatus(reservation);
+        items.push({
+          kind: 'reservation',
+          key: `reservation_${reservation.id}`,
+          status: derivedStatus,
+          sortDate: reservation.createdAt,
+          reservation,
+        });
+      }
+    }
+
+    items.sort((a, b) => {
+      const prA = getStatusPriority(a.status);
+      const prB = getStatusPriority(b.status);
+      if (prA !== prB) return prA - prB;
+
+      const tA = new Date(a.sortDate).getTime();
+      const tB = new Date(b.sortDate).getTime();
+      return tB - tA; // newest first; older items at bottom
+    });
+
+    return items;
+  }, [effectiveType, orders, reservations]);
 
   // ✅ HYDRATION FIX: Show loading during SSR → CSR transition
   // if (!isMounted || !auth) {
@@ -604,7 +658,7 @@ export default function OrderHistoryPage() {
               </div>
             ))}
           </div>
-        ) : visibleOrders.length === 0 && visibleReservations.length === 0 ? (
+        ) : visibleItems.length === 0 ? (
           <div className="text-center py-20">
             {/* Empty State - SVG Icon */}
             <FaClipboardList className="w-16 h-16 mx-auto mb-4 text-gray-300" />
@@ -623,17 +677,14 @@ export default function OrderHistoryPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            {visibleReservations.length > 0 ? (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold text-gray-900">
-                    {tOr(t, 'customer.history.reservationsTitle', 'Reservations')}
-                  </p>
-                </div>
+            {visibleItems.map((row) => {
+              if (row.kind === 'reservation') {
+                const reservation = row.reservation;
+                const derivedStatus = getReservationDerivedStatus(reservation);
 
-                {visibleReservations.map((reservation) => (
+                return (
                   <div
-                    key={`reservation_${reservation.id}`}
+                    key={row.key}
                     className="p-4 border border-gray-200 rounded-xl bg-white"
                   >
                     <div className="flex justify-between items-start mb-3">
@@ -643,7 +694,7 @@ export default function OrderHistoryPage() {
                         </p>
                         <p className="text-xs text-gray-500">{formatDate(reservation.createdAt)}</p>
                       </div>
-                      {getStatusBadge(getReservationDerivedStatus(reservation))}
+                      {getStatusBadge(derivedStatus)}
                     </div>
 
                     <div className="mb-3 p-2 bg-gray-50 rounded-lg">
@@ -670,7 +721,7 @@ export default function OrderHistoryPage() {
                     </div>
 
                     <div className="flex gap-2 mt-4 pt-3 border-t border-gray-200">
-                      {reservation.order?.orderNumber && getReservationDerivedStatus(reservation).toLowerCase() === 'completed' ? (
+                      {reservation.order?.orderNumber && derivedStatus.toLowerCase() === 'completed' ? (
                         <>
                           <button
                             onClick={(e) => {
@@ -694,6 +745,7 @@ export default function OrderHistoryPage() {
                                 merchantCode: reservation.merchantCode,
                                 mode: (reservation.order!.mode as OrderHistoryItem['mode']) || 'dinein',
                                 status: reservation.order!.status,
+                                discountAmount: 0,
                                 totalAmount: 0,
                                 placedAt: reservation.createdAt,
                                 itemsCount: reservation.itemsCount || 0,
@@ -742,18 +794,14 @@ export default function OrderHistoryPage() {
                       )}
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : null}
+                );
+              }
 
-            {visibleOrders.map((order) => {
+              const order = row.order;
               const isOrderActive = !['completed', 'cancelled'].includes(order.status.toLowerCase());
 
               return (
-                <div
-                  key={order.id.toString()}
-                  className="p-4 border border-gray-200 rounded-xl bg-white"
-                >
+                <div key={row.key} className="p-4 border border-gray-200 rounded-xl bg-white">
                   {/* Order Header */}
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex-1 min-w-0">
@@ -818,9 +866,14 @@ export default function OrderHistoryPage() {
                       <span>•</span>
                       <span>{order.itemsCount || 0} items</span>
                     </div>
-                    <span className="text-base font-bold text-orange-500">
-                      {formatCurrency(order.totalAmount)}
-                    </span>
+                    <div className="flex flex-col items-end">
+                      {order.mode !== 'dinein' && typeof order.discountAmount === 'number' && order.discountAmount > 0 ? (
+                        <span className="text-[11px] font-semibold text-green-600">
+                          {tOr(t, 'customer.payment.voucher.discount', 'Voucher discount')}: -{formatCurrency(order.discountAmount)}
+                        </span>
+                      ) : null}
+                      <span className="text-base font-bold text-orange-500">{formatCurrency(order.totalAmount)}</span>
+                    </div>
                   </div>
 
                   {/* Action Buttons */}

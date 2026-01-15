@@ -197,6 +197,26 @@ export function formatDateTime(date: Date | string, locale?: Locale): string {
 }
 
 /**
+ * Format date + time in a specific IANA timezone (e.g., "Australia/Sydney").
+ *
+ * Use this when displaying timestamps stored in UTC but needing merchant-local display.
+ */
+export function formatDateTimeInTimeZone(date: Date | string, timeZone: string, locale?: Locale): string {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  const intlLocale = locale ? appLocaleToIntlLocale[locale] : 'id-ID';
+
+  return new Intl.DateTimeFormat(intlLocale, {
+    timeZone,
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(d);
+}
+
+/**
  * Get relative time with locale support
  * @param date - Date to compare
  * @param locale - App locale (en/id)

@@ -55,6 +55,29 @@ export const ERROR_CODES = {
   INVALID_ORDER_STATUS: 'INVALID_ORDER_STATUS',
   INVALID_STATUS_TRANSITION: 'INVALID_STATUS_TRANSITION',
   EMPTY_CART: 'EMPTY_CART',
+
+  // Voucher
+  VOUCHER_NOT_FOUND: 'VOUCHER_NOT_FOUND',
+  VOUCHER_TEMPLATE_REQUIRED: 'VOUCHER_TEMPLATE_REQUIRED',
+  VOUCHER_INACTIVE: 'VOUCHER_INACTIVE',
+  VOUCHER_NOT_APPLICABLE: 'VOUCHER_NOT_APPLICABLE',
+  VOUCHER_ORDER_TYPE_NOT_ALLOWED: 'VOUCHER_ORDER_TYPE_NOT_ALLOWED',
+  VOUCHER_NOT_ACTIVE_YET: 'VOUCHER_NOT_ACTIVE_YET',
+  VOUCHER_EXPIRED: 'VOUCHER_EXPIRED',
+  VOUCHER_NOT_AVAILABLE_TODAY: 'VOUCHER_NOT_AVAILABLE_TODAY',
+  VOUCHER_NOT_AVAILABLE_NOW: 'VOUCHER_NOT_AVAILABLE_NOW',
+  VOUCHER_SCHEDULE_INVALID: 'VOUCHER_SCHEDULE_INVALID',
+  VOUCHER_REQUIRES_LOGIN: 'VOUCHER_REQUIRES_LOGIN',
+  VOUCHER_MIN_ORDER_NOT_MET: 'VOUCHER_MIN_ORDER_NOT_MET',
+  VOUCHER_MAX_ORDER_EXCEEDED: 'VOUCHER_MAX_ORDER_EXCEEDED',
+  VOUCHER_USAGE_LIMIT_REACHED: 'VOUCHER_USAGE_LIMIT_REACHED',
+  VOUCHER_DISCOUNT_CAP_REACHED: 'VOUCHER_DISCOUNT_CAP_REACHED',
+  VOUCHER_NOT_APPLICABLE_ITEMS: 'VOUCHER_NOT_APPLICABLE_ITEMS',
+  VOUCHER_ALREADY_APPLIED: 'VOUCHER_ALREADY_APPLIED',
+  VOUCHER_CANNOT_STACK_MANUAL: 'VOUCHER_CANNOT_STACK_MANUAL',
+  VOUCHER_CANNOT_STACK_POS: 'VOUCHER_CANNOT_STACK_POS',
+  VOUCHER_CANNOT_STACK_CUSTOMER: 'VOUCHER_CANNOT_STACK_CUSTOMER',
+  VOUCHER_DISCOUNT_ZERO: 'VOUCHER_DISCOUNT_ZERO',
   
   // General
   INTERNAL_ERROR: 'INTERNAL_ERROR',
@@ -121,6 +144,29 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   INVALID_ORDER_STATUS: 'Invalid order status',
   INVALID_STATUS_TRANSITION: 'Invalid status transition',
   EMPTY_CART: 'Cart is empty',
+
+  // Voucher
+  VOUCHER_NOT_FOUND: 'Invalid voucher',
+  VOUCHER_TEMPLATE_REQUIRED: 'Voucher template is required',
+  VOUCHER_INACTIVE: 'Voucher is inactive',
+  VOUCHER_NOT_APPLICABLE: 'Voucher is not applicable',
+  VOUCHER_ORDER_TYPE_NOT_ALLOWED: 'Voucher is not applicable for this order type',
+  VOUCHER_NOT_ACTIVE_YET: 'Voucher is not active yet',
+  VOUCHER_EXPIRED: 'Voucher has expired',
+  VOUCHER_NOT_AVAILABLE_TODAY: 'Voucher is not available today',
+  VOUCHER_NOT_AVAILABLE_NOW: 'Voucher is not available at this time',
+  VOUCHER_SCHEDULE_INVALID: 'Voucher schedule is invalid',
+  VOUCHER_REQUIRES_LOGIN: 'Customer login is required to use this voucher',
+  VOUCHER_MIN_ORDER_NOT_MET: 'Order does not meet minimum amount',
+  VOUCHER_MAX_ORDER_EXCEEDED: 'Order exceeds maximum amount',
+  VOUCHER_USAGE_LIMIT_REACHED: 'Voucher usage limit reached',
+  VOUCHER_DISCOUNT_CAP_REACHED: 'Voucher discount budget reached',
+  VOUCHER_NOT_APPLICABLE_ITEMS: 'Voucher is not applicable to selected items',
+  VOUCHER_ALREADY_APPLIED: 'Only one voucher can be used per order',
+  VOUCHER_CANNOT_STACK_MANUAL: 'Voucher cannot be combined with manual discount',
+  VOUCHER_CANNOT_STACK_POS: 'Voucher cannot be combined with POS voucher',
+  VOUCHER_CANNOT_STACK_CUSTOMER: 'Voucher cannot be combined with customer voucher',
+  VOUCHER_DISCOUNT_ZERO: 'Voucher discount is zero',
   
   // General
   INTERNAL_ERROR: 'An internal error occurred. Please try again later',
@@ -137,7 +183,8 @@ export class CustomError extends Error {
   constructor(
     public errorCode: ErrorCode,
     public statusCode: number,
-    message?: string
+    message?: string,
+    public details?: Record<string, unknown>
   ) {
     super(message || ERROR_MESSAGES[errorCode]);
     this.name = 'CustomError';
@@ -148,8 +195,12 @@ export class CustomError extends Error {
  * Specific Error Classes
  */
 export class ValidationError extends CustomError {
-  constructor(message?: string, errorCode: ErrorCode = ERROR_CODES.VALIDATION_ERROR) {
-    super(errorCode, 400, message);
+  constructor(
+    message?: string,
+    errorCode: ErrorCode = ERROR_CODES.VALIDATION_ERROR,
+    details?: Record<string, unknown>
+  ) {
+    super(errorCode, 400, message, details);
     this.name = 'ValidationError';
   }
 }

@@ -206,6 +206,11 @@ function OrderHistoryPageContent() {
     setDeleteOrderNumber(null);
   };
 
+  const stripDiscountCodeSuffix = (label: string) => {
+    // Removes trailing " (CODE)" to avoid printing voucher codes on receipts.
+    return label.replace(/\s*\([^)]*\)\s*$/g, '').trim();
+  };
+
   // Print receipt for an order using unified receipt generator
   const handlePrintReceipt = async (orderId: string | number) => {
     try {
@@ -259,6 +264,15 @@ function OrderHistoryPageContent() {
       };
 
       // Use unified receipt generator
+      const discountLabel = Array.isArray((order as any).orderDiscounts)
+        ? ((order as any).orderDiscounts
+            .map((d: any) =>
+              typeof d?.label === 'string' ? stripDiscountCodeSuffix(d.label) : ''
+            )
+            .filter((s: string) => s.trim() !== '')
+            .join(' + ') || undefined)
+        : undefined;
+
       printReceipt({
         order: {
           orderId: String(orderId),
@@ -299,7 +313,9 @@ function OrderHistoryPageContent() {
           taxAmount: Number(order.taxAmount) || 0,
           serviceChargeAmount: Number(order.serviceChargeAmount) || 0,
           packagingFeeAmount: Number(order.packagingFeeAmount) || 0,
+          deliveryFeeAmount: Number(order.deliveryFeeAmount) || 0,
           discountAmount: Number(order.discountAmount) || 0,
+          discountLabel,
           totalAmount: Number(order.totalAmount) || 0,
           amountPaid: order.payment?.amountPaid ? Number(order.payment.amountPaid) : undefined,
           changeAmount: order.payment?.changeAmount ? Number(order.payment.changeAmount) : undefined,

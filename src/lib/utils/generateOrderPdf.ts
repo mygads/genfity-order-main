@@ -34,6 +34,7 @@ const receiptTranslations = {
         tax: 'Tax',
         serviceCharge: 'Service Charge',
         packagingFee: 'Packaging Fee',
+        discount: 'Discount',
         total: 'TOTAL',
         paymentMethod: 'Payment Method',
         status: 'Status',
@@ -61,6 +62,7 @@ const receiptTranslations = {
         tax: 'Pajak',
         serviceCharge: 'Biaya Layanan',
         packagingFee: 'Biaya Kemasan',
+        discount: 'Diskon',
         total: 'TOTAL',
         paymentMethod: 'Metode Pembayaran',
         status: 'Status',
@@ -103,6 +105,7 @@ export interface OrderReceiptData {
     serviceChargeAmount?: number;
     packagingFeeAmount?: number;
     deliveryFeeAmount?: number;
+    discountAmount?: number;
     totalAmount: number;
     paymentMethod?: string;
     paymentStatus?: string;
@@ -532,6 +535,11 @@ export const generateOrderReceiptPdf = async (data: OrderReceiptData): Promise<v
 
     if (data.deliveryFeeAmount && data.deliveryFeeAmount > 0) {
         addLeftRight(t.deliveryFee, formatMoney(data.deliveryFeeAmount, data.currency, lang), yPos);
+        yPos += 4;
+    }
+
+    if (data.discountAmount && data.discountAmount > 0) {
+        addLeftRight(t.discount, `-${formatMoney(data.discountAmount, data.currency, lang)}`, yPos);
         yPos += 4;
     }
 

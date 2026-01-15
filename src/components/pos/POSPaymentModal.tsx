@@ -31,7 +31,8 @@ import { useTranslation } from '@/lib/i18n/useTranslation';
 import { printReceipt as printUnifiedReceipt } from '@/lib/utils/unifiedReceipt';
 import { DEFAULT_RECEIPT_SETTINGS, type ReceiptSettings } from '@/lib/types/receiptSettings';
 import { useMerchant } from '@/context/MerchantContext';
-import { formatCurrency, formatFullOrderNumber } from '@/lib/utils/format';
+import { formatCurrency, formatDateTimeInTimeZone, formatFullOrderNumber } from '@/lib/utils/format';
+import OrderTotalsBreakdown from '@/components/orders/OrderTotalsBreakdown';
 
 // ============================================
 // TYPES
@@ -97,6 +98,7 @@ export interface POSPaymentData {
   amountPaid: number;
   change: number;
   notes?: string;
+  voucherTemplateId?: string;
   // Split payment details
   cashAmount?: number;
   cardAmount?: number;
@@ -148,6 +150,98 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
   const [discountValue, setDiscountValue] = useState<number>(0);
   const [showDiscount, setShowDiscount] = useState(false);
 
+  const [discountEntryMode, setDiscountEntryMode] = useState<'VOUCHER' | 'MANUAL'>('VOUCHER');
+
+  // Voucher state (POS)
+  const [voucherTemplates, setVoucherTemplates] = useState<Array<{
+    id: string;
+    name: string;
+    description?: string | null;
+    discountType: 'PERCENTAGE' | 'FIXED_AMOUNT';
+    discountValue: number;
+    maxDiscountAmount?: number | null;
+    minOrderAmount?: number | null;
+  }>>([]);
+  const [selectedVoucherTemplateId, setSelectedVoucherTemplateId] = useState<string>('');
+  const [isLoadingVoucherTemplates, setIsLoadingVoucherTemplates] = useState(false);
+  const [appliedVoucher, setAppliedVoucher] = useState<{
+    kind: 'CODE' | 'TEMPLATE';
+    code?: string;
+    templateId?: string;
+    label?: string;
+    discountAmount: number;
+  } | null>(null);
+  const [voucherError, setVoucherError] = useState<string | null>(null);
+  const [isValidatingVoucher, setIsValidatingVoucher] = useState(false);
+
+  const posDiscountsEnabled = merchant?.posDiscountsEnabled !== false;
+
+  const getVoucherReasonMessage = useCallback(
+    (json: any, fallback: string) => {
+      const errorCode = typeof json?.error === 'string' ? json.error : '';
+      const reasonKey = errorCode ? `voucher.reason.${errorCode}` : '';
+      const translated = reasonKey ? (t(reasonKey) as string) : '';
+      if (typeof translated === 'string' && translated.trim() !== '' && translated !== reasonKey) return translated;
+      if (typeof json?.message === 'string' && json.message.trim() !== '') return json.message;
+      return fallback;
+    },
+    [t]
+  );
+
+  const buildVoucherDetailsHint = useCallback(
+    (details: unknown): string => {
+      if (!details || typeof details !== 'object' || Array.isArray(details)) return '';
+      const d = details as Record<string, unknown>;
+
+      const parts: string[] = [];
+
+      const minOrderAmount = typeof d.minOrderAmount === 'number' ? d.minOrderAmount : Number(d.minOrderAmount);
+      if (Number.isFinite(minOrderAmount) && minOrderAmount > 0) {
+        parts.push(`${t('voucher.meta.minOrder') || 'Minimum order'}: ${formatCurrency(minOrderAmount, currency, locale)}`);
+      }
+
+      const totalDiscountCap = typeof d.totalDiscountCap === 'number' ? d.totalDiscountCap : Number(d.totalDiscountCap);
+      if (Number.isFinite(totalDiscountCap) && totalDiscountCap > 0) {
+        parts.push(`${t('voucher.meta.cap') || 'Cap'}: ${formatCurrency(totalDiscountCap, currency, locale)}`);
+      }
+
+      const validFrom = typeof d.validFrom === 'string' ? d.validFrom : null;
+      if (validFrom) {
+        parts.push(
+          `${t('voucher.meta.validFrom') || 'Valid from'}: ${formatDateTimeInTimeZone(validFrom, merchant?.timezone || 'UTC', (locale as any) || 'en')}`
+        );
+      }
+
+      const validUntil = typeof d.validUntil === 'string' ? d.validUntil : null;
+      if (validUntil) {
+        parts.push(
+          `${t('voucher.meta.validUntil') || 'Valid until'}: ${formatDateTimeInTimeZone(validUntil, merchant?.timezone || 'UTC', (locale as any) || 'en')}`
+        );
+      }
+
+      const startTime = typeof d.startTime === 'string' ? d.startTime : '';
+      const endTime = typeof d.endTime === 'string' ? d.endTime : '';
+      if (startTime && endTime) {
+        parts.push(`${t('voucher.meta.timeWindow') || 'Time'}: ${startTime}–${endTime}`);
+      }
+
+      const maxUsesTotal = typeof d.maxUsesTotal === 'number' ? d.maxUsesTotal : Number(d.maxUsesTotal);
+      const used = typeof d.used === 'number' ? d.used : Number(d.used);
+      if (Number.isFinite(maxUsesTotal) && Number.isFinite(used) && maxUsesTotal > 0) {
+        parts.push(`${t('voucher.meta.usage') || 'Usage'}: ${used}/${maxUsesTotal}`);
+      }
+
+      const maxUsesPerCustomer = typeof d.maxUsesPerCustomer === 'number' ? d.maxUsesPerCustomer : Number(d.maxUsesPerCustomer);
+      const usedByCustomer = typeof d.usedByCustomer === 'number' ? d.usedByCustomer : Number(d.usedByCustomer);
+      if (Number.isFinite(maxUsesPerCustomer) && Number.isFinite(usedByCustomer) && maxUsesPerCustomer > 0) {
+        parts.push(`${t('voucher.meta.usage') || 'Usage'}: ${usedByCustomer}/${maxUsesPerCustomer}`);
+      }
+
+      return parts.length > 0 ? ` (${parts.join(' • ')})` : '';
+    },
+    [currency, locale, merchant?.timezone, t]
+  );
+
   // Print receipt option
   const [printReceipt, setPrintReceipt] = useState(false);
 
@@ -160,19 +254,49 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
     return Math.min(discountValue, totalAmount);
   }, [discountType, discountValue, totalAmount]);
 
+  const voucherDiscountAmount = useMemo(() => {
+    if (!appliedVoucher) return 0;
+    const raw = typeof appliedVoucher.discountAmount === 'number' ? appliedVoucher.discountAmount : 0;
+    return Number.isFinite(raw) ? Math.max(0, raw) : 0;
+  }, [appliedVoucher]);
+
+  const effectiveDiscountAmount = useMemo(() => {
+    return voucherDiscountAmount > 0 ? voucherDiscountAmount : discountAmount;
+  }, [voucherDiscountAmount, discountAmount]);
+
   // Final total after discount
   const finalTotal = useMemo(() => {
-    return Math.max(0, totalAmount - discountAmount);
-  }, [totalAmount, discountAmount]);
+    return Math.max(0, totalAmount - effectiveDiscountAmount);
+  }, [totalAmount, effectiveDiscountAmount]);
+
+  const totalsBreakdownAmounts = useMemo(() => {
+    if (!orderDetails) return null;
+
+    return {
+      subtotal: orderDetails.subtotal,
+      taxAmount: orderDetails.taxAmount ?? 0,
+      serviceChargeAmount: orderDetails.serviceChargeAmount ?? 0,
+      packagingFeeAmount: orderDetails.packagingFeeAmount ?? 0,
+      deliveryFeeAmount: 0,
+      discountAmount: effectiveDiscountAmount > 0 ? effectiveDiscountAmount : 0,
+      totalAmount: finalTotal,
+    };
+  }, [effectiveDiscountAmount, finalTotal, orderDetails]);
 
   const isDirty = useMemo(() => {
     const hasNotes = Boolean(notes.trim());
-    const hasDiscount = showDiscount || discountValue > 0;
+    const hasDiscount = discountValue > 0;
+    const hasVoucher = Boolean(appliedVoucher) || Boolean(selectedVoucherTemplateId);
     const methodChanged = paymentMethod !== 'CASH_ON_COUNTER';
     const splitChanged = paymentMethod === 'SPLIT' ? cashAmount > 0 || cardAmount > 0 : false;
     const amountChanged = paymentMethod !== 'SPLIT' ? amount !== finalTotal : false;
-    return hasNotes || hasDiscount || methodChanged || splitChanged || amountChanged;
-  }, [notes, showDiscount, discountValue, paymentMethod, cashAmount, cardAmount, amount, finalTotal]);
+    return hasNotes || hasDiscount || hasVoucher || methodChanged || splitChanged || amountChanged;
+  }, [notes, discountValue, appliedVoucher, selectedVoucherTemplateId, paymentMethod, cashAmount, cardAmount, amount, finalTotal]);
+
+  const clearManualDiscount = useCallback(() => {
+    setDiscountValue(0);
+    setShowDiscount(false);
+  }, []);
 
   // Reset state when modal opens
   useEffect(() => {
@@ -186,6 +310,13 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
       setDiscountType('percentage');
       setDiscountValue(0);
       setShowDiscount(false);
+      setDiscountEntryMode('VOUCHER');
+      setVoucherTemplates([]);
+      setSelectedVoucherTemplateId('');
+      setIsLoadingVoucherTemplates(false);
+      setAppliedVoucher(null);
+      setVoucherError(null);
+      setIsValidatingVoucher(false);
       try {
         if (typeof window !== 'undefined') {
           const stored = localStorage.getItem(getAutoPrintStorageKey());
@@ -196,6 +327,61 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
       }
     }
   }, [isOpen, totalAmount, getAutoPrintStorageKey]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!posDiscountsEnabled) {
+      setVoucherTemplates([]);
+      setSelectedVoucherTemplateId('');
+      setAppliedVoucher(null);
+      setVoucherError(null);
+      return;
+    }
+
+    const fetchTemplates = async () => {
+      setIsLoadingVoucherTemplates(true);
+      try {
+        const token = localStorage.getItem('accessToken');
+        const res = await fetch('/api/merchant/orders/pos/voucher-templates', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const json = await res.json();
+        if (!res.ok || !json?.success || !Array.isArray(json?.data)) {
+          setVoucherTemplates([]);
+          return;
+        }
+
+        const normalized = (json.data as any[])
+          .map((row) => {
+            const discountType = row?.discountType === 'PERCENTAGE'
+              ? ('PERCENTAGE' as const)
+              : ('FIXED_AMOUNT' as const);
+
+            return {
+              id: String(row?.id ?? ''),
+              name: String(row?.name ?? ''),
+              description: typeof row?.description === 'string' ? (row.description as string) : null,
+              discountType,
+              discountValue: Number(row?.discountValue ?? 0),
+              maxDiscountAmount: row?.maxDiscountAmount != null ? Number(row.maxDiscountAmount) : null,
+              minOrderAmount: row?.minOrderAmount != null ? Number(row.minOrderAmount) : null,
+            };
+          })
+          .filter((t) => t.id && t.name);
+
+        setVoucherTemplates(normalized);
+      } catch {
+        setVoucherTemplates([]);
+      } finally {
+        setIsLoadingVoucherTemplates(false);
+      }
+    };
+
+    void fetchTemplates();
+  }, [isOpen, posDiscountsEnabled]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -345,7 +531,8 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
         taxAmount: orderDetails.taxAmount,
         serviceChargeAmount: orderDetails.serviceChargeAmount,
         packagingFeeAmount: orderDetails.packagingFeeAmount,
-        discountAmount: discountAmount > 0 ? discountAmount : undefined,
+        discountAmount: effectiveDiscountAmount > 0 ? effectiveDiscountAmount : undefined,
+        discountLabel: appliedVoucher?.label || undefined,
         totalAmount: finalTotal,
         amountPaid: paymentMethod === 'SPLIT' ? cashAmount + cardAmount : amount,
         changeAmount: change,
@@ -370,7 +557,93 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
       settings,
       language,
     });
-  }, [orderDetails, merchantInfo, merchant?.code, orderNumber, discountAmount, finalTotal, paymentMethod, amount, change, cashAmount, cardAmount, currency, receiptSettings, locale, orderId]);
+  }, [orderDetails, merchantInfo, merchant?.code, orderNumber, effectiveDiscountAmount, appliedVoucher?.label, finalTotal, paymentMethod, amount, change, cashAmount, cardAmount, currency, receiptSettings, locale, orderId]);
+
+  const handleApplyVoucherTemplate = useCallback(async () => {
+    if (!orderId) {
+      setVoucherError(t('pos.payment.voucher.orderRequired') || 'Order is required to validate a voucher');
+      return;
+    }
+
+    if (!selectedVoucherTemplateId) {
+      setVoucherError(t('pos.payment.voucher.templateRequired') || 'Voucher template is required');
+      return;
+    }
+
+    setIsValidatingVoucher(true);
+    setVoucherError(null);
+
+    try {
+      const token = localStorage.getItem('accessToken');
+
+      const res = await fetch('/api/merchant/orders/pos/validate-voucher-template', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          orderId,
+          voucherTemplateId: selectedVoucherTemplateId,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json?.success) {
+        setAppliedVoucher(null);
+        const base = getVoucherReasonMessage(json, t('pos.payment.voucher.invalid') || 'Invalid voucher');
+        setVoucherError(`${base}${buildVoucherDetailsHint(json?.details)}`);
+        return;
+      }
+
+      const discountAmount = typeof json?.data?.discountAmount === 'number'
+        ? json.data.discountAmount
+        : Number(json?.data?.discountAmount);
+
+      const fallbackLabel = voucherTemplates.find((x) => x.id === selectedVoucherTemplateId)?.name;
+
+      setAppliedVoucher({
+        kind: 'TEMPLATE',
+        templateId: selectedVoucherTemplateId,
+        label: typeof json?.data?.label === 'string' ? json.data.label : fallbackLabel,
+        discountAmount: Number.isFinite(discountAmount) ? discountAmount : 0,
+      });
+
+      // Prevent double discounts: voucher OR manual
+      setDiscountValue(0);
+      setShowDiscount(false);
+      setDiscountEntryMode('VOUCHER');
+    } catch (error) {
+      console.error('[POSPaymentModal] validate voucher template error:', error);
+      setAppliedVoucher(null);
+      setVoucherError(t('pos.payment.voucher.failed') || 'Failed to validate voucher');
+    } finally {
+      setIsValidatingVoucher(false);
+    }
+  }, [orderId, selectedVoucherTemplateId, t, getVoucherReasonMessage, voucherTemplates]);
+
+  const handleRemoveVoucher = useCallback(() => {
+    setAppliedVoucher(null);
+    setVoucherError(null);
+    setSelectedVoucherTemplateId('');
+  }, []);
+
+  const switchToManualDiscount = useCallback(() => {
+    // Switching to manual discount should clear voucher selection/applied state
+    setDiscountEntryMode('MANUAL');
+    setAppliedVoucher(null);
+    setVoucherError(null);
+    setSelectedVoucherTemplateId('');
+    setShowDiscount(true);
+    setDiscountValue(0);
+  }, []);
+
+  const switchToVoucherTemplate = useCallback(() => {
+    // Switching to voucher template should clear manual discount state
+    setDiscountEntryMode('VOUCHER');
+    setDiscountValue(0);
+    setShowDiscount(false);
+  }, []);
 
   // Handle submit
   const handleSubmit = async () => {
@@ -383,16 +656,20 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
 
     setIsSubmitting(true);
     try {
+      const isUsingVoucher = Boolean(appliedVoucher);
+      const isUsingTemplateVoucher = appliedVoucher?.kind === 'TEMPLATE' && Boolean(appliedVoucher.templateId);
+
       await onConfirm({
         method: paymentMethod,
         amountPaid: paymentMethod === 'SPLIT' ? (cashAmount + cardAmount) : amount,
         change: change,
         notes: notes.trim() || undefined,
+        voucherTemplateId: isUsingTemplateVoucher ? appliedVoucher?.templateId : undefined,
         cashAmount: paymentMethod === 'SPLIT' ? cashAmount : undefined,
         cardAmount: paymentMethod === 'SPLIT' ? cardAmount : undefined,
-        discountType: discountAmount > 0 ? discountType : undefined,
-        discountValue: discountAmount > 0 ? discountValue : undefined,
-        discountAmount: discountAmount > 0 ? discountAmount : undefined,
+        discountType: !isUsingVoucher && discountAmount > 0 ? discountType : undefined,
+        discountValue: !isUsingVoucher && discountAmount > 0 ? discountValue : undefined,
+        discountAmount: !isUsingVoucher && discountAmount > 0 ? discountAmount : undefined,
         finalTotal: finalTotal,
         printReceipt: printReceipt,
       });
@@ -459,100 +736,248 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
               <p className="text-sm text-brand-600 dark:text-brand-400 font-medium mb-1">
                 {t('pos.payment.totalAmount') || 'Total Amount'}
               </p>
-              <p className={`text-3xl font-bold ${discountAmount > 0 ? 'text-gray-400 line-through text-2xl' : 'text-brand-600 dark:text-brand-400'}`}>
+              <p className={`text-3xl font-bold ${effectiveDiscountAmount > 0 ? 'text-gray-400 line-through text-2xl' : 'text-brand-600 dark:text-brand-400'}`}>
                 {formatMoney(totalAmount)}
               </p>
             </div>
 
-            {/* Discount Section */}
-            {discountAmount > 0 && (
-              <div className="mt-2 pt-2 border-t border-brand-200 dark:border-brand-700">
-                <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
-                  <span>
-                    {t('pos.payment.discount') || 'Discount'}
-                    {discountType === 'percentage' ? ` (${discountValue}%)` : ''}
-                  </span>
-                  <span>-{formatMoney(discountAmount)}</span>
-                </div>
-                <div className="flex justify-between text-xl font-bold text-brand-600 dark:text-brand-400 mt-1">
-                  <span>{t('pos.payment.finalTotal') || 'Final Total'}</span>
-                  <span>{formatMoney(finalTotal)}</span>
-                </div>
-              </div>
-            )}
-
-            {/* Add Discount Toggle */}
-            <button
-              type="button"
-              onClick={() => setShowDiscount(!showDiscount)}
-              className="mt-3 w-full py-2 text-sm text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 transition-colors flex items-center justify-center gap-2"
-            >
-              <FaPercent className="w-3 h-3" />
-              {showDiscount ? (t('pos.payment.hideDiscount') || 'Hide Discount') : (t('pos.payment.addDiscount') || 'Add Discount')}
-            </button>
-
-            {/* Discount Input */}
-            {showDiscount && (
+            {totalsBreakdownAmounts ? (
               <div className="mt-3 pt-3 border-t border-brand-200 dark:border-brand-700">
-                <div className="flex gap-2 mb-2">
-                  <button
-                    type="button"
-                    onClick={() => setDiscountType('percentage')}
-                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${discountType === 'percentage'
+                <OrderTotalsBreakdown
+                  amounts={totalsBreakdownAmounts}
+                  currency={currency}
+                  locale={locale}
+                  labels={{
+                    subtotal: t('pos.orderConfirm.subtotal') || 'Subtotal',
+                    tax: t('pos.orderConfirm.tax') || 'Tax',
+                    serviceCharge: t('pos.orderConfirm.service') || 'Service Charge',
+                    packagingFee: t('pos.orderConfirm.packaging') || 'Packaging Fee',
+                    discount: appliedVoucher
+                      ? (t('pos.payment.voucher.title') || 'Voucher')
+                      : `${t('pos.payment.discount') || 'Discount'}${discountType === 'percentage' && discountValue > 0 ? ` (${discountValue}%)` : ''}`,
+                    total: t('pos.payment.finalTotal') || 'Final Total',
+                  }}
+                  options={{
+                    showDiscount: effectiveDiscountAmount > 0,
+                    showDeliveryFee: false,
+                  }}
+                  showTotalRow={effectiveDiscountAmount > 0}
+                  rowsContainerClassName="space-y-1.5 text-sm"
+                  labelClassName="text-gray-700 dark:text-gray-300"
+                  valueClassName="text-gray-700 dark:text-gray-300"
+                  discountValueClassName="font-semibold text-green-600 dark:text-green-400"
+                  totalRowClassName="pt-2 mt-2 border-t border-brand-200 dark:border-brand-700 flex justify-between"
+                  totalLabelClassName="font-bold text-brand-600 dark:text-brand-400"
+                  totalValueClassName="font-bold text-brand-600 dark:text-brand-400"
+                />
+
+                {effectiveDiscountAmount > 0 && appliedVoucher?.label ? (
+                  <div className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+                    {appliedVoucher.label}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
+            {/* Voucher Code */}
+            {posDiscountsEnabled ? (
+              <>
+                {/* Discount/Voucher Switch */}
+                <div className="mt-3 pt-3 border-t border-brand-200 dark:border-brand-700">
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={switchToVoucherTemplate}
+                      disabled={isSubmitting || isValidatingVoucher}
+                      className={`py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${discountEntryMode === 'VOUCHER'
                         ? 'bg-brand-500 text-white'
                         : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
-                      }`}
-                  >
-                    <FaPercent className="w-3 h-3" />
-                    {t('pos.payment.percentage') || 'Percentage'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDiscountType('fixed')}
-                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${discountType === 'fixed'
+                        }`}
+                    >
+                      {t('pos.payment.voucher.title') || 'Voucher'}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={switchToManualDiscount}
+                      disabled={isSubmitting || isValidatingVoucher}
+                      className={`py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${discountEntryMode === 'MANUAL'
                         ? 'bg-brand-500 text-white'
                         : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
-                      }`}
-                  >
-                    <FaDollarSign className="w-3 h-3" />
-                    {t('pos.payment.fixed') || 'Fixed'}
-                  </button>
-                </div>
-                <div className="relative">
-                  <input
-                    type="number"
-                    step={discountType === 'percentage' ? '1' : (currency === 'IDR' ? '1000' : '0.01')}
-                    min="0"
-                    max={discountType === 'percentage' ? 100 : totalAmount}
-                    value={discountValue || ''}
-                    onChange={(e) => setDiscountValue(parseFloat(e.target.value) || 0)}
-                    placeholder={discountType === 'percentage' ? '0' : formatMoney(0)}
-                    className="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 border-none text-sm font-semibold text-gray-900 dark:text-white text-center focus:ring-2 focus:ring-brand-300 dark:focus:ring-brand-600"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
-                    {discountType === 'percentage' ? '%' : currency}
-                  </span>
-                </div>
-                {/* Quick discount buttons */}
-                {discountType === 'percentage' && (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {[5, 10, 15, 20, 25].map((pct) => (
-                      <button
-                        key={pct}
-                        type="button"
-                        onClick={() => setDiscountValue(pct)}
-                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${discountValue === pct
+                        }`}
+                    >
+                      <FaPercent className="w-3 h-3" />
+                      {t('pos.payment.addDiscount') || 'Manual discount'}
+                    </button>
+                  </div>
+
+                  {/* Voucher Template (shown only in voucher mode) */}
+                  {discountEntryMode === 'VOUCHER' ? (
+                    <div className="mt-3">
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          {t('pos.payment.voucher.title') || 'Voucher'}
+                        </div>
+                        {appliedVoucher ? (
+                          <button
+                            type="button"
+                            onClick={handleRemoveVoucher}
+                            className="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+                          >
+                            {t('pos.payment.voucher.remove') || 'Remove'}
+                          </button>
+                        ) : null}
+                      </div>
+
+                      {!appliedVoucher ? (
+                        <div className="mt-2 space-y-2">
+                          <div className="flex gap-2">
+                            <select
+                              value={selectedVoucherTemplateId}
+                              onChange={(e) => {
+                                setSelectedVoucherTemplateId(e.target.value);
+                                setVoucherError(null);
+                              }}
+                              disabled={isSubmitting || isValidatingVoucher}
+                              className="flex-1 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 border-none text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-300 dark:focus:ring-brand-600"
+                            >
+                              <option value="">
+                                {isLoadingVoucherTemplates
+                                  ? (t('pos.payment.voucher.loadingTemplates') || 'Loading vouchers...')
+                                  : (t('pos.payment.voucher.selectTemplate') || 'Select voucher')}
+                              </option>
+                              {voucherTemplates.map((tpl) => {
+                                const discountLabel = tpl.discountType === 'PERCENTAGE'
+                                  ? `${tpl.discountValue}%`
+                                  : `${formatMoney(tpl.discountValue)}`;
+
+                                const meta: string[] = [];
+                                if (tpl.minOrderAmount != null && Number.isFinite(tpl.minOrderAmount) && tpl.minOrderAmount > 0) {
+                                  meta.push(`${t('voucher.meta.min') || 'Min'} ${formatMoney(tpl.minOrderAmount)}`);
+                                }
+                                if (tpl.discountType === 'PERCENTAGE' && tpl.maxDiscountAmount != null && Number.isFinite(tpl.maxDiscountAmount) && tpl.maxDiscountAmount > 0) {
+                                  meta.push(`${t('voucher.meta.cap') || 'Cap'} ${formatMoney(tpl.maxDiscountAmount)}`);
+                                }
+
+                                const value = meta.length > 0
+                                  ? `${tpl.name} — ${discountLabel} (${meta.join(', ')})`
+                                  : `${tpl.name} — ${discountLabel}`;
+                                return (
+                                  <option key={tpl.id} value={tpl.id}>
+                                    {value}
+                                  </option>
+                                );
+                              })}
+                            </select>
+                            <button
+                              type="button"
+                              onClick={handleApplyVoucherTemplate}
+                              disabled={
+                                isSubmitting
+                                || isValidatingVoucher
+                                || !selectedVoucherTemplateId
+                                || !orderId
+                              }
+                              className="px-3 py-2 rounded-lg text-sm font-medium bg-brand-500 text-white hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {isValidatingVoucher
+                                ? (t('pos.payment.voucher.validating') || 'Validating...')
+                                : (t('pos.payment.voucher.applyTemplate') || 'Apply')}
+                            </button>
+                          </div>
+
+                          {voucherError ? (
+                            <div className="mt-2 text-xs text-red-600 dark:text-red-400">
+                              {voucherError}
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : null}
+
+                      {appliedVoucher ? (
+                        <div className="mt-2 text-xs text-green-600 dark:text-green-400">
+                          {(t('pos.payment.voucher.applied') || 'Applied')}: {appliedVoucher.label || ''}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  {/* Manual Discount Input (shown only in manual mode) */}
+                  {discountEntryMode === 'MANUAL' ? (
+                    <div className="mt-3">
+                      <div className="flex gap-2 mb-2">
+                        <button
+                          type="button"
+                          onClick={() => setDiscountType('percentage')}
+                          className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${discountType === 'percentage'
                             ? 'bg-brand-500 text-white'
                             : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
-                          }`}
-                      >
-                        {pct}%
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+                            }`}
+                        >
+                          <FaPercent className="w-3 h-3" />
+                          {t('pos.payment.percentage') || 'Percentage'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDiscountType('fixed')}
+                          className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${discountType === 'fixed'
+                            ? 'bg-brand-500 text-white'
+                            : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                            }`}
+                        >
+                          <FaDollarSign className="w-3 h-3" />
+                          {t('pos.payment.fixed') || 'Fixed'}
+                        </button>
+                      </div>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          step={discountType === 'percentage' ? '1' : (currency === 'IDR' ? '1000' : '0.01')}
+                          min="0"
+                          max={discountType === 'percentage' ? 100 : totalAmount}
+                          value={discountValue || ''}
+                          onChange={(e) => setDiscountValue(parseFloat(e.target.value) || 0)}
+                          placeholder={discountType === 'percentage' ? '0' : formatMoney(0)}
+                          className="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 border-none text-sm font-semibold text-gray-900 dark:text-white text-center focus:ring-2 focus:ring-brand-300 dark:focus:ring-brand-600"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
+                          {discountType === 'percentage' ? '%' : currency}
+                        </span>
+                      </div>
+                      {/* Quick discount buttons */}
+                      {discountType === 'percentage' && (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {[5, 10, 15, 20, 25].map((pct) => (
+                            <button
+                              key={pct}
+                              type="button"
+                              onClick={() => setDiscountValue(pct)}
+                              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${discountValue === pct
+                                ? 'bg-brand-500 text-white'
+                                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                                }`}
+                            >
+                              {pct}%
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {discountValue > 0 ? (
+                        <button
+                          type="button"
+                          onClick={clearManualDiscount}
+                          disabled={isSubmitting || isValidatingVoucher}
+                          className="mt-2 w-full py-2 text-xs font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+                        >
+                          {t('pos.payment.clearDiscount') || 'Clear discount'}
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+              </>
+            ) : null}
           </div>
 
           {/* Payment Method Selection */}

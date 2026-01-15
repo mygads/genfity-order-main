@@ -108,6 +108,7 @@ export const GET = withCustomer(async (
       isScheduled: Boolean((order as any).isScheduled),
       scheduledTime: ((order as any).scheduledTime ?? null) as string | null,
       status: order.status,
+      discountAmount: parseFloat(order.discountAmount.toString()),
       totalAmount: parseFloat(order.totalAmount.toString()),
       placedAt: order.placedAt.toISOString(),
       itemsCount: order.orderItems.length,

@@ -39,6 +39,7 @@ export interface OrderReceiptEmailPdfData {
   taxAmount?: number;
   serviceChargeAmount?: number;
   packagingFeeAmount?: number;
+  deliveryFeeAmount?: number;
   discountAmount?: number;
   totalAmount: number;
   paymentMethod?: string | null;
@@ -304,6 +305,10 @@ export async function generateOrderReceiptPdfBuffer(data: OrderReceiptEmailPdfDa
   }
   if (settings.showPackagingFee && (data.packagingFeeAmount || 0) > 0) {
     addLeftRight(labels.packagingFee, fmt(data.packagingFeeAmount || 0), y, 8);
+    y += 4;
+  }
+  if (settings.showDeliveryFee && (data.deliveryFeeAmount || 0) > 0) {
+    addLeftRight(labels.deliveryFee, fmt(data.deliveryFeeAmount || 0), y, 8);
     y += 4;
   }
   if (settings.showDiscount && (data.discountAmount || 0) > 0) {

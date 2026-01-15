@@ -48,6 +48,26 @@ export async function GET(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const merchantData = merchant as unknown as Record<string, any>;
 
+    const features = merchantData.features as unknown;
+    const { customerVouchersEnabled } = (() => {
+      if (!features || typeof features !== 'object' || Array.isArray(features)) {
+        return { customerVouchersEnabled: true };
+      }
+
+      const ov = (features as any).orderVouchers;
+      if (!ov || typeof ov !== 'object' || Array.isArray(ov)) {
+        return { customerVouchersEnabled: true };
+      }
+
+      const customerEnabledRaw = (ov as any).customerEnabled;
+      const posDiscountsEnabledRaw = (ov as any).posDiscountsEnabled;
+
+      const customerEnabled = customerEnabledRaw === undefined ? true : Boolean(customerEnabledRaw);
+      const posDiscountsEnabled = posDiscountsEnabledRaw === undefined ? true : Boolean(posDiscountsEnabledRaw);
+
+      return { customerVouchersEnabled: posDiscountsEnabled && customerEnabled };
+    })();
+
     // Check subscription status and auto-switch if needed
     let subscriptionStatus = 'ACTIVE';
     let subscriptionSuspendReason: string | null = null;
@@ -146,6 +166,7 @@ export async function GET(
       // Other settings
       currency: merchantData.currency,
       timezone: merchantData.timezone,
+      customerVouchersEnabled,
       latitude: merchantData.latitude,
       longitude: merchantData.longitude,
       // Reservation settings

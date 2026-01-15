@@ -31,6 +31,10 @@ interface Merchant {
   email?: string;
   hasDeletePin?: boolean;
   receiptSettings?: Partial<ReceiptSettings> | null;
+
+  // Feature flags (stored under merchant.features.orderVouchers)
+  posDiscountsEnabled?: boolean;
+  customerVouchersEnabled?: boolean;
 }
 
 interface MerchantContextType {
@@ -94,7 +98,33 @@ export function MerchantProvider({ children }: { children: ReactNode }) {
 
       const data = await response.json();
       if (data.success && data.data) {
-        setMerchant(data.data);
+        let posDiscountsEnabled: boolean | undefined;
+        let customerVouchersEnabled: boolean | undefined;
+
+        try {
+          const settingsRes = await fetch('/api/merchant/order-vouchers/settings', {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          const settingsJson = await settingsRes.json();
+          if (settingsRes.ok && settingsJson?.success && settingsJson?.data) {
+            if (typeof settingsJson.data.posDiscountsEnabled === 'boolean') {
+              posDiscountsEnabled = settingsJson.data.posDiscountsEnabled;
+            }
+            if (typeof settingsJson.data.customerVouchersEnabled === 'boolean') {
+              customerVouchersEnabled = settingsJson.data.customerVouchersEnabled;
+            }
+          }
+        } catch {
+          // ignore settings failures; defaults handled by consumers
+        }
+
+        setMerchant({
+          ...(data.data as Merchant),
+          ...(typeof posDiscountsEnabled === 'boolean' ? { posDiscountsEnabled } : {}),
+          ...(typeof customerVouchersEnabled === 'boolean' ? { customerVouchersEnabled } : {}),
+        });
         setError(null);
       }
     } catch (err) {

@@ -39,6 +39,7 @@ export interface ReceiptSettings {
   showTax: boolean;
   showServiceCharge: boolean;
   showPackagingFee: boolean;
+  showDeliveryFee: boolean;
   showDiscount: boolean;
   showTotal: boolean;
   showAmountPaid: boolean;
@@ -97,6 +98,7 @@ export const DEFAULT_RECEIPT_SETTINGS: ReceiptSettings = {
   showTax: true,
   showServiceCharge: true,
   showPackagingFee: true,
+  showDeliveryFee: true,
   showDiscount: true,
   showTotal: true,
   showAmountPaid: true,
@@ -156,6 +158,7 @@ export const RECEIPT_SETTINGS_GROUPS = {
       { key: 'showTax', labelKey: 'admin.receipt.showTax' },
       { key: 'showServiceCharge', labelKey: 'admin.receipt.showServiceCharge' },
       { key: 'showPackagingFee', labelKey: 'admin.receipt.showPackagingFee' },
+      { key: 'showDeliveryFee', labelKey: 'admin.receipt.showDeliveryFee' },
       { key: 'showDiscount', labelKey: 'admin.receipt.showDiscount' },
       { key: 'showTotal', labelKey: 'admin.receipt.showTotal' },
       { key: 'showAmountPaid', labelKey: 'admin.receipt.showAmountPaid' },

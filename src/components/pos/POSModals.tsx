@@ -398,7 +398,8 @@ export const TableNumberModal: React.FC<TableNumberModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      setTableNumber(initialValue);
+      // POS behavior: allow quick confirm by defaulting to 0 when empty
+      setTableNumber((initialValue || '').trim() ? initialValue : '0');
       setShowRequiredError(false);
       setTimeout(() => inputRef.current?.focus(), 100);
     }
@@ -406,16 +407,14 @@ export const TableNumberModal: React.FC<TableNumberModalProps> = ({
 
   const handleConfirm = () => {
     const trimmed = tableNumber.trim();
-    if (!trimmed) {
-      setShowRequiredError(true);
-      return;
-    }
-    onConfirm(trimmed);
+    // If empty, treat as default 0
+    onConfirm(trimmed ? trimmed : '0');
     onClose();
   };
 
   const handleClear = () => {
-    onConfirm('');
+    // Clearing resets to default 0 for POS
+    onConfirm('0');
     onClose();
   };
 
@@ -447,7 +446,7 @@ export const TableNumberModal: React.FC<TableNumberModalProps> = ({
               setTableNumber(nextValue);
               if (showRequiredError && nextValue.trim()) setShowRequiredError(false);
             }}
-            placeholder={t('pos.tableNumberPlaceholder')}
+            placeholder={t('pos.tableNumberPlaceholderDefault0') || t('pos.tableNumberPlaceholder')}
             className="w-full px-3 py-2.5 rounded-lg bg-gray-100 dark:bg-gray-800 border-none text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-600"
           />
 
@@ -498,7 +497,6 @@ export const TableNumberModal: React.FC<TableNumberModalProps> = ({
         )}
         <button
           onClick={handleConfirm}
-          disabled={!tableNumber.trim()}
           className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium bg-brand-500 text-white hover:bg-brand-600 transition-colors"
         >
           {t('common.confirm')}

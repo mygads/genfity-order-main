@@ -5,16 +5,25 @@ export function hasMerchantUnsavedChanges({
   originalFormData,
   openingHours,
   originalOpeningHours,
+  discountVoucherSettings,
+  originalDiscountVoucherSettings,
 }: {
   formData: MerchantFormData;
   originalFormData: MerchantFormData | null;
   openingHours: OpeningHour[];
   originalOpeningHours: OpeningHour[];
+  discountVoucherSettings?: { posDiscountsEnabled: boolean; customerVouchersEnabled: boolean };
+  originalDiscountVoucherSettings?: { posDiscountsEnabled: boolean; customerVouchersEnabled: boolean } | null;
 }): boolean {
   if (!originalFormData) return false;
 
   const formChanged = JSON.stringify(formData) !== JSON.stringify(originalFormData);
   const hoursChanged = JSON.stringify(openingHours) !== JSON.stringify(originalOpeningHours);
 
-  return formChanged || hoursChanged;
+  const discountVoucherChanged =
+    discountVoucherSettings && originalDiscountVoucherSettings
+      ? JSON.stringify(discountVoucherSettings) !== JSON.stringify(originalDiscountVoucherSettings)
+      : false;
+
+  return formChanged || hoursChanged || discountVoucherChanged;
 }

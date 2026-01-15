@@ -3,7 +3,7 @@
 // Force dynamic rendering for useSearchParams
 export const dynamic = 'force-dynamic';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Image from 'next/image';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { clearReservationDetails, clearTableNumber, getCustomerAuth, getReservationDetails, getTableNumber, saveRecentOrder } from '@/lib/utils/localStorage';
@@ -17,7 +17,7 @@ import { useCustomerData } from '@/context/CustomerDataContext';
 import { calculateCartSubtotal } from '@/lib/utils/priceCalculator';
 import { formatCurrency as formatCurrencyUtil } from '@/lib/utils/format';
 import { useTranslation, tOr } from '@/lib/i18n/useTranslation';
-import { FaArrowLeft, FaCheckCircle, FaChevronDown, FaClock, FaEnvelope, FaExclamationCircle, FaPhone, FaTable, FaToggleOff, FaToggleOn, FaUser, FaUsers } from 'react-icons/fa';
+import { FaArrowLeft, FaCheckCircle, FaChevronDown, FaClock, FaEnvelope, FaExclamationCircle, FaPhone, FaTable, FaTag, FaToggleOff, FaToggleOn, FaUser, FaUsers } from 'react-icons/fa';
 import ReservationDetailsModal, { type ReservationDetails } from '@/components/customer/ReservationDetailsModal';
 
 function isValidHHMM(value: string): boolean {
@@ -123,6 +123,15 @@ export default function PaymentPage() {
   const [showPaymentDetails, setShowPaymentDetails] = useState(false);
   const [apiError, setApiError] = useState(''); // For API submission errors
 
+  // ✅ NEW: Voucher state (customer checkout)
+  const [voucherCode, setVoucherCode] = useState('');
+  const [voucherStatus, setVoucherStatus] = useState<'idle' | 'checking' | 'valid' | 'invalid'>('idle');
+  const [voucherMessage, setVoucherMessage] = useState<string>('');
+  const [voucherLabel, setVoucherLabel] = useState<string>('');
+  const [voucherDiscountAmount, setVoucherDiscountAmount] = useState<number>(0);
+  const [voucherDiscountType, setVoucherDiscountType] = useState<'PERCENTAGE' | 'FIXED_AMOUNT' | null>(null);
+  const [voucherDiscountValue, setVoucherDiscountValue] = useState<number>(0);
+
   // ✅ NEW: Per-field validation errors
   const [fieldErrors, setFieldErrors] = useState<{
     name?: string;
@@ -158,6 +167,8 @@ export default function PaymentPage() {
   const isScheduledOrderEnabled = contextMerchantInfo?.isScheduledOrderEnabled === true;
   const requireTableNumberForDineIn = contextMerchantInfo?.requireTableNumberForDineIn === true;
   const shouldShowTableNumberField = mode === 'dinein' && requireTableNumberForDineIn && !isReservationFlow;
+
+  const isCustomerVoucherEnabled = (contextMerchantInfo as any)?.customerVouchersEnabled !== false;
 
   // If user entered payment via "Schedule Order" flow, pre-enable scheduled ordering.
   useEffect(() => {
@@ -238,6 +249,203 @@ export default function PaymentPage() {
   const [showReservationDetailsModal, setShowReservationDetailsModal] = useState(false);
 
   const formatCurrency = (amount: number): string => formatCurrencyUtil(amount, merchantCurrency, locale);
+
+  const formatDateTimeInMerchantTz = (iso: string): string => {
+    const tz = contextMerchantInfo?.timezone || 'UTC';
+    const dt = new Date(iso);
+    if (Number.isNaN(dt.getTime())) return iso;
+    return new Intl.DateTimeFormat(locale || 'en', {
+      timeZone: tz,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(dt);
+  };
+
+  const buildVoucherDetailsHint = (details: unknown): string => {
+    if (!details || typeof details !== 'object' || Array.isArray(details)) return '';
+    const d = details as Record<string, unknown>;
+
+    const parts: string[] = [];
+
+    const minOrderAmount = typeof d.minOrderAmount === 'number' ? d.minOrderAmount : Number(d.minOrderAmount);
+    if (Number.isFinite(minOrderAmount) && minOrderAmount > 0) {
+      parts.push(`${tOr(t, 'voucher.meta.minOrder', 'Minimum order')}: ${formatCurrency(minOrderAmount)}`);
+    }
+
+    const totalDiscountCap = typeof d.totalDiscountCap === 'number' ? d.totalDiscountCap : Number(d.totalDiscountCap);
+    if (Number.isFinite(totalDiscountCap) && totalDiscountCap > 0) {
+      parts.push(`${tOr(t, 'voucher.meta.cap', 'Cap')}: ${formatCurrency(totalDiscountCap)}`);
+    }
+
+    const validFrom = typeof d.validFrom === 'string' ? d.validFrom : null;
+    if (validFrom) {
+      parts.push(`${tOr(t, 'voucher.meta.validFrom', 'Valid from')}: ${formatDateTimeInMerchantTz(validFrom)}`);
+    }
+
+    const validUntil = typeof d.validUntil === 'string' ? d.validUntil : null;
+    if (validUntil) {
+      parts.push(`${tOr(t, 'voucher.meta.validUntil', 'Valid until')}: ${formatDateTimeInMerchantTz(validUntil)}`);
+    }
+
+    const startTime = typeof d.startTime === 'string' ? d.startTime : '';
+    const endTime = typeof d.endTime === 'string' ? d.endTime : '';
+    if (startTime && endTime) {
+      parts.push(`${tOr(t, 'voucher.meta.timeWindow', 'Time')}: ${startTime}–${endTime}`);
+    }
+
+    const maxUsesTotal = typeof d.maxUsesTotal === 'number' ? d.maxUsesTotal : Number(d.maxUsesTotal);
+    const used = typeof d.used === 'number' ? d.used : Number(d.used);
+    if (Number.isFinite(maxUsesTotal) && Number.isFinite(used) && maxUsesTotal > 0) {
+      parts.push(`${tOr(t, 'voucher.meta.usage', 'Usage')}: ${used}/${maxUsesTotal}`);
+    }
+
+    const maxUsesPerCustomer = typeof d.maxUsesPerCustomer === 'number' ? d.maxUsesPerCustomer : Number(d.maxUsesPerCustomer);
+    const usedByCustomer = typeof d.usedByCustomer === 'number' ? d.usedByCustomer : Number(d.usedByCustomer);
+    if (Number.isFinite(maxUsesPerCustomer) && Number.isFinite(usedByCustomer) && maxUsesPerCustomer > 0) {
+      parts.push(`${tOr(t, 'voucher.meta.usage', 'Usage')}: ${usedByCustomer}/${maxUsesPerCustomer}`);
+    }
+
+    return parts.length > 0 ? ` (${parts.join(' • ')})` : '';
+  };
+
+  const orderTypeForApi = useMemo<'DINE_IN' | 'TAKEAWAY' | 'DELIVERY'>(() => {
+    if (mode === 'dinein') return 'DINE_IN';
+    if (mode === 'takeaway') return 'TAKEAWAY';
+    return 'DELIVERY';
+  }, [mode]);
+
+  // If customer vouchers are disabled for this merchant, clear any existing voucher state.
+  useEffect(() => {
+    if (isCustomerVoucherEnabled) return;
+    if (!voucherCode && voucherStatus === 'idle') return;
+    setVoucherCode('');
+    setVoucherStatus('idle');
+    setVoucherMessage('');
+    setVoucherLabel('');
+    setVoucherDiscountAmount(0);
+    setVoucherDiscountType(null);
+    setVoucherDiscountValue(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isCustomerVoucherEnabled]);
+
+  const buildVoucherCandidateItems = useMemo(() => {
+    if (!cart) return [] as Array<{ menuId: string; subtotal: number }>;
+    return cart.items
+      .map((item) => {
+        const addonsTotal = (item.addons || []).reduce((sum, addon) => sum + (Number(addon.price) || 0), 0);
+        const subtotal = (Number(item.price) + addonsTotal) * Number(item.quantity || 0);
+        return { menuId: item.menuId.toString(), subtotal };
+      })
+      .filter((i) => i.menuId && Number.isFinite(i.subtotal) && i.subtotal > 0);
+  }, [cart]);
+
+  const normalizeVoucherCode = (value: string): string => value.toUpperCase();
+
+  const stripDiscountCodeSuffix = (label: string): string => {
+    // Historically labels could be "Voucher Name (CODE)".
+    // Payment UI should not show the code.
+    const trimmed = label.trim();
+    const match = trimmed.match(/^(.*)\(([A-Z0-9_-]{3,})\)\s*$/);
+    if (!match) return trimmed;
+    return match[1].trim();
+  };
+
+  const validateVoucher = async (codeRaw: string) => {
+    if (!isCustomerVoucherEnabled) {
+      setVoucherStatus('idle');
+      setVoucherMessage('');
+      setVoucherLabel('');
+      setVoucherDiscountAmount(0);
+      return;
+    }
+
+    const trimmed = codeRaw.trim().toUpperCase();
+    if (!trimmed) {
+      setVoucherStatus('idle');
+      setVoucherMessage('');
+      setVoucherLabel('');
+      setVoucherDiscountAmount(0);
+      return;
+    }
+
+    if (!cart || buildVoucherCandidateItems.length === 0) {
+      setVoucherStatus('invalid');
+      setVoucherMessage(tOr(t, 'customer.payment.voucher.cartEmpty', 'Add items to your cart before applying a voucher.'));
+      setVoucherLabel('');
+      setVoucherDiscountAmount(0);
+      return;
+    }
+
+    setVoucherStatus('checking');
+    setVoucherMessage('');
+
+    try {
+      const isAuthed = Boolean(auth?.accessToken);
+      const endpoint = isAuthed ? '/api/customer/vouchers/validate' : '/api/public/vouchers/validate';
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(isAuthed ? { Authorization: `Bearer ${auth!.accessToken}` } : {}),
+        },
+        body: JSON.stringify({
+          merchantCode,
+          voucherCode: trimmed,
+          orderType: orderTypeForApi,
+          items: buildVoucherCandidateItems.map((i) => ({ menuId: i.menuId, subtotal: i.subtotal })),
+        }),
+      });
+
+      const json = await res.json();
+
+      if (!res.ok || !json?.success) {
+        const errorCode = typeof json?.error === 'string' ? json.error : '';
+        const reasonKey = errorCode ? `voucher.reason.${errorCode}` : '';
+        const reasonMessage = reasonKey ? (t(reasonKey) as string) : '';
+        const message =
+          typeof reasonMessage === 'string' && reasonMessage.trim() !== '' && reasonMessage !== reasonKey
+            ? reasonMessage
+            : (typeof json?.message === 'string'
+              ? json.message
+              : tOr(t, 'customer.payment.voucher.invalid', 'Voucher is invalid.'));
+
+        const detailsHint = buildVoucherDetailsHint(json?.details);
+        setVoucherStatus('invalid');
+        setVoucherMessage(`${message}${detailsHint}`);
+        setVoucherLabel('');
+        setVoucherDiscountAmount(0);
+        return;
+      }
+
+      const label = typeof json?.data?.label === 'string' ? json.data.label : trimmed;
+      const discountAmount = Number(json?.data?.discountAmount || 0);
+
+      const discountTypeRaw = typeof json?.data?.discountType === 'string' ? json.data.discountType : null;
+      const discountType: 'PERCENTAGE' | 'FIXED_AMOUNT' | null =
+        discountTypeRaw === 'PERCENTAGE' || discountTypeRaw === 'FIXED_AMOUNT' ? discountTypeRaw : null;
+      const discountValue = Number(json?.data?.discountValue ?? 0);
+
+      setVoucherStatus('valid');
+      setVoucherMessage(tOr(t, 'customer.payment.voucher.applied', 'Voucher applied.'));
+      setVoucherLabel(stripDiscountCodeSuffix(label));
+      setVoucherDiscountAmount(Number.isFinite(discountAmount) ? discountAmount : 0);
+      setVoucherDiscountType(discountType);
+      setVoucherDiscountValue(Number.isFinite(discountValue) ? discountValue : 0);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : tOr(t, 'customer.payment.voucher.failed', 'Failed to validate voucher.');
+      setVoucherStatus('invalid');
+      setVoucherMessage(message);
+      setVoucherLabel('');
+      setVoucherDiscountAmount(0);
+      setVoucherDiscountType(null);
+      setVoucherDiscountValue(0);
+    }
+  };
 
   // Initialize cart on mount
   useEffect(() => {
@@ -621,6 +829,12 @@ export default function PaymentPage() {
         })),
       };
 
+      // ✅ NEW: Optional voucher code
+      // Only apply voucher when customer explicitly validated it.
+      if (isCustomerVoucherEnabled && voucherStatus === 'valid' && voucherCode.trim()) {
+        orderPayload.voucherCode = voucherCode.trim().toUpperCase();
+      }
+
       // ✅ NEW: Scheduled order (same-day validation happens server-side in merchant timezone)
       if (isScheduledOrder) {
         const trimmed = scheduledTime.trim();
@@ -749,6 +963,21 @@ export default function PaymentPage() {
   const serviceChargeAmount = cartSubtotal * (merchantServiceChargePercent / 100);
   const packagingFeeAmount = merchantPackagingFee;
   const totalPayment = cartSubtotal + taxAmount + serviceChargeAmount + packagingFeeAmount + (mode === 'delivery' ? deliveryFee : 0);
+  const voucherDiscountApplied = isCustomerVoucherEnabled ? Math.min(Math.max(0, voucherDiscountAmount), totalPayment) : 0;
+  const totalPaymentAfterVoucher = Math.max(0, totalPayment - voucherDiscountApplied);
+
+  const voucherTypeLabel = (() => {
+    if (voucherStatus !== 'valid') return '';
+    if (!voucherDiscountType) return '';
+    if (voucherDiscountType === 'PERCENTAGE') {
+      const pct = Math.max(0, Math.min(100, voucherDiscountValue));
+      return `${pct}%`;
+    }
+    if (voucherDiscountType === 'FIXED_AMOUNT') {
+      return formatCurrency(Math.max(0, voucherDiscountValue));
+    }
+    return '';
+  })();
 
   // Loading state while cart initializes
   if (cart === null) {
@@ -1246,6 +1475,115 @@ export default function PaymentPage() {
               </>
             )}
           </form>
+
+          {/* Voucher */}
+          {isCustomerVoucherEnabled ? (
+            <div className="mx-4 mt-4 rounded-xl border border-gray-200 bg-white p-4">
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-semibold text-gray-900">
+                  {tOr(t, 'customer.payment.voucher.title', 'Voucher')}
+                </div>
+                {voucherStatus === 'valid' && voucherCode.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVoucherCode('');
+                      setVoucherStatus('idle');
+                      setVoucherMessage('');
+                      setVoucherLabel('');
+                      setVoucherDiscountAmount(0);
+                      setVoucherDiscountType(null);
+                      setVoucherDiscountValue(0);
+                    }}
+                    className="text-xs font-semibold text-gray-600 hover:text-gray-900"
+                  >
+                    {tOr(t, 'customer.payment.voucher.remove', 'Remove')}
+                  </button>
+                )}
+              </div>
+
+              {voucherStatus === 'valid' && voucherDiscountApplied > 0 ? (
+                <div className="mt-3 rounded-lg border border-green-200 bg-green-50 px-3 py-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold text-green-800 truncate">
+                        {voucherLabel || tOr(t, 'customer.payment.voucher.title', 'Voucher')}
+                      </div>
+                      {voucherTypeLabel ? (
+                        <div className="mt-0.5 text-xs font-semibold text-green-700">
+                          {voucherTypeLabel}
+                        </div>
+                      ) : null}
+                    </div>
+                    <div className="shrink-0 text-sm font-bold text-green-800">
+                      -{formatCurrency(voucherDiscountApplied)}
+                    </div>
+                  </div>
+                  {voucherMessage ? (
+                    <div className="mt-1 text-xs text-green-700">{voucherMessage}</div>
+                  ) : null}
+                </div>
+              ) : (
+                <div className="mt-2">
+                  <label
+                    htmlFor="voucherCode"
+                    className="mb-1 block"
+                    style={{ fontSize: '14px', color: '#212529' }}
+                  >
+                    {tOr(t, 'customer.payment.voucher.codeLabel', 'Voucher code')}
+                  </label>
+
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <div className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: voucherStatus === 'invalid' ? '#EF4444' : '#9CA3AF' }}>
+                        <FaTag className="w-5 h-5" />
+                      </div>
+                      <input
+                        id="voucherCode"
+                        value={voucherCode}
+                        onChange={(e) => {
+                          setVoucherCode(normalizeVoucherCode(e.target.value));
+                          if (voucherStatus !== 'idle') {
+                            setVoucherStatus('idle');
+                            setVoucherMessage('');
+                            setVoucherLabel('');
+                            setVoucherDiscountAmount(0);
+                            setVoucherDiscountType(null);
+                            setVoucherDiscountValue(0);
+                          }
+                        }}
+                        placeholder={tOr(t, 'customer.payment.voucher.placeholder', 'Enter voucher code')}
+                        autoCapitalize="characters"
+                        autoCorrect="off"
+                        spellCheck={false}
+                        inputMode="text"
+                        className={`w-full h-12 pl-11 pr-4 border-2 rounded-xl text-sm bg-white focus:outline-none transition-colors ${voucherStatus === 'invalid'
+                          ? 'border-red-500 ring-1 ring-red-500 focus:border-red-500 focus:ring-red-500'
+                          : 'border-gray-300 focus:ring-1 focus:ring-[#f05a28] focus:border-[#f05a28]'
+                          }`}
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={voucherStatus === 'checking' || !voucherCode.trim()}
+                      onClick={() => validateVoucher(voucherCode)}
+                      className="h-12 rounded-xl px-4 text-sm font-semibold text-white transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                      style={{ backgroundColor: '#f05a28' }}
+                    >
+                      {voucherStatus === 'checking'
+                        ? tOr(t, 'customer.payment.voucher.checking', 'Checking...')
+                        : tOr(t, 'customer.payment.voucher.check', 'Check')}
+                    </button>
+                  </div>
+
+                  {voucherStatus === 'invalid' && voucherMessage && (
+                    <div className="mt-2 text-sm text-red-700">{voucherMessage}</div>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : null}
         </div>
 
         {/* Payment instructions */}
@@ -1339,6 +1677,23 @@ export default function PaymentPage() {
                 <div>{formatCurrency(deliveryFee)}</div>
               </div>
             )}
+
+            {/* Voucher Discount Row */}
+            {voucherDiscountApplied > 0 && (
+              <div
+                className="flex mb-1"
+                style={{ fontSize: '0.9rem', color: '#AEB3BE' }}
+              >
+                <div className="grow">
+                  {(() => {
+                    const base = tOr(t, 'customer.payment.voucher.discount', 'Voucher discount');
+                    const parts = [voucherLabel || null, voucherTypeLabel || null].filter(Boolean).join(' • ');
+                    return parts ? `${base} (${parts})` : base;
+                  })()}
+                </div>
+                <div>-{formatCurrency(voucherDiscountApplied)}</div>
+              </div>
+            )}
           </div>
         )}
 
@@ -1366,7 +1721,7 @@ export default function PaymentPage() {
               className="flex items-center"
               style={{ fontWeight: 'bold', fontSize: '20px', lineHeight: 1.5, color: '#101828' }}
             >
-              {formatCurrency(totalPayment)}
+              {formatCurrency(totalPaymentAfterVoucher)}
             </div>
           </div>
 

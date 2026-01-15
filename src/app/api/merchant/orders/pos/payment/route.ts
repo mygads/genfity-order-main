@@ -15,6 +15,7 @@ import type { AuthContext } from '@/lib/middleware/auth';
 import prisma from '@/lib/db/client';
 import { serializeBigInt } from '@/lib/utils/serializer';
 import { Prisma } from '@prisma/client';
+import { computeVoucherDiscount, applyOrderDiscount } from '@/lib/services/OrderVoucherService';
 
 /**
  * Payment Request Body Interface
@@ -31,6 +32,8 @@ interface PaymentRequest {
   discountValue?: number;
   discountAmount?: number;
   finalTotal?: number;
+  voucherCode?: string;
+  voucherTemplateId?: number | string;
 }
 
 /**
@@ -98,6 +101,13 @@ async function handlePost(req: NextRequest, context: AuthContext) {
 
     const numericOrderId = typeof orderId === 'string' ? parseInt(orderId, 10) : orderId;
 
+    const voucherCodeRaw = typeof body.voucherCode === 'string' ? body.voucherCode.trim() : '';
+
+    const numericVoucherTemplateId =
+      body.voucherTemplateId !== undefined && body.voucherTemplateId !== null
+        ? BigInt(typeof body.voucherTemplateId === 'string' ? parseInt(body.voucherTemplateId, 10) : body.voucherTemplateId)
+        : null;
+
     // Find the order and verify it belongs to this merchant
     const order = await prisma.order.findFirst({
       where: {
@@ -108,7 +118,15 @@ async function handlePost(req: NextRequest, context: AuthContext) {
         id: true,
         orderNumber: true,
         totalAmount: true,
+        subtotal: true,
+        orderType: true,
         status: true,
+        orderItems: {
+          select: {
+            menuId: true,
+            subtotal: true,
+          },
+        },
       },
     });
 
@@ -137,15 +155,120 @@ async function handlePost(req: NextRequest, context: AuthContext) {
       },
     });
 
-    const orderTotalAmount = Number(order.totalAmount);
-    const requestedFinalTotal = typeof body.finalTotal === 'number' && Number.isFinite(body.finalTotal)
-      ? body.finalTotal
-      : undefined;
-    const requestedDiscountAmount = typeof body.discountAmount === 'number' && Number.isFinite(body.discountAmount)
-      ? body.discountAmount
+    const merchant = await prisma.merchant.findUnique({
+      where: { id: BigInt(merchantId) },
+      select: { currency: true, timezone: true },
+    });
+
+    const merchantCurrency = merchant?.currency || 'AUD';
+    const merchantTimezone = merchant?.timezone || 'Australia/Sydney';
+
+    const orderTotalAmountBeforeDiscount = Number(order.totalAmount);
+
+    const requestedDiscountAmount =
+      typeof body.discountAmount === 'number' && Number.isFinite(body.discountAmount)
+        ? body.discountAmount
+        : undefined;
+
+    const requestedDiscountType = body.discountType;
+    const requestedDiscountValue = typeof body.discountValue === 'number' && Number.isFinite(body.discountValue)
+      ? body.discountValue
       : undefined;
 
-    const totalAmount = requestedFinalTotal ?? orderTotalAmount;
+    const orderItems = (order.orderItems || []).map((i) => ({
+      menuId: i.menuId,
+      subtotal: Number(i.subtotal),
+    }));
+
+    let discountAmountToApply = 0;
+    let discountLabel: string | null = null;
+    let discountSource: 'POS_VOUCHER' | 'MANUAL' | null = null;
+    let voucherTemplateIdToApply: bigint | null = null;
+    let voucherCodeIdToApply: bigint | null = null;
+    let discountTypeToStore: 'PERCENTAGE' | 'FIXED_AMOUNT' | null = null;
+    let discountValueToStore: number | null = null;
+
+    if (voucherCodeRaw) {
+      const computed = await computeVoucherDiscount({
+        merchantId: BigInt(merchantId),
+        merchantCurrency,
+        merchantTimezone,
+        audience: 'POS',
+        orderType: order.orderType,
+        subtotal: Number(order.subtotal),
+        items: orderItems,
+        voucherCode: voucherCodeRaw,
+        customerId: null,
+        orderIdForStacking: order.id,
+      });
+
+      discountAmountToApply = computed.discountAmount;
+      discountLabel = computed.label;
+      discountSource = 'POS_VOUCHER';
+      voucherTemplateIdToApply = computed.templateId;
+      voucherCodeIdToApply = computed.codeId;
+      discountTypeToStore = computed.discountType;
+      discountValueToStore = computed.discountValue;
+    } else if (numericVoucherTemplateId) {
+      const computed = await computeVoucherDiscount({
+        merchantId: BigInt(merchantId),
+        merchantCurrency,
+        merchantTimezone,
+        audience: 'POS',
+        orderType: order.orderType,
+        subtotal: Number(order.subtotal),
+        items: orderItems,
+        voucherTemplateId: numericVoucherTemplateId,
+        customerId: null,
+        orderIdForStacking: order.id,
+      });
+
+      // Default to template values
+      discountAmountToApply = computed.discountAmount;
+      discountLabel = computed.label;
+      discountSource = 'POS_VOUCHER';
+      voucherTemplateIdToApply = computed.templateId;
+      voucherCodeIdToApply = null;
+      discountTypeToStore = computed.discountType;
+      discountValueToStore = computed.discountValue;
+
+      // Allow cashier override of type/value (still bounded by eligible subtotal and template caps via computeVoucherDiscount)
+      if (requestedDiscountType && requestedDiscountValue !== undefined && requestedDiscountValue > 0) {
+        const eligible = computed.eligibleSubtotal;
+        if (requestedDiscountType === 'PERCENTAGE') {
+          const pct = Math.max(0, Math.min(requestedDiscountValue, 100));
+          let amount = eligible * (pct / 100);
+          // If the template has a max cap, computeVoucherDiscount already enforced it for template defaults,
+          // but we must enforce again for overrides.
+          const template = await prisma.orderVoucherTemplate.findUnique({
+            where: { id: computed.templateId },
+            select: { maxDiscountAmount: true },
+          });
+          if (template?.maxDiscountAmount) {
+            amount = Math.min(amount, Number(template.maxDiscountAmount));
+          }
+          discountAmountToApply = Math.min(amount, eligible);
+          discountTypeToStore = 'PERCENTAGE';
+          discountValueToStore = pct;
+        } else {
+          discountAmountToApply = Math.min(requestedDiscountValue, eligible);
+          discountTypeToStore = 'FIXED_AMOUNT';
+          discountValueToStore = requestedDiscountValue;
+        }
+      }
+    } else if (requestedDiscountAmount !== undefined && requestedDiscountAmount > 0) {
+      discountAmountToApply = requestedDiscountAmount;
+      discountLabel = 'Manual discount';
+      discountSource = 'MANUAL';
+      voucherCodeIdToApply = null;
+      discountTypeToStore = requestedDiscountType === 'PERCENTAGE' ? 'PERCENTAGE' : 'FIXED_AMOUNT';
+      discountValueToStore = requestedDiscountValue ?? null;
+    }
+
+    // Compute final total server-side (do not trust client finalTotal)
+    const finalTotal = Math.max(0, orderTotalAmountBeforeDiscount - discountAmountToApply);
+    const totalAmount = Number.isFinite(finalTotal) ? finalTotal : orderTotalAmountBeforeDiscount;
+
     const paidAmount = amountPaid !== undefined ? amountPaid : totalAmount;
     const change = changeAmount !== undefined ? changeAmount : Math.max(0, paidAmount - totalAmount);
 
@@ -183,14 +306,33 @@ async function handlePost(req: NextRequest, context: AuthContext) {
     // Create or update payment record in a transaction
     const result = await prisma.$transaction(async (tx) => {
       // Keep order totals in sync with what was paid (discount applied at payment step)
-      if (requestedFinalTotal !== undefined || requestedDiscountAmount !== undefined) {
+      if (discountAmountToApply > 0) {
         await tx.order.update({
           where: { id: order.id },
           data: {
-            ...(requestedFinalTotal !== undefined ? { totalAmount: new Prisma.Decimal(requestedFinalTotal) } : {}),
-            ...(requestedDiscountAmount !== undefined ? { discountAmount: new Prisma.Decimal(requestedDiscountAmount) } : {}),
+            totalAmount: new Prisma.Decimal(totalAmount),
           },
         });
+
+        if (discountSource && discountLabel && discountTypeToStore) {
+          await applyOrderDiscount({
+            tx,
+            merchantId: BigInt(merchantId),
+            orderId: order.id,
+            source: discountSource,
+            currency: merchantCurrency,
+            label: discountLabel,
+            discountType: discountTypeToStore,
+            discountValue: discountValueToStore,
+            discountAmount: discountAmountToApply,
+            voucherTemplateId: voucherTemplateIdToApply,
+            voucherCodeId: voucherCodeIdToApply,
+            appliedByUserId: BigInt(userId),
+            appliedByCustomerId: null,
+            // Replace any prior POS-entered discount to prevent duplicates on retries
+            replaceExistingSources: ['POS_VOUCHER', 'MANUAL'],
+          });
+        }
       }
 
       if (existingPayment) {

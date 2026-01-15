@@ -40,6 +40,8 @@ import { SpecialPriceService } from '@/lib/services/SpecialPriceService';
 import DeliveryFeeService from '@/lib/services/DeliveryFeeService';
 import { haversineDistanceKm, isPointInPolygon, type LatLng } from '@/lib/utils/geo';
 import { createOrderTrackingToken } from '@/lib/utils/orderTrackingToken';
+import { optionalCustomerAuth } from '@/lib/middleware/auth';
+import { computeVoucherDiscount, applyOrderDiscount } from '@/lib/services/OrderVoucherService';
 import {
   type ExtendedMerchantStatus,
   isStoreOpenWithSpecialHoursAtTime,
@@ -95,6 +97,7 @@ interface _OrderRequestBody {
   items: OrderItemInput[];
   notes?: string;
   paymentMethod?: string;
+  voucherCode?: string;
 }
 
 interface AddonData {
@@ -119,6 +122,7 @@ interface MerchantWithConfig {
   id: bigint;
   code: string;
   name: string;
+  currency?: string;
   country?: string | null;
   isActive: boolean;
   isOpen: boolean;
@@ -556,12 +560,46 @@ export async function POST(req: NextRequest) {
     // Now uses separate Customer table (not User table)
     // ========================================
 
-    // Find customer by email in Customer table
-    let customer = await prisma.customer.findUnique({
-      where: {
-        email: body.customerEmail.toLowerCase(),
-      },
-    });
+    const voucherCodeRaw = typeof body.voucherCode === 'string' ? body.voucherCode.trim().toUpperCase() : '';
+    const wantsVoucher = voucherCodeRaw.length > 0;
+
+    // If customer voucher is supplied, customer MUST be logged in
+    const customerAuth = wantsVoucher ? await optionalCustomerAuth(req) : null;
+    if (wantsVoucher && !customerAuth) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'AUTH_REQUIRED',
+          message: 'Please log in to use a voucher code.',
+          statusCode: 401,
+        },
+        { status: 401 }
+      );
+    }
+
+    // Find customer (prefer authenticated customer when available)
+    let customer = customerAuth
+      ? await prisma.customer.findUnique({ where: { id: customerAuth.customerId } })
+      : await prisma.customer.findUnique({
+          where: {
+            email: body.customerEmail.toLowerCase(),
+          },
+        });
+
+    if (customerAuth && customer) {
+      // Prevent mixing authenticated account with a different email in request
+      if (String(customer.email).toLowerCase() !== String(body.customerEmail).toLowerCase()) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'EMAIL_MISMATCH',
+            message: 'Your logged-in account email does not match the checkout email.',
+            statusCode: 400,
+          },
+          { status: 400 }
+        );
+      }
+    }
 
     if (!customer) {
       // ✅ Check if phone is already used by another customer with different email
@@ -811,6 +849,40 @@ export async function POST(req: NextRequest) {
     orderLog(`💰 [ORDER CALC] Total: ${totalAmount} (subtotal: ${subtotal} + tax: ${taxAmount} + service: ${serviceChargeAmount} + packaging: ${packagingFeeAmount} + delivery: ${deliveryFeeAmount})`);
 
     // ========================================
+    // STEP 3b: Apply customer voucher (optional)
+    // ========================================
+
+    let discountAmount = 0;
+    let voucherDiscount: null | {
+      templateId: bigint;
+      codeId: bigint | null;
+      label: string;
+      discountType: 'PERCENTAGE' | 'FIXED_AMOUNT';
+      discountValue: number;
+      discountAmount: number;
+    } = null;
+
+    if (wantsVoucher) {
+      voucherDiscount = await computeVoucherDiscount({
+        merchantId: merchant.id,
+        merchantCurrency: merchant.currency || 'AUD',
+        merchantTimezone: tz,
+        audience: 'CUSTOMER',
+        orderType: body.orderType,
+        subtotal,
+        items: orderItemsData.map((i) => ({ menuId: i.menuId, subtotal: i.subtotal })),
+        voucherCode: voucherCodeRaw,
+        customerId: customer?.id ?? null,
+        orderIdForStacking: null,
+      });
+
+      discountAmount = round2(Math.min(voucherDiscount.discountAmount, totalAmount));
+      orderLog(`🎟️ [VOUCHER] Applied customer voucher: ${voucherDiscount.label} => -${discountAmount}`);
+    }
+
+    const totalAmountAfterDiscount = round2(Math.max(0, totalAmount - discountAmount));
+
+    // ========================================
     // STEP 4: Generate unique order number
     // ========================================
 
@@ -955,10 +1027,37 @@ export async function POST(req: NextRequest) {
           taxAmount,
           serviceChargeAmount,
           packagingFeeAmount,
-          totalAmount,
+          discountAmount,
+          totalAmount: totalAmountAfterDiscount,
           notes: body.notes || null,
         } as any,
       });
+
+      if (voucherDiscount) {
+        await applyOrderDiscount({
+          tx,
+          merchantId: merchant.id,
+          orderId: createdOrder.id,
+          source: 'CUSTOMER_VOUCHER',
+          currency: merchant.currency || 'AUD',
+          label: voucherDiscount.label,
+          discountType: voucherDiscount.discountType,
+          discountValue: voucherDiscount.discountValue,
+          discountAmount,
+          voucherTemplateId: voucherDiscount.templateId,
+          voucherCodeId: voucherDiscount.codeId,
+          appliedByUserId: null,
+          appliedByCustomerId: customer?.id ?? null,
+        });
+
+        // Also ensure totalAmount is discounted (applyOrderDiscount only syncs discountAmount)
+        await tx.order.update({
+          where: { id: createdOrder.id },
+          data: {
+            totalAmount: totalAmountAfterDiscount,
+          } as any,
+        });
+      }
 
       // 1b. Create Payment record (orderId is required and unique)
       // For DELIVERY, default to CASH_ON_DELIVERY; for others, default to CASH_ON_COUNTER.
@@ -976,7 +1075,7 @@ export async function POST(req: NextRequest) {
       await tx.payment.create({
         data: {
           orderId: createdOrder.id,
-          amount: totalAmount,
+          amount: totalAmountAfterDiscount,
           paymentMethod: paymentMethod as any,
           status: 'PENDING',
         },

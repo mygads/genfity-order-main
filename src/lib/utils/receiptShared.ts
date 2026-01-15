@@ -19,6 +19,7 @@ export interface ReceiptLabels {
   tax: string;
   serviceCharge: string;
   packagingFee: string;
+  deliveryFee: string;
   discount: string;
   total: string;
   paymentMethod: string;
@@ -47,6 +48,7 @@ const labelsEN: ReceiptLabels = {
   tax: 'Tax',
   serviceCharge: 'Service Charge',
   packagingFee: 'Packaging Fee',
+  deliveryFee: 'Delivery Fee',
   discount: 'Discount',
   total: 'TOTAL',
   paymentMethod: 'Payment',
@@ -75,6 +77,7 @@ const labelsID: ReceiptLabels = {
   tax: 'Pajak',
   serviceCharge: 'Biaya Layanan',
   packagingFee: 'Biaya Kemasan',
+  deliveryFee: 'Biaya Pengantaran',
   discount: 'Diskon',
   total: 'TOTAL',
   paymentMethod: 'Pembayaran',

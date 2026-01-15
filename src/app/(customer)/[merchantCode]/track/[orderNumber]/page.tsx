@@ -24,6 +24,7 @@ import FeedbackModal from '@/components/customer/FeedbackModal';
 import { customerHistoryUrl, customerMerchantHomeUrl } from '@/lib/utils/customerRoutes';
 import { formatPaymentMethodLabel, formatPaymentStatusLabel } from '@/lib/utils/paymentDisplay';
 import { useCustomerData } from '@/context/CustomerDataContext';
+import OrderTotalsBreakdown from '@/components/orders/OrderTotalsBreakdown';
 
 // Order status types
 type OrderStatus = 'PENDING' | 'ACCEPTED' | 'IN_PROGRESS' | 'READY' | 'COMPLETED' | 'CANCELLED';
@@ -39,6 +40,11 @@ interface OrderData {
     scheduledDate?: string | null;
     scheduledTime?: string | null;
     customerName: string;
+    subtotal?: number;
+    taxAmount?: number;
+    serviceChargeAmount?: number;
+    packagingFeeAmount?: number;
+    discountAmount?: number;
     totalAmount: number;
     createdAt: string;
     updatedAt: string;
@@ -194,7 +200,7 @@ export default function OrderTrackPage() {
     const params = useParams();
     const router = useRouter();
     const searchParams = useSearchParams();
-    const { t } = useTranslation();
+    const { t, locale } = useTranslation();
 
     const merchantCode = params.merchantCode as string;
     const orderNumber = params.orderNumber as string;
@@ -258,6 +264,11 @@ export default function OrderTrackPage() {
                 orderType: data.data.orderType,
                 tableNumber: data.data.tableNumber,
                 customerName: data.data.customerName,
+                subtotal: convertDecimal(data.data.subtotal),
+                taxAmount: convertDecimal(data.data.taxAmount),
+                serviceChargeAmount: convertDecimal(data.data.serviceChargeAmount),
+                packagingFeeAmount: convertDecimal(data.data.packagingFeeAmount),
+                discountAmount: convertDecimal(data.data.discountAmount),
                 totalAmount: convertDecimal(data.data.totalAmount),
                 createdAt: data.data.createdAt,
                 updatedAt: data.data.updatedAt,
@@ -1204,12 +1215,41 @@ export default function OrderTrackPage() {
                         </div>
                     )}
 
-                    {/* Total */}
-                    <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200">
-                        <span className="text-base font-semibold text-gray-900">{t('customer.payment.total')}</span>
-                        <span className="text-lg font-bold text-orange-500">
-                            {formatCurrency(order.totalAmount, order.merchant.currency)}
-                        </span>
+                    {/* Totals */}
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                        <OrderTotalsBreakdown
+                            amounts={{
+                                subtotal: Number(order.subtotal || 0),
+                                taxAmount: Number(order.taxAmount || 0),
+                                serviceChargeAmount: Number(order.serviceChargeAmount || 0),
+                                packagingFeeAmount: Number(order.packagingFeeAmount || 0),
+                                deliveryFeeAmount: order.orderType === 'DELIVERY' ? Number(order.deliveryFeeAmount || 0) : 0,
+                                discountAmount: Number(order.discountAmount || 0),
+                                totalAmount: Number(order.totalAmount || 0),
+                            }}
+                            currency={order.merchant.currency}
+                            locale={locale}
+                            formatAmount={(amount) => formatCurrency(amount, order.merchant.currency, locale)}
+                            labels={{
+                                subtotal: tOr(t, 'customer.payment.subtotal', 'Subtotal'),
+                                tax: tOr(t, 'customer.payment.inclTax', 'Tax'),
+                                serviceCharge: tOr(t, 'customer.payment.serviceCharge', 'Service Charge'),
+                                packagingFee: tOr(t, 'customer.payment.packagingFee', 'Packaging Fee'),
+                                deliveryFee: tOr(t, 'customer.track.deliveryFee', 'Delivery fee'),
+                                discount: tOr(t, 'customer.payment.voucher.discount', 'Voucher discount'),
+                                total: t('customer.payment.total'),
+                            }}
+                            options={{
+                                showDeliveryFee: order.orderType === 'DELIVERY',
+                            }}
+                            rowClassName="flex justify-between items-center"
+                            labelClassName="text-sm text-gray-600"
+                            valueClassName="text-sm font-semibold text-gray-900"
+                            discountValueClassName="text-sm font-semibold text-green-600"
+                            totalRowClassName="flex justify-between items-center"
+                            totalLabelClassName="text-base font-semibold text-gray-900"
+                            totalValueClassName="text-lg font-bold text-orange-500"
+                        />
                     </div>
                 </div>
             </div>

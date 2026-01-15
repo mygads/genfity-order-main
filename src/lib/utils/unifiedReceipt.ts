@@ -55,7 +55,9 @@ export interface ReceiptOrderData {
   taxAmount?: number;
   serviceChargeAmount?: number;
   packagingFeeAmount?: number;
+  deliveryFeeAmount?: number;
   discountAmount?: number;
+  discountLabel?: string | null;
   totalAmount: number;
   amountPaid?: number;
   changeAmount?: number;
@@ -84,6 +86,15 @@ export interface GenerateReceiptOptions {
 // ============================================
 // HELPERS
 // ============================================
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 function formatDateTime(dateString: string, language: 'en' | 'id'): string {
   const date = new Date(dateString);
@@ -456,6 +467,15 @@ function buildPaymentSection(
 ): string {
   const rows: string[] = [];
 
+  const stripDiscountCodeSuffix = (label: string): string => {
+    // Historically we stored labels like "Voucher Name (CODE)".
+    // Receipts should not show the code; keep only the display name.
+    const trimmed = label.trim();
+    const match = trimmed.match(/^(.*)\(([A-Z0-9_-]{3,})\)\s*$/);
+    if (!match) return trimmed;
+    return match[1].trim();
+  };
+
   if (settings.showSubtotal) {
     rows.push(`<div class="payment-row"><span>${labels.subtotal}</span><span>${fmt(order.subtotal)}</span></div>`);
   }
@@ -472,8 +492,14 @@ function buildPaymentSection(
     rows.push(`<div class="payment-row"><span>${labels.packagingFee}</span><span>${fmt(order.packagingFeeAmount)}</span></div>`);
   }
 
+  if (settings.showDeliveryFee && order.deliveryFeeAmount && order.deliveryFeeAmount > 0) {
+    rows.push(`<div class="payment-row"><span>${labels.deliveryFee}</span><span>${fmt(order.deliveryFeeAmount)}</span></div>`);
+  }
+
   if (settings.showDiscount && order.discountAmount && order.discountAmount > 0) {
-    rows.push(`<div class="payment-row discount"><span>${labels.discount}</span><span>-${fmt(order.discountAmount)}</span></div>`);
+    const cleanLabel = order.discountLabel ? stripDiscountCodeSuffix(String(order.discountLabel)) : '';
+    const labelSuffix = cleanLabel ? ` (${escapeHtml(cleanLabel)})` : '';
+    rows.push(`<div class="payment-row discount"><span>${labels.discount}${labelSuffix}</span><span>-${fmt(order.discountAmount)}</span></div>`);
   }
 
   if (settings.showTotal) {

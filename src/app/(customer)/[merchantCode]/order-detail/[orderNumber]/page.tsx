@@ -10,6 +10,7 @@ import { useToast } from '@/context/ToastContext';
 import { Skeleton } from '@/components/common/SkeletonLoaders';
 import { FaArrowLeft, FaBoxOpen, FaFileDownload, FaSpinner } from 'react-icons/fa';
 import { formatPaymentMethodLabel, formatPaymentStatusLabel } from '@/lib/utils/paymentDisplay';
+import OrderTotalsBreakdown from '@/components/orders/OrderTotalsBreakdown';
 
 interface OrderDetail {
     id: string;
@@ -30,6 +31,7 @@ interface OrderDetail {
     taxAmount: number;
     serviceChargeAmount: number;
     packagingFeeAmount: number;
+    discountAmount?: number;
     placedAt: string;
     completedAt: string | null;
     payment: {
@@ -239,6 +241,7 @@ export default function OrderDetailPage() {
                 serviceChargeAmount: Number(order.serviceChargeAmount) || 0,
                 packagingFeeAmount: Number(order.packagingFeeAmount) || 0,
                 deliveryFeeAmount: Number(order.deliveryFeeAmount) || 0,
+                discountAmount: Number(order.discountAmount) || 0,
                 totalAmount: Number(order.totalAmount) || 0,
                 paymentMethod: order.payment?.paymentMethod,
                 paymentStatus: order.payment?.status,
@@ -437,42 +440,32 @@ export default function OrderDetailPage() {
                 {/* Payment Summary */}
                 <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
                     <h2 className="font-bold text-gray-900 mb-4">{t('order.paymentDetails')}</h2>
-                    <div className="space-y-2 text-sm">
-                        <div className="flex justify-between text-gray-600">
-                            <span>{t('customer.payment.subtotal')}</span>
-                            <span>{formatCurrency(Number(order.subtotal) || 0)}</span>
-                        </div>
-                        {Number(order.taxAmount) > 0 && (
-                            <div className="flex justify-between text-gray-600">
-                                <span>{t('customer.payment.tax')}</span>
-                                <span>{formatCurrency(Number(order.taxAmount))}</span>
-                            </div>
-                        )}
-                        {Number(order.serviceChargeAmount) > 0 && (
-                            <div className="flex justify-between text-gray-600">
-                                <span>{t('customer.payment.serviceCharge')}</span>
-                                <span>{formatCurrency(Number(order.serviceChargeAmount))}</span>
-                            </div>
-                        )}
-                        {Number(order.packagingFeeAmount) > 0 && (
-                            <div className="flex justify-between text-gray-600">
-                                <span>{t('customer.payment.packagingFee')}</span>
-                                <span>{formatCurrency(Number(order.packagingFeeAmount))}</span>
-                            </div>
-                        )}
-                        {order.orderType === 'DELIVERY' && Number(order.deliveryFeeAmount) > 0 && (
-                            <div className="flex justify-between text-gray-600">
-                                <span>{t('customer.track.deliveryFee')}</span>
-                                <span>{formatCurrency(Number(order.deliveryFeeAmount))}</span>
-                            </div>
-                        )}
-                        <div className="border-t border-gray-200 pt-2 mt-2">
-                            <div className="flex justify-between font-bold text-gray-900">
-                                <span>{t('customer.payment.total')}</span>
-                                <span className="text-orange-500">{formatCurrency(Number(order.totalAmount) || 0)}</span>
-                            </div>
-                        </div>
-                    </div>
+                    <OrderTotalsBreakdown
+                        amounts={{
+                            subtotal: Number(order.subtotal) || 0,
+                            taxAmount: Number(order.taxAmount) || 0,
+                            serviceChargeAmount: Number(order.serviceChargeAmount) || 0,
+                            packagingFeeAmount: Number(order.packagingFeeAmount) || 0,
+                            deliveryFeeAmount: order.orderType === 'DELIVERY' ? (Number(order.deliveryFeeAmount) || 0) : 0,
+                            discountAmount: Number(order.discountAmount || 0) || 0,
+                            totalAmount: Number(order.totalAmount) || 0,
+                        }}
+                        currency={order.merchant?.currency || 'AUD'}
+                        locale={locale}
+                        formatAmount={formatCurrency}
+                        labels={{
+                            subtotal: t('customer.payment.subtotal'),
+                            tax: t('customer.payment.tax'),
+                            serviceCharge: t('customer.payment.serviceCharge'),
+                            packagingFee: t('customer.payment.packagingFee'),
+                            deliveryFee: t('customer.track.deliveryFee'),
+                            discount: t('customer.payment.voucher.discount'),
+                            total: t('customer.payment.total'),
+                        }}
+                        options={{
+                            showDeliveryFee: order.orderType === 'DELIVERY',
+                        }}
+                    />
 
                     {/* Payment Method */}
                     {order.payment && (
