@@ -28,7 +28,7 @@ import { TableActionButton } from '@/components/common/TableActionButton';
 type ReservationStatus = 'PENDING' | 'ACCEPTED' | 'CANCELLED';
 type ReservationDisplayStatus = ReservationStatus | 'IN_PROGRESS' | 'COMPLETED';
 
-type StatusFilter = 'ALL' | ReservationStatus;
+type StatusFilter = 'ALL' | 'ACTIVE' | ReservationStatus;
 type DatePreset = 'ALL' | 'TODAY' | 'TOMORROW' | 'CUSTOM';
 
 type ReservationPreorderItem = {
@@ -38,6 +38,43 @@ type ReservationPreorderItem = {
 type ReservationPreorder = {
   items?: ReservationPreorderItem[] | null;
 } | null;
+
+type PreorderDetailsResponse = {
+  reservation: {
+    id: string;
+    status: string;
+    reservationDate: string;
+    reservationTime: string;
+    notes: string | null;
+    customer: {
+      name: string;
+      email: string;
+      phone: string | null;
+    } | null;
+    order: {
+      id: string;
+      status: string;
+      orderNumber: string;
+    } | null;
+  };
+  preorder: {
+    items: Array<{
+      menuId: string;
+      menuName: string | null;
+      quantity: number;
+      notes: string | null;
+      unitPrice: number;
+      isAvailable: boolean;
+      addons: Array<{
+        addonItemId: string;
+        addonName: string | null;
+        quantity: number;
+        unitPrice: number;
+        isAvailable: boolean;
+      }>;
+    }>;
+  };
+};
 
 export type ReservationListItem = {
   id: string;
@@ -149,6 +186,7 @@ function CenteredModal(props: {
 
 export default function MerchantReservationsPanel(props: {
   embedded?: boolean;
+  initialStatusFilter?: StatusFilter;
   limit?: number;
   pollMs?: number;
   onOrderCreated?: (orderId: string) => void;
@@ -159,7 +197,14 @@ export default function MerchantReservationsPanel(props: {
   const { merchant } = useMerchant();
   const isTableNumberEnabled = merchant?.requireTableNumberForDineIn === true;
 
-  const { embedded: embeddedProp, limit: limitProp, pollMs: pollMsProp, onOrderCreated, onPendingCountChange } = props;
+  const {
+    embedded: embeddedProp,
+    initialStatusFilter,
+    limit: limitProp,
+    pollMs: pollMsProp,
+    onOrderCreated,
+    onPendingCountChange,
+  } = props;
 
   const embedded = embeddedProp === true;
   const limit = limitProp ?? 100;
@@ -172,7 +217,12 @@ export default function MerchantReservationsPanel(props: {
   const [filterQuery, setFilterQuery] = useState('');
   const [filterDateFrom, setFilterDateFrom] = useState('');
   const [filterDateTo, setFilterDateTo] = useState('');
-  const [filterStatus, setFilterStatus] = useState<StatusFilter>('ALL');
+  const [filterStatus, setFilterStatus] = useState<StatusFilter>(initialStatusFilter ?? 'ALL');
+  useEffect(() => {
+    if (!initialStatusFilter) return;
+    setFilterStatus(initialStatusFilter);
+  }, [initialStatusFilter]);
+
   const [datePreset, setDatePreset] = useState<DatePreset>('ALL');
   const [filterTimeFrom, setFilterTimeFrom] = useState('');
   const [filterTimeTo, setFilterTimeTo] = useState('');
@@ -185,6 +235,12 @@ export default function MerchantReservationsPanel(props: {
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [activeReservationId, setActiveReservationId] = useState<string | null>(null);
   const [tableNumber, setTableNumber] = useState('');
+
+  const [preorderModalOpen, setPreorderModalOpen] = useState(false);
+  const [preorderReservationId, setPreorderReservationId] = useState<string | null>(null);
+  const [preorderLoading, setPreorderLoading] = useState(false);
+  const [preorderError, setPreorderError] = useState('');
+  const [preorderDetails, setPreorderDetails] = useState<PreorderDetailsResponse | null>(null);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -278,6 +334,42 @@ export default function MerchantReservationsPanel(props: {
     setCancelModalOpen(false);
     setActiveReservationId(null);
     setTableNumber('');
+  };
+
+  const closePreorderModal = () => {
+    setPreorderModalOpen(false);
+    setPreorderReservationId(null);
+    setPreorderLoading(false);
+    setPreorderError('');
+    setPreorderDetails(null);
+  };
+
+  const openPreorderModal = async (reservationId: string) => {
+    if (!token) return;
+
+    setPreorderReservationId(reservationId);
+    setPreorderModalOpen(true);
+    setPreorderLoading(true);
+    setPreorderError('');
+    setPreorderDetails(null);
+
+    try {
+      const res = await fetch(`/api/merchant/reservations/${encodeURIComponent(reservationId)}/preorder`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const json = (await res.json()) as ApiResponse<PreorderDetailsResponse>;
+      if (!res.ok || !json.success || !json.data) {
+        throw new Error(json.message || t('admin.reservations.errorLoad'));
+      }
+
+      setPreorderDetails(json.data);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : t('admin.reservations.errorLoad');
+      setPreorderError(msg);
+    } finally {
+      setPreorderLoading(false);
+    }
   };
 
   const handleAccept = async () => {
@@ -383,7 +475,14 @@ export default function MerchantReservationsPanel(props: {
     const timeTo = filterTimeTo || '';
 
     return reservations.filter((r) => {
-      const matchesStatus = filterStatus === 'ALL' ? true : r.status === filterStatus;
+      const displayStatus = normalizeDisplayStatus(r.displayStatus || r.status);
+
+      const matchesStatus =
+        filterStatus === 'ALL'
+          ? true
+          : filterStatus === 'ACTIVE'
+            ? displayStatus === 'PENDING' || displayStatus === 'ACCEPTED' || displayStatus === 'IN_PROGRESS'
+            : r.status === filterStatus;
 
       const matchesQuery = !query
         ? true
@@ -454,6 +553,7 @@ export default function MerchantReservationsPanel(props: {
             className="h-10 rounded-lg border border-gray-200 bg-white px-3 pr-8 text-sm text-gray-700 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
           >
             <option value="ALL">{t('admin.reservations.statusAll')}</option>
+            <option value="ACTIVE">{t('admin.reservations.statusActive')}</option>
             <option value="PENDING">{t('admin.reservations.statusPending')}</option>
             <option value="ACCEPTED">{t('admin.reservations.statusAccepted')}</option>
             <option value="CANCELLED">{t('admin.reservations.statusCancelled')}</option>
@@ -721,33 +821,61 @@ export default function MerchantReservationsPanel(props: {
                           <>
                             <TableActionButton
                               icon={FaCheckCircle}
-                              label={t('admin.reservations.accept')}
+                              title={t('admin.reservations.accept')}
+                              aria-label={t('admin.reservations.accept')}
                               onClick={() => openAcceptModal(r.id)}
                               disabled={acceptingId === r.id || cancellingId === r.id}
                             />
                             <TableActionButton
                               icon={FaBan}
-                              label={t('admin.reservations.cancel')}
+                              tone="danger"
+                              containerClassName="border-error-200 dark:border-error-800"
+                              title={t('admin.reservations.cancel')}
+                              aria-label={t('admin.reservations.cancel')}
                               onClick={() => openCancelModal(r.id)}
                               disabled={acceptingId === r.id || cancellingId === r.id}
+                            />
+                            <TableActionButton
+                              icon={FaExternalLinkAlt}
+                              label={t('common.view')}
+                              title={t('admin.reservations.viewOrder')}
+                              aria-label={t('admin.reservations.viewOrder')}
+                              onClick={() => {
+                                if (!r.order?.id) {
+                                  openPreorderModal(r.id);
+                                  return;
+                                }
+
+                                const displayStatus = normalizeDisplayStatus(r.displayStatus || r.status);
+                                const target =
+                                  displayStatus === 'COMPLETED'
+                                    ? `/admin/dashboard/orders/history?orderId=${encodeURIComponent(r.order.id)}`
+                                    : `/admin/dashboard/orders?orderId=${encodeURIComponent(r.order.id)}`;
+                                router.push(target);
+                              }}
                             />
                           </>
                         ) : (
                           <>
-                            {r.order?.id && (
-                              <TableActionButton
-                                icon={FaExternalLinkAlt}
-                                label={t('admin.reservations.viewOrder')}
-                                onClick={() => {
-                                  const displayStatus = normalizeDisplayStatus(r.displayStatus || r.status);
-                                  const target =
-                                    displayStatus === 'COMPLETED'
-                                      ? `/admin/dashboard/orders/history?orderId=${encodeURIComponent(r.order!.id)}`
-                                      : `/admin/dashboard/orders?orderId=${encodeURIComponent(r.order!.id)}`;
-                                  router.push(target);
-                                }}
-                              />
-                            )}
+                            <TableActionButton
+                              icon={FaExternalLinkAlt}
+                              label={t('common.view')}
+                              title={t('admin.reservations.viewOrder')}
+                              aria-label={t('admin.reservations.viewOrder')}
+                              onClick={() => {
+                                if (!r.order?.id) {
+                                  openPreorderModal(r.id);
+                                  return;
+                                }
+
+                                const displayStatus = normalizeDisplayStatus(r.displayStatus || r.status);
+                                const target =
+                                  displayStatus === 'COMPLETED'
+                                    ? `/admin/dashboard/orders/history?orderId=${encodeURIComponent(r.order.id)}`
+                                    : `/admin/dashboard/orders?orderId=${encodeURIComponent(r.order.id)}`;
+                                router.push(target);
+                              }}
+                            />
                           </>
                         )}
                       </div>
@@ -799,6 +927,107 @@ export default function MerchantReservationsPanel(props: {
           </div>
         </div>
       )}
+
+      <CenteredModal
+        open={preorderModalOpen}
+        title={t('admin.reservations.preorderModalTitle')}
+        onClose={() => {
+          if (preorderLoading) return;
+          closePreorderModal();
+        }}
+      >
+        <div className="space-y-4">
+          {preorderLoading ? (
+            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+              <FaSpinner className="animate-spin" />
+              {t('admin.reservations.preorderModalLoading')}
+            </div>
+          ) : preorderError ? (
+            <div className="p-3 bg-error-50 border border-error-200 rounded-lg dark:bg-error-900/20 dark:border-error-800">
+              <p className="text-sm text-error-700 dark:text-error-400 flex items-center gap-2">
+                <FaExclamationCircle />
+                {preorderError}
+              </p>
+            </div>
+          ) : preorderDetails?.preorder?.items?.length ? (
+            <div className="space-y-3">
+              <div className="rounded-xl border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-gray-950">
+                <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                  {preorderDetails.reservation.customer?.name || t('admin.reservations.guest')}
+                </div>
+                <div className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                  {preorderDetails.reservation.reservationDate} • {preorderDetails.reservation.reservationTime}
+                </div>
+                {preorderDetails.reservation.notes ? (
+                  <div className="mt-2 text-sm text-gray-700 dark:text-gray-300">
+                    <span className="font-medium">{t('admin.reservations.notesLabel')}:</span> {preorderDetails.reservation.notes}
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="space-y-2">
+                {preorderDetails.preorder.items.map((it, idx) => (
+                  <div
+                    key={`${it.menuId}_${idx}`}
+                    className="rounded-xl border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-gray-950"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                          {it.menuName || t('admin.reservations.notAvailable')}
+                        </div>
+                        {!it.isAvailable ? (
+                          <div className="mt-0.5 text-xs text-error-700 dark:text-error-300">
+                            {t('admin.reservations.notAvailable')}
+                          </div>
+                        ) : null}
+                      </div>
+                      <div className="shrink-0 text-sm font-semibold text-gray-900 dark:text-white">
+                        ×{it.quantity}
+                      </div>
+                    </div>
+
+                    {it.notes ? (
+                      <div className="mt-2 text-sm text-gray-700 dark:text-gray-300">
+                        <span className="font-medium">{t('admin.reservations.notesLabel')}:</span> {it.notes}
+                      </div>
+                    ) : null}
+
+                    {it.addons.length ? (
+                      <div className="mt-2 space-y-1">
+                        <div className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+                          {t('admin.reservations.preorderLabel')}
+                        </div>
+                        {it.addons.map((a, aIdx) => (
+                          <div key={`${a.addonItemId}_${aIdx}`} className="text-sm text-gray-700 dark:text-gray-300">
+                            - {a.addonName || t('admin.reservations.notAvailable')}
+                            <span className="text-xs text-gray-500 dark:text-gray-400"> ×{a.quantity}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              {t('admin.reservations.preorderModalEmpty')}
+            </div>
+          )}
+
+          <div className="flex items-center justify-end">
+            <button
+              type="button"
+              onClick={closePreorderModal}
+              disabled={preorderLoading}
+              className="h-10 px-4 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {t('common.close')}
+            </button>
+          </div>
+        </div>
+      </CenteredModal>
 
       <CenteredModal
         open={acceptModalOpen}

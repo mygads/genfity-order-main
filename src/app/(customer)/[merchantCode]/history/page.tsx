@@ -10,8 +10,9 @@ import { formatCurrency as formatCurrencyUtil } from '@/lib/utils/format';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/context/ToastContext';
 import { useCustomerData } from '@/context/CustomerDataContext';
-import { FaArrowLeft, FaClipboardList, FaClock, FaFileDownload, FaMotorcycle, FaRedo, FaShoppingBag, FaSpinner, FaStickyNote, FaUtensils, FaUsers } from 'react-icons/fa';
+import { FaArrowLeft, FaClipboardList, FaClock, FaFileDownload, FaMotorcycle, FaRedo, FaShoppingBag, FaSpinner, FaUtensils, FaUsers } from 'react-icons/fa';
 import { customerMerchantHomeUrl, customerOrderUrl, customerTrackUrl } from '@/lib/utils/customerRoutes';
+import { ConfirmationModal } from '@/components/common/ConfirmationModal';
 
 interface OrderHistoryItem {
   id: string;
@@ -115,6 +116,11 @@ export default function OrderHistoryPage() {
   const [merchantCurrency, setMerchantCurrency] = useState('AUD');
   const [reorderingOrderId, setReorderingOrderId] = useState<string | null>(null);
   const [downloadingOrderId, setDownloadingOrderId] = useState<string | null>(null);
+  const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
+  const [cancellingReservationId, setCancellingReservationId] = useState<string | null>(null);
+
+  const [orderToCancel, setOrderToCancel] = useState<OrderHistoryItem | null>(null);
+  const [reservationToCancel, setReservationToCancel] = useState<ReservationHistoryItem | null>(null);
 
   // ✅ FIX: Add hydration guard to prevent SSR/CSR mismatch
   const [isMounted, setIsMounted] = useState(false);
@@ -424,21 +430,92 @@ export default function OrderHistoryPage() {
     }
   };
 
+  const handleCancelOrder = async (order: OrderHistoryItem) => {
+    if (!auth) return;
+
+    setCancellingOrderId(order.id.toString());
+
+    try {
+      const response = await fetch(`/api/customer/orders/${order.id}/cancel`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${auth.accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ reason: 'Cancelled by customer' }),
+      });
+
+      const json = await response.json().catch(() => null);
+      if (!response.ok || !json?.success) {
+        showError(json?.message || tOr(t, 'customer.history.cancelOrderFailed', 'Failed to cancel order'));
+        return;
+      }
+
+      showSuccess(tOr(t, 'customer.history.cancelOrderSuccess', 'Order cancelled'));
+      setOrders((prev) => prev.map((o) => (String(o.id) === String(order.id)
+        ? {
+            ...o,
+            status: 'cancelled',
+          }
+        : o)));
+    } catch (error) {
+      console.error('Cancel order error:', error);
+      showError(tOr(t, 'customer.history.cancelOrderFailed', 'Failed to cancel order'));
+    } finally {
+      setCancellingOrderId(null);
+    }
+  };
+
+  const handleCancelReservation = async (reservation: ReservationHistoryItem) => {
+    if (!auth) return;
+
+    setCancellingReservationId(reservation.id.toString());
+
+    try {
+      const response = await fetch(`/api/customer/reservations/${reservation.id}/cancel`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${auth.accessToken}`,
+        },
+      });
+
+      const json = await response.json().catch(() => null);
+      if (!response.ok || !json?.success) {
+        showError(json?.message || tOr(t, 'customer.history.cancelReservationFailed', 'Failed to cancel reservation'));
+        return;
+      }
+
+      showSuccess(tOr(t, 'customer.history.cancelReservationSuccess', 'Reservation cancelled'));
+      setReservations((prev) => prev.map((r) => (String(r.id) === String(reservation.id)
+        ? {
+            ...r,
+            status: 'cancelled',
+          }
+        : r)));
+    } catch (error) {
+      console.error('Cancel reservation error:', error);
+      showError(tOr(t, 'customer.history.cancelReservationFailed', 'Failed to cancel reservation'));
+    } finally {
+      setCancellingReservationId(null);
+    }
+  };
+
   const handleOrderClick = (order: OrderHistoryItem) => {
     const status = order.status.toLowerCase();
     const token = order.trackingToken;
 
-    // If order is completed or ready, go to order-detail page (read-only view)
-    if (status === 'completed' || status === 'ready') {
+    // Pending orders go to order-summary-cash; other statuses go to read-only order-detail.
+    if (status === 'pending') {
+      const currentPath = window.location.pathname + window.location.search;
       router.push(
-        `/${order.merchantCode}/order-detail/${order.orderNumber}?mode=${encodeURIComponent(order.mode)}&token=${encodeURIComponent(token)}`
+        `/${order.merchantCode}/order-summary-cash?orderNumber=${encodeURIComponent(order.orderNumber)}&mode=${encodeURIComponent(order.mode)}&token=${encodeURIComponent(token)}&from=history&ref=${encodeURIComponent(currentPath)}`
       );
-    } else {
-      // For pending, accepted, in_progress orders, go to order-summary-cash (tracking page)
-      router.push(
-        `/${order.merchantCode}/order-summary-cash?orderNumber=${encodeURIComponent(order.orderNumber)}&mode=${encodeURIComponent(order.mode)}&token=${encodeURIComponent(token)}`
-      );
+      return;
     }
+
+    router.push(
+      `/${order.merchantCode}/order-detail/${order.orderNumber}?mode=${encodeURIComponent(order.mode)}&token=${encodeURIComponent(token)}`
+    );
   };
 
   const getStatusBadge = (status: string) => {
@@ -489,16 +566,6 @@ export default function OrderHistoryPage() {
     return reservation.status;
   };
 
-  const getStatusPriority = (statusRaw: string): number => {
-    const s = statusRaw.toLowerCase();
-    if (s === 'pending') return 0;
-    if (s === 'accepted' || s === 'confirmed' || s === 'in_progress') return 1;
-    if (s === 'ready') return 2;
-    if (s === 'completed') return 3;
-    if (s === 'cancelled') return 4;
-    return 0;
-  };
-
   type UnifiedHistoryItem =
     | {
         kind: 'order';
@@ -547,10 +614,6 @@ export default function OrderHistoryPage() {
     }
 
     items.sort((a, b) => {
-      const prA = getStatusPriority(a.status);
-      const prB = getStatusPriority(b.status);
-      if (prA !== prB) return prA - prB;
-
       const tA = new Date(a.sortDate).getTime();
       const tB = new Date(b.sortDate).getTime();
       return tB - tA; // newest first; older items at bottom
@@ -681,6 +744,7 @@ export default function OrderHistoryPage() {
               if (row.kind === 'reservation') {
                 const reservation = row.reservation;
                 const derivedStatus = getReservationDerivedStatus(reservation);
+                const isReservationPending = reservation.status.toLowerCase() === 'pending';
 
                 return (
                   <div
@@ -769,6 +833,38 @@ export default function OrderHistoryPage() {
                             )}
                           </button>
                         </>
+                      ) : isReservationPending ? (
+                        <>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(
+                                `/${reservation.merchantCode}/reservation-detail/${reservation.id}?mode=${encodeURIComponent(mode || 'dinein')}`
+                              );
+                            }}
+                            className="flex-1 py-2 text-sm font-semibold text-orange-500 border border-orange-500 rounded-lg hover:bg-orange-50 transition-all"
+                          >
+                            {tOr(t, 'customer.history.viewReservationDetail', 'View reservation detail')}
+                          </button>
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setReservationToCancel(reservation);
+                            }}
+                            disabled={cancellingReservationId === reservation.id.toString()}
+                            className="flex-1 py-2 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                          >
+                            {cancellingReservationId === reservation.id.toString() ? (
+                              <>
+                                <FaSpinner className="h-4 w-4 animate-spin" />
+                                <span>{t('common.loading')}</span>
+                              </>
+                            ) : (
+                              <span>{t('common.cancel')}</span>
+                            )}
+                          </button>
+                        </>
                       ) : (
                         <button
                           onClick={(e) => {
@@ -776,10 +872,13 @@ export default function OrderHistoryPage() {
 
                             if (!reservation.order?.orderNumber) return;
 
+                            const currentPath = window.location.pathname + window.location.search;
+
                             router.push(
                               customerTrackUrl(reservation.merchantCode, reservation.order.orderNumber, {
                                 mode: reservation.order.mode,
                                 token: reservation.order.trackingToken,
+                                ref: currentPath,
                               })
                             );
                           }}
@@ -798,7 +897,9 @@ export default function OrderHistoryPage() {
               }
 
               const order = row.order;
-              const isOrderActive = !['completed', 'cancelled'].includes(order.status.toLowerCase());
+              const status = order.status.toLowerCase();
+              const isOrderPending = status === 'pending';
+              const isOrderActive = !['completed', 'cancelled'].includes(status);
 
               return (
                 <div key={row.key} className="p-4 border border-gray-200 rounded-xl bg-white">
@@ -889,12 +990,38 @@ export default function OrderHistoryPage() {
                       {t('customer.history.viewOrder')}
                     </button>
 
-                    {/* Track Order Button - Only for active orders */}
-                    {isOrderActive && (
+                    {/* Cancel Button - Only for pending orders */}
+                    {isOrderPending && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          router.push(customerTrackUrl(order.merchantCode, order.orderNumber, { mode: order.mode, token: (order as any).trackingToken }));
+                          setOrderToCancel(order);
+                        }}
+                        disabled={cancellingOrderId === order.id.toString()}
+                        className="flex-1 py-2 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        {cancellingOrderId === order.id.toString() ? (
+                          <>
+                            <FaSpinner className="h-4 w-4 animate-spin" />
+                            <span>{t('common.loading')}</span>
+                          </>
+                        ) : (
+                          <span>{t('common.cancel')}</span>
+                        )}
+                      </button>
+                    )}
+
+                    {/* Track Order Button - Only for active orders */}
+                    {isOrderActive && !isOrderPending && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const currentPath = window.location.pathname + window.location.search;
+                          router.push(customerTrackUrl(order.merchantCode, order.orderNumber, {
+                            mode: order.mode,
+                            token: (order as any).trackingToken,
+                            ref: currentPath,
+                          }));
                         }}
                         className="flex-1 py-2 text-sm font-semibold text-white bg-orange-500 rounded-lg hover:bg-orange-600 transition-all"
                       >
@@ -932,17 +1059,6 @@ export default function OrderHistoryPage() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            router.push(customerTrackUrl(order.merchantCode, order.orderNumber, { mode: order.mode, token: (order as any).trackingToken }));
-                          }}
-                          className="w-10 h-10 flex items-center justify-center text-orange-500 border border-orange-500 rounded-lg hover:bg-orange-50 transition-all"
-                          title={t('customer.history.trackOrder')}
-                        >
-                          <FaStickyNote className="w-4 h-4" />
-                        </button>
-
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
                             handleDownloadReceipt(order);
                           }}
                           disabled={downloadingOrderId === order.id.toString()}
@@ -964,6 +1080,37 @@ export default function OrderHistoryPage() {
           </div>
         )}
       </main>
+
+      {/* Cancel confirmations */}
+      <ConfirmationModal
+        isOpen={Boolean(orderToCancel)}
+        onClose={() => setOrderToCancel(null)}
+        onConfirm={() => {
+          if (orderToCancel) {
+            handleCancelOrder(orderToCancel);
+          }
+        }}
+        title={tOr(t, 'customer.history.cancelOrderConfirmTitle', 'Cancel order?')}
+        message={tOr(t, 'customer.history.cancelOrderConfirmMessage', 'This will cancel your pending order. You cannot undo this action.')}
+        cancelText={t('common.no')}
+        confirmText={tOr(t, 'customer.history.cancelOrderConfirmYes', 'Yes, cancel')}
+        variant="danger"
+      />
+
+      <ConfirmationModal
+        isOpen={Boolean(reservationToCancel)}
+        onClose={() => setReservationToCancel(null)}
+        onConfirm={() => {
+          if (reservationToCancel) {
+            handleCancelReservation(reservationToCancel);
+          }
+        }}
+        title={tOr(t, 'customer.history.cancelReservationConfirmTitle', 'Cancel reservation?')}
+        message={tOr(t, 'customer.history.cancelReservationConfirmMessage', 'This will cancel your pending reservation. You cannot undo this action.')}
+        cancelText={t('common.no')}
+        confirmText={tOr(t, 'customer.history.cancelReservationConfirmYes', 'Yes, cancel')}
+        variant="danger"
+      />
     </div>
   );
 }

@@ -38,6 +38,32 @@ function getNowHHMMInTimezone(timezone: string): string {
   }).format(new Date());
 }
 
+function getDateHHMMInTimezone(date: Date, timezone: string): string {
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: timezone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date);
+}
+
+function getYYYYMMDDInTimezone(date: Date, timezone: string): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+}
+
+function getReservationDefaultDateTime(timezone: string, plusHours: number): { date: string; time: string } {
+  const date = new Date(Date.now() + plusHours * 60 * 60 * 1000);
+  return {
+    date: getYYYYMMDDInTimezone(date, timezone),
+    time: getDateHHMMInTimezone(date, timezone),
+  };
+}
+
 interface ReservationDetailsModalProps {
   merchantCode: string;
   merchantTimezone: string;
@@ -85,10 +111,13 @@ export default function ReservationDetailsModal({
       return;
     }
 
-    setReservationDate('');
-    setReservationTime('');
+    const timezone = merchantTimezone || 'Australia/Sydney';
+    const defaults = getReservationDefaultDateTime(timezone, 2);
+    setReservationDate(defaults.date);
+    setReservationTime(defaults.time);
     setPartySize(2);
-  }, [isOpen, merchantCode]);
+    setError('');
+  }, [isOpen, merchantCode, merchantTimezone]);
 
   const handleClose = () => {
     setIsClosing(true);

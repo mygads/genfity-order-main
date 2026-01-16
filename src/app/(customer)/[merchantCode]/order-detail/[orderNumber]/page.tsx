@@ -267,6 +267,10 @@ export default function OrderDetailPage() {
         }
     };
 
+    const canDownloadReceipt = order
+        ? !['pending', 'cancelled'].includes(order.status.toLowerCase())
+        : false;
+
     // Loading skeleton
     if (isLoading) {
         return (
@@ -490,24 +494,26 @@ export default function OrderDetailPage() {
                     )}
                 </div>
 
-                {/* Download Receipt Button */}
-                <button
-                    onClick={handleDownloadReceipt}
-                    disabled={downloadingReceipt}
-                    className="w-full py-2 text-white bg-orange-500 font-semibold rounded-xl text-sm hover:bg-orange-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                    {downloadingReceipt ? (
-                        <>
-                            <FaSpinner className="h-5 w-5 animate-spin" />
-                            <span>{t('customer.receipt.downloading')}</span>
-                        </>
-                    ) : (
-                        <>
-                            <FaFileDownload className="w-5 h-5" />
-                            <span>{t('customer.receipt.downloadReceipt')}</span>
-                        </>
-                    )}
-                </button>
+                {/* Download Receipt Button (hide for PENDING/CANCELLED) */}
+                {canDownloadReceipt ? (
+                    <button
+                        onClick={handleDownloadReceipt}
+                        disabled={downloadingReceipt}
+                        className="w-full py-2 text-white bg-orange-500 font-semibold rounded-xl text-sm hover:bg-orange-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                        {downloadingReceipt ? (
+                            <>
+                                <FaSpinner className="h-5 w-5 animate-spin" />
+                                <span>{t('customer.receipt.downloading')}</span>
+                            </>
+                        ) : (
+                            <>
+                                <FaFileDownload className="w-5 h-5" />
+                                <span>{t('customer.receipt.downloadReceipt')}</span>
+                            </>
+                        )}
+                    </button>
+                ) : null}
             </main>
         </div>
     );

@@ -480,6 +480,12 @@ export default function OrderTrackPage() {
 
     // Handle back navigation
     const handleBack = () => {
+        const ref = searchParams.get('ref');
+        if (ref) {
+            router.replace(decodeURIComponent(ref));
+            return;
+        }
+
         const back = searchParams.get('back');
         if (back === 'history') {
             const mode = searchParams.get('mode');
@@ -487,7 +493,7 @@ export default function OrderTrackPage() {
             return;
         }
 
-        router.back();
+        router.replace(customerMerchantHomeUrl(merchantCode));
     };
 
     // Handle new order

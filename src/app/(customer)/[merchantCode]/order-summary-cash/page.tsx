@@ -103,6 +103,11 @@ export default function OrderSummaryCashPage() {
   const orderNumber = searchParams.get('orderNumber') || '';
   const mode = (searchParams.get('mode') || 'takeaway') as OrderMode;
   const trackingToken = searchParams.get('token') || '';
+  const openedFrom = searchParams.get('from') || '';
+  const closeRef = searchParams.get('ref') || '';
+
+  const trackBack = openedFrom === 'history' ? 'history' : undefined;
+  const trackRef = openedFrom === 'history' && closeRef ? closeRef : undefined;
 
   const [order, setOrder] = useState<OrderSummaryData | null>(null);
   const [merchantInfo, setMerchantInfo] = useState<MerchantInfo | null>(null);
@@ -271,7 +276,8 @@ export default function OrderSummaryCashPage() {
         if (['ACCEPTED', 'IN_PROGRESS', 'READY', 'COMPLETED'].includes(orderData.status)) {
           router.replace(
             customerTrackUrl(merchantCode, orderData.orderNumber, {
-              back: 'history',
+              back: trackBack,
+              ref: trackRef,
               mode: orderData.mode,
               token: trackingToken,
             })
@@ -307,7 +313,8 @@ export default function OrderSummaryCashPage() {
         if (['ACCEPTED', 'IN_PROGRESS', 'READY', 'COMPLETED'].includes(newStatus)) {
           router.replace(
             customerTrackUrl(merchantCode, resolvedOrderNumber, {
-              back: 'history',
+              back: trackBack,
+              ref: trackRef,
               mode,
               token: trackingToken,
             })
@@ -350,6 +357,15 @@ export default function OrderSummaryCashPage() {
     clearCart(merchantCode, mode);
     localStorage.removeItem(`mode_${merchantCode}`);
     setShowNewOrderModal(false);
+    router.push(`/${merchantCode}`);
+  };
+
+  const handleClose = () => {
+    if (openedFrom === 'history' && closeRef) {
+      router.push(decodeURIComponent(closeRef));
+      return;
+    }
+
     router.push(`/${merchantCode}`);
   };
 
@@ -419,7 +435,7 @@ export default function OrderSummaryCashPage() {
           {/* Close button - only visible for logged in users */}
           {isLoggedIn ? (
             <button
-              onClick={() => router.push(`/${merchantCode}/order?mode=${mode}`)}
+              onClick={handleClose}
               className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
               aria-label="Close"
             >
@@ -555,7 +571,8 @@ export default function OrderSummaryCashPage() {
             <QRCodeSVG
               value={customerTrackUrl(merchantCode, order.orderNumber, {
                 token: trackingToken || undefined,
-                back: 'history',
+                back: trackBack,
+                ref: trackRef,
                 mode: effectiveMode,
               })}
               size={350}
@@ -574,7 +591,8 @@ export default function OrderSummaryCashPage() {
                 try {
                   const path = customerTrackUrl(merchantCode, order.orderNumber, {
                     token: trackingToken,
-                    back: 'history',
+                    back: trackBack,
+                    ref: trackRef,
                     mode: effectiveMode,
                   });
                   const url = `${getPublicAppOrigin('http://localhost:3000')}${path}`;

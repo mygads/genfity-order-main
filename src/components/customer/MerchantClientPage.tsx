@@ -11,7 +11,7 @@ import PoweredByFooter from '@/components/common/PoweredByFooter';
 import { useStoreStatus } from '@/hooks/useStoreStatus';
 import { useToast } from '@/hooks/useToast';
 import { useTranslation, tOr } from '@/lib/i18n/useTranslation';
-import { FaCalendarAlt } from 'react-icons/fa';
+import { FaCalendarAlt, FaCheck, FaCheckCircle } from 'react-icons/fa';
 
 interface OpeningHour {
     id: string;
@@ -276,9 +276,19 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
             {(isDineInEnabled || isTakeawayEnabled || isDeliveryEnabled) && (
                 <div className={`px-3 mb-6 ${!storeOpen ? 'opacity-60' : ''}`}>
                     <div className="text-center">
-                        <h3 className="my-4 mb-4 text-base font-semibold text-gray-900">
+                        <h3 className="my-4 mb-2 text-base font-semibold text-gray-900">
                             {t('customer.mode.howToEat')}
                         </h3>
+
+                        {/* Scheduled order capability badge (below sales modes, above reservation CTA) */}
+                        {isScheduledOrderEnabled && (
+                            <div className="mb-3 flex justify-center">
+                                <span className="inline-flex items-center gap-2 rounded-full border border-gray-200 px-3 py-1 text-xs font-medium text-gray-700">
+                                    <FaCheckCircle className="h-3 w-3" />
+                                    <span>scheduled order</span>
+                                </span>
+                            </div>
+                        )}
 
                         {/* Mode Selection Buttons - Always visible, grayed when unavailable */}
                         <div className="space-y-3">
@@ -342,15 +352,7 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                                 </button>
                             )}
 
-                            {/* Scheduled order capability badge (below sales modes, above reservation CTA) */}
-                            {isScheduledOrderEnabled && (
-                                <div className="mt-3 flex justify-center">
-                                    <span className="inline-flex items-center gap-2 rounded-full border border-gray-200 px-3 py-1 text-xs font-medium text-gray-700">
-                                        <FaCalendarAlt className="h-3 w-3" />
-                                        <span>this merchant can scheduled order</span>
-                                    </span>
-                                </div>
-                            )}
+                            
                         </div>
 
                         

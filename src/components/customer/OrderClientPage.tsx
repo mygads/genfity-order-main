@@ -464,12 +464,21 @@ export default function OrderClientPage({
 
     // Normal dinein flow - show table modal
     const tableData = getTableNumber(merchantCode);
+    // If store is closed (manual/auto/override), do not prompt for table number.
+    if (isCustomerStoreClosed) {
+      setShowTableModal(false);
+      if (tableData?.tableNumber) {
+        setTableNumber(tableData.tableNumber);
+      }
+      return;
+    }
+
     setShowTableModal(true);
 
     if (tableData?.tableNumber) {
       setTableNumber(tableData.tableNumber);
     }
-  }, [merchantCode, normalizedMode, router, isReservationFlow, isScheduledFlow, isTableNumberEnabled]);
+  }, [merchantCode, normalizedMode, router, isReservationFlow, isScheduledFlow, isTableNumberEnabled, isCustomerStoreClosed]);
 
   // ========================================
   // Handle Outlet Info Modal via URL
@@ -897,6 +906,22 @@ export default function OrderClientPage({
                 />
               )}
             </div>
+
+            {/* Store-closed helper (dine-in + table numbers) */}
+            {normalizedMode === 'dinein' &&
+            isTableNumberEnabled &&
+            !isReservationFlow &&
+            !isScheduledFlow &&
+            isCustomerStoreClosed &&
+            !tableNumber ? (
+              <div className="px-4 my-2 relative z-20">
+                <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+                  <p className="text-xs font-medium text-gray-700">
+                    {tOr(t, 'customer.table.storeClosedNoPrompt', 'Store is closed — no need to enter table number right now.')}
+                  </p>
+                </div>
+              </div>
+            ) : null}
 
             {/* Dine-in Info Card (Table Number OR Reservation Summary) */}
             {mode === 'dinein' && hasTopInfoCard && (
