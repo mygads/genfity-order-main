@@ -71,6 +71,12 @@ interface ApiResponse<T> {
     data: T;
 }
 
+type ReceiptSettingsApiData = {
+    receiptSettings: ReceiptSettings;
+    completedOrderEmailFee?: number;
+    currentBalance?: number;
+};
+
 type UsageSummary = {
     today: {
         orderFee: number;
@@ -121,7 +127,7 @@ export default function SubscriptionPage() {
     const { data: transactionsResponse, isLoading: transactionsLoading } =
         useSWRStatic<ApiResponse<{ transactions: TransactionData[] }>>('/api/merchant/balance/transactions?limit=5');
     const { data: canSwitchResponse } = useSWRStatic<ApiResponse<CanSwitchData>>('/api/merchant/subscription/can-switch');
-    const { data: receiptSettingsResponse } = useSWRStatic<ApiResponse<{ receiptSettings: ReceiptSettings }>>('/api/merchant/receipt-settings');
+    const { data: receiptSettingsResponse } = useSWRStatic<ApiResponse<ReceiptSettingsApiData>>('/api/merchant/receipt-settings');
     const { data: usageSummaryResponse } = useSWRStatic<ApiResponse<UsageSummary>>('/api/merchant/balance/usage-summary');
 
     const subscription = subscriptionResponse?.data?.subscription;
@@ -130,6 +136,7 @@ export default function SubscriptionPage() {
     const canSwitch = canSwitchResponse?.data;
     const transactions = transactionsResponse?.data?.transactions || [];
     const receiptSettings = receiptSettingsResponse?.data?.receiptSettings;
+    const completedOrderEmailFee = receiptSettingsResponse?.data?.completedOrderEmailFee ?? 0;
     const usageSummary = usageSummaryResponse?.data;
 
     // Show contextual hint on first visit
@@ -316,6 +323,14 @@ export default function SubscriptionPage() {
     const isTrial = subscription.type === 'TRIAL';
     const isDeposit = subscription.type === 'DEPOSIT';
     const isMonthly = subscription.type === 'MONTHLY';
+
+    const estimatedEmailsRemaining = (() => {
+        if (!receiptSettings?.sendCompletedOrderEmailToCustomer) return null;
+        if (!completedOrderEmailFee || completedOrderEmailFee <= 0) return null;
+        const currentBalance = balanceInfo?.balance ?? 0;
+        if (!Number.isFinite(currentBalance) || currentBalance <= 0) return 0;
+        return Math.floor(currentBalance / completedOrderEmailFee);
+    })();
 
     // Status colors
     const getStatusColor = () => {
@@ -585,6 +600,13 @@ export default function SubscriptionPage() {
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             {usageSummary.today.completedOrderEmailFeeCount} {locale === 'id' ? 'email' : 'emails'}
                         </p>
+                        {typeof estimatedEmailsRemaining === 'number' && completedOrderEmailFee > 0 && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                {locale === 'id'
+                                    ? `Perkiraan sisa: ${estimatedEmailsRemaining} email (biaya ${formatCurrency(completedOrderEmailFee, currency)}/email)`
+                                    : `Estimated remaining: ${estimatedEmailsRemaining} emails (${formatCurrency(completedOrderEmailFee, currency)}/email)`}
+                            </p>
+                        )}
                     </div>
                 )}
 

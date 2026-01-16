@@ -7,6 +7,8 @@ type BarcodeDetectorType = {
   detect: (source: CanvasImageSource) => Promise<Array<{ rawValue?: string }>>;
 };
 
+type JsQrResult = { data: string } | null;
+
 type QRCodeScanModalProps = {
   isOpen: boolean;
   title: string;
@@ -40,6 +42,10 @@ export default function QRCodeScanModal({
 
   const [error, setError] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
+
+  const supportsCamera = useMemo(() => {
+    return typeof window !== 'undefined' && !!navigator?.mediaDevices?.getUserMedia;
+  }, []);
 
   const supportsBarcodeDetector = useMemo(() => {
     return typeof window !== 'undefined' && 'BarcodeDetector' in window;
@@ -81,8 +87,8 @@ export default function QRCodeScanModal({
       setIsStarting(true);
 
       try {
-        if (!supportsBarcodeDetector) {
-          setError('QR scanning is not supported in this browser.');
+        if (!supportsCamera) {
+          setError('Camera is not supported in this browser.');
           return;
         }
 
@@ -108,7 +114,13 @@ export default function QRCodeScanModal({
         video.srcObject = stream;
         await video.play();
 
-        const detector = new (window as any).BarcodeDetector({ formats: ['qr_code'] }) as BarcodeDetectorType;
+        const detector = supportsBarcodeDetector
+          ? (new (window as any).BarcodeDetector({ formats: ['qr_code'] }) as BarcodeDetectorType)
+          : null;
+
+        const jsqr = !supportsBarcodeDetector
+          ? ((await import('jsqr')).default as unknown as (data: Uint8ClampedArray, width: number, height: number) => JsQrResult)
+          : null;
 
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
@@ -129,12 +141,23 @@ export default function QRCodeScanModal({
               canvas.height = height;
               ctx.drawImage(v, 0, 0, width, height);
 
-              const results = await detector.detect(canvas);
-              const rawValue = results?.[0]?.rawValue;
-              if (rawValue) {
-                await stop();
-                onScan(rawValue);
-                return;
+              if (detector) {
+                const results = await detector.detect(canvas);
+                const rawValue = results?.[0]?.rawValue;
+                if (rawValue) {
+                  await stop();
+                  onScan(rawValue);
+                  return;
+                }
+              } else if (jsqr) {
+                const imageData = ctx.getImageData(0, 0, width, height);
+                const result = jsqr(imageData.data, width, height);
+                const rawValue = result?.data;
+                if (rawValue) {
+                  await stop();
+                  onScan(rawValue);
+                  return;
+                }
               }
             }
           } catch {
@@ -160,7 +183,7 @@ export default function QRCodeScanModal({
       stop();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, supportsBarcodeDetector]);
+  }, [isOpen, supportsBarcodeDetector, supportsCamera]);
 
   if (!isOpen) return null;
 
@@ -189,7 +212,7 @@ export default function QRCodeScanModal({
         </div>
 
         <div className="p-5">
-          {!supportsBarcodeDetector ? (
+          {!supportsCamera ? (
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
               <div className="flex items-start gap-3">
                 <FaExclamationTriangle className="mt-0.5 h-5 w-5" />

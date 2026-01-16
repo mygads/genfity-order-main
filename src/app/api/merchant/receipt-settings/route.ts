@@ -179,4 +179,47 @@ async function handlePut(req: NextRequest, authContext: AuthContext) {
   }
 }
 
+async function handleGet(_req: NextRequest, authContext: AuthContext) {
+  try {
+    const merchantUser = await prisma.merchantUser.findFirst({
+      where: { userId: authContext.userId },
+      include: { merchant: true },
+    });
+
+    if (!merchantUser) {
+      return jsonError(404, 'MERCHANT_NOT_FOUND', 'Merchant not found for this user');
+    }
+
+    const current = (merchantUser.merchant as any)?.receiptSettings as Partial<ReceiptSettings> | null | undefined;
+    const merged: ReceiptSettings = {
+      ...DEFAULT_RECEIPT_SETTINGS,
+      ...(current || {}),
+    };
+
+    const merchantCurrency = (merchantUser.merchant as any)?.currency || 'IDR';
+    const pricing = await subscriptionService.getPlanPricing(merchantCurrency);
+
+    const balanceRecord = await prisma.merchantBalance.findUnique({
+      where: { merchantId: merchantUser.merchantId },
+      select: { balance: true },
+    });
+
+    const currentBalance = balanceRecord ? Number(balanceRecord.balance) : 0;
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        receiptSettings: merged,
+        completedOrderEmailFee: pricing.completedOrderEmailFee,
+        currentBalance,
+      },
+      statusCode: 200,
+    });
+  } catch (error) {
+    console.error('Error getting receipt settings:', error);
+    return jsonError(500, 'INTERNAL_ERROR', 'Failed to get receipt settings');
+  }
+}
+
 export const PUT = withMerchant(handlePut);
+export const GET = withMerchant(handleGet);
