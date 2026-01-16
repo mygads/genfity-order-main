@@ -184,6 +184,8 @@ export default function OrderClientPage({
   // Reservation flow is allowed even when the store is closed / schedules are unavailable.
   const customerOrderingAllowed = storeOpen || isReservationFlow;
 
+  const isCustomerStoreClosed = !customerOrderingAllowed;
+
   const normalizedMode: OrderMode = (mode === 'dinein' || mode === 'takeaway' || mode === 'delivery')
     ? (mode as OrderMode)
     : 'takeaway';
@@ -843,7 +845,7 @@ export default function OrderClientPage({
             imageUrl={merchantInfo?.logoUrl}
             bannerUrl={merchantInfo?.bannerUrl}
             merchantName={merchantInfo?.name || merchantCode}
-            isClosed={!storeOpen}
+            isClosed={isCustomerStoreClosed}
           />
         )}
       </div>
@@ -851,9 +853,9 @@ export default function OrderClientPage({
       {/* ========================================
           MAIN CONTENT - Gray overlay when store is closed
       ======================================== */}
-      <div className={`pb-24 ${!storeOpen ? 'relative' : ''}`}>
+      <div className={`pb-24 ${isCustomerStoreClosed ? 'relative' : ''}`}>
         {/* Gray overlay for content when store is closed */}
-        {!storeOpen && (
+        {isCustomerStoreClosed && (
           <div className="absolute inset-0 bg-gray-100/50 pointer-events-none z-0" />
         )}
 
@@ -890,7 +892,7 @@ export default function OrderClientPage({
                     window.history.pushState({}, '', `?${params.toString()}`);
                     setShowOutletInfo(true);
                   }}
-                  isClosed={!storeOpen}
+                  isClosed={isCustomerStoreClosed}
                   logoUrl={merchantInfo.logoUrl}
                 />
               )}
@@ -898,7 +900,7 @@ export default function OrderClientPage({
 
             {/* Dine-in Info Card (Table Number OR Reservation Summary) */}
             {mode === 'dinein' && hasTopInfoCard && (
-              <div className={`px-4 my-2 relative z-10 ${!storeOpen ? 'opacity-50' : ''}`} data-table-number-card>
+              <div className={`px-4 my-2 relative z-10 ${isCustomerStoreClosed ? 'opacity-50' : ''}`} data-table-number-card>
                 {isReservationFlow && reservationDetails ? (
                   <div
                     className="text-center cursor-pointer"

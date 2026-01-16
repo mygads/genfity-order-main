@@ -179,9 +179,21 @@ export default function ReservationDetailsModal({
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-2">
-                {tOr(t, 'customer.reservationDetails.dateLabel', 'Date')}<span className="text-red-500">*</span>
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-semibold text-gray-900">
+                  {tOr(t, 'customer.reservationDetails.dateLabel', 'Date')}<span className="text-red-500">*</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReservationDate(today);
+                    setError('');
+                  }}
+                  className="text-xs font-medium text-orange-600 hover:text-orange-700"
+                >
+                  {tOr(t, 'common.time.today', 'Today')}
+                </button>
+              </div>
               <input
                 type="date"
                 value={reservationDate}

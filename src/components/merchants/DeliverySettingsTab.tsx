@@ -106,6 +106,23 @@ export default function DeliverySettingsTab({
     return keyOrFallback('admin.merchant.deliveryNotCovered' as TranslationKeys, 'Not covered', t);
   };
 
+  const getNotCoveredReasonPill = (errorCode?: string): string | null => {
+    const code = (errorCode || '').toUpperCase();
+    if (code === 'OUT_OF_RANGE') {
+      return keyOrFallback('admin.merchant.deliveryReasonTooFar' as TranslationKeys, 'Too far', t);
+    }
+    if (code === 'OUT_OF_ZONE') {
+      return keyOrFallback('admin.merchant.deliveryReasonOutsideZone' as TranslationKeys, 'Outside zone', t);
+    }
+    if (code === 'NO_ZONES_CONFIGURED') {
+      return keyOrFallback('admin.merchant.deliveryReasonZonesNotConfigured' as TranslationKeys, 'Zones not configured', t);
+    }
+    if (code) {
+      return keyOrFallback('admin.merchant.deliveryReasonNotCovered' as TranslationKeys, 'Not covered', t);
+    }
+    return null;
+  };
+
   const getNotCoveredMessage = (errorCode?: string, apiMessage?: string): string => {
     const code = (errorCode || '').toUpperCase();
     if (apiMessage && apiMessage.trim()) return apiMessage;
@@ -1102,9 +1119,12 @@ export default function DeliverySettingsTab({
           <div className="mt-4 rounded-xl border border-warning-200 bg-warning-50 p-4 text-sm text-warning-800 dark:border-warning-900/40 dark:bg-warning-900/10 dark:text-warning-200">
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <div className="font-semibold">{getNotCoveredTitle(previewResult.errorCode)}</div>
-              {previewResult.errorCode && (
-                <span className="inline-flex items-center rounded-full border border-warning-300 bg-warning-100 px-2 py-0.5 text-xs font-semibold text-warning-900 dark:border-warning-900/40 dark:bg-warning-900/20 dark:text-warning-100">
-                  Reason: {previewResult.errorCode}
+              {getNotCoveredReasonPill(previewResult.errorCode) && (
+                <span
+                  className="inline-flex items-center rounded-full border border-warning-300 bg-warning-100 px-2 py-0.5 text-xs font-semibold text-warning-900 dark:border-warning-900/40 dark:bg-warning-900/20 dark:text-warning-100"
+                  title={previewResult.errorCode ? `Code: ${previewResult.errorCode}` : undefined}
+                >
+                  {getNotCoveredReasonPill(previewResult.errorCode)}
                 </span>
               )}
             </div>

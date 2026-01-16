@@ -283,7 +283,7 @@ export default function ArchiveModal({
           {/* Header */}
           <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-100 text-brand-600 dark:bg-brand-900/30 dark:text-brand-400">
                 <FaTrashRestore className="h-5 w-5" />
               </div>
               <div>
@@ -412,7 +412,7 @@ export default function ArchiveModal({
                         <span className={`font-medium ${
                           item.daysUntilPermanentDelete <= 7 
                             ? 'text-error-600 dark:text-error-400' 
-                            : 'text-amber-600 dark:text-amber-400'
+                            : 'text-brand-600 dark:text-brand-400'
                         }`}>
                           {item.daysUntilPermanentDelete} days left
                         </span>

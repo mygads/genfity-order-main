@@ -859,11 +859,11 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                   )}
 
                   {(order as any).deliveryInstructions && (
-                    <div className="mb-3 rounded-lg border border-amber-100 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-100">
+                    <div className="mb-3 rounded-lg border border-brand-100 bg-brand-50 px-3 py-2 text-sm text-brand-900 dark:border-brand-900/40 dark:bg-brand-900/20 dark:text-brand-100">
                       <div className="flex items-start gap-2">
-                        <FaStickyNote className="mt-0.5 h-4 w-4 text-amber-700 dark:text-amber-300" />
+                        <FaStickyNote className="mt-0.5 h-4 w-4 text-brand-700 dark:text-brand-300" />
                         <div>
-                          <p className="text-xs font-medium uppercase tracking-wide text-amber-700 dark:text-amber-300">Delivery instructions</p>
+                          <p className="text-xs font-medium uppercase tracking-wide text-brand-700 dark:text-brand-300">Delivery instructions</p>
                           <p className="mt-0.5">{String((order as any).deliveryInstructions)}</p>
                         </div>
                       </div>
@@ -987,8 +987,8 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
 
                           {/* Item Notes */}
                           {item.notes && (
-                            <div className="mt-2 rounded bg-amber-50 dark:bg-amber-900/20 px-2 py-1">
-                              <p className="text-xs text-amber-700 dark:text-amber-400">
+                            <div className="mt-2 rounded bg-brand-50 dark:bg-brand-900/20 px-2 py-1">
+                              <p className="text-xs text-brand-700 dark:text-brand-400">
                                 📝 {item.notes}
                               </p>
                             </div>
@@ -1006,8 +1006,8 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
               <div className="mb-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-white/3 overflow-hidden">
                 <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/40">
-                      <FaStickyNote className="h-4 w-4 text-amber-700 dark:text-amber-400" />
+                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 dark:bg-brand-900/20 border border-brand-100 dark:border-brand-900/40">
+                      <FaStickyNote className="h-4 w-4 text-brand-700 dark:text-brand-400" />
                     </span>
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-gray-900 dark:text-white">Order Notes</p>
@@ -1037,8 +1037,8 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                   {/* Existing admin note (read mode) */}
                   {!isEditingAdminNote && ((order as any)?.adminNote || (order as any)?.kitchenNotes) ? (
                     <div className="rounded-lg bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-800 px-3 py-2">
-                      <p className="text-[11px] font-semibold text-amber-800/80 dark:text-amber-300/80 uppercase tracking-wide mb-1">Kitchen note</p>
-                      <p className="text-sm text-amber-900 dark:text-amber-200 wrap-break-word">
+                      <p className="text-[11px] font-semibold text-brand-800/80 dark:text-brand-300/80 uppercase tracking-wide mb-1">Kitchen note</p>
+                      <p className="text-sm text-brand-900 dark:text-brand-200 wrap-break-word">
                         {String(((order as any)?.kitchenNotes ?? '')).trim() || '—'}
                       </p>
                     </div>

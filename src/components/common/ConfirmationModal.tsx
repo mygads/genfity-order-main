@@ -35,9 +35,9 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 
   const variantStyles = {
     warning: {
-      icon: 'text-amber-500',
-      iconBg: 'bg-amber-100 dark:bg-amber-900/30',
-      button: 'bg-amber-500 hover:bg-amber-600 text-white',
+      icon: 'text-brand-500',
+      iconBg: 'bg-brand-100 dark:bg-brand-900/30',
+      button: 'bg-brand-500 hover:bg-brand-600 text-white',
     },
     danger: {
       icon: 'text-red-500',
@@ -45,9 +45,9 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
       button: 'bg-red-500 hover:bg-red-600 text-white',
     },
     info: {
-      icon: 'text-blue-500',
-      iconBg: 'bg-blue-100 dark:bg-blue-900/30',
-      button: 'bg-blue-500 hover:bg-blue-600 text-white',
+      icon: 'text-brand-500',
+      iconBg: 'bg-brand-100 dark:bg-brand-900/30',
+      button: 'bg-brand-500 hover:bg-brand-600 text-white',
     },
   };
 

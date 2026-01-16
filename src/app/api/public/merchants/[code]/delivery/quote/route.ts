@@ -66,7 +66,7 @@ export async function POST(
     );
 
     if (!result.success) {
-      const errorMessage = DeliveryFeeService.getErrorMessage(result.error?.code || '');
+      const errorMessage = result.error?.message || DeliveryFeeService.getErrorMessage(result.error?.code || '');
       return NextResponse.json(
         {
           success: false,

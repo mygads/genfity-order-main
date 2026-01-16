@@ -277,8 +277,8 @@ export default function AddonItemFormModal({
                     />
                   </div>
                   {formData.autoResetStock && formData.dailyStockTemplate && (
-                    <div className="rounded-lg bg-yellow-50 p-3 dark:bg-yellow-900/20">
-                      <p className="text-xs text-yellow-700 dark:text-yellow-400">
+                    <div className="rounded-lg bg-brand-50 p-3 dark:bg-brand-900/20">
+                      <p className="text-xs text-brand-700 dark:text-brand-400">
                         {t("admin.addonItems.modal.autoResetStockInfo", { qty: formData.dailyStockTemplate })}
                       </p>
                     </div>

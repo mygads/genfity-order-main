@@ -92,7 +92,7 @@ export default function EditStaffModal({
 
         <div className="px-6 py-5">
           {disabledByInvite && (
-            <div className="mb-4 rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800 dark:border-yellow-900/40 dark:bg-yellow-900/20 dark:text-yellow-200">
+            <div className="mb-4 rounded-lg border border-brand-200 bg-brand-50 p-3 text-sm text-brand-800 dark:border-brand-900/40 dark:bg-brand-900/20 dark:text-brand-200">
               Staff invitation must be accepted before editing.
             </div>
           )}

@@ -284,7 +284,7 @@ export default function BalanceSubscriptionModal({
                 <span
                   className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
                     subscriptionData.type === "TRIAL"
-                      ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400"
+                      ? "bg-brand-100 text-brand-700 dark:bg-brand-900/20 dark:text-brand-400"
                       : subscriptionData.type === "DEPOSIT"
                         ? "bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400"
                         : "bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400"

@@ -13,6 +13,8 @@ import { StatusToggle } from "@/components/common/StatusToggle";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { formatCurrency } from "@/lib/utils/format";
 import { useContextualHint, CONTEXTUAL_HINTS } from "@/lib/tutorial/components/ContextualHint";
+import { useToast } from "@/hooks/useToast";
+import ToastContainer from "@/components/ui/ToastContainer";
 
 // Dynamically import map component
 const MapContent = dynamic(() => import("@/components/maps/MapContent"), { ssr: false });
@@ -72,6 +74,7 @@ export default function ViewMerchantPage() {
   const { user } = useAuth();
   const { t } = useTranslation();
   const { showHint } = useContextualHint();
+  const { toasts, success: showSuccess, error: showError } = useToast();
   const [merchant, setMerchant] = useState<MerchantData | null>(null);
   const [loading, setLoading] = useState(true);
   const [showQRModal, setShowQRModal] = useState(false);
@@ -173,9 +176,13 @@ export default function ViewMerchantPage() {
           owners,
           staff,
         });
+      } else {
+        const json = await response.json().catch(() => null);
+        showError(t("common.error"), json?.message || t("admin.merchant.toast.failedToLoadMerchant"));
       }
     } catch (error) {
       console.error("Failed to fetch merchant details:", error);
+      showError(t("common.error"), error instanceof Error ? error.message : t("admin.merchant.toast.failedToLoadMerchant"));
     } finally {
       setLoading(false);
     }
@@ -218,6 +225,10 @@ export default function ViewMerchantPage() {
         if (response.ok) {
           await fetchMerchantDetails();
           window.dispatchEvent(new Event('merchantStatusUpdated'));
+          showSuccess(t("common.success"), t("admin.merchant.toast.storeStatusUpdated"));
+        } else {
+          const json = await response.json().catch(() => null);
+          showError(t("common.error"), json?.message || t("admin.merchant.toast.failedToUpdateStoreStatus"));
         }
       } else {
         // Auto mode - toggle to manual with opposite of effective status
@@ -236,10 +247,15 @@ export default function ViewMerchantPage() {
         if (response.ok) {
           await fetchMerchantDetails();
           window.dispatchEvent(new Event('merchantStatusUpdated'));
+          showSuccess(t("common.success"), t("admin.merchant.toast.storeStatusUpdated"));
+        } else {
+          const json = await response.json().catch(() => null);
+          showError(t("common.error"), json?.message || t("admin.merchant.toast.failedToUpdateStoreStatus"));
         }
       }
     } catch (error) {
       console.error("Failed to toggle store open status:", error);
+      showError(t("common.error"), error instanceof Error ? error.message : t("admin.merchant.toast.failedToUpdateStoreStatus"));
     } finally {
       setIsTogglingOpen(false);
     }
@@ -326,6 +342,7 @@ export default function ViewMerchantPage() {
   return (
     <div>
       <PageBreadcrumb pageTitle={t("admin.merchant.pageTitle")} />
+      <ToastContainer toasts={toasts} />
 
       {/* Header - Centered Layout */}
       <div className="mb-6 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-white/3">

@@ -99,8 +99,8 @@ export default function UpgradePromptModal({
     const urgencyClass = daysRemaining <= 3 
         ? "text-red-600 dark:text-red-400" 
         : daysRemaining <= 7 
-            ? "text-amber-600 dark:text-amber-400"
-            : "text-amber-600 dark:text-amber-400";
+            ? "text-brand-600 dark:text-brand-400"
+            : "text-brand-600 dark:text-brand-400";
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overflow-x-hidden p-4">
@@ -127,8 +127,8 @@ export default function UpgradePromptModal({
                         </p>
                         <div className={`mt-3 inline-flex items-center gap-2 rounded-full px-4 py-1 ${
                             daysRemaining <= 3 ? "bg-red-100 dark:bg-red-900/30" :
-                            daysRemaining <= 7 ? "bg-amber-100 dark:bg-amber-900/30" :
-                            "bg-amber-100 dark:bg-amber-900/30"
+                            daysRemaining <= 7 ? "bg-brand-100 dark:bg-brand-900/30" :
+                            "bg-brand-100 dark:bg-brand-900/30"
                         }`}>
                             <svg className={`w-4 h-4 ${urgencyClass}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}

@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/useToast";
 import { useSWRStatic } from "@/hooks/useSWRWithAuth";
 import { useSWRConfig } from "swr";
 import { useTranslation } from "@/lib/i18n/useTranslation";
-import { FaDollarSign, FaSyncAlt, FaMoneyBillWave, FaPercent, FaWallet } from "react-icons/fa";
+import { FaDollarSign, FaSyncAlt, FaMoneyBillWave, FaWallet } from "react-icons/fa";
 
 interface SubscriptionPlan {
     id: string;
@@ -18,9 +18,6 @@ interface SubscriptionPlan {
     // Merchant Withdrawal
     minWithdrawalIdr: number;
     minWithdrawalAud: number;
-    // Platform Fees (taken from influencer commission)
-    platformFirstReferralFeePercent: number;
-    platformRecurringReferralFeePercent: number;
 }
 
 interface ApiResponse<T> {
@@ -38,7 +35,7 @@ export default function InfluencerSettingsPage() {
     const { success: showSuccess, error: showError } = useToast();
     const { mutate } = useSWRConfig();
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [activeTab, setActiveTab] = useState<'commission' | 'withdrawal' | 'platformFees' | 'merchantWithdrawal'>('commission');
+    const [activeTab, setActiveTab] = useState<'commission' | 'withdrawal' | 'merchantWithdrawal'>('commission');
 
     const {
         data: response,
@@ -55,9 +52,6 @@ export default function InfluencerSettingsPage() {
         // Merchant Withdrawal
         minWithdrawalIdr: 100000,
         minWithdrawalAud: 20,
-        // Platform Fees
-        platformFirstReferralFeePercent: 20,
-        platformRecurringReferralFeePercent: 20,
     });
 
     // Load plan data into form
@@ -71,9 +65,6 @@ export default function InfluencerSettingsPage() {
                 // Merchant Withdrawal
                 minWithdrawalIdr: plan.minWithdrawalIdr || 100000,
                 minWithdrawalAud: plan.minWithdrawalAud || 20,
-                // Platform Fees
-                platformFirstReferralFeePercent: plan.platformFirstReferralFeePercent || 20,
-                platformRecurringReferralFeePercent: plan.platformRecurringReferralFeePercent || 20,
             });
         }
     }, [plan]);
@@ -155,17 +146,6 @@ export default function InfluencerSettingsPage() {
                     >
                         <FaMoneyBillWave className="w-4 h-4" />
                         {t("admin.influencerSettings.withdrawal.title")}
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('platformFees')}
-                        className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2
-              ${activeTab === 'platformFees'
-                                ? 'bg-brand-500 text-white'
-                                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200'
-                            }`}
-                    >
-                        <FaPercent className="w-4 h-4" />
-                        Platform Fees
                     </button>
                     <button
                         onClick={() => setActiveTab('merchantWithdrawal')}
@@ -343,114 +323,6 @@ export default function InfluencerSettingsPage() {
                     </div>
                 )}
 
-                {/* Platform Fees Tab */}
-                {activeTab === 'platformFees' && (
-                    <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-                        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                            Platform Referral Fees
-                        </h2>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-                            Configure the percentage the platform takes from influencer referral commissions.
-                        </p>
-
-                        {/* Info Cards */}
-                        <div className="grid gap-4 sm:grid-cols-2 mb-6">
-                            <div className="p-4 rounded-lg bg-brand-50 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-800">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <FaPercent className="w-4 h-4 text-brand-600 dark:text-brand-400" />
-                                    <span className="font-medium text-brand-900 dark:text-brand-200">First Payment Fee</span>
-                                </div>
-                                <p className="text-xs text-brand-700 dark:text-brand-300">
-                                    Platform fee taken from influencer&apos;s first payment commission.
-                                </p>
-                            </div>
-                            <div className="p-4 rounded-lg bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <FaPercent className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                                    <span className="font-medium text-purple-900 dark:text-purple-200">Recurring Fee</span>
-                                </div>
-                                <p className="text-xs text-purple-700 dark:text-purple-300">
-                                    Platform fee taken from influencer&apos;s recurring payment commissions.
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Fee Settings */}
-                        <div className="grid gap-6 sm:grid-cols-2 mb-6">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                    First Payment Fee (%)
-                                </label>
-                                <div className="relative">
-                                    <input
-                                        type="number"
-                                        value={formData.platformFirstReferralFeePercent}
-                                        onChange={(e) => handleChange('platformFirstReferralFeePercent', Number(e.target.value))}
-                                        min={0}
-                                        max={100}
-                                        step={1}
-                                        className="w-full px-4 py-2 pr-12 rounded-lg border border-gray-300 dark:border-gray-600 
-                                            bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                                            focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
-                                    />
-                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500">%</span>
-                                </div>
-                                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                    Recommended: 20%
-                                </p>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                    Recurring Payment Fee (%)
-                                </label>
-                                <div className="relative">
-                                    <input
-                                        type="number"
-                                        value={formData.platformRecurringReferralFeePercent}
-                                        onChange={(e) => handleChange('platformRecurringReferralFeePercent', Number(e.target.value))}
-                                        min={0}
-                                        max={100}
-                                        step={1}
-                                        className="w-full px-4 py-2 pr-12 rounded-lg border border-gray-300 dark:border-gray-600 
-                                            bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                                            focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
-                                    />
-                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500">%</span>
-                                </div>
-                                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                    Recommended: 20%
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Example Calculation */}
-                        <div className="p-4 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 mb-6">
-                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Example Calculation
-                            </p>
-                            <p className="text-xs text-gray-600 dark:text-gray-400">
-                                If influencer earns A$10 commission and platform fee is {formData.platformFirstReferralFeePercent}%:
-                            </p>
-                            <div className="mt-2 flex items-center gap-4 text-sm">
-                                <div className="text-gray-900 dark:text-white">
-                                    <span className="text-gray-500">Influencer gets:</span> A${(10 * (100 - formData.platformFirstReferralFeePercent) / 100).toFixed(2)}
-                                </div>
-                                <div className="text-gray-900 dark:text-white">
-                                    <span className="text-gray-500">Platform gets:</span> A${(10 * formData.platformFirstReferralFeePercent / 100).toFixed(2)}
-                                </div>
-                            </div>
-                        </div>
-
-                        <button
-                            onClick={handleSubmit}
-                            disabled={isSubmitting}
-                            className="px-6 py-2 rounded-lg font-medium text-white
-                    bg-brand-500 hover:bg-brand-600 disabled:bg-gray-400 transition-colors"
-                        >
-                            {isSubmitting ? t("admin.influencerSettings.saving") : t("admin.influencerSettings.saveChanges")}
-                        </button>
-                    </div>
-                )}
 
                 {/* Merchant Withdrawal Tab */}
                 {activeTab === 'merchantWithdrawal' && (

@@ -54,7 +54,7 @@ export default function SubscriptionSettingsPage() {
     const { success: showSuccess, error: showError } = useToast();
     const { mutate } = useSWRConfig();
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [activeTab, setActiveTab] = useState<'pricing' | 'bank' | 'deposit'>('pricing');
+    const [activeTab, setActiveTab] = useState<'pricing' | 'bank' | 'deposit' | 'email'>('pricing');
 
     const {
         data: response,
@@ -199,7 +199,18 @@ export default function SubscriptionSettingsPage() {
                             }`}
                     >
                         <FaMoneyBillWave className="w-4 h-4" />
-                        Minimum Deposit
+                        {t("admin.subscriptionSettings.tabs.deposit")}
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('email')}
+                        className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2
+              ${activeTab === 'email'
+                                ? 'bg-brand-500 text-white'
+                                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200'
+                            }`}
+                    >
+                        <FaMoneyBillWave className="w-4 h-4" />
+                        {t("admin.subscriptionSettings.tabs.emailFee")}
                     </button>
                 </div>
 
@@ -324,23 +335,6 @@ export default function SubscriptionSettingsPage() {
                         bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                         />
                                     </div>
-
-                                <div>
-                                    <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
-                                        {t("admin.subscriptionSettings.completedEmailFee")}
-                                    </label>
-                                    <div className="relative">
-                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">Rp</span>
-                                        <input
-                                            type="number"
-                                            value={formData.completedOrderEmailFeeIdr}
-                                            onChange={(e) => handleChange('completedOrderEmailFeeIdr', Number(e.target.value))}
-                                            min={0}
-                                            className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 
-                        bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                                        />
-                                    </div>
-                                </div>
                                 </div>
                                 <div>
                                     <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
@@ -495,50 +489,13 @@ export default function SubscriptionSettingsPage() {
                 {/* Minimum Deposit Tab */}
                 {activeTab === 'deposit' && (
                     <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-                        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                            Minimum Deposit Settings
+                        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
+                            {t("admin.subscriptionSettings.tabs.deposit")}
                         </h2>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-                            Configure the minimum deposit amount for merchants in different currencies.
-                        </p>
-
-                        {/* Info Card */}
-                        <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 mb-6">
-                            <div className="flex items-start gap-3">
-                                <FaMoneyBillWave className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
-                                <div>
-                                    <p className="font-medium text-blue-900 dark:text-blue-200">About Minimum Deposit</p>
-                                    <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
-                                        This is the minimum amount merchants must deposit to top up their balance.
-
-                                <div>
-                                    <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
-                                        {t("admin.subscriptionSettings.completedEmailFee")}
-                                    </label>
-                                    <div className="relative">
-                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">A$</span>
-                                        <input
-                                            type="number"
-                                            value={formData.completedOrderEmailFeeAud}
-                                            onChange={(e) => handleChange('completedOrderEmailFeeAud', Number(e.target.value))}
-                                            step={0.01}
-                                            min={0}
-                                            className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 
-                        bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                                        />
-                                    </div>
-                                </div>
-                                        Set appropriate amounts based on local currency values.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Deposit Settings */}
                         <div className="grid gap-6 sm:grid-cols-2 mb-6">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                    Minimum Deposit (IDR)
+                                    {t("admin.subscriptionSettings.depositIdr")}
                                 </label>
                                 <div className="relative">
                                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">Rp</span>
@@ -553,13 +510,10 @@ export default function SubscriptionSettingsPage() {
                                             focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                                     />
                                 </div>
-                                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                    Recommended: Rp 50,000
-                                </p>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                    Minimum Deposit (AUD)
+                                    {t("admin.subscriptionSettings.depositAud")}
                                 </label>
                                 <div className="relative">
                                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">A$</span>
@@ -574,13 +528,67 @@ export default function SubscriptionSettingsPage() {
                                             focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                                     />
                                 </div>
-                                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                    Recommended: A$ 10
-                                </p>
                             </div>
                         </div>
 
                         {/* Save Button */}
+                        <button
+                            onClick={handleSubmit}
+                            disabled={isSubmitting}
+                            className="px-6 py-2 rounded-lg font-medium text-white
+                bg-brand-500 hover:bg-brand-600 disabled:bg-gray-400 transition-colors"
+                        >
+                            {isSubmitting ? t("admin.subscriptionSettings.saving") : t("admin.subscriptionSettings.saveChanges")}
+                        </button>
+                    </div>
+                )}
+
+                {/* Email Fee Tab */}
+                {activeTab === 'email' && (
+                    <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+                        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
+                            {t("admin.subscriptionSettings.tabs.emailFee")}
+                        </h2>
+
+                        <div className="grid gap-6 sm:grid-cols-2 mb-6">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    {t("admin.subscriptionSettings.emailFeeIdr")}
+                                </label>
+                                <div className="relative">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">Rp</span>
+                                    <input
+                                        type="number"
+                                        value={formData.completedOrderEmailFeeIdr}
+                                        onChange={(e) => handleChange('completedOrderEmailFeeIdr', Number(e.target.value))}
+                                        min={0}
+                                        step={100}
+                                        className="w-full px-4 py-2 pl-12 rounded-lg border border-gray-300 dark:border-gray-600 
+                                            bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                                            focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    {t("admin.subscriptionSettings.emailFeeAud")}
+                                </label>
+                                <div className="relative">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">A$</span>
+                                    <input
+                                        type="number"
+                                        value={formData.completedOrderEmailFeeAud}
+                                        onChange={(e) => handleChange('completedOrderEmailFeeAud', Number(e.target.value))}
+                                        min={0}
+                                        step={0.01}
+                                        className="w-full px-4 py-2 pl-12 rounded-lg border border-gray-300 dark:border-gray-600 
+                                            bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                                            focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
                         <button
                             onClick={handleSubmit}
                             disabled={isSubmitting}
