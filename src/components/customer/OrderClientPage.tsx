@@ -181,6 +181,9 @@ export default function OrderClientPage({
     revalidateOnFocus: true,
   });
 
+  // Reservation flow is allowed even when the store is closed / schedules are unavailable.
+  const customerOrderingAllowed = storeOpen || isReservationFlow;
+
   const normalizedMode: OrderMode = (mode === 'dinein' || mode === 'takeaway' || mode === 'delivery')
     ? (mode as OrderMode)
     : 'takeaway';
@@ -358,6 +361,11 @@ export default function OrderClientPage({
     if (!merchantInfo) return;
     if (isStatusLoading) return; // Wait for status to load
 
+    if (isReservationFlow) {
+      setShowModeUnavailableModal(false);
+      return;
+    }
+
     // Don't check when store is closed - just show modified UI
 
     // Only show modal if mode becomes unavailable while store is open
@@ -382,7 +390,7 @@ export default function OrderClientPage({
 
     // Close modal if mode becomes available again
     setShowModeUnavailableModal(false);
-  }, [merchantInfo, normalizedMode, storeOpen, isStatusLoading, isDineInAvailable, isTakeawayAvailable, isDeliveryAvailable]);
+  }, [merchantInfo, normalizedMode, storeOpen, isStatusLoading, isDineInAvailable, isTakeawayAvailable, isDeliveryAvailable, isReservationFlow]);
 
   // ========================================
   // Mode Unavailable Modal Handlers
@@ -1020,7 +1028,7 @@ export default function OrderClientPage({
                     currency={merchantInfo?.currency || 'AUD'}
                     allMenuItems={allMenuItems}
                     onItemClick={(item) => handleOpenMenu(item as MenuItem)}
-                    storeOpen={storeOpen}
+                    storeOpen={customerOrderingAllowed}
                   />
                 </div>
 
@@ -1042,7 +1050,7 @@ export default function OrderClientPage({
                         onIncreaseQty={handleIncreaseQtyFromCard}
                         onDecreaseQty={handleDecreaseQtyFromCard}
                         isPromoSection={true}
-                        storeOpen={storeOpen}
+                        storeOpen={customerOrderingAllowed}
                       />
                     </div>
                     {/* Divider */}
@@ -1069,7 +1077,7 @@ export default function OrderClientPage({
                         getItemQuantityInCart={getMenuQuantityInCart}
                         onIncreaseQty={handleIncreaseQtyFromCard}
                         onDecreaseQty={handleDecreaseQtyFromCard}
-                        storeOpen={storeOpen}
+                        storeOpen={customerOrderingAllowed}
                       />
                     </div>
                     {/* Divider */}
@@ -1096,7 +1104,7 @@ export default function OrderClientPage({
                         getItemQuantityInCart={getMenuQuantityInCart}
                         onIncreaseQty={handleIncreaseQtyFromCard}
                         onDecreaseQty={handleDecreaseQtyFromCard}
-                        storeOpen={storeOpen}
+                        storeOpen={customerOrderingAllowed}
                       />
                     </div>
                     {/* Divider */}
@@ -1134,7 +1142,7 @@ export default function OrderClientPage({
                           getItemQuantityInCart={getMenuQuantityInCart}
                           onIncreaseQty={handleIncreaseQtyFromCard}
                           onDecreaseQty={handleDecreaseQtyFromCard}
-                          storeOpen={storeOpen}
+                          storeOpen={customerOrderingAllowed}
                           viewMode={viewMode}
                         />
                       </div>
@@ -1192,7 +1200,7 @@ export default function OrderClientPage({
         mode={normalizedMode}
         flow={isReservationFlow ? 'reservation' : undefined}
         scheduled={isScheduledFlow ? true : undefined}
-        storeOpen={storeOpen}
+        storeOpen={customerOrderingAllowed}
       />
 
       
@@ -1212,7 +1220,7 @@ export default function OrderClientPage({
           existingCartItem={editingCartItem}
           onClose={handleCloseMenuDetail}
           prefetchedAddons={menuAddonsCache[selectedMenu.id]}
-          storeOpen={storeOpen}
+          storeOpen={customerOrderingAllowed}
         />
       )}
 

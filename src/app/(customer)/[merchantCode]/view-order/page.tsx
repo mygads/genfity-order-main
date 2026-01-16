@@ -88,6 +88,7 @@ export default function ViewOrderPage() {
 
   // Check if mode will be available at estimated pickup time (default 15 min)
   const modeAvailability = useModeAvailability(merchantCode, mode, 15);
+  const canProceedToPayment = isReservationFlow ? true : modeAvailability.canOrderForPickup;
 
   // Initialize cart on mount
   useEffect(() => {
@@ -402,7 +403,7 @@ export default function ViewOrderPage() {
       </header>
 
       {/* ===== MODE UNAVAILABLE WARNING ===== */}
-      {!modeAvailability.canOrderForPickup && modeAvailability.warningMessage && (
+      {!isReservationFlow && !modeAvailability.canOrderForPickup && modeAvailability.warningMessage && (
         <div className="mx-3 mt-3 p-3 rounded-lg bg-red-50 border border-red-200">
           <div className="flex items-start gap-2">
             <FaExclamationTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
@@ -957,17 +958,17 @@ export default function ViewOrderPage() {
           <div className="p-4">
             <button
               onClick={handleProceedToPayment}
-              disabled={!modeAvailability.canOrderForPickup}
-              className={`mt-2 px-6 py-4 text-white font-medium rounded-lg transition-all ${modeAvailability.canOrderForPickup
+              disabled={!canProceedToPayment}
+              className={`mt-2 px-6 py-4 text-white font-medium rounded-lg transition-all ${canProceedToPayment
                 ? 'active:scale-[0.98]'
                 : 'opacity-50 cursor-not-allowed'
                 }`}
               style={{
-                backgroundColor: modeAvailability.canOrderForPickup ? '#f05a28' : '#9ca3af',
+                backgroundColor: canProceedToPayment ? '#f05a28' : '#9ca3af',
                 fontSize: '14px'
               }}
             >
-              {modeAvailability.canOrderForPickup
+              {canProceedToPayment
                 ? (isReservationFlow ? (t('customer.reservation.submit') || 'Continue') : t('customer.cart.continueToPayment'))
                 : 'Mode Unavailable'}
             </button>

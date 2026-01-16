@@ -3,6 +3,9 @@
 import React from "react";
 import { FaEdit, FaTrash } from "react-icons/fa";
 import { TableActionButton } from "@/components/common/TableActionButton";
+import { StatusToggle } from "@/components/common/StatusToggle";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import { formatCurrency, type Currency } from "@/lib/utils/format";
 
 interface AddonCategory {
   id: string;
@@ -45,35 +48,36 @@ export default function AddonItemsTable({
   onToggleActive,
   onDelete,
 }: AddonItemsTableProps) {
-  const formatPrice = (price: string | number): string => {
-    const numPrice = typeof price === 'string' ? parseFloat(price) : price;
-    if (isNaN(numPrice) || numPrice === 0) return 'Free';
+  const { t, locale } = useTranslation();
 
-    const currencyCode = currency || 'AUD';
-    try {
-      return new Intl.NumberFormat('en-AU', {
-        style: 'currency',
-        currency: currencyCode,
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }).format(numPrice);
-    } catch {
-      return `${numPrice.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const getPriceDisplay = (price: string | number): { label: string; isFree: boolean } => {
+    const numPrice = typeof price === "string" ? parseFloat(price) : price;
+    if (!Number.isFinite(numPrice) || numPrice === 0) {
+      return { label: t("common.free"), isFree: true };
     }
+
+    return {
+      label: formatCurrency(numPrice, (currency || "AUD") as Currency, locale),
+      isFree: false,
+    };
   };
 
   const getCategoryName = (item: AddonItem): string => {
     if (item.addonCategory?.name) return item.addonCategory.name;
     const category = categories.find(c => c.id === item.addonCategoryId);
-    return category?.name || 'Unknown';
+    return category?.name || t("common.unknown");
   };
 
   const getInputTypeLabel = (item: AddonItem): string => {
     const category = item.addonCategory || categories.find(c => c.id === item.addonCategoryId);
-    if (!category) return item.inputType === "SELECT" ? "Selection" : "Quantity (+/-)";
+    if (!category) {
+      return item.inputType === "SELECT"
+        ? t("admin.addonItems.inputType.selection")
+        : t("admin.addonItems.inputType.quantity");
+    }
     const max = category.maxSelection;
-    if (item.inputType === "QTY") return "Quantity (+/-)";
-    return max === 1 ? "Radio" : "Checkbox";
+    if (item.inputType === "QTY") return t("admin.addonItems.inputType.quantity");
+    return max === 1 ? t("admin.addonItems.inputType.radio") : t("admin.addonItems.inputType.checkbox");
   };
 
   const getInputTypeBadgeColor = (item: AddonItem): string => {
@@ -89,7 +93,7 @@ export default function AddonItemsTable({
     return (
       <div className="py-10 text-center">
         <p className="text-sm text-gray-500 dark:text-gray-400">
-          No items match your filters
+          {t("admin.addonItems.noMatch")}
         </p>
       </div>
     );
@@ -100,12 +104,12 @@ export default function AddonItemsTable({
       <table className="w-full table-auto">
         <thead>
           <tr className="bg-gray-50 text-left dark:bg-gray-900/50">
-            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Name</th>
-            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Category</th>
-            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Type</th>
-            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Price</th>
-            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Status</th>
-            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Actions</th>
+            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">{t("common.name")}</th>
+            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">{t("common.category")}</th>
+            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">{t("common.type")}</th>
+            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">{t("common.price")}</th>
+            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">{t("common.status")}</th>
+            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">{t("common.actions")}</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -130,40 +134,44 @@ export default function AddonItemsTable({
                 </span>
               </td>
               <td className="px-4 py-4">
-                <span className={`text-sm font-semibold ${formatPrice(item.price) === 'Free'
-                  ? 'text-success-600 dark:text-success-400'
-                  : 'text-gray-800 dark:text-white/90'
-                  }`}>
-                  {formatPrice(item.price)}
-                </span>
+                {(() => {
+                  const { label, isFree } = getPriceDisplay(item.price);
+                  return (
+                    <span
+                      className={`text-sm font-semibold ${isFree
+                        ? "text-success-600 dark:text-success-400"
+                        : "text-gray-800 dark:text-white/90"
+                        }`}
+                    >
+                      {label}
+                    </span>
+                  );
+                })()}
               </td>
 
               <td className="px-4 py-4">
-                <button
-                  onClick={() => onToggleActive(item.id, item.isActive)}
-                  className={`inline-flex cursor-pointer rounded-full px-3 py-1 text-xs font-medium transition-colors ${item.isActive
-                    ? 'bg-success-100 text-success-700 hover:bg-success-200 dark:bg-success-900/20 dark:text-success-400 dark:hover:bg-success-900/30'
-                    : 'bg-error-100 text-error-700 hover:bg-error-200 dark:bg-error-900/20 dark:text-error-400 dark:hover:bg-error-900/30'
-                    }`}
-                  title={item.isActive ? "Click to deactivate" : "Click to activate"}
-                >
-                  {item.isActive ? '● Active' : '○ Inactive'}
-                </button>
+                <StatusToggle
+                  isActive={item.isActive}
+                  onToggle={() => onToggleActive(item.id, item.isActive)}
+                  size="sm"
+                  activeLabel={t("common.active")}
+                  inactiveLabel={t("common.inactive")}
+                />
               </td>
               <td className="px-4 py-4">
                 <div className="flex items-center gap-2">
                   <TableActionButton
                     icon={FaEdit}
                     onClick={() => onEdit(item)}
-                    title="Edit"
-                    aria-label="Edit"
+                    title={t("common.edit")}
+                    aria-label={t("common.edit")}
                   />
                   <TableActionButton
                     icon={FaTrash}
                     tone="danger"
                     onClick={() => onDelete(item.id, item.name)}
-                    title="Delete"
-                    aria-label="Delete"
+                    title={t("common.delete")}
+                    aria-label={t("common.delete")}
                   />
                 </div>
               </td>

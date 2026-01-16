@@ -14,6 +14,7 @@ import ToastContainer from "@/components/ui/ToastContainer";
 import SubscriptionStatusBadge from "@/components/subscription/SubscriptionStatusBadge";
 import { useSWRWithAuth } from "@/hooks/useSWRWithAuth";
 import { MerchantsPageSkeleton } from "@/components/common/SkeletonLoaders";
+import { StatusToggle } from "@/components/common/StatusToggle";
 import { FaMoneyBillWave, FaCalendarPlus, FaTimes, FaSortUp, FaSortDown, FaSort } from "react-icons/fa";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 
@@ -513,14 +514,14 @@ export default function MerchantBalancePage() {
                         )}
                       </td>
                       <td className="px-5 py-4">
-                        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
-                          merchant.isActive
-                            ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                            : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
-                        }`}>
-                          <span className={`h-1.5 w-1.5 rounded-full ${merchant.isActive ? 'bg-green-600' : 'bg-gray-600'}`} />
-                          {merchant.isActive ? t("admin.superadmin.merchantBalance.active") : t("admin.superadmin.merchantBalance.inactive")}
-                        </span>
+                          <StatusToggle
+                            isActive={merchant.isActive}
+                            onToggle={() => {}}
+                            disabled
+                            size="sm"
+                            activeLabel={t("admin.superadmin.merchantBalance.active")}
+                            inactiveLabel={t("admin.superadmin.merchantBalance.inactive")}
+                          />
                       </td>
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-2">

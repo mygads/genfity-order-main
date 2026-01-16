@@ -14,6 +14,7 @@ import { useToast } from "@/context/ToastContext";
 import ArchiveModal from "@/components/common/ArchiveModal";
 import { useContextualHint, CONTEXTUAL_HINTS, useClickHereHint, CLICK_HINTS } from "@/lib/tutorial";
 import { TableActionButton } from "@/components/common/TableActionButton";
+import { StatusToggle } from "@/components/common/StatusToggle";
 import { FaCogs, FaEdit, FaTrash } from "react-icons/fa";
 
 interface Category {
@@ -921,14 +922,13 @@ export default function MerchantCategoriesPage() {
                             {t("admin.categories.menusCount", { count: category._count?.menuItems || 0 })}
                           </td>
                           <td className="px-4 py-4">
-                            <button
-                              onClick={() => handleToggleActive(category.id, category.isActive, category.name)}
-                              className={`inline-flex rounded-full px-3 py-1 text-xs font-medium transition-colors ${category.isActive
-                                ? 'bg-success-100 text-success-700 hover:bg-success-200 dark:bg-success-900/20 dark:text-success-400 dark:hover:bg-success-900/30'
-                                : 'bg-error-100 text-error-700 hover:bg-error-200 dark:bg-error-900/20 dark:text-error-400 dark:hover:bg-error-900/30'
-                                }`}>
-                              {category.isActive ? t("admin.categories.statusActive") : t("admin.categories.statusInactive")}
-                            </button>
+                            <StatusToggle
+                              isActive={category.isActive}
+                              onToggle={() => handleToggleActive(category.id, category.isActive, category.name)}
+                              size="sm"
+                              activeLabel={t("common.active")}
+                              inactiveLabel={t("common.inactive")}
+                            />
                           </td>
                           <td className="px-4 py-4">
                             <div className="flex items-center gap-2">
@@ -1204,12 +1204,14 @@ export default function MerchantCategoriesPage() {
                                   <p className="text-sm font-medium text-gray-800 dark:text-white/90 truncate">
                                     {menu.name}
                                   </p>
-                                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${menu.isActive
-                                    ? 'bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400'
-                                    : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-                                    }`}>
-                                    {menu.isActive ? 'Active' : 'Inactive'}
-                                  </span>
+                                  <StatusToggle
+                                    isActive={menu.isActive}
+                                    onToggle={() => {}}
+                                    disabled
+                                    size="sm"
+                                    activeLabel={t("common.active")}
+                                    inactiveLabel={t("common.inactive")}
+                                  />
                                 </div>
                                 <p className="text-xs text-gray-500 dark:text-gray-400">
                                   {formatCurrency(typeof menu.price === 'string' ? parseFloat(menu.price) : menu.price)}
@@ -1292,12 +1294,14 @@ export default function MerchantCategoriesPage() {
                                   <p className="text-sm font-medium text-gray-800 dark:text-white/90 truncate">
                                     {menu.name}
                                   </p>
-                                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${menu.isActive
-                                    ? 'bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400'
-                                    : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-                                    }`}>
-                                    {menu.isActive ? 'Active' : 'Inactive'}
-                                  </span>
+                                  <StatusToggle
+                                    isActive={menu.isActive}
+                                    onToggle={() => {}}
+                                    disabled
+                                    size="sm"
+                                    activeLabel={t("common.active")}
+                                    inactiveLabel={t("common.inactive")}
+                                  />
                                 </div>
                                 <p className="text-xs text-gray-500 dark:text-gray-400">
                                   {formatCurrency(typeof menu.price === 'string' ? parseFloat(menu.price) : menu.price)}

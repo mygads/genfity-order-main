@@ -13,6 +13,8 @@ import { ProfilePageSkeleton } from '@/components/common/SkeletonLoaders';
 import { getAdminToken } from '@/lib/utils/adminAuth';
 import { useToast } from '@/hooks/useToast';
 import Image from 'next/image';
+import { StatusToggle } from '@/components/common/StatusToggle';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 interface UserProfile {
   id: string;
@@ -28,6 +30,7 @@ interface UserProfile {
 }
 
 export default function ProfilePage() {
+  const { t } = useTranslation();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -267,14 +270,14 @@ export default function ProfilePage() {
             </div>
             <div>
               <p className="text-xs text-gray-500 dark:text-gray-400">Status</p>
-              <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${profile.isActive
-                ? 'bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400'
-                : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
-                }`}>
-                <span className={`h-1.5 w-1.5 rounded-full ${profile.isActive ? 'bg-success-500' : 'bg-gray-500'
-                  }`}></span>
-                {profile.isActive ? 'Active' : 'Inactive'}
-              </span>
+              <StatusToggle
+                isActive={profile.isActive}
+                onToggle={() => {}}
+                disabled
+                size="sm"
+                activeLabel={t('common.active')}
+                inactiveLabel={t('common.inactive')}
+              />
             </div>
             <div>
               <p className="text-xs text-gray-500 dark:text-gray-400">Member Since</p>

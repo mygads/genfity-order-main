@@ -8,6 +8,8 @@ import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import ComponentCard from "@/components/common/ComponentCard";
 import BalanceSubscriptionModal from "@/components/merchants/BalanceSubscriptionModal";
 import AlertDialog from "@/components/modals/AlertDialog";
+import { StatusToggle } from "@/components/common/StatusToggle";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 // Dynamically import map component
 const MapContent = dynamic(() => import("@/components/maps/MapContent"), { ssr: false });
@@ -52,6 +54,7 @@ export default function MerchantDetailsPage() {
   const router = useRouter();
   const params = useParams();
   const merchantId = params?.id as string;
+  const { t } = useTranslation();
 
   const [merchant, setMerchant] = useState<MerchantDetails | null>(null);
   const [loading, setLoading] = useState(true);
@@ -245,19 +248,15 @@ export default function MerchantDetailsPage() {
                 {merchant.code}
               </p>
               <div className="flex flex-wrap items-center justify-center gap-2 md:justify-start">
-                <button
-                  onClick={handleToggleStatus}
-                  className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium ${
-                    merchant.isActive
-                      ? "bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400"
-                      : "bg-error-100 text-error-700 dark:bg-error-900/20 dark:text-error-400"
-                  }`}
-                >
-                  <span className={`h-2 w-2 rounded-full ${
-                    merchant.isActive ? 'bg-success-500' : 'bg-error-500'
-                  }`}></span>
-                  {merchant.isActive ? "Active" : "Inactive"}
-                </button>
+                <StatusToggle
+                  isActive={merchant.isActive}
+                  onToggle={handleToggleStatus}
+                  size="sm"
+                  activeLabel={t("common.active")}
+                  inactiveLabel={t("common.inactive")}
+                  activateTitle="Activate"
+                  deactivateTitle="Deactivate"
+                />
                 
                 {merchant.isActive && (
                   merchant.isOpen ? (

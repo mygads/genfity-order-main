@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { StatusToggle } from '@/components/common/StatusToggle';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 interface Balance {
   currency: string;
@@ -54,6 +56,7 @@ function formatDateTime(value?: string | null) {
 export default function SuperAdminInfluencerDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const { t } = useTranslation();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -204,17 +207,16 @@ export default function SuperAdminInfluencerDetailPage() {
             </>
           )}
           {influencer && (
-            <button
-              onClick={handleToggleActive}
+            <StatusToggle
+              isActive={influencer.isActive}
+              onToggle={handleToggleActive}
               disabled={saving}
-              className={`px-4 py-2 rounded-lg disabled:opacity-50 ${
-                influencer.isActive
-                  ? 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400'
-                  : 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400'
-              }`}
-            >
-              {influencer.isActive ? 'Deactivate' : 'Activate'}
-            </button>
+              size="sm"
+              activeLabel={t('common.active')}
+              inactiveLabel={t('common.inactive')}
+              activateTitle="Activate"
+              deactivateTitle="Deactivate"
+            />
           )}
         </div>
       </div>
@@ -280,14 +282,15 @@ export default function SuperAdminInfluencerDetailPage() {
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Active</span>
-                  <span
-                    className={`text-sm font-medium ${
-                      influencer.isActive ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'
-                    }`}
-                  >
-                    {influencer.isActive ? 'Active' : 'Inactive'}
-                  </span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">{t('common.active')}</span>
+                  <StatusToggle
+                    isActive={influencer.isActive}
+                    onToggle={() => {}}
+                    disabled
+                    size="sm"
+                    activeLabel={t('common.active')}
+                    inactiveLabel={t('common.inactive')}
+                  />
                 </div>
                 <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
                   <p className="text-xs text-gray-500 dark:text-gray-400">Approved At</p>

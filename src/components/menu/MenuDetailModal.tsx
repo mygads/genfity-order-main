@@ -553,7 +553,7 @@ export default function MenuDetailModal({
   const isAvailable = menuIsActive && (!menuTrackStock || (menuStockQty !== null && menuStockQty > 0));
 
   return (
-    <div className="fixed inset-0 z-300 flex justify-center">
+    <div className="fixed inset-0 z-1000 flex justify-center">
       {/* Overlay background */}
       <div
         className={`absolute inset-0 bg-black/40 transition-opacity duration-250 ${isClosing ? 'opacity-0' : 'opacity-100'}`}
@@ -988,7 +988,7 @@ export default function MenuDetailModal({
         {/* Fixed Bottom Bar - Burjo ESB Style */}
         {/* Hide entire bottom bar when store is closed */}
         {storeOpen && (
-          <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[500px] bg-white border-t border-gray-200 rounded-t-2xl z-310" style={{ boxShadow: '0 -4px 6px -1px rgba(0, 0, 0, 0.1), 0 -2px 4px -1px rgba(0, 0, 0, 0.06)' }}>
+          <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[500px] bg-white border-t border-gray-200 rounded-t-2xl z-1010" style={{ boxShadow: '0 -4px 6px -1px rgba(0, 0, 0, 0.1), 0 -2px 4px -1px rgba(0, 0, 0, 0.06)' }}>
             {/* Total Order Row */}
             <div className="flex items-center justify-between px-4 py-4">
               <div className="text-sm font-medium text-gray-700">
@@ -1068,7 +1068,7 @@ export default function MenuDetailModal({
       {/* Image Zoom Modal - Full quality with click outside to close */}
       {isImageZoomed && (
         <div
-          className="fixed inset-0 z-400 flex items-center justify-center bg-black/95 cursor-pointer"
+          className="fixed inset-0 z-1100 flex items-center justify-center bg-black/95 cursor-pointer"
           onClick={() => setIsImageZoomed(false)} // Click outside image to close
         >
           {/* Zoomed Image Container - Max 500px */}
@@ -1078,7 +1078,7 @@ export default function MenuDetailModal({
           >
             {/* Gradient Overlay - Top 1/5 of image */}
             <div
-              className="absolute top-0 left-0 right-0 z-405 pointer-events-none"
+              className="absolute top-0 left-0 right-0 z-1105 pointer-events-none"
               style={{
                 height: '20%',
                 background: 'linear-gradient(to bottom, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0) 100%)'
@@ -1088,7 +1088,7 @@ export default function MenuDetailModal({
             {/* Close Button for Zoom - positioned relative to container */}
             <button
               onClick={() => setIsImageZoomed(false)}
-              className="absolute top-4 right-4 w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors z-410"
+              className="absolute top-4 right-4 w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors z-1110"
               aria-label="Close zoom"
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">

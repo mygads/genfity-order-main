@@ -8,9 +8,11 @@ import AdminFormFooter from "@/components/common/AdminFormFooter";
 import Image from "next/image";
 import { FaCopy, FaUpload, FaImages } from "react-icons/fa";
 import DuplicateMenuModal from "@/components/modals/DuplicateMenuModal";
+import { StatusToggle } from "@/components/common/StatusToggle";
 import { useMerchant } from "@/context/MerchantContext";
 import { getCurrencySymbol } from "@/lib/utils/format";
 import StockPhotoPicker from "@/components/menu/StockPhotoPicker";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface Merchant {
   id: string;
@@ -53,6 +55,7 @@ interface MenuFormData {
 
 export default function CreateMenuPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { currency } = useMerchant();
   const currencySymbol = getCurrencySymbol(currency);
   const [loading, setLoading] = useState(true);
@@ -504,10 +507,13 @@ export default function CreateMenuPage() {
                     <p className="text-xs text-gray-500 dark:text-gray-400">Available for customers to order</p>
                   </div>
                 </div>
-                <label className="relative inline-flex cursor-pointer items-center">
-                  <input type="checkbox" name="isActive" checked={formData.isActive} onChange={handleChange} className="peer sr-only" />
-                  <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-success-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-success-300/20 dark:bg-gray-700 dark:peer-focus:ring-success-800/20" />
-                </label>
+                <StatusToggle
+                  isActive={formData.isActive}
+                  onToggle={() => setFormData((prev) => ({ ...prev, isActive: !prev.isActive }))}
+                  size="md"
+                  activeLabel={t('common.active')}
+                  inactiveLabel={t('common.inactive')}
+                />
               </div>
             </div>
 
@@ -891,10 +897,13 @@ export default function CreateMenuPage() {
                     <p className="text-xs text-gray-500 dark:text-gray-400">Monitor inventory levels</p>
                   </div>
                 </div>
-                <label className="relative inline-flex cursor-pointer items-center">
-                  <input type="checkbox" name="trackStock" checked={formData.trackStock} onChange={handleChange} className="peer sr-only" />
-                  <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-warning-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-warning-300/20 dark:bg-gray-700 dark:peer-focus:ring-warning-800/20" />
-                </label>
+                <StatusToggle
+                  isActive={formData.trackStock}
+                  onToggle={() => setFormData((prev) => ({ ...prev, trackStock: !prev.trackStock }))}
+                  size="sm"
+                  activeLabel={t('common.on')}
+                  inactiveLabel={t('common.off')}
+                />
               </div>
 
               {formData.trackStock && (
@@ -926,16 +935,16 @@ export default function CreateMenuPage() {
                       />
                     </div>
                   </div>
-                  <label className="flex cursor-pointer items-center gap-2 rounded-lg bg-warning-100/50 p-3 transition-colors hover:bg-warning-100 dark:bg-warning-900/20 dark:hover:bg-warning-900/30">
-                    <input
-                      type="checkbox"
-                      name="autoResetStock"
-                      checked={formData.autoResetStock}
-                      onChange={handleChange}
-                      className="h-4 w-4 rounded border-warning-400 text-warning-500 focus:ring-warning-500"
-                    />
+                  <div className="flex items-center justify-between gap-3 rounded-lg bg-warning-100/50 p-3 dark:bg-warning-900/20">
                     <span className="text-sm text-warning-700 dark:text-warning-300">Auto-reset stock daily at midnight</span>
-                  </label>
+                    <StatusToggle
+                      isActive={formData.autoResetStock}
+                      onToggle={() => setFormData((prev) => ({ ...prev, autoResetStock: !prev.autoResetStock }))}
+                      size="sm"
+                      activeLabel={t('common.on')}
+                      inactiveLabel={t('common.off')}
+                    />
+                  </div>
                 </div>
               )}
             </div>
@@ -954,66 +963,102 @@ export default function CreateMenuPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <label htmlFor="isSpicy" className={`flex cursor-pointer items-center gap-3 rounded-xl border-2 p-3 transition-all ${formData.isSpicy ? 'border-amber-400 bg-amber-50 dark:border-amber-600 dark:bg-amber-900/20' : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800/50 dark:hover:border-gray-600'
-                  }`}>
-                  <input type="checkbox" id="isSpicy" name="isSpicy" checked={formData.isSpicy} onChange={handleChange} className="sr-only" />
-                  <div className="group relative h-5 w-5 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-amber-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800">
-                    <Image
-                      src="/images/menu-badges/spicy.png"
-                      alt="Spicy"
-                      width={20}
-                      height={20}
-                      className="h-full w-full object-cover"
-                    />
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div
+                  className={`flex items-center justify-between gap-3 rounded-xl border-2 p-3 transition-all ${formData.isSpicy
+                    ? 'border-amber-400 bg-amber-50 dark:border-amber-600 dark:bg-amber-900/20'
+                    : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800/50 dark:hover:border-gray-600'
+                    }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="group relative h-5 w-5 overflow-hidden rounded-full border border-gray-400/50 bg-white dark:border-gray-500/50 dark:bg-gray-800">
+                      <Image src="/images/menu-badges/spicy.png" alt="Spicy" width={20} height={20} className="h-full w-full object-cover" />
+                    </div>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Spicy</span>
                   </div>
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Spicy</span>
-                </label>
+                  <StatusToggle
+                    isActive={formData.isSpicy}
+                    onToggle={() => setFormData((prev) => ({ ...prev, isSpicy: !prev.isSpicy }))}
+                    size="sm"
+                    activeLabel={t('common.on')}
+                    inactiveLabel={t('common.off')}
+                  />
+                </div>
 
-                <label htmlFor="isBestSeller" className={`flex cursor-pointer items-center gap-3 rounded-xl border-2 p-3 transition-all ${formData.isBestSeller ? 'border-amber-400 bg-amber-50 dark:border-amber-600 dark:bg-amber-900/20' : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800/50 dark:hover:border-gray-600'
-                  }`}>
-                  <input type="checkbox" id="isBestSeller" name="isBestSeller" checked={formData.isBestSeller} onChange={handleChange} className="sr-only" />
-                  <div className="group relative h-5 w-5 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-amber-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800">
-                    <Image
-                      src="/images/menu-badges/best-seller.png"
-                      alt="Best Seller"
-                      width={20}
-                      height={20}
-                      className="h-full w-full object-cover"
-                    />
+                <div
+                  className={`flex items-center justify-between gap-3 rounded-xl border-2 p-3 transition-all ${formData.isBestSeller
+                    ? 'border-amber-400 bg-amber-50 dark:border-amber-600 dark:bg-amber-900/20'
+                    : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800/50 dark:hover:border-gray-600'
+                    }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="group relative h-5 w-5 overflow-hidden rounded-full border border-gray-400/50 bg-white dark:border-gray-500/50 dark:bg-gray-800">
+                      <Image
+                        src="/images/menu-badges/best-seller.png"
+                        alt="Best Seller"
+                        width={20}
+                        height={20}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Best Seller</span>
                   </div>
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Best Seller</span>
-                </label>
+                  <StatusToggle
+                    isActive={formData.isBestSeller}
+                    onToggle={() => setFormData((prev) => ({ ...prev, isBestSeller: !prev.isBestSeller }))}
+                    size="sm"
+                    activeLabel={t('common.on')}
+                    inactiveLabel={t('common.off')}
+                  />
+                </div>
 
-                <label htmlFor="isSignature" className={`flex cursor-pointer items-center gap-3 rounded-xl border-2 p-3 transition-all ${formData.isSignature ? 'border-purple-400 bg-purple-50 dark:border-purple-600 dark:bg-purple-900/20' : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800/50 dark:hover:border-gray-600'
-                  }`}>
-                  <input type="checkbox" id="isSignature" name="isSignature" checked={formData.isSignature} onChange={handleChange} className="sr-only" />
-                  <div className="group relative h-5 w-5 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-purple-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800">
-                    <Image
-                      src="/images/menu-badges/signature.png"
-                      alt="Signature"
-                      width={20}
-                      height={20}
-                      className="h-full w-full object-cover"
-                    />
+                <div
+                  className={`flex items-center justify-between gap-3 rounded-xl border-2 p-3 transition-all ${formData.isSignature
+                    ? 'border-purple-400 bg-purple-50 dark:border-purple-600 dark:bg-purple-900/20'
+                    : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800/50 dark:hover:border-gray-600'
+                    }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="group relative h-5 w-5 overflow-hidden rounded-full border border-gray-400/50 bg-white dark:border-gray-500/50 dark:bg-gray-800">
+                      <Image src="/images/menu-badges/signature.png" alt="Signature" width={20} height={20} className="h-full w-full object-cover" />
+                    </div>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Signature</span>
                   </div>
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Signature</span>
-                </label>
+                  <StatusToggle
+                    isActive={formData.isSignature}
+                    onToggle={() => setFormData((prev) => ({ ...prev, isSignature: !prev.isSignature }))}
+                    size="sm"
+                    activeLabel={t('common.on')}
+                    inactiveLabel={t('common.off')}
+                  />
+                </div>
 
-                <label htmlFor="isRecommended" className={`flex cursor-pointer items-center gap-3 rounded-xl border-2 p-3 transition-all ${formData.isRecommended ? 'border-green-400 bg-green-50 dark:border-green-600 dark:bg-green-900/20' : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800/50 dark:hover:border-gray-600'
-                  }`}>
-                  <input type="checkbox" id="isRecommended" name="isRecommended" checked={formData.isRecommended} onChange={handleChange} className="sr-only" />
-                  <div className="group relative h-5 w-5 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-green-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800">
-                    <Image
-                      src="/images/menu-badges/recommended.png"
-                      alt="Recommended"
-                      width={20}
-                      height={20}
-                      className="h-full w-full object-cover"
-                    />
+                <div
+                  className={`flex items-center justify-between gap-3 rounded-xl border-2 p-3 transition-all ${formData.isRecommended
+                    ? 'border-green-400 bg-green-50 dark:border-green-600 dark:bg-green-900/20'
+                    : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800/50 dark:hover:border-gray-600'
+                    }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="group relative h-5 w-5 overflow-hidden rounded-full border border-gray-400/50 bg-white dark:border-gray-500/50 dark:bg-gray-800">
+                      <Image
+                        src="/images/menu-badges/recommended.png"
+                        alt="Recommended"
+                        width={20}
+                        height={20}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Recommended</span>
                   </div>
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Recommended</span>
-                </label>
+                  <StatusToggle
+                    isActive={formData.isRecommended}
+                    onToggle={() => setFormData((prev) => ({ ...prev, isRecommended: !prev.isRecommended }))}
+                    size="sm"
+                    activeLabel={t('common.on')}
+                    inactiveLabel={t('common.off')}
+                  />
+                </div>
               </div>
             </div>
           </div>

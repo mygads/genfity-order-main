@@ -18,7 +18,7 @@ import Image from 'next/image';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { useToast } from '@/context/ToastContext';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
-import { CheckLineIcon } from '@/icons';
+import { StatusToggle } from '@/components/common/StatusToggle';
 
 interface MenuItem {
   id: string;
@@ -234,7 +234,7 @@ export default function BulkOperationsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="flex items-center justify-center min-h-100">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-500" />
       </div>
     );
@@ -262,7 +262,7 @@ export default function BulkOperationsPage() {
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 mb-4">
         <div className="flex flex-wrap gap-4">
           {/* Search */}
-          <div className="flex-1 min-w-[200px]">
+          <div className="flex-1 min-w-50">
             <input
               type="text"
               placeholder="Search menu items..."
@@ -294,8 +294,8 @@ export default function BulkOperationsPage() {
                      bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
           >
             <option value="">All Status</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
+            <option value="active">{t('common.active')}</option>
+            <option value="inactive">{t('common.inactive')}</option>
           </select>
         </div>
       </div>
@@ -338,8 +338,8 @@ export default function BulkOperationsPage() {
                              bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   >
                     <option value="">Select Status</option>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
+                    <option value="active">{t('common.active')}</option>
+                    <option value="inactive">{t('common.inactive')}</option>
                   </select>
                 ) : (
                   <input
@@ -454,7 +454,7 @@ export default function BulkOperationsPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 overflow-hidden flex-shrink-0">
+                      <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 overflow-hidden shrink-0">
                         {menu.imageUrl ? (
                           <Image
                             src={menu.imageUrl}
@@ -494,16 +494,14 @@ export default function BulkOperationsPage() {
                     )}
                   </td>
                   <td className="px-4 py-3 text-center">
-                    {menu.isActive ? (
-                      <span className="inline-flex items-center gap-1 text-xs text-green-600 bg-green-100 dark:bg-green-900/20 px-2 py-1 rounded-full">
-                        <CheckLineIcon className="w-3 h-3" />
-                        Active
-                      </span>
-                    ) : (
-                      <span className="text-xs text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">
-                        Inactive
-                      </span>
-                    )}
+                    <StatusToggle
+                      isActive={menu.isActive}
+                      onToggle={() => {}}
+                      disabled
+                      size="sm"
+                      activeLabel={t('common.active')}
+                      inactiveLabel={t('common.inactive')}
+                    />
                   </td>
                 </tr>
               ))}

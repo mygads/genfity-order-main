@@ -11,6 +11,7 @@ import AddDriverModal from "@/components/drivers/AddDriverModal";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { ConfirmationModal } from "@/components/common/ConfirmationModal";
+import { StatusToggle } from "@/components/common/StatusToggle";
 
 interface Driver {
   id: string;
@@ -200,13 +201,14 @@ export default function DriversManagementPage() {
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <span
-                      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${d.isActive
-                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
-                        : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300"}`}
-                    >
-                      {d.isActive ? "Active" : "Inactive"}
-                    </span>
+                    <StatusToggle
+                      isActive={d.isActive}
+                      onToggle={() => {}}
+                      disabled
+                      size="sm"
+                      activeLabel={t("common.active")}
+                      inactiveLabel={t("common.inactive")}
+                    />
 
                     {isOwner && (
                       <button

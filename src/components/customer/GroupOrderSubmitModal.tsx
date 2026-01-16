@@ -80,7 +80,7 @@ export default function GroupOrderSubmitModal({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center">
+        <div className="fixed inset-0 z-1000 flex items-center justify-center">
             {/* Backdrop */}
             <div
                 className="absolute inset-0 bg-black/50 backdrop-blur-sm"
@@ -90,7 +90,7 @@ export default function GroupOrderSubmitModal({
             {/* Modal */}
             <div className="relative bg-white rounded-2xl w-full max-w-md mx-4 overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
                 {/* Header */}
-                <div className="px-6 py-5 border-b border-gray-200 bg-gradient-to-r from-green-500 to-emerald-500">
+                <div className="px-6 py-5 border-b border-gray-200 bg-linear-to-r from-green-500 to-emerald-500">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 bg-white/20 backdrop-blur rounded-full flex items-center justify-center">
@@ -187,7 +187,7 @@ export default function GroupOrderSubmitModal({
                     <button
                         type="submit"
                         disabled={isLoading}
-                        className="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold text-lg rounded-xl hover:from-green-600 hover:to-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg"
+                        className="w-full py-4 bg-linear-to-r from-green-500 to-emerald-500 text-white font-bold text-lg rounded-xl hover:from-green-600 hover:to-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg"
                     >
                         {isLoading ? (
                             <>

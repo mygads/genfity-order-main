@@ -7,6 +7,7 @@ import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useContextualHint, CONTEXTUAL_HINTS } from "@/lib/tutorial/components/ContextualHint";
 import { TableActionButton } from "@/components/common/TableActionButton";
+import { StatusToggle } from "@/components/common/StatusToggle";
 import { FaEdit, FaTrash } from "react-icons/fa";
 import { useModalImplicitClose } from "@/hooks/useModalImplicitClose";
 
@@ -295,15 +296,13 @@ export default function SpecialPricesPage() {
                                             {sp.isAllDay ? t("admin.specialPrices.allDay") : `${sp.startTime} - ${sp.endTime}`}
                                         </td>
                                         <td className="px-4 py-4">
-                                            <button
-                                                onClick={() => toggleStatus(sp.id, sp.isActive)}
-                                                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${sp.isActive
-                                                    ? "bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400"
-                                                    : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400"
-                                                    }`}
-                                            >
-                                                {sp.isActive ? t("admin.specialPrices.active") : t("admin.specialPrices.inactive")}
-                                            </button>
+                                            <StatusToggle
+                                                isActive={sp.isActive}
+                                                onToggle={() => toggleStatus(sp.id, sp.isActive)}
+                                                size="sm"
+                                                activeLabel={t("admin.specialPrices.active")}
+                                                inactiveLabel={t("admin.specialPrices.inactive")}
+                                            />
                                         </td>
                                         <td className="px-4 py-4 text-right">
                                             <div className="flex items-center justify-end gap-2">

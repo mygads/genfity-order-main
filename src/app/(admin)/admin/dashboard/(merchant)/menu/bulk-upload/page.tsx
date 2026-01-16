@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { useToast } from "@/context/ToastContext";
 import { TableActionButton } from "@/components/common/TableActionButton";
+import { StatusToggle } from "@/components/common/StatusToggle";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 import { FaDownload, FaTrash, FaEdit, FaCheck, FaTimes, FaArrowLeft, FaSave, FaFileExcel, FaChevronDown, FaChevronUp, FaExclamationCircle, FaUpload, FaExclamationTriangle } from "react-icons/fa";
 import * as XLSX from "xlsx";
 import { useMerchant } from "@/context/MerchantContext";
@@ -49,6 +51,7 @@ interface Category {
  */
 export default function MenuBulkUploadPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { showSuccess, showError } = useToast();
   const { currency: _currency } = useMerchant();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1060,28 +1063,49 @@ export default function MenuBulkUploadPage() {
                                   { key: "isBestSeller", label: "Best Seller" },
                                   { key: "isSignature", label: "Signature" },
                                   { key: "isRecommended", label: "Recommended" },
-                                ].map(flag => (
-                                  <label key={flag.key} className="flex items-center gap-2 cursor-pointer">
-                                    <input
-                                      type="checkbox"
-                                      checked={item[flag.key as keyof MenuUploadItem] as boolean}
-                                      onChange={(e) => updateItem(index, flag.key as keyof MenuUploadItem, e.target.checked)}
-                                      className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-700"
-                                    />
-                                    <span className="text-sm text-gray-700 dark:text-gray-300">{flag.label}</span>
-                                  </label>
-                                ))}
+                                ].map(flag => {
+                                  if (flag.key === "isActive") {
+                                    return (
+                                      <div key={flag.key} className="flex items-center justify-between">
+                                        <span className="text-sm text-gray-700 dark:text-gray-300">{flag.label}</span>
+                                        <StatusToggle
+                                          isActive={item.isActive}
+                                          onToggle={() => updateItem(index, "isActive", !item.isActive)}
+                                          size="sm"
+                                          activeLabel={t("common.active")}
+                                          inactiveLabel={t("common.inactive")}
+                                        />
+                                      </div>
+                                    );
+                                  }
+
+                                  return (
+                                    <label key={flag.key} className="flex items-center gap-2 cursor-pointer">
+                                      <input
+                                        type="checkbox"
+                                        checked={item[flag.key as keyof MenuUploadItem] as boolean}
+                                        onChange={(e) => updateItem(index, flag.key as keyof MenuUploadItem, e.target.checked)}
+                                        className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-700"
+                                      />
+                                      <span className="text-sm text-gray-700 dark:text-gray-300">{flag.label}</span>
+                                    </label>
+                                  );
+                                })}
                               </div>
                             ) : (
                               <div className="flex flex-wrap gap-2">
-                                {item.isActive && <span className="text-xs text-gray-600 dark:text-gray-400">Active</span>}
+                                <StatusToggle
+                                  isActive={item.isActive}
+                                  onToggle={() => {}}
+                                  disabled
+                                  size="sm"
+                                  activeLabel={t("common.active")}
+                                  inactiveLabel={t("common.inactive")}
+                                />
                                 {item.isSpicy && <span className="text-xs text-gray-600 dark:text-gray-400">• Spicy</span>}
                                 {item.isBestSeller && <span className="text-xs text-gray-600 dark:text-gray-400">• Best Seller</span>}
                                 {item.isSignature && <span className="text-xs text-gray-600 dark:text-gray-400">• Signature</span>}
                                 {item.isRecommended && <span className="text-xs text-gray-600 dark:text-gray-400">• Recommended</span>}
-                                {!item.isActive && !item.isSpicy && !item.isBestSeller && !item.isSignature && !item.isRecommended && (
-                                  <span className="text-xs text-gray-400">None</span>
-                                )}
                               </div>
                             )}
                           </div>

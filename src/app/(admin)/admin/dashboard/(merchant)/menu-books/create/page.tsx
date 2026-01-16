@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import AdminFormFooter from "@/components/common/AdminFormFooter";
+import { StatusToggle } from "@/components/common/StatusToggle";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useMerchant } from "@/context/MerchantContext";
 
@@ -17,7 +18,7 @@ interface Menu {
 
 export default function CreateMenuBookPage() {
     const router = useRouter();
-    const { } = useTranslation();
+    const { t } = useTranslation();
     const { formatCurrency } = useMerchant();
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
@@ -216,9 +217,14 @@ export default function CreateMenuBookPage() {
                                                     <p className="text-sm font-medium text-gray-900 dark:text-white">{menu.name}</p>
                                                     <p className="text-xs text-gray-500">{formatCurrency(menu.price)}</p>
                                                 </div>
-                                                {!menu.isActive && (
-                                                    <span className="rounded bg-gray-200 px-2 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-400">Inactive</span>
-                                                )}
+                                                <StatusToggle
+                                                    isActive={menu.isActive}
+                                                    onToggle={() => {}}
+                                                    disabled
+                                                    size="sm"
+                                                    activeLabel={t("common.active")}
+                                                    inactiveLabel={t("common.inactive")}
+                                                />
                                             </label>
                                         );
                                     })}

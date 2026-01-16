@@ -7,6 +7,7 @@ import Link from "next/link";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import ImagePopupModal from "@/components/common/ImagePopupModal";
 import ViewMenuAddonCategoriesModal from "@/components/menu/ViewMenuAddonCategoriesModal";
+import { StatusToggle } from "@/components/common/StatusToggle";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface MenuAddonCategory {
@@ -256,13 +257,14 @@ export default function MenuDetailPage() {
                     <p className="mt-2 text-sm leading-relaxed text-gray-600 dark:text-gray-400">{menu.description}</p>
                   )}
                 </div>
-                <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${menu.isActive
-                  ? 'bg-success-100 text-success-700 dark:bg-success-900/30 dark:text-success-400'
-                  : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                  }`}>
-                  <span className={`h-2 w-2 rounded-full ${menu.isActive ? 'bg-success-500' : 'bg-gray-400'}`}></span>
-                  {menu.isActive ? t("admin.menu.detail.active") : t("admin.menu.detail.inactive")}
-                </span>
+                <StatusToggle
+                  isActive={menu.isActive}
+                  onToggle={() => {}}
+                  disabled
+                  size="sm"
+                  activeLabel={t("admin.menu.detail.active")}
+                  inactiveLabel={t("admin.menu.detail.inactive")}
+                />
               </div>
 
               {/* Menu Badges */}

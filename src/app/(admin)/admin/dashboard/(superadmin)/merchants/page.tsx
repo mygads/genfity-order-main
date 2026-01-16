@@ -13,7 +13,9 @@ import Image from "next/image";
 import { useSWRWithAuth } from "@/hooks/useSWRWithAuth";
 import { MerchantsPageSkeleton } from "@/components/common/SkeletonLoaders";
 import { TableActionButton } from "@/components/common/TableActionButton";
+import { StatusToggle } from "@/components/common/StatusToggle";
 import { FaEdit, FaEye, FaTrash, FaUserPlus, FaUsers } from "react-icons/fa";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface Merchant {
   id: string;
@@ -67,6 +69,7 @@ interface MerchantsApiResponse {
 export default function MerchantsPage() {
   const router = useRouter();
   const { toasts, success: showSuccess, error: showError } = useToast();
+  const { t } = useTranslation();
 
   // Note: setActiveOnly reserved for future API filter toggle
   const [activeOnly, _setActiveOnly] = useState(false);
@@ -190,7 +193,7 @@ export default function MerchantsPage() {
    */
   const getStoreStatus = (merchant: Merchant): { text: string; isOpen: boolean } => {
     if (!merchant.isActive) {
-      return { text: 'Inactive', isOpen: false };
+      return { text: t('common.inactive'), isOpen: false };
     }
 
     return {
@@ -332,8 +335,8 @@ export default function MerchantsPage() {
               className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
             >
               <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
+              <option value="active">{t('common.active')}</option>
+              <option value="inactive">{t('common.inactive')}</option>
             </select>
 
             {/* Subscription Filter */}
@@ -507,18 +510,15 @@ export default function MerchantsPage() {
                             </span>
                           </td>
                           <td className="w-25 min-w-25 px-4 py-4">
-                            {/* Active/Inactive Toggle */}
-                            <button
-                              onClick={() => handleToggleStatus(merchant.id, merchant.isActive)}
-                              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium transition-colors ${merchant.isActive
-                                ? "bg-success-100 text-success-700 hover:bg-success-200 dark:bg-success-900/30 dark:text-success-400 dark:hover:bg-success-900/50"
-                                : "bg-error-100 text-error-700 hover:bg-error-200 dark:bg-error-900/30 dark:text-error-400 dark:hover:bg-error-900/50"
-                                }`}
-                              title={`Click to ${merchant.isActive ? 'deactivate' : 'activate'}`}
-                            >
-                              <span className={`h-1.5 w-1.5 rounded-full ${merchant.isActive ? 'bg-success-600' : 'bg-error-600'}`} />
-                              {merchant.isActive ? "Active" : "Inactive"}
-                            </button>
+                            <StatusToggle
+                              isActive={merchant.isActive}
+                              onToggle={() => handleToggleStatus(merchant.id, merchant.isActive)}
+                              activeLabel={t('common.active')}
+                              inactiveLabel={t('common.inactive')}
+                              activateTitle="Activate"
+                              deactivateTitle="Deactivate"
+                              size="sm"
+                            />
                           </td>
                           <td className="w-30 min-w-30 px-4 py-4">
                             <div className="flex items-center gap-2">

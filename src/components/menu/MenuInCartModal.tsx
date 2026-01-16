@@ -101,7 +101,7 @@ export default function MenuInCartModal({
           animation: menuInCartFadeOut 0.25s ease-in forwards;
         }
       `}</style>
-      <div className="fixed inset-0 flex items-end justify-center" style={{ zIndex: 300 }}>
+      <div className="fixed inset-0 flex items-end justify-center" style={{ zIndex: 1000 }}>
         {/* Overlay */}
         <div
           className={`absolute inset-0 bg-black/40 ${isClosing ? 'menu-in-cart-fade-out' : 'menu-in-cart-fade-in'}`}

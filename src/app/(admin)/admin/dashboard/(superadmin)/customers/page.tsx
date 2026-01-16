@@ -22,6 +22,8 @@ import { useSWRWithAuth } from '@/hooks/useSWRWithAuth';
 import { UsersPageSkeleton } from '@/components/common/SkeletonLoaders';
 import CustomerDetailModal from '@/components/modals/CustomerDetailModal';
 import { FaDownload, FaFilter, FaTimes, FaCheckSquare, FaSquare } from 'react-icons/fa';
+import { StatusToggle } from '@/components/common/StatusToggle';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 interface Customer {
   id: string;
@@ -55,6 +57,7 @@ interface CustomersApiResponse {
 }
 
 export default function CustomersPage() {
+  const { t } = useTranslation();
   const { toasts, success: showSuccessToast, error: showErrorToast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -96,6 +99,16 @@ export default function CustomersPage() {
 
   // Extract customers from SWR response
   const customers = customersResponse?.success ? customersResponse.data : [];
+
+  const selectedCustomers = customers.filter((c) => selectedIds.has(c.id));
+  const selectedStatus: 'active' | 'inactive' | 'mixed' | null =
+    selectedCustomers.length === 0
+      ? null
+      : selectedCustomers.every((c) => c.isActive)
+        ? 'active'
+        : selectedCustomers.every((c) => !c.isActive)
+          ? 'inactive'
+          : 'mixed';
 
   // Function to refetch data
   const fetchCustomers = useCallback(async () => {
@@ -266,7 +279,7 @@ export default function CustomersPage() {
       c.name,
       c.email,
       c.phone || '',
-      c.isActive ? 'Active' : 'Inactive',
+      c.isActive ? t('common.active') : t('common.inactive'),
       (c._count?.orders || c.totalOrders || 0).toString(),
       (c.totalSpent || 0).toString(),
       formatDate(c.createdAt),
@@ -284,7 +297,7 @@ export default function CustomersPage() {
     URL.revokeObjectURL(link.href);
 
     showSuccessToast('Success', `Exported ${filteredCustomers.length} customers to CSV`);
-  }, [filteredCustomers, showSuccessToast]);
+  }, [filteredCustomers, showSuccessToast, t]);
 
   // Clear all filters
   const clearFilters = () => {
@@ -391,8 +404,8 @@ export default function CustomersPage() {
                 className="h-10 rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
               >
                 <option value="">All Status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
+                <option value="active">{t('common.active')}</option>
+                <option value="inactive">{t('common.inactive')}</option>
               </select>
 
               <button
@@ -523,20 +536,19 @@ export default function CustomersPage() {
                 {selectedIds.size} customer(s) selected
               </span>
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleBulkToggle(true)}
+                <StatusToggle
+                  isActive={selectedStatus === 'active'}
+                  indeterminate={selectedStatus === 'mixed'}
+                  onToggle={() => handleBulkToggle(selectedStatus === 'active' ? false : true)}
                   disabled={isBulkProcessing}
-                  className="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
-                >
-                  Activate All
-                </button>
-                <button
-                  onClick={() => handleBulkToggle(false)}
-                  disabled={isBulkProcessing}
-                  className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
-                >
-                  Deactivate All
-                </button>
+                  size="sm"
+                  activeLabel={t('common.active')}
+                  inactiveLabel={t('common.inactive')}
+                  indeterminateLabel="Mixed"
+                  activateTitle="Activate selected"
+                  deactivateTitle="Deactivate selected"
+                  indeterminateTitle="Activate selected"
+                />
                 <button
                   onClick={() => setSelectedIds(new Set())}
                   className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
@@ -648,17 +660,15 @@ export default function CustomersPage() {
                         {(customer.totalSpent || 0).toLocaleString()}
                       </td>
                       <td className="px-4 py-4">
-                        <button
-                          onClick={() => handleToggleActive(customer.id, customer.isActive)}
-                          className={`inline-flex items-center gap-2 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${customer.isActive
-                            ? 'bg-success-100 text-success-700 hover:bg-success-200 dark:bg-success-900/30 dark:text-success-400 dark:hover:bg-success-900/50'
-                            : 'bg-error-100 text-error-700 hover:bg-error-200 dark:bg-error-900/30 dark:text-error-400 dark:hover:bg-error-900/50'
-                            }`}
-                          title={`Click to ${customer.isActive ? 'deactivate' : 'activate'}`}
-                        >
-                          <span className={`h-1.5 w-1.5 rounded-full ${customer.isActive ? 'bg-success-600' : 'bg-error-600'}`} />
-                          {customer.isActive ? 'Active' : 'Inactive'}
-                        </button>
+                        <StatusToggle
+                          isActive={customer.isActive}
+                          onToggle={() => handleToggleActive(customer.id, customer.isActive)}
+                          activeLabel={t('common.active')}
+                          inactiveLabel={t('common.inactive')}
+                          activateTitle="Activate"
+                          deactivateTitle="Deactivate"
+                          size="sm"
+                        />
                       </td>
                       <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">{formatDate(customer.createdAt)}</td>
                       <td className="px-4 py-4 text-end">

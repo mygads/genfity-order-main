@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useSWRStatic } from "@/hooks/useSWRWithAuth";
+import { StatusToggle } from "@/components/common/StatusToggle";
 import Link from "next/link";
 import { useToast } from "@/context/ToastContext";
 import NotificationSettingsModal, {
@@ -272,15 +273,20 @@ export default function NotificationsPage() {
 
                         {/* Actions */}
                         <div className="flex items-center gap-4">
-                            <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    checked={showUnreadOnly}
-                                    onChange={(e) => { setShowUnreadOnly(e.target.checked); setPage(1); }}
-                                    className="w-4 h-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+                            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                                <StatusToggle
+                                    isActive={showUnreadOnly}
+                                    onToggle={() => {
+                                        const next = !showUnreadOnly;
+                                        setShowUnreadOnly(next);
+                                        setPage(1);
+                                    }}
+                                    size="sm"
+                                    activeLabel={t('common.on')}
+                                    inactiveLabel={t('common.off')}
                                 />
-                                {t('notifications.unreadOnly') || 'Unread only'}
-                            </label>
+                                <span>{t('notifications.unreadOnly') || 'Unread only'}</span>
+                            </div>
                             <button
                                 onClick={handleMarkAllAsRead}
                                 className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 transition-colors"

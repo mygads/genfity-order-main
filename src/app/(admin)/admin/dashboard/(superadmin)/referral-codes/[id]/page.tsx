@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useSWRWithAuth } from "@/hooks/useSWRWithAuth";
 import { formatDate } from "@/lib/utils/format";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { StatusToggle } from "@/components/common/StatusToggle";
 
 interface ReferralCodeDetail {
     id: string;
@@ -249,13 +250,22 @@ export default function ReferralCodeDetailPage() {
 
             {/* Status Badge */}
             <div className="mb-6">
-                {!code.isActive ? (
-                    <span className="px-3 py-1 text-sm rounded-full bg-gray-100 text-gray-600">{t("referral.inactive")}</span>
-                ) : code.validUntil && new Date(code.validUntil) < new Date() ? (
-                    <span className="px-3 py-1 text-sm rounded-full bg-red-100 text-red-600">{t("referral.expired")}</span>
-                ) : (
-                    <span className="px-3 py-1 text-sm rounded-full bg-green-100 text-green-600">{t("referral.active")}</span>
-                )}
+                <div className="flex flex-wrap items-center gap-2">
+                    <StatusToggle
+                        isActive={isEditing ? editData.isActive : code.isActive}
+                        onToggle={() => {
+                            if (!isEditing) return;
+                            setEditData((prev) => ({ ...prev, isActive: !prev.isActive }));
+                        }}
+                        disabled={!isEditing}
+                        size="sm"
+                        activeLabel={t("referral.active")}
+                        inactiveLabel={t("referral.inactive")}
+                    />
+                    {(isEditing ? editData.isActive : code.isActive) && code.validUntil && new Date(code.validUntil) < new Date() ? (
+                        <span className="px-3 py-1 text-sm rounded-full bg-red-100 text-red-600">{t("referral.expired")}</span>
+                    ) : null}
+                </div>
             </div>
 
             {/* Stats Cards */}
@@ -330,14 +340,13 @@ export default function ReferralCodeDetailPage() {
                             />
                         </div>
                         <div className="flex items-center gap-2">
-                            <input
-                                type="checkbox"
-                                id="isActive"
-                                checked={editData.isActive}
-                                onChange={(e) => setEditData({ ...editData, isActive: e.target.checked })}
-                                className="rounded text-brand-500 focus:ring-brand-500"
+                            <StatusToggle
+                                isActive={editData.isActive}
+                                onToggle={() => setEditData({ ...editData, isActive: !editData.isActive })}
+                                size="sm"
+                                activeLabel={t("referral.active")}
+                                inactiveLabel={t("referral.inactive")}
                             />
-                            <label htmlFor="isActive" className="text-sm">{t("referral.active")}</label>
                         </div>
                     </div>
                 ) : (

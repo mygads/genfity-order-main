@@ -14,11 +14,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
 import { ValidationError } from '@/lib/constants/errors';
 import { serializeBigInt } from '@/lib/utils/serializer';
-import {
-  isStoreOpenWithSpecialHoursForDateTime,
-  isModeAvailableWithSchedulesForDateTime,
-  type ExtendedMerchantStatus,
-} from '@/lib/utils/storeStatus';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import emailService from '@/lib/services/EmailService';
@@ -158,71 +153,6 @@ export async function POST(req: NextRequest) {
     if (reservationDate < today || (reservationDate === today && reservationTime < nowTime)) {
       return NextResponse.json(
         { success: false, error: 'VALIDATION_ERROR', message: 'Reservation time cannot be in the past' },
-        { status: 400 }
-      );
-    }
-
-    // Validate store + mode availability for the requested reservation time.
-    // Note: Reservations can be made even if the store is currently closed, as long as
-    // the selected time falls within opening hours/schedules (merchant timezone).
-    const specialHour = await prisma.merchantSpecialHour.findUnique({
-      where: {
-        merchantId_date: {
-          merchantId: merchant.id,
-          date: new Date(reservationDate),
-        },
-      },
-    });
-
-    const merchantStatus: ExtendedMerchantStatus = {
-      isOpen: merchant.isOpen,
-      isManualOverride: merchant.isManualOverride,
-      timezone: tz,
-      openingHours: (merchant.openingHours || []).map((h) => ({
-        dayOfWeek: h.dayOfWeek,
-        openTime: h.openTime,
-        closeTime: h.closeTime,
-        isClosed: h.isClosed,
-        is24Hours: (h as any).is24Hours,
-      })),
-      modeSchedules: (merchant.modeSchedules || []).map((s) => ({
-        mode: s.mode as any,
-        dayOfWeek: s.dayOfWeek,
-        startTime: s.startTime,
-        endTime: s.endTime,
-      })),
-      todaySpecialHour: null,
-      isDineInEnabled: merchant.isDineInEnabled,
-      isTakeawayEnabled: merchant.isTakeawayEnabled,
-      isDeliveryEnabled: merchant.isDeliveryEnabled,
-      dineInScheduleStart: merchant.dineInScheduleStart,
-      dineInScheduleEnd: merchant.dineInScheduleEnd,
-      takeawayScheduleStart: merchant.takeawayScheduleStart,
-      takeawayScheduleEnd: merchant.takeawayScheduleEnd,
-      deliveryScheduleStart: merchant.deliveryScheduleStart,
-      deliveryScheduleEnd: merchant.deliveryScheduleEnd,
-    };
-
-    const storeRes = isStoreOpenWithSpecialHoursForDateTime(merchantStatus, reservationDate, reservationTime, specialHour);
-    if (!storeRes.isOpen) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'STORE_CLOSED',
-          message: storeRes.reason || 'Store is closed at the selected time',
-        },
-        { status: 400 }
-      );
-    }
-
-    const modeRes = isModeAvailableWithSchedulesForDateTime('DINE_IN', merchantStatus, reservationDate, reservationTime, specialHour);
-    if (!modeRes.available) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'MODE_UNAVAILABLE',
-          message: modeRes.reason || 'Dine-in is not available at the selected time',
-        },
         { status: 400 }
       );
     }

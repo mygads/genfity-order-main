@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { StatusToggle } from '@/components/common/StatusToggle';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 interface Balance {
   currency: string;
@@ -51,6 +53,7 @@ function formatCurrency(amount: number | string, currency: string): string {
 }
 
 export default function SuperAdminInfluencersPage() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [influencers, setInfluencers] = useState<Influencer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -324,7 +327,7 @@ export default function SuperAdminInfluencersPage() {
                         )}
                         {!influencer.isActive && (
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
-                            Inactive
+                            {t('common.inactive')}
                           </span>
                         )}
                         {influencer.pendingWithdrawals > 0 && (
@@ -357,17 +360,16 @@ export default function SuperAdminInfluencersPage() {
                             Reject
                           </button>
                         )}
-                        <button
-                          onClick={() => handleToggleActive(influencer.id, influencer.isActive)}
+                        <StatusToggle
+                          isActive={influencer.isActive}
+                          onToggle={() => handleToggleActive(influencer.id, influencer.isActive)}
                           disabled={actionLoading === influencer.id}
-                          className={`px-3 py-1.5 text-sm font-medium rounded-lg disabled:opacity-50 ${
-                            influencer.isActive
-                              ? 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400'
-                              : 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400'
-                          }`}
-                        >
-                          {influencer.isActive ? 'Deactivate' : 'Activate'}
-                        </button>
+                          size="sm"
+                          activeLabel={t('common.active')}
+                          inactiveLabel={t('common.inactive')}
+                          activateTitle="Activate"
+                          deactivateTitle="Deactivate"
+                        />
                         <Link
                           href={`/admin/dashboard/influencers/${influencer.id}`}
                           className="px-3 py-1.5 text-sm font-medium bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg"

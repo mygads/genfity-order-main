@@ -16,6 +16,7 @@ import ArchiveModal from "@/components/common/ArchiveModal";
 import { useContextualHint, CONTEXTUAL_HINTS, useClickHereHint, CLICK_HINTS } from "@/lib/tutorial";
 import ConfirmDialog from "@/components/modals/ConfirmDialog";
 import { TableActionButton } from "@/components/common/TableActionButton";
+import { StatusToggle } from "@/components/common/StatusToggle";
 import { FaEye, FaLink, FaPencilAlt, FaTrash } from "react-icons/fa";
 
 interface AddonCategory {
@@ -875,14 +876,13 @@ function AddonCategoriesPageContent() {
                         </span>
                       </td>
                       <td className="px-4 py-4">
-                        <button
-                          onClick={() => handleToggleActive(category.id, category.isActive, category.name)}
-                          className={`inline-flex rounded-full px-3 py-1 text-xs font-medium transition-colors ${category.isActive
-                            ? 'bg-success-100 text-success-700 hover:bg-success-200 dark:bg-success-900/20 dark:text-success-400 dark:hover:bg-success-900/30'
-                            : 'bg-error-100 text-error-700 hover:bg-error-200 dark:bg-error-900/20 dark:text-error-400 dark:hover:bg-error-900/30'
-                            }`}>
-                          {category.isActive ? t("admin.addonCategories.statusActive") : t("admin.addonCategories.statusInactive")}
-                        </button>
+                        <StatusToggle
+                          isActive={category.isActive}
+                          onToggle={() => handleToggleActive(category.id, category.isActive, category.name)}
+                          size="sm"
+                          activeLabel={t("common.active")}
+                          inactiveLabel={t("common.inactive")}
+                        />
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-2">

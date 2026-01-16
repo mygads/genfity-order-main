@@ -80,6 +80,7 @@ interface POSPaymentModalProps {
     taxAmount?: number;
     serviceChargeAmount?: number;
     packagingFeeAmount?: number;
+    deliveryFeeAmount?: number;
   };
   merchantInfo?: {
     name: string;
@@ -277,7 +278,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
       taxAmount: orderDetails.taxAmount ?? 0,
       serviceChargeAmount: orderDetails.serviceChargeAmount ?? 0,
       packagingFeeAmount: orderDetails.packagingFeeAmount ?? 0,
-      deliveryFeeAmount: 0,
+      deliveryFeeAmount: orderDetails.deliveryFeeAmount ?? 0,
       discountAmount: effectiveDiscountAmount > 0 ? effectiveDiscountAmount : 0,
       totalAmount: finalTotal,
     };
@@ -531,6 +532,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
         taxAmount: orderDetails.taxAmount,
         serviceChargeAmount: orderDetails.serviceChargeAmount,
         packagingFeeAmount: orderDetails.packagingFeeAmount,
+        deliveryFeeAmount: orderDetails.deliveryFeeAmount,
         discountAmount: effectiveDiscountAmount > 0 ? effectiveDiscountAmount : undefined,
         discountLabel: appliedVoucher?.label || undefined,
         totalAmount: finalTotal,
@@ -759,7 +761,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
                   }}
                   options={{
                     showDiscount: effectiveDiscountAmount > 0,
-                    showDeliveryFee: false,
+                    showDeliveryFee: true,
                   }}
                   showTotalRow={effectiveDiscountAmount > 0}
                   rowsContainerClassName="space-y-1.5 text-sm"

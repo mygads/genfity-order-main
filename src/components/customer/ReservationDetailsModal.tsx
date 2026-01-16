@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation, tOr } from '@/lib/i18n/useTranslation';
 import { saveReservationDetails, getReservationDetails } from '@/lib/utils/localStorage';
+import { FaTimes } from 'react-icons/fa';
 
 export type ReservationDetails = {
   partySize: number;
@@ -142,16 +143,24 @@ export default function ReservationDetailsModal({
     <>
       {/* Overlay (no close on click; required modal) */}
       <div
-        className={`fixed inset-0 bg-black/50 z-110 transition-opacity duration-250 ${isClosing ? 'animate-fadeOut' : 'animate-fadeIn'}`}
+        className={`fixed inset-0 bg-black/50 z-1000 transition-opacity duration-250 ${isClosing ? 'animate-fadeOut' : 'animate-fadeIn'}`}
       />
 
       {/* Bottom Sheet */}
-      <div className={`fixed inset-x-0 bottom-0 z-111 flex justify-center ${isClosing ? 'animate-slideDown' : 'animate-slideUp'}`}>
+      <div className={`fixed inset-x-0 bottom-0 z-1000 flex justify-center ${isClosing ? 'animate-slideDown' : 'animate-slideUp'}`}>
         <div className="w-full max-w-125 bg-white rounded-t-2xl shadow-2xl">
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
             <h2 className="text-lg font-semibold text-gray-900" style={{ margin: 0, lineHeight: 'normal' }}>
               {tOr(t, 'customer.reservationDetails.title', 'Reservation Details')}
             </h2>
+            <button
+              onClick={handleBack}
+              className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-gray-100 transition-colors"
+              aria-label={tOr(t, 'common.close', 'Close')}
+              type="button"
+            >
+              <FaTimes className="w-4 h-4 text-gray-700" />
+            </button>
           </div>
 
           <div className="px-4 py-4 space-y-4">

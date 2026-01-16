@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useModalImplicitClose } from "@/hooks/useModalImplicitClose";
 import { getCurrencyConfig } from "@/lib/constants/location";
 import { getCurrencySymbol } from "@/lib/utils/format";
+import { StatusToggle } from "@/components/common/StatusToggle";
 import { FaCalendarAlt, FaCashRegister, FaCoins, FaLayerGroup, FaShoppingCart, FaTag, FaTasks, FaUser } from "react-icons/fa";
 
 type ApiResponse<T> = { success: boolean; data?: T; message?: string };
@@ -620,15 +621,16 @@ export function OrderVoucherTemplateFormModal({
                 <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">{t("admin.orderVouchers.hints.oneVoucherPerOrder")}</p>
               </div>
 
-              <label className="flex cursor-pointer items-center gap-3 text-sm text-gray-700 dark:text-gray-300">
-                <input
-                  type="checkbox"
-                  checked={form.isActive}
-                  onChange={(e) => setForm((p) => ({ ...p, isActive: e.target.checked }))}
-                  className="h-4 w-4"
+              <div className="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300">
+                <StatusToggle
+                  isActive={form.isActive}
+                  onToggle={() => setForm((p) => ({ ...p, isActive: !p.isActive }))}
+                  size="sm"
+                  activeLabel={t("common.active")}
+                  inactiveLabel={t("common.inactive")}
                 />
                 <span>{t("admin.orderVouchers.fields.isActive")}</span>
-              </label>
+              </div>
             </div>
           </section>
 
@@ -918,15 +920,16 @@ export function OrderVoucherTemplateFormModal({
           <section className="rounded-xl border border-gray-200 p-4 dark:border-gray-800">
             <h4 className="mb-3 text-sm font-semibold text-gray-900 dark:text-white">{t("admin.orderVouchers.sections.scope")}</h4>
 
-            <label className="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300">
-              <input
-                type="checkbox"
-                checked={form.includeAllItems}
-                onChange={(e) => setForm((p) => ({ ...p, includeAllItems: e.target.checked }))}
-                className="h-4 w-4"
+            <div className="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300">
+              <StatusToggle
+                isActive={form.includeAllItems}
+                onToggle={() => setForm((p) => ({ ...p, includeAllItems: !p.includeAllItems }))}
+                size="sm"
+                activeLabel={t("common.on")}
+                inactiveLabel={t("common.off")}
               />
-              {t("admin.orderVouchers.fields.includeAllItems")}
-            </label>
+              <span>{t("admin.orderVouchers.fields.includeAllItems")}</span>
+            </div>
 
             {!form.includeAllItems && (
               <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">

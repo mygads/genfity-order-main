@@ -11,6 +11,7 @@ import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Image from 'next/image';
 import { TableActionButton } from '@/components/common/TableActionButton';
 import { FaEdit } from 'react-icons/fa';
+import { StatusToggle } from '@/components/common/StatusToggle';
 
 import EditUserModal from './EditUserModal';
 import ToastContainer from '@/components/ui/ToastContainer';
@@ -19,6 +20,7 @@ import { getAdminToken } from '@/lib/utils/adminAuth';
 import CreateUserModal from './CreateUserModal';
 import { useSWRWithAuth } from '@/hooks/useSWRWithAuth';
 import { UsersPageSkeleton } from '@/components/common/SkeletonLoaders';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 interface User {
   id: string;
@@ -39,6 +41,7 @@ interface UsersApiResponse {
 }
 
 export default function UsersPage() {
+  const { t } = useTranslation();
   const { toasts, success: showSuccessToast, error: showErrorToast } = useToast();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -287,8 +290,8 @@ export default function UsersPage() {
               className="h-10 rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
             >
               <option value="">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
+              <option value="active">{t('common.active')}</option>
+              <option value="inactive">{t('common.inactive')}</option>
             </select>
           </div>
           <button 
@@ -385,19 +388,15 @@ export default function UsersPage() {
                         {user.merchantName || '-'}
                       </td>
                       <td className="px-5 py-4">
-                        {/* Toggle Active/Inactive */}
-                        <button
-                          onClick={() => handleToggleActive(user.id, user.isActive)}
-                          className={`inline-flex items-center gap-2 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${
-                            user.isActive 
-                              ? 'bg-success-100 text-success-700 hover:bg-success-200 dark:bg-success-900/30 dark:text-success-400 dark:hover:bg-success-900/50'
-                              : 'bg-error-100 text-error-700 hover:bg-error-200 dark:bg-error-900/30 dark:text-error-400 dark:hover:bg-error-900/50'
-                          }`}
-                          title={`Click to ${user.isActive ? 'deactivate' : 'activate'}`}
-                        >
-                          <span className={`h-1.5 w-1.5 rounded-full ${user.isActive ? 'bg-success-600' : 'bg-error-600'}`} />
-                          {user.isActive ? 'Active' : 'Inactive'}
-                        </button>
+                        <StatusToggle
+                          isActive={user.isActive}
+                          onToggle={() => handleToggleActive(user.id, user.isActive)}
+                          activeLabel={t('common.active')}
+                          inactiveLabel={t('common.inactive')}
+                          activateTitle="Activate"
+                          deactivateTitle="Deactivate"
+                          size="sm"
+                        />
                       </td>
                       <td className="px-5 py-4 text-sm text-gray-600 dark:text-gray-400">{formatDate(user.createdAt)}</td>
                       <td className="px-5 py-4 text-end">

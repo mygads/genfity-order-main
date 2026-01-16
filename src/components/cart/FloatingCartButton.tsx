@@ -103,8 +103,8 @@ export default function FloatingCartButton({ merchantCode, mode, flow, scheduled
     setPrevItemCount(currentCount);
   }, [displayData.totalItems, prevItemCount]);
 
-  // Don't show if store is closed
-  if (!storeOpen) {
+  // Don't show if store is closed (except reservation flow)
+  if (!storeOpen && flow !== 'reservation') {
     return null;
   }
 

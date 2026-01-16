@@ -6,6 +6,8 @@ import Image from "next/image";
 import dynamic from "next/dynamic";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import AdminFormFooter from "@/components/common/AdminFormFooter";
+import { StatusToggle } from "@/components/common/StatusToggle";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useToast } from "@/hooks/useToast";
 import ToastContainer from "@/components/ui/ToastContainer";
 import { COUNTRIES, CURRENCIES, TIMEZONES } from "@/lib/constants/location";
@@ -42,6 +44,7 @@ export default function EditMerchantPage() {
   const router = useRouter();
   const params = useParams();
   const merchantId = params?.id as string;
+  const { t } = useTranslation();
   const { toasts, success: showSuccess, error: showError } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -656,15 +659,16 @@ export default function EditMerchantPage() {
                   </div>
 
                   {/* Is Closed Checkbox */}
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={hour.isClosed}
-                      onChange={(e) => handleOpeningHourChange(hour.dayOfWeek, 'isClosed', e.target.checked)}
-                      className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 dark:border-gray-700"
-                    />
+                  <div className="flex items-center gap-2">
                     <span className="text-sm text-gray-600 dark:text-gray-400">Closed</span>
-                  </label>
+                    <StatusToggle
+                      isActive={hour.isClosed}
+                      onToggle={() => handleOpeningHourChange(hour.dayOfWeek, 'isClosed', !hour.isClosed)}
+                      size="sm"
+                      activeLabel={t('common.on')}
+                      inactiveLabel={t('common.off')}
+                    />
+                  </div>
 
                   {/* Time Inputs */}
                   {!hour.isClosed && (

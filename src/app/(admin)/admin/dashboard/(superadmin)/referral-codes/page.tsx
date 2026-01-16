@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useSWRWithAuth } from "@/hooks/useSWRWithAuth";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { StatusToggle } from "@/components/common/StatusToggle";
 
 interface ReferralCode {
     id: string;
@@ -38,6 +39,7 @@ export default function ReferralCodesPage() {
     const [showInactive, setShowInactive] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
     const [showCreateModal, setShowCreateModal] = useState(false);
+    const [togglingId, setTogglingId] = useState<string | null>(null);
     const [newCode, setNewCode] = useState({
         code: "",
         description: "",
@@ -91,14 +93,46 @@ export default function ReferralCodesPage() {
         }
     };
 
-    const getStatusBadge = (code: ReferralCode) => {
-        if (!code.isActive) {
-            return <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-600">{t("referral.inactive")}</span>;
+    const handleToggleActive = async (code: ReferralCode) => {
+        setTogglingId(code.id);
+        try {
+            const token = localStorage.getItem('accessToken');
+            if (!token) return;
+
+            const response = await fetch(`/api/admin/referral-codes/${code.id}`, {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    isActive: !code.isActive,
+                }),
+            });
+
+            if (response.ok) {
+                mutate();
+            }
+        } finally {
+            setTogglingId(null);
         }
+    };
+
+    const getStatusCell = (code: ReferralCode) => {
         if (code.validUntil && new Date(code.validUntil) < new Date()) {
             return <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-600">{t("referral.expired")}</span>;
         }
-        return <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-600">{t("referral.active")}</span>;
+
+        return (
+            <StatusToggle
+                isActive={code.isActive}
+                onToggle={() => void handleToggleActive(code)}
+                disabled={togglingId === code.id}
+                size="sm"
+                activeLabel={t("referral.active")}
+                inactiveLabel={t("referral.inactive")}
+            />
+        );
     };
 
     if (isLoading) {
@@ -149,15 +183,16 @@ export default function ReferralCodesPage() {
 
             {/* Filters */}
             <div className="mb-6 flex items-center gap-4">
-                <label className="flex items-center gap-2 text-sm">
-                    <input
-                        type="checkbox"
-                        checked={showInactive}
-                        onChange={(e) => setShowInactive(e.target.checked)}
-                        className="rounded text-brand-500 focus:ring-brand-500"
+                <div className="flex items-center gap-2 text-sm">
+                    <StatusToggle
+                        isActive={showInactive}
+                        onToggle={() => setShowInactive(!showInactive)}
+                        size="sm"
+                        activeLabel={t('common.on')}
+                        inactiveLabel={t('common.off')}
                     />
-                    Show inactive codes
-                </label>
+                    <span>{t("referral.showInactiveCodes")}</span>
+                </div>
             </div>
 
             {/* Table */}
@@ -220,7 +255,7 @@ export default function ReferralCodesPage() {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
-                                        {getStatusBadge(code)}
+                                        {getStatusCell(code)}
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         <Link

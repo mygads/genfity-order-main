@@ -72,6 +72,7 @@ import ConfirmDialog from '@/components/modals/ConfirmDialog';
 
 import { printReceipt } from '@/lib/utils/unifiedReceipt';
 import type { ReceiptSettings } from '@/lib/types/receiptSettings';
+import { normalizeTableNumber } from '@/lib/utils/posTableNumber';
 
 // ============================================
 // INTERFACES
@@ -120,20 +121,6 @@ const HELD_ORDERS_STORAGE_KEY = 'pos_held_orders';
 const HELD_ORDERS_EXPIRY_DAYS = 1; // Auto-expire after 1 day
 
 type DisplayMode = 'normal' | 'clean' | 'fullscreen';
-
-function normalizeTableNumber(value: unknown): string {
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
-
-  if (value && typeof value === 'object') {
-    const obj = value as Record<string, unknown>;
-    const candidate = obj.tableNumber ?? obj.value ?? obj.label;
-    if (typeof candidate === 'string') return candidate;
-    if (typeof candidate === 'number' && Number.isFinite(candidate)) return String(candidate);
-  }
-
-  return '';
-}
 
 // Grid columns options (min 1 for large cards, max 12 for small cards)
 const MIN_GRID_COLUMNS = 1;
@@ -260,6 +247,7 @@ export default function POSPage() {
     taxAmount?: number;
     serviceChargeAmount?: number;
     packagingFeeAmount?: number;
+    deliveryFeeAmount?: number;
   } | null>(null);
 
   // Loading state
@@ -786,7 +774,13 @@ export default function POSPage() {
       ? (merchantSettings.packagingFeeAmount || 0)
       : 0;
 
-    return subtotal + taxAmount + serviceCharge + packagingFee;
+    // Future-proofing: if POS adds DELIVERY order type, include delivery fee when present.
+    const isDeliveryOrder = String(orderType) === 'DELIVERY';
+    const deliveryFee = isDeliveryOrder && (merchantSettings as any)?.enableDeliveryFee
+      ? Number((merchantSettings as any)?.deliveryFeeAmount || 0)
+      : 0;
+
+    return subtotal + taxAmount + serviceCharge + packagingFee + (Number.isFinite(deliveryFee) ? deliveryFee : 0);
   }, [cartItems, merchantSettings, orderType]);
 
   // Place order - with offline support
@@ -927,6 +921,11 @@ export default function POSPage() {
           ? (merchantSettings.packagingFeeAmount || 0)
           : 0;
 
+        const isDeliveryOrder = String(orderType) === 'DELIVERY';
+        const deliveryFeeAmount = isDeliveryOrder && (merchantSettings as any)?.enableDeliveryFee
+          ? Number((merchantSettings as any)?.deliveryFeeAmount || 0)
+          : 0;
+
         // Store order details for receipt printing
         setPendingOrderDetails({
           orderType,
@@ -947,6 +946,7 @@ export default function POSPage() {
           taxAmount: taxAmount > 0 ? taxAmount : undefined,
           serviceChargeAmount: serviceChargeAmount > 0 ? serviceChargeAmount : undefined,
           packagingFeeAmount: packagingFeeAmount > 0 ? packagingFeeAmount : undefined,
+          deliveryFeeAmount: deliveryFeeAmount > 0 ? deliveryFeeAmount : undefined,
         });
 
         // Store order info and show payment modal
@@ -1110,11 +1110,17 @@ export default function POSPage() {
       ? (merchantSettings.packagingFeeAmount || 0)
       : 0;
 
+    const isDeliveryOrder = String(orderType) === 'DELIVERY';
+    const deliveryFeeAmount = isDeliveryOrder && (merchantSettings as any)?.enableDeliveryFee
+      ? Number((merchantSettings as any)?.deliveryFeeAmount || 0)
+      : 0;
+
     lines.push('');
     lines.push(`${t('pos.orderConfirm.subtotal') || 'Subtotal'}: ${formatCurrency(subtotal)}`);
     if (taxAmount > 0) lines.push(`${t('pos.orderConfirm.tax') || 'Tax'}: ${formatCurrency(taxAmount)}`);
     if (serviceChargeAmount > 0) lines.push(`${t('pos.orderConfirm.service') || 'Service'}: ${formatCurrency(serviceChargeAmount)}`);
     if (packagingFeeAmount > 0) lines.push(`${t('pos.orderConfirm.packaging') || 'Packaging'}: ${formatCurrency(packagingFeeAmount)}`);
+    if (deliveryFeeAmount > 0) lines.push(`${t('pos.orderConfirm.deliveryFee') || 'Delivery Fee'}: ${formatCurrency(deliveryFeeAmount)}`);
     lines.push(`${t('pos.orderConfirm.total') || 'Total'}: ${formatCurrency(calculateOrderTotal())}`);
 
     setPendingPlaceOrderTableNumber(isTableNumberEnabled ? (effectiveTableNumber || '0') : undefined);
@@ -1175,6 +1181,7 @@ export default function POSPage() {
         taxAmount: pendingOrderDetails.taxAmount,
         serviceChargeAmount: pendingOrderDetails.serviceChargeAmount,
         packagingFeeAmount: pendingOrderDetails.packagingFeeAmount,
+        deliveryFeeAmount: pendingOrderDetails.deliveryFeeAmount,
         totalAmount: pendingOrderTotal || calculateOrderTotal(),
         paymentStatus: 'UNPAID',
       },

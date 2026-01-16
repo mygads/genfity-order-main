@@ -95,6 +95,41 @@ export default function DeliverySettingsTab({
 }) {
   const { t } = useTranslation();
 
+  const getNotCoveredTitle = (errorCode?: string): string => {
+    const code = (errorCode || '').toUpperCase();
+    if (code === 'OUT_OF_RANGE' || code === 'OUT_OF_ZONE') {
+      return keyOrFallback('admin.merchant.deliveryOutsideArea' as TranslationKeys, 'Outside delivery area', t);
+    }
+    if (code === 'NO_ZONES_CONFIGURED') {
+      return keyOrFallback('admin.merchant.deliveryZonesNotConfigured' as TranslationKeys, 'Delivery zones not configured', t);
+    }
+    return keyOrFallback('admin.merchant.deliveryNotCovered' as TranslationKeys, 'Not covered', t);
+  };
+
+  const getNotCoveredMessage = (errorCode?: string, apiMessage?: string): string => {
+    const code = (errorCode || '').toUpperCase();
+    if (apiMessage && apiMessage.trim()) return apiMessage;
+    if (code === 'OUT_OF_RANGE' || code === 'OUT_OF_ZONE') {
+      return keyOrFallback(
+        'admin.merchant.deliveryOutsideAreaDesc' as TranslationKeys,
+        'This location is outside the delivery coverage area.',
+        t
+      );
+    }
+    if (code === 'NO_ZONES_CONFIGURED') {
+      return keyOrFallback(
+        'admin.merchant.deliveryZonesNotConfiguredDesc' as TranslationKeys,
+        'Delivery zones are enforced but no zones are configured.',
+        t
+      );
+    }
+    return keyOrFallback(
+      'admin.merchant.deliveryNotCoveredDesc' as TranslationKeys,
+      'This location is not covered by the current delivery configuration.',
+      t
+    );
+  };
+
   const currency = formData.currency || 'AUD';
   const currencyConfig = getCurrencyConfig(currency);
   const decimals = currencyConfig?.decimals ?? 2;
@@ -1066,14 +1101,14 @@ export default function DeliverySettingsTab({
         {previewResult && !previewResult.isCovered && (
           <div className="mt-4 rounded-xl border border-warning-200 bg-warning-50 p-4 text-sm text-warning-800 dark:border-warning-900/40 dark:bg-warning-900/10 dark:text-warning-200">
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-              <div className="font-semibold">Not covered</div>
+              <div className="font-semibold">{getNotCoveredTitle(previewResult.errorCode)}</div>
               {previewResult.errorCode && (
                 <span className="inline-flex items-center rounded-full border border-warning-300 bg-warning-100 px-2 py-0.5 text-xs font-semibold text-warning-900 dark:border-warning-900/40 dark:bg-warning-900/20 dark:text-warning-100">
                   Reason: {previewResult.errorCode}
                 </span>
               )}
             </div>
-            <div>{previewResult.message || 'This location is outside the delivery coverage.'}</div>
+            <div>{getNotCoveredMessage(previewResult.errorCode, previewResult.message)}</div>
           </div>
         )}
       </div>

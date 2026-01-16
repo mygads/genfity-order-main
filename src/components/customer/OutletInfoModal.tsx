@@ -112,12 +112,12 @@ export default function OutletInfoModal({ isOpen, onClose, merchant, merchantCod
         <>
             {/* Backdrop */}
             <div
-                className={`fixed inset-0 bg-black/50 z-50 transition-opacity duration-250 ${isClosing ? 'opacity-0' : 'opacity-100'}`}
+                className={`fixed inset-0 bg-black/50 z-1000 transition-opacity duration-250 ${isClosing ? 'opacity-0' : 'opacity-100'}`}
                 onClick={handleClose}
             />
 
             {/* Modal */}
-            <div className="fixed inset-0 z-50 flex items-end justify-center pointer-events-none">
+            <div className="fixed inset-0 z-1000 flex items-end justify-center pointer-events-none">
                 <div className={`w-full max-w-[500px] bg-white rounded-t-2xl shadow-2xl pointer-events-auto ${isClosing ? 'animate-slide-down' : 'animate-slide-up'}`}>
 
                     {/* Header */}
@@ -273,12 +273,12 @@ export default function OutletInfoModal({ isOpen, onClose, merchant, merchantCod
                 <>
                     {/* Share Modal Backdrop */}
                     <div
-                        className="fixed inset-0 bg-black/60 z-[60] transition-opacity"
+                        className="fixed inset-0 bg-black/60 z-1010 transition-opacity"
                         onClick={() => setShowShareModal(false)}
                     />
 
                     {/* Share Modal Content */}
-                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+                    <div className="fixed inset-0 z-1010 flex items-center justify-center p-4">
                         <div className="w-full max-w-[400px] bg-white rounded-2xl shadow-2xl animate-scale-in">
                             {/* Header */}
                             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">

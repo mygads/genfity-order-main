@@ -11,6 +11,7 @@ import { useMerchant } from '@/context/MerchantContext';
 import { getCurrencySymbol } from '@/lib/utils/format';
 import { useToast } from '@/context/ToastContext';
 import StockPhotoPicker from './StockPhotoPicker';
+import { StatusToggle } from '@/components/common/StatusToggle';
 
 /**
  * Menu Builder Tabs Component
@@ -137,6 +138,7 @@ export default function MenuBuilderTabs({
 
   const watchTrackStock = watch('trackStock');
   const watchImageUrl = watch('imageUrl');
+  const watchIsActive = watch('isActive');
 
   useEffect(() => {
     setImageError(false);
@@ -753,16 +755,20 @@ export default function MenuBuilderTabs({
             </div>
 
             {/* Active Status */}
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                {...register('isActive')}
-                id="isActive"
-                className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+            <div className="flex items-center gap-3">
+              <StatusToggle
+                isActive={Boolean(watchIsActive)}
+                onToggle={() => {
+                  setValue('isActive', !Boolean(watchIsActive), { shouldDirty: true, shouldValidate: true });
+                }}
+                activeLabel="Active"
+                inactiveLabel="Inactive"
+                activateTitle="Activate menu"
+                deactivateTitle="Deactivate menu"
               />
-              <label htmlFor="isActive" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Menu is Active (visible to customers)
-              </label>
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Visible to customers
+              </span>
             </div>
           </div>
         )}

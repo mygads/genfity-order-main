@@ -19,6 +19,7 @@ import { useContextualHint, CONTEXTUAL_HINTS, useClickHereHint, CLICK_HINTS } fr
 import { STAFF_PERMISSIONS } from "@/lib/constants/permissions";
 import Switch from "@/components/ui/Switch";
 import { ConfirmationModal } from "@/components/common/ConfirmationModal";
+import { StatusToggle } from "@/components/common/StatusToggle";
 import { FaEye, FaTrash, FaUserShield, FaEdit } from "react-icons/fa";
 
 interface Staff {
@@ -690,14 +691,15 @@ export default function StaffManagementPage() {
                         {member.role === 'MERCHANT_OWNER' ? (
                           <span className="text-sm text-gray-400 dark:text-gray-600">—</span>
                         ) : (
-                          <Switch
-                            checked={member.isActive}
-                            onCheckedChange={() => {
+                          <StatusToggle
+                            isActive={member.isActive}
+                            onToggle={() => {
                               void handleToggleStatus(member);
                             }}
                             disabled={!isCurrentUserOwner || Boolean(savingToggle[member.userId]?.active)}
                             size="sm"
-                            aria-label={`Toggle active for ${member.name}`}
+                            activeLabel={t("common.active")}
+                            inactiveLabel={t("common.inactive")}
                           />
                         )}
                       </td>

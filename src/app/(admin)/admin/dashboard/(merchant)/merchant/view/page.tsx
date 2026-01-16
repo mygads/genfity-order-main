@@ -9,6 +9,7 @@ import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { useAuth } from "@/hooks/useAuth";
 import MerchantQRCodeModal from "@/components/merchants/MerchantQRCodeModal";
 import { isStoreEffectivelyOpen } from "@/lib/utils/storeStatus";
+import { StatusToggle } from "@/components/common/StatusToggle";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { formatCurrency } from "@/lib/utils/format";
 import { useContextualHint, CONTEXTUAL_HINTS } from "@/lib/tutorial/components/ContextualHint";
@@ -369,21 +370,14 @@ export default function ViewMerchantPage() {
 
             {/* Status Badges */}
             <div className="mt-3 flex items-center gap-2">
-              {merchant.isActive ? (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-success-100 px-3 py-1.5 text-xs font-medium text-success-700 dark:bg-success-900/20 dark:text-success-400">
-                  <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
-                  </svg>
-                  {t("admin.merchant.statusActive")}
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-400">
-                  <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
-                  </svg>
-                  {t("admin.merchant.statusInactive")}
-                </span>
-              )}
+              <StatusToggle
+                isActive={merchant.isActive}
+                onToggle={() => {}}
+                disabled
+                size="sm"
+                activeLabel={t("admin.merchant.statusActive")}
+                inactiveLabel={t("admin.merchant.statusInactive")}
+              />
 
               {merchant.isActive && (
                 (() => {

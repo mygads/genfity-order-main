@@ -3,8 +3,10 @@
 import React, { useState } from "react";
 import { useSWRWithAuth } from "@/hooks/useSWRWithAuth";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { formatCurrency } from "@/lib/utils/format";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { TableActionButton } from "@/components/common/TableActionButton";
+import { StatusToggle } from "@/components/common/StatusToggle";
 import ConfirmDialog from "@/components/modals/ConfirmDialog";
 import AlertDialog from "@/components/modals/AlertDialog";
 import { FaTicketAlt, FaPlus, FaWallet, FaCalendarPlus, FaSearch, FaFilter, FaTimes, FaEdit, FaTrash, FaEye, FaHistory } from "react-icons/fa";
@@ -86,7 +88,7 @@ export default function VouchersPage() {
     const { t, locale } = useTranslation();
 
     const [alertOpen, setAlertOpen] = useState(false);
-    const [alertTitle, setAlertTitle] = useState<string>(locale === "id" ? "Gagal" : "Error");
+    const [alertTitle, setAlertTitle] = useState<string>(t("common.failed"));
     const [alertMessage, setAlertMessage] = useState<string>("");
     const [alertVariant, setAlertVariant] = useState<"danger" | "warning" | "info">("danger");
 
@@ -94,7 +96,7 @@ export default function VouchersPage() {
     const [pendingDeleteVoucher, setPendingDeleteVoucher] = useState<Voucher | null>(null);
 
     const showAlert = (message: string, variant: "danger" | "warning" | "info" = "danger", title?: string) => {
-        setAlertTitle(title || (locale === "id" ? "Gagal" : "Error"));
+        setAlertTitle(title || t("common.failed"));
         setAlertMessage(message);
         setAlertVariant(variant);
         setAlertOpen(true);
@@ -191,11 +193,11 @@ export default function VouchersPage() {
                 resetForm();
                 mutateVouchers();
             } else {
-                showAlert(data.message || "Failed to create voucher");
+                showAlert(data.message || t("admin.voucher.error.createFailed"));
             }
         } catch (error) {
             console.error("Error creating voucher:", error);
-            showAlert("Failed to create voucher");
+            showAlert(t("admin.voucher.error.createFailed"));
         } finally {
             setIsSubmitting(false);
         }
@@ -233,11 +235,11 @@ export default function VouchersPage() {
                 resetForm();
                 mutateVouchers();
             } else {
-                showAlert(data.message || "Failed to update voucher");
+                showAlert(data.message || t("admin.voucher.error.updateFailed"));
             }
         } catch (error) {
             console.error("Error updating voucher:", error);
-            showAlert("Failed to update voucher");
+            showAlert(t("admin.voucher.error.updateFailed"));
         } finally {
             setIsSubmitting(false);
         }
@@ -260,11 +262,11 @@ export default function VouchersPage() {
             if (data.success) {
                 mutateVouchers();
             } else {
-                showAlert(data.message || "Failed to update voucher");
+                showAlert(data.message || t("admin.voucher.error.updateFailed"));
             }
         } catch (error) {
             console.error("Error updating voucher:", error);
-            showAlert("Failed to update voucher");
+            showAlert(t("admin.voucher.error.updateFailed"));
         }
     };
 
@@ -281,11 +283,11 @@ export default function VouchersPage() {
             if (data.success) {
                 mutateVouchers();
             } else {
-                showAlert(data.message || "Failed to delete voucher");
+                showAlert(data.message || t("admin.voucher.error.deleteFailed"));
             }
         } catch (error) {
             console.error("Error deleting voucher:", error);
-            showAlert("Failed to delete voucher");
+            showAlert(t("admin.voucher.error.deleteFailed"));
         }
     };
 
@@ -318,14 +320,6 @@ export default function VouchersPage() {
         setShowEditModal(true);
     };
 
-    // Format currency
-    const formatCurrency = (amount: number, currency: string) => {
-        if (currency === "AUD") {
-            return `A$${amount.toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        }
-        return `Rp ${amount.toLocaleString("id-ID")}`;
-    };
-
     // Format date
     const formatDate = (dateStr: string) => {
         return new Date(dateStr).toLocaleDateString(locale === "id" ? "id-ID" : "en-AU", {
@@ -351,14 +345,14 @@ export default function VouchersPage() {
             return (
                 <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
                     <FaWallet className="w-3 h-3" />
-                    {locale === "id" ? "Saldo" : "Balance"}
+                    {t("admin.voucher.type.balance")}
                 </span>
             );
         }
         return (
             <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
                 <FaCalendarPlus className="w-3 h-3" />
-                {locale === "id" ? "Hari Langganan" : "Subscription Days"}
+                {t("admin.voucher.type.subscriptionDays")}
             </span>
         );
     };
@@ -366,20 +360,20 @@ export default function VouchersPage() {
     // Get status badge
     const getStatusBadge = (voucher: Voucher) => {
         if (!voucher.isActive) {
-            return <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">{locale === "id" ? "Nonaktif" : "Inactive"}</span>;
+            return <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">{t("admin.voucher.inactive")}</span>;
         }
         if (voucher.validUntil && new Date(voucher.validUntil) < new Date()) {
-            return <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">{locale === "id" ? "Kedaluwarsa" : "Expired"}</span>;
+            return <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">{t("admin.voucher.expired")}</span>;
         }
         if (voucher.maxUsage && voucher.currentUsage >= voucher.maxUsage) {
-            return <span className="px-2 py-1 text-xs font-medium rounded-full bg-brand-100 text-brand-600 dark:bg-brand-900/30 dark:text-brand-400">{locale === "id" ? "Habis" : "Exhausted"}</span>;
+            return <span className="px-2 py-1 text-xs font-medium rounded-full bg-brand-100 text-brand-600 dark:bg-brand-900/30 dark:text-brand-400">{t("admin.voucher.fullyUsed")}</span>;
         }
-        return <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400">{locale === "id" ? "Aktif" : "Active"}</span>;
+        return <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400">{t("admin.voucher.active")}</span>;
     };
 
     // Get currency label
     const getCurrencyLabel = (currency: string | null) => {
-        if (!currency) return locale === "id" ? "Semua" : "Universal";
+        if (!currency) return t("admin.voucher.currencyUniversal");
         return currency;
     };
 
@@ -407,7 +401,7 @@ export default function VouchersPage() {
                     <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
                         <FaTimes className="w-8 h-8 text-red-500" />
                     </div>
-                    <p className="text-red-500 dark:text-red-400">{locale === "id" ? "Gagal memuat data voucher" : "Failed to load vouchers"}</p>
+                    <p className="text-red-500 dark:text-red-400">{t("admin.voucher.error.loadFailed")}</p>
                     <button onClick={() => mutateVouchers()} className="mt-4 px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors">
                         {t("common.retry")}
                     </button>
@@ -418,7 +412,7 @@ export default function VouchersPage() {
 
     return (
         <div className="space-y-4">
-            <PageBreadcrumb pageTitle={locale === "id" ? "Voucher" : "Vouchers"} />
+            <PageBreadcrumb pageTitle={t("admin.nav.vouchers")} />
 
             <AlertDialog
                 isOpen={alertOpen}
@@ -430,16 +424,14 @@ export default function VouchersPage() {
 
             <ConfirmDialog
                 isOpen={deleteConfirmOpen}
-                title={locale === "id" ? "Hapus Voucher" : "Delete Voucher"}
+                title={t("admin.voucher.deleteTitle")}
                 message={
                     pendingDeleteVoucher
-                        ? (locale === "id"
-                            ? `Hapus voucher "${pendingDeleteVoucher.code}"?`
-                            : `Delete voucher "${pendingDeleteVoucher.code}"?`)
-                        : (locale === "id" ? "Hapus voucher ini?" : "Delete this voucher?")
+                        ? t("admin.voucher.deleteConfirmWithCode", { code: pendingDeleteVoucher.code })
+                        : t("admin.voucher.deleteConfirm")
                 }
-                confirmText={locale === "id" ? "Hapus" : "Delete"}
-                cancelText={locale === "id" ? "Batal" : "Cancel"}
+                confirmText={t("common.delete")}
+                cancelText={t("common.cancel")}
                 variant="danger"
                 onConfirm={confirmDelete}
                 onCancel={() => {
@@ -452,12 +444,10 @@ export default function VouchersPage() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                        {locale === "id" ? "Kelola Voucher" : "Manage Vouchers"}
+                        {t("admin.voucher.title")}
                     </h1>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        {locale === "id" 
-                            ? "Buat dan kelola voucher untuk menambah saldo atau hari langganan merchant" 
-                            : "Create and manage vouchers to add balance or subscription days for merchants"}
+                        {t("admin.voucher.subtitle")}
                     </p>
                 </div>
                 <button
@@ -468,7 +458,7 @@ export default function VouchersPage() {
                     className="inline-flex items-center gap-2 px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors font-medium"
                 >
                     <FaPlus className="w-4 h-4" />
-                    {locale === "id" ? "Buat Voucher" : "Create Voucher"}
+                    {t("admin.voucher.create")}
                 </button>
             </div>
 
@@ -484,7 +474,7 @@ export default function VouchersPage() {
                 >
                     <span className="flex items-center gap-2">
                         <FaTicketAlt className="w-4 h-4" />
-                        {locale === "id" ? "Daftar Voucher" : "Voucher List"}
+                        {t("admin.voucher.tabs.vouchers")}
                     </span>
                 </button>
                 <button
@@ -497,7 +487,7 @@ export default function VouchersPage() {
                 >
                     <span className="flex items-center gap-2">
                         <FaHistory className="w-4 h-4" />
-                        {locale === "id" ? "Riwayat Penukaran" : "Redemption History"}
+                        {t("admin.voucher.tabs.redemptions")}
                     </span>
                 </button>
             </div>
@@ -515,7 +505,7 @@ export default function VouchersPage() {
                                     type="text"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    placeholder={locale === "id" ? "Cari kode voucher..." : "Search voucher code..."}
+                                    placeholder={t("admin.voucher.searchPlaceholder")}
                                     className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                                 />
                             </div>
@@ -526,9 +516,9 @@ export default function VouchersPage() {
                                 onChange={(e) => setTypeFilter(e.target.value)}
                                 className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                             >
-                                <option value="ALL">{locale === "id" ? "Semua Tipe" : "All Types"}</option>
-                                <option value="BALANCE">{locale === "id" ? "Saldo" : "Balance"}</option>
-                                <option value="SUBSCRIPTION_DAYS">{locale === "id" ? "Hari Langganan" : "Subscription Days"}</option>
+                                <option value="ALL">{t("admin.voucher.type.all")}</option>
+                                <option value="BALANCE">{t("admin.voucher.type.balance")}</option>
+                                <option value="SUBSCRIPTION_DAYS">{t("admin.voucher.type.subscriptionDays")}</option>
                             </select>
 
                             {/* Currency filter */}
@@ -537,21 +527,22 @@ export default function VouchersPage() {
                                 onChange={(e) => setCurrencyFilter(e.target.value)}
                                 className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                             >
-                                <option value="ALL">{locale === "id" ? "Semua Mata Uang" : "All Currencies"}</option>
+                                <option value="ALL">{t("admin.voucher.currency.all")}</option>
                                 <option value="IDR">IDR</option>
                                 <option value="AUD">AUD</option>
                             </select>
 
                             {/* Show inactive toggle */}
-                            <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                                <input
-                                    type="checkbox"
-                                    checked={showInactive}
-                                    onChange={(e) => setShowInactive(e.target.checked)}
-                                    className="rounded text-brand-500 focus:ring-brand-500"
+                            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                                <StatusToggle
+                                    isActive={showInactive}
+                                    onToggle={() => setShowInactive(!showInactive)}
+                                    size="sm"
+                                    activeLabel={t('common.on')}
+                                    inactiveLabel={t('common.off')}
                                 />
-                                {locale === "id" ? "Tampilkan nonaktif" : "Show inactive"}
-                            </label>
+                                <span>{t('admin.voucher.showInactive')}</span>
+                            </div>
                         </div>
                     </div>
 
@@ -562,12 +553,10 @@ export default function VouchersPage() {
                                 <FaTicketAlt className="w-10 h-10 text-gray-300 dark:text-gray-600" />
                             </div>
                             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                                {locale === "id" ? "Belum ada voucher" : "No vouchers yet"}
+                                {t("admin.voucher.noVouchers")}
                             </h3>
                             <p className="text-gray-500 dark:text-gray-400 mb-4">
-                                {locale === "id" 
-                                    ? "Buat voucher pertama Anda untuk mulai memberikan benefit ke merchant" 
-                                    : "Create your first voucher to start giving benefits to merchants"}
+                                {t("admin.voucher.noVouchersDesc")}
                             </p>
                             <button
                                 onClick={() => {
@@ -577,7 +566,7 @@ export default function VouchersPage() {
                                 className="inline-flex items-center gap-2 px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors"
                             >
                                 <FaPlus className="w-4 h-4" />
-                                {locale === "id" ? "Buat Voucher" : "Create Voucher"}
+                                {t("admin.voucher.create")}
                             </button>
                         </div>
                     ) : (
@@ -587,25 +576,25 @@ export default function VouchersPage() {
                                     <thead className="bg-gray-50 dark:bg-gray-800/50">
                                         <tr>
                                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                                {locale === "id" ? "Kode" : "Code"}
+                                                {t("admin.voucher.code")}
                                             </th>
                                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                                {locale === "id" ? "Tipe" : "Type"}
+                                                {t("admin.voucher.type")}
                                             </th>
                                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                                {locale === "id" ? "Nilai" : "Value"}
+                                                {t("admin.voucher.value")}
                                             </th>
                                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                                {locale === "id" ? "Mata Uang" : "Currency"}
+                                                {t("admin.voucher.currency")}
                                             </th>
                                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                                {locale === "id" ? "Penggunaan" : "Usage"}
+                                                {t("admin.voucher.currentUsage")}
                                             </th>
                                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                                {locale === "id" ? "Status" : "Status"}
+                                                {t("admin.voucher.status")}
                                             </th>
                                             <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                                {locale === "id" ? "Aksi" : "Actions"}
+                                                {t("admin.voucher.actions")}
                                             </th>
                                         </tr>
                                     </thead>
@@ -626,8 +615,8 @@ export default function VouchersPage() {
                                                 <td className="px-4 py-3">
                                                     <div className="font-medium text-gray-900 dark:text-white">
                                                         {voucher.type === "BALANCE" 
-                                                            ? formatCurrency(voucher.value, voucher.currency || "IDR")
-                                                            : `${voucher.value} ${locale === "id" ? "hari" : "days"}`
+                                                            ? formatCurrency(voucher.value, voucher.currency || "IDR", locale)
+                                                            : `${voucher.value} ${t("admin.voucher.days")}`
                                                         }
                                                     </div>
                                                 </td>
@@ -649,28 +638,24 @@ export default function VouchersPage() {
                                                         <TableActionButton
                                                             icon={FaEdit}
                                                             onClick={() => openEditModal(voucher)}
-                                                            aria-label={locale === "id" ? "Edit" : "Edit"}
-                                                            title={locale === "id" ? "Edit" : "Edit"}
+                                                            aria-label={t("common.edit")}
+                                                            title={t("common.edit")}
                                                         />
-                                                        <button
-                                                            onClick={() => handleToggleActive(voucher)}
-                                                            className={`px-2 py-1 text-xs rounded transition-colors ${
-                                                                voucher.isActive
-                                                                    ? "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
-                                                                    : "bg-green-100 text-green-600 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50"
-                                                            }`}
-                                                        >
-                                                            {voucher.isActive 
-                                                                ? (locale === "id" ? "Nonaktifkan" : "Deactivate")
-                                                                : (locale === "id" ? "Aktifkan" : "Activate")
-                                                            }
-                                                        </button>
+                                                        <StatusToggle
+                                                            isActive={voucher.isActive}
+                                                            onToggle={() => handleToggleActive(voucher)}
+                                                            activeLabel={t('common.active')}
+                                                            inactiveLabel={t('common.inactive')}
+                                                            activateTitle={t("admin.voucher.action.activate")}
+                                                            deactivateTitle={t("admin.voucher.action.deactivate")}
+                                                            size="sm"
+                                                        />
                                                         <TableActionButton
                                                             icon={FaTrash}
                                                             tone="danger"
                                                             onClick={() => handleDelete(voucher)}
-                                                            aria-label={locale === "id" ? "Hapus" : "Delete"}
-                                                            title={locale === "id" ? "Hapus" : "Delete"}
+                                                            aria-label={t("common.delete")}
+                                                            title={t("common.delete")}
                                                         />
                                                     </div>
                                                 </td>
@@ -701,12 +686,10 @@ export default function VouchersPage() {
                                 <FaHistory className="w-10 h-10 text-gray-300 dark:text-gray-600" />
                             </div>
                             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                                {locale === "id" ? "Belum ada penukaran" : "No redemptions yet"}
+                                {t("admin.voucher.redemption.noRedemptions")}
                             </h3>
                             <p className="text-gray-500 dark:text-gray-400">
-                                {locale === "id" 
-                                    ? "Riwayat penukaran voucher akan muncul di sini" 
-                                    : "Voucher redemption history will appear here"}
+                                {t("admin.voucher.redemption.noRedemptionsDesc")}
                             </p>
                         </div>
                     ) : (
@@ -715,19 +698,19 @@ export default function VouchersPage() {
                                 <thead className="bg-gray-50 dark:bg-gray-800/50">
                                     <tr>
                                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                            {locale === "id" ? "Voucher" : "Voucher"}
+                                            {t("admin.voucher.code")}
                                         </th>
                                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                            {locale === "id" ? "Merchant" : "Merchant"}
+                                            {t("admin.voucher.redemption.merchant")}
                                         </th>
                                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                            {locale === "id" ? "Nilai" : "Value"}
+                                            {t("admin.voucher.redemption.value")}
                                         </th>
                                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                            {locale === "id" ? "Auto-Switch" : "Auto-Switch"}
+                                            {t("admin.voucher.redemption.autoSwitch")}
                                         </th>
                                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                            {locale === "id" ? "Waktu" : "Time"}
+                                            {t("admin.voucher.redemption.time")}
                                         </th>
                                     </tr>
                                 </thead>
@@ -755,13 +738,13 @@ export default function VouchersPage() {
                                             <td className="px-4 py-3">
                                                 <div className="font-medium text-gray-900 dark:text-white">
                                                     {redemption.voucherType === "BALANCE"
-                                                        ? formatCurrency(redemption.valueApplied, redemption.currency)
-                                                        : `${redemption.valueApplied} ${locale === "id" ? "hari" : "days"}`
+                                                        ? formatCurrency(redemption.valueApplied, redemption.currency, locale)
+                                                        : `${redemption.valueApplied} ${t("admin.voucher.days")}`
                                                     }
                                                 </div>
                                                 {redemption.voucherType === "BALANCE" && redemption.balanceBefore !== null && (
                                                     <div className="text-xs text-gray-500 dark:text-gray-400">
-                                                        {formatCurrency(redemption.balanceBefore, redemption.currency)} → {formatCurrency(redemption.balanceAfter || 0, redemption.currency)}
+                                                        {formatCurrency(redemption.balanceBefore, redemption.currency, locale)} → {formatCurrency(redemption.balanceAfter || 0, redemption.currency, locale)}
                                                     </div>
                                                 )}
                                             </td>
@@ -793,7 +776,7 @@ export default function VouchersPage() {
                         <div className="p-6 border-b border-gray-200 dark:border-gray-800">
                             <div className="flex items-center justify-between">
                                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                                    {locale === "id" ? "Buat Voucher Baru" : "Create New Voucher"}
+                                    {t("admin.voucher.modal.createTitle")}
                                 </h2>
                                 <button onClick={() => setShowCreateModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                                     <FaTimes className="w-5 h-5" />
@@ -804,29 +787,29 @@ export default function VouchersPage() {
                             {/* Code */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    {locale === "id" ? "Kode Voucher" : "Voucher Code"} <span className="text-red-500">*</span>
+                                    {t("admin.voucher.code")} <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="text"
                                     value={formData.code}
                                     onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
                                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent font-mono"
-                                    placeholder="WELCOME2024"
+                                    placeholder={t("admin.voucher.form.codePlaceholder")}
                                 />
                             </div>
 
                             {/* Type */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    {locale === "id" ? "Tipe Voucher" : "Voucher Type"} <span className="text-red-500">*</span>
+                                    {t("admin.voucher.type")} <span className="text-red-500">*</span>
                                 </label>
                                 <select
                                     value={formData.type}
                                     onChange={(e) => setFormData({ ...formData, type: e.target.value as "BALANCE" | "SUBSCRIPTION_DAYS" })}
                                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                                 >
-                                    <option value="BALANCE">{locale === "id" ? "Tambah Saldo" : "Add Balance"}</option>
-                                    <option value="SUBSCRIPTION_DAYS">{locale === "id" ? "Tambah Hari Langganan" : "Add Subscription Days"}</option>
+                                    <option value="BALANCE">{t("admin.voucher.form.typeOption.balance")}</option>
+                                    <option value="SUBSCRIPTION_DAYS">{t("admin.voucher.form.typeOption.subscriptionDays")}</option>
                                 </select>
                             </div>
 
@@ -834,8 +817,8 @@ export default function VouchersPage() {
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                     {formData.type === "BALANCE" 
-                                        ? (locale === "id" ? "Nilai Saldo" : "Balance Amount")
-                                        : (locale === "id" ? "Jumlah Hari" : "Number of Days")
+                                        ? t("admin.voucher.balanceAmount")
+                                        : t("admin.voucher.numberOfDays")
                                     } <span className="text-red-500">*</span>
                                 </label>
                                 <input
@@ -853,21 +836,19 @@ export default function VouchersPage() {
                             {formData.type === "BALANCE" && (
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        {locale === "id" ? "Batasan Mata Uang" : "Currency Restriction"}
+                                        {t("admin.voucher.currencyRestriction")}
                                     </label>
                                     <select
                                         value={formData.currency}
                                         onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
                                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                                     >
-                                        <option value="">{locale === "id" ? "Semua (Universal)" : "All (Universal)"}</option>
+                                        <option value="">{t("admin.voucher.currencyUniversal")}</option>
                                         <option value="IDR">IDR (Rupiah)</option>
                                         <option value="AUD">AUD (Australian Dollar)</option>
                                     </select>
                                     <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                        {locale === "id" 
-                                            ? "Jika dipilih, voucher hanya bisa digunakan merchant dengan mata uang tersebut" 
-                                            : "If selected, voucher can only be used by merchants with that currency"}
+                                        {t("admin.voucher.currencyRestrictionHint")}
                                     </p>
                                 </div>
                             )}
@@ -875,28 +856,28 @@ export default function VouchersPage() {
                             {/* Description */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    {locale === "id" ? "Deskripsi" : "Description"}
+                                    {t("admin.voucher.description")}
                                 </label>
                                 <input
                                     type="text"
                                     value={formData.description}
                                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-                                    placeholder={locale === "id" ? "Voucher promo launching" : "Launch promo voucher"}
+                                    placeholder={t("admin.voucher.descriptionPlaceholder")}
                                 />
                             </div>
 
                             {/* Max Usage */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    {locale === "id" ? "Batas Penggunaan" : "Usage Limit"}
+                                    {t("admin.voucher.maxUsage")}
                                 </label>
                                 <input
                                     type="number"
                                     value={formData.maxUsage}
                                     onChange={(e) => setFormData({ ...formData, maxUsage: e.target.value })}
                                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-                                    placeholder={locale === "id" ? "Kosongkan untuk unlimited" : "Leave empty for unlimited"}
+                                    placeholder={t("admin.voucher.form.maxUsagePlaceholder")}
                                     min="1"
                                 />
                             </div>
@@ -905,7 +886,7 @@ export default function VouchersPage() {
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        {locale === "id" ? "Berlaku Dari" : "Valid From"}
+                                        {t("admin.voucher.validFrom")}
                                     </label>
                                     <input
                                         type="date"
@@ -916,7 +897,7 @@ export default function VouchersPage() {
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        {locale === "id" ? "Berlaku Hingga" : "Valid Until"}
+                                        {t("admin.voucher.validUntil")}
                                     </label>
                                     <input
                                         type="date"
@@ -953,7 +934,7 @@ export default function VouchersPage() {
                         <div className="p-6 border-b border-gray-200 dark:border-gray-800">
                             <div className="flex items-center justify-between">
                                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                                    {locale === "id" ? "Edit Voucher" : "Edit Voucher"}
+                                    {t("admin.voucher.edit")}
                                 </h2>
                                 <button onClick={() => setShowEditModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                                     <FaTimes className="w-5 h-5" />
@@ -964,7 +945,7 @@ export default function VouchersPage() {
                             {/* Same form fields as create modal */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    {locale === "id" ? "Kode Voucher" : "Voucher Code"} <span className="text-red-500">*</span>
+                                    {t("admin.voucher.code")} <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="text"
@@ -976,23 +957,23 @@ export default function VouchersPage() {
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    {locale === "id" ? "Tipe Voucher" : "Voucher Type"} <span className="text-red-500">*</span>
+                                    {t("admin.voucher.type")} <span className="text-red-500">*</span>
                                 </label>
                                 <select
                                     value={formData.type}
                                     onChange={(e) => setFormData({ ...formData, type: e.target.value as "BALANCE" | "SUBSCRIPTION_DAYS" })}
                                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                                 >
-                                    <option value="BALANCE">{locale === "id" ? "Tambah Saldo" : "Add Balance"}</option>
-                                    <option value="SUBSCRIPTION_DAYS">{locale === "id" ? "Tambah Hari Langganan" : "Add Subscription Days"}</option>
+                                    <option value="BALANCE">{t("admin.voucher.form.typeOption.balance")}</option>
+                                    <option value="SUBSCRIPTION_DAYS">{t("admin.voucher.form.typeOption.subscriptionDays")}</option>
                                 </select>
                             </div>
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                     {formData.type === "BALANCE" 
-                                        ? (locale === "id" ? "Nilai Saldo" : "Balance Amount")
-                                        : (locale === "id" ? "Jumlah Hari" : "Number of Days")
+                                        ? t("admin.voucher.balanceAmount")
+                                        : t("admin.voucher.numberOfDays")
                                     } <span className="text-red-500">*</span>
                                 </label>
                                 <input
@@ -1008,14 +989,14 @@ export default function VouchersPage() {
                             {formData.type === "BALANCE" && (
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        {locale === "id" ? "Batasan Mata Uang" : "Currency Restriction"}
+                                        {t("admin.voucher.currencyRestriction")}
                                     </label>
                                     <select
                                         value={formData.currency}
                                         onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
                                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                                     >
-                                        <option value="">{locale === "id" ? "Semua (Universal)" : "All (Universal)"}</option>
+                                        <option value="">{t("admin.voucher.currencyUniversal")}</option>
                                         <option value="IDR">IDR (Rupiah)</option>
                                         <option value="AUD">AUD (Australian Dollar)</option>
                                     </select>
@@ -1024,7 +1005,7 @@ export default function VouchersPage() {
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    {locale === "id" ? "Deskripsi" : "Description"}
+                                    {t("admin.voucher.description")}
                                 </label>
                                 <input
                                     type="text"
@@ -1036,7 +1017,7 @@ export default function VouchersPage() {
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    {locale === "id" ? "Batas Penggunaan" : "Usage Limit"}
+                                    {t("admin.voucher.maxUsage")}
                                 </label>
                                 <input
                                     type="number"
@@ -1046,14 +1027,14 @@ export default function VouchersPage() {
                                     min="1"
                                 />
                                 <p className="mt-1 text-xs text-gray-500">
-                                    {locale === "id" ? `Sudah digunakan: ${selectedVoucher.currentUsage}` : `Already used: ${selectedVoucher.currentUsage}`}
+                                    {t("admin.voucher.alreadyUsed", { count: selectedVoucher.currentUsage })}
                                 </p>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        {locale === "id" ? "Berlaku Dari" : "Valid From"}
+                                        {t("admin.voucher.validFrom")}
                                     </label>
                                     <input
                                         type="date"
@@ -1064,7 +1045,7 @@ export default function VouchersPage() {
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        {locale === "id" ? "Berlaku Hingga" : "Valid Until"}
+                                        {t("admin.voucher.validUntil")}
                                     </label>
                                     <input
                                         type="date"

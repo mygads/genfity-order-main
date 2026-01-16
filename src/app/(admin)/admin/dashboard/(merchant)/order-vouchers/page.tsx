@@ -8,7 +8,7 @@ import { TableActionButton } from "@/components/common/TableActionButton";
 import { useModalImplicitClose } from "@/hooks/useModalImplicitClose";
 import { formatCurrency } from "@/lib/utils/format";
 import { OrderVoucherTemplateFormModal } from "@/components/order-vouchers/OrderVoucherTemplateFormModal";
-import { FaChartBar, FaEdit, FaListAlt, FaPlus, FaSyncAlt } from "react-icons/fa";
+import { FaChartBar, FaEdit, FaListAlt, FaPlus, FaSyncAlt, FaToggleOff, FaToggleOn, FaTrash } from "react-icons/fa";
 
 type VoucherTemplate = {
   id: string;
@@ -644,15 +644,18 @@ export default function OrderVouchersPage() {
                       <button
                         type="button"
                         onClick={() => toggleTemplateActive(tpl)}
-                        className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium transition-colors hover:opacity-90 ${
-                          tpl.isActive
-                            ? "bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-300"
-                            : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
-                        }`}
+                        className="inline-flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-900"
                         aria-label={tpl.isActive ? (t("admin.orderVouchers.deactivate") as string) : (t("admin.orderVouchers.activate") as string)}
                         title={tpl.isActive ? (t("admin.orderVouchers.deactivate") as string) : (t("admin.orderVouchers.activate") as string)}
                       >
-                        {tpl.isActive ? t("admin.orderVouchers.active") : t("admin.orderVouchers.inactive")}
+                        {tpl.isActive ? (
+                          <FaToggleOn className="h-6 w-6 text-green-600 dark:text-green-400" />
+                        ) : (
+                          <FaToggleOff className="h-6 w-6 text-gray-400 dark:text-gray-500" />
+                        )}
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          {tpl.isActive ? t("admin.orderVouchers.active") : t("admin.orderVouchers.inactive")}
+                        </span>
                       </button>
                     </td>
                     <td className="px-4 py-4 text-sm text-gray-700 dark:text-gray-300">{formatValidity(tpl)}</td>
@@ -770,8 +773,24 @@ export default function OrderVouchersPage() {
                           <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
                             {typeof c.usedCount === "number" ? c.usedCount : 0}
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                            {c.isActive ? t("admin.orderVouchers.active") : t("admin.orderVouchers.inactive")}
+                          <td className="px-4 py-3">
+                            <button
+                              type="button"
+                              className="inline-flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-gray-50 disabled:opacity-60 dark:hover:bg-gray-900"
+                              onClick={() => toggleCodeActive(c)}
+                              disabled={codeActionLoadingId === c.id}
+                              aria-label={c.isActive ? (t("admin.orderVouchers.deactivate") as string) : (t("admin.orderVouchers.activate") as string)}
+                              title={c.isActive ? (t("admin.orderVouchers.deactivate") as string) : (t("admin.orderVouchers.activate") as string)}
+                            >
+                              {c.isActive ? (
+                                <FaToggleOn className="h-6 w-6 text-green-600 dark:text-green-400" />
+                              ) : (
+                                <FaToggleOff className="h-6 w-6 text-gray-400 dark:text-gray-500" />
+                              )}
+                              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                {c.isActive ? t("admin.orderVouchers.active") : t("admin.orderVouchers.inactive")}
+                              </span>
+                            </button>
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
                             {new Date(c.createdAt).toLocaleString()}
@@ -780,19 +799,13 @@ export default function OrderVouchersPage() {
                             <div className="flex items-center justify-end gap-2">
                               <button
                                 type="button"
-                                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-800 hover:bg-gray-50 disabled:opacity-60 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:hover:bg-gray-800"
-                                onClick={() => toggleCodeActive(c)}
-                                disabled={codeActionLoadingId === c.id}
-                              >
-                                {c.isActive ? t("admin.orderVouchers.deactivate") : t("admin.orderVouchers.activate")}
-                              </button>
-                              <button
-                                type="button"
-                                className="rounded-lg border border-red-200 bg-white px-2.5 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-60 dark:border-red-900/60 dark:bg-gray-900 dark:text-red-300 dark:hover:bg-red-900/20"
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-200 bg-white text-red-700 hover:bg-red-50 disabled:opacity-60 dark:border-red-900/60 dark:bg-gray-900 dark:text-red-300 dark:hover:bg-red-900/20"
                                 onClick={() => confirmDeleteCode(c)}
                                 disabled={codeActionLoadingId === c.id}
+                                aria-label={t("common.delete") as string}
+                                title={t("common.delete") as string}
                               >
-                                {t("common.delete")}
+                                <FaTrash className="h-4 w-4" />
                               </button>
                             </div>
                           </td>

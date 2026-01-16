@@ -3,6 +3,8 @@
 import React from "react";
 import AddonInputTypeSelector from "@/components/ui/AddonInputTypeSelector";
 import { HelpTooltip } from "@/components/ui/Tooltip";
+import { StatusToggle } from "@/components/common/StatusToggle";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface AddonCategory {
   id: string;
@@ -48,7 +50,16 @@ export default function AddonItemFormModal({
   onChange,
   onCancel,
 }: AddonItemFormModalProps) {
+  const { t } = useTranslation();
+
   if (!show) return null;
+
+  const triggerCheckboxChange = (name: keyof AddonItemFormData, checked: boolean) => {
+    const event = {
+      target: { name, type: "checkbox", checked },
+    } as unknown as React.ChangeEvent<HTMLInputElement>;
+    onChange(event);
+  };
 
   // Check if form has changes (only for edit mode)
   const hasChanges = (): boolean => {
@@ -84,10 +95,12 @@ export default function AddonItemFormModal({
         <div className="shrink-0 border-b border-gray-200 px-6 py-4 dark:border-gray-800">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-              {editingId ? "Edit Addon Item" : "Create New Addon Item"}
+              {editingId ? t("admin.addonItems.editItem") : t("admin.addonItems.createNew")}
             </h3>
             <button
               onClick={onCancel}
+              aria-label={t("common.close")}
+              title={t("common.close")}
               className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
             >
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -103,7 +116,7 @@ export default function AddonItemFormModal({
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div data-tutorial="addon-item-category" className="md:col-span-2">
                 <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Addon Category <span className="text-error-500">*</span>
+                  {t("admin.addonItems.modal.categoryLabel")} <span className="text-error-500">*</span>
                 </label>
                 <select
                   name="addonCategoryId"
@@ -112,10 +125,10 @@ export default function AddonItemFormModal({
                   required
                   className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
                 >
-                  <option value="">Select a category</option>
+                  <option value="">{t("admin.addonItems.modal.selectCategoryPlaceholder")}</option>
                   {categories.map((cat) => (
                     <option key={cat.id} value={cat.id}>
-                      {cat.name} (min: {cat.minSelection}, max: {cat.maxSelection || '∞'})
+                      {cat.name} ({t("admin.addonItems.modal.categoryOptionMeta", { min: cat.minSelection, max: cat.maxSelection || "∞" })})
                     </option>
                   ))}
                 </select>
@@ -123,7 +136,7 @@ export default function AddonItemFormModal({
 
               <div data-tutorial="addon-item-name" className="md:col-span-2">
                 <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Item Name <span className="text-error-500">*</span>
+                  {t("admin.addonItems.modal.itemNameLabel")} <span className="text-error-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -131,28 +144,28 @@ export default function AddonItemFormModal({
                   value={formData.name}
                   onChange={onChange}
                   required
-                  placeholder="e.g., Extra Cheese, Large Size"
+                  placeholder={t("admin.addonItems.modal.itemNamePlaceholder")}
                   className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
                 />
               </div>
 
               <div className="md:col-span-2">
                 <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Description
+                  {t("admin.addonItems.modal.descriptionLabel")}
                 </label>
                 <textarea
                   name="description"
                   value={formData.description}
                   onChange={onChange}
                   rows={2}
-                  placeholder="Describe this addon item"
+                  placeholder={t("admin.addonItems.modal.descriptionPlaceholder")}
                   className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
                 />
               </div>
 
               <div data-tutorial="addon-item-price">
                 <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Price <span className="text-error-500">*</span>
+                  {t("admin.addonItems.modal.priceLabel")} <span className="text-error-500">*</span>
                 </label>
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-gray-500">
@@ -171,7 +184,7 @@ export default function AddonItemFormModal({
                   />
                 </div>
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Enter 0 for free addon items
+                  {t("admin.addonItems.modal.freeHint")}
                 </p>
               </div>
             </div>
@@ -194,23 +207,21 @@ export default function AddonItemFormModal({
 
             {/* Stock Tracking Section */}
             <div data-tutorial="addon-item-stock" className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  id="trackStock"
-                  name="trackStock"
-                  checked={formData.trackStock}
-                  onChange={onChange}
-                  className="h-5 w-5 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
-                />
-                <label htmlFor="trackStock" className="flex-1">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
                   <span className="text-sm font-medium text-gray-800 dark:text-white/90">
-                    Track Stock
+                    {t("admin.addonItems.modal.trackStockLabel")}
                   </span>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Enable inventory tracking for this addon item
+                    {t("admin.addonItems.modal.trackStockHint")}
                   </p>
-                </label>
+                </div>
+                <StatusToggle
+                  isActive={formData.trackStock}
+                  onToggle={() => triggerCheckboxChange("trackStock", !formData.trackStock)}
+                  activeLabel={t("common.on")}
+                  inactiveLabel={t("common.off")}
+                />
               </div>
 
               {formData.trackStock && (
@@ -218,8 +229,8 @@ export default function AddonItemFormModal({
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
                       <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Current Stock
-                        <HelpTooltip content="Current available quantity. This will be automatically decremented when orders are placed." />
+                        {t("admin.addonItems.modal.currentStockLabel")}
+                        <HelpTooltip content={t("admin.addonItems.modal.currentStockTooltip")} />
                       </label>
                       <input
                         type="number"
@@ -233,8 +244,8 @@ export default function AddonItemFormModal({
                     </div>
                     <div>
                       <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Daily Stock Template
-                        <HelpTooltip content="If auto-reset is enabled, stock will be reset to this amount daily at midnight." />
+                        {t("admin.addonItems.modal.dailyStockTemplateLabel")}
+                        <HelpTooltip content={t("admin.addonItems.modal.dailyStockTemplateTooltip")} />
                       </label>
                       <input
                         type="number"
@@ -242,35 +253,33 @@ export default function AddonItemFormModal({
                         value={formData.dailyStockTemplate}
                         onChange={onChange}
                         min="0"
-                        placeholder="Leave empty for no template"
+                        placeholder={t("admin.addonItems.modal.dailyStockTemplatePlaceholder")}
                         className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
                       />
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      id="autoResetStock"
-                      name="autoResetStock"
-                      checked={formData.autoResetStock}
-                      onChange={onChange}
-                      disabled={!formData.dailyStockTemplate}
-                      className="h-5 w-5 rounded border-gray-300 text-brand-500 focus:ring-brand-500 disabled:opacity-50"
-                    />
+                  <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
-                      <label htmlFor="autoResetStock" className="text-sm font-medium text-gray-800 dark:text-white/90">
-                        Auto-reset Stock Daily
-                      </label>
+                      <span className="text-sm font-medium text-gray-800 dark:text-white/90">
+                        {t("admin.addonItems.modal.autoResetStockLabel")}
+                      </span>
                       <p className="text-xs text-gray-500 dark:text-gray-400">
-                        Automatically reset to template value at midnight
+                        {t("admin.addonItems.modal.autoResetStockHint")}
                       </p>
                     </div>
+                    <StatusToggle
+                      isActive={formData.autoResetStock}
+                      onToggle={() => triggerCheckboxChange("autoResetStock", !formData.autoResetStock)}
+                      disabled={!formData.dailyStockTemplate}
+                      activeLabel={t("common.on")}
+                      inactiveLabel={t("common.off")}
+                    />
                   </div>
                   {formData.autoResetStock && formData.dailyStockTemplate && (
                     <div className="rounded-lg bg-yellow-50 p-3 dark:bg-yellow-900/20">
                       <p className="text-xs text-yellow-700 dark:text-yellow-400">
-                        ℹ️ Stock will automatically reset to {formData.dailyStockTemplate} units daily
+                        {t("admin.addonItems.modal.autoResetStockInfo", { qty: formData.dailyStockTemplate })}
                       </p>
                     </div>
                   )}
@@ -287,7 +296,7 @@ export default function AddonItemFormModal({
                 onClick={onCancel}
                 className="flex-1 h-11 rounded-xl border border-gray-300 bg-white text-sm font-medium text-gray-700 shadow-sm transition-all hover:bg-gray-50 hover:shadow-md dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
               {editingId ? (
                 formChanged ? (
@@ -297,11 +306,11 @@ export default function AddonItemFormModal({
                     data-tutorial="addon-item-save-btn"
                     className="flex-1 h-11 rounded-xl bg-brand-500 text-sm font-medium text-white shadow-lg shadow-brand-500/25 transition-all hover:bg-brand-600 hover:shadow-brand-500/30 focus:outline-none focus:ring-4 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {submitting ? "Saving..." : "Update Item"}
+                      {submitting ? t("common.saving") : t("admin.addonItems.updateItem")}
                   </button>
                 ) : (
                   <span className="flex-1 h-11 flex items-center justify-center rounded-xl bg-gray-100 text-sm font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400">
-                    No changes
+                      {t("common.noChanges")}
                   </span>
                 )
               ) : (
@@ -311,7 +320,7 @@ export default function AddonItemFormModal({
                   data-tutorial="addon-item-save-btn"
                   className="flex-1 h-11 rounded-xl bg-brand-500 text-sm font-medium text-white shadow-lg shadow-brand-500/25 transition-all hover:bg-brand-600 hover:shadow-brand-500/30 focus:outline-none focus:ring-4 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {submitting ? "Saving..." : "Create Item"}
+                    {submitting ? t("common.saving") : t("admin.addonItems.createItem")}
                 </button>
               )}
             </div>

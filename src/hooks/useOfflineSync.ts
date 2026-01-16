@@ -12,6 +12,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { normalizeTableNumber } from '@/lib/utils/posTableNumber';
 
 // ============================================
 // TYPES
@@ -45,6 +46,16 @@ export interface PendingOrder {
     }[];
   }[];
   totalAmount: number;
+}
+
+function sanitizePendingOrderTableNumber(order: PendingOrder): PendingOrder {
+  const normalized = normalizeTableNumber((order as any)?.tableNumber).trim();
+  const nextTableNumber = normalized ? normalized : undefined;
+  if (order.tableNumber === nextTableNumber) return order;
+  return {
+    ...order,
+    tableNumber: nextTableNumber,
+  };
 }
 
 export interface OfflineSyncState {
@@ -224,16 +235,25 @@ export function useOfflineSync(options: OfflineSyncOptions = {}): UseOfflineSync
 
       const scoped = safeParseJson<PendingOrder[]>(localStorage.getItem(pendingKey));
       if (scoped && Array.isArray(scoped)) {
-        const cleaned = scoped.filter(o => !isExpired(o.createdAt, pendingOrdersExpiryDays));
+        const cleaned = scoped
+          .filter(o => !isExpired(o.createdAt, pendingOrdersExpiryDays))
+          .map(sanitizePendingOrderTableNumber);
+
         setPendingOrders(cleaned);
-        if (cleaned.length !== scoped.length) {
+
+        const changed = cleaned.length !== scoped.length
+          || cleaned.some((o, i) => scoped[i]?.tableNumber !== o.tableNumber);
+
+        if (changed) {
           localStorage.setItem(pendingKey, JSON.stringify(cleaned));
         }
       } else {
         // One-time migration from legacy unscoped key
         const legacy = safeParseJson<PendingOrder[]>(localStorage.getItem('pos_pending_orders'));
         if (legacy && Array.isArray(legacy) && legacy.length > 0) {
-          const cleaned = legacy.filter(o => !isExpired(o.createdAt, pendingOrdersExpiryDays));
+          const cleaned = legacy
+            .filter(o => !isExpired(o.createdAt, pendingOrdersExpiryDays))
+            .map(sanitizePendingOrderTableNumber);
           setPendingOrders(cleaned);
           localStorage.setItem(pendingKey, JSON.stringify(cleaned));
           localStorage.removeItem('pos_pending_orders');
@@ -256,9 +276,14 @@ export function useOfflineSync(options: OfflineSyncOptions = {}): UseOfflineSync
 
     try {
       const pendingKey = buildStorageKey('pending_orders', merchantId);
-      const cleaned = pendingOrders.filter(o => !isExpired(o.createdAt, pendingOrdersExpiryDays));
+      const cleaned = pendingOrders
+        .filter(o => !isExpired(o.createdAt, pendingOrdersExpiryDays))
+        .map(sanitizePendingOrderTableNumber);
 
-      if (cleaned.length !== pendingOrders.length) {
+      const changed = cleaned.length !== pendingOrders.length
+        || cleaned.some((o, i) => pendingOrders[i]?.tableNumber !== o.tableNumber);
+
+      if (changed) {
         setPendingOrders(cleaned);
         return;
       }
@@ -317,10 +342,13 @@ export function useOfflineSync(options: OfflineSyncOptions = {}): UseOfflineSync
   const addPendingOrder = useCallback((order: Omit<PendingOrder, 'id' | 'createdAt'>): string => {
     const id = `pending-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     const normalizedItems = normalizePendingItems(order.items);
+    const normalizedTableNumber = normalizeTableNumber((order as any)?.tableNumber).trim();
+
     const newOrder: PendingOrder = {
       ...order,
       id,
       createdAt: new Date().toISOString(),
+      tableNumber: normalizedTableNumber ? normalizedTableNumber : undefined,
       items: normalizedItems,
       totalAmount: calculatePendingOrderTotal({ items: normalizedItems }),
     };
@@ -337,10 +365,12 @@ export function useOfflineSync(options: OfflineSyncOptions = {}): UseOfflineSync
     setPendingOrders(prev => prev.map(o => {
       if (o.id !== orderId) return o;
       const normalizedItems = normalizePendingItems(order.items);
+      const normalizedTableNumber = normalizeTableNumber((order as any)?.tableNumber).trim();
       return {
         ...o,
         ...order,
         items: normalizedItems,
+        tableNumber: normalizedTableNumber ? normalizedTableNumber : undefined,
         totalAmount: round2(order.totalAmount ?? calculatePendingOrderTotal({ items: normalizedItems })),
       };
     }));
@@ -702,6 +732,7 @@ export function saveCartToStorage(
   try {
     const persistData: CartPersistData = {
       ...data,
+      tableNumber: normalizeTableNumber((data as any)?.tableNumber),
       version: CART_SCHEMA_VERSION,
       merchantId: merchantId || null,
       savedAt: new Date().toISOString(),
@@ -723,13 +754,34 @@ export function loadCartFromStorage(merchantId?: string | null): CartPersistData
   try {
     const key = buildStorageKey('cart_data', merchantId);
     const scoped = safeParseJson<CartPersistData>(localStorage.getItem(key));
-    if (scoped) return scoped;
+    if (scoped) {
+      const normalizedTableNumber = normalizeTableNumber((scoped as any)?.tableNumber);
+      if (scoped.tableNumber !== normalizedTableNumber) {
+        const fixed: CartPersistData = {
+          ...scoped,
+          tableNumber: normalizedTableNumber,
+        };
+        localStorage.setItem(key, JSON.stringify(fixed));
+        return fixed;
+      }
+      return scoped;
+    }
 
     // Legacy fallback
     const legacy = safeParseJson<CartPersistData>(localStorage.getItem(LEGACY_STORAGE_KEY_CART));
     if (legacy) {
-      // If merchantId is known, only load legacy if it was not scoped previously
-      return legacy;
+      const normalizedTableNumber = normalizeTableNumber((legacy as any)?.tableNumber);
+      const fixed: CartPersistData = {
+        ...legacy,
+        version: CART_SCHEMA_VERSION,
+        merchantId: merchantId || legacy.merchantId || null,
+        tableNumber: normalizedTableNumber,
+      };
+
+      // Migrate legacy -> scoped
+      localStorage.setItem(key, JSON.stringify(fixed));
+      localStorage.removeItem(LEGACY_STORAGE_KEY_CART);
+      return fixed;
     }
   } catch (error) {
     console.error('[OfflineSync] Error loading cart:', error);

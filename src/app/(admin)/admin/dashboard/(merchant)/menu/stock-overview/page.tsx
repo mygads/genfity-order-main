@@ -309,7 +309,7 @@ export default function StockOverviewPage() {
         (item.stockQty ?? 0).toString(),
         (item.dailyStockTemplate ?? '-').toString(),
         item.autoResetStock ? 'Yes' : 'No',
-        item.isActive ? 'Active' : 'Inactive',
+        item.isActive ? t('common.active') : t('common.inactive'),
       ]),
     ];
 

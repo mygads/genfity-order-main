@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import AdminFormFooter from "@/components/common/AdminFormFooter";
+import { StatusToggle } from "@/components/common/StatusToggle";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useMerchant } from "@/context/MerchantContext";
 
@@ -36,7 +37,7 @@ const dayOptions = [
 
 export default function CreateSpecialPricePage() {
     const router = useRouter();
-    const { } = useTranslation();
+    const { t } = useTranslation();
     const { formatCurrency } = useMerchant();
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
@@ -284,15 +285,13 @@ export default function CreateSpecialPricePage() {
                     {/* Time Range */}
                     <div className="mb-6">
                         <div className="mb-3 flex items-center gap-3">
-                            <label className="relative inline-flex cursor-pointer items-center">
-                                <input
-                                    type="checkbox"
-                                    checked={isAllDay}
-                                    onChange={(e) => setIsAllDay(e.target.checked)}
-                                    className="peer sr-only"
-                                />
-                                <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all peer-checked:bg-brand-500 peer-checked:after:translate-x-full dark:bg-gray-700"></div>
-                            </label>
+                            <StatusToggle
+                                isActive={isAllDay}
+                                onToggle={() => setIsAllDay(!isAllDay)}
+                                size="sm"
+                                activeLabel={t('common.on')}
+                                inactiveLabel={t('common.off')}
+                            />
                             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">All Day</span>
                         </div>
 

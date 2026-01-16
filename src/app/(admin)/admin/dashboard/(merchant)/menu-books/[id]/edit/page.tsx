@@ -6,6 +6,7 @@ import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import AdminFormFooter from "@/components/common/AdminFormFooter";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useMerchant } from "@/context/MerchantContext";
+import { StatusToggle } from "@/components/common/StatusToggle";
 
 interface Menu {
     id: string;
@@ -19,7 +20,7 @@ export default function EditMenuBookPage() {
     const router = useRouter();
     const params = useParams();
     const bookId = params.id as string;
-    const { } = useTranslation();
+    const { t } = useTranslation();
     const { formatCurrency } = useMerchant();
 
     const [loading, setLoading] = useState(true);
@@ -177,18 +178,13 @@ export default function EditMenuBookPage() {
 
                     {/* Status Toggle */}
                     <div className="mb-6 flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800" data-tutorial="menu-book-status">
-                        <label className="relative inline-flex cursor-pointer items-center">
-                            <input
-                                type="checkbox"
-                                checked={isActive}
-                                onChange={(e) => setIsActive(e.target.checked)}
-                                className="peer sr-only"
-                            />
-                            <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all peer-checked:bg-green-500 peer-checked:after:translate-x-full dark:bg-gray-700"></div>
-                        </label>
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                            {isActive ? "Active" : "Inactive"}
-                        </span>
+                        <StatusToggle
+                            isActive={isActive}
+                            onToggle={() => setIsActive(!isActive)}
+                            size="sm"
+                            activeLabel={t("common.active")}
+                            inactiveLabel={t("common.inactive")}
+                        />
                     </div>
 
                     {/* Menu Selection */}
