@@ -13,7 +13,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { FaSync, FaExpand, FaCompress, FaEye, FaClock, FaFire, FaPlay, FaCheck, FaShoppingBag, FaRegClock } from 'react-icons/fa';
+import { FaSync, FaExpand, FaCompress, FaEye, FaClock, FaFire, FaPlay, FaCheck, FaShoppingBag, FaRegClock, FaUtensils, FaTruck } from 'react-icons/fa';
 import { OrderDetailModal } from '@/components/orders/OrderDetailModal';
 import { OrderTimer } from '@/components/orders/OrderTimer';
 import { KitchenDisplaySkeleton } from '@/components/common/SkeletonLoaders';
@@ -318,8 +318,12 @@ export default function KitchenDisplayPage() {
                   merchantCode={merchant?.code}
                   translations={{
                     table: t("admin.kitchen.table"),
+                    dineIn: t("admin.kitchen.dineIn"),
                     takeaway: t("admin.kitchen.takeaway"),
-                    orderNote: t("admin.kitchen.orderNote"),
+                    delivery: t("admin.kitchen.delivery"),
+                    kitchenNote: t("admin.kitchen.kitchenNote"),
+                    customerPrefix: t("admin.kitchen.noteCustomerPrefix"),
+                    adminPrefix: t("admin.kitchen.noteAdminPrefix"),
                   }}
                 />
               ))}
@@ -360,8 +364,12 @@ export default function KitchenDisplayPage() {
                   merchantCode={merchant?.code}
                   translations={{
                     table: t("admin.kitchen.table"),
+                    dineIn: t("admin.kitchen.dineIn"),
                     takeaway: t("admin.kitchen.takeaway"),
-                    orderNote: t("admin.kitchen.orderNote"),
+                    delivery: t("admin.kitchen.delivery"),
+                    kitchenNote: t("admin.kitchen.kitchenNote"),
+                    customerPrefix: t("admin.kitchen.noteCustomerPrefix"),
+                    adminPrefix: t("admin.kitchen.noteAdminPrefix"),
                   }}
                 />
               ))}
@@ -386,6 +394,7 @@ export default function KitchenDisplayPage() {
           initialOrder={selectedOrder}
           currency={merchantCurrency}
           allowPaymentRecording={false}
+          viewVariant="kitchen"
         />
       )}
     </div>
@@ -408,14 +417,46 @@ interface KitchenCardProps {
   merchantCode?: string;
   translations: {
     table: string;
+    dineIn: string;
     takeaway: string;
-    orderNote: string;
+    delivery: string;
+    kitchenNote: string;
+    customerPrefix: string;
+    adminPrefix: string;
   };
 }
 
 function KitchenCard({ order, onCardClick, onAction, actionLabel, actionIcon, actionColor, merchantCode, translations }: KitchenCardProps) {
   const { merchant } = useMerchant();
   const items = 'orderItems' in order ? order.orderItems : [];
+
+  const customerNote = String(order.notes ?? '').trim();
+  const adminNote = String(((order as any)?.kitchenNotes ?? '')).trim();
+
+  const normalizeNoteContent = (value: string): string => {
+    let s = String(value ?? '').trim();
+
+    // Remove leading bullets/dashes
+    s = s.replace(/^[-–—•\s]+/, '').trim();
+
+    // If users typed prefixes like "admin:" or "customer:", strip them to avoid double-prefixing.
+    // Also handles cases like "- admin: ...".
+    const prefixRegex = /^\s*([-–—•\s]+)?\s*(admin|customer)\s*:\s*/i;
+    while (prefixRegex.test(s)) {
+      s = s.replace(prefixRegex, '').trim();
+    }
+
+    return s;
+  };
+
+  const normalizedCustomerNote = normalizeNoteContent(customerNote);
+  const normalizedAdminNote = normalizeNoteContent(adminNote);
+  const kitchenNoteText = (() => {
+    const parts: string[] = [];
+    if (normalizedCustomerNote) parts.push(`${translations.customerPrefix} : ${normalizedCustomerNote}`);
+    if (normalizedAdminNote) parts.push(`${translations.adminPrefix} : ${normalizedAdminNote}`);
+    return parts.join(' | ');
+  })();
   const isUrgent = (() => {
     const elapsed = Date.now() - new Date(order.placedAt).getTime();
     return elapsed > 10 * 60 * 1000; // 10 minutes
@@ -492,7 +533,17 @@ function KitchenCard({ order, onCardClick, onAction, actionLabel, actionIcon, ac
                 {translations.table} {order.tableNumber}
               </span>
             )}
-            {order.orderType === 'TAKEAWAY' && (
+            {order.orderType === 'DINE_IN' ? (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                <FaUtensils className="h-2.5 w-2.5" />
+                {translations.dineIn}
+              </span>
+            ) : order.orderType === 'DELIVERY' ? (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                <FaTruck className="h-2.5 w-2.5" />
+                {translations.delivery}
+              </span>
+            ) : (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
                 <FaShoppingBag className="h-2.5 w-2.5" />
                 {translations.takeaway}
@@ -550,15 +601,15 @@ function KitchenCard({ order, onCardClick, onAction, actionLabel, actionIcon, ac
           ))}
         </div>
 
-        {/* Order Notes - Prominent */}
-        {order.notes && (
-          <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{translations.orderNote}</p>
-            <p className="text-sm text-gray-800 dark:text-gray-200">
-              {order.notes}
-            </p>
+        {/* Notes - Kitchen Note */}
+        {kitchenNoteText ? (
+          <div className="mt-4">
+            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{translations.kitchenNote}</p>
+              <p className="text-sm text-gray-800 dark:text-gray-200">{kitchenNoteText}</p>
+            </div>
           </div>
-        )}
+        ) : null}
 
         {/* Action Button */}
         <button

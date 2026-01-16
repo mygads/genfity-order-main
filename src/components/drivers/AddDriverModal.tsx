@@ -29,7 +29,6 @@ export default function AddDriverModal({ show, onClose, onSuccess }: AddDriverMo
 
   const eligibleStaff = useMemo(() => {
     return staff
-      .filter((s) => s.role !== "MERCHANT_OWNER")
       .filter((s) => s.isActive)
       .filter((s) => s.invitationStatus !== "WAITING")
       .filter((s) => !(s.permissions || []).includes(STAFF_PERMISSIONS.DRIVER_DASHBOARD));
@@ -187,7 +186,7 @@ export default function AddDriverModal({ show, onClose, onSuccess }: AddDriverMo
               ))}
             </select>
             <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
-              Only accepted staff (non-owner) can be added as drivers.
+              Only accepted and active staff can be added as drivers.
             </p>
           </div>
 

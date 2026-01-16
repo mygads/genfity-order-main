@@ -9,6 +9,7 @@
  *
  * POST /api/merchant/drivers
  * - Grant driver access to an existing ACCEPTED staff member (OWNER only)
+ * - Owners are always eligible for assignment
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -42,6 +43,7 @@ export const GET = withMerchantPermission(async (req: NextRequest, authContext: 
         merchantId: authContext.merchantId,
         ...(includeInactive ? {} : { isActive: true }),
         OR: [
+          { role: 'OWNER' },
           { role: 'DRIVER' },
           {
             role: 'STAFF',
@@ -83,7 +85,7 @@ export const GET = withMerchantPermission(async (req: NextRequest, authContext: 
       ...d.user,
       isActive: d.isActive,
       joinedAt: d.createdAt,
-      source: d.role === 'DRIVER' ? 'driver' : 'staff',
+      source: d.role === 'OWNER' ? 'owner' : d.role === 'DRIVER' ? 'driver' : 'staff',
     }));
 
     return NextResponse.json({
@@ -135,8 +137,15 @@ export const POST = withMerchantOwner(async (req: NextRequest, authContext: Auth
       where: {
         merchantId: authContext.merchantId,
         userId: staffUserId,
-        role: 'STAFF',
-        invitationStatus: 'ACCEPTED',
+        role: { in: ['STAFF', 'OWNER'] },
+        ...(true
+          ? {
+              OR: [
+                { role: 'OWNER' },
+                { role: 'STAFF', invitationStatus: 'ACCEPTED' },
+              ],
+            }
+          : {}),
         isActive: true,
       },
       include: {
@@ -156,8 +165,21 @@ export const POST = withMerchantOwner(async (req: NextRequest, authContext: Auth
       throw new ValidationError('Eligible staff member not found (must be accepted and active)', ERROR_CODES.NOT_FOUND);
     }
 
-    if (staffLink.user.role === 'MERCHANT_OWNER') {
-      throw new ValidationError('Owner cannot be assigned as a driver', ERROR_CODES.FORBIDDEN);
+    if (staffLink.role === 'OWNER') {
+      return NextResponse.json(
+        {
+          success: true,
+          data: serializeBigInt({
+            ...staffLink.user,
+            isActive: staffLink.isActive,
+            joinedAt: staffLink.createdAt,
+            source: 'owner',
+          }),
+          message: 'Owner is eligible as a driver',
+          statusCode: 200,
+        },
+        { status: 200 }
+      );
     }
 
     const updated = await prisma.merchantUser.update({

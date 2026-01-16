@@ -18,6 +18,7 @@ import {
   FaUtensils,
   FaShoppingBag,
   FaTruck,
+  FaMapMarkerAlt,
   FaClock,
   FaMoneyBillWave,
   FaCreditCard,
@@ -52,6 +53,7 @@ interface OrderDetailModalProps {
   currency?: string;
   allowPaymentRecording?: boolean;
   actionMode?: 'default' | 'history';
+  viewVariant?: 'default' | 'kitchen';
 }
 
 export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
@@ -63,6 +65,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   currency,
   allowPaymentRecording = true,
   actionMode = 'default',
+  viewVariant = 'default',
 }) => {
   const [order, setOrder] = useState<OrderWithDetails | null>(initialOrder);
   const [loading, setLoading] = useState(!initialOrder);
@@ -101,6 +104,8 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
 
   const shouldShowFooterActions = actionMode !== 'history';
   const shouldShowPrintOnly = actionMode === 'history';
+
+  const isKitchenView = viewVariant === 'kitchen';
 
   const apiOrderId = React.useMemo(() => {
     if (/^\d+$/.test(String(orderId))) return String(orderId);
@@ -821,13 +826,26 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
               )}
 
               {/* Delivery Info + Driver Assignment */}
-              {order.orderType === 'DELIVERY' && (
+              {order.orderType === 'DELIVERY' && !isKitchenView && (
                 <div className="mb-4 rounded-lg border border-gray-100 dark:border-gray-800 p-4">
                   <div className="mb-3 flex items-start justify-between gap-3">
                     <div>
                       <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Delivery</p>
                       <p className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
-                        {(order as any).deliveryStatus || 'PENDING_ASSIGNMENT'}
+                        {(() => {
+                          const raw = String((order as any).deliveryStatus || '').trim();
+                          const normalized = raw || 'PENDING_ASSIGNMENT';
+
+                          const labels: Record<string, string> = {
+                            PENDING_ASSIGNMENT: 'Unassigned',
+                            ASSIGNED: 'Assigned',
+                            PICKED_UP: 'Picked up',
+                            DELIVERED: 'Delivered',
+                            FAILED: 'Failed',
+                          };
+
+                          return labels[normalized] ?? normalized;
+                        })()}
                       </p>
                     </div>
                     <div className="text-right">
@@ -855,6 +873,37 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                           return prefix || addr || '—';
                         })()}
                       </p>
+
+                      {(() => {
+                        const lat = (order as any).deliveryLatitude ?? (order as any).deliveryLat;
+                        const lng = (order as any).deliveryLongitude ?? (order as any).deliveryLng;
+
+                        const prefix = [
+                          (order as any).deliveryUnit,
+                          (order as any).deliveryBuildingName,
+                          (order as any).deliveryBuildingNumber ? `No ${(order as any).deliveryBuildingNumber}` : null,
+                          (order as any).deliveryFloor ? `Floor ${(order as any).deliveryFloor}` : null,
+                        ].filter(Boolean).join(', ');
+                        const addr = String((order as any).deliveryAddress || '').trim();
+                        const addressQuery = (prefix && addr) ? `${prefix}, ${addr}` : (prefix || addr);
+
+                        const hasCoords = lat !== null && lat !== undefined && lng !== null && lng !== undefined;
+                        const query = hasCoords ? `${lat},${lng}` : addressQuery;
+                        if (!query) return null;
+
+                        const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(String(query))}`;
+                        return (
+                          <a
+                            href={mapsUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-2 inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-800 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:hover:bg-gray-800"
+                          >
+                            <FaMapMarkerAlt className="h-3.5 w-3.5" />
+                            View maps
+                          </a>
+                        );
+                      })()}
                     </div>
                   )}
 
@@ -917,7 +966,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
 
                     {!driversLoading && drivers.length === 0 && (
                       <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                        No drivers found. Add a staff member with role DRIVER.
+                        No drivers found. Add a staff member with driver access.
                       </p>
                     )}
                   </div>
@@ -1101,43 +1150,56 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
               </div>
 
               {/* Price Breakdown */}
-              <div className="mb-4 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                <div className="px-4 py-3">
-                  <OrderTotalsBreakdown
-                    amounts={{
-                      subtotal: Number(order.subtotal) || 0,
-                      taxAmount: Number(order.taxAmount) || 0,
-                      serviceChargeAmount: Number((order as any).serviceChargeAmount || 0),
-                      packagingFeeAmount: Number((order as any).packagingFeeAmount || 0),
-                      deliveryFeeAmount:
-                        String(order.orderType) === 'DELIVERY' ? Number((order as any).deliveryFeeAmount || 0) : 0,
-                      discountAmount: Number((order as any).discountAmount || 0),
-                      totalAmount: Number(order.totalAmount) || 0,
-                    }}
-                    currency={merchantCurrency}
-                    formatAmount={(amount) => formatCurrency(amount)}
-                    options={{
-                      showDeliveryFee: String(order.orderType) === 'DELIVERY',
-                    }}
-                    showTotalRow={false}
-                    rowsContainerClassName="space-y-2"
-                    rowClassName="flex items-center justify-between text-sm"
-                    labelClassName="text-gray-600 dark:text-gray-400"
-                    valueClassName="text-gray-900 dark:text-white"
-                    discountValueClassName="text-green-700 dark:text-green-400 font-medium"
-                  />
-                </div>
+              {!isKitchenView ? (
+                <div className="mb-4 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                  <div className="px-4 py-3">
+                    <OrderTotalsBreakdown
+                      amounts={{
+                        subtotal: Number(order.subtotal) || 0,
+                        taxAmount: Number(order.taxAmount) || 0,
+                        serviceChargeAmount: Number((order as any).serviceChargeAmount || 0),
+                        packagingFeeAmount: Number((order as any).packagingFeeAmount || 0),
+                        deliveryFeeAmount:
+                          String(order.orderType) === 'DELIVERY' ? Number((order as any).deliveryFeeAmount || 0) : 0,
+                        discountAmount: Number((order as any).discountAmount || 0),
+                        totalAmount: Number(order.totalAmount) || 0,
+                      }}
+                      currency={merchantCurrency}
+                      formatAmount={(amount) => formatCurrency(amount)}
+                      options={{
+                        showDeliveryFee: String(order.orderType) === 'DELIVERY',
+                      }}
+                      showTotalRow={false}
+                      rowsContainerClassName="space-y-2"
+                      rowClassName="flex items-center justify-between text-sm"
+                      labelClassName="text-gray-600 dark:text-gray-400"
+                      valueClassName="text-gray-900 dark:text-white"
+                      discountValueClassName="text-green-700 dark:text-green-400 font-medium"
+                    />
+                  </div>
 
-                {/* Total */}
-                <div className="border-t-2 border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-900/20 px-4 py-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Total</span>
-                    <span className="text-xl font-bold text-brand-600 dark:text-brand-400">
-                      {formatCurrency(Number(order.totalAmount))}
-                    </span>
+                  {/* Total */}
+                  <div className="border-t-2 border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-900/20 px-4 py-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Total</span>
+                      <span className="text-xl font-bold text-brand-600 dark:text-brand-400">
+                        {formatCurrency(Number(order.totalAmount))}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className="mb-4 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                  <div className="bg-brand-50 dark:bg-brand-900/20 px-4 py-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Total</span>
+                      <span className="text-xl font-bold text-brand-600 dark:text-brand-400">
+                        {formatCurrency(Number(order.totalAmount))}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
 
             </div>
 

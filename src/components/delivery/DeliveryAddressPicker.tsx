@@ -564,21 +564,6 @@ export default function DeliveryAddressPicker({
         </p>
       </div>
 
-      {/* Coordinates Display */}
-      {markerPosition && (
-        <div
-          className="p-3 rounded-lg mb-3"
-          style={{ backgroundColor: 'rgba(240, 90, 40, 0.05)', border: '1px solid rgba(240, 90, 40, 0.2)' }}
-        >
-          <p className="text-xs font-mono text-gray-600">
-            <span className="inline-flex items-center gap-2">
-              <FaMapMarkerAlt className="w-4 h-4 text-[#f05a28]" />
-              {markerPosition.lat.toFixed(6)}, {markerPosition.lng.toFixed(6)}
-            </span>
-          </p>
-        </div>
-      )}
-
       {/* Error Message */}
       {error && (
         <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 border-l-4 border-red-500 mb-3">

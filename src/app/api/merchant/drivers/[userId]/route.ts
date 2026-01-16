@@ -45,6 +45,7 @@ export const PATCH = withMerchantOwner(async (req: NextRequest, authContext: Aut
         merchantId: authContext.merchantId,
         userId,
         OR: [
+          { role: 'OWNER' },
           { role: 'DRIVER' },
           { role: 'STAFF', permissions: { has: driverPermission } },
         ],
@@ -63,6 +64,10 @@ export const PATCH = withMerchantOwner(async (req: NextRequest, authContext: Aut
 
     if (!merchantUser) {
       throw new ValidationError('Driver not found', ERROR_CODES.NOT_FOUND);
+    }
+
+    if (merchantUser.role === 'OWNER') {
+      throw new ValidationError('Owner driver status cannot be changed', ERROR_CODES.FORBIDDEN);
     }
 
     // New model: drivers are STAFF with `driver_dashboard` permission.
@@ -163,6 +168,7 @@ export const DELETE = withMerchantOwner(async (_req: NextRequest, authContext: A
         merchantId: authContext.merchantId,
         userId,
         OR: [
+          { role: 'OWNER' },
           { role: 'DRIVER' },
           { role: 'STAFF', permissions: { has: driverPermission } },
         ],
@@ -181,6 +187,10 @@ export const DELETE = withMerchantOwner(async (_req: NextRequest, authContext: A
 
     if (!merchantUser) {
       throw new ValidationError('Driver not found', ERROR_CODES.NOT_FOUND);
+    }
+
+    if (merchantUser.role === 'OWNER') {
+      throw new ValidationError('Owner cannot be removed from drivers', ERROR_CODES.FORBIDDEN);
     }
 
     const updated = await prisma.merchantUser.update({

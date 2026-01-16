@@ -10,6 +10,7 @@ import type { AuthContext } from '@/lib/middleware/auth';
 import { serializeBigInt } from '@/lib/utils/serializer';
 import { ORDER_DETAIL_INCLUDE } from '@/lib/types/order';
 import { invalidRouteParam, requireBigIntRouteParam } from '@/lib/utils/routeContext';
+import { STAFF_PERMISSIONS } from '@/lib/constants/permissions';
 
 type AssignBody = {
   driverUserId?: string | null;
@@ -122,9 +123,17 @@ export const PUT = withMerchant(async (request: NextRequest, authContext: AuthCo
       where: {
         merchantId: authContext.merchantId,
         userId: driverUserId,
-        role: 'DRIVER',
         isActive: true,
         user: { isActive: true },
+        OR: [
+          { role: 'OWNER' },
+          { role: 'DRIVER' },
+          {
+            role: 'STAFF',
+            invitationStatus: 'ACCEPTED',
+            permissions: { has: STAFF_PERMISSIONS.DRIVER_DASHBOARD },
+          },
+        ],
       },
       select: { userId: true },
     });

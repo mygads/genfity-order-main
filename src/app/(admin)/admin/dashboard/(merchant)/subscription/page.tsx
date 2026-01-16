@@ -10,6 +10,7 @@ import AlertDialog from "@/components/modals/AlertDialog";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useContextualHint, CONTEXTUAL_HINTS } from "@/lib/tutorial/components/ContextualHint";
 import { FaWallet, FaCalendarAlt, FaClock, FaExchangeAlt, FaArrowRight, FaCheckCircle, FaExclamationTriangle, FaHistory, FaCreditCard, FaInfoCircle, FaTicketAlt } from "react-icons/fa";
+import type { ReceiptSettings } from "@/lib/types/receiptSettings";
 
 interface SubscriptionData {
     subscription: {
@@ -70,6 +71,23 @@ interface ApiResponse<T> {
     data: T;
 }
 
+type UsageSummary = {
+    today: {
+        orderFee: number;
+        orderFeeCount: number;
+        completedOrderEmailFee: number;
+        completedOrderEmailFeeCount: number;
+        total: number;
+    };
+    last30Days: {
+        orderFee: number;
+        orderFeeCount: number;
+        completedOrderEmailFee: number;
+        completedOrderEmailFeeCount: number;
+        total: number;
+    };
+};
+
 /**
  * Merchant Subscription Page - Redesigned
  * Professional, clean, modern UI with dual language support
@@ -103,12 +121,16 @@ export default function SubscriptionPage() {
     const { data: transactionsResponse, isLoading: transactionsLoading } =
         useSWRStatic<ApiResponse<{ transactions: TransactionData[] }>>('/api/merchant/balance/transactions?limit=5');
     const { data: canSwitchResponse } = useSWRStatic<ApiResponse<CanSwitchData>>('/api/merchant/subscription/can-switch');
+    const { data: receiptSettingsResponse } = useSWRStatic<ApiResponse<{ receiptSettings: ReceiptSettings }>>('/api/merchant/receipt-settings');
+    const { data: usageSummaryResponse } = useSWRStatic<ApiResponse<UsageSummary>>('/api/merchant/balance/usage-summary');
 
     const subscription = subscriptionResponse?.data?.subscription;
     const pricing = subscriptionResponse?.data?.pricing;
     const balanceInfo = balanceResponse?.data;
     const canSwitch = canSwitchResponse?.data;
     const transactions = transactionsResponse?.data?.transactions || [];
+    const receiptSettings = receiptSettingsResponse?.data?.receiptSettings;
+    const usageSummary = usageSummaryResponse?.data;
 
     // Show contextual hint on first visit
     useEffect(() => {
@@ -123,10 +145,12 @@ export default function SubscriptionPage() {
 
     // Helpers
     const formatCurrency = (amount: number, currency: string) => {
+        const sign = amount < 0 ? '-' : '';
+        const value = Math.abs(amount);
         if (currency === 'AUD') {
-            return `A$${amount.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            return `${sign}A$${value.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
         }
-        return `Rp ${amount.toLocaleString('id-ID')}`;
+        return `${sign}Rp ${value.toLocaleString('id-ID')}`;
     };
 
     const formatDate = (dateStr: string) => {
@@ -152,6 +176,7 @@ export default function SubscriptionPage() {
         const labels: Record<string, { en: string; id: string }> = {
             'DEPOSIT': { en: 'Top Up', id: 'Isi Saldo' },
             'ORDER_FEE': { en: 'Order Fee', id: 'Biaya Pesanan' },
+            'COMPLETED_ORDER_EMAIL_FEE': { en: 'Completed Order Email Fee', id: 'Biaya Email Pesanan Selesai' },
             'SUBSCRIPTION': { en: 'Subscription', id: 'Langganan' },
             'REFUND': { en: 'Refund', id: 'Pengembalian' },
             'ADJUSTMENT': { en: 'Adjustment', id: 'Penyesuaian' },
@@ -539,6 +564,68 @@ export default function SubscriptionPage() {
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             {locale === 'id' ? 'Biaya pesanan' : 'Order fees'}
+                        </p>
+                    </div>
+                )}
+
+                {/* Email Usage Today (only if receipt email enabled) */}
+                {receiptSettings?.sendCompletedOrderEmailToCustomer && usageSummary && (
+                    <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+                        <div className="flex items-center gap-2 mb-2">
+                            <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
+                                <FaInfoCircle className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                            </div>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                                {locale === 'id' ? 'Pemakaian Email Hari Ini' : 'Email Usage Today'}
+                            </span>
+                        </div>
+                        <p className="text-xl font-bold text-gray-900 dark:text-white">
+                            {formatCurrency(-usageSummary.today.completedOrderEmailFee, currency)}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            {usageSummary.today.completedOrderEmailFeeCount} {locale === 'id' ? 'email' : 'emails'}
+                        </p>
+                    </div>
+                )}
+
+                {/* Deposit Usage Today (only in deposit mode) */}
+                {isDeposit && usageSummary && (
+                    <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+                        <div className="flex items-center gap-2 mb-2">
+                            <div className="w-8 h-8 rounded-lg bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center">
+                                <FaWallet className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+                            </div>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                                {locale === 'id' ? 'Pemakaian Saldo Hari Ini' : 'Deposit Usage Today'}
+                            </span>
+                        </div>
+                        <p className="text-xl font-bold text-gray-900 dark:text-white">
+                            {formatCurrency(-usageSummary.today.orderFee, currency)}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            {usageSummary.today.orderFeeCount} {locale === 'id' ? 'biaya pesanan' : 'order fees'}
+                        </p>
+                    </div>
+                )}
+
+                {/* Combined Usage (Deposit + Email) */}
+                {isDeposit && receiptSettings?.sendCompletedOrderEmailToCustomer && usageSummary && (
+                    <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+                        <div className="flex items-center gap-2 mb-2">
+                            <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                                <FaHistory className="w-4 h-4 text-gray-700 dark:text-gray-300" />
+                            </div>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                                {locale === 'id' ? 'Total Pemakaian' : 'Total Usage'}
+                            </span>
+                        </div>
+                        <p className="text-xl font-bold text-gray-900 dark:text-white">
+                            {formatCurrency(-usageSummary.today.total, currency)}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            {locale === 'id'
+                                ? `30 hari: ${formatCurrency(-usageSummary.last30Days.total, currency)}`
+                                : `Last 30 days: ${formatCurrency(-usageSummary.last30Days.total, currency)}`}
                         </p>
                     </div>
                 )}

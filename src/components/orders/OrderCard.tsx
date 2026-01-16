@@ -93,7 +93,30 @@ export const OrderCard: React.FC<OrderCardProps> = ({
         ? (order.orderNumber ?? '')
         : fullOrderNumber;
 
-  const displayNotes = String(((order as any).kitchenNotes ?? order.notes) ?? '').trim();
+  const normalizeNoteContent = (value: string): string => {
+    let s = String(value ?? '').trim();
+    s = s.replace(/^[-–—•\s]+/, '').trim();
+    const prefixRegex = /^\s*([-–—•\s]+)?\s*(admin|customer)\s*:\s*/i;
+    while (prefixRegex.test(s)) {
+      s = s.replace(prefixRegex, '').trim();
+    }
+    return s;
+  };
+
+  const customerNote = normalizeNoteContent(String(order.notes ?? '').trim());
+  const adminRaw = String(((order as any).kitchenNotes ?? (order as any).adminNote) ?? '').trim();
+  const adminOnly = (() => {
+    const m = adminRaw.match(/admin\s*:\s*([\s\S]*)$/i);
+    const extracted = m ? m[1] : adminRaw;
+    return normalizeNoteContent(extracted);
+  })();
+
+  const displayNotes = (() => {
+    const parts: string[] = [];
+    if (customerNote) parts.push(`customer : ${customerNote}`);
+    if (adminOnly) parts.push(`admin : ${adminOnly}`);
+    return parts.join(' | ');
+  })();
   const scheduledTime = (order as any).scheduledTime as string | null | undefined;
   const isScheduled = Boolean((order as any).isScheduled && scheduledTime);
 

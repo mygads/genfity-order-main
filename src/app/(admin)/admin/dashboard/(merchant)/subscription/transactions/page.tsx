@@ -202,10 +202,12 @@ export default function TransactionsPage() {
     };
 
     const formatCurrency = (amount: number) => {
+        const sign = amount < 0 ? '-' : '';
+        const value = Math.abs(amount);
         if (currency === 'AUD') {
-            return `A$${amount.toLocaleString('en-AU', { minimumFractionDigits: 2 })}`;
+            return `${sign}A$${value.toLocaleString('en-AU', { minimumFractionDigits: 2 })}`;
         }
-        return `Rp ${amount.toLocaleString('id-ID')}`;
+        return `${sign}Rp ${value.toLocaleString('id-ID')}`;
     };
 
     const formatDateTime = (dateStr: string) => {
@@ -311,6 +313,15 @@ export default function TransactionsPage() {
                     <p className="text-gray-500 dark:text-gray-400">
                         {t('subscription.history.subtitle')}
                     </p>
+                    <div className="mt-2">
+                        <Link
+                            href="/admin/dashboard/subscription"
+                            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                        >
+                            <FaChevronLeft className="w-3 h-3" />
+                            {t('subscription.confirm.backToSubscription')}
+                        </Link>
+                    </div>
                 </div>
                 <div className="flex items-center gap-3">
                     {balanceInfo && (
@@ -458,7 +469,7 @@ export default function TransactionsPage() {
                                             </p>
                                             {tx.description && (
                                                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                                                    {tx.description}
+                                                    {tx.description.replaceAll('Completed-order', 'Completed order')}
                                                 </p>
                                             )}
                                         </div>

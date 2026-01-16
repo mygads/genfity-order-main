@@ -26,6 +26,7 @@ import {
   FaCompress,
   FaSearch,
   FaUserFriends,
+  FaQrcode,
 } from 'react-icons/fa';
 import { useContextualHint, CONTEXTUAL_HINTS, useClickHereHint, CLICK_HINTS } from '@/lib/tutorial';
 import { OrderKanbanBoard } from '@/components/orders/OrderKanbanBoard';
@@ -40,6 +41,7 @@ import { OrderStatus } from '@prisma/client';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import MerchantReservationsPanel from '@/components/reservations/MerchantReservationsPanel';
 import AdminPillTabs, { type AdminPillTabItem } from '@/components/common/AdminPillTabs';
+import QRCodeScanModal from '@/components/common/QRCodeScanModal';
 
 type ViewMode = 'kanban-card' | 'kanban-list' | 'tab-list';
 
@@ -81,6 +83,8 @@ function MerchantOrdersPageContent() {
   const [loading, setLoading] = useState(true);
   const [displayMode, setDisplayMode] = useState<'normal' | 'clean' | 'fullscreen'>('normal');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isQrScanOpen, setIsQrScanOpen] = useState(false);
+  const [qrScanError, setQrScanError] = useState<string | null>(null);
   const [pendingReservationCount, setPendingReservationCount] = useState<number>(0);
   const [activeReservationCount, setActiveReservationCount] = useState<number>(0);
 
@@ -284,6 +288,73 @@ function MerchantOrdersPageContent() {
     setFilters(DEFAULT_FILTERS);
   };
 
+  const resolveOrderIdFromScan = useCallback(async (rawValue: string): Promise<string> => {
+    const value = rawValue.trim();
+
+    // 1) If it is already an admin URL with ?orderId=
+    try {
+      const maybeUrl = new URL(value);
+      const fromQuery = maybeUrl.searchParams.get('orderId');
+      if (fromQuery) return fromQuery;
+    } catch {
+      // not a URL
+    }
+
+    // 2) Extract orderNumber from customer tracking URL: /{merchantCode}/track/{orderNumber}
+    let orderNumber: string | null = null;
+    const trackMatch = value.match(/\/track\/([^/?#]+)/i);
+    if (trackMatch?.[1]) {
+      try {
+        orderNumber = decodeURIComponent(trackMatch[1]);
+      } catch {
+        orderNumber = trackMatch[1];
+      }
+    }
+
+    // 3) If QR contains just the order number
+    if (!orderNumber) {
+      orderNumber = value;
+    }
+
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+
+    const res = await fetch(`/api/merchant/orders/resolve?orderNumber=${encodeURIComponent(orderNumber)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    const json = await res.json();
+    if (!res.ok || !json?.success) {
+      throw new Error(json?.message || json?.error || 'Order not found');
+    }
+
+    const orderId = String(json?.data?.orderId ?? '');
+    if (!orderId) {
+      throw new Error('Order not found');
+    }
+
+    return orderId;
+  }, []);
+
+  const handleQrScan = useCallback(async (rawValue: string) => {
+    try {
+      setQrScanError(null);
+      const orderId = await resolveOrderIdFromScan(rawValue);
+      setIsQrScanOpen(false);
+      setSelectedOrder(null);
+      setIsModalOpen(false);
+      setUrlOrderId(orderId);
+    } catch (e) {
+      setQrScanError(e instanceof Error ? e.message : 'Failed to open order');
+    }
+  }, [resolveOrderIdFromScan]);
+
   // Bulk operations
   const toggleOrderSelection = (orderId: string) => {
     setSelectedOrders(prev => {
@@ -361,37 +432,50 @@ function MerchantOrdersPageContent() {
       {/* Header - Always Sticky like Kitchen Display */}
       <div className={`sticky top-0 z-30 bg-white/95 backdrop-blur-sm dark:bg-gray-950/95 border-b border-gray-200 dark:border-gray-800 ${displayMode !== 'normal' ? 'px-4 md:px-6 pt-6 pb-4' : 'pb-4 -mx-4 md:-mx-6 px-4 md:px-6 pt-0'}`}>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800 dark:text-white/90">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-4 min-w-0">
+            <h1 className="text-2xl font-bold text-gray-800 dark:text-white/90 whitespace-nowrap">
               {t("admin.orders.title")}
             </h1>
-          </div>
 
-          {/* Search Bar */}
-          {activeMainTab === 'orders' ? (
-            <div data-tutorial="order-search" className="relative w-full lg:w-auto lg:min-w-75">
-              <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                <FaSearch className="h-4 w-4 text-gray-400" />
-              </div>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={t("admin.orders.searchPlaceholder")}
-                className="w-full h-11 pl-11 pr-10 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 placeholder-gray-400 shadow-sm focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:placeholder-gray-500 dark:focus:border-brand-500"
-              />
-              {searchQuery && (
+            {/* Search + QR Scan (right of title) */}
+            {activeMainTab === 'orders' ? (
+              <div className="flex w-full items-center gap-2 lg:w-auto" data-tutorial="order-search">
+                <div className="relative w-full lg:w-105">
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                    <FaSearch className="h-4 w-4 text-gray-400" />
+                  </div>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder={t("admin.orders.searchPlaceholder")}
+                    className="w-full h-11 pl-11 pr-10 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 placeholder-gray-400 shadow-sm focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:placeholder-gray-500 dark:focus:border-brand-500"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                    >
+                      <FaTimes className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+
                 <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  type="button"
+                  onClick={() => {
+                    setQrScanError(null);
+                    setIsQrScanOpen(true);
+                  }}
+                  className="flex h-11 items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
+                  title={t('admin.orders.scanQr')}
                 >
-                  <FaTimes className="h-3.5 w-3.5" />
+                  <FaQrcode className="h-4 w-4" />
+                  <span className="hidden sm:inline">{t('admin.orders.scanQr')}</span>
                 </button>
-              )}
-            </div>
-          ) : (
-            <div className="hidden lg:block" />
-          )}
+              </div>
+            ) : null}
+          </div>
 
           <div className="flex flex-wrap items-center gap-3">
             <AdminPillTabs
@@ -518,6 +602,20 @@ function MerchantOrdersPageContent() {
           </div>
         </div>
       </div>
+
+      <QRCodeScanModal
+        isOpen={isQrScanOpen}
+        title={t('admin.orders.scanQrTitle')}
+        subtitle={qrScanError ? `${t('common.error')}: ${qrScanError}` : t('admin.orders.scanQrSubtitle')}
+        closeLabel={t('common.close')}
+        unsupportedTitle={t('admin.orders.scanQrUnsupportedTitle')}
+        unsupportedText={t('admin.orders.scanQrUnsupportedText')}
+        cameraErrorTitle={t('admin.orders.scanQrCameraErrorTitle')}
+        startingText={t('admin.orders.scanQrStarting')}
+        hintText={t('admin.orders.scanQrHint')}
+        onClose={() => setIsQrScanOpen(false)}
+        onScan={handleQrScan}
+      />
 
       {/* Content Area */}
       <div className={`flex-1 min-h-0 min-w-0 flex flex-col ${displayMode !== 'normal' ? 'px-4 md:px-6 pb-6 pt-6' : 'pt-6'}`}>

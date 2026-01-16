@@ -166,8 +166,8 @@ class BalanceService {
         }
 
         const description = sentToEmail
-            ? `Completed-order email fee for #${orderNumber} (to ${sentToEmail})`
-            : `Completed-order email fee for #${orderNumber}`;
+            ? `Completed order email fee for #${orderNumber} (to ${sentToEmail})`
+            : `Completed order email fee for #${orderNumber}`;
 
         try {
             const result = await balanceRepository.deductBalanceWithType(merchantId, {
@@ -295,6 +295,92 @@ class BalanceService {
         }
 
         return { yesterday, lastWeek, lastMonth };
+    }
+
+    /**
+     * Get usage totals for today + last 30 days.
+     * Used for subscription dashboard cards.
+     */
+    async getUsageSummary(merchantId: bigint): Promise<{
+        today: {
+            orderFee: number;
+            orderFeeCount: number;
+            completedOrderEmailFee: number;
+            completedOrderEmailFeeCount: number;
+            total: number;
+        };
+        last30Days: {
+            orderFee: number;
+            orderFeeCount: number;
+            completedOrderEmailFee: number;
+            completedOrderEmailFeeCount: number;
+            total: number;
+        };
+    }> {
+        const now = new Date();
+
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const startOfLast30Days = new Date(startOfToday);
+        startOfLast30Days.setDate(startOfLast30Days.getDate() - 30);
+
+        const transactions = await balanceRepository.getTransactionsByDateRange(
+            merchantId,
+            startOfLast30Days,
+            now
+        );
+
+        const summary = {
+            today: {
+                orderFee: 0,
+                orderFeeCount: 0,
+                completedOrderEmailFee: 0,
+                completedOrderEmailFeeCount: 0,
+                total: 0,
+            },
+            last30Days: {
+                orderFee: 0,
+                orderFeeCount: 0,
+                completedOrderEmailFee: 0,
+                completedOrderEmailFeeCount: 0,
+                total: 0,
+            },
+        };
+
+        for (const tx of transactions) {
+            const amount = Number(tx.amount);
+            const txDate = new Date(tx.createdAt);
+            const inToday = txDate >= startOfToday;
+
+            // Only count usage/deductions (negative amounts)
+            if (!(Number.isFinite(amount) && amount < 0)) {
+                continue;
+            }
+
+            const fee = Math.abs(amount);
+
+            if (tx.type === 'ORDER_FEE') {
+                summary.last30Days.orderFee += fee;
+                summary.last30Days.orderFeeCount += 1;
+                if (inToday) {
+                    summary.today.orderFee += fee;
+                    summary.today.orderFeeCount += 1;
+                }
+            }
+
+            if (tx.type === 'COMPLETED_ORDER_EMAIL_FEE') {
+                summary.last30Days.completedOrderEmailFee += fee;
+                summary.last30Days.completedOrderEmailFeeCount += 1;
+                if (inToday) {
+                    summary.today.completedOrderEmailFee += fee;
+                    summary.today.completedOrderEmailFeeCount += 1;
+                }
+            }
+        }
+
+        summary.today.total = summary.today.orderFee + summary.today.completedOrderEmailFee;
+        summary.last30Days.total = summary.last30Days.orderFee + summary.last30Days.completedOrderEmailFee;
+
+        return summary;
     }
 }
 

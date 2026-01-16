@@ -546,9 +546,11 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
           setPendingStatusChange(null);
         }}
         onConfirm={() => {
-          if (pendingStatusChange) {
-            updateOrderStatus(pendingStatusChange.orderId, pendingStatusChange.newStatus);
-            setPendingStatusChange(null);
+          const change = pendingStatusChange;
+          setShowUnpaidConfirm(false);
+          setPendingStatusChange(null);
+          if (change) {
+            updateOrderStatus(change.orderId, change.newStatus);
           }
         }}
         title="Unpaid Order"
@@ -566,9 +568,11 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
           setPendingCompleteStatusChange(null);
         }}
         onConfirm={() => {
-          if (pendingCompleteStatusChange) {
-            updateOrderStatus(pendingCompleteStatusChange.orderId, pendingCompleteStatusChange.newStatus);
-            setPendingCompleteStatusChange(null);
+          const change = pendingCompleteStatusChange;
+          setShowUnpaidCompleteConfirm(false);
+          setPendingCompleteStatusChange(null);
+          if (change) {
+            updateOrderStatus(change.orderId, change.newStatus);
           }
         }}
         title="Unpaid Order"
