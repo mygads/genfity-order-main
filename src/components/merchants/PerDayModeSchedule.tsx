@@ -585,7 +585,7 @@ const PerDayModeSchedule = forwardRef<PerDayModeScheduleHandle, PerDayModeSchedu
 
       {/* Copy Modal */}
       {showCopyModal && copySource && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center">
           <div className="absolute inset-0 bg-black/50" onClick={() => setShowCopyModal(false)} />
           <div className="relative z-10 w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl dark:bg-gray-900">
             <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">

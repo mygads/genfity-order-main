@@ -102,7 +102,7 @@ export const DeletePinModal: React.FC<DeletePinModalProps> = ({
   // Show "No PIN Set" message if merchant hasn't configured a delete PIN
   if (!hasDeletePin) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
         <div className="relative w-full max-w-sm bg-white dark:bg-gray-900 rounded-2xl shadow-2xl">
           {/* Close button */}
           <button
@@ -150,7 +150,7 @@ export const DeletePinModal: React.FC<DeletePinModalProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div className="relative w-full max-w-sm bg-white dark:bg-gray-900 rounded-2xl shadow-2xl">
         {/* Close button */}
         <button

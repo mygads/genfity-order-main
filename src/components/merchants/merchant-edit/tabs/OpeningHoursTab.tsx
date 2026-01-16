@@ -42,12 +42,12 @@ export default function OpeningHoursTab({
               <div className="w-full text-sm font-medium text-gray-900 dark:text-white sm:w-28">{DAYS[hour.dayOfWeek]}</div>
 
               <div className="flex items-center justify-between gap-3 sm:w-40 sm:justify-start">
-                <div className="text-sm text-gray-600 dark:text-gray-300">Closed</div>
+                <div className="text-sm text-gray-600 dark:text-gray-300">{hour.isClosed ? 'Closed' : 'Open'}</div>
                 <Switch
                   size="sm"
-                  checked={hour.isClosed}
-                  onCheckedChange={(checked) => onOpeningHourChange(hour.dayOfWeek, 'isClosed', checked)}
-                  aria-label={`Closed on ${DAYS[hour.dayOfWeek]}`}
+                  checked={!hour.isClosed}
+                  onCheckedChange={(checked) => onOpeningHourChange(hour.dayOfWeek, 'isClosed', !checked)}
+                  aria-label={`Open on ${DAYS[hour.dayOfWeek]}`}
                 />
               </div>
 

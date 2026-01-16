@@ -187,7 +187,7 @@ export default function ManageMenuCategoriesModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 p-4"
       onMouseDown={onBackdropMouseDown}
     >
       <div className="w-full max-w-4xl rounded-2xl border border-gray-200 bg-white shadow-xl dark:border-gray-800 dark:bg-gray-900 max-h-[90vh] overflow-hidden flex flex-col">

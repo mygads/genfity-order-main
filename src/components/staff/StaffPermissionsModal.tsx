@@ -147,7 +147,7 @@ export default function StaffPermissionsModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4"
+      className="fixed inset-0 z-[1000] flex items-center justify-center overflow-y-auto bg-black/50 p-4"
       onMouseDown={onBackdropMouseDown}
     >
       <div className="w-full max-w-2xl rounded-xl bg-white shadow-2xl dark:bg-gray-900">

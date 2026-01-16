@@ -103,12 +103,12 @@ export default function UpgradePromptModal({
             : "text-brand-600 dark:text-brand-400";
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overflow-x-hidden p-4">
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center overflow-y-auto overflow-x-hidden p-4">
             {/* Backdrop */}
             <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose}></div>
 
             {/* Modal */}
-            <div className="relative z-50 w-full max-w-3xl rounded-2xl bg-white shadow-xl dark:bg-gray-900">
+            <div className="relative z-[1000] w-full max-w-3xl rounded-2xl bg-white shadow-xl dark:bg-gray-900">
                 {/* Header */}
                 <div className="relative border-b border-gray-200 px-6 py-4 dark:border-gray-700">
                     <button

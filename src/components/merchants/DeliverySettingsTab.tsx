@@ -1181,7 +1181,7 @@ export default function DeliverySettingsTab({
       )}
 
       {showZoneModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-gray-900">
             <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-800">
               <div className="flex items-start justify-between gap-6">
