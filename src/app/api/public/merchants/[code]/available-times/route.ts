@@ -105,9 +105,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ code
       where: { code: merchantCode },
       include: {
         openingHours: true,
-        modeSchedules: {
-          where: { isActive: true },
-        },
+        modeSchedules: true,
       },
     });
 
@@ -157,6 +155,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ code
     const merchantStatus: ExtendedMerchantStatus = {
       isOpen: merchant.isOpen,
       isManualOverride: merchant.isManualOverride,
+      isPerDayModeScheduleEnabled: merchant.isPerDayModeScheduleEnabled,
       timezone: tz,
       openingHours: merchant.openingHours.map((h) => ({
         dayOfWeek: h.dayOfWeek,
@@ -169,6 +168,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ code
         dayOfWeek: s.dayOfWeek,
         startTime: s.startTime,
         endTime: s.endTime,
+        isActive: s.isActive,
       })),
       todaySpecialHour: todaySpecialHour as any,
       isDineInEnabled: merchant.isDineInEnabled,

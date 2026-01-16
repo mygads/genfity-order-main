@@ -60,7 +60,7 @@ export default function AdminFormFooter({
       
       {/* Fixed footer container */}
       <div
-        className={`fixed bottom-0 left-0 right-0 z-40 border-t border-gray-200 bg-white shadow-[0_-4px_12px_rgba(0,0,0,0.08)] dark:border-gray-800 dark:bg-gray-900 ${className}`}
+        className={`fixed bottom-0 left-0 right-0 z-60 border-t border-gray-200 bg-white shadow-[0_-4px_12px_rgba(0,0,0,0.08)] dark:border-gray-800 dark:bg-gray-900 ${className}`}
       >
         {/* Content wrapper - matches sidebar offset */}
         <div className="ml-0 lg:ml-[290px]">

@@ -21,6 +21,11 @@ export const GET = withMerchant(async (
 ) => {
   try {
     const merchantId = context.merchantId!;
+    const merchant = await prisma.merchant.findUnique({
+      where: { id: merchantId },
+      select: { isPerDayModeScheduleEnabled: true },
+    });
+
     const schedules = await prisma.merchantModeSchedule.findMany({
       where: {
         merchantId,
@@ -33,7 +38,10 @@ export const GET = withMerchant(async (
 
     return NextResponse.json({
       success: true,
-      data: serializeBigInt(schedules),
+      data: serializeBigInt({
+        enabled: merchant?.isPerDayModeScheduleEnabled ?? false,
+        schedules,
+      }),
     });
   } catch (error) {
     console.error('Error fetching mode schedules:', error);
@@ -55,7 +63,14 @@ export const POST = withMerchant(async (
   try {
     const merchantId = context.merchantId!;
     const body = await request.json();
-    const { schedules } = body;
+    const { schedules, enabled } = body;
+
+    if (enabled !== undefined && typeof enabled !== 'boolean') {
+      return NextResponse.json(
+        { success: false, error: 'VALIDATION_ERROR', message: 'Enabled must be a boolean' },
+        { status: 400 }
+      );
+    }
 
     if (!Array.isArray(schedules)) {
       return NextResponse.json(
@@ -86,33 +101,49 @@ export const POST = withMerchant(async (
       }
     }
 
-    // Upsert each schedule in a transaction
-    const results = await prisma.$transaction(
-      schedules.map((schedule) =>
-        prisma.merchantModeSchedule.upsert({
-          where: {
-            merchantId_mode_dayOfWeek: {
-              merchantId,
-              mode: schedule.mode,
-              dayOfWeek: schedule.dayOfWeek,
-            },
-          },
-          create: {
-            merchantId,
-            mode: schedule.mode,
-            dayOfWeek: schedule.dayOfWeek,
-            startTime: schedule.startTime,
-            endTime: schedule.endTime,
-            isActive: schedule.isActive ?? true,
-          },
-          update: {
-            startTime: schedule.startTime,
-            endTime: schedule.endTime,
-            isActive: schedule.isActive ?? true,
-          },
-        })
-      )
-    );
+    const results = await prisma.$transaction(async (tx) => {
+      const updatedMerchant = enabled === undefined
+        ? null
+        : await tx.merchant.update({
+          where: { id: merchantId },
+          data: { isPerDayModeScheduleEnabled: enabled },
+          select: { isPerDayModeScheduleEnabled: true },
+        });
+
+      const upserts = schedules.length === 0
+        ? []
+        : await Promise.all(
+          schedules.map((schedule) =>
+            tx.merchantModeSchedule.upsert({
+              where: {
+                merchantId_mode_dayOfWeek: {
+                  merchantId,
+                  mode: schedule.mode,
+                  dayOfWeek: schedule.dayOfWeek,
+                },
+              },
+              create: {
+                merchantId,
+                mode: schedule.mode,
+                dayOfWeek: schedule.dayOfWeek,
+                startTime: schedule.startTime,
+                endTime: schedule.endTime,
+                isActive: schedule.isActive ?? true,
+              },
+              update: {
+                startTime: schedule.startTime,
+                endTime: schedule.endTime,
+                isActive: schedule.isActive ?? true,
+              },
+            })
+          )
+        );
+
+      return {
+        enabled: updatedMerchant?.isPerDayModeScheduleEnabled ?? enabled ?? null,
+        schedules: upserts,
+      };
+    });
 
     return NextResponse.json({
       success: true,
@@ -141,6 +172,7 @@ export const DELETE = withMerchant(async (
     const { searchParams } = new URL(request.url);
     const mode = searchParams.get('mode');
     const dayOfWeek = searchParams.get('dayOfWeek');
+    const disableIfEmpty = searchParams.get('disableIfEmpty') === 'true';
 
     if (!mode || !dayOfWeek) {
       return NextResponse.json(
@@ -149,19 +181,40 @@ export const DELETE = withMerchant(async (
       );
     }
 
-    await prisma.merchantModeSchedule.delete({
-      where: {
-        merchantId_mode_dayOfWeek: {
-          merchantId,
-          mode: mode as 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY',
-          dayOfWeek: parseInt(dayOfWeek),
+    const result = await prisma.$transaction(async (tx) => {
+      await tx.merchantModeSchedule.delete({
+        where: {
+          merchantId_mode_dayOfWeek: {
+            merchantId,
+            mode: mode as 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY',
+            dayOfWeek: parseInt(dayOfWeek),
+          },
         },
-      },
+      });
+
+      if (!disableIfEmpty) {
+        return { disabled: false };
+      }
+
+      const remaining = await tx.merchantModeSchedule.count({ where: { merchantId } });
+      if (remaining > 0) {
+        return { disabled: false };
+      }
+
+      await tx.merchant.update({
+        where: { id: merchantId },
+        data: { isPerDayModeScheduleEnabled: false },
+      });
+
+      return { disabled: true };
     });
 
     return NextResponse.json({
       success: true,
-      message: 'Mode schedule deleted successfully',
+      data: result,
+      message: result.disabled
+        ? 'Mode schedule deleted successfully and per-day scheduling disabled'
+        : 'Mode schedule deleted successfully',
     });
   } catch (error) {
     console.error('Error deleting mode schedule:', error);

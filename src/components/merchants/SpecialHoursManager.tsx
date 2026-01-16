@@ -28,10 +28,13 @@ interface SpecialHour {
   closeTime: string;
   isDineInEnabled: boolean | null;
   isTakeawayEnabled: boolean | null;
+  isDeliveryEnabled: boolean | null;
   dineInStartTime: string;
   dineInEndTime: string;
   takeawayStartTime: string;
   takeawayEndTime: string;
+  deliveryStartTime: string;
+  deliveryEndTime: string;
   isRecurring?: boolean; // New: repeat annually
 }
 
@@ -74,10 +77,13 @@ export default function SpecialHoursManager({ token, embedded = false }: Special
     closeTime: '22:00',
     isDineInEnabled: null,
     isTakeawayEnabled: null,
+    isDeliveryEnabled: null,
     dineInStartTime: '',
     dineInEndTime: '',
     takeawayStartTime: '',
     takeawayEndTime: '',
+    deliveryStartTime: '',
+    deliveryEndTime: '',
     isRecurring: false,
   });
 
@@ -120,10 +126,13 @@ export default function SpecialHoursManager({ token, embedded = false }: Special
       closeTime: '22:00',
       isDineInEnabled: null,
       isTakeawayEnabled: null,
+      isDeliveryEnabled: null,
       dineInStartTime: '',
       dineInEndTime: '',
       takeawayStartTime: '',
       takeawayEndTime: '',
+      deliveryStartTime: '',
+      deliveryEndTime: '',
       isRecurring: false,
     });
     setEditingHour(null);
@@ -140,6 +149,8 @@ export default function SpecialHoursManager({ token, embedded = false }: Special
       dineInEndTime: hour.dineInEndTime || '',
       takeawayStartTime: hour.takeawayStartTime || '',
       takeawayEndTime: hour.takeawayEndTime || '',
+      deliveryStartTime: hour.deliveryStartTime || '',
+      deliveryEndTime: hour.deliveryEndTime || '',
       isRecurring: hour.isRecurring || false,
     });
     setShowAddModal(true);
@@ -768,6 +779,152 @@ export default function SpecialHoursManager({ token, embedded = false }: Special
                   </div>
                 </div>
               )}
+
+              {/* Mode overrides (optional) */}
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800">
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Mode overrides (optional)</p>
+                <p className="text-xs text-gray-500">Disable a mode for this date, or set custom hours per mode.</p>
+
+                <div className="mt-4 space-y-4">
+                  {/* Dine In */}
+                  <div className="rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium text-gray-800 dark:text-gray-200">Dine In</p>
+                        <p className="text-xs text-gray-500">Override availability for this date</p>
+                      </div>
+                      <select
+                        value={formData.isDineInEnabled === null ? 'inherit' : formData.isDineInEnabled ? 'enabled' : 'disabled'}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            isDineInEnabled: e.target.value === 'inherit' ? null : e.target.value === 'enabled',
+                          }))
+                        }
+                        className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                        disabled={formData.isClosed}
+                      >
+                        <option value="inherit">Inherit</option>
+                        <option value="enabled">Enabled</option>
+                        <option value="disabled">Disabled</option>
+                      </select>
+                    </div>
+
+                    {(formData.isDineInEnabled !== false) && !formData.isClosed && (
+                      <div className="mt-3">
+                        <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Custom hours (optional)</label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="time"
+                            value={formData.dineInStartTime}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, dineInStartTime: e.target.value }))}
+                            className="h-9 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                          />
+                          <span className="text-gray-400">-</span>
+                          <input
+                            type="time"
+                            value={formData.dineInEndTime}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, dineInEndTime: e.target.value }))}
+                            className="h-9 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Takeaway */}
+                  <div className="rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium text-gray-800 dark:text-gray-200">Takeaway</p>
+                        <p className="text-xs text-gray-500">Override availability for this date</p>
+                      </div>
+                      <select
+                        value={formData.isTakeawayEnabled === null ? 'inherit' : formData.isTakeawayEnabled ? 'enabled' : 'disabled'}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            isTakeawayEnabled: e.target.value === 'inherit' ? null : e.target.value === 'enabled',
+                          }))
+                        }
+                        className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                        disabled={formData.isClosed}
+                      >
+                        <option value="inherit">Inherit</option>
+                        <option value="enabled">Enabled</option>
+                        <option value="disabled">Disabled</option>
+                      </select>
+                    </div>
+
+                    {(formData.isTakeawayEnabled !== false) && !formData.isClosed && (
+                      <div className="mt-3">
+                        <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Custom hours (optional)</label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="time"
+                            value={formData.takeawayStartTime}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, takeawayStartTime: e.target.value }))}
+                            className="h-9 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                          />
+                          <span className="text-gray-400">-</span>
+                          <input
+                            type="time"
+                            value={formData.takeawayEndTime}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, takeawayEndTime: e.target.value }))}
+                            className="h-9 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Delivery */}
+                  <div className="rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium text-gray-800 dark:text-gray-200">Delivery</p>
+                        <p className="text-xs text-gray-500">Override availability for this date</p>
+                      </div>
+                      <select
+                        value={formData.isDeliveryEnabled === null ? 'inherit' : formData.isDeliveryEnabled ? 'enabled' : 'disabled'}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            isDeliveryEnabled: e.target.value === 'inherit' ? null : e.target.value === 'enabled',
+                          }))
+                        }
+                        className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                        disabled={formData.isClosed}
+                      >
+                        <option value="inherit">Inherit</option>
+                        <option value="enabled">Enabled</option>
+                        <option value="disabled">Disabled</option>
+                      </select>
+                    </div>
+
+                    {(formData.isDeliveryEnabled !== false) && !formData.isClosed && (
+                      <div className="mt-3">
+                        <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Custom hours (optional)</label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="time"
+                            value={formData.deliveryStartTime}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, deliveryStartTime: e.target.value }))}
+                            className="h-9 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                          />
+                          <span className="text-gray-400">-</span>
+                          <input
+                            type="time"
+                            value={formData.deliveryEndTime}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, deliveryEndTime: e.target.value }))}
+                            className="h-9 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Actions */}

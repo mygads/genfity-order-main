@@ -71,8 +71,10 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
         storeOpen,
         isDineInEnabled,
         isTakeawayEnabled,
+        isDeliveryEnabled: isDeliveryEnabledByStatus,
         isDineInAvailable,
         isTakeawayAvailable,
+        isDeliveryAvailable: isDeliveryAvailableBySchedule,
         dineInLabel,
         takeawayLabel,
         deliveryLabel,
@@ -90,8 +92,8 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
     const displayOpeningHours = liveOpeningHours.length > 0 ? liveOpeningHours : merchant.openingHours;
 
     const merchantHasDeliveryCoords = merchant.latitude !== null && merchant.latitude !== undefined && merchant.longitude !== null && merchant.longitude !== undefined;
-    const isDeliveryEnabled = merchant.isDeliveryEnabled === true;
-    const isDeliveryAvailable = storeOpen && isDeliveryEnabled && merchantHasDeliveryCoords;
+    const isDeliveryAvailable = isDeliveryAvailableBySchedule && merchantHasDeliveryCoords;
+    const isDeliveryEnabled = isDeliveryEnabledByStatus;
 
     const isReservationEnabled = merchant.isReservationEnabled === true;
     const reservationMinItemCount = Number(merchant.reservationMinItemCount ?? 0);
@@ -150,22 +152,7 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
         }
     };
 
-    // If only one mode is enabled and available, auto-redirect to order page
-    useEffect(() => {
-        if (isStatusLoading) return; // Wait for status to load
-        if (!storeOpen) return;
-
-        const availability = {
-            dinein: isDineInAvailable,
-            takeaway: isTakeawayAvailable,
-            delivery: isDeliveryAvailable,
-        };
-
-        const availableModes = (Object.keys(availability) as Array<keyof typeof availability>).filter((k) => availability[k]);
-        if (availableModes.length === 1) {
-            router.replace(`/${merchantCode}/order?mode=${availableModes[0]}`);
-        }
-    }, [isStatusLoading, storeOpen, isDineInAvailable, isTakeawayAvailable, isDeliveryAvailable, merchantCode, router]);
+    // Note: Do not auto-redirect when only one mode is available.
 
     return (
         <>

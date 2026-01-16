@@ -7,6 +7,7 @@ import AdminFormFooter from "@/components/common/AdminFormFooter";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useMerchant } from "@/context/MerchantContext";
 import { StatusToggle } from "@/components/common/StatusToggle";
+import { FaArrowLeft } from "react-icons/fa";
 
 interface Menu {
     id: string;
@@ -14,13 +15,15 @@ interface Menu {
     price: number;
     imageUrl: string | null;
     isActive: boolean;
+    categories?: Array<{ category: { id: string; name: string } }>;
+    category?: { id: string; name: string } | null;
 }
 
 export default function EditMenuBookPage() {
     const router = useRouter();
     const params = useParams();
     const bookId = params.id as string;
-    const { t } = useTranslation();
+    const { t, locale } = useTranslation();
     const { formatCurrency } = useMerchant();
 
     const [loading, setLoading] = useState(true);
@@ -32,6 +35,7 @@ export default function EditMenuBookPage() {
     const [isActive, setIsActive] = useState(true);
     const [selectedMenuIds, setSelectedMenuIds] = useState<string[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
+    const [showAllSelected, setShowAllSelected] = useState(false);
 
     const fetchData = useCallback(async () => {
         try {
@@ -59,7 +63,7 @@ export default function EditMenuBookPage() {
                 setIsActive(bookData.data.isActive);
                 setSelectedMenuIds(bookData.data.items.map((i: { menuId: string }) => i.menuId));
             } else {
-                setError("Menu book not found");
+                setError(locale === 'id' ? 'Menu book tidak ditemukan' : 'Menu book not found');
             }
 
             if (menusData.success) {
@@ -67,7 +71,7 @@ export default function EditMenuBookPage() {
             }
         } catch (err) {
             console.error("Fetch error:", err);
-            setError("Failed to fetch data");
+            setError(locale === 'id' ? 'Gagal memuat data' : 'Failed to fetch data');
         } finally {
             setLoading(false);
         }
@@ -82,10 +86,56 @@ export default function EditMenuBookPage() {
         return menus.filter(m => m.name.toLowerCase().includes(searchQuery.toLowerCase()));
     }, [menus, searchQuery]);
 
+    const menusByCategory = useMemo(() => {
+        const map = new Map<string, { id: string; name: string; menus: Menu[] }>();
+
+        for (const menu of filteredMenus) {
+            const primaryCategory = menu.categories?.[0]?.category || menu.category || null;
+            const key = primaryCategory?.id || "uncategorized";
+            const name = primaryCategory?.name || (locale === 'id' ? 'Tanpa Kategori' : 'Uncategorized');
+
+            const existing = map.get(key);
+            if (existing) {
+                existing.menus.push(menu);
+            } else {
+                map.set(key, { id: key, name, menus: [menu] });
+            }
+        }
+
+        const groups = Array.from(map.values()).map(g => ({
+            ...g,
+            menus: g.menus.sort((a, b) => a.name.localeCompare(b.name)),
+        }));
+
+        groups.sort((a, b) => {
+            if (a.id === "uncategorized") return 1;
+            if (b.id === "uncategorized") return -1;
+            return a.name.localeCompare(b.name);
+        });
+
+        return groups;
+    }, [filteredMenus, locale]);
+
+    const selectedMenus = useMemo(() => {
+        const byId = new Map(menus.map(m => [m.id, m] as const));
+        return selectedMenuIds.map(id => byId.get(id)).filter(Boolean) as Menu[];
+    }, [menus, selectedMenuIds]);
+
+    const filteredMenuIds = useMemo(() => filteredMenus.map(m => m.id), [filteredMenus]);
+
+    const selectAllMenus = (menuIds: string[]) => {
+        setSelectedMenuIds(prev => Array.from(new Set([...prev, ...menuIds])));
+    };
+
+    const deselectAllMenus = (menuIds: string[]) => {
+        const ids = new Set(menuIds);
+        setSelectedMenuIds(prev => prev.filter(id => !ids.has(id)));
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!name.trim()) {
-            setError("Name is required");
+            setError(locale === 'id' ? 'Nama wajib diisi' : 'Name is required');
             return;
         }
 
@@ -125,7 +175,7 @@ export default function EditMenuBookPage() {
     if (loading) {
         return (
             <div>
-                <PageBreadcrumb pageTitle="Edit Menu Book" />
+                <PageBreadcrumb pageTitle={t("admin.menuBooks.edit")} />
                 <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950">
                     <div className="mb-6 grid gap-6 md:grid-cols-2">
                         <div><div className="mb-2 h-4 w-16 animate-pulse rounded bg-gray-200 dark:bg-gray-700"></div><div className="h-11 w-full animate-pulse rounded-lg bg-gray-200 dark:bg-gray-700"></div></div>
@@ -140,9 +190,25 @@ export default function EditMenuBookPage() {
 
     return (
         <div data-tutorial="menu-book-edit-page">
-            <PageBreadcrumb pageTitle="Edit Menu Book" />
+            <PageBreadcrumb pageTitle={t("admin.menuBooks.edit")} />
 
             <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950" data-tutorial="menu-book-edit-form">
+                <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <button
+                        type="button"
+                        onClick={() => router.push("/admin/dashboard/menu-books")}
+                        className="inline-flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+                    >
+                        <FaArrowLeft className="h-4 w-4" />
+                        {t("common.back")}
+                    </button>
+
+                    <div className="text-right">
+                        <div className="text-sm font-semibold text-gray-900 dark:text-white">{t("admin.menuBooks.edit")}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">{t("admin.menuBooks.subtitle")}</div>
+                    </div>
+                </div>
+
                 <form onSubmit={handleSubmit}>
                     {error && (
                         <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
@@ -154,7 +220,7 @@ export default function EditMenuBookPage() {
                     <div className="mb-6 grid gap-6 md:grid-cols-2">
                         <div>
                             <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Name <span className="text-red-500">*</span>
+                                {t("admin.menuBooks.name")} <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="text"
@@ -165,7 +231,7 @@ export default function EditMenuBookPage() {
                         </div>
                         <div>
                             <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Description
+                                {t("admin.menuBooks.description")}
                             </label>
                             <input
                                 type="text"
@@ -190,64 +256,139 @@ export default function EditMenuBookPage() {
                     {/* Menu Selection */}
                     <div className="mb-6">
                         <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Select Menus ({selectedMenuIds.length} selected)
+                            {locale === 'id' ? 'Pilih Menu' : 'Select Menus'} ({selectedMenuIds.length} {locale === 'id' ? 'dipilih' : 'selected'})
                         </label>
                         <input
                             type="text"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Search menus..."
+                            placeholder={locale === 'id' ? 'Cari menu...' : 'Search menus...'}
                             className="mb-3 h-10 w-full max-w-md rounded-lg border border-gray-200 bg-white px-4 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                         />
 
+                        <div className="mb-3 flex flex-wrap items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => selectAllMenus(filteredMenuIds)}
+                                className="rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-300"
+                            >
+                                {locale === 'id' ? 'Pilih semua (hasil filter)' : 'Select all (filtered)'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => deselectAllMenus(filteredMenuIds)}
+                                className="rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-300"
+                            >
+                                {locale === 'id' ? 'Hapus pilihan (hasil filter)' : 'Deselect (filtered)'}
+                            </button>
+                            {selectedMenuIds.length > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedMenuIds([])}
+                                    className="rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-300"
+                                >
+                                    {locale === 'id' ? 'Reset pilihan' : 'Clear selection'}
+                                </button>
+                            )}
+                            <div className="ml-auto text-xs text-gray-500 dark:text-gray-400">
+                                {locale === 'id'
+                                    ? `${filteredMenus.length} menu ditampilkan`
+                                    : `${filteredMenus.length} menus shown`}
+                            </div>
+                        </div>
+
                         {selectedMenuIds.length > 0 && (
                             <div className="mb-3 flex flex-wrap gap-2">
-                                {selectedMenuIds.map(id => {
-                                    const menu = menus.find(m => m.id === id);
-                                    return menu ? (
-                                                                                <span key={id} className="inline-flex items-center gap-1.5 rounded-full bg-brand-100 px-3 py-1 text-xs font-medium text-brand-700 dark:bg-brand-900/30 dark:text-brand-400">
-                                            {menu.name}
-                                            <button
-                                                type="button"
-                                                onClick={() => setSelectedMenuIds(prev => prev.filter(x => x !== id))}
-                                                                                            className="hover:text-brand-900"
-                                            >
-                                                <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                                </svg>
-                                            </button>
-                                        </span>
-                                    ) : null;
-                                })}
+                                {(showAllSelected ? selectedMenus : selectedMenus.slice(0, 8)).map(menu => (
+                                    <span key={menu.id} className="inline-flex items-center gap-1.5 rounded-full bg-brand-100 px-3 py-1 text-xs font-medium text-brand-700 dark:bg-brand-900/30 dark:text-brand-400">
+                                        {menu.name}
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedMenuIds(prev => prev.filter(x => x !== menu.id))}
+                                            className="hover:text-brand-900"
+                                        >
+                                            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    </span>
+                                ))}
+
+                                {selectedMenus.length > 8 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowAllSelected(s => !s)}
+                                        className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-300"
+                                    >
+                                        {showAllSelected
+                                            ? (locale === 'id' ? 'Sembunyikan' : 'Hide')
+                                            : (locale === 'id' ? `+${selectedMenus.length - 8} lagi` : `+${selectedMenus.length - 8} more`)}
+                                    </button>
+                                )}
                             </div>
                         )}
 
                         <div className="max-h-64 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700">
                             {filteredMenus.length === 0 ? (
-                                <p className="p-4 text-center text-sm text-gray-500">No menus found</p>
+                                <p className="p-4 text-center text-sm text-gray-500">{locale === 'id' ? 'Tidak ada menu' : 'No menus found'}</p>
                             ) : (
                                 <div className="divide-y divide-gray-200 dark:divide-gray-700">
-                                    {filteredMenus.map(menu => {
-                                        const isSelected = selectedMenuIds.includes(menu.id);
+                                    {menusByCategory.map(group => {
+                                        const groupMenuIds = group.menus.map(m => m.id);
+                                        const selectedInGroup = groupMenuIds.filter(id => selectedMenuIds.includes(id)).length;
                                         return (
-                                            <label key={menu.id} className={`flex cursor-pointer items-center gap-3 p-3 transition-colors ${isSelected ? "bg-brand-50 dark:bg-brand-900/20" : "hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={isSelected}
-                                                    onChange={() => {
-                                                        if (isSelected) {
-                                                            setSelectedMenuIds(prev => prev.filter(x => x !== menu.id));
-                                                        } else {
-                                                            setSelectedMenuIds(prev => [...prev, menu.id]);
-                                                        }
-                                                    }}
-                                                    className="h-4 w-4 rounded border-gray-300 text-brand-600"
-                                                />
-                                                <div className="flex-1">
-                                                    <p className="text-sm font-medium text-gray-900 dark:text-white">{menu.name}</p>
-                                                    <p className="text-xs text-gray-500">{formatCurrency(menu.price)}</p>
+                                            <div key={group.id}>
+                                                <div className="flex items-center justify-between gap-3 bg-gray-50 px-3 py-2 dark:bg-gray-900/40">
+                                                    <div className="min-w-0">
+                                                        <div className="truncate text-sm font-semibold text-gray-900 dark:text-white">
+                                                            {group.name}
+                                                        </div>
+                                                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                            {selectedInGroup}/{group.menus.length} {locale === 'id' ? 'dipilih' : 'selected'}
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => selectAllMenus(groupMenuIds)}
+                                                            className="rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-300"
+                                                        >
+                                                            {t("admin.staff.selectAll")}
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => deselectAllMenus(groupMenuIds)}
+                                                            className="rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-300"
+                                                        >
+                                                            {t("admin.staff.deselectAll")}
+                                                        </button>
+                                                    </div>
                                                 </div>
-                                            </label>
+
+                                                {group.menus.map(menu => {
+                                                    const isSelected = selectedMenuIds.includes(menu.id);
+                                                    return (
+                                                        <label key={menu.id} className={`flex cursor-pointer items-center gap-3 p-3 transition-colors ${isSelected ? "bg-brand-50 dark:bg-brand-900/20" : "hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={isSelected}
+                                                                onChange={() => {
+                                                                    if (isSelected) {
+                                                                        setSelectedMenuIds(prev => prev.filter(x => x !== menu.id));
+                                                                    } else {
+                                                                        setSelectedMenuIds(prev => [...prev, menu.id]);
+                                                                    }
+                                                                }}
+                                                                className="h-4 w-4 rounded border-gray-300 text-brand-600"
+                                                            />
+                                                            <div className="flex-1">
+                                                                <p className="text-sm font-medium text-gray-900 dark:text-white">{menu.name}</p>
+                                                                <p className="text-xs text-gray-500">{formatCurrency(menu.price)}</p>
+                                                            </div>
+                                                        </label>
+                                                    );
+                                                })}
+                                            </div>
                                         );
                                     })}
                                 </div>
@@ -259,8 +400,8 @@ export default function EditMenuBookPage() {
                     <AdminFormFooter
                         onCancel={() => router.push("/admin/dashboard/menu-books")}
                         isSubmitting={submitting}
-                        submitLabel="Save Changes"
-                        submittingLabel="Saving..."
+                        submitLabel={locale === 'id' ? 'Simpan Perubahan' : 'Save Changes'}
+                        submittingLabel={locale === 'id' ? 'Menyimpan...' : 'Saving...'}
                     />
                 </form>
             </div>

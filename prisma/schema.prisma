@@ -406,6 +406,9 @@ model Merchant {
   takeawayScheduleStart  String?               @map("takeaway_schedule_start")
   takeawayScheduleEnd    String?               @map("takeaway_schedule_end")
 
+  // Per-day mode schedules feature flag (explicit enable/disable)
+  isPerDayModeScheduleEnabled Boolean          @default(false) @map("is_per_day_mode_schedule_enabled")
+
   // Optional global delivery schedule (HH:MM)
   deliveryScheduleStart  String?               @map("delivery_schedule_start")
   deliveryScheduleEnd    String?               @map("delivery_schedule_end")

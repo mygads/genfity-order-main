@@ -37,12 +37,14 @@ interface ModeSchedule {
   dayOfWeek: number;
   startTime: string;
   endTime: string;
+  isActive: boolean;
 }
 
 interface StoreStatusResponse {
   isOpen: boolean;
   isManualOverride: boolean;
   timezone: string;
+  isPerDayModeScheduleEnabled?: boolean;
   isDineInEnabled: boolean;
   isTakeawayEnabled: boolean;
   isDeliveryEnabled: boolean;
@@ -181,10 +183,12 @@ export function useStoreStatus(
     // Build extended merchant status for new utility functions
     const extendedMerchant = {
       isOpen: data.isOpen,
+      isManualOverride: data.isManualOverride,
       timezone: data.timezone,
       isDineInEnabled: data.isDineInEnabled,
       isTakeawayEnabled: data.isTakeawayEnabled,
       isDeliveryEnabled: data.isDeliveryEnabled,
+      isPerDayModeScheduleEnabled: data.isPerDayModeScheduleEnabled,
       dineInScheduleStart: data.dineInScheduleStart,
       dineInScheduleEnd: data.dineInScheduleEnd,
       takeawayScheduleStart: data.takeawayScheduleStart,
@@ -208,7 +212,7 @@ export function useStoreStatus(
     let specialHourName: string | undefined;
     let isManualOverrideActive = data.isManualOverride ?? false;
 
-    if (data.todaySpecialHour || (data.modeSchedules && data.modeSchedules.length > 0)) {
+    if (data.todaySpecialHour) {
       // Use extended function for special hours / per-day schedules
       const storeStatus = isStoreOpenWithSpecialHours({
         ...extendedMerchant,
@@ -241,7 +245,10 @@ export function useStoreStatus(
     let isTakeawayAvailable: boolean;
     let isDeliveryAvailable: boolean;
 
-    if (data.todaySpecialHour || (data.modeSchedules && data.modeSchedules.length > 0)) {
+    const hasExtendedModeRules =
+      !!data.todaySpecialHour || data.isPerDayModeScheduleEnabled === true;
+
+    if (hasExtendedModeRules) {
       // Use extended function
       const dineInStatus = isModeAvailableWithSchedules('DINE_IN', extendedMerchant);
       const takeawayStatus = isModeAvailableWithSchedules('TAKEAWAY', extendedMerchant);

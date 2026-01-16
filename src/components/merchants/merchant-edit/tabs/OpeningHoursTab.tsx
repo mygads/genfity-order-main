@@ -1,6 +1,7 @@
 import React from 'react';
 
 import PerDayModeSchedule from '@/components/merchants/PerDayModeSchedule';
+import type { PerDayModeScheduleHandle } from '@/components/merchants/PerDayModeSchedule';
 import SpecialHoursManager from '@/components/merchants/SpecialHoursManager';
 import type { OpeningHour } from '@/components/merchants/merchant-edit/types';
 import SettingsCard from '@/components/merchants/merchant-edit/ui/SettingsCard';
@@ -11,6 +12,7 @@ const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 
 export interface OpeningHoursTabProps {
   authToken: string;
   openingHours: OpeningHour[];
+  perDayModeScheduleRef?: React.Ref<PerDayModeScheduleHandle>;
   onOpeningHourChange: (
     dayOfWeek: number,
     field: keyof Pick<OpeningHour, 'isClosed' | 'openTime' | 'closeTime'>,
@@ -21,6 +23,7 @@ export interface OpeningHoursTabProps {
 export default function OpeningHoursTab({
   authToken,
   openingHours,
+  perDayModeScheduleRef,
   onOpeningHourChange,
 }: OpeningHoursTabProps) {
   return (
@@ -78,7 +81,7 @@ export default function OpeningHoursTab({
           title="Advanced: per-day mode schedules"
           description="Optional. Override mode availability by day (e.g. delivery only on weekends)."
         >
-          <PerDayModeSchedule token={authToken} embedded />
+          <PerDayModeSchedule ref={perDayModeScheduleRef} token={authToken} embedded />
         </SettingsCard>
       )}
 

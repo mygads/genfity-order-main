@@ -29,11 +29,12 @@ const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export default function SpecialPricesPage() {
     const router = useRouter();
-    const { t } = useTranslation();
+    const { t, locale } = useTranslation();
     const { showHint } = useContextualHint();
     const [loading, setLoading] = useState(true);
     const [specialPrices, setSpecialPrices] = useState<SpecialPrice[]>([]);
     const [error, setError] = useState<string | null>(null);
+    const [menuBooksExist, setMenuBooksExist] = useState<boolean | null>(null);
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [deleting, setDeleting] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
@@ -65,15 +66,35 @@ export default function SpecialPricesPage() {
                 return;
             }
 
-            const response = await fetch("/api/merchant/special-prices", {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            const [pricesRes, menuBooksRes] = await Promise.all([
+                fetch("/api/merchant/special-prices", {
+                    headers: { Authorization: `Bearer ${token}` },
+                }),
+                fetch("/api/merchant/menu-books", {
+                    headers: { Authorization: `Bearer ${token}` },
+                }),
+            ]);
 
-            const data = await response.json();
-            if (data.success) {
-                setSpecialPrices(data.data);
+            const [pricesData, menuBooksData] = await Promise.all([
+                pricesRes.json(),
+                menuBooksRes.json(),
+            ]);
+
+            const menuBooksLoaded = Boolean(menuBooksData?.success && Array.isArray(menuBooksData?.data));
+            const menuBooksCount = menuBooksLoaded ? menuBooksData.data.length : null;
+            const hasMenuBooks = menuBooksCount !== null ? menuBooksCount > 0 : true;
+            setMenuBooksExist(hasMenuBooks);
+
+            if (menuBooksCount === 0) {
+                setSpecialPrices([]);
+                setError(null);
+                return;
+            }
+
+            if (pricesData.success) {
+                setSpecialPrices(pricesData.data);
             } else {
-                setError(data.message || "Failed to fetch special prices");
+                setError(pricesData.message || "Failed to fetch special prices");
             }
         } catch (err) {
             console.error("Fetch error:", err);
@@ -197,6 +218,38 @@ export default function SpecialPricesPage() {
                                 ))}
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (menuBooksExist === false) {
+        return (
+            <div>
+                <PageBreadcrumb pageTitle={t("admin.specialPrices.title")} />
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 shadow-sm dark:border-amber-900/30 dark:bg-amber-900/10">
+                    <div className="text-lg font-semibold text-amber-900 dark:text-amber-200">
+                        {t("admin.specialPrices.needMenuBookTitle")}
+                    </div>
+                    <div className="mt-1 text-sm text-amber-800/80 dark:text-amber-200/80">
+                        {t("admin.specialPrices.needMenuBookDesc")}
+                    </div>
+                    <div className="mt-4 flex gap-3">
+                        <button
+                            type="button"
+                            onClick={() => router.replace("/admin/dashboard/menu-books")}
+                            className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
+                        >
+                            {t("admin.specialPrices.goToMenuBooks")}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => router.replace("/admin/dashboard/menu-books/create")}
+                            className="rounded-lg border border-amber-300 bg-white px-4 py-2 text-sm font-medium text-amber-900 hover:bg-amber-100 dark:border-amber-800 dark:bg-transparent dark:text-amber-200 dark:hover:bg-amber-900/20"
+                        >
+                            {t("admin.specialPrices.createMenuBook")}
+                        </button>
                     </div>
                 </div>
             </div>

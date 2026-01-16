@@ -160,6 +160,14 @@ export default function SubscriptionPage() {
         return `${sign}Rp ${value.toLocaleString('id-ID')}`;
     };
 
+    const formatNegativeUsage = (amount: number, currency: string) => {
+        const value = Math.abs(amount);
+        if (currency === 'AUD') {
+            return `-A$${value.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        }
+        return `-Rp ${value.toLocaleString('id-ID')}`;
+    };
+
     const formatDate = (dateStr: string) => {
         const dateLocale = locale === 'id' ? 'id-ID' : 'en-AU';
         return new Date(dateStr).toLocaleDateString(dateLocale, {
@@ -503,22 +511,22 @@ export default function SubscriptionPage() {
                     )}
                 </div>
 
-                {/* Estimated Orders Card - Only for Deposit mode */}
-                {isDeposit && (
+                {/* Deposit Usage Today (only in deposit mode) */}
+                {isDeposit && usageSummary && (
                     <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
                         <div className="flex items-center gap-2 mb-2">
-                            <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                                <FaCreditCard className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                            <div className="w-8 h-8 rounded-lg bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center">
+                                <FaWallet className="w-4 h-4 text-rose-600 dark:text-rose-400" />
                             </div>
                             <span className="text-xs text-gray-500 dark:text-gray-400">
-                                {locale === 'id' ? 'Estimasi Pesanan' : 'Est. Orders'}
+                                {locale === 'id' ? 'Pemakaian Saldo Hari Ini' : 'Deposit Usage Today'}
                             </span>
                         </div>
                         <p className="text-xl font-bold text-gray-900 dark:text-white">
-                            ~{balanceInfo?.estimatedOrders || 0}
+                            {formatNegativeUsage(usageSummary.today.orderFee, currency)}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            {locale === 'id' ? 'Pesanan tersisa' : 'Orders remaining'}
+                            {usageSummary.today.orderFeeCount} {locale === 'id' ? 'biaya pesanan' : 'order fees'}
                         </p>
                     </div>
                 )}
@@ -535,7 +543,7 @@ export default function SubscriptionPage() {
                             </span>
                         </div>
                         <p className="text-xl font-bold text-gray-900 dark:text-white">
-                            {formatCurrency(balanceInfo?.billingSummary?.yesterday || 0, currency)}
+                            {formatNegativeUsage(balanceInfo?.billingSummary?.yesterday || 0, currency)}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             {locale === 'id' ? 'Biaya pesanan' : 'Order fees'}
@@ -555,7 +563,7 @@ export default function SubscriptionPage() {
                             </span>
                         </div>
                         <p className="text-xl font-bold text-gray-900 dark:text-white">
-                            {formatCurrency(balanceInfo?.billingSummary?.lastWeek || 0, currency)}
+                            {formatNegativeUsage(balanceInfo?.billingSummary?.lastWeek || 0, currency)}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             {locale === 'id' ? 'Biaya pesanan' : 'Order fees'}
@@ -575,10 +583,30 @@ export default function SubscriptionPage() {
                             </span>
                         </div>
                         <p className="text-xl font-bold text-gray-900 dark:text-white">
-                            {formatCurrency(balanceInfo?.billingSummary?.lastMonth || 0, currency)}
+                            {formatNegativeUsage(balanceInfo?.billingSummary?.lastMonth || 0, currency)}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             {locale === 'id' ? 'Biaya pesanan' : 'Order fees'}
+                        </p>
+                    </div>
+                )}
+
+                {/* Estimated Orders Card - Only for Deposit mode */}
+                {isDeposit && (
+                    <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+                        <div className="flex items-center gap-2 mb-2">
+                            <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                                <FaCreditCard className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                            </div>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                                {locale === 'id' ? 'Estimasi Pesanan' : 'Est. Orders'}
+                            </span>
+                        </div>
+                        <p className="text-xl font-bold text-gray-900 dark:text-white">
+                            ~{balanceInfo?.estimatedOrders || 0}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            {locale === 'id' ? 'Pesanan tersisa' : 'Orders remaining'}
                         </p>
                     </div>
                 )}
@@ -607,26 +635,6 @@ export default function SubscriptionPage() {
                                     : `Estimated remaining: ${estimatedEmailsRemaining} emails (${formatCurrency(completedOrderEmailFee, currency)}/email)`}
                             </p>
                         )}
-                    </div>
-                )}
-
-                {/* Deposit Usage Today (only in deposit mode) */}
-                {isDeposit && usageSummary && (
-                    <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
-                        <div className="flex items-center gap-2 mb-2">
-                            <div className="w-8 h-8 rounded-lg bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center">
-                                <FaWallet className="w-4 h-4 text-rose-600 dark:text-rose-400" />
-                            </div>
-                            <span className="text-xs text-gray-500 dark:text-gray-400">
-                                {locale === 'id' ? 'Pemakaian Saldo Hari Ini' : 'Deposit Usage Today'}
-                            </span>
-                        </div>
-                        <p className="text-xl font-bold text-gray-900 dark:text-white">
-                            {formatCurrency(-usageSummary.today.orderFee, currency)}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            {usageSummary.today.orderFeeCount} {locale === 'id' ? 'biaya pesanan' : 'order fees'}
-                        </p>
                     </div>
                 )}
 

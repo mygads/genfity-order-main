@@ -1,7 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   getDayOfWeekFromISODate,
   isStoreOpenWithSpecialHoursForDateTime,
+  isModeAvailableWithSchedules,
+  isModeAvailableWithSchedulesAtTime,
   isModeAvailableWithSchedulesForDateTime,
   type ExtendedMerchantStatus,
   type SpecialHour,
@@ -78,6 +80,7 @@ describe('storeStatus date-aware helpers', () => {
     const merchant: ExtendedMerchantStatus = {
       isOpen: true,
       isManualOverride: false,
+      isPerDayModeScheduleEnabled: true,
       isDineInEnabled: true,
       isTakeawayEnabled: true,
       isDeliveryEnabled: false,
@@ -107,5 +110,84 @@ describe('storeStatus date-aware helpers', () => {
 
     expect(isStoreOpenWithSpecialHoursForDateTime(merchant, '2026-01-13', '12:00', null).isOpen).toBe(true);
     expect(isModeAvailableWithSchedulesForDateTime('DINE_IN', merchant, '2026-01-13', '12:00', null).available).toBe(false);
+  });
+
+  it('per-day schedules disabled: ignore inactive per-day rows and fall back to global schedule', () => {
+    vi.setSystemTime(new Date('2026-01-11T11:00:00.000Z')); // Sunday, 11:00 UTC
+
+    const merchant: ExtendedMerchantStatus = {
+      isOpen: true,
+      isManualOverride: false,
+      timezone: 'UTC',
+      isPerDayModeScheduleEnabled: false,
+      isDineInEnabled: true,
+      dineInScheduleStart: '10:00',
+      dineInScheduleEnd: '22:00',
+      modeSchedules: [
+        {
+          mode: 'DINE_IN',
+          dayOfWeek: 0,
+          startTime: '00:00',
+          endTime: '00:00',
+          isActive: false,
+        },
+      ],
+    };
+
+    expect(isModeAvailableWithSchedules('DINE_IN', merchant).available).toBe(true);
+    expect(isModeAvailableWithSchedulesAtTime('DINE_IN', merchant, '11:00').available).toBe(true);
+    expect(isModeAvailableWithSchedulesForDateTime('DINE_IN', merchant, '2026-01-11', '11:00', null).available).toBe(true);
+  });
+
+  it('per-day schedules enabled: inactive day blocks mode even if global schedule is open', () => {
+    vi.setSystemTime(new Date('2026-01-11T11:00:00.000Z')); // Sunday, 11:00 UTC
+
+    const merchant: ExtendedMerchantStatus = {
+      isOpen: true,
+      isManualOverride: false,
+      timezone: 'UTC',
+      isPerDayModeScheduleEnabled: true,
+      isDineInEnabled: true,
+      dineInScheduleStart: '10:00',
+      dineInScheduleEnd: '22:00',
+      modeSchedules: [
+        {
+          mode: 'DINE_IN',
+          dayOfWeek: 0,
+          startTime: '10:00',
+          endTime: '22:00',
+          isActive: false,
+        },
+      ],
+    };
+
+    expect(isModeAvailableWithSchedules('DINE_IN', merchant).available).toBe(false);
+    expect(isModeAvailableWithSchedulesAtTime('DINE_IN', merchant, '11:00').available).toBe(false);
+    expect(isModeAvailableWithSchedulesForDateTime('DINE_IN', merchant, '2026-01-11', '11:00', null).available).toBe(false);
+  });
+
+  it('manual override open ignores per-day inactive day restrictions (but still respects global enable)', () => {
+    vi.setSystemTime(new Date('2026-01-11T11:00:00.000Z')); // Sunday, 11:00 UTC
+
+    const merchant: ExtendedMerchantStatus = {
+      isOpen: true,
+      isManualOverride: true,
+      timezone: 'UTC',
+      isPerDayModeScheduleEnabled: true,
+      isDineInEnabled: true,
+      modeSchedules: [
+        {
+          mode: 'DINE_IN',
+          dayOfWeek: 0,
+          startTime: '10:00',
+          endTime: '22:00',
+          isActive: false,
+        },
+      ],
+    };
+
+    expect(isModeAvailableWithSchedules('DINE_IN', merchant).available).toBe(true);
+    expect(isModeAvailableWithSchedulesAtTime('DINE_IN', merchant, '11:00').available).toBe(true);
+    expect(isModeAvailableWithSchedulesForDateTime('DINE_IN', merchant, '2026-01-11', '11:00', null).available).toBe(true);
   });
 });

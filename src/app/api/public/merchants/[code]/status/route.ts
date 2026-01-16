@@ -33,6 +33,7 @@ export async function GET(
         isOpen: true,
         isManualOverride: true,
         timezone: true,
+        isPerDayModeScheduleEnabled: true,
         isDineInEnabled: true,
         isTakeawayEnabled: true,
         isDeliveryEnabled: true,
@@ -59,13 +60,13 @@ export async function GET(
         },
         // Per-day mode schedules
         modeSchedules: {
-          where: { isActive: true },
           select: {
             id: true,
             mode: true,
             dayOfWeek: true,
             startTime: true,
             endTime: true,
+            isActive: true,
           },
           orderBy: [
             { mode: 'asc' },
@@ -160,6 +161,7 @@ export async function GET(
       isOpen: merchant.isOpen,
       isManualOverride: merchant.isManualOverride ?? false,
       timezone: merchant.timezone,
+      isPerDayModeScheduleEnabled: merchant.isPerDayModeScheduleEnabled ?? false,
       isDineInEnabled: merchant.isDineInEnabled ?? true,
       isTakeawayEnabled: merchant.isTakeawayEnabled ?? true,
       isDeliveryEnabled: merchant.isDeliveryEnabled ?? false,

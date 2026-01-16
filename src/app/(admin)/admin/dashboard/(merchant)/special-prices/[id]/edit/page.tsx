@@ -1,12 +1,14 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import AdminFormFooter from "@/components/common/AdminFormFooter";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useMerchant } from "@/context/MerchantContext";
 import { StatusToggle } from "@/components/common/StatusToggle";
+import { FaArrowLeft, FaMagic } from "react-icons/fa";
+import { getCurrencyConfig } from "@/lib/constants/location";
 
 interface MenuBook {
     id: string;
@@ -25,22 +27,14 @@ interface PriceItem {
     promoPrice: number;
 }
 
-const dayOptions = [
-    { value: 0, label: "Sunday" },
-    { value: 1, label: "Monday" },
-    { value: 2, label: "Tuesday" },
-    { value: 3, label: "Wednesday" },
-    { value: 4, label: "Thursday" },
-    { value: 5, label: "Friday" },
-    { value: 6, label: "Saturday" },
-];
-
 export default function EditSpecialPricePage() {
     const router = useRouter();
     const params = useParams();
     const priceId = params.id as string;
-    const { t } = useTranslation();
-    const { formatCurrency } = useMerchant();
+    const { t, locale } = useTranslation();
+    const { formatCurrency, currency } = useMerchant();
+    const { decimals } = getCurrencyConfig(currency);
+    const priceStep = useMemo(() => (decimals === 0 ? 1 : 1 / Math.pow(10, decimals)), [decimals]);
 
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
@@ -57,6 +51,114 @@ export default function EditSpecialPricePage() {
     const [endTime, setEndTime] = useState("23:59");
     const [isActive, setIsActive] = useState(true);
     const [priceItems, setPriceItems] = useState<PriceItem[]>([]);
+
+    const [bulkPercentOff, setBulkPercentOff] = useState<number>(10);
+    const [bulkAmountOff, setBulkAmountOff] = useState<number>(currency === "IDR" ? 5000 : 1);
+
+    const dayOptions = useMemo(() => {
+        if (locale === "id") {
+            return [
+                { value: 0, label: "Minggu" },
+                { value: 1, label: "Senin" },
+                { value: 2, label: "Selasa" },
+                { value: 3, label: "Rabu" },
+                { value: 4, label: "Kamis" },
+                { value: 5, label: "Jumat" },
+                { value: 6, label: "Sabtu" },
+            ];
+        }
+
+        return [
+            { value: 0, label: "Sunday" },
+            { value: 1, label: "Monday" },
+            { value: 2, label: "Tuesday" },
+            { value: 3, label: "Wednesday" },
+            { value: 4, label: "Thursday" },
+            { value: 5, label: "Friday" },
+            { value: 6, label: "Saturday" },
+        ];
+    }, [locale]);
+
+    const presetPercentOptions = useMemo(() => [5, 10, 15, 20, 25, 30], []);
+    const presetAmountOptions = useMemo(() => {
+        return currency === "IDR" ? [2000, 5000, 10000, 20000, 50000] : [0.5, 1, 2, 5, 10];
+    }, [currency]);
+
+    const roundToCurrency = useCallback((amount: number) => {
+        const factor = Math.pow(10, decimals);
+        if (!Number.isFinite(amount)) return 0;
+        if (decimals === 0) return Math.max(0, Math.round(amount));
+        return Math.max(0, Math.round(amount * factor) / factor);
+    }, [decimals]);
+
+    const applyPercentOffToAll = useCallback((percent: number) => {
+        const pct = Number.isFinite(percent) ? Math.max(0, Math.min(100, percent)) : 0;
+        setPriceItems(prev => prev.map(item => ({
+            ...item,
+            promoPrice: roundToCurrency(item.originalPrice * (1 - pct / 100)),
+        })));
+    }, [roundToCurrency]);
+
+    const applyAmountOffToAll = useCallback((amountOff: number) => {
+        const amt = Number.isFinite(amountOff) ? Math.max(0, amountOff) : 0;
+        setPriceItems(prev => prev.map(item => ({
+            ...item,
+            promoPrice: roundToCurrency(item.originalPrice - amt),
+        })));
+    }, [roundToCurrency]);
+
+    const resetPromoToOriginal = useCallback(() => {
+        setPriceItems(prev => prev.map(item => ({ ...item, promoPrice: roundToCurrency(item.originalPrice) })));
+    }, [roundToCurrency]);
+
+    const applyTemplate = (template: 'all-day' | 'lunch' | 'happy-hour' | 'breakfast' | 'dinner' | 'weekend') => {
+        if (template === 'all-day') {
+            setApplicableDays([0, 1, 2, 3, 4, 5, 6]);
+            setIsAllDay(true);
+            setStartTime('00:00');
+            setEndTime('23:59');
+            return;
+        }
+
+        if (template === 'lunch') {
+            setApplicableDays([1, 2, 3, 4, 5]);
+            setIsAllDay(false);
+            setStartTime('11:00');
+            setEndTime('14:00');
+            return;
+        }
+
+        if (template === 'happy-hour') {
+            setApplicableDays([1, 2, 3, 4, 5]);
+            setIsAllDay(false);
+            setStartTime('15:00');
+            setEndTime('17:00');
+            return;
+        }
+
+        if (template === 'breakfast') {
+            setApplicableDays([1, 2, 3, 4, 5, 6, 0]);
+            setIsAllDay(false);
+            setStartTime('07:00');
+            setEndTime('10:00');
+            return;
+        }
+
+        if (template === 'dinner') {
+            setApplicableDays([1, 2, 3, 4, 5, 6, 0]);
+            setIsAllDay(false);
+            setStartTime('17:00');
+            setEndTime('21:00');
+            return;
+        }
+
+        if (template === 'weekend') {
+            setApplicableDays([0, 6]);
+            setIsAllDay(true);
+            setStartTime('00:00');
+            setEndTime('23:59');
+        }
+    };
 
     const fetchData = useCallback(async () => {
         try {
@@ -146,7 +248,7 @@ export default function EditSpecialPricePage() {
 
     const handlePromoPriceChange = (menuId: string, price: number) => {
         setPriceItems(prev => prev.map(item =>
-            item.menuId === menuId ? { ...item, promoPrice: price } : item
+            item.menuId === menuId ? { ...item, promoPrice: roundToCurrency(price) } : item
         ));
     };
 
@@ -159,6 +261,13 @@ export default function EditSpecialPricePage() {
         }
         if (applicableDays.length === 0) {
             setError("Select at least one applicable day");
+            return;
+        }
+
+        if (!isAllDay && startTime >= endTime) {
+            setError(locale === 'id'
+                ? 'Jam mulai harus lebih awal dari jam selesai'
+                : 'Start time must be before end time');
             return;
         }
 
@@ -207,7 +316,7 @@ export default function EditSpecialPricePage() {
     if (loading) {
         return (
             <div>
-                <PageBreadcrumb pageTitle="Edit Special Price" />
+                <PageBreadcrumb pageTitle={t("admin.specialPrices.edit")} />
                 <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950">
                     <div className="mb-6 grid gap-6 md:grid-cols-2">
                         <div><div className="mb-2 h-4 w-20 animate-pulse rounded bg-gray-200 dark:bg-gray-700"></div><div className="h-11 w-full animate-pulse rounded-lg bg-gray-200 dark:bg-gray-700"></div></div>
@@ -226,9 +335,28 @@ export default function EditSpecialPricePage() {
 
     return (
         <div data-tutorial="special-price-edit-page">
-            <PageBreadcrumb pageTitle="Edit Special Price" />
+            <PageBreadcrumb pageTitle={t("admin.specialPrices.edit")} />
 
             <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-950" data-tutorial="special-price-edit-form">
+                <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <button
+                        type="button"
+                        onClick={() => router.push("/admin/dashboard/special-prices")}
+                        className="inline-flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+                    >
+                        <FaArrowLeft className="h-4 w-4" />
+                        {t("common.back")}
+                    </button>
+                    <div className="text-right">
+                        <div className="text-sm font-semibold text-gray-900 dark:text-white">{t("admin.specialPrices.edit")}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {locale === 'id'
+                                ? 'Ubah tanggal, hari, jam, dan harga promo'
+                                : 'Update dates, days, time windows, and promo prices'}
+                        </div>
+                    </div>
+                </div>
+
                 <form onSubmit={handleSubmit}>
                     {error && (
                         <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
@@ -300,9 +428,84 @@ export default function EditSpecialPricePage() {
                         </div>
                     </div>
 
+                    {/* Quick Templates */}
+                    <div className="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/40">
+                        <div className="mb-3 flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2">
+                                <FaMagic className="h-4 w-4 text-gray-500" />
+                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    {locale === 'id' ? 'Template Cepat' : 'Quick Templates'}
+                                </span>
+                            </div>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                                {locale === 'id' ? 'Mengisi hari & jam' : 'Fills days & time'}
+                            </span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            <button
+                                type="button"
+                                onClick={() => applyTemplate('all-day')}
+                                className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-300"
+                            >
+                                {locale === 'id' ? 'Setiap Hari (Seharian)' : 'Everyday (All Day)'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => applyTemplate('lunch')}
+                                className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-300"
+                            >
+                                {locale === 'id' ? 'Lunch (Sen-Jum)' : 'Lunch (Mon-Fri)'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => applyTemplate('happy-hour')}
+                                className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-300"
+                            >
+                                {locale === 'id' ? 'Happy Hour (Sen-Jum)' : 'Happy Hour (Mon-Fri)'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => applyTemplate('breakfast')}
+                                className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-300"
+                            >
+                                {locale === 'id' ? 'Breakfast (07-10)' : 'Breakfast (07-10)'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => applyTemplate('dinner')}
+                                className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-300"
+                            >
+                                {locale === 'id' ? 'Dinner (17-21)' : 'Dinner (17-21)'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => applyTemplate('weekend')}
+                                className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-300"
+                            >
+                                {locale === 'id' ? 'Weekend (Seharian)' : 'Weekend (All Day)'}
+                            </button>
+                        </div>
+                    </div>
+
                     {/* Applicable Days */}
                     <div className="mb-6">
                         <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Applicable Days</label>
+                        <div className="mb-2 flex flex-wrap gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setApplicableDays([0, 1, 2, 3, 4, 5, 6])}
+                                className="rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-300"
+                            >
+                                {t("admin.staff.selectAll")}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setApplicableDays([])}
+                                className="rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-300"
+                            >
+                                {t("admin.staff.deselectAll")}
+                            </button>
+                        </div>
                         <div className="flex flex-wrap gap-2">
                             {dayOptions.map(day => (
                                 <button
@@ -330,13 +533,13 @@ export default function EditSpecialPricePage() {
                                 activeLabel={t('common.on')}
                                 inactiveLabel={t('common.off')}
                             />
-                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">All Day</span>
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("admin.specialPrices.allDay")}</span>
                         </div>
 
                         {!isAllDay && (
                             <div className="grid gap-4 md:grid-cols-2">
                                 <div>
-                                    <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Start Time</label>
+                                    <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">{locale === 'id' ? 'Jam Mulai' : 'Start Time'}</label>
                                     <input
                                         type="time"
                                         value={startTime}
@@ -345,7 +548,7 @@ export default function EditSpecialPricePage() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">End Time</label>
+                                    <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">{locale === 'id' ? 'Jam Selesai' : 'End Time'}</label>
                                     <input
                                         type="time"
                                         value={endTime}
@@ -361,8 +564,99 @@ export default function EditSpecialPricePage() {
                     {priceItems.length > 0 && (
                         <div className="mb-6">
                             <label className="mb-3 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Promo Prices
+                                {locale === 'id' ? 'Harga Promo' : 'Promo Prices'}
                             </label>
+
+                            <div className="mb-3 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950">
+                                <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                                    <div className="grid w-full gap-4 md:grid-cols-2">
+                                        <div>
+                                            <div className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                                                {locale === 'id' ? 'Diskon % (untuk semua)' : 'Percent discount (apply to all)'}
+                                            </div>
+                                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                                                {presetPercentOptions.map(p => (
+                                                    <button
+                                                        key={p}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setBulkPercentOff(p);
+                                                            applyPercentOffToAll(p);
+                                                        }}
+                                                        className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-300"
+                                                    >
+                                                        -{p}%
+                                                    </button>
+                                                ))}
+                                                <div className="flex items-center gap-2">
+                                                    <input
+                                                        type="number"
+                                                        min={0}
+                                                        max={100}
+                                                        value={bulkPercentOff}
+                                                        onChange={(e) => setBulkPercentOff(Number(e.target.value))}
+                                                        className="h-9 w-24 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 focus:border-brand-400 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => applyPercentOffToAll(bulkPercentOff)}
+                                                        className="h-9 rounded-lg bg-brand-500 px-3 text-sm font-medium text-white hover:bg-brand-600"
+                                                    >
+                                                        {locale === 'id' ? 'Terapkan' : 'Apply'}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <div className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                                                {locale === 'id' ? 'Potongan harga (untuk semua)' : 'Amount off (apply to all)'}
+                                            </div>
+                                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                                                {presetAmountOptions.map(a => (
+                                                    <button
+                                                        key={a}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setBulkAmountOff(a);
+                                                            applyAmountOffToAll(a);
+                                                        }}
+                                                        className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-300"
+                                                    >
+                                                        -{formatCurrency(a)}
+                                                    </button>
+                                                ))}
+                                                <div className="flex items-center gap-2">
+                                                    <input
+                                                        type="number"
+                                                        min={0}
+                                                        step={priceStep}
+                                                        value={bulkAmountOff}
+                                                        onChange={(e) => setBulkAmountOff(Number(e.target.value))}
+                                                        className="h-9 w-32 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 focus:border-brand-400 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => applyAmountOffToAll(bulkAmountOff)}
+                                                        className="h-9 rounded-lg bg-brand-500 px-3 text-sm font-medium text-white hover:bg-brand-600"
+                                                    >
+                                                        {locale === 'id' ? 'Terapkan' : 'Apply'}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={resetPromoToOriginal}
+                                        className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-300"
+                                    >
+                                        {locale === 'id' ? 'Reset ke harga asli' : 'Reset to original'}
+                                    </button>
+                                </div>
+                            </div>
+
                             <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
                                 <table className="w-full">
                                     <thead className="bg-gray-50 dark:bg-gray-800">
@@ -388,6 +682,7 @@ export default function EditSpecialPricePage() {
                                                             value={item.promoPrice}
                                                             onChange={(e) => handlePromoPriceChange(item.menuId, Number(e.target.value))}
                                                             min="0"
+                                                            step={priceStep}
                                                             className="h-9 w-32 rounded-lg border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                                                         />
                                                     </td>
@@ -401,7 +696,7 @@ export default function EditSpecialPricePage() {
                                                                 +{Math.abs(discount)}%
                                                             </span>
                                                         ) : (
-                                                            <span className="text-xs text-gray-400">No change</span>
+                                                            <span className="text-xs text-gray-400">{locale === 'id' ? 'Tidak berubah' : 'No change'}</span>
                                                         )}
                                                     </td>
                                                 </tr>
@@ -417,8 +712,8 @@ export default function EditSpecialPricePage() {
                     <AdminFormFooter
                         onCancel={() => router.push("/admin/dashboard/special-prices")}
                         isSubmitting={submitting}
-                        submitLabel="Save Changes"
-                        submittingLabel="Saving..."
+                        submitLabel={locale === 'id' ? 'Simpan Perubahan' : 'Save Changes'}
+                        submittingLabel={locale === 'id' ? 'Menyimpan...' : 'Saving...'}
                     />
                 </form>
             </div>

@@ -46,6 +46,7 @@ import FeesTabComponent from "@/components/merchants/merchant-edit/tabs/FeesTab"
 import PinTab from "@/components/merchants/merchant-edit/tabs/PinTab";
 import type { MerchantFormData, OpeningHour } from "@/components/merchants/merchant-edit/types";
 import { hasMerchantUnsavedChanges } from "@/components/merchants/merchant-edit/utils/unsavedChanges";
+import type { PerDayModeScheduleHandle } from "@/components/merchants/PerDayModeSchedule";
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -61,6 +62,7 @@ export default function EditMerchantPage() {
   const { showHint } = useContextualHint();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
+  const perDayModeScheduleRef = useRef<PerDayModeScheduleHandle>(null);
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -465,7 +467,7 @@ export default function EditMerchantPage() {
 
   // Check if there are unsaved changes
   const hasUnsavedChanges = useCallback((): boolean => {
-    return hasMerchantUnsavedChanges({
+    const baseHasUnsaved = hasMerchantUnsavedChanges({
       formData,
       originalFormData,
       openingHours,
@@ -473,6 +475,9 @@ export default function EditMerchantPage() {
       discountVoucherSettings: { posDiscountsEnabled, customerVouchersEnabled },
       originalDiscountVoucherSettings,
     });
+
+    const perDayDirty = perDayModeScheduleRef.current?.isDirty?.() ?? false;
+    return baseHasUnsaved || perDayDirty;
   }, [formData, originalFormData, openingHours, originalOpeningHours, posDiscountsEnabled, customerVouchersEnabled, originalDiscountVoucherSettings]);
 
   const syncActiveTabToUrl = useCallback((tabId: string) => {
@@ -516,6 +521,7 @@ export default function EditMerchantPage() {
       setPosDiscountsEnabled(originalDiscountVoucherSettings.posDiscountsEnabled);
       setCustomerVouchersEnabled(originalDiscountVoucherSettings.customerVouchersEnabled);
     }
+    void perDayModeScheduleRef.current?.reset?.();
     confirmTabChange();
   };
 
@@ -738,6 +744,11 @@ export default function EditMerchantPage() {
 
       if (!hoursResponse.ok) {
         throw new Error(hoursData.message || "Failed to update opening hours");
+      }
+
+      // Update per-day mode schedules (advanced) via the same fixed footer
+      if (perDayModeScheduleRef.current) {
+        await perDayModeScheduleRef.current.save({ showToast: false });
       }
 
       // Update discount/voucher feature settings
@@ -969,6 +980,7 @@ export default function EditMerchantPage() {
             authToken={authToken}
             openingHours={openingHours}
             onOpeningHourChange={handleOpeningHourChange}
+            perDayModeScheduleRef={perDayModeScheduleRef}
           />
         );
       case "receipt":

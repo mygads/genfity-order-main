@@ -127,6 +127,7 @@ interface MerchantWithConfig {
   isActive: boolean;
   isOpen: boolean;
   isManualOverride?: boolean;
+  isPerDayModeScheduleEnabled?: boolean;
   timezone?: string;
   latitude?: Decimal | null;
   longitude?: Decimal | null;
@@ -324,9 +325,7 @@ export async function POST(req: NextRequest) {
       where: { code: body.merchantCode },
       include: {
         openingHours: true,
-        modeSchedules: {
-          where: { isActive: true },
-        },
+        modeSchedules: true,
       },
     }) as MerchantWithConfig | null;
 

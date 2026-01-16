@@ -133,9 +133,7 @@ async function handlePut(req: NextRequest, context: AuthContext, routeContext: R
         where: { id: reservation.merchantId },
         include: {
           openingHours: true,
-          modeSchedules: {
-            where: { isActive: true },
-          },
+          modeSchedules: true,
         },
       });
 
@@ -160,6 +158,7 @@ async function handlePut(req: NextRequest, context: AuthContext, routeContext: R
       const merchantStatus: ExtendedMerchantStatus = {
         isOpen: merchantForValidation.isOpen,
         isManualOverride: merchantForValidation.isManualOverride,
+        isPerDayModeScheduleEnabled: merchantForValidation.isPerDayModeScheduleEnabled,
         timezone: tz,
         openingHours: (merchantForValidation.openingHours || []).map((h) => ({
           dayOfWeek: h.dayOfWeek,
@@ -173,6 +172,7 @@ async function handlePut(req: NextRequest, context: AuthContext, routeContext: R
           dayOfWeek: s.dayOfWeek,
           startTime: s.startTime,
           endTime: s.endTime,
+          isActive: (s as any).isActive,
         })),
         todaySpecialHour: null,
         isDineInEnabled: merchantForValidation.isDineInEnabled,

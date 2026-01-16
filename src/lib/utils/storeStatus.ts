@@ -42,6 +42,7 @@ export interface PerDayModeSchedule {
   dayOfWeek: number;  // 0=Sunday, 6=Saturday
   startTime: string;  // HH:MM format
   endTime: string;    // HH:MM format
+  isActive?: boolean;
 }
 
 // Special hours for a specific date
@@ -67,6 +68,7 @@ export interface ExtendedMerchantStatus extends MerchantStatus {
   isManualOverride?: boolean;    // When true, isOpen overrides schedule
   modeSchedules?: PerDayModeSchedule[];
   todaySpecialHour?: SpecialHour | null;
+  isPerDayModeScheduleEnabled?: boolean;
   // Global mode settings
   isDineInEnabled?: boolean;
   isTakeawayEnabled?: boolean;
@@ -627,6 +629,15 @@ export function isModeAvailableWithSchedules(
 ): { available: boolean; reason?: string; schedule?: { start: string; end: string } } {
   const { dayOfWeek, currentTime } = getCurrentTimeInTimezone(merchant.timezone);
 
+  // Manual override: when the store is forced open, modes should be available based on enable flags only.
+  // When forced closed, all modes should be unavailable.
+  if (merchant.isManualOverride === true) {
+    const storeForcedOpen = merchant.isOpen ?? true;
+    if (!storeForcedOpen) {
+      return { available: false, reason: 'Store is manually closed' };
+    }
+  }
+
   // Check global mode enabled
   const isEnabled = modeType === 'DINE_IN'
     ? merchant.isDineInEnabled !== false
@@ -637,6 +648,11 @@ export function isModeAvailableWithSchedules(
   if (!isEnabled) {
     const label = modeType === 'DINE_IN' ? 'Dine In' : modeType === 'TAKEAWAY' ? 'Takeaway' : 'Delivery';
     return { available: false, reason: `${label} is not available` };
+  }
+
+  // Manual override open: ignore special hours and schedule restrictions.
+  if (merchant.isManualOverride === true && (merchant.isOpen ?? true) === true) {
+    return { available: true };
   }
 
   // Priority 1: Check special hours mode override
@@ -678,17 +694,26 @@ export function isModeAvailableWithSchedules(
   }
 
   // Priority 2: Check per-day mode schedule
-  if (merchant.modeSchedules && merchant.modeSchedules.length > 0) {
+  if (
+    merchant.isPerDayModeScheduleEnabled === true &&
+    merchant.modeSchedules &&
+    merchant.modeSchedules.length > 0
+  ) {
     const daySchedule = merchant.modeSchedules.find(
-      s => s.mode === modeType && s.dayOfWeek === dayOfWeek
+      (s) => s.mode === modeType && s.dayOfWeek === dayOfWeek
     );
 
     if (daySchedule) {
+      if (daySchedule.isActive === false) {
+        const label = modeType === 'DINE_IN' ? 'Dine In' : modeType === 'TAKEAWAY' ? 'Takeaway' : 'Delivery';
+        return { available: false, reason: `${label} not available today` };
+      }
+
       const isWithin = currentTime >= daySchedule.startTime && currentTime <= daySchedule.endTime;
-      return { 
-        available: isWithin, 
+      return {
+        available: isWithin,
         reason: isWithin ? undefined : `Available ${daySchedule.startTime} - ${daySchedule.endTime}`,
-        schedule: { start: daySchedule.startTime, end: daySchedule.endTime }
+        schedule: { start: daySchedule.startTime, end: daySchedule.endTime },
       };
     }
   }
@@ -729,6 +754,15 @@ export function isModeAvailableWithSchedulesAtTime(
 ): { available: boolean; reason?: string; schedule?: { start: string; end: string } } {
   const { dayOfWeek } = getCurrentTimeInTimezone(merchant.timezone);
 
+  // Manual override: when the store is forced open, modes should be available based on enable flags only.
+  // When forced closed, all modes should be unavailable.
+  if (merchant.isManualOverride === true) {
+    const storeForcedOpen = merchant.isOpen ?? true;
+    if (!storeForcedOpen) {
+      return { available: false, reason: 'Store is manually closed' };
+    }
+  }
+
   // Check global mode enabled
   const isEnabled =
     modeType === 'DINE_IN'
@@ -740,6 +774,11 @@ export function isModeAvailableWithSchedulesAtTime(
   if (!isEnabled) {
     const label = modeType === 'DINE_IN' ? 'Dine In' : modeType === 'TAKEAWAY' ? 'Takeaway' : 'Delivery';
     return { available: false, reason: `${label} is not available` };
+  }
+
+  // Manual override open: ignore special hours and schedule restrictions.
+  if (merchant.isManualOverride === true && (merchant.isOpen ?? true) === true) {
+    return { available: true };
   }
 
   // Priority 1: Special hours mode override
@@ -782,10 +821,21 @@ export function isModeAvailableWithSchedulesAtTime(
   }
 
   // Priority 2: Per-day mode schedule
-  if (merchant.modeSchedules && merchant.modeSchedules.length > 0) {
-    const daySchedule = merchant.modeSchedules.find((s) => s.mode === modeType && s.dayOfWeek === dayOfWeek);
+  if (
+    merchant.isPerDayModeScheduleEnabled === true &&
+    merchant.modeSchedules &&
+    merchant.modeSchedules.length > 0
+  ) {
+    const daySchedule = merchant.modeSchedules.find(
+      (s) => s.mode === modeType && s.dayOfWeek === dayOfWeek
+    );
 
     if (daySchedule) {
+      if (daySchedule.isActive === false) {
+        const label = modeType === 'DINE_IN' ? 'Dine In' : modeType === 'TAKEAWAY' ? 'Takeaway' : 'Delivery';
+        return { available: false, reason: `${label} not available today` };
+      }
+
       const isWithin = timeHHMM >= daySchedule.startTime && timeHHMM <= daySchedule.endTime;
       return {
         available: isWithin,
@@ -834,6 +884,15 @@ export function isModeAvailableWithSchedulesForDateTime(
 ): { available: boolean; reason?: string; schedule?: { start: string; end: string } } {
   const dayOfWeek = getDayOfWeekFromISODate(dateISO);
 
+  // Manual override: when the store is forced open, modes should be available based on enable flags only.
+  // When forced closed, all modes should be unavailable.
+  if (merchant.isManualOverride === true) {
+    const storeForcedOpen = merchant.isOpen ?? true;
+    if (!storeForcedOpen) {
+      return { available: false, reason: 'Store is manually closed' };
+    }
+  }
+
   const isEnabled =
     modeType === 'DINE_IN'
       ? merchant.isDineInEnabled !== false
@@ -844,6 +903,11 @@ export function isModeAvailableWithSchedulesForDateTime(
   if (!isEnabled) {
     const label = modeType === 'DINE_IN' ? 'Dine In' : modeType === 'TAKEAWAY' ? 'Takeaway' : 'Delivery';
     return { available: false, reason: `${label} is not available` };
+  }
+
+  // Manual override open: ignore special hours and schedule restrictions.
+  if (merchant.isManualOverride === true && (merchant.isOpen ?? true) === true) {
+    return { available: true };
   }
 
   // Special hours overrides for that date
@@ -884,10 +948,18 @@ export function isModeAvailableWithSchedulesForDateTime(
   }
 
   // Per-day schedule
-  if (merchant.modeSchedules && merchant.modeSchedules.length > 0) {
+  if (
+    merchant.isPerDayModeScheduleEnabled === true &&
+    merchant.modeSchedules &&
+    merchant.modeSchedules.length > 0
+  ) {
     const daySchedule = merchant.modeSchedules.find((s) => s.mode === modeType && s.dayOfWeek === dayOfWeek);
 
     if (daySchedule) {
+      if (daySchedule.isActive === false) {
+        const label = modeType === 'DINE_IN' ? 'Dine In' : modeType === 'TAKEAWAY' ? 'Takeaway' : 'Delivery';
+        return { available: false, reason: `${label} not available today` };
+      }
       const isWithin = timeHHMM >= daySchedule.startTime && timeHHMM <= daySchedule.endTime;
       return {
         available: isWithin,
@@ -948,11 +1020,16 @@ export function getMinutesUntilModeCloses(
   }
 
   // Priority 2: Per-day schedule
-  if (!endTime && merchant.modeSchedules && merchant.modeSchedules.length > 0) {
+  if (
+    !endTime &&
+    merchant.isPerDayModeScheduleEnabled === true &&
+    merchant.modeSchedules &&
+    merchant.modeSchedules.length > 0
+  ) {
     const daySchedule = merchant.modeSchedules.find(
       s => s.mode === modeType && s.dayOfWeek === dayOfWeek
     );
-    if (daySchedule) {
+    if (daySchedule && daySchedule.isActive !== false) {
       endTime = daySchedule.endTime;
     }
   }
