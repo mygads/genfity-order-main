@@ -1319,6 +1319,9 @@ const id = {
   "admin.receipt.completedEmail.toggleHelp": "Jika aktif, pelanggan akan menerima email setelah pesanan selesai.",
   "admin.receipt.completedEmail.disabledReason.notConfigured": "Dinonaktifkan karena harga belum diatur oleh admin.",
   "admin.receipt.completedEmail.disabledReason.noBalance": "Dinonaktifkan karena saldo tidak mencukupi.",
+  "admin.receipt.completedEmail.autoDisabledBanner.title": "Saldo tidak mencukupi",
+  "admin.receipt.completedEmail.autoDisabledBanner.message": "Isi saldo untuk mengaktifkan email pesanan selesai ke pelanggan.",
+  "admin.receipt.completedEmail.autoDisabledBanner.topupCta": "Isi saldo",
   "admin.receipt.completedEmail.note": "Catatan: Email hanya dikirim untuk email pelanggan yang valid (email tamu/placeholder akan dilewati).",
   // Receipt Sections
   "admin.receipt.headerSection": "Header (Info Toko)",
@@ -3830,6 +3833,10 @@ const id = {
   "pos.moreItems": "+{count} lainnya",
   "pos.note": "Catatan",
   "pos.printReceipt": "Cetak",
+  "pos.receipt.printFailedTitle": "Gagal mencetak struk",
+  "pos.receipt.printFailedMessage": "Tidak dapat membuka PDF struk untuk dicetak. Periksa koneksi dan pastikan popup diizinkan, lalu coba lagi.",
+  "pos.receipt.printFailedPopupBlockedMessage": "Tidak dapat membuka jendela cetak. Izinkan popup, lalu coba lagi.",
+  "pos.receipt.printFailedFetchMessage": "Tidak dapat mengambil PDF struk. Periksa koneksi, lalu coba lagi.",
   "pos.refund": "Refund/Void",
   "pos.refundSuccess": "Pesanan berhasil di-refund",
   // POS Keyboard Shortcuts

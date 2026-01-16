@@ -70,8 +70,7 @@ import {
 
 import ConfirmDialog from '@/components/modals/ConfirmDialog';
 
-import { printReceipt } from '@/lib/utils/unifiedReceipt';
-import type { ReceiptSettings } from '@/lib/types/receiptSettings';
+import { openMerchantOrderReceiptPdfAndPrint } from '@/lib/utils/receiptPdfClient';
 import { normalizeTableNumber } from '@/lib/utils/posTableNumber';
 
 // ============================================
@@ -1154,54 +1153,24 @@ export default function POSPage() {
     router.push('/admin/dashboard/orders');
   }, [router]);
 
-  const handlePrintCreatedOrderReceipt = useCallback(() => {
-    if (!merchant || !pendingOrderDetails) {
-      showError(t('common.error') || 'Error', 'Receipt data is not available');
+  const handlePrintCreatedOrderReceipt = useCallback(async () => {
+    if (!pendingOrderId) {
+      showError(t('common.error') || 'Error', 'Receipt is not available');
       return;
     }
 
-    const rawSettings = (merchant.receiptSettings || {}) as Partial<ReceiptSettings>;
-    const ok = printReceipt({
-      order: {
-        orderId: pendingOrderId ? String(pendingOrderId) : undefined,
-        orderNumber: lastOrderNumber,
-        orderType: pendingOrderDetails.orderType,
-        tableNumber: pendingOrderDetails.tableNumber || null,
-        placedAt: pendingOrderDetails.placedAt.toISOString(),
-        items: pendingOrderDetails.items.map((it) => ({
-          quantity: it.quantity,
-          menuName: it.menuName,
-          subtotal: it.subtotal,
-          addons: (it.addons || []).map((a) => ({
-            addonName: a.addonName,
-            addonPrice: a.addonPrice,
-          })),
-        })),
-        subtotal: pendingOrderDetails.subtotal,
-        taxAmount: pendingOrderDetails.taxAmount,
-        serviceChargeAmount: pendingOrderDetails.serviceChargeAmount,
-        packagingFeeAmount: pendingOrderDetails.packagingFeeAmount,
-        deliveryFeeAmount: pendingOrderDetails.deliveryFeeAmount,
-        totalAmount: pendingOrderTotal || calculateOrderTotal(),
-        paymentStatus: 'UNPAID',
-      },
-      merchant: {
-        name: merchant.name || merchant.code || 'Merchant',
-        code: merchant.code,
-        logoUrl: merchant.logoUrl,
-        address: merchant.address,
-        phone: merchant.phone,
-        email: merchant.email,
-        currency,
-      },
-      settings: rawSettings,
-      language: locale === 'id' ? 'id' : 'en',
-    });
+    const result = await openMerchantOrderReceiptPdfAndPrint(pendingOrderId);
+    if (!result.ok) {
+      const message =
+        result.reason === 'popup_blocked'
+          ? (t('pos.receipt.printFailedPopupBlockedMessage') as string) ||
+            'Unable to open the print window. Please allow popups, then try again.'
+          : (t('pos.receipt.printFailedFetchMessage') as string) ||
+            'Unable to fetch the receipt PDF. Please check your connection, then try again.';
 
-    if (!ok) {
-      showError(t('common.error') || 'Error', 'Failed to open print window (check popup blocker)');
+      showError(t('common.error') || 'Error', message);
     }
-  }, [merchant, pendingOrderDetails, pendingOrderId, lastOrderNumber, pendingOrderTotal, calculateOrderTotal, currency, locale, showError, t]);
+  }, [pendingOrderId, showError, t]);
 
   const handleMakePaymentFromSuccess = useCallback(() => {
     if (!pendingOrderId) return;

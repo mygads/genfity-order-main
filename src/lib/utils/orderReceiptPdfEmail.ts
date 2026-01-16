@@ -20,8 +20,14 @@ export interface OrderReceiptEmailPdfData {
   customerName: string;
   customerPhone?: string | null;
   customerEmail?: string | null;
-  orderType: 'DINE_IN' | 'TAKEAWAY';
+  orderType: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY';
   tableNumber?: string | null;
+  deliveryUnit?: string | null;
+  deliveryBuildingName?: string | null;
+  deliveryBuildingNumber?: string | null;
+  deliveryFloor?: string | null;
+  deliveryInstructions?: string | null;
+  deliveryAddress?: string | null;
   items: Array<{
     menuName: string;
     quantity: number;
@@ -201,12 +207,53 @@ export async function generateOrderReceiptPdfBuffer(data: OrderReceiptEmailPdfDa
   }
 
   if (settings.showOrderType) {
-    const typeLabel = data.orderType === 'DINE_IN' ? labels.dineIn : labels.takeaway;
+    const typeLabel =
+      data.orderType === 'DINE_IN'
+        ? labels.dineIn
+        : data.orderType === 'TAKEAWAY'
+          ? labels.takeaway
+          : labels.delivery;
     const typeRight = settings.showTableNumber && data.tableNumber
       ? `${typeLabel} / ${labels.table} ${data.tableNumber}`
       : typeLabel;
     addLeftRight(labels.type, typeRight, y, 8);
     y += 5;
+  }
+
+  if (data.orderType === 'DELIVERY') {
+    const prefix = [
+      data.deliveryUnit,
+      data.deliveryBuildingName,
+      data.deliveryBuildingNumber ? `No ${data.deliveryBuildingNumber}` : null,
+      data.deliveryFloor ? `Floor ${data.deliveryFloor}` : null,
+    ]
+      .filter(Boolean)
+      .join(', ');
+
+    const address = String(data.deliveryAddress || '').trim();
+    const fullAddress = prefix && address ? `${prefix}, ${address}` : (prefix || address);
+    if (fullAddress) {
+      doc.setFont('courier', 'normal');
+      doc.setFontSize(7);
+      const lines = doc.splitTextToSize(`📍 ${fullAddress}`, contentWidth);
+      for (const line of lines) {
+        doc.text(String(line), margin, y);
+        y += 3.2;
+      }
+      y += 1;
+    }
+
+    const instructions = String(data.deliveryInstructions || '').trim();
+    if (instructions) {
+      doc.setFont('courier', 'normal');
+      doc.setFontSize(7);
+      const lines = doc.splitTextToSize(`📝 ${instructions}`, contentWidth);
+      for (const line of lines) {
+        doc.text(String(line), margin, y);
+        y += 3.2;
+      }
+      y += 1;
+    }
   }
 
   if (settings.showCustomerName) {

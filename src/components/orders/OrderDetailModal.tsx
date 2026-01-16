@@ -37,9 +37,9 @@ import { getNextPossibleStatuses } from '@/lib/utils/orderStatusRules';
 import { useToast } from '@/context/ToastContext';
 import { useMerchant } from '@/context/MerchantContext';
 import type { OrderWithDetails } from '@/lib/types/order';
+import type { ReceiptSettings } from '@/lib/types/receiptSettings';
 import { OrderStatus, PaymentMethod } from '@prisma/client';
-import { printReceipt } from '@/lib/utils/unifiedReceipt';
-import { DEFAULT_RECEIPT_SETTINGS, type ReceiptSettings } from '@/lib/types/receiptSettings';
+import { openMerchantOrderReceiptPdfAndPrint } from '@/lib/utils/receiptPdfClient';
 import { formatFullOrderNumber } from '@/lib/utils/format';
 import { formatPaymentMethodLabel } from '@/lib/utils/paymentDisplay';
 import OrderTotalsBreakdown from '@/components/orders/OrderTotalsBreakdown';
@@ -433,26 +433,6 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     }
   };
 
-  const mintTrackingToken = async (orderId: string | number): Promise<string | null> => {
-    try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) return null;
-
-      const res = await fetch(`/api/merchant/orders/${orderId}/tracking-token`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const json = await res.json();
-      if (!res.ok || !json?.success) return null;
-
-      return json?.data?.trackingToken || null;
-    } catch {
-      return null;
-    }
-  };
-
   const handleConfirmCashOnDelivery = async () => {
     if (!order) return;
 
@@ -490,99 +470,14 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   const handlePrintReceipt = async () => {
     if (!order) return;
 
-    const stripDiscountCodeSuffix = (label: string): string => {
-      const trimmed = label.trim();
-      const match = trimmed.match(/^(.*)\(([A-Z0-9_-]{3,})\)\s*$/);
-      if (!match) return trimmed;
-      return match[1].trim();
-    };
-
-    const rawSettings = (merchantProfile?.receiptSettings || {}) as Partial<ReceiptSettings>;
-    const inferredLanguage: 'en' | 'id' = merchantCurrency === 'IDR' ? 'id' : 'en';
-    const language: 'en' | 'id' =
-      rawSettings.receiptLanguage === 'id' || rawSettings.receiptLanguage === 'en'
-        ? rawSettings.receiptLanguage
-        : inferredLanguage;
-
-    const settings: ReceiptSettings = {
-      ...DEFAULT_RECEIPT_SETTINGS,
-      ...rawSettings,
-      receiptLanguage: language,
-      paperSize: rawSettings.paperSize === '58mm' ? '58mm' : '80mm',
-    };
-
-    const trackingToken = settings.showTrackingQRCode
-      ? await mintTrackingToken(apiOrderId)
-      : null;
-
-    const placedAt =
-      (order as unknown as { placedAt?: string }).placedAt ||
-      (order as unknown as { createdAt?: string }).createdAt ||
-      new Date().toISOString();
-
-    const discountLabel = Array.isArray((order as any).orderDiscounts)
-      ? ((order as any).orderDiscounts
-        .map((d: any) => (typeof d?.label === 'string' ? stripDiscountCodeSuffix(d.label) : ''))
-          .filter((s: string) => s.trim() !== '')
-          .join(' + ') || undefined)
-      : undefined;
-
-    const payment = (order as unknown as { payment?: any }).payment;
-
-    printReceipt({
-      order: {
-        orderId: String(apiOrderId),
-        orderNumber: (order as any).orderNumber,
-        orderType: (order as any).orderType,
-        tableNumber: (order as any).tableNumber,
-        deliveryUnit: (order as any).deliveryUnit,
-        deliveryBuildingName: (order as any).deliveryBuildingName,
-        deliveryBuildingNumber: (order as any).deliveryBuildingNumber,
-        deliveryFloor: (order as any).deliveryFloor,
-        deliveryInstructions: (order as any).deliveryInstructions,
-        deliveryAddress: (order as any).deliveryAddress,
-        customerName: (order as any).customerName,
-        customerPhone: (order as any).customerPhone,
-        customerEmail: (order as any).customerEmail,
-        trackingToken,
-        placedAt,
-        paidAt: payment?.paidAt || payment?.paidAt?.toString?.(),
-        items: ((order as any).orderItems || []).map((item: any) => ({
-          quantity: item.quantity,
-          menuName: item.menuName,
-          unitPrice: typeof item.unitPrice === 'number' ? item.unitPrice : undefined,
-          subtotal: Number(item.subtotal) || 0,
-          notes: item.notes,
-          addons: (item.addons || []).map((addon: any) => ({
-            addonName: addon.addonName,
-            addonPrice: typeof addon.addonPrice === 'number' ? addon.addonPrice : Number(addon.addonPrice),
-          })),
-        })),
-        subtotal: Number((order as any).subtotal) || 0,
-        taxAmount: Number((order as any).taxAmount) || 0,
-        serviceChargeAmount: Number((order as any).serviceChargeAmount) || 0,
-        packagingFeeAmount: Number((order as any).packagingFeeAmount) || 0,
-        discountAmount: Number((order as any).discountAmount) || 0,
-        discountLabel,
-        totalAmount: Number((order as any).totalAmount) || 0,
-        amountPaid: payment?.amountPaid ? Number(payment.amountPaid) : undefined,
-        changeAmount: payment?.changeAmount ? Number(payment.changeAmount) : undefined,
-        paymentMethod: payment?.paymentMethod || payment?.method,
-        paymentStatus: payment?.status,
-        cashierName: payment?.paidByUser?.name || payment?.paidBy?.name,
-      },
-      merchant: {
-        name: merchantProfile?.name || 'Merchant',
-        code: (merchantProfile as any)?.code,
-        logoUrl: merchantProfile?.logoUrl,
-        address: merchantProfile?.address,
-        phone: merchantProfile?.phone,
-        email: merchantProfile?.email,
-        currency: merchantCurrency,
-      },
-      settings,
-      language,
-    });
+    const result = await openMerchantOrderReceiptPdfAndPrint(apiOrderId);
+    if (!result.ok) {
+      const message =
+        result.reason === 'popup_blocked'
+          ? 'Failed to open print window (check popup blocker)'
+          : 'Failed to fetch receipt PDF (check connection)';
+      showError(message, 'Print');
+    }
   };
 
   if (!isOpen) return null;
@@ -615,7 +510,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 p-4"
+      className="fixed inset-0 z-1000 flex items-center justify-center bg-black/40 p-4"
       onClick={onClose}
     >
       <div

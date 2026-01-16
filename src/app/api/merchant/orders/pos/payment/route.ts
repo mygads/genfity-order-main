@@ -16,6 +16,7 @@ import prisma from '@/lib/db/client';
 import { serializeBigInt } from '@/lib/utils/serializer';
 import { Prisma } from '@prisma/client';
 import { computeVoucherDiscount, applyOrderDiscount } from '@/lib/services/OrderVoucherService';
+import { OrderManagementService } from '@/lib/services/OrderManagementService';
 
 /**
  * Payment Request Body Interface
@@ -43,6 +44,8 @@ interface PaymentRequest {
 async function handlePost(req: NextRequest, context: AuthContext) {
   try {
     const { merchantId, userId } = context;
+
+    const paidByUserId: bigint = typeof userId === 'bigint' ? userId : BigInt(userId);
 
     if (!merchantId) {
       return NextResponse.json(
@@ -373,6 +376,36 @@ async function handlePost(req: NextRequest, context: AuthContext) {
 
     console.log(`[POS Payment] Payment recorded for order ${order.orderNumber}: ${paymentMethod}, Amount: ${totalAmount}`);
 
+    // POS behavior: after successfully taking payment, best-effort advance the order to COMPLETED.
+    // This ensures downstream side-effects (push, paid completed-email, etc.) are triggered consistently.
+    // We do this outside the payment transaction so payment recording remains robust.
+    let finalOrderStatus = order.status;
+    try {
+      const transitionsByStatus: Record<string, Array<'ACCEPTED' | 'IN_PROGRESS' | 'READY' | 'COMPLETED'>> = {
+        PENDING: ['ACCEPTED', 'IN_PROGRESS', 'READY', 'COMPLETED'],
+        ACCEPTED: ['IN_PROGRESS', 'READY', 'COMPLETED'],
+        IN_PROGRESS: ['READY', 'COMPLETED'],
+        READY: ['COMPLETED'],
+        COMPLETED: [],
+        CANCELLED: [],
+      };
+
+      const steps = transitionsByStatus[String(order.status)] ?? [];
+      for (const status of steps) {
+        await OrderManagementService.updateStatus(order.id, {
+          status,
+          userId: paidByUserId,
+          note: 'Auto-advanced by POS payment',
+        });
+      }
+
+      if (steps.length > 0) {
+        finalOrderStatus = 'COMPLETED';
+      }
+    } catch (statusError) {
+      console.error(`[POS Payment] Failed to auto-advance order ${order.orderNumber} to COMPLETED:`, statusError);
+    }
+
     return NextResponse.json({
       success: true,
       data: serializeBigInt({
@@ -383,7 +416,7 @@ async function handlePost(req: NextRequest, context: AuthContext) {
         paymentMethod,
         paidAmount,
         changeAmount: change,
-        status: 'COMPLETED',
+        status: finalOrderStatus,
       }),
     });
 

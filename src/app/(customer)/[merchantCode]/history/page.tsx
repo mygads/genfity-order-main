@@ -13,6 +13,7 @@ import { useCustomerData } from '@/context/CustomerDataContext';
 import { FaArrowLeft, FaClipboardList, FaClock, FaFileDownload, FaMotorcycle, FaRedo, FaShoppingBag, FaSpinner, FaUtensils, FaUsers } from 'react-icons/fa';
 import { customerMerchantHomeUrl, customerOrderUrl, customerTrackUrl } from '@/lib/utils/customerRoutes';
 import { ConfirmationModal } from '@/components/common/ConfirmationModal';
+import { triggerPublicOrderReceiptDownload } from '@/lib/utils/receiptPdfClient';
 
 interface OrderHistoryItem {
   id: string;
@@ -334,76 +335,14 @@ export default function OrderHistoryPage() {
     setDownloadingOrderId(order.id.toString());
 
     try {
-      // Fetch full order details using public endpoint (supports orderNumber lookup)
-      const tokenQuery = `?token=${encodeURIComponent(order.trackingToken)}`;
-      let response = await fetch(`/api/public/orders/${order.orderNumber}${tokenQuery}`);
+      const fullOrderNumber = order.orderNumber.includes('-')
+        ? order.orderNumber
+        : `${order.merchantCode}-${order.orderNumber}`;
 
-      // If public endpoint fails, try constructing full order number with merchant code
-      if (!response.ok) {
-        const fullOrderNumber = order.orderNumber.includes('-')
-          ? order.orderNumber
-          : `${order.merchantCode}-${order.orderNumber}`;
-        response = await fetch(`/api/public/orders/${fullOrderNumber}${tokenQuery}`);
-      }
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch order details');
-      }
-
-      const data = await response.json();
-      const orderData = data.data;
-
-      // Dynamic import for PDF generator (client-side only)
-      const { generateOrderReceiptPdf } = await import('@/lib/utils/generateOrderPdf');
-
-      // Prepare data for PDF generation
-      const receiptData = {
-        orderNumber: orderData.orderNumber,
-        merchantName: orderData.merchant?.name || order.merchantName,
-        merchantCode: order.merchantCode,
-        merchantAddress: orderData.merchant?.address,
-        merchantPhone: orderData.merchant?.phone,
-        merchantLogo: orderData.merchant?.logoUrl,
-        orderType: orderData.orderType as 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY',
-        tableNumber: isTableNumberEnabled ? orderData.tableNumber : null,
-        deliveryUnit: orderData.deliveryUnit,
-        deliveryAddress: orderData.deliveryAddress,
-        customerName: auth.customer.name,
-        customerEmail: auth.customer.email,
-        customerPhone: auth.customer.phone,
-        placedAt: orderData.placedAt,
-        items: (orderData.orderItems || []).map((item: { menuName: string; quantity: number; menuPrice: number; addons?: Array<{ addonName: string; addonPrice: number }>; notes?: string | null }) => ({
-          menuName: item.menuName,
-          quantity: item.quantity,
-          price: Number(item.menuPrice) || 0,
-          addons: (item.addons || []).map((addon: { addonName: string; addonPrice: number }) => ({
-            name: addon.addonName,
-            price: Number(addon.addonPrice) || 0,
-          })),
-          notes: item.notes,
-        })),
-        subtotal: Number(orderData.subtotal) || 0,
-        taxAmount: Number(orderData.taxAmount) || 0,
-        serviceChargeAmount: Number(orderData.serviceChargeAmount) || 0,
-        packagingFeeAmount: Number(orderData.packagingFeeAmount) || 0,
-        deliveryFeeAmount: Number(orderData.deliveryFeeAmount) || 0,
-        discountAmount: Number(orderData.discountAmount) || 0,
-        totalAmount: Number(orderData.totalAmount) || order.totalAmount,
-        paymentMethod: orderData.payment?.paymentMethod,
-        paymentStatus: orderData.payment?.status,
-        currency: orderData.merchant?.currency || merchantCurrency,
-        trackingToken: order.trackingToken,
-        // Staff who recorded the payment
-        recordedBy: orderData.payment?.paidBy ? {
-          name: orderData.payment.paidBy.name,
-          email: orderData.payment.paidBy.email,
-        } : null,
-        // Language for receipt (id or en)
-        language: locale as 'en' | 'id',
-      };
-
-      // Generate and download PDF
-      await generateOrderReceiptPdf(receiptData);
+      triggerPublicOrderReceiptDownload({
+        orderNumber: fullOrderNumber,
+        token: order.trackingToken,
+      });
       showSuccess(t('customer.receipt.downloadSuccess'));
 
     } catch (error) {

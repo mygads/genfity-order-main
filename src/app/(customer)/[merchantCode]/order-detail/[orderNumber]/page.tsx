@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/common/SkeletonLoaders';
 import { FaArrowLeft, FaBoxOpen, FaFileDownload, FaSpinner } from 'react-icons/fa';
 import { formatPaymentMethodLabel, formatPaymentStatusLabel } from '@/lib/utils/paymentDisplay';
 import OrderTotalsBreakdown from '@/components/orders/OrderTotalsBreakdown';
+import { triggerPublicOrderReceiptDownload } from '@/lib/utils/receiptPdfClient';
 
 interface OrderDetail {
     id: string;
@@ -207,56 +208,16 @@ export default function OrderDetailPage() {
         setDownloadingReceipt(true);
 
         try {
-            // Dynamic import for PDF generator (client-side only)
-            const { generateOrderReceiptPdf } = await import('@/lib/utils/generateOrderPdf');
+            const token = searchParams.get('token') || '';
+            if (!token) {
+                showError(t('customer.errors.trackingTokenMissing'));
+                return;
+            }
 
-            // Prepare data for PDF generation
-            const receiptData = {
-                orderNumber: order.orderNumber,
-                merchantName: order.merchant?.name || t('customer.common.merchant'),
-                merchantCode: merchantCode,
-                merchantAddress: order.merchant?.address,
-                merchantPhone: order.merchant?.phone,
-                merchantLogo: (order.merchant as { logoUrl?: string })?.logoUrl,
-                orderType: order.orderType as 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY',
-                tableNumber: isTableNumberEnabled ? order.tableNumber : null,
-                deliveryUnit: order.deliveryUnit,
-                deliveryAddress: order.deliveryAddress,
-                customerName: auth.customer.name,
-                customerEmail: auth.customer.email,
-                customerPhone: auth.customer.phone,
-                placedAt: order.placedAt,
-                items: (order.orderItems || []).map((item) => ({
-                    menuName: item.menuName,
-                    quantity: item.quantity,
-                    price: Number(item.menuPrice) || 0,
-                    addons: (item.addons || []).map((addon) => ({
-                        name: addon.addonName,
-                        price: Number(addon.addonPrice) || 0,
-                    })),
-                    notes: item.notes,
-                })),
-                subtotal: Number(order.subtotal) || 0,
-                taxAmount: Number(order.taxAmount) || 0,
-                serviceChargeAmount: Number(order.serviceChargeAmount) || 0,
-                packagingFeeAmount: Number(order.packagingFeeAmount) || 0,
-                deliveryFeeAmount: Number(order.deliveryFeeAmount) || 0,
-                discountAmount: Number(order.discountAmount) || 0,
-                totalAmount: Number(order.totalAmount) || 0,
-                paymentMethod: order.payment?.paymentMethod,
-                paymentStatus: order.payment?.status,
-                currency: order.merchant?.currency || merchantCurrency,
-                // Staff who recorded the payment
-                recordedBy: order.payment?.paidBy ? {
-                    name: order.payment.paidBy.name,
-                    email: order.payment.paidBy.email,
-                } : null,
-                // Language for receipt
-                language: locale as 'en' | 'id',
-            };
-
-            // Generate and download PDF
-            await generateOrderReceiptPdf(receiptData);
+            triggerPublicOrderReceiptDownload({
+                orderNumber,
+                token,
+            });
             showSuccess(t('customer.receipt.downloadSuccess'));
 
         } catch (error) {

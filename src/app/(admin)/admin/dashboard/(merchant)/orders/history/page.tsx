@@ -17,8 +17,7 @@ import type { OrderStatus, OrderType } from '@prisma/client';
 import { useMerchant } from '@/context/MerchantContext';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { useToast } from '@/context/ToastContext';
-import { printReceipt } from '@/lib/utils/unifiedReceipt';
-import { ReceiptSettings, DEFAULT_RECEIPT_SETTINGS } from '@/lib/types/receiptSettings';
+import { openMerchantOrderReceiptPdfAndPrint } from '@/lib/utils/receiptPdfClient';
 
 // ===== TYPES =====
 
@@ -206,136 +205,13 @@ function OrderHistoryPageContent() {
     setDeleteOrderNumber(null);
   };
 
-  const stripDiscountCodeSuffix = (label: string) => {
-    // Removes trailing " (CODE)" to avoid printing voucher codes on receipts.
-    return label.replace(/\s*\([^)]*\)\s*$/g, '').trim();
-  };
-
-  // Print receipt for an order using unified receipt generator
   const handlePrintReceipt = async (orderId: string | number) => {
     try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) return;
-
-      // Fetch order details
-      const response = await fetch(`/api/merchant/orders/${orderId}`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      
-      if (!response.ok) {
-        showError(t('admin.history.error.orderLoadFailed'));
+      const result = await openMerchantOrderReceiptPdfAndPrint(orderId);
+      if (!result.ok) {
+        showError(t('admin.history.printFailed'));
         return;
       }
-
-      const data = await response.json();
-      if (!data.success) {
-        showError(data.message || t('admin.history.error.orderLoadFailed'));
-        return;
-      }
-
-      const order = data.data;
-
-      // Mint tracking token for QR (token-required public tracking)
-      let trackingToken: string | null = null;
-      try {
-        const mintRes = await fetch(`/api/merchant/orders/${orderId}/tracking-token`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const mintJson = await mintRes.json();
-        if (mintRes.ok && mintJson?.success) {
-          trackingToken = mintJson?.data?.trackingToken || null;
-        }
-      } catch {
-        trackingToken = null;
-      }
-      const rawSettings = (merchantData?.receiptSettings || {}) as Partial<ReceiptSettings>;
-      const inferredLanguage: 'en' | 'id' = merchantData?.currency === 'IDR' ? 'id' : 'en';
-      const language: 'en' | 'id' =
-        rawSettings.receiptLanguage === 'id' || rawSettings.receiptLanguage === 'en'
-          ? rawSettings.receiptLanguage
-          : inferredLanguage;
-
-      // Merge receipt settings with defaults (avoid missing new fields)
-      const settings: ReceiptSettings = {
-        ...DEFAULT_RECEIPT_SETTINGS,
-        ...rawSettings,
-        receiptLanguage: language,
-        paperSize: rawSettings.paperSize === '58mm' ? '58mm' : '80mm',
-      };
-
-      // Use unified receipt generator
-      const discountLabel = Array.isArray((order as any).orderDiscounts)
-        ? ((order as any).orderDiscounts
-            .map((d: any) =>
-              typeof d?.label === 'string' ? stripDiscountCodeSuffix(d.label) : ''
-            )
-            .filter((s: string) => s.trim() !== '')
-            .join(' + ') || undefined)
-        : undefined;
-
-      printReceipt({
-        order: {
-          orderId: String(orderId),
-          orderNumber: order.orderNumber,
-          orderType: order.orderType,
-          tableNumber: order.tableNumber,
-          deliveryUnit: order.deliveryUnit,
-          deliveryBuildingName: order.deliveryBuildingName,
-          deliveryBuildingNumber: order.deliveryBuildingNumber,
-          deliveryFloor: order.deliveryFloor,
-          deliveryInstructions: order.deliveryInstructions,
-          deliveryAddress: order.deliveryAddress,
-          customerName: order.customerName,
-          customerPhone: order.customerPhone,
-          customerEmail: order.customerEmail,
-          trackingToken,
-          placedAt: order.placedAt,
-          paidAt: order.paidAt,
-          items: (order.orderItems || []).map((item: { 
-            quantity: number; 
-            menuName: string; 
-            unitPrice?: number;
-            subtotal: number; 
-            notes?: string; 
-            addons?: Array<{ addonName: string; addonPrice?: number }> 
-          }) => ({
-            quantity: item.quantity,
-            menuName: item.menuName,
-            unitPrice: item.unitPrice,
-            subtotal: Number(item.subtotal) || 0,
-            notes: item.notes,
-            addons: item.addons?.map(addon => ({
-              addonName: addon.addonName,
-              addonPrice: addon.addonPrice,
-            })),
-          })),
-          subtotal: Number(order.subtotal) || 0,
-          taxAmount: Number(order.taxAmount) || 0,
-          serviceChargeAmount: Number(order.serviceChargeAmount) || 0,
-          packagingFeeAmount: Number(order.packagingFeeAmount) || 0,
-          deliveryFeeAmount: Number(order.deliveryFeeAmount) || 0,
-          discountAmount: Number(order.discountAmount) || 0,
-          discountLabel,
-          totalAmount: Number(order.totalAmount) || 0,
-          amountPaid: order.payment?.amountPaid ? Number(order.payment.amountPaid) : undefined,
-          changeAmount: order.payment?.changeAmount ? Number(order.payment.changeAmount) : undefined,
-          paymentMethod: order.payment?.method,
-          paymentStatus: order.payment?.status,
-          cashierName: order.cashierName,
-        },
-        merchant: {
-          name: merchantData?.name || '',
-          code: merchantData?.code,
-          logoUrl: merchantData?.logoUrl,
-          address: merchantData?.address,
-          phone: merchantData?.phone,
-          email: merchantData?.email,
-          currency: merchantData?.currency || 'AUD',
-        },
-        settings,
-        language,
-      });
-
       showSuccess(t('admin.history.printSuccess'));
     } catch (error) {
       console.error('Print receipt error:', error);

@@ -10,10 +10,10 @@
 import React, { useState } from 'react';
 import { OrderNumberDisplay } from './OrderNumberDisplay';
 import { PaymentRecordForm, type PaymentFormData } from './PaymentRecordForm';
-import { printReceipt } from '@/lib/utils/unifiedReceipt';
 import type { OrderWithDetails } from '@/lib/types/order';
-import { DEFAULT_RECEIPT_SETTINGS, type ReceiptSettings } from '@/lib/types/receiptSettings';
+import type { ReceiptSettings } from '@/lib/types/receiptSettings';
 import { formatCurrency as formatCurrencyUtil } from '@/lib/utils/format';
+import { openMerchantOrderReceiptPdfAndPrint } from '@/lib/utils/receiptPdfClient';
 
 interface PaymentVerificationModalProps {
   isOpen: boolean;
@@ -54,26 +54,6 @@ export const PaymentVerificationModal: React.FC<PaymentVerificationModalProps> =
 
   const formatCurrency = (amount: number) => formatCurrencyUtil(amount, merchantInfo.currency);
 
-  const mintTrackingToken = async (orderId: string | number): Promise<string | null> => {
-    try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) return null;
-
-      const res = await fetch(`/api/merchant/orders/${orderId}/tracking-token`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const json = await res.json();
-      if (!res.ok || !json?.success) return null;
-
-      return json?.data?.trackingToken || null;
-    } catch {
-      return null;
-    }
-  };
-
   const handleVerify = async () => {
     if (!orderNumber.trim()) return;
     
@@ -88,83 +68,10 @@ export const PaymentVerificationModal: React.FC<PaymentVerificationModalProps> =
       
       // Print receipt after successful payment
       if (verifiedOrder) {
-        const rawSettings = (receiptSettings || {}) as Partial<ReceiptSettings>;
-        const inferredLanguage: 'en' | 'id' = merchantInfo.currency === 'IDR' ? 'id' : 'en';
-        const language: 'en' | 'id' =
-          rawSettings.receiptLanguage === 'id' || rawSettings.receiptLanguage === 'en'
-            ? rawSettings.receiptLanguage
-            : inferredLanguage;
-
-        const settings: ReceiptSettings = {
-          ...DEFAULT_RECEIPT_SETTINGS,
-          ...rawSettings,
-          receiptLanguage: language,
-          paperSize: rawSettings.paperSize === '58mm' ? '58mm' : '80mm',
-        };
-
         const orderId = (verifiedOrder as any)?.id as string | number | undefined;
-        const trackingToken = settings.showTrackingQRCode && orderId != null
-          ? await mintTrackingToken(orderId)
-          : null;
-
-        const discountLabel = Array.isArray((verifiedOrder as any).orderDiscounts)
-          ? ((verifiedOrder as any).orderDiscounts
-              .map((d: any) => (typeof d?.label === 'string' ? d.label : ''))
-              .filter((s: string) => s.trim() !== '')
-              .join(' + ') || undefined)
-          : undefined;
-
-        printReceipt({
-          order: {
-            orderId: orderId != null ? String(orderId) : undefined,
-            orderNumber: (verifiedOrder as any).orderNumber,
-            orderType: (verifiedOrder as any).orderType,
-            tableNumber: (verifiedOrder as any).tableNumber,
-            deliveryUnit: (verifiedOrder as any).deliveryUnit,
-            deliveryBuildingName: (verifiedOrder as any).deliveryBuildingName,
-            deliveryBuildingNumber: (verifiedOrder as any).deliveryBuildingNumber,
-            deliveryFloor: (verifiedOrder as any).deliveryFloor,
-            deliveryInstructions: (verifiedOrder as any).deliveryInstructions,
-            deliveryAddress: (verifiedOrder as any).deliveryAddress,
-            customerName: (verifiedOrder as any).customerName,
-            customerPhone: (verifiedOrder as any).customerPhone,
-            customerEmail: (verifiedOrder as any).customerEmail,
-            trackingToken,
-            placedAt: ((verifiedOrder as any).placedAt || (verifiedOrder as any).createdAt || new Date().toISOString()) as string,
-            items: ((verifiedOrder as any).orderItems || []).map((item: any) => ({
-              quantity: item.quantity,
-              menuName: item.menuName,
-              unitPrice: item.unitPrice,
-              subtotal: Number(item.subtotal) || 0,
-              notes: item.notes,
-              addons: (item.addons || []).map((addon: any) => ({
-                addonName: addon.addonName,
-                addonPrice: Number(addon.addonPrice) || 0,
-              })),
-            })),
-            subtotal: Number((verifiedOrder as any).subtotal) || 0,
-            taxAmount: Number((verifiedOrder as any).taxAmount) || 0,
-            serviceChargeAmount: Number((verifiedOrder as any).serviceChargeAmount) || 0,
-            packagingFeeAmount: Number((verifiedOrder as any).packagingFeeAmount) || 0,
-            discountAmount: Number((verifiedOrder as any).discountAmount) || 0,
-            discountLabel,
-            totalAmount: Number((verifiedOrder as any).totalAmount) || 0,
-            amountPaid: data.amount,
-            changeAmount: 0,
-            paymentMethod: data.paymentMethod,
-            paymentStatus: 'COMPLETED',
-            cashierName: undefined,
-          },
-          merchant: {
-            name: merchantInfo.name,
-            code: merchantInfo.code,
-            address: merchantInfo.address,
-            phone: merchantInfo.phone,
-            currency: merchantInfo.currency,
-          },
-          settings,
-          language,
-        });
+        if (orderId != null) {
+          await openMerchantOrderReceiptPdfAndPrint(orderId);
+        }
       }
       
       // Close modal and reset
@@ -188,7 +95,7 @@ export const PaymentVerificationModal: React.FC<PaymentVerificationModalProps> =
 
   return (
     <div
-      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      className="fixed inset-0 z-1000 flex items-center justify-center bg-black/50 backdrop-blur-sm"
       onMouseDown={(e) => {
         if (e.target !== e.currentTarget) return;
         // Only close by outside click when nothing has been entered yet.

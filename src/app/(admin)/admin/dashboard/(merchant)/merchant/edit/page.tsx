@@ -669,6 +669,18 @@ export default function EditMerchantPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const hasIncompleteModeSchedule =
+      Boolean(formData.dineInScheduleStart) !== Boolean(formData.dineInScheduleEnd) ||
+      Boolean(formData.takeawayScheduleStart) !== Boolean(formData.takeawayScheduleEnd) ||
+      Boolean(formData.deliveryScheduleStart) !== Boolean(formData.deliveryScheduleEnd);
+
+    if (hasIncompleteModeSchedule) {
+      showError('Error', 'Mode availability hours: please fill both From and To for any mode you set.');
+      setActiveTab('sale-modes');
+      syncActiveTabToUrl('sale-modes');
+      return;
+    }
+
     setSubmitting(true);
 
     try {

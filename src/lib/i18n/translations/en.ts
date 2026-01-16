@@ -1323,6 +1323,9 @@ const en = {
   "admin.receipt.completedEmail.toggleHelp": "When enabled, customers will receive an email after the order is completed.",
   "admin.receipt.completedEmail.disabledReason.notConfigured": "Disabled because the price is not configured by admin.",
   "admin.receipt.completedEmail.disabledReason.noBalance": "Disabled because your balance is insufficient.",
+  "admin.receipt.completedEmail.autoDisabledBanner.title": "Insufficient balance",
+  "admin.receipt.completedEmail.autoDisabledBanner.message": "Top up your balance to enable completed-order emails for customers.",
+  "admin.receipt.completedEmail.autoDisabledBanner.topupCta": "Top up",
   "admin.receipt.completedEmail.note": "Note: Emails are only sent for real customer emails (guest/placeholder emails are skipped).",
   // Receipt Sections
   "admin.receipt.headerSection": "Header (Store Info)",
@@ -3834,6 +3837,10 @@ const en = {
   "pos.moreItems": "+{count} more",
   "pos.note": "Note",
   "pos.printReceipt": "Print",
+  "pos.receipt.printFailedTitle": "Failed to print receipt",
+  "pos.receipt.printFailedMessage": "Unable to open the receipt PDF for printing. Please check your connection and allow popups, then try again.",
+  "pos.receipt.printFailedPopupBlockedMessage": "Unable to open the print window. Please allow popups, then try again.",
+  "pos.receipt.printFailedFetchMessage": "Unable to fetch the receipt PDF. Please check your connection, then try again.",
   "pos.refund": "Refund/Void",
   "pos.refundSuccess": "Order refunded successfully",
   // POS Keyboard Shortcuts

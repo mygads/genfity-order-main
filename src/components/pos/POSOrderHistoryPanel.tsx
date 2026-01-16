@@ -32,10 +32,10 @@ import {
 } from 'react-icons/fa';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { DeletePinModal } from '@/components/modals/DeletePinModal';
-import { printReceipt } from '@/lib/utils/unifiedReceipt';
-import { ReceiptSettings, DEFAULT_RECEIPT_SETTINGS } from '@/lib/types/receiptSettings';
+import { openMerchantOrderReceiptPdfAndPrint } from '@/lib/utils/receiptPdfClient';
 import { useMerchant } from '@/context/MerchantContext';
 import { formatCurrency, formatFullOrderNumber } from '@/lib/utils/format';
+import { useToast } from '@/context/ToastContext';
 
 // ============================================
 // TYPES
@@ -85,7 +85,7 @@ interface MerchantInfo {
   address?: string;
   phone?: string;
   email?: string;
-  receiptSettings?: Partial<ReceiptSettings> | null;
+  receiptSettings?: unknown;
 }
 
 interface POSOrderHistoryPanelProps {
@@ -111,6 +111,7 @@ export const POSOrderHistoryPanel: React.FC<POSOrderHistoryPanelProps> = ({
 }) => {
   const { t, locale } = useTranslation();
   const { merchant } = useMerchant();
+  const { showError } = useToast();
   
   // State
   const [searchQuery, setSearchQuery] = useState('');
@@ -255,118 +256,24 @@ export const POSOrderHistoryPanel: React.FC<POSOrderHistoryPanelProps> = ({
     }
   }, [refundingOrderId, selectedOrder, onRefundSuccess]);
 
-  // Print receipt using unified receipt generator
   const handlePrintReceipt = async (order: Order) => {
-    const rawSettings = (merchantInfo?.receiptSettings || {}) as Partial<ReceiptSettings>;
-    const language: 'en' | 'id' =
-      rawSettings.receiptLanguage === 'id' || rawSettings.receiptLanguage === 'en'
-        ? rawSettings.receiptLanguage
-        : locale === 'id'
-          ? 'id'
-          : 'en';
+    const result = await openMerchantOrderReceiptPdfAndPrint(order.id);
+    if (!result.ok) {
+      const message =
+        result.reason === 'popup_blocked'
+          ? ((t('pos.receipt.printFailedPopupBlockedMessage') as string) ||
+            'Unable to open the print window. Please allow popups, then try again.')
+          : ((t('pos.receipt.printFailedFetchMessage') as string) ||
+            'Unable to fetch the receipt PDF. Please check your connection, then try again.');
 
-    // Merge receipt settings with defaults (avoid missing new fields)
-    const settings: ReceiptSettings = {
-      ...DEFAULT_RECEIPT_SETTINGS,
-      ...rawSettings,
-      receiptLanguage: language,
-      paperSize: rawSettings.paperSize === '58mm' ? '58mm' : '80mm',
-    };
-
-    let trackingToken: string | null = null;
-    if (settings.showTrackingQRCode) {
-      try {
-        const token = localStorage.getItem('accessToken');
-        if (token) {
-          const mintRes = await fetch(`/api/merchant/orders/${order.id}/tracking-token`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          const mintJson = await mintRes.json();
-          if (mintRes.ok && mintJson?.success) {
-            trackingToken = mintJson?.data?.trackingToken || null;
-          }
-        }
-      } catch {
-        trackingToken = null;
-      }
+      showError(
+        message,
+        (t('pos.receipt.printFailedTitle') as string) ||
+          (t('admin.history.printFailed') as string) ||
+          'Failed to print receipt'
+      );
+      console.error('[POSOrderHistoryPanel] Failed to print receipt');
     }
-
-    let discountLabel: string | undefined;
-    try {
-      const token = localStorage.getItem('accessToken');
-      if (token && order?.id && order.discountAmount && order.discountAmount > 0) {
-        const detailRes = await fetch(`/api/merchant/orders/${order.id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const detailJson = await detailRes.json();
-        const orderDiscounts = detailJson?.data?.orderDiscounts;
-        if (detailRes.ok && detailJson?.success && Array.isArray(orderDiscounts)) {
-          const joined = orderDiscounts
-            .map((d: any) => (typeof d?.label === 'string' ? d.label : ''))
-            .filter((s: string) => s.trim() !== '')
-            .join(' + ');
-          discountLabel = joined || undefined;
-        }
-      }
-    } catch {
-      discountLabel = undefined;
-    }
-    
-    // Print using unified receipt generator
-    printReceipt({
-      order: {
-        orderId: order.id,
-        orderNumber: order.orderNumber,
-        orderType: order.orderType,
-        tableNumber: order.tableNumber,
-        deliveryUnit: (order as any).deliveryUnit,
-        deliveryBuildingName: (order as any).deliveryBuildingName,
-        deliveryBuildingNumber: (order as any).deliveryBuildingNumber,
-        deliveryFloor: (order as any).deliveryFloor,
-        deliveryInstructions: (order as any).deliveryInstructions,
-        deliveryAddress: (order as any).deliveryAddress,
-        customerName: order.customerName,
-        customerPhone: order.customerPhone,
-        customerEmail: (order as any).customerEmail,
-        trackingToken,
-        placedAt: order.createdAt,
-        paidAt: order.paidAt,
-        items: order.items.map(item => ({
-          quantity: item.quantity,
-          menuName: item.menuName,
-          unitPrice: item.unitPrice,
-          subtotal: item.subtotal,
-          notes: item.notes,
-          addons: item.addons?.map(addon => ({
-            addonName: addon.addonName,
-            addonPrice: addon.addonPrice,
-          })),
-        })),
-        subtotal: order.subtotal,
-        taxAmount: order.taxAmount,
-        serviceChargeAmount: order.serviceChargeAmount,
-        packagingFeeAmount: order.packagingFeeAmount,
-        discountAmount: order.discountAmount,
-        discountLabel,
-        totalAmount: order.totalAmount,
-        amountPaid: order.amountPaid,
-        changeAmount: order.changeAmount,
-        paymentMethod: order.paymentMethod,
-        paymentStatus: order.paymentStatus,
-        cashierName: undefined, // Not available in this context
-      },
-      merchant: {
-        name: merchantInfo?.name || '',
-        code: merchantInfo?.code || merchant?.code,
-        logoUrl: merchantInfo?.logoUrl,
-        address: merchantInfo?.address,
-        phone: merchantInfo?.phone,
-        email: merchantInfo?.email,
-        currency: currency,
-      },
-      settings,
-      language,
-    });
   };
 
   if (!isOpen) return null;

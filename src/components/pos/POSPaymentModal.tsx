@@ -28,9 +28,10 @@ import {
   FaExchangeAlt,
 } from 'react-icons/fa';
 import { useTranslation } from '@/lib/i18n/useTranslation';
-import { printReceipt as printUnifiedReceipt } from '@/lib/utils/unifiedReceipt';
-import { DEFAULT_RECEIPT_SETTINGS, type ReceiptSettings } from '@/lib/types/receiptSettings';
+import { openMerchantOrderReceiptPdfAndPrint } from '@/lib/utils/receiptPdfClient';
+import type { ReceiptSettings } from '@/lib/types/receiptSettings';
 import { useMerchant } from '@/context/MerchantContext';
+import { useToast } from '@/context/ToastContext';
 import { formatCurrency, formatDateTimeInTimeZone, formatFullOrderNumber } from '@/lib/utils/format';
 import OrderTotalsBreakdown from '@/components/orders/OrderTotalsBreakdown';
 
@@ -130,6 +131,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
 }) => {
   const { t, locale } = useTranslation();
   const { merchant } = useMerchant();
+  const { showError } = useToast();
 
   const getAutoPrintStorageKey = useCallback(() => {
     const merchantId = merchant?.id ? String(merchant.id) : '';
@@ -474,92 +476,24 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
 
   // Print receipt function
   const handlePrintReceipt = useCallback(async () => {
-    if (!orderDetails || !merchantInfo) return;
+    if (orderId == null) return;
+    const result = await openMerchantOrderReceiptPdfAndPrint(orderId);
+    if (!result.ok) {
+      const message =
+        result.reason === 'popup_blocked'
+          ? ((t('pos.receipt.printFailedPopupBlockedMessage') as string) ||
+            'Unable to open the print window. Please allow popups, then try again.')
+          : ((t('pos.receipt.printFailedFetchMessage') as string) ||
+            'Unable to fetch the receipt PDF. Please check your connection, then try again.');
 
-    const rawSettings = (receiptSettings || {}) as Partial<ReceiptSettings>;
-    const inferredLanguage: 'en' | 'id' = locale === 'id' ? 'id' : 'en';
-    const language: 'en' | 'id' =
-      rawSettings.receiptLanguage === 'id' || rawSettings.receiptLanguage === 'en'
-        ? rawSettings.receiptLanguage
-        : inferredLanguage;
-
-    const settings: ReceiptSettings = {
-      ...DEFAULT_RECEIPT_SETTINGS,
-      ...rawSettings,
-      receiptLanguage: language,
-      paperSize: rawSettings.paperSize === '58mm' ? '58mm' : '80mm',
-    };
-
-    let trackingToken: string | null = null;
-    if (settings.showTrackingQRCode && orderId != null) {
-      try {
-        const token = localStorage.getItem('accessToken');
-        if (token) {
-          const res = await fetch(`/api/merchant/orders/${orderId}/tracking-token`, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
-
-          const json = await res.json();
-          if (res.ok && json?.success) {
-            trackingToken = json?.data?.trackingToken || null;
-          }
-        }
-      } catch {
-        trackingToken = null;
-      }
+      showError(
+        message,
+        (t('pos.receipt.printFailedTitle') as string) ||
+          (t('admin.history.printFailed') as string) ||
+          'Failed to print receipt'
+      );
     }
-
-    printUnifiedReceipt({
-      order: {
-        orderId: orderId != null ? String(orderId) : undefined,
-        orderNumber,
-        orderType: orderDetails.orderType,
-        tableNumber: orderDetails.tableNumber,
-        placedAt: orderDetails.placedAt.toISOString(),
-        trackingToken,
-        items: orderDetails.items.map((item) => ({
-          quantity: item.quantity,
-          menuName: item.menuName,
-          subtotal: item.subtotal,
-          addons: (item.addons || []).map((addon) => ({
-            addonName: addon.quantity && addon.quantity > 1 ? `${addon.quantity}x ${addon.addonName}` : addon.addonName,
-            addonPrice: addon.addonPrice * (addon.quantity || 1),
-          })),
-        })),
-        subtotal: orderDetails.subtotal,
-        taxAmount: orderDetails.taxAmount,
-        serviceChargeAmount: orderDetails.serviceChargeAmount,
-        packagingFeeAmount: orderDetails.packagingFeeAmount,
-        deliveryFeeAmount: orderDetails.deliveryFeeAmount,
-        discountAmount: effectiveDiscountAmount > 0 ? effectiveDiscountAmount : undefined,
-        discountLabel: appliedVoucher?.label || undefined,
-        totalAmount: finalTotal,
-        amountPaid: paymentMethod === 'SPLIT' ? cashAmount + cardAmount : amount,
-        changeAmount: change,
-        paymentMethod:
-          paymentMethod === 'SPLIT'
-            ? 'SPLIT'
-            : paymentMethod === 'CASH_ON_COUNTER'
-              ? 'CASH'
-              : 'CARD',
-        paymentStatus: 'COMPLETED',
-        cashierName: undefined,
-      },
-      merchant: {
-        name: merchantInfo.name,
-        code: merchantInfo.code || merchant?.code,
-        logoUrl: merchantInfo.logoUrl,
-        address: merchantInfo.address,
-        phone: merchantInfo.phone,
-        email: merchantInfo.email,
-        currency: currency,
-      },
-      settings,
-      language,
-    });
-  }, [orderDetails, merchantInfo, merchant?.code, orderNumber, effectiveDiscountAmount, appliedVoucher?.label, finalTotal, paymentMethod, amount, change, cashAmount, cardAmount, currency, receiptSettings, locale, orderId]);
+  }, [orderId, showError, t]);
 
   const handleApplyVoucherTemplate = useCallback(async () => {
     if (!orderId) {

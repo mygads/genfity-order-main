@@ -51,6 +51,21 @@ export default function SaleModesTab({
   const showTakeawaySchedule = formData.isTakeawayEnabled || Boolean(formData.takeawayScheduleStart || formData.takeawayScheduleEnd);
   const showDeliverySchedule = formData.isDeliveryEnabled || Boolean(formData.deliveryScheduleStart || formData.deliveryScheduleEnd);
 
+  const scheduleErrors = {
+    dineIn: Boolean(
+      (formData.dineInScheduleStart && !formData.dineInScheduleEnd) ||
+        (!formData.dineInScheduleStart && formData.dineInScheduleEnd)
+    ),
+    takeaway: Boolean(
+      (formData.takeawayScheduleStart && !formData.takeawayScheduleEnd) ||
+        (!formData.takeawayScheduleStart && formData.takeawayScheduleEnd)
+    ),
+    delivery: Boolean(
+      (formData.deliveryScheduleStart && !formData.deliveryScheduleEnd) ||
+        (!formData.deliveryScheduleStart && formData.deliveryScheduleEnd)
+    ),
+  };
+
   const [labelsOpen, setLabelsOpen] = useState(false);
   const [schedulesOpen, setSchedulesOpen] = useState(false);
   const didInitAdvanced = useRef(false);
@@ -337,6 +352,12 @@ export default function SaleModesTab({
                 </summary>
 
                 <div className="space-y-4 border-t border-gray-200 p-4 dark:border-gray-800">
+                  {scheduleErrors.dineIn || scheduleErrors.takeaway || scheduleErrors.delivery ? (
+                    <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-900/10 dark:text-red-300">
+                      Please fill both From and To for any mode availability hours you set.
+                    </div>
+                  ) : null}
+
                   <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950">
                     <p className="text-sm font-medium text-gray-900 dark:text-white">Quick presets</p>
                     <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Applies to all modes (including disabled ones).</p>
@@ -413,7 +434,12 @@ export default function SaleModesTab({
                               type="time"
                               value={formData.dineInScheduleStart}
                               onChange={(e) => setFormData((prev) => ({ ...prev, dineInScheduleStart: e.target.value }))}
-                              className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                              aria-invalid={scheduleErrors.dineIn}
+                              className={`h-10 w-full rounded-lg border bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:bg-gray-900 dark:text-white ${
+                                scheduleErrors.dineIn
+                                  ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20 dark:border-red-900'
+                                  : 'border-gray-200 focus:border-brand-500 dark:border-gray-800'
+                              }`}
                             />
                           </div>
                           <div>
@@ -422,10 +448,18 @@ export default function SaleModesTab({
                               type="time"
                               value={formData.dineInScheduleEnd}
                               onChange={(e) => setFormData((prev) => ({ ...prev, dineInScheduleEnd: e.target.value }))}
-                              className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                              aria-invalid={scheduleErrors.dineIn}
+                              className={`h-10 w-full rounded-lg border bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:bg-gray-900 dark:text-white ${
+                                scheduleErrors.dineIn
+                                  ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20 dark:border-red-900'
+                                  : 'border-gray-200 focus:border-brand-500 dark:border-gray-800'
+                              }`}
                             />
                           </div>
                         </div>
+                        {scheduleErrors.dineIn ? (
+                          <p className="mt-2 text-xs text-red-600 dark:text-red-400">From and To must both be filled.</p>
+                        ) : null}
                       </div>
                     ) : null}
 
@@ -446,7 +480,12 @@ export default function SaleModesTab({
                               type="time"
                               value={formData.takeawayScheduleStart}
                               onChange={(e) => setFormData((prev) => ({ ...prev, takeawayScheduleStart: e.target.value }))}
-                              className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                              aria-invalid={scheduleErrors.takeaway}
+                              className={`h-10 w-full rounded-lg border bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:bg-gray-900 dark:text-white ${
+                                scheduleErrors.takeaway
+                                  ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20 dark:border-red-900'
+                                  : 'border-gray-200 focus:border-brand-500 dark:border-gray-800'
+                              }`}
                             />
                           </div>
                           <div>
@@ -455,10 +494,18 @@ export default function SaleModesTab({
                               type="time"
                               value={formData.takeawayScheduleEnd}
                               onChange={(e) => setFormData((prev) => ({ ...prev, takeawayScheduleEnd: e.target.value }))}
-                              className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                              aria-invalid={scheduleErrors.takeaway}
+                              className={`h-10 w-full rounded-lg border bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:bg-gray-900 dark:text-white ${
+                                scheduleErrors.takeaway
+                                  ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20 dark:border-red-900'
+                                  : 'border-gray-200 focus:border-brand-500 dark:border-gray-800'
+                              }`}
                             />
                           </div>
                         </div>
+                        {scheduleErrors.takeaway ? (
+                          <p className="mt-2 text-xs text-red-600 dark:text-red-400">From and To must both be filled.</p>
+                        ) : null}
                       </div>
                     ) : null}
 
@@ -479,7 +526,12 @@ export default function SaleModesTab({
                               type="time"
                               value={formData.deliveryScheduleStart}
                               onChange={(e) => setFormData((prev) => ({ ...prev, deliveryScheduleStart: e.target.value }))}
-                              className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                              aria-invalid={scheduleErrors.delivery}
+                              className={`h-10 w-full rounded-lg border bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:bg-gray-900 dark:text-white ${
+                                scheduleErrors.delivery
+                                  ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20 dark:border-red-900'
+                                  : 'border-gray-200 focus:border-brand-500 dark:border-gray-800'
+                              }`}
                             />
                           </div>
                           <div>
@@ -488,10 +540,18 @@ export default function SaleModesTab({
                               type="time"
                               value={formData.deliveryScheduleEnd}
                               onChange={(e) => setFormData((prev) => ({ ...prev, deliveryScheduleEnd: e.target.value }))}
-                              className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                              aria-invalid={scheduleErrors.delivery}
+                              className={`h-10 w-full rounded-lg border bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:bg-gray-900 dark:text-white ${
+                                scheduleErrors.delivery
+                                  ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20 dark:border-red-900'
+                                  : 'border-gray-200 focus:border-brand-500 dark:border-gray-800'
+                              }`}
                             />
                           </div>
                         </div>
+                        {scheduleErrors.delivery ? (
+                          <p className="mt-2 text-xs text-red-600 dark:text-red-400">From and To must both be filled.</p>
+                        ) : null}
                         {!formData.isDeliveryEnabled ? (
                           <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">Delivery is currently disabled.</p>
                         ) : null}

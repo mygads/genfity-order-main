@@ -10,6 +10,7 @@ export interface ReceiptLabels {
   table: string;
   dineIn: string;
   takeaway: string;
+  delivery: string;
   items: string;
   customer: string;
   phone: string;
@@ -39,6 +40,7 @@ const labelsEN: ReceiptLabels = {
   table: 'Table',
   dineIn: 'Dine In',
   takeaway: 'Takeaway',
+  delivery: 'Delivery',
   items: 'Items',
   customer: 'Customer',
   phone: 'Phone',
@@ -68,6 +70,7 @@ const labelsID: ReceiptLabels = {
   table: 'Meja',
   dineIn: 'Makan di Tempat',
   takeaway: 'Bawa Pulang',
+  delivery: 'Pengantaran',
   items: 'Item Pesanan',
   customer: 'Pelanggan',
   phone: 'Telepon',

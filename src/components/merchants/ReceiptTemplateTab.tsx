@@ -7,8 +7,9 @@
 
 'use client';
 
-import React from 'react';
-import { FaPrint } from 'react-icons/fa';
+import React, { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { FaArrowRight, FaExclamationTriangle, FaPrint } from 'react-icons/fa';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import Switch from '@/components/ui/Switch';
 import Button from '@/components/ui/Button';
@@ -17,7 +18,6 @@ import {
   DEFAULT_RECEIPT_SETTINGS,
   RECEIPT_SETTINGS_GROUPS
 } from '@/lib/types/receiptSettings';
-import { generateReceiptHTML, printReceipt, ReceiptOrderData, ReceiptMerchantInfo } from '@/lib/utils/unifiedReceipt';
 import { formatCurrency } from '@/lib/utils/format';
 
 // ============================================
@@ -44,55 +44,6 @@ interface ReceiptTemplateTabProps {
 }
 
 // ============================================
-// MOCK DATA FOR PREVIEW
-// ============================================
-
-const MOCK_ORDER: ReceiptOrderData = {
-  orderNumber: 'DEMO-1234',
-  orderType: 'DINE_IN',
-  tableNumber: '5',
-  customerName: 'John Doe',
-  customerPhone: '+61 412 345 678',
-  placedAt: new Date().toISOString(),
-  items: [
-    {
-      quantity: 2,
-      menuName: 'Chicken Burger',
-      unitPrice: 15.50,
-      subtotal: 31.00,
-      addons: [
-        { addonName: 'Extra Cheese', addonPrice: 2.00 },
-        { addonName: 'Bacon', addonPrice: 3.00 },
-      ],
-      notes: 'No onion please',
-    },
-    {
-      quantity: 1,
-      menuName: 'French Fries',
-      unitPrice: 8.00,
-      subtotal: 8.00,
-    },
-    {
-      quantity: 2,
-      menuName: 'Soft Drink',
-      unitPrice: 4.50,
-      subtotal: 9.00,
-    },
-  ],
-  subtotal: 48.00,
-  taxAmount: 4.80,
-  serviceChargeAmount: 2.40,
-  packagingFeeAmount: 0,
-  discountAmount: 5.00,
-  totalAmount: 50.20,
-  amountPaid: 60.00,
-  changeAmount: 9.80,
-  paymentMethod: 'Cash',
-  paymentStatus: 'COMPLETED',
-  cashierName: 'Staff Member',
-};
-
-// ============================================
 // MAIN COMPONENT
 // ============================================
 
@@ -103,6 +54,10 @@ export const ReceiptTemplateTab: React.FC<ReceiptTemplateTabProps> = ({
   merchantInfo,
 }) => {
   const { t, locale } = useTranslation();
+
+  const [previewUrl, setPreviewUrl] = useState<string>('');
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string>('');
 
   const inferredLanguage: 'en' | 'id' = merchantInfo.currency === 'IDR' ? 'id' : 'en';
   const rawLanguage = initialSettings?.receiptLanguage;
@@ -127,11 +82,24 @@ export const ReceiptTemplateTab: React.FC<ReceiptTemplateTabProps> = ({
   const isCompletedEmailPriceConfigured = completedEmailFee > 0;
   const hasSufficientBalanceForCompletedEmail = currentBalance >= completedEmailFee && currentBalance > 0;
 
+  const canEnableCompletedEmail =
+    isCompletedEmailPriceConfigured &&
+    hasSufficientBalanceForCompletedEmail;
+
+  // Only disable the switch when user is trying to enable the feature.
+  // Disabling (turning OFF) should always be allowed.
   const completedEmailToggleDisabled =
-    !isCompletedEmailPriceConfigured ||
-    !hasSufficientBalanceForCompletedEmail;
+    !settings.sendCompletedOrderEmailToCustomer &&
+    !canEnableCompletedEmail;
 
   const formatMoney = (amount: number) => formatCurrency(amount, currency, receiptLanguage);
+
+  const previewRequestBody = useMemo(() => {
+    // Keep the request small and stable.
+    return JSON.stringify({
+      receiptSettings: settings,
+    });
+  }, [settings]);
 
   // Handle checkbox change
   const handleChange = (key: keyof ReceiptSettings, value: boolean) => {
@@ -164,25 +132,68 @@ export const ReceiptTemplateTab: React.FC<ReceiptTemplateTabProps> = ({
     });
   };
 
-  // Generate preview HTML
-  const generatePreviewHtml = (): string => {
-    const merchant: ReceiptMerchantInfo = {
-      name: merchantInfo.name || 'Your Restaurant',
-      code: merchantInfo.code || 'DEMO',
-      logoUrl: merchantInfo.logoUrl,
-      address: merchantInfo.address,
-      phone: merchantInfo.phone,
-      email: merchantInfo.email,
-      currency: merchantInfo.currency || 'AUD',
+  useEffect(() => {
+    let isCancelled = false;
+
+    const run = async () => {
+      setPreviewError('');
+      setPreviewLoading(true);
+
+      try {
+        const token = localStorage.getItem('accessToken');
+        if (!token) {
+          throw new Error('Missing access token');
+        }
+
+        const res = await fetch('/api/merchant/receipt/preview', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: previewRequestBody,
+        });
+
+        if (!res.ok) {
+          throw new Error('Failed to generate preview');
+        }
+
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+
+        if (isCancelled) {
+          URL.revokeObjectURL(url);
+          return;
+        }
+
+        setPreviewUrl((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return url;
+        });
+      } catch (err) {
+        if (isCancelled) return;
+        setPreviewError(err instanceof Error ? err.message : 'Failed to generate preview');
+        setPreviewUrl((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return '';
+        });
+      } finally {
+        if (!isCancelled) setPreviewLoading(false);
+      }
     };
 
-    return generateReceiptHTML({
-      order: MOCK_ORDER,
-      merchant,
-      settings,
-      language: receiptLanguage || (locale as 'en' | 'id'),
-    });
-  };
+    void run();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [previewRequestBody]);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
 
   // Reset to defaults
   const handleReset = () => {
@@ -190,23 +201,38 @@ export const ReceiptTemplateTab: React.FC<ReceiptTemplateTabProps> = ({
   };
 
   // Test print
-  const handleTestPrint = () => {
-    const merchant: ReceiptMerchantInfo = {
-      name: merchantInfo.name || 'Your Restaurant',
-      code: merchantInfo.code || 'DEMO',
-      logoUrl: merchantInfo.logoUrl,
-      address: merchantInfo.address,
-      phone: merchantInfo.phone,
-      email: merchantInfo.email,
-      currency: merchantInfo.currency || 'AUD',
-    };
+  const handleTestPrint = async () => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) return;
 
-    printReceipt({
-      order: MOCK_ORDER,
-      merchant,
-      settings,
-      language: receiptLanguage || (locale as 'en' | 'id'),
-    });
+      const res = await fetch('/api/merchant/receipt/preview', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: previewRequestBody,
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to generate preview');
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const win = window.open(url, '_blank');
+      if (!win) return;
+      win.onload = () => {
+        win.print();
+        setTimeout(() => {
+          win.close();
+          URL.revokeObjectURL(url);
+        }, 250);
+      };
+    } catch {
+      // Ignore preview print failures
+    }
   };
 
   return (
@@ -256,6 +282,34 @@ export const ReceiptTemplateTab: React.FC<ReceiptTemplateTabProps> = ({
             </div>
           </div>
 
+          {isCompletedEmailPriceConfigured &&
+            !hasSufficientBalanceForCompletedEmail &&
+            !settings.sendCompletedOrderEmailToCustomer && (
+              <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/40 dark:bg-amber-900/10">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <FaExclamationTriangle className="mt-0.5 h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                        {t('admin.receipt.completedEmail.autoDisabledBanner.title')}
+                      </p>
+                      <p className="mt-0.5 text-xs text-amber-800 dark:text-amber-300">
+                        {t('admin.receipt.completedEmail.autoDisabledBanner.message')}
+                      </p>
+                    </div>
+                  </div>
+
+                  <Link
+                    href="/admin/dashboard/subscription/topup"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-700 transition-colors shrink-0"
+                  >
+                    {t('admin.receipt.completedEmail.autoDisabledBanner.topupCta')}
+                    <FaArrowRight className="h-3 w-3" />
+                  </Link>
+                </div>
+              </div>
+            )}
+
           <div className="mt-4">
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
               <div className="flex items-start justify-between gap-4">
@@ -276,7 +330,7 @@ export const ReceiptTemplateTab: React.FC<ReceiptTemplateTabProps> = ({
                   checked={Boolean(settings.sendCompletedOrderEmailToCustomer)}
                   disabled={completedEmailToggleDisabled}
                   onCheckedChange={(next) => {
-                    if (completedEmailToggleDisabled) return;
+                    if (next && !canEnableCompletedEmail) return;
                     onChange({
                       ...settings,
                       sendCompletedOrderEmailToCustomer: next,
@@ -486,12 +540,25 @@ export const ReceiptTemplateTab: React.FC<ReceiptTemplateTabProps> = ({
               className="mx-auto rounded bg-white shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden"
               style={{ width: `${paperWidthPx}px` }}
             >
-              <iframe
-                title="Receipt preview"
-                sandbox="allow-same-origin"
-                srcDoc={generatePreviewHtml()}
-                style={{ width: `${paperWidthPx}px`, height: '720px', border: 0 }}
-              />
+              {previewLoading ? (
+                <div className="flex h-180 w-full items-center justify-center text-sm text-gray-500 dark:text-gray-400">
+                  Generating preview…
+                </div>
+              ) : previewError ? (
+                <div className="flex h-180 w-full items-center justify-center px-4 text-center text-sm text-red-600 dark:text-red-400">
+                  {previewError}
+                </div>
+              ) : previewUrl ? (
+                <iframe
+                  title="Receipt preview"
+                  src={previewUrl}
+                  style={{ width: `${paperWidthPx}px`, height: '720px', border: 0 }}
+                />
+              ) : (
+                <div className="flex h-180 w-full items-center justify-center text-sm text-gray-500 dark:text-gray-400">
+                  Preview unavailable
+                </div>
+              )}
             </div>
           </div>
         </div>

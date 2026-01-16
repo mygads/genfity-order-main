@@ -111,16 +111,19 @@ class EmailService {
 
       // Verify SMTP connectivity once so misconfigurations show up in logs.
       // (Do not block startup; log any issues asynchronously.)
-      this.transporter
-        .verify()
-        .then(() => {
-          if (!isInitialized) {
-            console.log('✅ Email service initialized with SMTP');
-          }
-        })
-        .catch((error) => {
-          console.error('❌ Email service SMTP verify failed:', error);
-        });
+      const maybeVerify = (this.transporter as unknown as { verify?: () => Promise<unknown> })?.verify;
+      if (typeof maybeVerify === 'function') {
+        maybeVerify
+          .call(this.transporter)
+          .then(() => {
+            if (!isInitialized) {
+              console.log('✅ Email service initialized with SMTP');
+            }
+          })
+          .catch((error) => {
+            console.error('❌ Email service SMTP verify failed:', error);
+          });
+      }
 
       // Only log once in development to avoid spam
       if (!isInitialized) {

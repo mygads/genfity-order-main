@@ -35,6 +35,7 @@ import subscriptionHistoryService from '@/lib/services/SubscriptionHistoryServic
 import CustomerPushService from '@/lib/services/CustomerPushService';
 import { shouldSendCustomerEmail } from '@/lib/utils/emailGuards';
 import { getCurrentTimeInTimezone } from '@/lib/utils/storeStatus';
+import userNotificationService from '@/lib/services/UserNotificationService';
 
 type TxClient = Prisma.TransactionClient;
 
@@ -49,6 +50,9 @@ function redactEmailForLogs(email: string): string {
 }
 
 export class OrderManagementService {
+  private static readonly COMPLETED_EMAIL_AUTO_DISABLE_NOTIFICATION_TITLE = 'Completed-order emails disabled';
+  private static readonly COMPLETED_EMAIL_AUTO_DISABLE_NOTIFICATION_COOLDOWN_MS = 60 * 60 * 1000; // 1 hour
+
   private static async deductStockForScheduledOrderOnAccept(
     tx: TxClient,
     orderId: bigint,
@@ -531,6 +535,72 @@ export class OrderManagementService {
                 console.warn(
                   `ℹ️ [Order ${order.orderNumber}] Completed email skipped: insufficient balance (${currentBalance} < ${completedEmailFee})`
                 );
+
+                // Auto-disable paid completed-order emails when balance becomes insufficient.
+                // This prevents repeated failures and matches the UI gating done when enabling.
+                try {
+                  const currentReceiptSettings = (updated.merchant as any)?.receiptSettings as any;
+                  const wasEnabled = Boolean(currentReceiptSettings?.sendCompletedOrderEmailToCustomer);
+
+                  if (wasEnabled) {
+                    const nextReceiptSettings = {
+                      ...(currentReceiptSettings || {}),
+                      sendCompletedOrderEmailToCustomer: false,
+                    };
+
+                    await prisma.merchant.update({
+                      where: { id: order.merchantId },
+                      data: {
+                        receiptSettings: JSON.parse(JSON.stringify(nextReceiptSettings)),
+                      },
+                      select: { id: true },
+                    });
+
+                    const cutoff = new Date(
+                      Date.now() - OrderManagementService.COMPLETED_EMAIL_AUTO_DISABLE_NOTIFICATION_COOLDOWN_MS
+                    );
+
+                    const hasRecentNotification = await prisma.userNotification.findFirst({
+                      where: {
+                        merchantId: order.merchantId,
+                        category: 'SUBSCRIPTION',
+                        title: OrderManagementService.COMPLETED_EMAIL_AUTO_DISABLE_NOTIFICATION_TITLE,
+                        createdAt: {
+                          gte: cutoff,
+                        },
+                      },
+                      select: { id: true },
+                    });
+
+                    if (!hasRecentNotification) {
+                      await userNotificationService.createForMerchant(
+                        order.merchantId,
+                        'SUBSCRIPTION',
+                        OrderManagementService.COMPLETED_EMAIL_AUTO_DISABLE_NOTIFICATION_TITLE,
+                        `We disabled completed-order customer emails because your balance is insufficient (${currentBalance} < ${completedEmailFee}). Please top up to re-enable this feature.`,
+                        {
+                          actionUrl: '/admin/dashboard/subscription/topup',
+                          metadata: {
+                            type: 'COMPLETED_ORDER_EMAIL_DISABLED_LOW_BALANCE',
+                            feature: 'completed_order_email',
+                            currentBalance,
+                            requiredFee: completedEmailFee,
+                            currency,
+                          },
+                        }
+                      );
+                    }
+
+                    console.log(
+                      `ℹ️ [Order ${order.orderNumber}] Auto-disabled completed-order emails due to insufficient balance`
+                    );
+                  }
+                } catch (autoDisableError) {
+                  console.error(
+                    `[Order ${order.orderNumber}] Failed to auto-disable completed-order emails on low balance:`,
+                    autoDisableError
+                  );
+                }
               } else {
                 const sent = await emailService.sendOrderCompleted({
                   to: completedCustomerEmail,
