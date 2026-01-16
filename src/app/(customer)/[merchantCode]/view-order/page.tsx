@@ -17,6 +17,7 @@ import UpsellSection from '@/components/customer/UpsellSection';
 import { customerOrderUrl } from '@/lib/utils/customerRoutes';
 import AlertDialog from '@/components/modals/AlertDialog';
 import { FaArrowLeft, FaCheckCircle, FaChevronDown, FaEdit, FaExclamationTriangle, FaMinusCircle, FaPlusCircle, FaStickyNote, FaTrash } from 'react-icons/fa';
+import OrderTotalsBreakdown from '@/components/orders/OrderTotalsBreakdown';
 
 interface MenuItem {
   id: string;
@@ -118,7 +119,7 @@ export default function ViewOrderPage() {
       if (contextMerchantInfo.enableServiceCharge) {
         setMerchantServiceChargePercent(Number(contextMerchantInfo.serviceChargePercent) || 0);
       }
-      if (contextMerchantInfo.enablePackagingFee && mode === 'takeaway') {
+      if (contextMerchantInfo.enablePackagingFee && (mode === 'takeaway' || mode === 'delivery')) {
         setMerchantPackagingFee(Number(contextMerchantInfo.packagingFeeAmount) || 0);
       }
       setMerchantCurrency(contextMerchantInfo.currency || 'AUD');
@@ -445,7 +446,11 @@ export default function ViewOrderPage() {
             <span className="text-gray-700">{t('order.type')}</span>
             <div className="flex items-center gap-2">
               <span className="font-medium text-gray-900">
-                {mode === 'dinein' ? t('customer.mode.dineIn') : t('customer.mode.pickUp')}
+                {mode === 'dinein'
+                  ? t('customer.mode.dineIn')
+                  : mode === 'delivery'
+                    ? t('customer.mode.delivery')
+                    : t('customer.mode.pickUp')}
               </span>
               <FaCheckCircle style={{ width: '18px', height: '18px', color: '#212529' }} />
             </div>
@@ -853,58 +858,34 @@ export default function ViewOrderPage() {
 
                   {/* Expandable Fee Details */}
                   {showOtherFees && (
-                    <div>
-                      {taxAmount > 0 && (
-                        <div
-                          className="flex items-center justify-between"
-                          style={{
-                            fontSize: '0.9rem',
-                            fontWeight: 500,
-                            color: '#aeb3be',
-                            borderBottom: '1px dashed #e4e7ec',
-                            paddingTop: '10px',
-                            paddingBottom: '10px',
-                            paddingLeft: '5px'
-                          }}
-                        >
-                          <span className="flex-grow">Incl. Tax</span>
-                          <span>{formatCurrency(taxAmount, merchantCurrency)}</span>
-                        </div>
-                      )}
-                      {serviceChargeAmount > 0 && (
-                        <div
-                          className="flex items-center justify-between"
-                          style={{
-                            fontSize: '0.9rem',
-                            fontWeight: 500,
-                            color: '#aeb3be',
-                            borderBottom: '1px dashed #e4e7ec',
-                            paddingTop: '10px',
-                            paddingBottom: '10px',
-                            paddingLeft: '5px'
-                          }}
-                        >
-                          <span className="flex-grow">Service ({merchantServiceChargePercent}%)</span>
-                          <span>{formatCurrency(serviceChargeAmount, merchantCurrency)}</span>
-                        </div>
-                      )}
-                      {packagingFeeAmount > 0 && (
-                        <div
-                          className="flex items-center justify-between"
-                          style={{
-                            fontSize: '0.9rem',
-                            fontWeight: 500,
-                            color: '#aeb3be',
-                            borderBottom: '1px dashed #e4e7ec',
-                            paddingTop: '10px',
-                            paddingBottom: '10px',
-                            paddingLeft: '5px'
-                          }}
-                        >
-                          <span className="flex-grow">Packaging</span>
-                          <span>{formatCurrency(packagingFeeAmount, merchantCurrency)}</span>
-                        </div>
-                      )}
+                    <div className="pt-2">
+                      <OrderTotalsBreakdown
+                        amounts={{
+                          subtotal: 0,
+                          taxAmount,
+                          serviceChargeAmount,
+                          packagingFeeAmount,
+                          deliveryFeeAmount: 0,
+                          discountAmount: 0,
+                          totalAmount: 0,
+                        }}
+                        currency={merchantCurrency}
+                        labels={{
+                          tax: t('customer.payment.inclTax'),
+                          serviceCharge: t('customer.payment.serviceCharge'),
+                          packagingFee: t('customer.payment.packagingFee'),
+                        }}
+                        options={{
+                          showSubtotal: false,
+                          showDeliveryFee: false,
+                          showDiscount: false,
+                        }}
+                        showTotalRow={false}
+                        rowsContainerClassName="text-sm"
+                        rowClassName="flex justify-between items-center py-2 border-b border-dashed border-[#e4e7ec]"
+                        labelClassName="text-[#aeb3be] font-normal"
+                        valueClassName="font-semibold text-[#212529]"
+                      />
                     </div>
                   )}
                 </div>

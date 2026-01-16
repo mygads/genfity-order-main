@@ -19,6 +19,7 @@ import { formatCurrency as formatCurrencyUtil } from '@/lib/utils/format';
 import { useTranslation, tOr } from '@/lib/i18n/useTranslation';
 import { FaArrowLeft, FaCheckCircle, FaChevronDown, FaClock, FaEnvelope, FaExclamationCircle, FaPhone, FaTable, FaTag, FaToggleOff, FaToggleOn, FaUser, FaUsers } from 'react-icons/fa';
 import ReservationDetailsModal, { type ReservationDetails } from '@/components/customer/ReservationDetailsModal';
+import OrderTotalsBreakdown from '@/components/orders/OrderTotalsBreakdown';
 
 function isValidHHMM(value: string): boolean {
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
@@ -495,7 +496,7 @@ export default function PaymentPage() {
       if (contextMerchantInfo.enableServiceCharge) {
         setMerchantServiceChargePercent(Number(contextMerchantInfo.serviceChargePercent) || 0);
       }
-      if (contextMerchantInfo.enablePackagingFee && mode === 'takeaway') {
+      if (contextMerchantInfo.enablePackagingFee && (mode === 'takeaway' || mode === 'delivery')) {
         setMerchantPackagingFee(Number(contextMerchantInfo.packagingFeeAmount) || 0);
       }
       setMerchantCurrency(contextMerchantInfo.currency || 'AUD');
@@ -679,6 +680,18 @@ export default function PaymentPage() {
       }
       if (deliveryLatitude === null || deliveryLongitude === null) {
         errors.deliveryAddress = t('customer.payment.error.deliveryLocationRequired') || 'Please pick delivery location on map';
+        if (!firstInvalidRef) firstInvalidRef = null;
+      }
+
+      // Block placing delivery orders when zone / max-range validation fails.
+      if (deliveryFeeError) {
+        errors.deliveryAddress = deliveryFeeError;
+        if (!firstInvalidRef) firstInvalidRef = null;
+      }
+
+      // Merchant may not support delivery.
+      if (!isDeliveryAvailable) {
+        errors.deliveryAddress = tOr(t, 'customer.delivery.notAvailable', 'Delivery is not available for this merchant.');
         if (!firstInvalidRef) firstInvalidRef = null;
       }
     }
@@ -1636,63 +1649,42 @@ export default function PaymentPage() {
         {/* Detail Payment Section (shown when expanded) */}
         {showPaymentDetails && (
           <div className="flex flex-col px-4 pt-4 mt-2 mx-2">
-            {/* Tax Row */}
-            {taxAmount > 0 && (
-              <div
-                className="flex mb-1"
-                style={{ fontSize: '0.9rem', color: '#AEB3BE' }}
-              >
-                <div className="grow">{t('customer.payment.inclTax')}</div>
-                <div>{formatCurrency(taxAmount)}</div>
-              </div>
-            )}
-            {/* Service Charge Row */}
-            {serviceChargeAmount > 0 && (
-              <div
-                className="flex mb-1"
-                style={{ fontSize: '0.9rem', color: '#AEB3BE' }}
-              >
-                <div className="grow">{t('customer.payment.serviceCharge')}</div>
-                <div>{formatCurrency(serviceChargeAmount)}</div>
-              </div>
-            )}
-            {/* Packaging Fee Row */}
-            {packagingFeeAmount > 0 && (
-              <div
-                className="flex mb-1"
-                style={{ fontSize: '0.9rem', color: '#AEB3BE' }}
-              >
-                <div className="grow">{t('customer.payment.packagingFee')}</div>
-                <div>{formatCurrency(packagingFeeAmount)}</div>
-              </div>
-            )}
-            {/* ✅ NEW: Delivery Fee Row */}
-            {mode === 'delivery' && deliveryFee > 0 && (
-              <div
-                className="flex mb-1"
-                style={{ fontSize: '0.9rem', color: '#AEB3BE' }}
-              >
-                <div className="grow">{t('customer.delivery.fee') || 'Delivery Fee'}</div>
-                <div>{formatCurrency(deliveryFee)}</div>
-              </div>
-            )}
-
-            {/* Voucher Discount Row */}
-            {voucherDiscountApplied > 0 && (
-              <div
-                className="flex mb-1"
-                style={{ fontSize: '0.9rem', color: '#AEB3BE' }}
-              >
-                <div className="grow">
-                  {(() => {
-                    const base = tOr(t, 'customer.payment.voucher.discount', 'Voucher discount');
-                    const parts = [voucherLabel || null, voucherTypeLabel || null].filter(Boolean).join(' • ');
-                    return parts ? `${base} (${parts})` : base;
-                  })()}
-                </div>
-                <div>-{formatCurrency(voucherDiscountApplied)}</div>
-              </div>
-            )}
+            <OrderTotalsBreakdown
+              amounts={{
+                subtotal: 0,
+                taxAmount,
+                serviceChargeAmount,
+                packagingFeeAmount,
+                deliveryFeeAmount: mode === 'delivery' ? deliveryFee : 0,
+                discountAmount: voucherDiscountApplied,
+                totalAmount: 0,
+              }}
+              currency={merchantCurrency}
+              locale={locale}
+              formatAmount={formatCurrency}
+              labels={{
+                tax: tOr(t, 'customer.payment.inclTax', 'Tax'),
+                serviceCharge: tOr(t, 'customer.payment.serviceCharge', 'Service Charge'),
+                packagingFee: tOr(t, 'customer.payment.packagingFee', 'Packaging Fee'),
+                deliveryFee: tOr(t, 'customer.delivery.fee', 'Delivery Fee'),
+                discount: (() => {
+                  const base = tOr(t, 'customer.payment.voucher.discount', 'Voucher discount');
+                  const parts = [voucherLabel || null, voucherTypeLabel || null].filter(Boolean).join(' • ');
+                  return parts ? `${base} (${parts})` : base;
+                })(),
+              }}
+              options={{
+                showSubtotal: false,
+                showDeliveryFee: mode === 'delivery',
+                hideZero: true,
+              }}
+              showTotalRow={false}
+              rowsContainerClassName="text-sm"
+              rowClassName="flex mb-1"
+              labelClassName="grow"
+              valueClassName=""
+              discountValueClassName=""
+            />
           </div>
         )}
 
@@ -1728,7 +1720,16 @@ export default function PaymentPage() {
           <button
             type="button"
             onClick={handleFormSubmit}
-            disabled={isLoading}
+            disabled={
+              isLoading ||
+              (mode === 'delivery' && (
+                !isDeliveryAvailable ||
+                !deliveryAddress.trim() ||
+                deliveryLatitude === null ||
+                deliveryLongitude === null ||
+                Boolean(deliveryFeeError)
+              ))
+            }
             className="w-1/2 py-3 text-white font-semibold rounded-lg transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
               backgroundColor: '#f05a28',

@@ -48,6 +48,8 @@ export default function DeliveryFeePreview({
         setFee(null);
         setDistance(null);
         setError('');
+        if (onError) onError('');
+        if (onFeeCalculated) onFeeCalculated(0);
         return;
       }
 
@@ -75,6 +77,7 @@ export default function DeliveryFeePreview({
           const errorMessage = data.message || 'Failed to calculate delivery fee';
           setError(errorMessage);
           if (onError) onError(errorMessage);
+          if (onFeeCalculated) onFeeCalculated(0);
           setFee(null);
           setDistance(null);
           return;
@@ -82,11 +85,13 @@ export default function DeliveryFeePreview({
 
         setFee(data.data.feeAmount);
         setDistance(data.data.distanceKm);
+        if (onError) onError('');
         if (onFeeCalculated) onFeeCalculated(data.data.feeAmount);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to calculate delivery fee';
         setError(errorMessage);
         if (onError) onError(errorMessage);
+        if (onFeeCalculated) onFeeCalculated(0);
         setFee(null);
         setDistance(null);
       } finally {

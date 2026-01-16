@@ -38,7 +38,12 @@ export const KitchenOrderCard: React.FC<KitchenOrderCardProps> = ({
   const hasOrderItems = 'orderItems' in order && Array.isArray(order.orderItems);
   const items = hasOrderItems ? order.orderItems : [];
 
-  const displayNotes = String(((order as any).kitchenNotes ?? order.notes) ?? '').trim();
+  const customerNotes = String(order.notes ?? '').trim();
+  const kitchenNotes = String((order as any).kitchenNotes ?? '').trim();
+
+  const hasCustomerNotes = customerNotes.length > 0;
+  const hasKitchenNotes = kitchenNotes.length > 0;
+  const showCombinedNotes = hasCustomerNotes && hasKitchenNotes && customerNotes === kitchenNotes;
 
   return (
     <div
@@ -169,17 +174,52 @@ export const KitchenOrderCard: React.FC<KitchenOrderCardProps> = ({
         )}
       </div>
 
-      {/* Order Notes (customer + admin combined) */}
-      {displayNotes && (
+      {/* Notes */}
+      {showCombinedNotes ? (
         <div className="mb-3 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/40 rounded-lg">
           <div className="flex items-start gap-2">
             <FaStickyNote className="h-3.5 w-3.5 text-amber-700 dark:text-amber-400 mt-0.5 shrink-0" />
-            <p className="text-xs font-semibold text-amber-900 dark:text-amber-200 wrap-break-word">
-              {displayNotes}
-            </p>
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-300">Notes</p>
+              <p className="text-xs font-semibold text-amber-900 dark:text-amber-200 wrap-break-word">
+                {customerNotes}
+              </p>
+            </div>
           </div>
         </div>
-      )}
+      ) : null}
+
+      {!showCombinedNotes && (hasCustomerNotes || hasKitchenNotes) ? (
+        <div className="mb-3 space-y-2">
+          {hasCustomerNotes ? (
+            <div className="p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/40 rounded-lg">
+              <div className="flex items-start gap-2">
+                <FaStickyNote className="h-3.5 w-3.5 text-amber-700 dark:text-amber-400 mt-0.5 shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-300">Customer note</p>
+                  <p className="text-xs font-semibold text-amber-900 dark:text-amber-200 wrap-break-word">
+                    {customerNotes}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {hasKitchenNotes ? (
+            <div className="p-2 bg-slate-50 dark:bg-slate-900/20 border border-slate-200 dark:border-slate-900/40 rounded-lg">
+              <div className="flex items-start gap-2">
+                <FaStickyNote className="h-3.5 w-3.5 text-slate-700 dark:text-slate-400 mt-0.5 shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Admin note</p>
+                  <p className="text-xs font-semibold text-slate-900 dark:text-slate-200 wrap-break-word">
+                    {kitchenNotes}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       {/* Action Buttons - Compact */}
       {showActions && (

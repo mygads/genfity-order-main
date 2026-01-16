@@ -129,7 +129,9 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
 
   const taxAmount = enableTax ? subtotal * (taxPercentage / 100) : 0;
   const serviceChargeAmount = enableServiceCharge ? subtotal * (serviceChargePercent / 100) : 0;
-  const packagingFee = (orderType === 'TAKEAWAY' && enablePackagingFee) ? packagingFeeAmount : 0;
+  const packagingFee = ((orderType === 'TAKEAWAY' || String(orderType) === 'DELIVERY') && enablePackagingFee)
+    ? packagingFeeAmount
+    : 0;
   const total = subtotal + taxAmount + serviceChargeAmount + packagingFee;
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
 

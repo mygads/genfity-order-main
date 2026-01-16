@@ -357,7 +357,7 @@ export const GET = withCustomer(async (
         : 0;
       const serviceChargeAmount = round2(subtotal * (serviceChargePercent / 100));
 
-      const packagingFeeAmount = (orderType === 'TAKEAWAY' && reservation.merchant.enablePackagingFee && reservation.merchant.packagingFeeAmount)
+      const packagingFeeAmount = ((orderType === 'TAKEAWAY' || orderType === 'DELIVERY') && reservation.merchant.enablePackagingFee && reservation.merchant.packagingFeeAmount)
         ? round2(Number(reservation.merchant.packagingFeeAmount))
         : 0;
 

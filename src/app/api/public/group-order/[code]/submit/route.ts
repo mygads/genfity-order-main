@@ -284,7 +284,7 @@ export async function POST(req: NextRequest, context: RouteParams) {
             : 0;
         const serviceChargeAmount = round2(subtotal * (serviceChargePercent / 100));
 
-        const packagingFeeAmount = (session.orderType === 'TAKEAWAY' && merchant.enablePackagingFee && merchant.packagingFeeAmount)
+        const packagingFeeAmount = ((session.orderType === 'TAKEAWAY' || session.orderType === 'DELIVERY') && merchant.enablePackagingFee && merchant.packagingFeeAmount)
             ? round2(Number(merchant.packagingFeeAmount))
             : 0;
 

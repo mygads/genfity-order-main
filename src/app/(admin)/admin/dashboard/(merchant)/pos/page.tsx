@@ -770,7 +770,7 @@ export default function POSPage() {
     const serviceCharge = merchantSettings?.enableServiceCharge
       ? subtotal * ((merchantSettings.serviceChargePercent || 0) / 100)
       : 0;
-    const packagingFee = (orderType === 'TAKEAWAY' && merchantSettings?.enablePackagingFee)
+    const packagingFee = ((orderType === 'TAKEAWAY' || String(orderType) === 'DELIVERY') && merchantSettings?.enablePackagingFee)
       ? (merchantSettings.packagingFeeAmount || 0)
       : 0;
 
@@ -917,7 +917,7 @@ export default function POSPage() {
         const serviceChargeAmount = merchantSettings?.enableServiceCharge
           ? subtotal * ((merchantSettings.serviceChargePercent || 0) / 100)
           : 0;
-        const packagingFeeAmount = (orderType === 'TAKEAWAY' && merchantSettings?.enablePackagingFee)
+        const packagingFeeAmount = ((orderType === 'TAKEAWAY' || String(orderType) === 'DELIVERY') && merchantSettings?.enablePackagingFee)
           ? (merchantSettings.packagingFeeAmount || 0)
           : 0;
 
@@ -1106,7 +1106,7 @@ export default function POSPage() {
     const serviceChargeAmount = merchantSettings?.enableServiceCharge
       ? subtotal * ((merchantSettings.serviceChargePercent || 0) / 100)
       : 0;
-    const packagingFeeAmount = (orderType === 'TAKEAWAY' && merchantSettings?.enablePackagingFee)
+    const packagingFeeAmount = ((orderType === 'TAKEAWAY' || String(orderType) === 'DELIVERY') && merchantSettings?.enablePackagingFee)
       ? (merchantSettings.packagingFeeAmount || 0)
       : 0;
 

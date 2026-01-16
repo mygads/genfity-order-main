@@ -839,7 +839,7 @@ export async function POST(req: NextRequest) {
     orderLog(`💰 [ORDER CALC] Service Charge (${serviceChargePercent}% on ${subtotal}): ${serviceChargeAmount}`);
 
     // Packaging fee (only for TAKEAWAY orders)
-    const packagingFeeAmount = (body.orderType === 'TAKEAWAY' && merchant.enablePackagingFee && merchant.packagingFeeAmount)
+    const packagingFeeAmount = ((body.orderType === 'TAKEAWAY' || body.orderType === 'DELIVERY') && merchant.enablePackagingFee && merchant.packagingFeeAmount)
       ? round2(Number(merchant.packagingFeeAmount))
       : 0;
     orderLog(`💰 [ORDER CALC] Packaging Fee: ${packagingFeeAmount} (orderType: ${body.orderType})`);

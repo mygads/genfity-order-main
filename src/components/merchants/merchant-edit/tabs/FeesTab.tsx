@@ -1,5 +1,7 @@
 import React from 'react';
 
+import type { TranslationKeys } from '@/lib/i18n';
+import { useTranslation, tOr } from '@/lib/i18n/useTranslation';
 import type { MerchantFormData } from '@/components/merchants/merchant-edit/types';
 import SettingsCard from '@/components/merchants/merchant-edit/ui/SettingsCard';
 import Switch from '@/components/ui/Switch';
@@ -12,6 +14,8 @@ export interface FeesTabProps {
 }
 
 export default function FeesTab({ formData, setFormData }: FeesTabProps) {
+  const { t } = useTranslation();
+
   const currency = formData.currency || 'AUD';
   const currencyConfig = getCurrencyConfig(currency);
   const decimals = currencyConfig?.decimals ?? 2;
@@ -20,26 +24,36 @@ export default function FeesTab({ formData, setFormData }: FeesTabProps) {
   return (
     <div className="space-y-6">
       <SettingsCard
-        title="Fees & charges"
-        description="Configure tax, service charge, and packaging fees that apply to customer orders."
+        title={tOr(t, 'admin.merchantEdit.feesChargesTitle' as TranslationKeys, 'Fees & charges')}
+        description={tOr(
+          t,
+          'admin.merchantEdit.feesChargesDesc' as TranslationKeys,
+          'Configure tax, service charge, and packaging fees that apply to customer orders.'
+        )}
       >
         <div className="space-y-4">
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/40">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">Tax</p>
-                <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Apply a percentage-based tax to all orders.</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                  {tOr(t, 'admin.merchantEdit.fee.taxTitle' as TranslationKeys, 'Tax')}
+                </p>
+                <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                  {tOr(t, 'admin.merchantEdit.fee.taxDesc' as TranslationKeys, 'Apply a percentage-based tax to all orders.')}
+                </p>
               </div>
               <Switch
                 checked={formData.enableTax}
                 onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, enableTax: checked }))}
-                aria-label="Enable tax"
+                aria-label={tOr(t, 'admin.merchantEdit.enableTax' as TranslationKeys, 'Enable tax')}
               />
             </div>
             {formData.enableTax ? (
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">Tax percentage</label>
+                  <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">
+                    {tOr(t, 'admin.merchantEdit.taxPercentage' as TranslationKeys, 'Tax percentage')}
+                  </label>
                   <div className="relative">
                     <input
                       type="number"
@@ -60,19 +74,33 @@ export default function FeesTab({ formData, setFormData }: FeesTabProps) {
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/40">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">Service charge</p>
-                <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Add a percentage-based service charge to all orders.</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                  {tOr(t, 'admin.merchantEdit.fee.serviceChargeTitle' as TranslationKeys, 'Service charge')}
+                </p>
+                <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                  {tOr(
+                    t,
+                    'admin.merchantEdit.fee.serviceChargeDesc' as TranslationKeys,
+                    'Add a percentage-based service charge to all orders.'
+                  )}
+                </p>
               </div>
               <Switch
                 checked={formData.enableServiceCharge}
                 onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, enableServiceCharge: checked }))}
-                aria-label="Enable service charge"
+                aria-label={tOr(t, 'admin.merchantEdit.enableServiceCharge' as TranslationKeys, 'Enable service charge')}
               />
             </div>
             {formData.enableServiceCharge ? (
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">Service charge percentage</label>
+                  <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">
+                    {tOr(
+                      t,
+                      'admin.merchantEdit.chargePercentage' as TranslationKeys,
+                      'Service charge percentage'
+                    )}
+                  </label>
                   <div className="relative">
                     <input
                       type="number"
@@ -98,19 +126,36 @@ export default function FeesTab({ formData, setFormData }: FeesTabProps) {
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/40" data-tutorial="fees-packaging-fee">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">Packaging fee</p>
-                <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Add a fixed fee per order (commonly used for takeaway packaging).</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                  {tOr(t, 'admin.merchantEdit.fee.packagingFeeTitle' as TranslationKeys, 'Packaging fee')}
+                </p>
+                <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                  {tOr(
+                    t,
+                    'admin.merchantEdit.fee.packagingFeeDesc' as TranslationKeys,
+                    'Add a fixed fee per order.'
+                  )}
+                </p>
+                <p className="mt-1 text-xs font-medium text-gray-700 dark:text-gray-300">
+                  {tOr(
+                    t,
+                    'admin.merchantEdit.packagingFeeDesc' as TranslationKeys,
+                    'Applied to takeaway and delivery orders'
+                  )}
+                </p>
               </div>
               <Switch
                 checked={formData.enablePackagingFee}
                 onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, enablePackagingFee: checked }))}
-                aria-label="Enable packaging fee"
+                aria-label={tOr(t, 'admin.merchantEdit.enablePackagingFee' as TranslationKeys, 'Enable packaging fee')}
               />
             </div>
             {formData.enablePackagingFee ? (
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">Packaging fee amount</label>
+                  <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">
+                    {tOr(t, 'admin.merchantEdit.feeAmount' as TranslationKeys, 'Packaging fee amount')}
+                  </label>
                   <input
                     type="number"
                     min={0}
@@ -120,7 +165,8 @@ export default function FeesTab({ formData, setFormData }: FeesTabProps) {
                     className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
                   />
                   <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
-                    Preview: {formatCurrency(formData.packagingFeeAmount || 0, currency)}
+                    {tOr(t, 'admin.merchantEdit.fee.preview' as TranslationKeys, 'Preview')}:{' '}
+                    {formatCurrency(formData.packagingFeeAmount || 0, currency)}
                   </p>
                 </div>
               </div>
