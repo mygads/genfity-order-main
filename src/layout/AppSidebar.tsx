@@ -119,12 +119,6 @@ const superAdminNavGroups: NavGroup[] = [
         roles: ["SUPER_ADMIN"],
       },
       {
-        icon: <FaExchangeAlt />,
-        nameKey: "admin.nav.transactions",
-        path: "/admin/dashboard/transactions",
-        roles: ["SUPER_ADMIN"],
-      },
-      {
         icon: <FaWallet />,
         nameKey: "admin.nav.merchantBalance",
         path: "/admin/dashboard/merchant-balance",
@@ -168,6 +162,12 @@ const superAdminNavGroups: NavGroup[] = [
         icon: <FaChartPie />,
         nameKey: "admin.nav.analytics",
         path: "/admin/dashboard/analytics",
+        roles: ["SUPER_ADMIN"],
+      },
+      {
+        icon: <FaExchangeAlt />,
+        nameKey: "admin.nav.transactions",
+        path: "/admin/dashboard/transactions",
         roles: ["SUPER_ADMIN"],
       },
     ],

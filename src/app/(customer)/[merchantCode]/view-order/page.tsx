@@ -61,6 +61,12 @@ export default function ViewOrderPage() {
   const isScheduledFlow = scheduled === '1' || scheduled === 'true';
   const isGroupOrderCheckout = searchParams.get('groupOrder') === 'true';
 
+  const orderUrl = customerOrderUrl(merchantCode, {
+    mode,
+    ...(isReservationFlow ? { flow: 'reservation' } : {}),
+    ...(isScheduledFlow ? { scheduled: 1 } : {}),
+  });
+
   const { cart, updateItem, removeItem, initializeCart, addItem } = useCart();
   const { isInGroupOrder: _isInGroupOrder, isHost, session } = useGroupOrder();
 
@@ -137,15 +143,15 @@ export default function ViewOrderPage() {
     if (isGroupOrderCheckout) {
       // For group order, check if we have session items
       if (!isLoading && (!session || !isHost)) {
-        router.push(customerOrderUrl(merchantCode, { mode }));
+        router.push(orderUrl);
       }
     } else {
       // Normal checkout - check cart
       if (!isLoading && (!cart || cart.items.length === 0)) {
-        router.push(customerOrderUrl(merchantCode, { mode }));
+        router.push(orderUrl);
       }
     }
-  }, [cart, isLoading, merchantCode, mode, router, isGroupOrderCheckout, session, isHost]);
+  }, [cart, isLoading, router, isGroupOrderCheckout, session, isHost, orderUrl]);
 
   const updateQuantity = (cartItemId: string, newQuantity: number, itemName?: string) => {
     if (!cart) return;
@@ -327,7 +333,7 @@ export default function ViewOrderPage() {
   };
 
   const handleAddItem = () => {
-    router.push(customerOrderUrl(merchantCode, { mode }));
+    router.push(orderUrl);
   };
 
   const handleEditItem = async (item: CartItem) => {
@@ -390,7 +396,7 @@ export default function ViewOrderPage() {
       <header className="sticky top-0 z-10 bg-white border-b border-gray-300 shadow-md">
         <div className="flex items-center px-4 py-3">
           <button
-            onClick={() => router.push(customerOrderUrl(merchantCode, { mode }))}
+            onClick={() => router.push(orderUrl)}
             className="w-10 h-10 flex items-center justify-center -ml-2"
             aria-label="Back"
           >

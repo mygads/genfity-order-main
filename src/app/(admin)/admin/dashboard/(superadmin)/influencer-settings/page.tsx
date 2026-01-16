@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
+import ToastContainer from "@/components/ui/ToastContainer";
 import { useToast } from "@/hooks/useToast";
 import { useSWRStatic } from "@/hooks/useSWRWithAuth";
 import { useSWRConfig } from "swr";
@@ -32,7 +33,7 @@ interface ApiResponse<T> {
  */
 export default function InfluencerSettingsPage() {
     const { t } = useTranslation();
-    const { success: showSuccess, error: showError } = useToast();
+    const { toasts, success: showSuccess, error: showError } = useToast();
     const { mutate } = useSWRConfig();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [activeTab, setActiveTab] = useState<'commission' | 'withdrawal' | 'merchantWithdrawal'>('commission');
@@ -122,9 +123,15 @@ export default function InfluencerSettingsPage() {
         <div>
             <PageBreadcrumb pageTitle={t("admin.influencerSettings.title")} />
 
-            <div className="max-w-3xl">
+            <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6">
+                <div className="mb-5">
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
+                        {t("admin.influencerSettings.title")}
+                    </h3>
+                </div>
+
                 {/* Tabs */}
-                <div className="flex gap-2 mb-6 flex-wrap">
+                <div className="mb-6 flex flex-wrap gap-2">
                     <button
                         onClick={() => setActiveTab('commission')}
                         className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2
@@ -413,6 +420,8 @@ export default function InfluencerSettingsPage() {
                     </div>
                 )}
             </div>
+
+            <ToastContainer toasts={toasts} />
         </div>
     );
 }

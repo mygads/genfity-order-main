@@ -360,7 +360,7 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
 
             {/* Reservation CTA (separate from ordering modes) */}
             {isReservationEnabled && (
-                <div className={`px-3 mb-6 ${!storeOpen ? 'opacity-80' : ''}`}>
+                <div className="px-3 mb-6">
                     <div className="text-center">
                                                 <h3 className="my-4 mb-2 text-md font-semibold text-gray-900">
                                                     {tOr(t, 'customer.reservation.ctaTitle', 'Book a table?')}
@@ -369,10 +369,7 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                         <button
                             id="mode-reservation"
                             onClick={handleReservationSelect}
-                            className={`w-full h-12 border rounded-lg text-base font-medium transition-colors duration-200 shadow-lg flex items-center justify-center gap-2 ${storeOpen
-                                ? 'border-gray-300 bg-white text-gray-900 hover:bg-gray-50'
-                                : 'border-gray-200 text-gray-700 bg-gray-100'
-                                }`}
+                            className="w-full h-12 border rounded-lg text-base font-medium transition-colors duration-200 shadow-lg flex items-center justify-center gap-2 border-gray-300 bg-white text-gray-900 hover:bg-gray-50"
                         >
                             <span>{tOr(t, 'customer.reservation.ctaButton', 'Reservation')}</span>
                         </button>

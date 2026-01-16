@@ -358,19 +358,6 @@ export default function VouchersPage() {
     };
 
     // Get status badge
-    const getStatusBadge = (voucher: Voucher) => {
-        if (!voucher.isActive) {
-            return <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">{t("admin.voucher.inactive")}</span>;
-        }
-        if (voucher.validUntil && new Date(voucher.validUntil) < new Date()) {
-            return <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">{t("admin.voucher.expired")}</span>;
-        }
-        if (voucher.maxUsage && voucher.currentUsage >= voucher.maxUsage) {
-            return <span className="px-2 py-1 text-xs font-medium rounded-full bg-brand-100 text-brand-600 dark:bg-brand-900/30 dark:text-brand-400">{t("admin.voucher.fullyUsed")}</span>;
-        }
-        return <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400">{t("admin.voucher.active")}</span>;
-    };
-
     // Get currency label
     const getCurrencyLabel = (currency: string | null) => {
         if (!currency) return t("admin.voucher.currencyUniversal");
@@ -631,7 +618,15 @@ export default function VouchersPage() {
                                                     </div>
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    {getStatusBadge(voucher)}
+                                                    <StatusToggle
+                                                        isActive={voucher.isActive}
+                                                        onToggle={() => handleToggleActive(voucher)}
+                                                        activeLabel={t('common.active')}
+                                                        inactiveLabel={t('common.inactive')}
+                                                        activateTitle={t("admin.voucher.action.activate")}
+                                                        deactivateTitle={t("admin.voucher.action.deactivate")}
+                                                        size="sm"
+                                                    />
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <div className="flex items-center justify-end gap-2">
@@ -640,15 +635,6 @@ export default function VouchersPage() {
                                                             onClick={() => openEditModal(voucher)}
                                                             aria-label={t("common.edit")}
                                                             title={t("common.edit")}
-                                                        />
-                                                        <StatusToggle
-                                                            isActive={voucher.isActive}
-                                                            onToggle={() => handleToggleActive(voucher)}
-                                                            activeLabel={t('common.active')}
-                                                            inactiveLabel={t('common.inactive')}
-                                                            activateTitle={t("admin.voucher.action.activate")}
-                                                            deactivateTitle={t("admin.voucher.action.deactivate")}
-                                                            size="sm"
                                                         />
                                                         <TableActionButton
                                                             icon={FaTrash}

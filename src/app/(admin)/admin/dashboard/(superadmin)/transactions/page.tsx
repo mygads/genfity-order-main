@@ -8,6 +8,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
+import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import {
   FaArrowCircleDown,
   FaArrowCircleUp,
@@ -253,8 +254,10 @@ export default function TransactionsPage() {
   const totalPages = Math.ceil(pagination.total / pagination.limit);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+    <div>
+      <PageBreadcrumb pageTitle="All Transactions" />
+
+      <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6">
         {/* Header */}
         <div className="mb-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
