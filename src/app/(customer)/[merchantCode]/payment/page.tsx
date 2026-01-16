@@ -1137,9 +1137,8 @@ export default function PaymentPage() {
                     </p>
                   )}
                 </div>
-                      <span className="text-sm font-semibold">{t('common.edit')}</span>
                 <div className="shrink-0 flex items-center gap-2 text-gray-700">
-                  <span className="text-sm font-semibold">Edit</span>
+                  <span className="text-sm font-semibold">{t('common.edit')}</span>
                   <FaChevronDown className="w-4 h-4" style={{ transform: 'rotate(-90deg)' }} />
                 </div>
               </div>
@@ -1169,7 +1168,7 @@ export default function PaymentPage() {
             </label>
             <div className="relative mb-1">
               <div className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: fieldErrors.name ? '#EF4444' : '#9CA3AF' }}>
-                <FaUser className="w-5 h-5" />
+                <FaUser className="w-4 h-4" />
               </div>
               <input
                 ref={nameInputRef}
@@ -1183,7 +1182,7 @@ export default function PaymentPage() {
                   if (fieldErrors.name) setFieldErrors(prev => ({ ...prev, name: undefined }));
                 }}
                 disabled={!!(auth && auth.customer.name)}
-                className={`w-full h-12 pl-11 pr-4 border-2 rounded-xl text-sm focus:outline-none transition-colors ${fieldErrors.name
+                className={`w-full h-12 pl-10 pr-4 border-2 rounded-xl text-sm focus:outline-none transition-colors ${fieldErrors.name
                   ? 'border-red-500 ring-1 ring-red-500 focus:border-red-500 focus:ring-red-500'
                   : 'border-gray-300 focus:ring-1 focus:ring-[#f05a28] focus:border-[#f05a28]'
                   } ${(auth && auth.customer.name) ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}`}
@@ -1208,7 +1207,7 @@ export default function PaymentPage() {
             </label>
             <div className="relative mb-1">
               <div className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: fieldErrors.phone ? '#EF4444' : '#9CA3AF' }}>
-                <FaPhone className="w-5 h-5" />
+                <FaPhone className="w-4 h-4" />
               </div>
               <input
                 ref={phoneInputRef}
@@ -1223,7 +1222,7 @@ export default function PaymentPage() {
                   if (fieldErrors.phone) setFieldErrors(prev => ({ ...prev, phone: undefined }));
                 }}
                 disabled={!!(auth && auth.customer.phone)}
-                className={`w-full h-12 pl-11 pr-4 border-2 rounded-xl text-sm focus:outline-none transition-colors ${fieldErrors.phone
+                className={`w-full h-12 pl-10 pr-4 border-2 rounded-xl text-sm focus:outline-none transition-colors ${fieldErrors.phone
                   ? 'border-red-500 ring-1 ring-red-500 focus:border-red-500 focus:ring-red-500'
                   : 'border-gray-300 focus:ring-1 focus:ring-[#f05a28] focus:border-[#f05a28]'
                   } ${(auth && auth.customer.phone) ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}`}
@@ -1248,7 +1247,7 @@ export default function PaymentPage() {
             </label>
             <div className="relative mb-1">
               <div className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: fieldErrors.email ? '#EF4444' : '#9CA3AF' }}>
-                <FaEnvelope className="w-5 h-5" />
+                <FaEnvelope className="w-4 h-4" />
               </div>
               <input
                 ref={emailInputRef}
@@ -1262,7 +1261,7 @@ export default function PaymentPage() {
                   if (fieldErrors.email) setFieldErrors(prev => ({ ...prev, email: undefined }));
                 }}
                 disabled={!!(auth && auth.customer.email)}
-                className={`w-full h-12 pl-11 pr-4 border-2 rounded-xl text-sm focus:outline-none transition-colors ${fieldErrors.email
+                className={`w-full h-12 pl-10 pr-4 border-2 rounded-xl text-sm focus:outline-none transition-colors ${fieldErrors.email
                   ? 'border-red-500 ring-1 ring-red-500 focus:border-red-500 focus:ring-red-500'
                   : 'border-gray-300 focus:ring-1 focus:ring-[#f05a28] focus:border-[#f05a28]'
                   } ${(auth && auth.customer.email) ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}`}
@@ -1289,7 +1288,7 @@ export default function PaymentPage() {
                 </label>
                 <div className="relative mb-1">
                   <div className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: fieldErrors.tableNumber ? '#EF4444' : '#9CA3AF' }}>
-                    <FaTable className="w-5 h-5" />
+                    <FaTable className="w-4 h-4" />
                   </div>
                   <input
                     ref={tableNumberInputRef}
@@ -1302,7 +1301,7 @@ export default function PaymentPage() {
                       setTableNumber(e.target.value);
                       if (fieldErrors.tableNumber) setFieldErrors(prev => ({ ...prev, tableNumber: undefined }));
                     }}
-                    className={`w-full h-12 pl-11 pr-4 border-2 rounded-xl text-sm bg-white focus:outline-none transition-colors ${fieldErrors.tableNumber
+                    className={`w-full h-12 pl-10 pr-4 border-2 rounded-xl text-sm bg-white focus:outline-none transition-colors ${fieldErrors.tableNumber
                       ? 'border-red-500 ring-1 ring-red-500 focus:border-red-500 focus:ring-red-500'
                       : 'border-gray-300 focus:ring-1 focus:ring-[#f05a28] focus:border-[#f05a28]'
                       }`}
@@ -1478,7 +1477,7 @@ export default function PaymentPage() {
 
           {/* Voucher */}
           {isCustomerVoucherEnabled ? (
-            <div className="mx-4 mt-4 rounded-xl border border-gray-200 bg-white p-4">
+            <div className="mt-4 rounded-xl border border-gray-200 bg-white p-4">
               <div className="flex items-center justify-between">
                 <div className="text-sm font-semibold text-gray-900">
                   {tOr(t, 'customer.payment.voucher.title', 'Voucher')}
@@ -1536,7 +1535,7 @@ export default function PaymentPage() {
                   <div className="flex gap-2">
                     <div className="relative flex-1">
                       <div className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: voucherStatus === 'invalid' ? '#EF4444' : '#9CA3AF' }}>
-                        <FaTag className="w-5 h-5" />
+                        <FaTag className="w-4 h-4" />
                       </div>
                       <input
                         id="voucherCode"
@@ -1557,7 +1556,7 @@ export default function PaymentPage() {
                         autoCorrect="off"
                         spellCheck={false}
                         inputMode="text"
-                        className={`w-full h-12 pl-11 pr-4 border-2 rounded-xl text-sm bg-white focus:outline-none transition-colors ${voucherStatus === 'invalid'
+                        className={`w-full h-12 pl-10 pr-4 border-2 rounded-xl text-sm bg-white focus:outline-none transition-colors ${voucherStatus === 'invalid'
                           ? 'border-red-500 ring-1 ring-red-500 focus:border-red-500 focus:ring-red-500'
                           : 'border-gray-300 focus:ring-1 focus:ring-[#f05a28] focus:border-[#f05a28]'
                           }`}
@@ -1751,6 +1750,8 @@ export default function PaymentPage() {
           merchantCode={merchantCode}
           merchantTimezone={contextMerchantInfo?.timezone || 'Australia/Sydney'}
           isOpen={showReservationDetailsModal}
+          dismissable={Boolean(reservationDetails)}
+          onClose={() => setShowReservationDetailsModal(false)}
           onConfirm={(details) => {
             setReservationDetails(details);
             setShowReservationDetailsModal(false);

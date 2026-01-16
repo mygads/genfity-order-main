@@ -43,6 +43,8 @@ interface ReservationDetailsModalProps {
   merchantTimezone: string;
   isOpen: boolean;
   onConfirm: (details: ReservationDetails) => void;
+  onClose?: () => void;
+  dismissable?: boolean;
 }
 
 /**
@@ -58,6 +60,8 @@ export default function ReservationDetailsModal({
   merchantTimezone,
   isOpen,
   onConfirm,
+  onClose,
+  dismissable = false,
 }: ReservationDetailsModalProps) {
   const router = useRouter();
   const { t } = useTranslation();
@@ -86,10 +90,15 @@ export default function ReservationDetailsModal({
     setPartySize(2);
   }, [isOpen, merchantCode]);
 
-  const handleBack = () => {
+  const handleClose = () => {
     setIsClosing(true);
     setTimeout(() => {
       setIsClosing(false);
+      if (dismissable && onClose) {
+        onClose();
+        return;
+      }
+
       router.replace(`/${merchantCode}`);
     }, 250);
   };
@@ -141,10 +150,19 @@ export default function ReservationDetailsModal({
 
   return (
     <>
-      {/* Overlay (no close on click; required modal) */}
-      <div
-        className={`fixed inset-0 bg-black/50 z-1000 transition-opacity duration-250 ${isClosing ? 'animate-fadeOut' : 'animate-fadeIn'}`}
-      />
+      {/* Overlay */}
+      {dismissable ? (
+        <button
+          type="button"
+          onClick={handleClose}
+          aria-label={tOr(t, 'common.close', 'Close')}
+          className={`fixed inset-0 bg-black/50 z-1000 transition-opacity duration-250 ${isClosing ? 'animate-fadeOut' : 'animate-fadeIn'}`}
+        />
+      ) : (
+        <div
+          className={`fixed inset-0 bg-black/50 z-1000 transition-opacity duration-250 ${isClosing ? 'animate-fadeOut' : 'animate-fadeIn'}`}
+        />
+      )}
 
       {/* Bottom Sheet */}
       <div className={`fixed inset-x-0 bottom-0 z-1000 flex justify-center ${isClosing ? 'animate-slideDown' : 'animate-slideUp'}`}>
@@ -154,7 +172,7 @@ export default function ReservationDetailsModal({
               {tOr(t, 'customer.reservationDetails.title', 'Reservation Details')}
             </h2>
             <button
-              onClick={handleBack}
+              onClick={handleClose}
               className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-gray-100 transition-colors"
               aria-label={tOr(t, 'common.close', 'Close')}
               type="button"

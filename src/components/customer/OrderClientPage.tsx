@@ -1356,6 +1356,8 @@ export default function OrderClientPage({
         merchantCode={merchantCode}
         merchantTimezone={merchantInfo?.timezone || 'Australia/Sydney'}
         isOpen={showReservationDetailsModal}
+        dismissable={Boolean(reservationDetails)}
+        onClose={() => setShowReservationDetailsModal(false)}
         onConfirm={(details) => {
           setReservationDetails(details);
           setShowReservationDetailsModal(false);
