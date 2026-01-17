@@ -169,7 +169,7 @@ export default function PaymentPage() {
   const requireTableNumberForDineIn = contextMerchantInfo?.requireTableNumberForDineIn === true;
   const shouldShowTableNumberField = mode === 'dinein' && requireTableNumberForDineIn && !isReservationFlow;
 
-  const isCustomerVoucherEnabled = (contextMerchantInfo as any)?.customerVouchersEnabled !== false;
+  const isCustomerVoucherEnabled = (contextMerchantInfo as any)?.customerVouchersEnabled === true;
 
   // If user entered payment via "Schedule Order" flow, pre-enable scheduled ordering.
   useEffect(() => {

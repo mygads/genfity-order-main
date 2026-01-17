@@ -3481,6 +3481,7 @@ const id = {
   // NOTIFICATIONS
   // ============================================================================
   "notifications.title": "Notifikasi",
+  "notifications.subtitle": "Lihat pembaruan terbaru dan notifikasi penting",
   "notifications.empty": "Belum ada notifikasi",
   "notifications.viewAll": "Lihat Semua Notifikasi",
   "notifications.markAllRead": "Tandai semua sudah dibaca",

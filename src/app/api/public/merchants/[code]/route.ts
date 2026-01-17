@@ -51,19 +51,19 @@ export async function GET(
     const features = merchantData.features as unknown;
     const { customerVouchersEnabled } = (() => {
       if (!features || typeof features !== 'object' || Array.isArray(features)) {
-        return { customerVouchersEnabled: true };
+        return { customerVouchersEnabled: false };
       }
 
       const ov = (features as any).orderVouchers;
       if (!ov || typeof ov !== 'object' || Array.isArray(ov)) {
-        return { customerVouchersEnabled: true };
+        return { customerVouchersEnabled: false };
       }
 
       const customerEnabledRaw = (ov as any).customerEnabled;
       const posDiscountsEnabledRaw = (ov as any).posDiscountsEnabled;
 
-      const customerEnabled = customerEnabledRaw === undefined ? true : Boolean(customerEnabledRaw);
-      const posDiscountsEnabled = posDiscountsEnabledRaw === undefined ? true : Boolean(posDiscountsEnabledRaw);
+      const customerEnabled = customerEnabledRaw === undefined ? false : Boolean(customerEnabledRaw);
+      const posDiscountsEnabled = posDiscountsEnabledRaw === undefined ? false : Boolean(posDiscountsEnabledRaw);
 
       return { customerVouchersEnabled: posDiscountsEnabled && customerEnabled };
     })();

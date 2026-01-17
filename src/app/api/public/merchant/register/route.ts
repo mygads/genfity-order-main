@@ -25,7 +25,7 @@ const registerSchema = z.object({
         z.string().min(5, 'Alamat minimal 5 karakter').optional()
     ),
     phone: z.string().transform(val => val?.trim() || undefined).optional(),
-    currency: z.enum(['IDR', 'AUD', 'USD', 'SGD', 'MYR']).default('IDR'),
+    currency: z.enum(['IDR', 'AUD']).default('IDR'),
     country: z.string().default('Indonesia'),
     
     // Location fields (optional - from GPS detection)

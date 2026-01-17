@@ -25,7 +25,8 @@ export function getPosCustomItemsSettings(params: {
   const features = (params.features || {}) as any;
   const custom = (features?.pos?.customItems || {}) as any;
 
-  const enabled = custom?.enabled !== false;
+  // Null/undefined => OFF (explicit opt-in)
+  const enabled = custom?.enabled === true;
 
   const maxNameLengthRaw = Number(custom?.maxNameLength);
   const maxNameLength = Number.isFinite(maxNameLengthRaw) && maxNameLengthRaw > 0

@@ -14,7 +14,7 @@ interface FormData {
     merchantCode: string;
     address: string;
     phone: string;
-    currency: "IDR" | "AUD" | "USD" | "SGD" | "MYR";
+    currency: "IDR" | "AUD";
     country: string;
     timezone: string;
     latitude: number | null;
@@ -32,9 +32,6 @@ interface FormData {
 const COUNTRY_OPTIONS = [
     { code: "ID", name: "Indonesia", currency: "IDR" as const, timezone: "Asia/Jakarta" },
     { code: "AU", name: "Australia", currency: "AUD" as const, timezone: "Australia/Sydney" },
-    { code: "SG", name: "Singapore", currency: "SGD" as const, timezone: "Asia/Singapore" },
-    { code: "MY", name: "Malaysia", currency: "MYR" as const, timezone: "Asia/Kuala_Lumpur" },
-    { code: "US", name: "United States", currency: "USD" as const, timezone: "America/New_York" },
 ];
 
 // Country bounding boxes for location validation (approximate)
@@ -65,12 +62,26 @@ const TIMEZONE_OPTIONS = [
     { value: "Australia/Brisbane", label: "Brisbane (AEST, UTC+10)", country: "AU" },
     { value: "Australia/Perth", label: "Perth (AWST, UTC+8)", country: "AU" },
     { value: "Australia/Adelaide", label: "Adelaide (ACDT, UTC+10:30)", country: "AU" },
-    { value: "Asia/Singapore", label: "Singapore (SGT, UTC+8)", country: "SG" },
-    { value: "Asia/Kuala_Lumpur", label: "Kuala Lumpur (MYT, UTC+8)", country: "MY" },
-    { value: "America/New_York", label: "New York (EST, UTC-5)", country: "US" },
-    { value: "America/Los_Angeles", label: "Los Angeles (PST, UTC-8)", country: "US" },
-    { value: "America/Chicago", label: "Chicago (CST, UTC-6)", country: "US" },
 ];
+
+function normalizeCurrency(currency: string, fallback: FormData['currency']): FormData['currency'] {
+    if (currency === 'IDR' || currency === 'AUD') return currency;
+    return fallback;
+}
+
+function normalizeCountry(country: string, fallback: string): string {
+    if (country === 'Indonesia' || country === 'Australia') return country;
+    return fallback;
+}
+
+function normalizeTimezone(timezone: string, country: string, fallback: string): string {
+    const supported = TIMEZONE_OPTIONS.some((tz) => tz.value === timezone);
+    if (supported) return timezone;
+
+    const countryCode = country === 'Indonesia' ? 'ID' : 'AU';
+    const firstForCountry = TIMEZONE_OPTIONS.find((tz) => tz.country === countryCode)?.value;
+    return firstForCountry || fallback;
+}
 
 interface FormErrors {
     [key: string]: string;
@@ -186,9 +197,9 @@ function MerchantRegisterContent() {
         if (initialLocation.country && initialLocation.currency && initialLocation.timezone) {
             setFormData(prev => ({
                 ...prev,
-                country: initialLocation.country || prev.country,
-                currency: initialLocation.currency || prev.currency,
-                timezone: initialLocation.timezone || prev.timezone,
+                country: normalizeCountry(initialLocation.country, prev.country),
+                currency: normalizeCurrency(initialLocation.currency, prev.currency),
+                timezone: normalizeTimezone(initialLocation.timezone, initialLocation.country, prev.timezone),
             }));
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -203,9 +214,9 @@ function MerchantRegisterContent() {
 
             setFormData(prev => ({
                 ...prev,
-                country: locationData.country,
-                currency: locationData.currency,
-                timezone: locationData.timezone,
+                country: normalizeCountry(locationData.country, prev.country),
+                currency: normalizeCurrency(locationData.currency, prev.currency),
+                timezone: normalizeTimezone(locationData.timezone, locationData.country, prev.timezone),
                 latitude: locationData.latitude,
                 longitude: locationData.longitude,
             }));
@@ -757,9 +768,6 @@ function MerchantRegisterContent() {
                                                 >
                                                     <option value="IDR">IDR (Rupiah)</option>
                                                     <option value="AUD">AUD (Dollar)</option>
-                                                    <option value="USD">USD (Dollar)</option>
-                                                    <option value="SGD">SGD (Dollar)</option>
-                                                    <option value="MYR">MYR (Ringgit)</option>
                                                 </select>
                                             </div>
                                             <div>

@@ -13,6 +13,7 @@ import {
   NotFoundError,
   ERROR_CODES,
 } from '@/lib/constants/errors';
+import { DEFAULT_RECEIPT_SETTINGS, type ReceiptSettings } from '@/lib/types/receiptSettings';
 import type { Merchant, MerchantOpeningHour, User } from '@/lib/types';
 
 /**
@@ -223,6 +224,35 @@ class MerchantService {
       mustChangePassword: false, // No need to change password
     });
 
+    const currency = input.currency || 'AUD';
+
+    const receiptSettings: ReceiptSettings = {
+      ...DEFAULT_RECEIPT_SETTINGS,
+      receiptLanguage: currency === 'IDR' ? 'id' : 'en',
+      // “Custom receipt” ON by default, except custom thank-you/footer text
+      showEmail: true,
+      showCustomerPhone: true,
+      showAddonPrices: true,
+      showUnitPrice: true,
+      showCustomFooterText: false,
+      customFooterText: undefined,
+      customThankYouMessage: undefined,
+      // Explicitly keep this OFF for new merchants
+      sendCompletedOrderEmailToCustomer: false,
+    };
+
+    const features = {
+      orderVouchers: {
+        posDiscountsEnabled: true,
+        customerEnabled: false,
+      },
+      pos: {
+        customItems: {
+          enabled: false,
+        },
+      },
+    };
+
     // Create merchant with owner link
     const merchant = await merchantRepository.createWithUser(
       {
@@ -234,23 +264,36 @@ class MerchantService {
         email: input.email || input.ownerEmail, // Use merchant email or owner email as fallback
         isOpen: input.isOpen ?? true, // Default to open
         country: input.country || 'Australia',
-        currency: input.currency || 'AUD',
+        currency,
         timezone: input.timezone || 'Australia/Sydney',
         latitude: input.latitude || null,
         longitude: input.longitude || null,
-        enableTax: (input.taxRate !== undefined && input.taxRate > 0), // Map to enableTax
-        taxPercentage: input.taxRate !== undefined ? input.taxRate : null, // Map to taxPercentage
+        // Fees/charges default OFF for new merchants
+        enableTax: false,
+        taxPercentage: null,
+        enableServiceCharge: false,
+        serviceChargePercent: null,
+        enablePackagingFee: false,
+        packagingFeeAmount: null,
         // Feature defaults for NEW merchants:
-        // - Dine-in enabled
-        // - All other sales modes OFF until manually enabled
-        // - Reservations OFF until manually enabled
+        // - Dine-in + Takeaway enabled
+        // - Delivery OFF
+        // - Dine-in requires table number
+        // - Scheduled orders OFF
+        // - Reservations OFF
         isDineInEnabled: true,
-        isTakeawayEnabled: false,
+        isTakeawayEnabled: true,
         isDeliveryEnabled: false,
+        requireTableNumberForDineIn: true,
+        // POS: pay immediately ON, custom items OFF (in features)
+        posPayImmediately: true,
         isReservationEnabled: false,
         isScheduledOrderEnabled: false,
         reservationMenuRequired: false,
         reservationMinItemCount: 0,
+        // JSON settings
+        features,
+        receiptSettings,
         isActive: true,
       },
       owner.id, // Pass userId
@@ -266,7 +309,7 @@ class MerchantService {
       const { default: merchantTemplateService } = await import('@/lib/services/MerchantTemplateService');
 
       // Get trial days from plan pricing
-      const pricing = await subscriptionService.getPlanPricing(input.currency || 'AUD');
+      const pricing = await subscriptionService.getPlanPricing(currency);
       const trialDays = pricing.trialDays || 30;
 
       // Create trial subscription with merchantId and trialDays
@@ -282,12 +325,13 @@ class MerchantService {
         const templateResult = await merchantTemplateService.createTemplateData(
           merchant.id,
           owner.id,
-          input.currency || 'AUD'
+          currency
         );
         console.log(`✅ Created template data for merchant ${merchant.code}:`, {
-          category: templateResult.category.name,
-          menu: templateResult.menu.name,
+          categories: templateResult.categories.map((c) => c.name),
+          menus: templateResult.menus.map((m) => m.name),
           addonCategory: templateResult.addonCategory.name,
+          addonItems: templateResult.addonItems.map((a) => a.name),
           openingHours: `${templateResult.openingHoursCount} days`,
         });
       } catch (templateError) {

@@ -177,7 +177,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
   const [voucherError, setVoucherError] = useState<string | null>(null);
   const [isValidatingVoucher, setIsValidatingVoucher] = useState(false);
 
-  const posDiscountsEnabled = merchant?.posDiscountsEnabled !== false;
+  const posDiscountsEnabled = merchant?.posDiscountsEnabled === true;
 
   const getVoucherReasonMessage = useCallback(
     (json: any, fallback: string) => {

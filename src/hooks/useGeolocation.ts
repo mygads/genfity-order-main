@@ -14,7 +14,7 @@ export interface GeoLocationData {
   countryCode: string;
   city: string;
   state: string;
-  currency: 'IDR' | 'AUD' | 'USD' | 'SGD' | 'MYR';
+  currency: 'IDR' | 'AUD';
   timezone: string;
 }
 
@@ -27,12 +27,10 @@ export interface GeolocationState {
 }
 
 // Country to currency and timezone mapping
-const COUNTRY_CONFIG: Record<string, { currency: 'IDR' | 'AUD' | 'USD' | 'SGD' | 'MYR'; timezone: string }> = {
+// NOTE: This project currently supports only IDR and AUD.
+const COUNTRY_CONFIG: Record<string, { currency: 'IDR' | 'AUD'; timezone: string }> = {
   'ID': { currency: 'IDR', timezone: 'Asia/Jakarta' },
   'AU': { currency: 'AUD', timezone: 'Australia/Sydney' },
-  'US': { currency: 'USD', timezone: 'America/New_York' },
-  'SG': { currency: 'SGD', timezone: 'Asia/Singapore' },
-  'MY': { currency: 'MYR', timezone: 'Asia/Kuala_Lumpur' },
 };
 
 // Fallback for countries not in the list
@@ -222,12 +220,6 @@ export function useGeolocation() {
       return { country: 'Indonesia', countryCode: 'ID', currency: 'IDR', timezone: browserTimezone };
     } else if (browserTimezone.startsWith('Australia')) {
       return { country: 'Australia', countryCode: 'AU', currency: 'AUD', timezone: browserTimezone };
-    } else if (browserTimezone.startsWith('Asia/Singapore')) {
-      return { country: 'Singapore', countryCode: 'SG', currency: 'SGD', timezone: browserTimezone };
-    } else if (browserTimezone.startsWith('Asia/Kuala_Lumpur')) {
-      return { country: 'Malaysia', countryCode: 'MY', currency: 'MYR', timezone: browserTimezone };
-    } else if (browserTimezone.startsWith('America')) {
-      return { country: 'United States', countryCode: 'US', currency: 'USD', timezone: browserTimezone };
     }
     
     // Default

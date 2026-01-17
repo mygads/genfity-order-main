@@ -5,6 +5,7 @@
 
 import prisma from '@/lib/db/client';
 import type { Prisma, UserRole } from '@prisma/client';
+import { DEFAULT_NOTIFICATION_SETTINGS } from '@/lib/utils/notificationSettings';
 
 export class UserRepository {
   /**
@@ -65,8 +66,20 @@ export class UserRepository {
    * Create new user
    */
   async create(data: Prisma.UserCreateInput) {
-    return prisma.user.create({
-      data,
+    return prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({ data });
+
+      await tx.userPreference.create({
+        data: {
+          userId: user.id,
+          notificationSettings: DEFAULT_NOTIFICATION_SETTINGS as unknown as Prisma.InputJsonValue,
+          emailNotifications: true,
+          orderNotifications: true,
+          marketingEmails: false,
+        },
+      });
+
+      return user;
     });
   }
 

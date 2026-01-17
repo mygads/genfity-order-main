@@ -12,6 +12,7 @@ import type { Prisma } from '@prisma/client';
 import prisma from '@/lib/db/client';
 import { withMerchant } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/types/auth';
+import { mergeFeatures } from '@/lib/utils/mergeFeatures';
 
 type SettingsResponse = {
   customerVouchersEnabled: boolean;
@@ -32,7 +33,7 @@ function readCustomerVouchersEnabled(features: unknown): boolean {
     : null;
 
   const value = ov?.customerEnabled;
-  if (value === undefined) return true; // default ON to preserve existing behavior
+  if (value === undefined) return false; // default OFF when unset
   return Boolean(value);
 }
 
@@ -44,42 +45,24 @@ function readPosDiscountsEnabled(features: unknown): boolean {
     : null;
 
   const value = ov?.posDiscountsEnabled;
-  if (value === undefined) return true; // default ON to preserve existing behavior
+  if (value === undefined) return false; // default OFF when unset
   return Boolean(value);
 }
 
 function writeCustomerVouchersEnabled(features: unknown, enabled: boolean): Prisma.InputJsonValue {
-  const base = features && typeof features === 'object' && !Array.isArray(features) ? (features as Record<string, unknown>) : {};
-  const existingOrderVouchersRaw = base.orderVouchers;
-  const existingOrderVouchers =
-    existingOrderVouchersRaw && typeof existingOrderVouchersRaw === 'object' && !Array.isArray(existingOrderVouchersRaw)
-      ? (existingOrderVouchersRaw as Record<string, unknown>)
-      : {};
-
-  return {
-    ...base,
+  return mergeFeatures(features, {
     orderVouchers: {
-      ...existingOrderVouchers,
       customerEnabled: enabled,
     },
-  } as Prisma.InputJsonValue;
+  }) as Prisma.InputJsonValue;
 }
 
 function writePosDiscountsEnabled(features: unknown, enabled: boolean): Prisma.InputJsonValue {
-  const base = features && typeof features === 'object' && !Array.isArray(features) ? (features as Record<string, unknown>) : {};
-  const existingOrderVouchersRaw = base.orderVouchers;
-  const existingOrderVouchers =
-    existingOrderVouchersRaw && typeof existingOrderVouchersRaw === 'object' && !Array.isArray(existingOrderVouchersRaw)
-      ? (existingOrderVouchersRaw as Record<string, unknown>)
-      : {};
-
-  return {
-    ...base,
+  return mergeFeatures(features, {
     orderVouchers: {
-      ...existingOrderVouchers,
       posDiscountsEnabled: enabled,
     },
-  } as Prisma.InputJsonValue;
+  }) as Prisma.InputJsonValue;
 }
 
 export const GET = withMerchant(async (_req: NextRequest, context: AuthContext) => {

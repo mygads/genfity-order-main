@@ -3485,6 +3485,7 @@ const en = {
   // NOTIFICATIONS
   // ============================================================================
   "notifications.title": "Notifications",
+  "notifications.subtitle": "Your recent notifications",
   "notifications.empty": "No notifications yet",
   "notifications.viewAll": "View All Notifications",
   "notifications.markAllRead": "Mark all as read",

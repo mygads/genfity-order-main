@@ -68,7 +68,7 @@ export default function EditMerchantPage() {
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  const [posCustomItemsEnabled, setPosCustomItemsEnabled] = useState(true);
+  const [posCustomItemsEnabled, setPosCustomItemsEnabled] = useState(false);
   const [posCustomItemsMaxNameLength, setPosCustomItemsMaxNameLength] = useState<number>(80);
   const [posCustomItemsMaxPrice, setPosCustomItemsMaxPrice] = useState<number>(1);
 
@@ -82,8 +82,8 @@ export default function EditMerchantPage() {
   const [authToken, setAuthToken] = useState<string>("");
 
   // Discount & voucher feature toggles
-  const [posDiscountsEnabled, setPosDiscountsEnabled] = useState<boolean>(true);
-  const [customerVouchersEnabled, setCustomerVouchersEnabled] = useState<boolean>(true);
+  const [posDiscountsEnabled, setPosDiscountsEnabled] = useState<boolean>(false);
+  const [customerVouchersEnabled, setCustomerVouchersEnabled] = useState<boolean>(false);
   const [originalDiscountVoucherSettings, setOriginalDiscountVoucherSettings] = useState<{
     posDiscountsEnabled: boolean;
     customerVouchersEnabled: boolean;
@@ -388,20 +388,20 @@ export default function EditMerchantPage() {
         const nextPos =
           settingsRes.ok && settingsJson?.success && typeof settingsJson?.data?.posDiscountsEnabled === 'boolean'
             ? settingsJson.data.posDiscountsEnabled
-            : true;
+            : false;
         const nextCustomerRaw =
           settingsRes.ok && settingsJson?.success && typeof settingsJson?.data?.customerVouchersEnabled === 'boolean'
             ? settingsJson.data.customerVouchersEnabled
-            : true;
+            : false;
         const nextCustomer = nextPos ? nextCustomerRaw : false;
 
         setPosDiscountsEnabled(nextPos);
         setCustomerVouchersEnabled(nextCustomer);
         setOriginalDiscountVoucherSettings({ posDiscountsEnabled: nextPos, customerVouchersEnabled: nextCustomer });
       } catch {
-        setPosDiscountsEnabled(true);
-        setCustomerVouchersEnabled(true);
-        setOriginalDiscountVoucherSettings({ posDiscountsEnabled: true, customerVouchersEnabled: true });
+        setPosDiscountsEnabled(false);
+        setCustomerVouchersEnabled(false);
+        setOriginalDiscountVoucherSettings({ posDiscountsEnabled: false, customerVouchersEnabled: false });
       }
 
       // Save original form data for change detection
