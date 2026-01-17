@@ -368,6 +368,35 @@ export default function MenuBuilderTabs({
       setUploadedImageUrl(null);
       setUploadedImageThumbUrl(null);
       setImageSource('initial');
+
+      // For create flow, restart the wizard so the user can add another menu quickly.
+      if (!menuId) {
+        setActiveTab('basic');
+        setSelectedCategories([]);
+        setSelectedAddonCategories([]);
+        setPreviewSelectedMenuId(null);
+        setPreviewViewMode('list');
+
+        reset({
+          name: '',
+          description: '',
+          price: 0,
+          imageUrl: '',
+          imageThumbUrl: '',
+          isActive: true,
+          trackStock: false,
+          stockQty: null,
+          dailyStockTemplate: null,
+          autoResetStock: false,
+          isSpicy: false,
+          isBestSeller: false,
+          isSignature: false,
+          isRecommended: false,
+          categoryIds: [],
+          addonCategoryIds: [],
+        });
+      }
+
       try {
         localStorage.removeItem(draftStorageKey);
       } catch {

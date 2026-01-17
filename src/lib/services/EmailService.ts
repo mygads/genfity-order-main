@@ -417,10 +417,15 @@ class EmailService {
       locale: merchantLocale,
     });
 
+    const merchantNameForSubject = params.merchantName?.trim();
     const subject =
       merchantLocale === 'id'
-        ? `Pesanan Selesai - ${displayOrderNumber} | Terima kasih!`
-        : `Order Completed - ${displayOrderNumber} | Thank you!`;
+        ? merchantNameForSubject
+          ? `Pesanan Selesai ${merchantNameForSubject} - ${displayOrderNumber} | Terima kasih!`
+          : `Pesanan Selesai - ${displayOrderNumber} | Terima kasih!`
+        : merchantNameForSubject
+          ? `Order Completed ${merchantNameForSubject} - ${displayOrderNumber} | Thank you!`
+          : `Order Completed - ${displayOrderNumber} | Thank you!`;
 
     let attachments:
       | Array<{ filename: string; content: Buffer; contentType?: string }>

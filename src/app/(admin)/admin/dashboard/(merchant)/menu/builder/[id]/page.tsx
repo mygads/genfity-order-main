@@ -231,7 +231,8 @@ export default function MenuBuilderPage() {
       }
       
       showSuccess(t('admin.menuBuilder.saveSuccess'));
-      router.push('/admin/dashboard/menu');
+      // Do not navigate away on save.
+      // MenuBuilderTabs will clear local draft state and (for create) reset the wizard.
     } catch (error) {
       console.error('Error saving menu:', error);
       showError(error instanceof Error ? error.message : t('admin.menuBuilder.saveFailed'));
