@@ -4,6 +4,7 @@ import { withMerchant } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/middleware/auth';
 import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 import { generateOrderReceiptPdfBuffer } from '@/lib/utils/orderReceiptPdfEmail';
+import { resolveAssetUrl } from '@/lib/utils/assetUrl';
 
 /**
  * Merchant Receipt PDF
@@ -11,7 +12,7 @@ import { generateOrderReceiptPdfBuffer } from '@/lib/utils/orderReceiptPdfEmail'
  *
  * Returns a canonical receipt PDF for printing/downloading.
  */
-export const GET = withMerchant(async (_req: NextRequest, auth: AuthContext, routeContext: RouteContext) => {
+export const GET = withMerchant(async (req: NextRequest, auth: AuthContext, routeContext: RouteContext) => {
   const orderIdResult = await requireBigIntRouteParam(routeContext, 'orderId', 'Invalid orderId');
   if (!orderIdResult.ok) {
     return NextResponse.json(orderIdResult.body, { status: orderIdResult.status });
@@ -111,11 +112,14 @@ export const GET = withMerchant(async (_req: NextRequest, auth: AuthContext, rou
         .join(' + ') || undefined
     : undefined;
 
+  const requestOrigin = req.nextUrl.origin;
+  const resolvedLogoUrl = resolveAssetUrl(order.merchant.logoUrl, { requestOrigin });
+
   const pdfBuffer = await generateOrderReceiptPdfBuffer({
     orderNumber: order.orderNumber,
     merchantCode: order.merchant.code,
     merchantName: order.merchant.name,
-    merchantLogoUrl: order.merchant.logoUrl,
+    merchantLogoUrl: resolvedLogoUrl,
     merchantAddress: order.merchant.address,
     merchantPhone: order.merchant.phone,
     merchantEmail: order.merchant.email,

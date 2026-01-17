@@ -17,7 +17,7 @@ import type { OrderStatus, OrderType } from '@prisma/client';
 import { useMerchant } from '@/context/MerchantContext';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { useToast } from '@/context/ToastContext';
-import { openMerchantOrderReceiptPdfAndPrint } from '@/lib/utils/receiptPdfClient';
+import { openMerchantOrderReceiptHtmlAndPrint } from '@/lib/utils/receiptHtmlClient';
 
 // ===== TYPES =====
 
@@ -207,7 +207,7 @@ function OrderHistoryPageContent() {
 
   const handlePrintReceipt = async (orderId: string | number) => {
     try {
-      const result = await openMerchantOrderReceiptPdfAndPrint(orderId);
+      const result = await openMerchantOrderReceiptHtmlAndPrint(orderId);
       if (!result.ok) {
         showError(t('admin.history.printFailed'));
         return;

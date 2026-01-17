@@ -15,6 +15,8 @@ export type ViewMode = 'list' | 'grid-2' | 'grid-3';
 interface ViewModeToggleProps {
     value: ViewMode;
     onChange: (mode: ViewMode) => void;
+    /** When false, does not persist selection to localStorage */
+    persist?: boolean;
 }
 
 const STORAGE_KEY = 'menu_view_mode';
@@ -34,7 +36,7 @@ export function setStoredViewMode(mode: ViewMode): void {
     }
 }
 
-export default function ViewModeToggle({ value, onChange }: ViewModeToggleProps) {
+export default function ViewModeToggle({ value, onChange, persist = true }: ViewModeToggleProps) {
     const [open, setOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -102,7 +104,7 @@ export default function ViewModeToggle({ value, onChange }: ViewModeToggleProps)
                             role="menuitem"
                             onClick={() => {
                                 onChange(mode);
-                                setStoredViewMode(mode);
+                                if (persist) setStoredViewMode(mode);
                                 setOpen(false);
                             }}
                             className={`w-full flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${isActive

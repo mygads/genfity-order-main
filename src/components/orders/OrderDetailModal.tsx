@@ -39,7 +39,7 @@ import { useMerchant } from '@/context/MerchantContext';
 import type { OrderWithDetails } from '@/lib/types/order';
 import type { ReceiptSettings } from '@/lib/types/receiptSettings';
 import { OrderStatus, PaymentMethod } from '@prisma/client';
-import { openMerchantOrderReceiptPdfAndPrint } from '@/lib/utils/receiptPdfClient';
+import { openMerchantOrderReceiptHtmlAndPrint } from '@/lib/utils/receiptHtmlClient';
 import { formatFullOrderNumber } from '@/lib/utils/format';
 import { formatPaymentMethodLabel } from '@/lib/utils/paymentDisplay';
 import OrderTotalsBreakdown from '@/components/orders/OrderTotalsBreakdown';
@@ -470,12 +470,12 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   const handlePrintReceipt = async () => {
     if (!order) return;
 
-    const result = await openMerchantOrderReceiptPdfAndPrint(apiOrderId);
+    const result = await openMerchantOrderReceiptHtmlAndPrint(apiOrderId);
     if (!result.ok) {
       const message =
         result.reason === 'popup_blocked'
           ? 'Failed to open print window (check popup blocker)'
-          : 'Failed to fetch receipt PDF (check connection)';
+          : 'Failed to fetch receipt (check connection)';
       showError(message, 'Print');
     }
   };

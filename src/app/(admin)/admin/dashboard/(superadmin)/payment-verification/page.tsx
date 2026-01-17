@@ -40,12 +40,17 @@ export default function PaymentVerificationPage() {
     const [processingId, setProcessingId] = useState<string | null>(null);
     const [rejectReason, setRejectReason] = useState('');
     const [showRejectModal, setShowRejectModal] = useState<string | null>(null);
+    const [includePending, setIncludePending] = useState(false);
+
+    const swrKey = includePending
+        ? '/api/admin/payment-requests?includePending=true'
+        : '/api/admin/payment-requests';
 
     const {
         data: response,
         isLoading,
         error: _error
-    } = useSWRStatic<ApiResponse<{ requests: PaymentRequest[] }>>('/api/admin/payment-requests');
+    } = useSWRStatic<ApiResponse<{ requests: PaymentRequest[] }>>(swrKey);
 
     const requests = response?.data?.requests || [];
 
@@ -92,7 +97,7 @@ export default function PaymentVerificationPage() {
             }
 
             showSuccess(t("common.success"), t("admin.paymentVerification.verifySuccess"));
-            mutate('/api/admin/payment-requests');
+            mutate(swrKey);
         } catch (err: unknown) {
             showError(t("common.error"), err instanceof Error ? err.message : 'Failed to verify');
         } finally {
@@ -127,7 +132,7 @@ export default function PaymentVerificationPage() {
             showSuccess(t("common.success"), t("admin.paymentVerification.rejectSuccess"));
             setShowRejectModal(null);
             setRejectReason('');
-            mutate('/api/admin/payment-requests');
+            mutate(swrKey);
         } catch (err: unknown) {
             showError(t("common.error"), err instanceof Error ? err.message : 'Failed to reject');
         } finally {
@@ -151,6 +156,28 @@ export default function PaymentVerificationPage() {
     return (
         <div>
             <PageBreadcrumb pageTitle={t("admin.paymentVerification.title")} />
+
+            <div className="mb-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+                <div className="flex items-start justify-between gap-4">
+                    <div>
+                        <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                            {t("admin.paymentVerification.filtersTitle")}
+                        </div>
+                        <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                            {t("admin.paymentVerification.includePendingHelp")}
+                        </div>
+                    </div>
+                    <label className="inline-flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                        <input
+                            type="checkbox"
+                            checked={includePending}
+                            onChange={(e) => setIncludePending(e.target.checked)}
+                            className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                        />
+                        {t("admin.paymentVerification.includePending")}
+                    </label>
+                </div>
+            </div>
 
             {/* Payment List */}
             {requests.length === 0 ? (
@@ -184,6 +211,11 @@ export default function PaymentVerificationPage() {
                                         <h3 className="font-semibold text-gray-900 dark:text-white">
                                             {req.merchantName}
                                         </h3>
+                                        {req.status === 'PENDING' && (
+                                            <span className="text-xs font-semibold px-2 py-1 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200">
+                                                {t("admin.paymentVerification.pendingBadge")}
+                                            </span>
+                                        )}
                                     </div>
 
                                     <div className="grid gap-2 sm:grid-cols-3 text-sm">
@@ -208,6 +240,14 @@ export default function PaymentVerificationPage() {
                                         </div>
                                     </div>
 
+                                    {req.status === 'PENDING' && (
+                                        <div className="mt-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20">
+                                            <p className="text-sm text-amber-900 dark:text-amber-200">
+                                                {t("admin.paymentVerification.pendingHint")}
+                                            </p>
+                                        </div>
+                                    )}
+
                                     {req.transferNotes && (
                                         <div className="mt-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
                                             <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{t("admin.paymentVerification.merchantNotes")}:</p>
@@ -220,7 +260,7 @@ export default function PaymentVerificationPage() {
                                 <div className="flex items-center gap-2 sm:flex-col sm:items-stretch">
                                     <button
                                         onClick={() => handleVerify(req.id)}
-                                        disabled={processingId === req.id}
+                                        disabled={processingId === req.id || req.status !== 'CONFIRMED'}
                                         className="flex-1 sm:flex-none px-4 py-2 rounded-lg font-medium text-white
                       bg-green-600 hover:bg-green-700 disabled:bg-gray-400 transition-colors
                       flex items-center justify-center gap-2"
@@ -232,7 +272,7 @@ export default function PaymentVerificationPage() {
                                     </button>
                                     <button
                                         onClick={() => setShowRejectModal(req.id)}
-                                        disabled={processingId === req.id}
+                                        disabled={processingId === req.id || req.status !== 'CONFIRMED'}
                                         className="flex-1 sm:flex-none px-4 py-2 rounded-lg font-medium
                       text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 
                       hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors

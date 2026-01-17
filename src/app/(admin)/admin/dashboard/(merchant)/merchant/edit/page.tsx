@@ -345,7 +345,6 @@ export default function EditMerchantPage() {
         receiptSettings: {
           ...DEFAULT_RECEIPT_SETTINGS,
           ...(merchant.receiptSettings || {}),
-          paperSize: '80mm',
         },
       });
 
@@ -454,7 +453,6 @@ export default function EditMerchantPage() {
         receiptSettings: {
           ...DEFAULT_RECEIPT_SETTINGS,
           ...(merchant.receiptSettings || {}),
-          paperSize: '80mm',
         },
       };
       setOriginalFormData(originalData);

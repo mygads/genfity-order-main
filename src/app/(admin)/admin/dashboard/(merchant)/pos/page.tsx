@@ -70,7 +70,7 @@ import {
 
 import ConfirmDialog from '@/components/modals/ConfirmDialog';
 
-import { openMerchantOrderReceiptPdfAndPrint } from '@/lib/utils/receiptPdfClient';
+import { openMerchantOrderReceiptHtmlAndPrint } from '@/lib/utils/receiptHtmlClient';
 import { normalizeTableNumber } from '@/lib/utils/posTableNumber';
 
 // ============================================
@@ -1159,14 +1159,14 @@ export default function POSPage() {
       return;
     }
 
-    const result = await openMerchantOrderReceiptPdfAndPrint(pendingOrderId);
+    const result = await openMerchantOrderReceiptHtmlAndPrint(pendingOrderId);
     if (!result.ok) {
       const message =
         result.reason === 'popup_blocked'
           ? (t('pos.receipt.printFailedPopupBlockedMessage') as string) ||
             'Unable to open the print window. Please allow popups, then try again.'
           : (t('pos.receipt.printFailedFetchMessage') as string) ||
-            'Unable to fetch the receipt PDF. Please check your connection, then try again.';
+            'Unable to fetch the receipt. Please check your connection, then try again.';
 
       showError(t('common.error') || 'Error', message);
     }

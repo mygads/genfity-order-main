@@ -28,7 +28,7 @@ import {
   FaExchangeAlt,
 } from 'react-icons/fa';
 import { useTranslation } from '@/lib/i18n/useTranslation';
-import { openMerchantOrderReceiptPdfAndPrint } from '@/lib/utils/receiptPdfClient';
+import { openMerchantOrderReceiptHtmlAndPrint } from '@/lib/utils/receiptHtmlClient';
 import type { ReceiptSettings } from '@/lib/types/receiptSettings';
 import { useMerchant } from '@/context/MerchantContext';
 import { useToast } from '@/context/ToastContext';
@@ -477,14 +477,14 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
   // Print receipt function
   const handlePrintReceipt = useCallback(async () => {
     if (orderId == null) return;
-    const result = await openMerchantOrderReceiptPdfAndPrint(orderId);
+    const result = await openMerchantOrderReceiptHtmlAndPrint(orderId);
     if (!result.ok) {
       const message =
         result.reason === 'popup_blocked'
           ? ((t('pos.receipt.printFailedPopupBlockedMessage') as string) ||
             'Unable to open the print window. Please allow popups, then try again.')
           : ((t('pos.receipt.printFailedFetchMessage') as string) ||
-            'Unable to fetch the receipt PDF. Please check your connection, then try again.');
+            'Unable to fetch the receipt. Please check your connection, then try again.');
 
       showError(
         message,

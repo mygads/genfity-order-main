@@ -26,6 +26,7 @@ import { formatCurrency } from '@/lib/utils/format';
 import { generateOrderReceiptPdfBuffer } from '@/lib/utils/orderReceiptPdfEmail';
 import { formatFullOrderNumber } from '@/lib/utils/format';
 import { buildOrderTrackingUrl } from '@/lib/utils/orderTrackingLinks.server';
+import { resolveAssetUrl } from '@/lib/utils/assetUrl';
 
 // Track initialization to prevent duplicate logs
 let isInitialized = false;
@@ -394,6 +395,8 @@ class EmailService {
       );
     }
 
+    const resolvedMerchantLogoUrl = resolveAssetUrl(params.merchantLogoUrl);
+
     const html = getOrderCompletedTemplate({
       customerName: params.customerName,
       orderNumber: displayOrderNumber,
@@ -428,7 +431,7 @@ class EmailService {
         orderNumber: params.orderNumber,
         merchantCode: params.merchantCode,
         merchantName: params.merchantName,
-        merchantLogoUrl: params.merchantLogoUrl,
+        merchantLogoUrl: resolvedMerchantLogoUrl,
         merchantAddress: params.merchantAddress,
         merchantPhone: params.merchantPhone,
         merchantEmail: params.merchantEmail,
@@ -437,7 +440,6 @@ class EmailService {
         customerPhone: params.customerPhone,
         customerEmail: params.customerEmail,
         orderType: params.orderType,
-        tableNumber: params.tableNumber,
         items: params.items,
         subtotal: params.subtotal,
         taxAmount: params.taxAmount,

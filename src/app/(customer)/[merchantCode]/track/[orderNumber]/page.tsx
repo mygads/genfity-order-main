@@ -58,6 +58,7 @@ interface OrderData {
         menuName: string;
         quantity: number;
         menuPrice: number;
+        subtotal: number;
         notes: string | null;
         addons: Array<{
             name: string;
@@ -293,16 +294,18 @@ export default function OrderTrackPage() {
                     menuName: string;
                     quantity: number;
                     menuPrice: unknown;
+                    subtotal?: unknown;
                     notes?: string;
-                    addons?: Array<{ addonName?: string; name?: string; price?: unknown; quantity?: number }>;
+                    addons?: Array<{ addonName?: string; name?: string; price?: unknown; addonPrice?: unknown; subtotal?: unknown; quantity?: number }>;
                 }) => ({
                     menuName: item.menuName,
                     quantity: item.quantity,
                     menuPrice: convertDecimal(item.menuPrice),
+                    subtotal: convertDecimal(item.subtotal),
                     notes: item.notes,
                     addons: (item.addons || []).map((addon) => ({
                         name: addon.addonName || addon.name || '',
-                        price: convertDecimal(addon.price),
+                        price: convertDecimal(addon.addonPrice ?? addon.price),
                         quantity: addon.quantity || 1,
                     })),
                 })) || [],
@@ -1214,7 +1217,7 @@ export default function OrderTrackPage() {
                                         )}
                                     </div>
                                     <span className="text-sm font-medium text-gray-700">
-                                        {formatPrice(item.menuPrice * item.quantity, order.merchant.currency)}
+                                        {formatPrice(item.subtotal, order.merchant.currency)}
                                     </span>
                                 </div>
                             ))}

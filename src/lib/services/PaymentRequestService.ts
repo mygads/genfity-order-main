@@ -13,6 +13,7 @@ import userNotificationService from '@/lib/services/UserNotificationService';
 import influencerCommissionService from '@/lib/services/InfluencerCommissionService';
 import prisma from '@/lib/db/client';
 import { NotFoundError, ValidationError, ConflictError, ERROR_CODES } from '@/lib/constants/errors';
+import type { PaymentRequestStatus } from '@prisma/client';
 
 export interface CreatePaymentRequestInput {
     merchantId: bigint;
@@ -364,10 +365,18 @@ class PaymentRequestService {
     }
 
     /**
+     * Get latest active (PENDING/CONFIRMED) request for merchant
+     */
+    async getActiveMerchantRequest(merchantId: bigint) {
+        return paymentRequestRepository.getActiveMerchantRequest(merchantId);
+    }
+
+    /**
      * Get all confirmed payment requests for admin verification
      */
-    async getPendingVerifications(options: { limit?: number; offset?: number } = {}) {
-        return paymentRequestRepository.getPendingRequests({ ...options, status: 'CONFIRMED' });
+    async getPendingVerifications(options: { limit?: number; offset?: number; includePending?: boolean } = {}) {
+        const statuses: PaymentRequestStatus[] = options.includePending ? ['PENDING', 'CONFIRMED'] : ['CONFIRMED'];
+        return paymentRequestRepository.getPendingRequests({ ...options, status: statuses });
     }
 
     /**
@@ -375,6 +384,47 @@ class PaymentRequestService {
      */
     async getPaymentRequest(requestId: bigint) {
         return paymentRequestRepository.getPaymentRequest(requestId);
+    }
+
+    /**
+     * Merchant cancels a payment request (to allow creating a new one)
+     */
+    async cancelPaymentRequest(requestId: bigint, merchantId: bigint) {
+        const request = await paymentRequestRepository.getPaymentRequest(requestId);
+
+        if (!request) {
+            throw new NotFoundError('Payment request not found', ERROR_CODES.NOT_FOUND);
+        }
+
+        if (request.merchantId !== merchantId) {
+            throw new ValidationError('This payment request does not belong to you', ERROR_CODES.VALIDATION_FAILED);
+        }
+
+        if (request.status !== 'PENDING' && request.status !== 'CONFIRMED') {
+            throw new ValidationError(
+                `Cannot cancel a ${request.status.toLowerCase()} request`,
+                ERROR_CODES.VALIDATION_FAILED
+            );
+        }
+
+        const updated = await paymentRequestRepository.cancelPaymentRequest(requestId, {
+            cancelNote: 'Cancelled by merchant',
+        });
+
+        // Record in subscription history (audit)
+        try {
+            await subscriptionHistoryService.recordPaymentCancelled(
+                merchantId,
+                request.type as 'DEPOSIT_TOPUP' | 'MONTHLY_SUBSCRIPTION',
+                Number(request.amount),
+                request.currency,
+                requestId
+            );
+        } catch (historyError) {
+            console.error('Failed to record payment cancellation in history:', historyError);
+        }
+
+        return updated;
     }
 
     /**

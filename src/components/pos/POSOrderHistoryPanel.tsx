@@ -32,7 +32,7 @@ import {
 } from 'react-icons/fa';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { DeletePinModal } from '@/components/modals/DeletePinModal';
-import { openMerchantOrderReceiptPdfAndPrint } from '@/lib/utils/receiptPdfClient';
+import { openMerchantOrderReceiptHtmlAndPrint } from '@/lib/utils/receiptHtmlClient';
 import { useMerchant } from '@/context/MerchantContext';
 import { formatCurrency, formatFullOrderNumber } from '@/lib/utils/format';
 import { useToast } from '@/context/ToastContext';
@@ -257,14 +257,14 @@ export const POSOrderHistoryPanel: React.FC<POSOrderHistoryPanelProps> = ({
   }, [refundingOrderId, selectedOrder, onRefundSuccess]);
 
   const handlePrintReceipt = async (order: Order) => {
-    const result = await openMerchantOrderReceiptPdfAndPrint(order.id);
+    const result = await openMerchantOrderReceiptHtmlAndPrint(order.id);
     if (!result.ok) {
       const message =
         result.reason === 'popup_blocked'
           ? ((t('pos.receipt.printFailedPopupBlockedMessage') as string) ||
             'Unable to open the print window. Please allow popups, then try again.')
           : ((t('pos.receipt.printFailedFetchMessage') as string) ||
-            'Unable to fetch the receipt PDF. Please check your connection, then try again.');
+            'Unable to fetch the receipt. Please check your connection, then try again.');
 
       showError(
         message,

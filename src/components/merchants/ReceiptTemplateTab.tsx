@@ -55,7 +55,7 @@ export const ReceiptTemplateTab: React.FC<ReceiptTemplateTabProps> = ({
 }) => {
   const { t, locale } = useTranslation();
 
-  const [previewUrl, setPreviewUrl] = useState<string>('');
+  const [previewHtml, setPreviewHtml] = useState<string>('');
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string>('');
 
@@ -67,11 +67,12 @@ export const ReceiptTemplateTab: React.FC<ReceiptTemplateTabProps> = ({
     ...DEFAULT_RECEIPT_SETTINGS,
     ...(initialSettings || {}),
     receiptLanguage: rawLanguage === 'id' || rawLanguage === 'en' ? rawLanguage : inferredLanguage,
-    // Paper size is fixed to 80mm (no UI for switching sizes)
-    paperSize: '80mm',
+    paperSize: (initialSettings?.paperSize === '58mm' || initialSettings?.paperSize === '80mm')
+      ? initialSettings.paperSize
+      : DEFAULT_RECEIPT_SETTINGS.paperSize,
   };
 
-  const paperWidthPx = 280;
+  const paperWidthPx = settings.paperSize === '58mm' ? 200 : 280;
 
   const receiptLanguage: 'en' | 'id' = settings.receiptLanguage;
 
@@ -132,6 +133,13 @@ export const ReceiptTemplateTab: React.FC<ReceiptTemplateTabProps> = ({
     });
   };
 
+  const handlePaperSizeChange = (value: '58mm' | '80mm') => {
+    onChange({
+      ...settings,
+      paperSize: value,
+    });
+  };
+
   useEffect(() => {
     let isCancelled = false;
 
@@ -145,7 +153,7 @@ export const ReceiptTemplateTab: React.FC<ReceiptTemplateTabProps> = ({
           throw new Error('Missing access token');
         }
 
-        const res = await fetch('/api/merchant/receipt/preview', {
+        const res = await fetch('/api/merchant/receipt/preview-html', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -158,25 +166,13 @@ export const ReceiptTemplateTab: React.FC<ReceiptTemplateTabProps> = ({
           throw new Error('Failed to generate preview');
         }
 
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-
-        if (isCancelled) {
-          URL.revokeObjectURL(url);
-          return;
-        }
-
-        setPreviewUrl((prev) => {
-          if (prev) URL.revokeObjectURL(prev);
-          return url;
-        });
+        const html = await res.text();
+        if (isCancelled) return;
+        setPreviewHtml(html);
       } catch (err) {
         if (isCancelled) return;
         setPreviewError(err instanceof Error ? err.message : 'Failed to generate preview');
-        setPreviewUrl((prev) => {
-          if (prev) URL.revokeObjectURL(prev);
-          return '';
-        });
+        setPreviewHtml('');
       } finally {
         if (!isCancelled) setPreviewLoading(false);
       }
@@ -189,12 +185,6 @@ export const ReceiptTemplateTab: React.FC<ReceiptTemplateTabProps> = ({
     };
   }, [previewRequestBody]);
 
-  useEffect(() => {
-    return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-    };
-  }, [previewUrl]);
-
   // Reset to defaults
   const handleReset = () => {
     onChange({ ...DEFAULT_RECEIPT_SETTINGS, paperSize: '80mm' });
@@ -206,7 +196,7 @@ export const ReceiptTemplateTab: React.FC<ReceiptTemplateTabProps> = ({
       const token = localStorage.getItem('accessToken');
       if (!token) return;
 
-      const res = await fetch('/api/merchant/receipt/preview', {
+      const res = await fetch('/api/merchant/receipt/preview-html', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -219,17 +209,44 @@ export const ReceiptTemplateTab: React.FC<ReceiptTemplateTabProps> = ({
         throw new Error('Failed to generate preview');
       }
 
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const win = window.open(url, '_blank');
-      if (!win) return;
-      win.onload = () => {
-        win.print();
-        setTimeout(() => {
-          win.close();
-          URL.revokeObjectURL(url);
-        }, 250);
+      const html = await res.text();
+
+      // Print without navigating away: render into a hidden iframe and call print().
+      const iframe = document.createElement('iframe');
+      iframe.setAttribute('aria-hidden', 'true');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      iframe.style.opacity = '0';
+      iframe.style.pointerEvents = 'none';
+
+      const cleanup = () => {
+        try {
+          iframe.remove();
+        } catch {
+          // ignore
+        }
       };
+
+      iframe.onload = () => {
+        try {
+          const win = iframe.contentWindow;
+          if (!win) return;
+          win.focus();
+          win.print();
+        } catch {
+          // ignore
+        } finally {
+          window.setTimeout(cleanup, 800);
+        }
+      };
+
+      document.body.appendChild(iframe);
+      iframe.srcdoc = html;
+      window.setTimeout(cleanup, 5000);
     } catch {
       // Ignore preview print failures
     }
@@ -359,8 +376,8 @@ export const ReceiptTemplateTab: React.FC<ReceiptTemplateTabProps> = ({
             </h3>
             <div className="space-y-2">
               {RECEIPT_SETTINGS_GROUPS.header.fields.map((field) => (
-                <div key={field.key} className="flex items-center justify-between gap-3">
-                  <span className="min-w-0 truncate text-sm font-medium text-gray-800 dark:text-gray-200" title={t(field.labelKey)}>
+                <div key={field.key} className="flex items-start justify-between gap-4">
+                  <span className="flex-1 text-sm font-medium leading-snug text-gray-800 dark:text-gray-200">
                     {t(field.labelKey)}
                   </span>
                   <Switch
@@ -381,8 +398,8 @@ export const ReceiptTemplateTab: React.FC<ReceiptTemplateTabProps> = ({
             </h3>
             <div className="space-y-2">
               {RECEIPT_SETTINGS_GROUPS.order.fields.map((field) => (
-                <div key={field.key} className="flex items-center justify-between gap-3">
-                  <span className="min-w-0 truncate text-sm font-medium text-gray-800 dark:text-gray-200" title={t(field.labelKey)}>
+                <div key={field.key} className="flex items-start justify-between gap-4">
+                  <span className="flex-1 text-sm font-medium leading-snug text-gray-800 dark:text-gray-200">
                     {t(field.labelKey)}
                   </span>
                   <Switch
@@ -403,8 +420,8 @@ export const ReceiptTemplateTab: React.FC<ReceiptTemplateTabProps> = ({
             </h3>
             <div className="space-y-2">
               {RECEIPT_SETTINGS_GROUPS.items.fields.map((field) => (
-                <div key={field.key} className="flex items-center justify-between gap-3">
-                  <span className="min-w-0 truncate text-sm font-medium text-gray-800 dark:text-gray-200" title={t(field.labelKey)}>
+                <div key={field.key} className="flex items-start justify-between gap-4">
+                  <span className="flex-1 text-sm font-medium leading-snug text-gray-800 dark:text-gray-200">
                     {t(field.labelKey)}
                   </span>
                   <Switch
@@ -425,8 +442,8 @@ export const ReceiptTemplateTab: React.FC<ReceiptTemplateTabProps> = ({
             </h3>
             <div className="space-y-2">
               {RECEIPT_SETTINGS_GROUPS.footer.fields.map((field) => (
-                <div key={field.key} className="flex items-center justify-between gap-3">
-                  <span className="min-w-0 truncate text-sm font-medium text-gray-800 dark:text-gray-200" title={t(field.labelKey)}>
+                <div key={field.key} className="flex items-start justify-between gap-4">
+                  <span className="flex-1 text-sm font-medium leading-snug text-gray-800 dark:text-gray-200">
                     {t(field.labelKey)}
                   </span>
                   <Switch
@@ -446,10 +463,10 @@ export const ReceiptTemplateTab: React.FC<ReceiptTemplateTabProps> = ({
           <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
             {t(RECEIPT_SETTINGS_GROUPS.payment.titleKey)}
           </h3>
-          <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+          <div className="grid gap-3 sm:grid-cols-2">
             {RECEIPT_SETTINGS_GROUPS.payment.fields.map((field) => (
-              <div key={field.key} className="flex items-center justify-between gap-3 rounded-md border border-gray-200 bg-white px-3 py-2 dark:border-gray-800 dark:bg-gray-950">
-                <span className="min-w-0 truncate text-sm font-medium text-gray-800 dark:text-gray-200" title={t(field.labelKey)}>
+              <div key={field.key} className="flex items-start justify-between gap-4 rounded-md border border-gray-200 bg-white px-3 py-2 dark:border-gray-800 dark:bg-gray-950">
+                <span className="flex-1 text-sm font-medium leading-snug text-gray-800 dark:text-gray-200">
                   {t(field.labelKey)}
                 </span>
                 <Switch
@@ -467,14 +484,24 @@ export const ReceiptTemplateTab: React.FC<ReceiptTemplateTabProps> = ({
         <div className="grid gap-4 sm:grid-cols-2">
           {/* Custom Thank You Message */}
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50">
-            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              {t('admin.receipt.customMessage')}
-            </label>
+            <div className="mb-2 flex items-start justify-between gap-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                {t('admin.receipt.customMessage')}
+              </label>
+              <Switch
+                size="sm"
+                checked={Boolean(settings.showThankYouMessage)}
+                onCheckedChange={(next) => handleChange('showThankYouMessage', next)}
+                aria-label={t('admin.receipt.showThankYouMessage')}
+              />
+            </div>
             <textarea
               value={settings.customThankYouMessage || ''}
               onChange={(e) => handleMessageChange(e.target.value)}
               rows={2}
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white resize-none"
+              placeholder={t('admin.receipt.customMessagePlaceholder')}
+              disabled={!settings.showThankYouMessage}
+              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:opacity-60 dark:border-gray-800 dark:bg-gray-900 dark:text-white resize-none"
             />
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
               {t('admin.receipt.customMessageHelp')}
@@ -486,14 +513,24 @@ export const ReceiptTemplateTab: React.FC<ReceiptTemplateTabProps> = ({
             className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/50"
             data-tutorial="receipt-custom-footer"
           >
-            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              {t('admin.receipt.customFooterText')}
-            </label>
+            <div className="mb-2 flex items-start justify-between gap-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                {t('admin.receipt.customFooterText')}
+              </label>
+              <Switch
+                size="sm"
+                checked={Boolean(settings.showCustomFooterText)}
+                onCheckedChange={(next) => handleChange('showCustomFooterText', next)}
+                aria-label={t('admin.receipt.showCustomFooterText')}
+              />
+            </div>
             <textarea
               value={settings.customFooterText || ''}
               onChange={(e) => handleFooterTextChange(e.target.value)}
               rows={2}
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white resize-none"
+              placeholder={t('admin.receipt.customFooterPlaceholder')}
+              disabled={!settings.showCustomFooterText}
+              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:opacity-60 dark:border-gray-800 dark:bg-gray-900 dark:text-white resize-none"
             />
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
               {t('admin.receipt.customFooterHelp')}
@@ -508,9 +545,15 @@ export const ReceiptTemplateTab: React.FC<ReceiptTemplateTabProps> = ({
         <div className="rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 lg:sticky lg:top-6">
           <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-gray-200 dark:border-gray-800">
             <div className="flex items-center gap-2">
-              <span className="inline-flex h-7 items-center rounded-md border border-gray-200 bg-gray-50 px-2 text-[11px] font-semibold text-gray-700 dark:border-gray-800 dark:bg-gray-950/30 dark:text-gray-300">
-                80mm
-              </span>
+              <select
+                value={settings.paperSize}
+                onChange={(e) => handlePaperSizeChange(e.target.value as '58mm' | '80mm')}
+                className="h-9 rounded-lg border border-gray-200 bg-white px-2 text-xs text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
+                aria-label={t('admin.receipt.paperSize')}
+              >
+                <option value="80mm">{t('admin.receipt.paperSize80mm')}</option>
+                <option value="58mm">{t('admin.receipt.paperSize58mm')}</option>
+              </select>
 
               <select
                 data-tutorial="receipt-language-select"
@@ -542,21 +585,21 @@ export const ReceiptTemplateTab: React.FC<ReceiptTemplateTabProps> = ({
             >
               {previewLoading ? (
                 <div className="flex h-180 w-full items-center justify-center text-sm text-gray-500 dark:text-gray-400">
-                  Generating preview…
+                  {t('admin.receipt.previewGenerating')}
                 </div>
               ) : previewError ? (
                 <div className="flex h-180 w-full items-center justify-center px-4 text-center text-sm text-red-600 dark:text-red-400">
                   {previewError}
                 </div>
-              ) : previewUrl ? (
+              ) : previewHtml ? (
                 <iframe
                   title="Receipt preview"
-                  src={previewUrl}
+                  srcDoc={previewHtml}
                   style={{ width: `${paperWidthPx}px`, height: '720px', border: 0 }}
                 />
               ) : (
                 <div className="flex h-180 w-full items-center justify-center text-sm text-gray-500 dark:text-gray-400">
-                  Preview unavailable
+                  {t('admin.receipt.previewUnavailable')}
                 </div>
               )}
             </div>

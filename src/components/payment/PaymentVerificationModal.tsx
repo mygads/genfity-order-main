@@ -13,7 +13,7 @@ import { PaymentRecordForm, type PaymentFormData } from './PaymentRecordForm';
 import type { OrderWithDetails } from '@/lib/types/order';
 import type { ReceiptSettings } from '@/lib/types/receiptSettings';
 import { formatCurrency as formatCurrencyUtil } from '@/lib/utils/format';
-import { openMerchantOrderReceiptPdfAndPrint } from '@/lib/utils/receiptPdfClient';
+import { openMerchantOrderReceiptHtmlAndPrint } from '@/lib/utils/receiptHtmlClient';
 
 interface PaymentVerificationModalProps {
   isOpen: boolean;
@@ -70,7 +70,7 @@ export const PaymentVerificationModal: React.FC<PaymentVerificationModalProps> =
       if (verifiedOrder) {
         const orderId = (verifiedOrder as any)?.id as string | number | undefined;
         if (orderId != null) {
-          await openMerchantOrderReceiptPdfAndPrint(orderId);
+          await openMerchantOrderReceiptHtmlAndPrint(orderId);
         }
       }
       

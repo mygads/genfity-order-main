@@ -4,6 +4,7 @@ import { withMerchant } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/middleware/auth';
 import type { ReceiptSettings } from '@/lib/types/receiptSettings';
 import { generateOrderReceiptPdfBuffer } from '@/lib/utils/orderReceiptPdfEmail';
+import { resolveAssetUrl } from '@/lib/utils/assetUrl';
 
 /**
  * Receipt PDF Preview
@@ -57,20 +58,27 @@ export const POST = withMerchant(async (req: NextRequest, auth: AuthContext) => 
   const currency = merchant.currency || 'AUD';
   const timeZone = merchant.timezone || 'Australia/Sydney';
   const locale: 'en' | 'id' = currency === 'IDR' ? 'id' : 'en';
+  const previewLanguage: 'en' | 'id' =
+    receiptSettings.receiptLanguage === 'en' || receiptSettings.receiptLanguage === 'id'
+      ? receiptSettings.receiptLanguage
+      : locale;
 
   const now = new Date();
+
+  const requestOrigin = req.nextUrl.origin;
+  const resolvedLogoUrl = resolveAssetUrl(merchant.logoUrl, { requestOrigin });
 
   const pdfBuffer = await generateOrderReceiptPdfBuffer({
     orderNumber: 'DEMO-1234',
     merchantCode: merchant.code,
     merchantName: merchant.name,
-    merchantLogoUrl: merchant.logoUrl,
+    merchantLogoUrl: resolvedLogoUrl,
     merchantAddress: merchant.address,
     merchantPhone: merchant.phone || null,
     merchantEmail: merchant.email,
     receiptSettings,
-    customerName: locale === 'id' ? 'Pelanggan' : 'Customer',
-    customerPhone: locale === 'id' ? '08xx-xxxx-xxxx' : '+61 4xx xxx xxx',
+    customerName: previewLanguage === 'id' ? 'Pelanggan' : 'Customer',
+    customerPhone: previewLanguage === 'id' ? '08xx-xxxx-xxxx' : '+61 4xx xxx xxx',
     customerEmail: 'customer@example.com',
     orderType: 'DELIVERY',
     tableNumber: null,
@@ -78,7 +86,7 @@ export const POST = withMerchant(async (req: NextRequest, auth: AuthContext) => 
     deliveryBuildingName: 'Genfity Tower',
     deliveryBuildingNumber: '88',
     deliveryFloor: '7',
-    deliveryInstructions: locale === 'id' ? 'Tolong taruh di resepsionis.' : 'Please leave at reception.',
+    deliveryInstructions: previewLanguage === 'id' ? 'Tolong taruh di resepsionis.' : 'Please leave at reception.',
     deliveryAddress: '123 Example Street, City',
     items: [
       {
@@ -86,7 +94,7 @@ export const POST = withMerchant(async (req: NextRequest, auth: AuthContext) => 
         quantity: 2,
         unitPrice: 15.5,
         subtotal: 31,
-        notes: locale === 'id' ? 'Tanpa bawang' : 'No onion',
+        notes: previewLanguage === 'id' ? 'Tanpa bawang' : 'No onion',
         addons: [
           { addonName: 'Extra Cheese', addonPrice: 2, quantity: 2, subtotal: 4 },
           { addonName: 'Bacon', addonPrice: 3, quantity: 2, subtotal: 6 },

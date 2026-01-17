@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -9,9 +9,15 @@ import Link from 'next/link';
 import { FileIcon, FolderIcon, PlusIcon, EyeIcon } from '@/icons';
 import { useMerchant } from '@/context/MerchantContext';
 import { getCurrencySymbol } from '@/lib/utils/format';
+import { getCurrencyConfig } from '@/lib/constants/location';
 import { useToast } from '@/context/ToastContext';
 import StockPhotoPicker from './StockPhotoPicker';
 import { StatusToggle } from '@/components/common/StatusToggle';
+import { useTranslation } from '@/lib/i18n/useTranslation';
+import DetailedMenuSection from '@/components/customer/DetailedMenuSection';
+import HorizontalMenuSection from '@/components/customer/HorizontalMenuSection';
+import ViewModeToggle, { type ViewMode } from '@/components/customer/ViewModeToggle';
+import MenuDetailModal from '@/components/menu/MenuDetailModal';
 
 /**
  * Menu Builder Tabs Component
@@ -75,6 +81,10 @@ interface MenuBuilderTabsProps {
   onSubmit: (data: MenuBuilderFormData) => Promise<void>;
   onCancel: () => void;
   isLoading?: boolean;
+  /** Register cleanup function (draft + temp uploads) for parent navigation guards */
+  onRegisterCleanup?: (cleanup: () => Promise<void>) => void;
+  /** Notify parent whether there is an unsaved draft */
+  onDraftStateChange?: (hasDraft: boolean) => void;
 }
 
 type TabKey = 'basic' | 'categories' | 'addons' | 'preview';
@@ -87,8 +97,11 @@ export default function MenuBuilderTabs({
   onSubmit,
   onCancel,
   isLoading = false,
+  onRegisterCleanup,
+  onDraftStateChange,
 }: MenuBuilderTabsProps) {
-  const { currency } = useMerchant();
+  const { currency, merchant } = useMerchant();
+  const { t } = useTranslation();
   const { showError, showWarning } = useToast();
   const currencySymbol = getCurrencySymbol(currency);
   const [activeTab, setActiveTab] = useState<TabKey>('basic');
@@ -108,6 +121,7 @@ export default function MenuBuilderTabs({
     handleSubmit,
     watch,
     setValue,
+    reset,
     formState: { errors, isDirty },
   } = useForm({
     resolver: zodResolver(menuBuilderSchema),
@@ -138,7 +152,20 @@ export default function MenuBuilderTabs({
 
   const watchTrackStock = watch('trackStock');
   const watchImageUrl = watch('imageUrl');
+  const watchImageThumbUrl = watch('imageThumbUrl');
   const watchIsActive = watch('isActive');
+
+  const [previewViewMode, setPreviewViewMode] = useState<ViewMode>('list');
+  const [previewSelectedMenuId, setPreviewSelectedMenuId] = useState<string | null>(null);
+  const [showSaveConfirm, setShowSaveConfirm] = useState(false);
+
+  const isBusy = isLoading || uploadingImage;
+
+  const draftStorageKey = useMemo(() => {
+    return menuId ? `genfity_menu_builder_draft_${menuId}` : 'genfity_menu_builder_draft_new';
+  }, [menuId]);
+  const [hasLoadedDraft, setHasLoadedDraft] = useState(false);
+  const persistTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     setImageError(false);
@@ -147,6 +174,7 @@ export default function MenuBuilderTabs({
   // Track the uploaded image URL (only for newly uploaded images, not initial data)
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
   const [uploadedImageThumbUrl, setUploadedImageThumbUrl] = useState<string | null>(null);
+  const [imageSource, setImageSource] = useState<'initial' | 'upload' | 'stock'>('initial');
 
   // Update form values when selections change
   useEffect(() => {
@@ -177,15 +205,154 @@ export default function MenuBuilderTabs({
     }
   };
 
+  const replaceTempUpload = async (nextSource: 'upload' | 'stock' | 'initial') => {
+    // If there is a previously uploaded image that hasn't been saved, delete it.
+    if (uploadedImageUrl) {
+      await deleteUploadedImage(uploadedImageUrl, uploadedImageThumbUrl);
+      setUploadedImageUrl(null);
+      setUploadedImageThumbUrl(null);
+    }
+
+    setImageSource(nextSource);
+  };
+
+  const cleanupDraftAndTemp = async () => {
+    try {
+      await replaceTempUpload('initial');
+    } finally {
+      try {
+        localStorage.removeItem(draftStorageKey);
+      } catch {
+        // ignore
+      }
+      onDraftStateChange?.(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!onRegisterCleanup) return;
+    onRegisterCleanup(cleanupDraftAndTemp);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onRegisterCleanup, draftStorageKey, uploadedImageUrl, uploadedImageThumbUrl, imageSource]);
+
+  // Load draft (if any)
+  useEffect(() => {
+    if (hasLoadedDraft) return;
+    try {
+      const raw = localStorage.getItem(draftStorageKey);
+      if (!raw) {
+        setHasLoadedDraft(true);
+        return;
+      }
+      const parsed = JSON.parse(raw) as {
+        activeTab?: TabKey;
+        form?: Partial<MenuBuilderFormData>;
+        selectedCategories?: number[];
+        selectedAddonCategories?: number[];
+        imageSource?: 'initial' | 'upload' | 'stock';
+        uploadedImageUrl?: string | null;
+        uploadedImageThumbUrl?: string | null;
+      };
+
+      if (parsed?.form) {
+        reset({
+          name: parsed.form.name ?? initialData?.name ?? '',
+          description: parsed.form.description ?? initialData?.description ?? '',
+          price: parsed.form.price ?? initialData?.price ?? 0,
+          imageUrl: parsed.form.imageUrl ?? initialData?.imageUrl ?? '',
+          imageThumbUrl: parsed.form.imageThumbUrl ?? (initialData as Partial<MenuBuilderFormData> | undefined)?.imageThumbUrl ?? '',
+          isActive: parsed.form.isActive ?? initialData?.isActive ?? true,
+          trackStock: parsed.form.trackStock ?? initialData?.trackStock ?? false,
+          stockQty: parsed.form.stockQty ?? initialData?.stockQty ?? null,
+          dailyStockTemplate: parsed.form.dailyStockTemplate ?? initialData?.dailyStockTemplate ?? null,
+          autoResetStock: parsed.form.autoResetStock ?? initialData?.autoResetStock ?? false,
+          isSpicy: parsed.form.isSpicy ?? initialData?.isSpicy ?? false,
+          isBestSeller: parsed.form.isBestSeller ?? initialData?.isBestSeller ?? false,
+          isSignature: parsed.form.isSignature ?? initialData?.isSignature ?? false,
+          isRecommended: parsed.form.isRecommended ?? initialData?.isRecommended ?? false,
+          categoryIds: parsed.form.categoryIds ?? initialData?.categoryIds ?? [],
+          addonCategoryIds: parsed.form.addonCategoryIds ?? initialData?.addonCategoryIds ?? [],
+        });
+      }
+
+      if (Array.isArray(parsed.selectedCategories)) setSelectedCategories(parsed.selectedCategories);
+      if (Array.isArray(parsed.selectedAddonCategories)) setSelectedAddonCategories(parsed.selectedAddonCategories);
+      if (parsed.activeTab) setActiveTab(parsed.activeTab);
+
+      if (parsed.imageSource) setImageSource(parsed.imageSource);
+      if (typeof parsed.uploadedImageUrl !== 'undefined') setUploadedImageUrl(parsed.uploadedImageUrl);
+      if (typeof parsed.uploadedImageThumbUrl !== 'undefined') setUploadedImageThumbUrl(parsed.uploadedImageThumbUrl);
+
+      onDraftStateChange?.(true);
+    } catch {
+      // ignore corrupted draft
+    } finally {
+      setHasLoadedDraft(true);
+    }
+  }, [draftStorageKey, hasLoadedDraft, initialData, onDraftStateChange, reset]);
+
+  // Persist draft (form changes)
+  useEffect(() => {
+    if (!hasLoadedDraft) return;
+
+    const subscription = watch((form) => {
+      if (persistTimerRef.current) window.clearTimeout(persistTimerRef.current);
+      persistTimerRef.current = window.setTimeout(() => {
+        try {
+          const payload = {
+            activeTab,
+            form,
+            selectedCategories,
+            selectedAddonCategories,
+            imageSource,
+            uploadedImageUrl: imageSource === 'upload' ? uploadedImageUrl : null,
+            uploadedImageThumbUrl: imageSource === 'upload' ? uploadedImageThumbUrl : null,
+          };
+          localStorage.setItem(draftStorageKey, JSON.stringify(payload));
+          onDraftStateChange?.(true);
+        } catch {
+          // ignore
+        }
+      }, 250);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+      if (persistTimerRef.current) window.clearTimeout(persistTimerRef.current);
+    };
+  }, [watch, hasLoadedDraft, activeTab, selectedCategories, selectedAddonCategories, imageSource, uploadedImageUrl, uploadedImageThumbUrl, draftStorageKey, onDraftStateChange]);
+
+  // Persist draft when non-form state changes (tab / selections)
+  useEffect(() => {
+    if (!hasLoadedDraft) return;
+    try {
+      const form = watch();
+      const payload = {
+        activeTab,
+        form,
+        selectedCategories,
+        selectedAddonCategories,
+        imageSource,
+        uploadedImageUrl: imageSource === 'upload' ? uploadedImageUrl : null,
+        uploadedImageThumbUrl: imageSource === 'upload' ? uploadedImageThumbUrl : null,
+      };
+      localStorage.setItem(draftStorageKey, JSON.stringify(payload));
+      onDraftStateChange?.(true);
+    } catch {
+      // ignore
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, selectedCategories, selectedAddonCategories, imageSource, uploadedImageUrl, uploadedImageThumbUrl, hasLoadedDraft, draftStorageKey]);
+
   // Cleanup on unmount if image was uploaded but menu not saved
   useEffect(() => {
     return () => {
-      // Only cleanup if a new image was uploaded and form is dirty (not saved)
-      if (uploadedImageUrl && isDirty) {
+      // Cleanup if a new image was uploaded and not saved
+      if (uploadedImageUrl) {
         deleteUploadedImage(uploadedImageUrl, uploadedImageThumbUrl);
       }
     };
-  }, [uploadedImageUrl, uploadedImageThumbUrl, isDirty]);
+  }, [uploadedImageUrl, uploadedImageThumbUrl]);
 
   const handleFormSubmit = async (data: MenuBuilderFormData) => {
     // Manually set categoryIds and addonCategoryIds from state, convert to numbers
@@ -200,6 +367,13 @@ export default function MenuBuilderTabs({
       // Clear the uploaded image tracking since it's now saved with the menu
       setUploadedImageUrl(null);
       setUploadedImageThumbUrl(null);
+      setImageSource('initial');
+      try {
+        localStorage.removeItem(draftStorageKey);
+      } catch {
+        // ignore
+      }
+      onDraftStateChange?.(false);
     } catch (error) {
       console.error('Error submitting form:', error);
     }
@@ -225,6 +399,10 @@ export default function MenuBuilderTabs({
       setUploadingImage(true);
       setUploadProgress(0);
 
+      // Replacing an existing temp upload? Clean it up first.
+      // We intentionally do not delete initial/stock images here.
+      await replaceTempUpload('upload');
+
       const formData = new FormData();
       formData.append('file', file);
       const token = localStorage.getItem('accessToken');
@@ -246,11 +424,12 @@ export default function MenuBuilderTabs({
             const imageUrl = data.data.url;
             const imageThumbUrl = data.data.thumbUrl;
             const warnings = Array.isArray(data?.data?.warnings) ? data.data.warnings : [];
-            setValue('imageUrl', imageUrl);
-            setValue('imageThumbUrl', imageThumbUrl || '');
+            setValue('imageUrl', imageUrl, { shouldValidate: true, shouldDirty: true });
+            setValue('imageThumbUrl', imageThumbUrl || '', { shouldValidate: true, shouldDirty: true });
             // Track the uploaded image for cleanup if user cancels
             setUploadedImageUrl(imageUrl);
             setUploadedImageThumbUrl(imageThumbUrl || null);
+            setImageSource('upload');
 
             if (warnings.length > 0) {
               showWarning(warnings[0], 'Small image warning');
@@ -298,10 +477,10 @@ export default function MenuBuilderTabs({
   };
 
   const tabs = [
-    { key: 'basic' as TabKey, label: 'Basic Info', Icon: FileIcon },
-    { key: 'categories' as TabKey, label: 'Categories', Icon: FolderIcon },
-    { key: 'addons' as TabKey, label: 'Add-ons', Icon: PlusIcon },
-    { key: 'preview' as TabKey, label: 'Preview', Icon: EyeIcon },
+    { key: 'basic' as TabKey, label: t('admin.menuBuilder.tabs.basic') || 'Basic Info', Icon: FileIcon },
+    { key: 'categories' as TabKey, label: t('admin.menuBuilder.tabs.categories') || 'Categories', Icon: FolderIcon },
+    { key: 'addons' as TabKey, label: t('admin.menuBuilder.tabs.addons') || 'Add-ons', Icon: PlusIcon },
+    { key: 'preview' as TabKey, label: t('admin.menuBuilder.tabs.preview') || 'Preview', Icon: EyeIcon },
   ];
 
   const isTabComplete = (tab: TabKey): boolean => {
@@ -391,7 +570,14 @@ export default function MenuBuilderTabs({
       </div>
 
       {/* Tab Content */}
-      <form onSubmit={handleSubmit(handleFormSubmit)} className="p-6 lg:p-8">
+      <form
+        onSubmit={(e) => {
+          // Guard: never allow implicit form submissions (buttons without type inside preview, Enter key, etc.)
+          // Save must be explicit via the confirmation modal.
+          e.preventDefault();
+        }}
+        className="p-6 lg:p-8"
+      >
         {/* Basic Info Tab */}
         {activeTab === 'basic' && (
           <div className="space-y-6" data-tutorial="builder-basic">
@@ -463,7 +649,11 @@ export default function MenuBuilderTabs({
                       className="h-12 w-full rounded-xl border border-gray-200 bg-white pl-10 pr-4 text-sm text-gray-800 focus:border-brand-400 focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
                       placeholder="0.00"
                       min="0"
-                      step="0.01"
+                      step={getCurrencyConfig(currency).decimals === 0 ? '1' : '0.01'}
+                      onWheel={(e) => {
+                        // Prevent scroll wheel changing the value (common source of 20 -> 19.96)
+                        (e.target as HTMLInputElement).blur();
+                      }}
                     />
                   </div>
                   {errors.price && (
@@ -506,8 +696,23 @@ export default function MenuBuilderTabs({
                       <button
                         type="button"
                         onClick={() => {
-                          setValue('imageUrl', '');
-                          setValue('imageThumbUrl', '');
+                          const currentImageUrl = watchImageUrl;
+                          const currentThumbUrl = watchImageThumbUrl;
+
+                          // If there is a temp upload tracked, delete it immediately
+                          if (uploadedImageUrl) {
+                            deleteUploadedImage(uploadedImageUrl, uploadedImageThumbUrl);
+                            setUploadedImageUrl(null);
+                            setUploadedImageThumbUrl(null);
+                          }
+
+                          setImageSource('initial');
+
+                          setValue('imageUrl', '', { shouldValidate: true, shouldDirty: true });
+                          setValue('imageThumbUrl', '', { shouldValidate: true, shouldDirty: true });
+
+                          // Keep these reads to avoid unused vars in some TS configurations
+                          void currentThumbUrl;
                         }}
                         className="absolute right-2 top-2 rounded-full bg-white/90 p-2 text-gray-600 shadow-lg transition-all hover:bg-error-100 hover:text-error-600 dark:bg-gray-800/90 dark:text-gray-300"
                       >
@@ -566,6 +771,7 @@ export default function MenuBuilderTabs({
                   type="button"
                   onClick={() => setShowStockPhotoPicker(true)}
                   className="mt-3 w-full rounded-xl border-2 border-dashed border-gray-300 px-4 py-3 text-sm font-medium text-gray-600 transition-all hover:border-brand-400 hover:bg-brand-50 hover:text-brand-600 dark:border-gray-700 dark:text-gray-400 dark:hover:border-brand-500 dark:hover:bg-brand-900/20 dark:hover:text-brand-400"
+                  disabled={uploadingImage}
                 >
                   <span className="flex items-center justify-center gap-2">
                     <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -602,7 +808,7 @@ export default function MenuBuilderTabs({
                   </div>
                   <label className="relative inline-flex cursor-pointer items-center">
                     <input type="checkbox" {...register('trackStock')} className="peer sr-only" />
-                    <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-warning-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-warning-300/20 dark:bg-gray-700 dark:peer-focus:ring-warning-800/20" />
+                    <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-warning-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-warning-300/20 dark:bg-gray-700 dark:peer-focus:ring-warning-800/20" />
                   </label>
                 </div>
 
@@ -902,177 +1108,162 @@ export default function MenuBuilderTabs({
         {/* Preview Tab */}
         {activeTab === 'preview' && (
           <div className="space-y-6" data-tutorial="builder-preview">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">Customer Preview</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                This is how customers will see your menu
-              </p>
-            </div>
+            {(() => {
+              type PreviewMenuItem = {
+                id: string;
+                name: string;
+                description: string;
+                price: number;
+                imageUrl: string | null;
+                imageThumbUrl?: string | null;
+                stockQty: number | null;
+                isActive: boolean;
+                trackStock: boolean;
+                isPromo?: boolean;
+                promoPrice?: number;
+                isSpicy?: boolean;
+                isBestSeller?: boolean;
+                isSignature?: boolean;
+                isRecommended?: boolean;
+                addonCategories?: Array<{ id: string; name: string }>;
+              };
 
-            <div className="mx-auto max-w-2xl">
-              <div className="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900/50">
-                {watch('imageUrl') && (
-                  <div className="mb-4 overflow-hidden rounded-lg">
-                    {!imageError && (
-                      <Image
-                        src={watch('imageUrl') || ''}
-                        alt={watch('name')}
-                        fill
-                        className="object-cover"
-                        onError={() => setImageError(true)}
-                        unoptimized
-                      />
-                    )}
+              const selectedAddonCategoryDetails = selectedAddonCategories
+                .map((addonCatId) => addonCategories.find((ac) => ac.id === addonCatId))
+                .filter((ac): ac is AddonCategory => Boolean(ac));
+
+              const previewMenu: PreviewMenuItem = {
+                id: 'preview-menu',
+                name: String(watch('name') || t('admin.menuBuilder.preview.menuPlaceholderName') || 'New Menu'),
+                description: String(watch('description') || ''),
+                price: Number(watch('price') || 0),
+                imageUrl: watchImageUrl ? String(watchImageUrl) : null,
+                imageThumbUrl: watchImageThumbUrl ? String(watchImageThumbUrl) : null,
+                stockQty: watchTrackStock ? (watch('stockQty') ?? null) : null,
+                isActive: Boolean(watchIsActive),
+                trackStock: Boolean(watchTrackStock),
+                isPromo: false,
+                promoPrice: undefined,
+                isSpicy: Boolean(watch('isSpicy')),
+                isBestSeller: Boolean(watch('isBestSeller')),
+                isSignature: Boolean(watch('isSignature')),
+                isRecommended: Boolean(watch('isRecommended')),
+                addonCategories: selectedAddonCategoryDetails.map((ac) => ({ id: String(ac.id), name: ac.name })),
+              };
+
+              const dummyMenu: PreviewMenuItem = {
+                ...previewMenu,
+                id: 'preview-dummy',
+                name: String(t('admin.menuBuilder.preview.dummyName') || 'Dummy Menu (Disabled)'),
+                description: String(t('admin.menuBuilder.preview.dummyDescription') || 'This item is only for layout preview and cannot be clicked.'),
+                isActive: false,
+                trackStock: false,
+                stockQty: null,
+              };
+
+              const previewItems: PreviewMenuItem[] = [previewMenu, dummyMenu];
+              const selectedMenu = previewItems.find((m) => m.id === previewSelectedMenuId) ?? null;
+
+              const prefetchedAddonsForModal = selectedAddonCategoryDetails.map((ac) => ({
+                id: ac.id,
+                name: ac.name,
+                minSelection: ac.minSelection,
+                maxSelection: ac.maxSelection ?? 0,
+                addonItems: ac.addonItems ?? [],
+              }));
+
+              return (
+                <div className="mx-auto w-full max-w-130">
+                  {/* Mobile Device Frame */}
+                  <div className="relative overflow-hidden rounded-[28px] border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-950">
+                    <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 dark:border-gray-800">
+                      <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                        {t('admin.menuBuilder.preview.deviceTitle') || 'Mobile Preview'}
+                      </div>
+                      <div className="h-1.5 w-14 rounded-full bg-gray-300 dark:bg-gray-700" />
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        {t('admin.menuBuilder.preview.deviceHint') || 'Tap menu to open detail'}
+                      </div>
+                    </div>
+
+                    <div className="p-4 sm:p-5 bg-white dark:bg-gray-950">
+                  <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
+                        {t('admin.menuBuilder.preview.title') || 'Preview'}
+                      </h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        {t('admin.menuBuilder.preview.subtitle') || 'Preview how this menu will look to customers (list, grid, and horizontal cards).'}
+                      </p>
+                    </div>
+                    <ViewModeToggle value={previewViewMode} onChange={setPreviewViewMode} persist={false} />
                   </div>
-                )}
+                  <div className="space-y-4">
+                    <DetailedMenuSection
+                      title={String(t('admin.menuBuilder.preview.listTitle') || 'Menu List Preview')}
+                      items={previewItems}
+                      currency={currency}
+                      merchantCode=""
+                      onAddItem={(item) => setPreviewSelectedMenuId(item.id)}
+                      storeOpen={false}
+                      viewMode={previewViewMode}
+                    />
 
-                <h2 className="text-2xl font-bold text-gray-800 dark:text-white/90">
-                  {watch('name') || 'Menu Name'}
-                </h2>
-
-                {/* Menu Attribute Badges */}
-                {(watch('isSpicy') || watch('isBestSeller') || watch('isSignature') || watch('isRecommended')) && (
-                  <div className="mt-3 flex flex-wrap gap-1.5">
-                    {watch('isSpicy') && (
-                      <div
-                        className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-brand-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
-                        title="Spicy"
-                      >
-                        <Image
-                          src="/images/menu-badges/spicy.png"
-                          alt="Spicy"
-                          fill
-                          className="object-cover transition-opacity duration-300 group-hover:opacity-80"
-                        />
-                      </div>
-                    )}
-                    {watch('isBestSeller') && (
-                      <div
-                        className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-amber-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
-                        title="Best Seller"
-                      >
-                        <Image
-                          src="/images/menu-badges/best-seller.png"
-                          alt="Best Seller"
-                          fill
-                          className="object-cover transition-opacity duration-300 group-hover:opacity-80"
-                        />
-                      </div>
-                    )}
-                    {watch('isSignature') && (
-                      <div
-                        className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-purple-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
-                        title="Signature"
-                      >
-                        <Image
-                          src="/images/menu-badges/signature.png"
-                          alt="Signature"
-                          fill
-                          className="object-cover transition-opacity duration-300 group-hover:opacity-80"
-                        />
-                      </div>
-                    )}
-                    {watch('isRecommended') && (
-                      <div
-                        className="group relative h-6 w-6 cursor-pointer overflow-hidden rounded-full border border-gray-400/50 bg-white transition-all duration-300 hover:ring-2 hover:ring-green-300 hover:ring-offset-1 dark:border-gray-500/50 dark:bg-gray-800"
-                        title="Recommended"
-                      >
-                        <Image
-                          src="/images/menu-badges/recommended.png"
-                          alt="Recommended"
-                          fill
-                          className="object-cover transition-opacity duration-300 group-hover:opacity-80"
-                        />
-                      </div>
-                    )}
+                    <HorizontalMenuSection
+                      title={String(t('admin.menuBuilder.preview.horizontalTitle') || 'Horizontal Card Preview')}
+                      items={previewItems}
+                      currency={currency}
+                      merchantCode=""
+                      onItemClick={(item) => setPreviewSelectedMenuId(item.id)}
+                      storeOpen={false}
+                    />
                   </div>
-                )}
 
-                {watch('description') && (
-                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                    {watch('description')}
-                  </p>
-                )}
 
-                {/* Price display - Promo is now managed via SpecialPrice table */}
-                <div className="mt-4 flex items-baseline gap-2">
-                  <span className="text-2xl font-bold text-gray-800 dark:text-white/90">
-                    ${(watch('price') as number)?.toFixed(2) || '0.00'}
-                  </span>
+                  {selectedMenu && (
+                    <MenuDetailModal
+                      menu={{
+                        id: selectedMenu.id,
+                        name: selectedMenu.name,
+                        description: selectedMenu.description,
+                        price: selectedMenu.price,
+                        imageUrl: selectedMenu.imageUrl,
+                        stockQty: selectedMenu.stockQty,
+                        isActive: selectedMenu.isActive,
+                        trackStock: selectedMenu.trackStock,
+                        isPromo: false,
+                        promoPrice: undefined,
+                        isSpicy: selectedMenu.isSpicy,
+                        isBestSeller: selectedMenu.isBestSeller,
+                        isSignature: selectedMenu.isSignature,
+                        isRecommended: selectedMenu.isRecommended,
+                      }}
+                      merchantCode={merchant?.code || 'preview'}
+                      mode="dinein"
+                      currency={currency}
+                      onClose={() => setPreviewSelectedMenuId(null)}
+                      prefetchedAddons={prefetchedAddonsForModal}
+                      storeOpen={false}
+                      skipCartInit
+                      container="parent"
+                    />
+                  )}
+                    </div>
+                  </div>
                 </div>
-
-                {selectedCategories.length > 0 && (
-                  <div className="mt-4 border-t border-gray-200 pt-4 dark:border-gray-800">
-                    <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                      Categories
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedCategories.map((catId) => {
-                        const cat = categories.find((c) => c.id === catId);
-                        return (
-                          <span
-                            key={catId}
-                            className="inline-flex rounded-full bg-brand-100 px-3 py-1 text-xs font-medium text-brand-700 dark:bg-brand-900/20 dark:text-brand-400"
-                          >
-                            {cat?.name}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {selectedAddonCategories.length > 0 && (
-                  <div className="mt-4 border-t border-gray-200 pt-4 dark:border-gray-800">
-                    <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                      Available Add-ons
-                    </p>
-                    <div className="space-y-1.5">
-                      {selectedAddonCategories.map((addonCatId) => {
-                        const addonCat = addonCategories.find((ac) => ac.id === addonCatId);
-                        return (
-                          <div key={addonCatId} className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                            <svg className="h-4 w-4 text-success-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            {addonCat?.name}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {watch('trackStock') && watch('stockQty') !== undefined && watch('stockQty') !== null && (
-                  <div className="mt-4 border-t border-gray-200 pt-4 dark:border-gray-800">
-                    <div className="flex items-center gap-2">
-                      <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${(watch('stockQty') || 0) > 10
-                        ? 'bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400'
-                        : (watch('stockQty') || 0) > 0
-                          ? 'bg-warning-100 text-warning-700 dark:bg-warning-900/20 dark:text-warning-400'
-                          : 'bg-error-100 text-error-700 dark:bg-error-900/20 dark:text-error-400'
-                        }`}>
-                        {(watch('stockQty') || 0) > 0 ? '● In Stock' : '● Out of Stock'}
-                      </span>
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                        {watch('stockQty')} available
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+              );
+            })()}
           </div>
         )}
 
         {/* Action Buttons */}
         <div className="mt-8 flex items-center justify-between border-t border-gray-200 pt-6 dark:border-gray-800">
-          {(isDirty || menuId) ? (
+          {(isDirty || menuId || uploadingImage) ? (
             <button
               type="button"
               onClick={onCancel}
               className="inline-flex h-11 items-center rounded-lg border border-gray-200 bg-white px-6 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-              disabled={isLoading}
+              disabled={isBusy}
             >
               Cancel
             </button>
@@ -1096,7 +1287,7 @@ export default function MenuBuilderTabs({
                   }
                 }}
                 className="inline-flex h-11 items-center gap-2 rounded-lg border border-brand-500 bg-white px-6 text-sm font-medium text-brand-600 transition-colors hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-800 dark:hover:bg-brand-900/10"
-                disabled={isLoading}
+                disabled={isBusy}
               >
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -1115,7 +1306,7 @@ export default function MenuBuilderTabs({
                   }
                 }}
                 className="inline-flex h-11 items-center gap-2 rounded-lg bg-brand-500 px-6 text-sm font-medium text-white transition-colors hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={isLoading || !isTabComplete(activeTab)}
+                disabled={isBusy || !isTabComplete(activeTab)}
               >
                 Next
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1124,10 +1315,11 @@ export default function MenuBuilderTabs({
               </button>
             ) : (
               <button
-                type="submit"
+                type="button"
                 data-tutorial="builder-save"
                 className="inline-flex h-11 items-center gap-2 rounded-lg bg-success-500 px-8 text-sm font-medium text-white transition-colors hover:bg-success-600 disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={isLoading || !watch('name') || !watch('price') || watch('price') <= 0}
+                disabled={isBusy || !watch('name') || !watch('price') || watch('price') <= 0}
+                onClick={() => setShowSaveConfirm(true)}
               >
                 {isLoading ? (
                   <>
@@ -1151,13 +1343,53 @@ export default function MenuBuilderTabs({
         </div>
       </form>
 
+      {/* Save Confirmation Modal */}
+      {showSaveConfirm && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-lg dark:border-gray-800 dark:bg-gray-900">
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                {t('common.confirm') || 'Confirm'}
+              </h3>
+              <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                {t('admin.menuBuilder.preview.confirmSave') || 'Save this menu now?'}
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowSaveConfirm(false)}
+                className="flex-1 h-11 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                disabled={isBusy}
+              >
+                {t('common.cancel') || 'Cancel'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSaveConfirm(false);
+                  void handleSubmit(handleFormSubmit)();
+                }}
+                className="flex-1 h-11 rounded-lg bg-success-600 text-sm font-medium text-white hover:bg-success-700 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={isBusy}
+              >
+                {t('common.save') || 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Stock Photo Picker Modal */}
       <StockPhotoPicker
         isOpen={showStockPhotoPicker}
         onClose={() => setShowStockPhotoPicker(false)}
-        onSelect={(selection) => {
-          setValue('imageUrl', selection.imageUrl);
-          setValue('imageThumbUrl', selection.thumbnailUrl || '');
+        onSelect={async (selection) => {
+          // Switching to stock photo: delete any previously uploaded (temporary) blob.
+          await replaceTempUpload('stock');
+          setValue('imageUrl', selection.imageUrl, { shouldValidate: true, shouldDirty: true });
+          setValue('imageThumbUrl', selection.thumbnailUrl || '', { shouldValidate: true, shouldDirty: true });
           setShowStockPhotoPicker(false);
         }}
       />

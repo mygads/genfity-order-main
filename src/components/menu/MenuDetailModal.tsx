@@ -52,8 +52,25 @@ interface MenuDetailModalProps {
   editMode?: boolean;
   existingCartItem?: CartItem | null;
   onClose: () => void;
-  prefetchedAddons?: AddonCategory[]; // Prefetched addon data from parent
+  prefetchedAddons?: Array<{
+    id?: string | number;
+    name: string;
+    type?: 'required' | 'optional' | string;
+    isRequired?: boolean;
+    minSelection?: number;
+    maxSelection?: number;
+    minSelections?: number;
+    maxSelections?: number;
+    addons?: unknown[];
+    addonItems?: unknown[];
+  }>; // Prefetched addon data from parent (flexible shape)
   storeOpen?: boolean; // Whether store is open (hide Add button when closed)
+  skipCartInit?: boolean; // Avoid touching cart state (useful for admin previews)
+  /**
+   * Where to render the modal. Default is full viewport.
+   * Use 'parent' to render inside a positioned container (admin preview device frame).
+   */
+  container?: 'viewport' | 'parent';
 }
 
 /**
@@ -78,16 +95,19 @@ export default function MenuDetailModal({
   existingCartItem = null,
   onClose,
   prefetchedAddons,
-  storeOpen = true
+  storeOpen = true,
+  skipCartInit = false,
+  container = 'viewport'
 }: MenuDetailModalProps) {
   const { addItem, updateItem, initializeCart, cart } = useCart();
 
   // Initialize cart if not exists
   useEffect(() => {
+    if (skipCartInit) return;
     if (!cart || cart.merchantCode !== merchantCode || cart.mode !== mode) {
       initializeCart(merchantCode, mode as 'dinein' | 'takeaway' | 'delivery');
     }
-  }, [cart, merchantCode, mode, initializeCart]);
+  }, [cart, merchantCode, mode, initializeCart, skipCartInit]);
 
   const [quantity, setQuantity] = useState(editMode && existingCartItem ? existingCartItem.quantity : 1);
   const [notes, setNotes] = useState(editMode && existingCartItem ? existingCartItem.notes || '' : '');
@@ -552,8 +572,14 @@ export default function MenuDetailModal({
 
   const isAvailable = menuIsActive && (!menuTrackStock || (menuStockQty !== null && menuStockQty > 0));
 
+  const isContained = container === 'parent';
+  const rootPositionClass = isContained ? 'absolute inset-0' : 'fixed inset-0';
+  const bottomBarPositionClass = isContained
+    ? 'absolute bottom-0 left-0 w-full'
+    : 'fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[500px]';
+
   return (
-    <div className="fixed inset-0 z-1000 flex justify-center">
+    <div className={`${rootPositionClass} z-1000 flex justify-center`}>
       {/* Overlay background */}
       <div
         className={`absolute inset-0 bg-black/40 transition-opacity duration-250 ${isClosing ? 'opacity-0' : 'opacity-100'}`}
@@ -562,7 +588,7 @@ export default function MenuDetailModal({
 
       {/* Modal Container - Constrained to 500px like layout */}
       <div
-        className={`relative w-full max-w-[500px] h-full bg-white flex flex-col overflow-hidden transition-transform duration-250 ${isClosing ? 'translate-y-full' : 'translate-y-0'}`}
+        className={`relative w-full ${isContained ? '' : 'max-w-[500px]'} h-full bg-white flex flex-col overflow-hidden transition-transform duration-250 ${isClosing ? 'translate-y-full' : 'translate-y-0'}`}
         style={{ animation: isClosing ? 'none' : 'slideUp 0.3s ease-out' }}
       >
         {/* Full Screen Modal within 500px container - Burjo ESB Style */}
@@ -988,7 +1014,7 @@ export default function MenuDetailModal({
         {/* Fixed Bottom Bar - Burjo ESB Style */}
         {/* Hide entire bottom bar when store is closed */}
         {storeOpen && (
-          <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[500px] bg-white border-t border-gray-200 rounded-t-2xl z-1010" style={{ boxShadow: '0 -4px 6px -1px rgba(0, 0, 0, 0.1), 0 -2px 4px -1px rgba(0, 0, 0, 0.06)' }}>
+          <div className={`${bottomBarPositionClass} bg-white border-t border-gray-200 rounded-t-2xl z-1010`} style={{ boxShadow: '0 -4px 6px -1px rgba(0, 0, 0, 0.1), 0 -2px 4px -1px rgba(0, 0, 0, 0.06)' }}>
             {/* Total Order Row */}
             <div className="flex items-center justify-between px-4 py-4">
               <div className="text-sm font-medium text-gray-700">
@@ -1068,7 +1094,7 @@ export default function MenuDetailModal({
       {/* Image Zoom Modal - Full quality with click outside to close */}
       {isImageZoomed && (
         <div
-          className="fixed inset-0 z-1100 flex items-center justify-center bg-black/95 cursor-pointer"
+          className={`${isContained ? 'absolute' : 'fixed'} inset-0 z-1100 flex items-center justify-center bg-black/95 cursor-pointer`}
           onClick={() => setIsImageZoomed(false)} // Click outside image to close
         >
           {/* Zoomed Image Container - Max 500px */}

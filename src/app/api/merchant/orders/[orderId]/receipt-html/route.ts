@@ -1,0 +1,203 @@
+import { NextRequest, NextResponse } from 'next/server';
+import prisma from '@/lib/db/client';
+import { withMerchant } from '@/lib/middleware/auth';
+import type { AuthContext } from '@/lib/middleware/auth';
+import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
+import { generateReceiptHTML } from '@/lib/utils/unifiedReceipt';
+
+/**
+ * Merchant Receipt HTML (legacy print)
+ * GET /api/merchant/orders/[orderId]/receipt-html
+ *
+ * Returns an HTML receipt for admin/POS printing.
+ */
+export const GET = withMerchant(async (_req: NextRequest, auth: AuthContext, routeContext: RouteContext) => {
+  const orderIdResult = await requireBigIntRouteParam(routeContext, 'orderId', 'Invalid orderId');
+  if (!orderIdResult.ok) {
+    return NextResponse.json(orderIdResult.body, { status: orderIdResult.status });
+  }
+
+  const merchantId = auth.merchantId;
+  if (!merchantId) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'MERCHANT_ID_REQUIRED',
+        message: 'Merchant ID is required',
+        statusCode: 400,
+      },
+      { status: 400 }
+    );
+  }
+
+  const order = await prisma.order.findFirst({
+    where: {
+      id: orderIdResult.value,
+      merchantId,
+    },
+    include: {
+      orderItems: {
+        include: {
+          addons: true,
+          menu: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      },
+      customer: {
+        select: {
+          name: true,
+          email: true,
+          phone: true,
+        },
+      },
+      merchant: {
+        select: {
+          code: true,
+          name: true,
+          logoUrl: true,
+          address: true,
+          phone: true,
+          email: true,
+          currency: true,
+          receiptSettings: true,
+        },
+      },
+      payment: {
+        include: {
+          paidBy: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      },
+      reservation: {
+        select: {
+          tableNumber: true,
+        },
+      },
+      orderDiscounts: {
+        select: {
+          label: true,
+        },
+      },
+    },
+  });
+
+  if (!order || !order.merchant?.code) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'NOT_FOUND',
+        message: 'Order not found',
+        statusCode: 404,
+      },
+      { status: 404 }
+    );
+  }
+
+  const currency = order.merchant.currency || 'AUD';
+  const locale: 'en' | 'id' = currency === 'IDR' ? 'id' : 'en';
+
+  const discountLabel = Array.isArray(order.orderDiscounts)
+    ? order.orderDiscounts
+        .map((d) => (typeof d?.label === 'string' ? d.label : ''))
+        .filter((s) => s.trim() !== '')
+        .join(' + ') || undefined
+    : undefined;
+
+  const paymentMetadata = (order.payment?.metadata || {}) as any;
+  const amountPaidRaw = paymentMetadata?.paidAmount;
+  const changeAmountRaw = paymentMetadata?.changeAmount;
+
+  const amountPaid = typeof amountPaidRaw === 'number' && Number.isFinite(amountPaidRaw) ? amountPaidRaw : undefined;
+  const changeAmount = typeof changeAmountRaw === 'number' && Number.isFinite(changeAmountRaw) ? changeAmountRaw : undefined;
+
+  const html = generateReceiptHTML({
+    merchant: {
+      name: order.merchant.name,
+      code: order.merchant.code,
+      logoUrl: order.merchant.logoUrl,
+      address: order.merchant.address,
+      phone: order.merchant.phone,
+      email: order.merchant.email,
+      currency,
+    },
+    order: {
+      orderId: String(order.id),
+      orderNumber: order.orderNumber,
+      orderType: order.orderType as any,
+      tableNumber: (order as any).tableNumber || order.reservation?.tableNumber || null,
+      deliveryUnit: (order as any).deliveryUnit || null,
+      deliveryBuildingName: (order as any).deliveryBuildingName || null,
+      deliveryBuildingNumber: (order as any).deliveryBuildingNumber || null,
+      deliveryFloor: (order as any).deliveryFloor || null,
+      deliveryInstructions: (order as any).deliveryInstructions || null,
+      deliveryAddress: (order as any).deliveryAddress || null,
+      customerName: order.customer?.name || (locale === 'id' ? 'Pelanggan' : 'Customer'),
+      customerPhone: order.customer?.phone || null,
+      customerEmail: order.customer?.email || null,
+      trackingToken: (order as any).trackingToken || null,
+      placedAt: order.placedAt.toISOString(),
+      paidAt: order.payment?.paidAt ? order.payment.paidAt.toISOString() : null,
+      items: (order.orderItems || []).map((item: any) => ({
+        menuName: item.menuName || item.menu?.name || 'Item',
+        quantity: Number(item.quantity) || 0,
+        unitPrice: item.unitPrice !== null && item.unitPrice !== undefined ? Number(item.unitPrice) : undefined,
+        subtotal: Number(item.subtotal) || 0,
+        notes: item.notes || null,
+        addons: Array.isArray(item.addons)
+          ? item.addons.map((addon: any) => {
+              const qty = addon.quantity !== null && addon.quantity !== undefined ? Number(addon.quantity) : 1;
+              const baseName = addon.addonName || addon.addonItem?.name || 'Addon';
+              const addonName = qty > 1 ? `${baseName} x${qty}` : baseName;
+
+              return {
+                addonName,
+                addonPrice:
+                  addon.addonPrice !== null && addon.addonPrice !== undefined ? Number(addon.addonPrice) : undefined,
+              };
+            })
+          : [],
+      })),
+      subtotal: Number(order.subtotal) || 0,
+      taxAmount: order.taxAmount !== null && order.taxAmount !== undefined ? Number(order.taxAmount) : 0,
+      serviceChargeAmount:
+        (order as any).serviceChargeAmount !== null && (order as any).serviceChargeAmount !== undefined
+          ? Number((order as any).serviceChargeAmount)
+          : 0,
+      packagingFeeAmount:
+        (order as any).packagingFeeAmount !== null && (order as any).packagingFeeAmount !== undefined
+          ? Number((order as any).packagingFeeAmount)
+          : 0,
+      deliveryFeeAmount:
+        (order as any).deliveryFeeAmount !== null && (order as any).deliveryFeeAmount !== undefined
+          ? Number((order as any).deliveryFeeAmount)
+          : 0,
+      discountAmount:
+        (order as any).discountAmount !== null && (order as any).discountAmount !== undefined
+          ? Number((order as any).discountAmount)
+          : 0,
+      discountLabel,
+      totalAmount: Number(order.totalAmount) || 0,
+      amountPaid,
+      changeAmount,
+      paymentMethod: order.payment?.paymentMethod ? String(order.payment.paymentMethod) : null,
+      paymentStatus: order.payment?.status ? String(order.payment.status) : undefined,
+      cashierName: order.payment?.paidBy?.name || null,
+    },
+    settings: (order.merchant.receiptSettings || {}) as any,
+    language: locale,
+  });
+
+  return new NextResponse(html, {
+    status: 200,
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'no-store',
+    },
+  });
+});

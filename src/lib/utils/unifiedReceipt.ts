@@ -140,7 +140,7 @@ export function generateReceiptHTML(options: GenerateReceiptOptions): string {
   const headerHtml = buildHeaderSection(merchant, settings, labels);
   const orderInfoHtml = buildOrderInfoSection(order, settings, labels, receiptLanguage, displayOrderNumber);
   const itemsHtml = buildItemsSection(order.items, settings, labels, fmt);
-  const paymentHtml = buildPaymentSection(order, settings, labels, fmt);
+  const paymentHtml = buildPaymentSection(order, settings, labels, fmt, receiptLanguage);
   const footerHtml = buildFooterSection(order, settings, labels, merchant);
 
   return `
@@ -463,7 +463,8 @@ function buildPaymentSection(
   order: ReceiptOrderData,
   settings: ReceiptSettings,
   labels: ReceiptLabels,
-  fmt: (n: number) => string
+  fmt: (n: number) => string,
+  language: 'en' | 'id'
 ): string {
   const rows: string[] = [];
 
@@ -509,11 +510,33 @@ function buildPaymentSection(
   // Payment details for paid orders
   const isPaid = order.paymentStatus === 'COMPLETED' || order.paymentStatus === 'PAID';
 
-  if (isPaid) {
-    if (settings.showPaymentMethod && order.paymentMethod) {
-      rows.push(`<div class="payment-row"><span>${labels.paymentMethod}</span><span>${order.paymentMethod}</span></div>`);
+  const formatMethod = (): string | null => {
+    const method = String(order.paymentMethod || '').toUpperCase();
+    const type = String(order.orderType || '').toUpperCase();
+
+    const tr = (en: string, id: string) => (language === 'id' ? id : en);
+
+    if (type === 'DELIVERY') {
+      if (method === 'CASH_ON_DELIVERY') return tr('Cash on delivery', 'Tunai saat antar');
+      if (method === 'CARD_ON_DELIVERY') return tr('Card on delivery', 'Kartu saat antar');
+      return order.paymentMethod ? String(order.paymentMethod).replace(/_/g, ' ') : null;
     }
 
+    // DINE_IN / TAKEAWAY
+    if (!isPaid) return tr('Pay at cashier', 'Bayar di kasir');
+    if (method === 'CASH_ON_COUNTER') return tr('Cash at cashier', 'Tunai di kasir');
+    if (method === 'CARD_ON_COUNTER') return tr('Card at cashier', 'Kartu di kasir');
+    return order.paymentMethod ? String(order.paymentMethod).replace(/_/g, ' ') : null;
+  };
+
+  if (settings.showPaymentMethod) {
+    const methodLabel = formatMethod();
+    if (methodLabel) {
+      rows.push(`<div class="payment-row"><span>${labels.paymentMethod}</span><span>${escapeHtml(methodLabel)}</span></div>`);
+    }
+  }
+
+  if (isPaid) {
     if (settings.showAmountPaid && order.amountPaid) {
       rows.push(`<div class="payment-row"><span>${labels.amountPaid}</span><span>${fmt(order.amountPaid)}</span></div>`);
     }
@@ -594,7 +617,7 @@ function buildFooterSection(
       const orderNumberEncoded = encodeURIComponent(order.orderNumber);
       const trackingUrl = order.trackingToken
         ? `${baseUrl}/${merchantCode}/track/${orderNumberEncoded}?token=${encodeURIComponent(order.trackingToken)}`
-        : null;
+        : `${baseUrl}/${merchantCode}/track/${orderNumberEncoded}`;
       const qrSizePx = settings.paperSize === '58mm' ? 90 : 110;
       if (trackingUrl) {
         const qrDataUri = buildQrSvgDataUri(trackingUrl, qrSizePx);
@@ -610,8 +633,6 @@ function buildFooterSection(
             </div>
           </div>
         `);
-      } else {
-        parts.push(`<p class="merchant-info" style="margin-top: 8px;">${labels.scanToTrack}: (token missing)</p>`);
       }
     }
   }

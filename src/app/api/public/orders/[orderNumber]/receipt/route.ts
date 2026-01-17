@@ -3,6 +3,7 @@ import prisma from '@/lib/db/client';
 import { verifyOrderTrackingToken } from '@/lib/utils/orderTrackingToken';
 import type { RouteContext } from '@/lib/utils/routeContext';
 import { generateOrderReceiptPdfBuffer } from '@/lib/utils/orderReceiptPdfEmail';
+import { resolveAssetUrl } from '@/lib/utils/assetUrl';
 
 /**
  * Public Receipt PDF
@@ -13,6 +14,14 @@ import { generateOrderReceiptPdfBuffer } from '@/lib/utils/orderReceiptPdfEmail'
 export async function GET(request: NextRequest, context: RouteContext) {
   const params = await context.params;
   const { orderNumber } = params;
+
+  const normalizeOrderNumber = (raw: string): string => {
+    const trimmed = String(raw || '').trim();
+    const match = trimmed.match(/^([A-Za-z0-9]+)-([A-Za-z0-9]+)$/);
+    return match ? match[2] : trimmed;
+  };
+
+  const normalizedOrderNumber = normalizeOrderNumber(String(orderNumber || ''));
 
   const token = request.nextUrl.searchParams.get('token') || '';
   const download = request.nextUrl.searchParams.get('download') === '1';
@@ -30,7 +39,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
   }
 
   const order = await prisma.order.findFirst({
-    where: { orderNumber },
+    where: {
+      OR: [{ orderNumber: String(orderNumber) }, { orderNumber: normalizedOrderNumber }],
+    },
     include: {
       orderItems: {
         include: {
@@ -129,11 +140,14 @@ export async function GET(request: NextRequest, context: RouteContext) {
         .join(' + ') || undefined
     : undefined;
 
+  const requestOrigin = request.nextUrl.origin;
+  const resolvedLogoUrl = resolveAssetUrl(order.merchant.logoUrl, { requestOrigin });
+
   const pdfBuffer = await generateOrderReceiptPdfBuffer({
     orderNumber: order.orderNumber,
     merchantCode: order.merchant.code,
     merchantName: order.merchant.name,
-    merchantLogoUrl: order.merchant.logoUrl,
+    merchantLogoUrl: resolvedLogoUrl,
     merchantAddress: order.merchant.address,
     merchantPhone: order.merchant.phone,
     merchantEmail: order.merchant.email,
@@ -180,6 +194,17 @@ export async function GET(request: NextRequest, context: RouteContext) {
       : 0,
     totalAmount: Number(order.totalAmount) || 0,
     paymentMethod: order.payment?.paymentMethod ? String(order.payment.paymentMethod) : null,
+    paymentStatus: order.payment?.status ? String(order.payment.status) : null,
+    amountPaid: (() => {
+      const meta = (order.payment?.metadata || {}) as any;
+      const raw = meta?.paidAmount;
+      return typeof raw === 'number' && Number.isFinite(raw) ? raw : undefined;
+    })(),
+    changeAmount: (() => {
+      const meta = (order.payment?.metadata || {}) as any;
+      const raw = meta?.changeAmount;
+      return typeof raw === 'number' && Number.isFinite(raw) ? raw : undefined;
+    })(),
     currency,
     completedAt: (order as any).completedAt ? new Date((order as any).completedAt) : new Date(order.placedAt),
     locale,

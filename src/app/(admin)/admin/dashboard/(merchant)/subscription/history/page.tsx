@@ -5,6 +5,7 @@ import Link from "next/link";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { getAdminToken } from "@/lib/utils/adminAuth";
+import { getAdminUser } from "@/lib/utils/adminAuth";
 import { formatCurrency } from "@/lib/utils/format";
 import { 
     FaHistory, 
@@ -40,6 +41,16 @@ interface PaginationInfo {
     hasMore: boolean;
 }
 
+interface PaymentRequestItem {
+    id: string;
+    type: string;
+    status: string;
+    currency: string;
+    amount: number;
+    expiresAt: string | null;
+    createdAt?: string;
+}
+
 const EVENT_ICONS: Record<string, React.ReactNode> = {
     'CREATED': <FaCheckCircle className="w-4 h-4" />,
     'TRIAL_EXPIRED': <FaClock className="w-4 h-4" />,
@@ -47,6 +58,7 @@ const EVENT_ICONS: Record<string, React.ReactNode> = {
     'SUSPENDED': <FaPause className="w-4 h-4" />,
     'REACTIVATED': <FaPlay className="w-4 h-4" />,
     'PAYMENT_SUBMITTED': <FaCreditCard className="w-4 h-4" />,
+    'PAYMENT_CANCELLED': <FaBan className="w-4 h-4" />,
     'PAYMENT_RECEIVED': <FaCreditCard className="w-4 h-4" />,
     'PAYMENT_REJECTED': <FaBan className="w-4 h-4" />,
     'ORDER_FEE_DEDUCTED': <FaCreditCard className="w-4 h-4" />,
@@ -60,6 +72,7 @@ const EVENT_COLORS: Record<string, { bg: string; text: string; icon: string }> =
     'SUSPENDED': { bg: 'bg-red-50 dark:bg-red-900/20', text: 'text-red-700 dark:text-red-300', icon: 'text-red-500' },
     'REACTIVATED': { bg: 'bg-green-50 dark:bg-green-900/20', text: 'text-green-700 dark:text-green-300', icon: 'text-green-500' },
     'PAYMENT_SUBMITTED': { bg: 'bg-yellow-50 dark:bg-yellow-900/20', text: 'text-yellow-700 dark:text-yellow-300', icon: 'text-yellow-500' },
+    'PAYMENT_CANCELLED': { bg: 'bg-red-50 dark:bg-red-900/20', text: 'text-red-700 dark:text-red-300', icon: 'text-red-500' },
     'PAYMENT_RECEIVED': { bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-700 dark:text-emerald-300', icon: 'text-emerald-500' },
     'PAYMENT_REJECTED': { bg: 'bg-red-50 dark:bg-red-900/20', text: 'text-red-700 dark:text-red-300', icon: 'text-red-500' },
     'ORDER_FEE_DEDUCTED': { bg: 'bg-gray-50 dark:bg-gray-800', text: 'text-gray-700 dark:text-gray-300', icon: 'text-gray-500' },
@@ -74,6 +87,40 @@ export default function SubscriptionHistoryPage() {
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [pendingRequest, setPendingRequest] = useState<PaymentRequestItem | null>(null);
+    const [pendingRequestLoading, setPendingRequestLoading] = useState(false);
+    const [pendingRequestError, setPendingRequestError] = useState<string | null>(null);
+    const [isOwner, setIsOwner] = useState<boolean>(true);
+
+    const getPaymentRequestStatusLabel = (status: string) => {
+        const key = `subscription.paymentRequest.status.${status}`;
+        const value = t(key);
+        return value === key ? status : value;
+    };
+
+    const getPaymentRequestTypeLabel = (type: string) => {
+        const key = `subscription.paymentRequest.type.${type}`;
+        const value = t(key);
+        return value === key ? type : value;
+    };
+
+    const getPaymentRequestStatusBadge = (status: string) => {
+        switch (status) {
+            case 'PENDING':
+                return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200';
+            case 'CONFIRMED':
+                return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200';
+            case 'VERIFIED':
+                return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200';
+            case 'REJECTED':
+                return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200';
+            case 'EXPIRED':
+            case 'CANCELLED':
+                return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200';
+            default:
+                return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200';
+        }
+    };
 
     const fetchHistory = useCallback(async (offset: number = 0) => {
         const isInitial = offset === 0;
@@ -108,8 +155,65 @@ export default function SubscriptionHistoryPage() {
     }, []);
 
     useEffect(() => {
+        const user = getAdminUser();
+        const merchantRole = typeof window !== 'undefined' ? localStorage.getItem('merchantRole') : null;
+        setIsOwner(user?.role === 'MERCHANT_OWNER' || merchantRole === 'OWNER');
         fetchHistory();
     }, [fetchHistory]);
+
+    const fetchPendingRequest = useCallback(async () => {
+        setPendingRequestLoading(true);
+        try {
+            const token = getAdminToken();
+            const res = await fetch(`/api/merchant/payment-request/active`, {
+                headers: { 'Authorization': `Bearer ${token}` },
+            });
+            const data = await res.json();
+            if (data?.success) {
+                const active = data.data && (data.data.status === 'PENDING' || data.data.status === 'CONFIRMED') ? data.data : null;
+                setPendingRequest(active);
+                setPendingRequestError(null);
+            } else {
+                setPendingRequest(null);
+                setPendingRequestError(data?.message || data?.error || 'Failed to load payment requests');
+            }
+        } catch {
+            setPendingRequest(null);
+            setPendingRequestError('Network error');
+        } finally {
+            setPendingRequestLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchPendingRequest();
+    }, [fetchPendingRequest]);
+
+    const cancelPendingRequest = async () => {
+        if (!pendingRequest) return;
+        if (!isOwner) return;
+
+        setPendingRequestLoading(true);
+        try {
+            const token = getAdminToken();
+            const res = await fetch(`/api/merchant/payment-request/${pendingRequest.id}/cancel`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+            });
+            const data = await res.json().catch(() => null);
+            if (!res.ok || !data?.success) {
+                setPendingRequestError(data?.message || `HTTP ${res.status}`);
+                return;
+            }
+            setPendingRequest(null);
+            setPendingRequestError(null);
+            fetchHistory();
+        } catch {
+            setPendingRequestError('Network error');
+        } finally {
+            setPendingRequestLoading(false);
+        }
+    };
 
     const loadMore = () => {
         if (pagination?.hasMore && !loadingMore) {
@@ -125,6 +229,7 @@ export default function SubscriptionHistoryPage() {
             'SUSPENDED': { en: 'Account Suspended', id: 'Akun Ditangguhkan' },
             'REACTIVATED': { en: 'Account Reactivated', id: 'Akun Diaktifkan Kembali' },
             'PAYMENT_SUBMITTED': { en: 'Payment Submitted', id: 'Pembayaran Diajukan' },
+            'PAYMENT_CANCELLED': { en: 'Payment Cancelled', id: 'Pembayaran Dibatalkan' },
             'PAYMENT_RECEIVED': { en: 'Payment Received', id: 'Pembayaran Diterima' },
             'PAYMENT_REJECTED': { en: 'Payment Rejected', id: 'Pembayaran Ditolak' },
             'ORDER_FEE_DEDUCTED': { en: 'Order Fee Charged', id: 'Biaya Pesanan Dibebankan' },
@@ -236,6 +341,69 @@ export default function SubscriptionHistoryPage() {
                     </div>
                 </div>
             </div>
+
+            {(pendingRequestLoading || pendingRequest || pendingRequestError) && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-200">
+                    <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1">
+                            <div className="text-sm font-semibold">
+                                {t('subscription.topup.pendingRequestTitle')}
+                            </div>
+
+                            {pendingRequestLoading ? (
+                                <div className="mt-1 text-sm opacity-90">{locale === 'id' ? 'Memuat…' : 'Loading…'}</div>
+                            ) : pendingRequest ? (
+                                <div className="mt-2">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span
+                                            className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${getPaymentRequestStatusBadge(pendingRequest.status)}`}
+                                        >
+                                            {getPaymentRequestStatusLabel(pendingRequest.status)}
+                                        </span>
+                                        <span className="inline-flex items-center rounded-full bg-white/70 px-2.5 py-1 text-xs font-semibold text-amber-900 dark:bg-gray-900/20 dark:text-amber-200">
+                                            {getPaymentRequestTypeLabel(pendingRequest.type)}
+                                        </span>
+                                    </div>
+
+                                    <div className="mt-3 grid gap-2 text-sm">
+                                        <div className="flex items-center justify-between rounded-lg bg-white/60 px-3 py-2 dark:bg-gray-900/20">
+                                            <span className="text-amber-900/80 dark:text-amber-200/80">{t('subscription.topup.pendingRequestAmount')}</span>
+                                            <span className="font-semibold text-amber-900 dark:text-amber-200">
+                                                {formatCurrency(pendingRequest.amount, pendingRequest.currency, locale)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="mt-1 text-sm opacity-90">
+                                    {locale === 'id' ? 'Tidak ada permintaan pembayaran yang pending.' : 'No pending payment requests.'}
+                                </div>
+                            )}
+
+                            {pendingRequestError && (
+                                <div className="mt-2 text-sm text-red-700 dark:text-red-200">{pendingRequestError}</div>
+                            )}
+                        </div>
+
+                        {pendingRequest && (
+                            <button
+                                type="button"
+                                onClick={cancelPendingRequest}
+                                disabled={!isOwner || pendingRequestLoading}
+                                className="shrink-0 rounded-lg bg-amber-600 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-50"
+                            >
+                                {t('subscription.topup.cancelPreviousSubmission')}
+                            </button>
+                        )}
+                    </div>
+
+                    {!isOwner && pendingRequest && (
+                        <div className="mt-2 text-xs opacity-90">
+                            {locale === 'id' ? 'Hanya pemilik merchant yang dapat membatalkan.' : 'Only the merchant owner can cancel.'}
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Timeline */}
             {events.length === 0 ? (

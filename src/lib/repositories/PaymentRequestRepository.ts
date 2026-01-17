@@ -102,15 +102,15 @@ class PaymentRequestRepository {
      * Get all pending payment requests (for admin)
      */
     async getPendingRequests(options: {
-        status?: PaymentRequestStatus;
+        status?: PaymentRequestStatus | PaymentRequestStatus[];
         limit?: number;
         offset?: number;
     } = {}) {
         const { status = 'CONFIRMED', limit = 50, offset = 0 } = options;
 
-        const where: Prisma.PaymentRequestWhereInput = {
-            status,
-        };
+        const where: Prisma.PaymentRequestWhereInput = Array.isArray(status)
+            ? { status: { in: status } }
+            : { status };
 
         const [requests, total] = await Promise.all([
             prisma.paymentRequest.findMany({
@@ -126,7 +126,7 @@ class PaymentRequestRepository {
                         },
                     },
                 },
-                orderBy: { confirmedAt: 'asc' }, // Oldest first
+                orderBy: [{ confirmedAt: 'asc' }, { createdAt: 'asc' }],
                 take: limit,
                 skip: offset,
             }),
@@ -225,6 +225,20 @@ class PaymentRequestRepository {
             },
             data: {
                 status: 'EXPIRED',
+            },
+        });
+    }
+
+    /**
+     * Merchant cancels a pending/confirmed payment request
+     */
+    async cancelPaymentRequest(id: bigint, data?: { cancelNote?: string }) {
+        return prisma.paymentRequest.update({
+            where: { id },
+            data: {
+                status: 'CANCELLED',
+                expiresAt: new Date(),
+                transferNotes: data?.cancelNote,
             },
         });
     }

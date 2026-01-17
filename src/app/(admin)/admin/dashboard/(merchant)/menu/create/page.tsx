@@ -11,6 +11,7 @@ import DuplicateMenuModal from "@/components/modals/DuplicateMenuModal";
 import { StatusToggle } from "@/components/common/StatusToggle";
 import { useMerchant } from "@/context/MerchantContext";
 import { getCurrencySymbol } from "@/lib/utils/format";
+import { getCurrencyConfig } from "@/lib/constants/location";
 import StockPhotoPicker from "@/components/menu/StockPhotoPicker";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 
@@ -69,6 +70,8 @@ export default function CreateMenuPage() {
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [authToken, setAuthToken] = useState<string>("");
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+
+  const isBusy = submitting || uploadingImage;
 
   // Image source state: 'upload' or 'stock'
   const [imageSource, setImageSource] = useState<'upload' | 'stock'>('upload');
@@ -194,6 +197,16 @@ export default function CreateMenuPage() {
     }
   };
 
+  const replaceTempUpload = async (nextSource: 'upload' | 'stock') => {
+    // If there is a previously uploaded image that hasn't been saved, delete it.
+    if (uploadedImageUrl) {
+      await deleteUploadedImage(uploadedImageUrl, uploadedImageThumbUrl);
+      setUploadedImageUrl(null);
+      setUploadedImageThumbUrl(null);
+    }
+    setImageSource(nextSource);
+  };
+
   // Cleanup on unmount if image was uploaded but form not submitted
   useEffect(() => {
     return () => {
@@ -225,6 +238,9 @@ export default function CreateMenuPage() {
       setUploadProgress(0);
       setError(null);
 
+      // Replacing an existing temp upload? Clean it up first.
+      await replaceTempUpload('upload');
+
       const uploadFormData = new FormData();
       uploadFormData.append('file', file);
       const token = localStorage.getItem('accessToken');
@@ -248,6 +264,7 @@ export default function CreateMenuPage() {
             setFormData(prev => ({ ...prev, imageUrl, imageThumbUrl: imageThumbUrl || '' }));
             setUploadedImageUrl(imageUrl);
             setUploadedImageThumbUrl(imageThumbUrl || null);
+            setImageSource('upload');
             resolve();
           } else {
             try {
@@ -293,6 +310,12 @@ export default function CreateMenuPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (uploadingImage) {
+      setError('Please wait for the image upload to finish.');
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
 
@@ -487,7 +510,10 @@ export default function CreateMenuPage() {
                     onChange={handleChange}
                     required
                     min="0"
-                    step="0.01"
+                    step={getCurrencyConfig(currency).decimals === 0 ? '1' : '0.01'}
+                    onWheel={(e) => {
+                      (e.target as HTMLInputElement).blur();
+                    }}
                     placeholder="0.00"
                     className="h-12 w-full rounded-xl border border-gray-200 bg-white pl-10 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
                   />
@@ -568,7 +594,14 @@ export default function CreateMenuPage() {
                     />
                     <button
                       type="button"
-                      onClick={() => setFormData(prev => ({ ...prev, imageUrl: '', imageThumbUrl: '' }))}
+                      onClick={async () => {
+                        if (uploadedImageUrl) {
+                          await deleteUploadedImage(uploadedImageUrl, uploadedImageThumbUrl);
+                          setUploadedImageUrl(null);
+                          setUploadedImageThumbUrl(null);
+                        }
+                        setFormData(prev => ({ ...prev, imageUrl: '', imageThumbUrl: '' }));
+                      }}
                       className="absolute right-2 top-2 rounded-full bg-white/90 p-2 text-gray-600 shadow-lg transition-all hover:bg-error-100 hover:text-error-600 dark:bg-gray-800/90 dark:text-gray-300"
                     >
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -623,6 +656,7 @@ export default function CreateMenuPage() {
                   <button
                     type="button"
                     onClick={() => setShowStockPhotoPicker(true)}
+                    disabled={uploadingImage}
                     className="flex aspect-square w-full cursor-pointer flex-col items-center justify-center p-6"
                   >
                     <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">
@@ -644,7 +678,8 @@ export default function CreateMenuPage() {
           <StockPhotoPicker
             isOpen={showStockPhotoPicker}
             onClose={() => setShowStockPhotoPicker(false)}
-            onSelect={(selection) => {
+            onSelect={async (selection) => {
+              await replaceTempUpload('stock');
               setFormData(prev => ({
                 ...prev,
                 imageUrl: selection.imageUrl,
@@ -1065,8 +1100,12 @@ export default function CreateMenuPage() {
 
           {/* Fixed Footer */}
           <AdminFormFooter
-            onCancel={() => router.push("/admin/dashboard/menu")}
+            onCancel={() => {
+              if (isBusy) return;
+              router.push("/admin/dashboard/menu");
+            }}
             isSubmitting={submitting}
+            disabled={isBusy}
             submitLabel="Create Menu Item"
             submittingLabel="Creating..."
             submitDataTutorial="menu-save-btn"

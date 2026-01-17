@@ -12,6 +12,7 @@ import ViewMenuAddonCategoriesModal from "@/components/menu/ViewMenuAddonCategor
 import { StatusToggle } from "@/components/common/StatusToggle";
 import { useMerchant } from "@/context/MerchantContext";
 import { getCurrencySymbol } from "@/lib/utils/format";
+import { getCurrencyConfig } from "@/lib/constants/location";
 import StockPhotoPicker from "@/components/menu/StockPhotoPicker";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 
@@ -95,6 +96,8 @@ export default function EditMenuPage() {
   const [showViewAddonsModal, setShowViewAddonsModal] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [originalFormData, setOriginalFormData] = useState<MenuFormData | null>(null);
+
+  const isBusy = submitting || uploadingImage;
 
   // Image source state: 'upload' or 'stock'
   const [imageSource, setImageSource] = useState<'upload' | 'stock'>('upload');
@@ -362,6 +365,12 @@ export default function EditMenuPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (uploadingImage) {
+      setError('Please wait for the image upload to finish.');
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
 
@@ -532,7 +541,10 @@ export default function EditMenuPage() {
                     onChange={handleChange}
                     required
                     min="0"
-                    step="0.01"
+                    step={getCurrencyConfig(currency).decimals === 0 ? '1' : '0.01'}
+                    onWheel={(e) => {
+                      (e.target as HTMLInputElement).blur();
+                    }}
                     placeholder="0.00"
                     className="h-12 w-full rounded-xl border border-gray-200 bg-white pl-10 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-400 focus:outline-none focus:ring-4 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
                   />
@@ -665,6 +677,7 @@ export default function EditMenuPage() {
                   <button
                     type="button"
                     onClick={() => setShowStockPhotoPicker(true)}
+                    disabled={uploadingImage}
                     className="flex aspect-square w-full cursor-pointer flex-col items-center justify-center p-6"
                   >
                     <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-brand-100 text-brand-600 dark:bg-brand-900/30 dark:text-brand-400">
@@ -1032,12 +1045,15 @@ export default function EditMenuPage() {
 
           {/* Fixed Footer */}
           <AdminFormFooter
-            onCancel={() => router.push(menuListUrl)}
+            onCancel={() => {
+              if (isBusy) return;
+              router.push(menuListUrl);
+            }}
             isSubmitting={submitting}
             submitLabel="Update Menu Item"
             submittingLabel="Updating..."
             cancelLabel="Back"
-            disabled={!hasChanges()}
+            disabled={!hasChanges() || isBusy}
             submitDataTutorial="menu-save-btn"
           />
         </form>

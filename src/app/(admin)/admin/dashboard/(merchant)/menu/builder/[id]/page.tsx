@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import MenuBuilderTabs from '@/components/menu/MenuBuilderTabs';
 import { MenuBuilderSkeleton } from '@/components/common/SkeletonLoaders';
@@ -70,11 +70,56 @@ export default function MenuBuilderPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [hasDraft, setHasDraft] = useState(false);
+  const cleanupRef = useRef<null | (() => Promise<void>)>(null);
+  const allowPopRef = useRef(false);
 
   useEffect(() => {
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [menuId]);
+
+  // Warn on refresh/close if draft exists
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!hasDraft) return;
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasDraft]);
+
+  // Intercept browser back button when draft exists
+  useEffect(() => {
+    // Push a sentinel entry so we can intercept a single back press.
+    try {
+      window.history.pushState({ __menuBuilder: true }, '', window.location.href);
+    } catch {
+      // ignore
+    }
+
+    const handlePopState = () => {
+      if (allowPopRef.current) return;
+      if (!hasDraft) {
+        // No draft: allow navigating away by going back again.
+        allowPopRef.current = true;
+        router.back();
+        return;
+      }
+
+      // Draft exists: block navigation and show confirm modal.
+      setShowCancelConfirm(true);
+      try {
+        window.history.pushState({ __menuBuilder: true }, '', window.location.href);
+      } catch {
+        // ignore
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [router, hasDraft]);
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -199,6 +244,16 @@ export default function MenuBuilderPage() {
     setShowCancelConfirm(true);
   };
 
+  const discardAndLeave = async () => {
+    try {
+      if (cleanupRef.current) {
+        await cleanupRef.current();
+      }
+    } finally {
+      router.push('/admin/dashboard/menu');
+    }
+  };
+
   if (isLoading) {
     return <MenuBuilderSkeleton />;
   }
@@ -225,11 +280,15 @@ export default function MenuBuilderPage() {
         onSubmit={handleSubmit}
         onCancel={handleCancel}
         isLoading={isSaving}
+        onRegisterCleanup={(cleanup) => {
+          cleanupRef.current = cleanup;
+        }}
+        onDraftStateChange={setHasDraft}
       />
 
       {/* Cancel Confirmation Modal */}
       {showCancelConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50">
           <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-lg dark:border-gray-800 dark:bg-gray-900">
             <div className="mb-4 flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-warning-100 dark:bg-warning-900/20">
@@ -259,7 +318,9 @@ export default function MenuBuilderPage() {
                 {t('common.keepEditing') || 'Keep Editing'}
               </button>
               <button
-                onClick={() => router.push('/admin/dashboard/menu')}
+                onClick={() => {
+                  void discardAndLeave();
+                }}
                 className="flex-1 h-11 rounded-lg bg-error-600 text-sm font-medium text-white hover:bg-error-700"
               >
                 {t('common.discardChanges') || 'Discard Changes'}

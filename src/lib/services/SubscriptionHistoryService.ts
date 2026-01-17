@@ -146,6 +146,29 @@ class SubscriptionHistoryService {
     }
 
     /**
+     * Record payment cancelled event (merchant cancels their payment request)
+     */
+    async recordPaymentCancelled(
+        merchantId: bigint,
+        paymentType: 'DEPOSIT_TOPUP' | 'MONTHLY_SUBSCRIPTION',
+        amount: number,
+        currency: string,
+        requestId: bigint
+    ) {
+        const formattedAmount = currency === 'IDR'
+            ? `Rp ${amount.toLocaleString()}`
+            : `${currency} ${amount.toLocaleString()}`;
+
+        return this.recordEvent({
+            merchantId,
+            eventType: 'PAYMENT_CANCELLED',
+            reason: `Payment request of ${formattedAmount} cancelled for ${paymentType === 'DEPOSIT_TOPUP' ? 'deposit top-up' : 'monthly subscription'}.`,
+            metadata: { paymentType, amount, currency, requestId: requestId.toString() },
+            triggeredBy: 'MERCHANT',
+        });
+    }
+
+    /**
      * Record payment verified event
      */
     async recordPaymentReceived(

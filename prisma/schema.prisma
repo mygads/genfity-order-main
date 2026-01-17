@@ -1484,6 +1484,7 @@ enum PaymentRequestStatus {
   CONFIRMED       // Merchant clicked "I have paid"
   VERIFIED        // Admin verified payment
   REJECTED        // Admin rejected (invalid proof)
+  CANCELLED       // Cancelled by merchant
   EXPIRED         // Request expired (no action)
 }
 
@@ -1549,6 +1550,7 @@ enum SubscriptionEventType {
   SUSPENDED            // Subscription suspended
   REACTIVATED          // Subscription reactivated
   PAYMENT_SUBMITTED    // Merchant submitted payment for verification
+  PAYMENT_CANCELLED    // Merchant cancelled a payment request
   PAYMENT_RECEIVED     // Payment verified and applied
   PAYMENT_REJECTED     // Payment request rejected
   PERIOD_EXTENDED      // Monthly period extended
