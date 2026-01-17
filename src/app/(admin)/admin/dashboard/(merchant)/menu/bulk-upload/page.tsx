@@ -27,6 +27,8 @@ interface MenuUploadItem {
   stockQty: number | null;
   dailyStockTemplate: number | null;
   autoResetStock: boolean;
+  action: "new" | "update" | "unchanged";
+  changedFields: string[];
   errors: string[];       // Blocking errors
   warnings: string[];     // Non-blocking warnings
   isEditing: boolean;
@@ -62,11 +64,171 @@ export default function MenuBulkUploadPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [fileName, setFileName] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
-  const [existingMenus, setExistingMenus] = useState<Array<{ id: string; name: string }>>([]);
+  type ExistingMenu = {
+    id: string;
+    name: string;
+    description?: string | null;
+    price?: number | string;
+    isActive?: boolean;
+    isSpicy?: boolean;
+    isBestSeller?: boolean;
+    isSignature?: boolean;
+    isRecommended?: boolean;
+    trackStock?: boolean;
+    stockQty?: number | null;
+    dailyStockTemplate?: number | null;
+    autoResetStock?: boolean;
+    categories?: Array<{ category?: { name?: string | null } | null }>;
+    category?: { name?: string | null } | null;
+  };
+
+  const [existingMenus, setExistingMenus] = useState<ExistingMenu[]>([]);
   const [exporting, setExporting] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [duplicateCount, setDuplicateCount] = useState(0);
-  const [newCount, setNewCount] = useState(0);
+
+  const focusRow = (rowIndex: number) => {
+    setItems((prev) => prev.map((it) => (it.rowIndex === rowIndex ? { ...it, isExpanded: true } : it)));
+    setTimeout(() => {
+      const el = document.getElementById(`menu-upload-row-${rowIndex}`);
+      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 50);
+  };
+
+  const normalizeText = (value: unknown): string => String(value ?? "").trim();
+
+  const normalizeNumber = (value: unknown): number | null => {
+    if (value === null || value === undefined || value === "") return null;
+    const num = Number(value);
+    return Number.isFinite(num) ? num : null;
+  };
+
+  const parseBooleanWithDefault = (value: unknown, defaultValue: boolean): boolean => {
+    if (value === null || value === undefined || value === "") return defaultValue;
+    return parseBoolean(value);
+  };
+
+  const parseCategoryNames = (categoryNames: string): string[] => {
+    if (!categoryNames) return [];
+    return categoryNames
+      .split(",")
+      .map((c) => c.trim())
+      .filter(Boolean);
+  };
+
+  const getCategoryNameById = (categoryId: string): string | null => {
+    const cat = categories.find((c) => c.id === categoryId);
+    return cat?.name || null;
+  };
+
+  const getNormalizedCategorySetForItem = (item: MenuUploadItem): string[] => {
+    const names = (item.selectedCategoryIds.length > 0
+      ? item.selectedCategoryIds.map((id) => getCategoryNameById(id)).filter(Boolean)
+      : parseCategoryNames(item.categoryNames)) as string[];
+
+    return names.map((n) => n.toLowerCase().trim()).filter(Boolean).sort();
+  };
+
+  const getNormalizedCategorySetForExisting = (menu: ExistingMenu): string[] => {
+    const fromManyToMany = Array.isArray(menu.categories)
+      ? menu.categories
+          .map((c) => c?.category?.name)
+          .filter(Boolean)
+      : [];
+
+    const fromSingle = menu.category?.name ? [menu.category.name] : [];
+    const names = [...fromManyToMany, ...fromSingle].filter(Boolean) as string[];
+    return names.map((n) => n.toLowerCase().trim()).filter(Boolean).sort();
+  };
+
+  const normalizeComparable = (params: {
+    name: string;
+    description: string | null;
+    price: number;
+    isActive: boolean;
+    isSpicy: boolean;
+    isBestSeller: boolean;
+    isSignature: boolean;
+    isRecommended: boolean;
+    trackStock: boolean;
+    stockQty: number | null;
+    dailyStockTemplate: number | null;
+    autoResetStock: boolean;
+    categoryNamesSorted: string[];
+  }) => {
+    return {
+      name: normalizeText(params.name),
+      description: normalizeText(params.description ?? ""),
+      price: Number(params.price),
+      isActive: Boolean(params.isActive),
+      isSpicy: Boolean(params.isSpicy),
+      isBestSeller: Boolean(params.isBestSeller),
+      isSignature: Boolean(params.isSignature),
+      isRecommended: Boolean(params.isRecommended),
+      trackStock: Boolean(params.trackStock),
+      stockQty: params.trackStock ? (params.stockQty ?? 0) : null,
+      dailyStockTemplate: params.trackStock ? (params.dailyStockTemplate ?? null) : null,
+      autoResetStock: params.trackStock ? Boolean(params.autoResetStock) : false,
+      categoryNamesSorted: params.categoryNamesSorted,
+    };
+  };
+
+  const computeActionAndChanges = (item: MenuUploadItem): { action: MenuUploadItem["action"]; changedFields: string[] } => {
+    if (!item.existingMenuId) return { action: "new", changedFields: [] };
+    const existing = existingMenus.find((m) => m.id === item.existingMenuId);
+    if (!existing) return { action: "update", changedFields: ["id"] };
+
+    const existingComparable = normalizeComparable({
+      name: existing.name,
+      description: existing.description ?? null,
+      price: Number(existing.price ?? 0),
+      isActive: existing.isActive !== false,
+      isSpicy: Boolean(existing.isSpicy),
+      isBestSeller: Boolean(existing.isBestSeller),
+      isSignature: Boolean(existing.isSignature),
+      isRecommended: Boolean(existing.isRecommended),
+      trackStock: Boolean(existing.trackStock),
+      stockQty: existing.stockQty ?? null,
+      dailyStockTemplate: existing.dailyStockTemplate ?? null,
+      autoResetStock: Boolean(existing.autoResetStock),
+      categoryNamesSorted: getNormalizedCategorySetForExisting(existing),
+    });
+
+    const itemComparable = normalizeComparable({
+      name: item.name,
+      description: item.description,
+      price: item.price,
+      isActive: item.isActive,
+      isSpicy: item.isSpicy,
+      isBestSeller: item.isBestSeller,
+      isSignature: item.isSignature,
+      isRecommended: item.isRecommended,
+      trackStock: item.trackStock,
+      stockQty: item.stockQty,
+      dailyStockTemplate: item.dailyStockTemplate,
+      autoResetStock: item.autoResetStock,
+      categoryNamesSorted: getNormalizedCategorySetForItem(item),
+    });
+
+    const changedFields: string[] = [];
+    if (existingComparable.name !== itemComparable.name) changedFields.push("name");
+    if (existingComparable.description !== itemComparable.description) changedFields.push("description");
+    if (existingComparable.price !== itemComparable.price) changedFields.push("price");
+    if (existingComparable.isActive !== itemComparable.isActive) changedFields.push("isActive");
+    if (existingComparable.isSpicy !== itemComparable.isSpicy) changedFields.push("isSpicy");
+    if (existingComparable.isBestSeller !== itemComparable.isBestSeller) changedFields.push("isBestSeller");
+    if (existingComparable.isSignature !== itemComparable.isSignature) changedFields.push("isSignature");
+    if (existingComparable.isRecommended !== itemComparable.isRecommended) changedFields.push("isRecommended");
+    if (existingComparable.trackStock !== itemComparable.trackStock) changedFields.push("trackStock");
+    if ((existingComparable.stockQty ?? null) !== (itemComparable.stockQty ?? null)) changedFields.push("stockQty");
+    if ((existingComparable.dailyStockTemplate ?? null) !== (itemComparable.dailyStockTemplate ?? null)) changedFields.push("dailyStockTemplate");
+    if (existingComparable.autoResetStock !== itemComparable.autoResetStock) changedFields.push("autoResetStock");
+    if (JSON.stringify(existingComparable.categoryNamesSorted) !== JSON.stringify(itemComparable.categoryNamesSorted)) changedFields.push("categories");
+
+    return {
+      action: changedFields.length === 0 ? "unchanged" : "update",
+      changedFields,
+    };
+  };
 
   /**
    * Fetch categories for validation
@@ -106,7 +268,24 @@ export default function MenuBulkUploadPage() {
       if (response.ok) {
         const data = await response.json();
         if (data.success && Array.isArray(data.data)) {
-          setExistingMenus(data.data.map((m: { id: string; name: string }) => ({ id: m.id, name: m.name })));
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          setExistingMenus(data.data.map((m: any) => ({
+            id: m.id,
+            name: m.name,
+            description: m.description,
+            price: m.price,
+            isActive: m.isActive,
+            isSpicy: m.isSpicy,
+            isBestSeller: m.isBestSeller,
+            isSignature: m.isSignature,
+            isRecommended: m.isRecommended,
+            trackStock: m.trackStock,
+            stockQty: m.stockQty,
+            dailyStockTemplate: m.dailyStockTemplate,
+            autoResetStock: m.autoResetStock,
+            categories: m.categories,
+            category: m.category,
+          })));
         }
       }
     } catch (error) {
@@ -289,9 +468,27 @@ export default function MenuBulkUploadPage() {
       errors.push("Valid price is required (must be >= 0)");
     }
 
-    // Optional: Stock validation only when trackStock is enabled
-    if (item.trackStock && item.stockQty !== null && item.stockQty < 0) {
-      errors.push("Stock quantity cannot be negative");
+    // Stock validation
+    if (item.trackStock) {
+      if (item.stockQty === null || item.stockQty < 0) {
+        errors.push("Stock quantity is required when Track Stock is enabled");
+      }
+
+      if (item.autoResetStock && (item.dailyStockTemplate === null || item.dailyStockTemplate < 0)) {
+        errors.push("Daily Stock Template is required when Auto Reset Stock is enabled");
+      }
+    } else {
+      if (item.autoResetStock) {
+        errors.push("Auto Reset Stock requires Track Stock = Yes");
+      }
+
+      if (item.stockQty !== null) {
+        warnings.push("Stock Qty will be ignored because Track Stock is No");
+      }
+
+      if (item.dailyStockTemplate !== null) {
+        warnings.push("Daily Stock Template will be ignored because Track Stock is No");
+      }
     }
 
     // Warnings for optional but recommended fields
@@ -371,18 +568,23 @@ export default function MenuBulkUploadPage() {
           rowIndex: index + 2, // Excel rows start from 1, plus header row
           name: String(r["Name *"] || r["Name"] || "").trim(),
           description: String(r["Description"] || "").trim(),
-          price: parseNumber(r["Price *"] || r["Price"]) || 0,
+          price: (() => {
+            const num = normalizeNumber(r["Price *"] ?? r["Price"]);
+            return typeof num === "number" ? num : Number.NaN;
+          })(),
           categoryNames,
           selectedCategoryIds: [], // Will be populated after validation
-          isActive: parseBoolean(r["Is Active"]),
+          isActive: parseBooleanWithDefault(r["Is Active"], true),
           isSpicy: parseBoolean(r["Is Spicy"]),
           isBestSeller: parseBoolean(r["Is Best Seller"]),
           isSignature: parseBoolean(r["Is Signature"]),
           isRecommended: parseBoolean(r["Is Recommended"]),
-          trackStock: parseBoolean(r["Track Stock"]),
+          trackStock: parseBooleanWithDefault(r["Track Stock"], false),
           stockQty: parseNumber(r["Stock Qty"]),
           dailyStockTemplate: parseNumber(r["Daily Stock Template"]),
-          autoResetStock: parseBoolean(r["Auto Reset Stock"]),
+          autoResetStock: parseBooleanWithDefault(r["Auto Reset Stock"], false),
+          action: "new",
+          changedFields: [],
           errors: [],
           warnings: [],
           isEditing: false,
@@ -409,27 +611,27 @@ export default function MenuBulkUploadPage() {
         item.errors = validation.errors;
         item.warnings = validation.warnings;
 
-        // Add warning if this will update existing menu
-        if (item.existingMenuId && !item.warnings.includes("Will update existing menu")) {
-          item.warnings.push("Will update existing menu");
+        // Compute action (new/update/unchanged)
+        const computed = computeActionAndChanges(item);
+        item.action = computed.action;
+        item.changedFields = computed.changedFields;
+
+        if (item.existingMenuId && !existingMenus.some((m) => m.id === item.existingMenuId)) {
+          item.errors.push(`Existing menu ID not found: ${item.existingMenuId}`);
         }
 
         return item;
       });
 
-      // Calculate duplicate and new counts
-      const dupes = parsedItems.filter(i => i.existingMenuId).length;
-      const news = parsedItems.length - dupes;
-      setDuplicateCount(dupes);
-      setNewCount(news);
+      const parsedNewCount = parsedItems.filter((i) => i.action === "new").length;
+      const parsedUpdateCount = parsedItems.filter((i) => i.action === "update").length;
+      const parsedUnchangedCount = parsedItems.filter((i) => i.action === "unchanged").length;
 
       setItems(parsedItems);
 
-      if (dupes > 0) {
-        showSuccess(`Loaded ${parsedItems.length} items (${dupes} will update existing, ${news} are new)`);
-      } else {
-        showSuccess(`Loaded ${parsedItems.length} items from file`);
-      }
+      showSuccess(
+        `Loaded ${parsedItems.length} items (${parsedNewCount} new, ${parsedUpdateCount} update, ${parsedUnchangedCount} unchanged)`
+      );
     } catch (error) {
       console.error("Failed to parse file:", error);
       showError("Failed to parse the uploaded file. Please check the format.");
@@ -499,7 +701,16 @@ export default function MenuBulkUploadPage() {
     setItems(prev => prev.map((item, i) => {
       if (i !== index) return item;
 
-      const updated = { ...item, [field]: value };
+      let updated: MenuUploadItem = { ...item, [field]: value } as MenuUploadItem;
+
+      if (field === "trackStock" && value === false) {
+        updated = {
+          ...updated,
+          stockQty: null,
+          dailyStockTemplate: null,
+          autoResetStock: false,
+        };
+      }
 
       // If updating selectedCategoryIds, also update categoryNames for display
       if (field === "selectedCategoryIds" && Array.isArray(value)) {
@@ -513,6 +724,10 @@ export default function MenuBulkUploadPage() {
       const validation = validateItem(updated);
       updated.errors = validation.errors;
       updated.warnings = validation.warnings;
+
+      const computed = computeActionAndChanges(updated);
+      updated.action = computed.action;
+      updated.changedFields = computed.changedFields;
       return updated;
     }));
   };
@@ -534,10 +749,15 @@ export default function MenuBulkUploadPage() {
         .filter(Boolean)
         .join(", ");
 
-      const updated = { ...item, selectedCategoryIds: newIds, categoryNames: names };
+      const updated: MenuUploadItem = { ...item, selectedCategoryIds: newIds, categoryNames: names } as MenuUploadItem;
       const validation = validateItem(updated);
       updated.errors = validation.errors;
       updated.warnings = validation.warnings;
+
+      const computed = computeActionAndChanges(updated);
+      updated.action = computed.action;
+      updated.changedFields = computed.changedFields;
+
       return updated;
     }));
   };
@@ -553,6 +773,10 @@ export default function MenuBulkUploadPage() {
    * Save all items to database
    */
   const handleSave = async () => {
+    const actionableItems = items.filter((i) => i.action !== "unchanged");
+    const updateCount = actionableItems.filter((i) => i.action === "update").length;
+    const newCount = actionableItems.filter((i) => i.action === "new").length;
+
     // Check for errors
     const itemsWithErrors = items.filter(item => item.errors.length > 0);
     if (itemsWithErrors.length > 0) {
@@ -565,8 +789,13 @@ export default function MenuBulkUploadPage() {
       return;
     }
 
+    if (actionableItems.length === 0) {
+      showError("No changes to save (all rows match existing data)");
+      return;
+    }
+
     // If there are duplicates and confirmation not shown yet, show dialog
-    if (duplicateCount > 0 && !showConfirmDialog) {
+    if (updateCount > 0 && !showConfirmDialog) {
       setShowConfirmDialog(true);
       return;
     }
@@ -582,7 +811,7 @@ export default function MenuBulkUploadPage() {
       }
 
       // Map category names to IDs (use selectedCategoryIds if available, fallback to categoryNames)
-      const itemsWithCategoryIds = items.map(item => {
+      const itemsWithCategoryIds = actionableItems.map(item => {
         // Use selectedCategoryIds directly if available, otherwise map from names
         const categoryIds = item.selectedCategoryIds.length > 0
           ? item.selectedCategoryIds
@@ -655,6 +884,11 @@ export default function MenuBulkUploadPage() {
   const errorCount = items.filter(item => item.errors.length > 0).length;
   const warningCount = items.filter(item => item.warnings && item.warnings.length > 0).length;
   const validCount = items.length - errorCount;
+  const updateCount = items.filter((i) => i.action === "update").length;
+  const newCount = items.filter((i) => i.action === "new").length;
+  const unchangedCount = items.filter((i) => i.action === "unchanged").length;
+  const errorRows = items.filter((i) => i.errors.length > 0).map((i) => i.rowIndex);
+  const warningRows = items.filter((i) => i.warnings && i.warnings.length > 0).map((i) => i.rowIndex);
 
   return (
     <div>
@@ -821,6 +1055,16 @@ export default function MenuBulkUploadPage() {
                         <FaCheck className="h-3.5 w-3.5" />
                         {validCount} valid
                       </span>
+                      {updateCount > 0 && (
+                        <span className="flex items-center gap-1.5 text-blue-600">
+                          {updateCount} updates
+                        </span>
+                      )}
+                      {unchangedCount > 0 && (
+                        <span className="flex items-center gap-1.5 text-gray-500">
+                          {unchangedCount} unchanged
+                        </span>
+                      )}
                       {warningCount > 0 && (
                         <span className="flex items-center gap-1.5 text-amber-600">
                           <FaExclamationTriangle className="h-3.5 w-3.5" />
@@ -835,6 +1079,53 @@ export default function MenuBulkUploadPage() {
                       )}
                     </div>
 
+                    {(errorRows.length > 0 || warningRows.length > 0) && (
+                      <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
+                        {errorRows.length > 0 && (
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-medium text-red-700 dark:text-red-400">Errors in rows:</span>
+                            <div className="flex flex-wrap gap-1">
+                              {errorRows.slice(0, 24).map((row) => (
+                                <button
+                                  key={`err-${row}`}
+                                  type="button"
+                                  onClick={() => focusRow(row)}
+                                  className="rounded-md bg-red-100 px-2 py-1 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/40"
+                                  title={`Go to row #${row}`}
+                                >
+                                  #{row}
+                                </button>
+                              ))}
+                              {errorRows.length > 24 && (
+                                <span className="text-red-600 dark:text-red-400">+{errorRows.length - 24} more</span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        {warningRows.length > 0 && (
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-medium text-amber-700 dark:text-amber-300">Warnings in rows:</span>
+                            <div className="flex flex-wrap gap-1">
+                              {warningRows.slice(0, 24).map((row) => (
+                                <button
+                                  key={`warn-${row}`}
+                                  type="button"
+                                  onClick={() => focusRow(row)}
+                                  className="rounded-md bg-amber-100 px-2 py-1 text-amber-800 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-200 dark:hover:bg-amber-900/40"
+                                  title={`Go to row #${row}`}
+                                >
+                                  #{row}
+                                </button>
+                              ))}
+                              {warningRows.length > 24 && (
+                                <span className="text-amber-700 dark:text-amber-300">+{warningRows.length - 24} more</span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     <button
                       onClick={handleClear}
                       className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
@@ -845,7 +1136,7 @@ export default function MenuBulkUploadPage() {
 
                     <button
                       onClick={handleSave}
-                      disabled={saving || errorCount > 0}
+                      disabled={saving || errorCount > 0 || (newCount + updateCount) === 0}
                       data-tutorial="confirm-upload"
                       className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
                     >
@@ -860,7 +1151,9 @@ export default function MenuBulkUploadPage() {
                       ) : (
                         <>
                           <FaSave className="h-4 w-4" />
-                          Save {validCount} Items
+                          {(newCount + updateCount) === 0
+                            ? "No changes"
+                            : `Save (${newCount} new, ${updateCount} update, ${unchangedCount} unchanged)`}
                         </>
                       )}
                     </button>
@@ -884,12 +1177,34 @@ export default function MenuBulkUploadPage() {
               {/* Table Body */}
               <div className="divide-y divide-gray-100 dark:divide-gray-800">
                 {items.map((item, index) => (
-                  <div key={index} className={`${item.errors.length > 0 ? "bg-red-50/50 dark:bg-red-900/5" : ""}`}>
+                  <div
+                    key={index}
+                    id={`menu-upload-row-${item.rowIndex}`}
+                    className={`${item.errors.length > 0 ? "bg-red-50/50 dark:bg-red-900/5" : ""}`}
+                  >
                     {/* Main Row */}
                     <div className="grid grid-cols-12 gap-4 px-4 py-4 items-center">
                       {/* Row Number */}
                       <div className="col-span-2 lg:col-span-1 text-sm text-gray-500 dark:text-gray-400">
-                        #{item.rowIndex}
+                          <div className="flex flex-col gap-1">
+                            <span>#{item.rowIndex}</span>
+                            <span
+                              className={`inline-flex w-fit rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                                item.action === "new"
+                                  ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                  : item.action === "update"
+                                    ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                                    : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
+                              }`}
+                            >
+                              {item.action === "new" ? "New" : item.action === "update" ? "Update" : "Unchanged"}
+                            </span>
+                            {item.action === "update" && item.changedFields.length > 0 && (
+                              <span className="text-[11px] text-gray-500 dark:text-gray-500">
+                                {item.changedFields.join(", ")}
+                              </span>
+                            )}
+                          </div>
                       </div>
 
                       {/* Name */}
@@ -951,15 +1266,31 @@ export default function MenuBulkUploadPage() {
                       {/* Status */}
                       <div className="col-span-2 lg:col-span-2">
                         {item.errors.length > 0 ? (
-                          <span className="inline-flex items-center gap-1 text-xs font-medium text-red-600 dark:text-red-400">
-                            <FaExclamationCircle className="h-3 w-3" />
-                            {item.errors.length} error{item.errors.length > 1 ? "s" : ""}
-                          </span>
+                          <div className="flex flex-col gap-1">
+                            <span className="inline-flex items-center gap-1 text-xs font-medium text-red-600 dark:text-red-400">
+                              <FaExclamationCircle className="h-3 w-3" />
+                              {item.errors.length} error{item.errors.length > 1 ? "s" : ""}
+                            </span>
+                            {item.warnings.length > 0 && (
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-300">
+                                <FaExclamationTriangle className="h-3 w-3" />
+                                {item.warnings.length} warning{item.warnings.length > 1 ? "s" : ""}
+                              </span>
+                            )}
+                          </div>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600 dark:text-green-400">
-                            <FaCheck className="h-3 w-3" />
-                            Valid
-                          </span>
+                          <div className="flex flex-col gap-1">
+                            <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600 dark:text-green-400">
+                              <FaCheck className="h-3 w-3" />
+                              Valid
+                            </span>
+                            {item.warnings.length > 0 && (
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-300">
+                                <FaExclamationTriangle className="h-3 w-3" />
+                                {item.warnings.length} warning{item.warnings.length > 1 ? "s" : ""}
+                              </span>
+                            )}
+                          </div>
                         )}
                       </div>
 
@@ -997,6 +1328,17 @@ export default function MenuBulkUploadPage() {
                             <ul className="mt-1 list-inside list-disc text-sm text-red-600 dark:text-red-300">
                               {item.errors.map((err, i) => (
                                 <li key={i}>{err}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {item.errors.length === 0 && item.warnings.length > 0 && (
+                          <div className="mb-4 rounded-lg bg-amber-50 p-3 dark:bg-amber-900/20">
+                            <p className="text-sm font-medium text-amber-700 dark:text-amber-300">Warnings:</p>
+                            <ul className="mt-1 list-inside list-disc text-sm text-amber-700 dark:text-amber-200">
+                              {item.warnings.map((w, i) => (
+                                <li key={i}>{w}</li>
                               ))}
                             </ul>
                           </div>
@@ -1198,9 +1540,15 @@ export default function MenuBulkUploadPage() {
 
             <div className="mb-6 rounded-lg bg-amber-50 p-4 dark:bg-amber-900/20">
               <p className="text-sm text-gray-700 dark:text-gray-300">
-                <span className="font-semibold text-amber-600 dark:text-amber-400">{duplicateCount}</span> menu item(s) will be <strong>updated</strong> (overwritten)
+                <span className="font-semibold text-amber-600 dark:text-amber-400">{updateCount}</span> menu item(s) will be <strong>updated</strong> (only rows that differ)
                 <br />
                 <span className="font-semibold text-green-600 dark:text-green-400">{newCount}</span> menu item(s) will be <strong>created</strong> (new)
+                {unchangedCount > 0 && (
+                  <>
+                    <br />
+                    <span className="font-semibold text-gray-600 dark:text-gray-400">{unchangedCount}</span> menu item(s) are <strong>unchanged</strong> (skipped)
+                  </>
+                )}
               </p>
             </div>
 
@@ -1216,7 +1564,7 @@ export default function MenuBulkUploadPage() {
                 disabled={saving}
                 className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50"
               >
-                {saving ? "Saving..." : "Proceed with Updates"}
+                {saving ? "Saving..." : "Proceed"}
               </button>
             </div>
           </div>

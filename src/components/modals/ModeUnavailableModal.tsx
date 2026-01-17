@@ -107,7 +107,7 @@ const ModeUnavailableModal: React.FC<ModeUnavailableModalProps> = ({
             <button
               type="button"
               onClick={onSwitchMode}
-              className="h-12 w-full rounded-lg bg-brand-500 px-4 text-sm font-medium text-white hover:bg-brand-600 focus:outline-none focus:ring-3 focus:ring-brand-500/20"
+              className="h-12 w-full rounded-lg bg-orange-500 px-4 text-sm font-medium text-white hover:bg-orange-600 focus:outline-none focus:ring-3 focus:ring-orange-500/20"
             >
               Switch to {alternativeModeLabel}
             </button>
