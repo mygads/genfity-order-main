@@ -21,6 +21,8 @@ interface AddonUploadItem {
   dailyStockTemplate: number | null;
   autoResetStock: boolean;
   displayOrder: number;
+  action: "new" | "update" | "unchanged";
+  changedFields: string[];
   errors: string[];
   warnings: string[];
   isEditing: boolean;
@@ -36,6 +38,16 @@ interface ExistingAddon {
   id: string;
   name: string;
   addonCategoryId: string;
+  addonCategoryName?: string;
+  description?: string | null;
+  price?: number | string;
+  inputType?: "SELECT" | "QTY";
+  isActive?: boolean;
+  trackStock?: boolean;
+  stockQty?: number | null;
+  dailyStockTemplate?: number | null;
+  autoResetStock?: boolean;
+  displayOrder?: number | null;
 }
 
 /**
@@ -64,8 +76,96 @@ export default function AddonItemsBulkUploadPage() {
   const [existingAddons, setExistingAddons] = useState<ExistingAddon[]>([]);
   const [exporting, setExporting] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [duplicateCount, setDuplicateCount] = useState(0);
-  const [newCount, setNewCount] = useState(0);
+
+  const normalizeText = (value: unknown): string => String(value ?? "").trim();
+
+  const normalizeNumber = (value: unknown): number | null => {
+    if (value === null || value === undefined || value === "") return null;
+    const num = Number(value);
+    return Number.isFinite(num) ? num : null;
+  };
+
+  const buildExistingAddonKey = (name: string, categoryName: string) => {
+    return `${name.toLowerCase().trim()}::${categoryName.toLowerCase().trim()}`;
+  };
+
+  const normalizeComparable = (params: {
+    name: string;
+    description: string | null;
+    price: number;
+    inputType: "SELECT" | "QTY";
+    isActive: boolean;
+    trackStock: boolean;
+    stockQty: number | null;
+    dailyStockTemplate: number | null;
+    autoResetStock: boolean;
+    displayOrder: number;
+  }) => {
+    return {
+      name: normalizeText(params.name),
+      description: normalizeText(params.description ?? ""),
+      price: Number(params.price),
+      inputType: params.inputType,
+      isActive: Boolean(params.isActive),
+      trackStock: Boolean(params.trackStock),
+      stockQty: params.trackStock ? (params.stockQty ?? 0) : null,
+      dailyStockTemplate: params.trackStock ? (params.dailyStockTemplate ?? null) : null,
+      autoResetStock: params.trackStock ? Boolean(params.autoResetStock) : false,
+      displayOrder: Number.isFinite(Number(params.displayOrder)) ? Number(params.displayOrder) : 0,
+    };
+  };
+
+  const computeActionAndChanges = (item: AddonUploadItem): { action: AddonUploadItem["action"]; changedFields: string[] } => {
+    if (!item.existingAddonId) return { action: "new", changedFields: [] };
+
+    const existing = existingAddons.find((a) => a.id === item.existingAddonId);
+    if (!existing) {
+      return { action: "update", changedFields: ["id"] };
+    }
+
+    const existingComparable = normalizeComparable({
+      name: existing.name,
+      description: existing.description ?? null,
+      price: Number(existing.price ?? 0),
+      inputType: (existing.inputType ?? "SELECT") as "SELECT" | "QTY",
+      isActive: existing.isActive !== false,
+      trackStock: Boolean(existing.trackStock),
+      stockQty: existing.stockQty ?? null,
+      dailyStockTemplate: existing.dailyStockTemplate ?? null,
+      autoResetStock: Boolean(existing.autoResetStock),
+      displayOrder: Number(existing.displayOrder ?? 0),
+    });
+
+    const itemComparable = normalizeComparable({
+      name: item.name,
+      description: item.description,
+      price: item.price,
+      inputType: item.inputType,
+      isActive: item.isActive,
+      trackStock: item.trackStock,
+      stockQty: item.stockQty,
+      dailyStockTemplate: item.dailyStockTemplate,
+      autoResetStock: item.autoResetStock,
+      displayOrder: item.displayOrder,
+    });
+
+    const changedFields: string[] = [];
+    if (existingComparable.name !== itemComparable.name) changedFields.push("name");
+    if (existingComparable.description !== itemComparable.description) changedFields.push("description");
+    if (existingComparable.price !== itemComparable.price) changedFields.push("price");
+    if (existingComparable.inputType !== itemComparable.inputType) changedFields.push("inputType");
+    if (existingComparable.isActive !== itemComparable.isActive) changedFields.push("isActive");
+    if (existingComparable.trackStock !== itemComparable.trackStock) changedFields.push("trackStock");
+    if ((existingComparable.stockQty ?? null) !== (itemComparable.stockQty ?? null)) changedFields.push("stockQty");
+    if ((existingComparable.dailyStockTemplate ?? null) !== (itemComparable.dailyStockTemplate ?? null)) changedFields.push("dailyStockTemplate");
+    if (existingComparable.autoResetStock !== itemComparable.autoResetStock) changedFields.push("autoResetStock");
+    if (existingComparable.displayOrder !== itemComparable.displayOrder) changedFields.push("displayOrder");
+
+    return {
+      action: changedFields.length === 0 ? "unchanged" : "update",
+      changedFields,
+    };
+  };
 
   /**
    * Fetch addon categories for validation
@@ -110,6 +210,16 @@ export default function AddonItemsBulkUploadPage() {
             id: a.id,
             name: a.name,
             addonCategoryId: a.addonCategoryId,
+            addonCategoryName: a.addonCategory?.name,
+            description: a.description,
+            price: a.price,
+            inputType: a.inputType,
+            isActive: a.isActive,
+            trackStock: a.trackStock,
+            stockQty: a.stockQty,
+            dailyStockTemplate: a.dailyStockTemplate,
+            autoResetStock: a.autoResetStock,
+            displayOrder: a.displayOrder,
           })));
         }
       }
@@ -279,6 +389,11 @@ export default function AddonItemsBulkUploadPage() {
     return false;
   };
 
+  const parseBooleanWithDefault = (value: unknown, defaultValue: boolean): boolean => {
+    if (value === null || value === undefined || value === "") return defaultValue;
+    return parseBoolean(value);
+  };
+
   /**
    * Parse number value from Excel
    */
@@ -330,6 +445,22 @@ export default function AddonItemsBulkUploadPage() {
       errors.push("Stock quantity is required when tracking stock");
     }
 
+    if (item.autoResetStock && !item.trackStock) {
+      errors.push("Auto reset stock requires Track Stock = Yes");
+    }
+
+    if (item.autoResetStock && (item.dailyStockTemplate === null || item.dailyStockTemplate < 0)) {
+      errors.push("Daily Stock Template is required when Auto Reset Stock is enabled");
+    }
+
+    if (!item.trackStock && item.stockQty !== null) {
+      warnings.push("Stock Qty will be ignored because Track Stock is No");
+    }
+
+    if (!item.trackStock && item.dailyStockTemplate !== null) {
+      warnings.push("Daily Stock Template will be ignored because Track Stock is No");
+    }
+
     // Warnings for optional fields
     if (!item.description || item.description.trim() === "") {
       warnings.push("No description - consider adding one");
@@ -372,13 +503,14 @@ export default function AddonItemsBulkUploadPage() {
         return;
       }
 
-      // Build lookup map for existing addons by name + category combo
+      // Build lookup map for existing addons by name + category name combo
       const existingAddonMap = new Map(
-        existingAddons.map(a => {
-          const cat = categories.find(c => c.id === a.addonCategoryId);
-          const key = `${a.name.toLowerCase().trim()}::${cat?.name?.toLowerCase().trim() || ''}`;
-          return [key, a.id];
-        })
+        existingAddons
+          .map((a) => {
+            const categoryName = a.addonCategoryName || categories.find((c) => c.id === a.addonCategoryId)?.name || "";
+            const key = buildExistingAddonKey(a.name, categoryName);
+            return [key, a.id] as const;
+          })
       );
 
       // Parse and validate data
@@ -393,14 +525,19 @@ export default function AddonItemsBulkUploadPage() {
           addonCategoryName: String(r["Addon Category Name *"] || r["Addon Category Name"] || r["Category"] || "").trim(),
           name: String(r["Name *"] || r["Name"] || "").trim(),
           description: String(r["Description"] || "").trim(),
-          price: parseNumber(r["Price *"] || r["Price"]) || 0,
+          price: (() => {
+            const num = normalizeNumber(r["Price *"] ?? r["Price"]);
+            return typeof num === "number" ? num : Number.NaN;
+          })(),
           inputType: parseInputType(r["Input Type (SELECT/QTY)"] || r["Input Type"]),
-          isActive: parseBoolean(r["Is Active"]),
-          trackStock: parseBoolean(r["Track Stock"]),
+          isActive: parseBooleanWithDefault(r["Is Active"], true),
+          trackStock: parseBooleanWithDefault(r["Track Stock"], false),
           stockQty: parseNumber(r["Stock Qty"]),
           dailyStockTemplate: parseNumber(r["Daily Stock Template"]),
-          autoResetStock: parseBoolean(r["Auto Reset Stock"]),
+          autoResetStock: parseBooleanWithDefault(r["Auto Reset Stock"], false),
           displayOrder: parseNumber(r["Display Order"]) || 0,
+          action: "new",
+          changedFields: [],
           errors: [],
           warnings: [],
           isEditing: false,
@@ -424,27 +561,27 @@ export default function AddonItemsBulkUploadPage() {
         item.errors = validation.errors;
         item.warnings = validation.warnings;
 
-        // Add warning if this will update existing addon
-        if (item.existingAddonId && !item.warnings.includes("Will update existing addon")) {
-          item.warnings.push("Will update existing addon");
-        }
+        // Compute action (new/update/unchanged) + changed fields against existing record
+        const computed = computeActionAndChanges(item);
+        item.action = computed.action;
+        item.changedFields = computed.changedFields;
 
+        // If an explicit existing ID is provided but not found in existing list, surface it.
+        if (item.existingAddonId && !existingAddons.some((a) => a.id === item.existingAddonId)) {
+          item.errors.push(`Existing addon ID not found: ${item.existingAddonId}`);
+        }
         return item;
       });
 
-      // Calculate duplicate and new counts
-      const dupes = parsedItems.filter(i => i.existingAddonId).length;
-      const news = parsedItems.length - dupes;
-      setDuplicateCount(dupes);
-      setNewCount(news);
+      const parsedNewCount = parsedItems.filter((i) => i.action === "new").length;
+      const parsedUpdateCount = parsedItems.filter((i) => i.action === "update").length;
+      const parsedUnchangedCount = parsedItems.filter((i) => i.action === "unchanged").length;
 
       setItems(parsedItems);
 
-      if (dupes > 0) {
-        showSuccess(`Loaded ${parsedItems.length} items (${dupes} will update existing, ${news} are new)`);
-      } else {
-        showSuccess(`Loaded ${parsedItems.length} items from file`);
-      }
+      showSuccess(
+        `Loaded ${parsedItems.length} items (${parsedNewCount} new, ${parsedUpdateCount} update, ${parsedUnchangedCount} unchanged)`
+      );
     } catch (error) {
       console.error("Failed to parse file:", error);
       showError("Failed to parse the uploaded file. Please check the format.");
@@ -504,11 +641,29 @@ export default function AddonItemsBulkUploadPage() {
   const updateItem = (index: number, field: keyof AddonUploadItem, value: unknown) => {
     setItems(prev => prev.map((item, i) => {
       if (i !== index) return item;
-      
-      const updated = { ...item, [field]: value };
+
+      let updated: AddonUploadItem = { ...item, [field]: value } as AddonUploadItem;
+
+      // Keep dependent fields consistent
+      if (field === "trackStock" && value === false) {
+        updated = {
+          ...updated,
+          stockQty: null,
+          dailyStockTemplate: null,
+          autoResetStock: false,
+        };
+      }
+      if (field === "autoResetStock" && value === true && updated.dailyStockTemplate === null) {
+        // Leave dailyStockTemplate null; validation will prompt user to fill it.
+      }
+
       const validation = validateItem(updated);
       updated.errors = validation.errors;
       updated.warnings = validation.warnings;
+
+      const computed = computeActionAndChanges(updated);
+      updated.action = computed.action;
+      updated.changedFields = computed.changedFields;
       return updated;
     }));
   };
@@ -524,6 +679,10 @@ export default function AddonItemsBulkUploadPage() {
    * Save all items to database
    */
   const handleSave = async () => {
+    const actionableItems = items.filter((i) => i.action !== "unchanged");
+    const updateCount = actionableItems.filter((i) => i.action === "update").length;
+    const newCount = actionableItems.filter((i) => i.action === "new").length;
+
     // Check for errors
     const itemsWithErrors = items.filter(item => item.errors.length > 0);
     if (itemsWithErrors.length > 0) {
@@ -536,8 +695,13 @@ export default function AddonItemsBulkUploadPage() {
       return;
     }
 
+    if (actionableItems.length === 0) {
+      showError("No changes to save (all rows match existing data)");
+      return;
+    }
+
     // If there are duplicates and confirmation not shown yet, show dialog
-    if (duplicateCount > 0 && !showConfirmDialog) {
+    if (updateCount > 0 && !showConfirmDialog) {
       setShowConfirmDialog(true);
       return;
     }
@@ -553,7 +717,7 @@ export default function AddonItemsBulkUploadPage() {
       }
 
       // Map category names to IDs
-      const itemsWithCategoryIds = items.map(item => {
+      const itemsWithCategoryIds = actionableItems.map(item => {
         const category = categories.find(c => c.name.toLowerCase() === item.addonCategoryName.toLowerCase());
 
         return {
@@ -612,8 +776,6 @@ export default function AddonItemsBulkUploadPage() {
   const handleClear = () => {
     setItems([]);
     setFileName(null);
-    setDuplicateCount(0);
-    setNewCount(0);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -623,6 +785,9 @@ export default function AddonItemsBulkUploadPage() {
   const errorCount = items.filter(item => item.errors.length > 0).length;
   const warningCount = items.filter(item => item.warnings && item.warnings.length > 0).length;
   const validCount = items.length - errorCount;
+  const updateCount = items.filter((i) => i.action === "update").length;
+  const newCount = items.filter((i) => i.action === "new").length;
+  const unchangedCount = items.filter((i) => i.action === "unchanged").length;
 
   return (
     <div>
@@ -644,8 +809,9 @@ export default function AddonItemsBulkUploadPage() {
               <h3 className="text-lg font-semibold">Confirm Update</h3>
             </div>
             <p className="mt-3 text-gray-600 dark:text-gray-400">
-              {duplicateCount} addon item(s) will be <strong>updated</strong> (existing items with the same name in the same category).
+              {updateCount} addon item(s) will be <strong>updated</strong> (only rows that differ from existing data).
               {newCount > 0 && ` ${newCount} new item(s) will be created.`}
+              {unchangedCount > 0 && ` ${unchangedCount} row(s) are unchanged and will be skipped.`}
             </p>
             <p className="mt-2 text-sm text-gray-500 dark:text-gray-500">
               Are you sure you want to continue?
@@ -661,7 +827,7 @@ export default function AddonItemsBulkUploadPage() {
                 onClick={handleSave}
                 className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
               >
-                Yes, Update {duplicateCount} Item(s)
+                Yes, Save Changes
               </button>
             </div>
           </div>
@@ -842,11 +1008,16 @@ export default function AddonItemsBulkUploadPage() {
                           {warningCount} warnings
                         </span>
                       )}
-                      {duplicateCount > 0 && (
-                        <span className="flex items-center gap-1.5 text-blue-600">
-                          {duplicateCount} updates
-                        </span>
-                      )}
+                          {updateCount > 0 && (
+                            <span className="flex items-center gap-1.5 text-blue-600">
+                              {updateCount} updates
+                            </span>
+                          )}
+                          {unchangedCount > 0 && (
+                            <span className="flex items-center gap-1.5 text-gray-500">
+                              {unchangedCount} unchanged
+                            </span>
+                          )}
                     </div>
                     
                     <button
@@ -859,7 +1030,7 @@ export default function AddonItemsBulkUploadPage() {
                     
                     <button
                       onClick={handleSave}
-                      disabled={saving || errorCount > 0}
+                      disabled={saving || errorCount > 0 || (newCount + updateCount) === 0}
                       className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {saving ? (
@@ -873,7 +1044,9 @@ export default function AddonItemsBulkUploadPage() {
                       ) : (
                         <>
                           <FaSave className="h-4 w-4" />
-                          {duplicateCount > 0 ? `Save (${newCount} new, ${duplicateCount} update)` : `Save ${validCount} Items`}
+                          {(newCount + updateCount) === 0
+                            ? "No changes"
+                            : `Save (${newCount} new, ${updateCount} update, ${unchangedCount} unchanged)`}
                         </>
                       )}
                     </button>
@@ -888,11 +1061,18 @@ export default function AddonItemsBulkUploadPage() {
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-700">
                     <th className="pb-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Row</th>
+                    <th className="pb-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Action</th>
                     <th className="pb-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Category</th>
                     <th className="pb-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Name</th>
+                    <th className="pb-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Description</th>
                     <th className="pb-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Price</th>
                     <th className="pb-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Type</th>
-                    <th className="pb-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Stock</th>
+                    <th className="pb-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Is Active</th>
+                    <th className="pb-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Track Stock</th>
+                    <th className="pb-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Stock Qty</th>
+                    <th className="pb-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Daily Stock</th>
+                    <th className="pb-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Auto Reset</th>
+                    <th className="pb-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Display Order</th>
                     <th className="pb-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Status</th>
                     <th className="pb-3 text-right text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Actions</th>
                   </tr>
@@ -902,6 +1082,26 @@ export default function AddonItemsBulkUploadPage() {
                     <tr key={index} className={item.errors.length > 0 ? "bg-red-50 dark:bg-red-900/10" : ""}>
                       <td className="py-3 text-sm text-gray-600 dark:text-gray-400">
                         {item.rowIndex}
+                      </td>
+                      <td className="py-3">
+                        <div className="flex flex-col gap-1">
+                          <span
+                            className={`inline-flex w-fit rounded-full px-2 py-0.5 text-xs font-medium ${
+                              item.action === "new"
+                                ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                : item.action === "update"
+                                  ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                                  : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
+                            }`}
+                          >
+                            {item.action === "new" ? "New" : item.action === "update" ? "Update" : "Unchanged"}
+                          </span>
+                          {item.action === "update" && item.changedFields.length > 0 && (
+                            <span className="text-[11px] text-gray-500 dark:text-gray-500">
+                              {item.changedFields.join(", ")}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="py-3">
                         {item.isEditing ? (
@@ -929,6 +1129,18 @@ export default function AddonItemsBulkUploadPage() {
                           />
                         ) : (
                           <span className="text-sm font-medium text-gray-900 dark:text-white">{item.name || "-"}</span>
+                        )}
+                      </td>
+                      <td className="py-3">
+                        {item.isEditing ? (
+                          <input
+                            type="text"
+                            value={item.description}
+                            onChange={(e) => updateItem(index, "description", e.target.value)}
+                            className="w-full min-w-[220px] rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                          />
+                        ) : (
+                          <span className="text-sm text-gray-600 dark:text-gray-400">{item.description || "-"}</span>
                         )}
                       </td>
                       <td className="py-3">
@@ -964,9 +1176,96 @@ export default function AddonItemsBulkUploadPage() {
                         )}
                       </td>
                       <td className="py-3">
-                        <span className="text-sm text-gray-600 dark:text-gray-400">
-                          {item.trackStock ? `${item.stockQty ?? 0}` : "-"}
-                        </span>
+                        {item.isEditing ? (
+                          <select
+                            value={item.isActive ? "Yes" : "No"}
+                            onChange={(e) => updateItem(index, "isActive", e.target.value === "Yes")}
+                            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                          >
+                            <option value="Yes">Yes</option>
+                            <option value="No">No</option>
+                          </select>
+                        ) : (
+                          <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                            item.isActive
+                              ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                              : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
+                          }`}>
+                            {item.isActive ? "Yes" : "No"}
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3">
+                        {item.isEditing ? (
+                          <select
+                            value={item.trackStock ? "Yes" : "No"}
+                            onChange={(e) => updateItem(index, "trackStock", e.target.value === "Yes")}
+                            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                          >
+                            <option value="No">No</option>
+                            <option value="Yes">Yes</option>
+                          </select>
+                        ) : (
+                          <span className="text-sm text-gray-600 dark:text-gray-400">{item.trackStock ? "Yes" : "No"}</span>
+                        )}
+                      </td>
+                      <td className="py-3">
+                        {item.isEditing ? (
+                          <input
+                            type="number"
+                            value={item.stockQty ?? ""}
+                            onChange={(e) => updateItem(index, "stockQty", e.target.value === "" ? null : Number(e.target.value))}
+                            className="w-24 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                            placeholder={item.trackStock ? "0" : "-"}
+                            disabled={!item.trackStock}
+                            min={0}
+                          />
+                        ) : (
+                          <span className="text-sm text-gray-600 dark:text-gray-400">{item.trackStock ? `${item.stockQty ?? 0}` : "-"}</span>
+                        )}
+                      </td>
+                      <td className="py-3">
+                        {item.isEditing ? (
+                          <input
+                            type="number"
+                            value={item.dailyStockTemplate ?? ""}
+                            onChange={(e) => updateItem(index, "dailyStockTemplate", e.target.value === "" ? null : Number(e.target.value))}
+                            className="w-28 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                            placeholder={item.trackStock ? "" : "-"}
+                            disabled={!item.trackStock}
+                            min={0}
+                          />
+                        ) : (
+                          <span className="text-sm text-gray-600 dark:text-gray-400">{item.trackStock ? (item.dailyStockTemplate ?? "-") : "-"}</span>
+                        )}
+                      </td>
+                      <td className="py-3">
+                        {item.isEditing ? (
+                          <select
+                            value={item.autoResetStock ? "Yes" : "No"}
+                            onChange={(e) => updateItem(index, "autoResetStock", e.target.value === "Yes")}
+                            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                            disabled={!item.trackStock}
+                          >
+                            <option value="No">No</option>
+                            <option value="Yes">Yes</option>
+                          </select>
+                        ) : (
+                          <span className="text-sm text-gray-600 dark:text-gray-400">{item.trackStock ? (item.autoResetStock ? "Yes" : "No") : "-"}</span>
+                        )}
+                      </td>
+                      <td className="py-3">
+                        {item.isEditing ? (
+                          <input
+                            type="number"
+                            value={item.displayOrder}
+                            onChange={(e) => updateItem(index, "displayOrder", Number(e.target.value))}
+                            className="w-24 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                            min={0}
+                          />
+                        ) : (
+                          <span className="text-sm text-gray-600 dark:text-gray-400">{item.displayOrder ?? 0}</span>
+                        )}
                       </td>
                       <td className="py-3">
                         {item.errors.length > 0 ? (
@@ -979,6 +1278,20 @@ export default function AddonItemsBulkUploadPage() {
                               <ul className="list-disc pl-4 space-y-1">
                                 {item.errors.map((err, i) => (
                                   <li key={i}>{err}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          </div>
+                        ) : item.warnings.length > 0 ? (
+                          <div className="group relative">
+                            <span className="flex items-center gap-1 text-xs text-amber-600">
+                              <FaExclamationTriangle className="h-3 w-3" />
+                              {item.warnings.length} warning{item.warnings.length > 1 ? "s" : ""}
+                            </span>
+                            <div className="absolute left-0 top-full z-10 mt-1 hidden w-64 rounded-lg bg-amber-600 p-2 text-xs text-white shadow-lg group-hover:block">
+                              <ul className="list-disc pl-4 space-y-1">
+                                {item.warnings.map((w, i) => (
+                                  <li key={i}>{w}</li>
                                 ))}
                               </ul>
                             </div>
