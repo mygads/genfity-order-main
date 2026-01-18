@@ -9,6 +9,7 @@ import { useTranslation } from "@/lib/i18n/useTranslation";
 import { TranslationKeys } from "@/lib/i18n";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { FaArrowRight, FaCheckCircle, FaSignInAlt } from "react-icons/fa";
+import { TurnstileWidget } from "@/components/auth/TurnstileWidget";
 
 interface FormData {
     merchantName: string;
@@ -135,6 +136,7 @@ function MerchantRegisterContent() {
     const searchParams = useSearchParams();
     const { t } = useTranslation();
     const geolocation = useGeolocation();
+    const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
     const [step, setStep] = useState<1 | 2 | 3>(1);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -144,6 +146,7 @@ function MerchantRegisterContent() {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [locationDetected, setLocationDetected] = useState(false);
     const [detectedCountryFromGPS, setDetectedCountryFromGPS] = useState<string | null>(null);
+    const [turnstileToken, setTurnstileToken] = useState("");
 
     // Get influencer referral code from URL parameter
     const influencerCodeFromUrl = searchParams.get('ref') || '';
@@ -359,6 +362,11 @@ function MerchantRegisterContent() {
         e.preventDefault();
         if (!validateStep3()) return;
 
+        if (turnstileSiteKey && !turnstileToken) {
+            setError(t("auth.turnstile.required"));
+            return;
+        }
+
         setIsSubmitting(true);
         setError(null);
 
@@ -366,7 +374,10 @@ function MerchantRegisterContent() {
             const response = await fetch("/api/public/merchant/register", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(formData),
+                body: JSON.stringify({
+                    ...formData,
+                    turnstileToken: turnstileSiteKey ? turnstileToken : undefined,
+                }),
             });
 
             const result = await response.json();
@@ -928,6 +939,18 @@ function MerchantRegisterContent() {
                                             {formErrors.confirmPassword && <p className="text-red-500 text-xs mt-1">{formErrors.confirmPassword}</p>}
                                         </div>
 
+                                        {turnstileSiteKey && (
+                                            <div className="flex justify-center">
+                                                <TurnstileWidget
+                                                    siteKey={turnstileSiteKey}
+                                                    onVerify={(token) => setTurnstileToken(token)}
+                                                    onExpire={() => setTurnstileToken("")}
+                                                    onError={() => setTurnstileToken("")}
+                                                    theme="auto"
+                                                />
+                                            </div>
+                                        )}
+
                                         <div className="flex gap-3">
                                             <button
                                                 type="button"
@@ -938,7 +961,7 @@ function MerchantRegisterContent() {
                                             </button>
                                             <button
                                                 type="submit"
-                                                disabled={isSubmitting}
+                                                disabled={isSubmitting || (turnstileSiteKey ? !turnstileToken : false)}
                                                 className="flex-1 py-2.5 px-4 bg-brand-500 hover:bg-brand-600 disabled:bg-brand-200 text-white font-bold rounded-lg transition-colors text-sm flex items-center justify-center gap-2 disabled:cursor-not-allowed"
                                             >
                                                 {isSubmitting ? (

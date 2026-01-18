@@ -12,6 +12,7 @@ import emailService from '@/lib/services/EmailService';
 import referralService from '@/lib/services/ReferralService';
 import userNotificationService from '@/lib/services/UserNotificationService';
 import prisma from '@/lib/db/client';
+import { isTurnstileEnabled, verifyTurnstileToken } from '@/lib/utils/turnstile';
 
 const registerSchema = z.object({
     // Merchant info
@@ -44,6 +45,9 @@ const registerSchema = z.object({
     referralCode: z.string().optional(),
     // Influencer referral code (optional) - for partner referral system
     influencerCode: z.string().optional(),
+
+    // Optional anti-bot protection (enforced only when configured)
+    turnstileToken: z.string().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
     message: "Password tidak cocok",
     path: ["confirmPassword"],
@@ -67,6 +71,28 @@ export async function POST(req: NextRequest) {
         }
 
         const data = validation.data;
+
+        // Optional anti-bot protection: enforce only when configured
+        if (isTurnstileEnabled()) {
+            if (!data.turnstileToken || typeof data.turnstileToken !== 'string') {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        error: 'VALIDATION_ERROR',
+                        message: 'Silakan verifikasi bahwa Anda bukan robot.',
+                    },
+                    { status: 400 }
+                );
+            }
+
+            const ipAddress =
+                req.headers.get('cf-connecting-ip') ||
+                req.headers.get('x-forwarded-for')?.split(',')[0] ||
+                req.headers.get('x-real-ip') ||
+                'Unknown';
+
+            await verifyTurnstileToken({ token: data.turnstileToken, ipAddress });
+        }
 
         // Prevent role escalation: existing staff/driver/admin accounts cannot register as merchant owners
         const existingUser = await prisma.user.findUnique({

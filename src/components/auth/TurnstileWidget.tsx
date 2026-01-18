@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 declare global {
   interface Window {
@@ -75,16 +75,44 @@ export function TurnstileWidget({
   const widgetIdRef = useRef<string | null>(null);
   const [ready, setReady] = useState(false);
 
+  const onVerifyRef = useRef(onVerify);
+  const onExpireRef = useRef(onExpire);
+  const onErrorRef = useRef(onError);
+
+  useEffect(() => {
+    onVerifyRef.current = onVerify;
+  }, [onVerify]);
+
+  useEffect(() => {
+    onExpireRef.current = onExpire;
+  }, [onExpire]);
+
+  useEffect(() => {
+    onErrorRef.current = onError;
+  }, [onError]);
+
+  const handleVerify = useCallback((token: string) => {
+    onVerifyRef.current(token);
+  }, []);
+
+  const handleExpire = useCallback(() => {
+    onExpireRef.current?.();
+  }, []);
+
+  const handleError = useCallback(() => {
+    onErrorRef.current?.();
+  }, []);
+
   const options = useMemo(
     () => ({
       sitekey: siteKey,
-      callback: (token: string) => onVerify(token),
-      'expired-callback': () => onExpire?.(),
-      'error-callback': () => onError?.(),
+      callback: handleVerify,
+      'expired-callback': handleExpire,
+      'error-callback': handleError,
       theme,
       size,
     }),
-    [onError, onExpire, onVerify, siteKey, size, theme]
+    [handleError, handleExpire, handleVerify, siteKey, size, theme]
   );
 
   useEffect(() => {
@@ -104,7 +132,7 @@ export function TurnstileWidget({
         widgetIdRef.current = window.turnstile.render(containerRef.current, options);
         setReady(true);
       } catch {
-        onError?.();
+        handleError();
       }
     }
 
@@ -119,7 +147,7 @@ export function TurnstileWidget({
         window.turnstile.remove(widgetId);
       }
     };
-  }, [onError, options]);
+  }, [handleError, options]);
 
   return (
     <div className={className}>
