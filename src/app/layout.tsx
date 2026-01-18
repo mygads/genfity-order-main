@@ -3,12 +3,12 @@ import './globals.css';
 
 import { SidebarProvider } from '@/context/SidebarContext';
 import { ThemeProvider } from '@/context/ThemeContext';
-import { CartProvider } from "@/context/CartContext";
+import { CartProvider } from '@/context/CartContext';
 import { CustomerLanguageProvider } from '@/context/LanguageContext';
 import { Metadata } from 'next';
 
 const outfit = Outfit({
-  subsets: ["latin"],
+  subsets: ['latin'],
 });
 
 export const metadata: Metadata = {

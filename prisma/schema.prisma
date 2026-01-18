@@ -16,6 +16,7 @@ model User {
   profilePictureUrl   String?         @map("profile_picture_url")
   role                UserRole        @default(MERCHANT_STAFF)
   isActive            Boolean         @default(true) @map("is_active")
+  isSystem            Boolean         @default(false) @map("is_system")
   mustChangePassword  Boolean         @default(false) @map("must_change_password")
   resetToken          String?         @map("reset_token")
   resetTokenExpiresAt DateTime?       @map("reset_token_expires_at") @db.Timestamptz(6)
@@ -51,6 +52,7 @@ model User {
 
   @@index([email])
   @@index([role])
+  @@index([isSystem])
   @@map("users")
 }
 

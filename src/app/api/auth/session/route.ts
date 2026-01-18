@@ -21,6 +21,7 @@ import { NextRequest } from 'next/server';
 import { authenticate } from '@/lib/middleware/auth';
 import { handleError, successResponse } from '@/lib/middleware/errorHandler';
 import sessionRepository from '@/lib/repositories/SessionRepository';
+import prisma from '@/lib/db/client';
 
 export async function GET(request: NextRequest) {
   try {
@@ -44,6 +45,49 @@ export async function GET(request: NextRequest) {
     // Check if session is still valid
     const now = new Date();
     const isValid = session.expiresAt > now && session.status === 'ACTIVE';
+
+    // If merchant-role user but merchant was deleted, treat session as invalid
+    if (
+      isValid &&
+      (authContext.role === 'MERCHANT_OWNER' || authContext.role === 'MERCHANT_STAFF')
+    ) {
+      if (!authContext.merchantId) {
+        return successResponse(
+          {
+            userId: authContext.userId.toString(),
+            email: authContext.email,
+            role: authContext.role,
+            merchantId: undefined,
+            expiresAt: session.expiresAt.toISOString(),
+            refreshExpiresAt: session.refreshExpiresAt?.toISOString(),
+            isValid: false,
+          },
+          'Merchant not found',
+          401
+        );
+      }
+
+      const merchantExists = await prisma.merchant.findUnique({
+        where: { id: authContext.merchantId },
+        select: { id: true },
+      });
+
+      if (!merchantExists) {
+        return successResponse(
+          {
+            userId: authContext.userId.toString(),
+            email: authContext.email,
+            role: authContext.role,
+            merchantId: authContext.merchantId.toString(),
+            expiresAt: session.expiresAt.toISOString(),
+            refreshExpiresAt: session.refreshExpiresAt?.toISOString(),
+            isValid: false,
+          },
+          'Merchant not found',
+          401
+        );
+      }
+    }
 
     return successResponse(
       {

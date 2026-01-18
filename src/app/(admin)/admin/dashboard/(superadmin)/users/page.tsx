@@ -10,7 +10,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import Image from 'next/image';
 import { TableActionButton } from '@/components/common/TableActionButton';
-import { FaEdit } from 'react-icons/fa';
+import { FaEdit, FaTrash } from 'react-icons/fa';
 import { StatusToggle } from '@/components/common/StatusToggle';
 
 import EditUserModal from './EditUserModal';
@@ -21,6 +21,7 @@ import CreateUserModal from './CreateUserModal';
 import { useSWRWithAuth } from '@/hooks/useSWRWithAuth';
 import { UsersPageSkeleton } from '@/components/common/SkeletonLoaders';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import ConfirmDialog from '@/components/modals/ConfirmDialog';
 
 interface User {
   id: string;
@@ -40,12 +41,53 @@ interface UsersApiResponse {
   data: User[];
 }
 
+interface DeletePreviewData {
+  user: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  systemUser: {
+    id: string | null;
+    email: string;
+  };
+  reassignmentCounts: {
+    stockPhotos: number;
+    influencerApprovalLogs: number;
+    total: number;
+  };
+}
+
+interface DeletePreviewApiResponse {
+  success: boolean;
+  data: DeletePreviewData;
+  message?: string;
+}
+
+interface DeleteUserApiResponse {
+  success: boolean;
+  data?: {
+    reassigned?: {
+      stockPhotos: number;
+      influencerApprovalLogs: number;
+      total: number;
+    };
+    systemUserEmail?: string;
+  };
+  message?: string;
+}
+
 export default function UsersPage() {
   const { t } = useTranslation();
   const { toasts, success: showSuccessToast, error: showErrorToast } = useToast();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [pendingDeleteUser, setPendingDeleteUser] = useState<User | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deletePreview, setDeletePreview] = useState<DeletePreviewData | null>(null);
+  const [isDeletePreviewLoading, setIsDeletePreviewLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('admin'); // Default: admin roles only
   const [statusFilter, setStatusFilter] = useState('');
@@ -56,6 +98,7 @@ export default function UsersPage() {
 
   // Refs to track previous filter values for page reset (MUST be before early returns)
   const prevFiltersRef = useRef({ searchQuery, roleFilter, statusFilter });
+  const deletePreviewReqIdRef = useRef(0);
 
   // SWR hook for data fetching with caching
   const { 
@@ -165,6 +208,121 @@ export default function UsersPage() {
       console.error('Error toggling user status:', error);
       showErrorToast('Error', 'An error occurred while updating user status');
     }
+  };
+
+  const handleDeleteUser = (user: User) => {
+    setPendingDeleteUser(user);
+    setDeleteConfirmOpen(true);
+
+    setDeletePreview(null);
+    setIsDeletePreviewLoading(true);
+    const requestId = ++deletePreviewReqIdRef.current;
+
+    (async () => {
+      try {
+        const token = getAdminToken();
+        const response = await fetch(`/api/admin/users/${user.id}/delete-preview`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        const data = (await response.json()) as DeletePreviewApiResponse;
+
+        if (deletePreviewReqIdRef.current !== requestId) return;
+
+        if (response.ok && data.success) {
+          setDeletePreview(data.data);
+        } else {
+          // Preview is informational; if it fails, keep base confirm message.
+          setDeletePreview(null);
+        }
+      } catch (error) {
+        if (deletePreviewReqIdRef.current !== requestId) return;
+        console.error('Error loading delete preview:', error);
+        setDeletePreview(null);
+      } finally {
+        if (deletePreviewReqIdRef.current !== requestId) return;
+        setIsDeletePreviewLoading(false);
+      }
+    })();
+  };
+
+  const confirmDeleteUser = async () => {
+    if (!pendingDeleteUser || isDeleting) return;
+
+    if (isDeletePreviewLoading) {
+      showErrorToast(t('common.error'), t('admin.superadmin.users.deletePreview.wait'));
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      const token = getAdminToken();
+      const response = await fetch(`/api/admin/users/${pendingDeleteUser.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const data = (await response.json()) as DeleteUserApiResponse;
+
+      if (response.ok && data.success) {
+        const reassignedTotal = data.data?.reassigned?.total ?? 0;
+        const systemEmail = data.data?.systemUserEmail;
+
+        if (reassignedTotal > 0 && systemEmail) {
+          showSuccessToast(
+            t('common.success'),
+            t('admin.superadmin.users.deleteSuccessWithReassign', {
+              count: reassignedTotal,
+              email: systemEmail,
+            })
+          );
+        } else {
+          showSuccessToast(t('common.success'), t('admin.superadmin.users.deleteSuccess'));
+        }
+        setDeleteConfirmOpen(false);
+        setPendingDeleteUser(null);
+        fetchUsers();
+      } else {
+        showErrorToast(t('common.error'), data.message || t('admin.superadmin.users.deleteError'));
+      }
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      showErrorToast(t('common.error'), t('admin.superadmin.users.deleteError'));
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const buildDeleteConfirmMessage = () => {
+    if (!pendingDeleteUser) return '';
+
+    const base = t('admin.superadmin.users.deleteConfirm', { name: pendingDeleteUser.name });
+
+    if (isDeletePreviewLoading) {
+      return `${base}\n\n${t('admin.superadmin.users.deletePreview.loading')}`;
+    }
+
+    if (!deletePreview) return base;
+
+    const { stockPhotos, influencerApprovalLogs, total } = deletePreview.reassignmentCounts;
+    if (total <= 0) {
+      return `${base}\n\n${t('admin.superadmin.users.deletePreview.none')}`;
+    }
+
+    return [
+      base,
+      '',
+      t('admin.superadmin.users.deletePreview.title'),
+      t('admin.superadmin.users.deletePreview.stockPhotos', { count: stockPhotos }),
+      t('admin.superadmin.users.deletePreview.influencerApprovalLogs', { count: influencerApprovalLogs }),
+      '',
+      t('admin.superadmin.users.deletePreview.reassignedTo', { email: deletePreview.systemUser.email }),
+    ].join('\n');
   };
 
   /**
@@ -407,6 +565,14 @@ export default function UsersPage() {
                             title="Edit"
                             aria-label="Edit"
                           />
+                          <TableActionButton
+                            icon={FaTrash}
+                            tone="danger"
+                            onClick={() => handleDeleteUser(user)}
+                            title={t('common.delete')}
+                            aria-label={t('common.delete')}
+                            className="ml-2"
+                          />
                         </div>
                       </td>
                     </tr>
@@ -492,6 +658,24 @@ export default function UsersPage() {
 
       {/* Toast Notifications */}
       <ToastContainer toasts={toasts} />
+
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        isOpen={deleteConfirmOpen}
+        title={t('admin.superadmin.users.deleteTitle')}
+        message={buildDeleteConfirmMessage()}
+        confirmText={t('common.delete')}
+        cancelText={t('common.cancel')}
+        variant="danger"
+        onConfirm={confirmDeleteUser}
+        onCancel={() => {
+          if (isDeleting) return;
+          setDeleteConfirmOpen(false);
+          setPendingDeleteUser(null);
+          setDeletePreview(null);
+          setIsDeletePreviewLoading(false);
+        }}
+      />
     </div>
   );
 }

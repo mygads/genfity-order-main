@@ -21,6 +21,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import useSWR, { SWRConfiguration, KeyedMutator } from 'swr';
+import { clearAdminAuth } from '@/lib/utils/adminAuth';
 
 // Custom error class with additional info
 interface FetchError extends Error {
@@ -33,11 +34,12 @@ interface FetchError extends Error {
  * Clear all auth data from localStorage and redirect to login
  */
 const clearSessionAndRedirect = (loginPath: string) => {
-  // Clear all auth-related data
-  localStorage.removeItem('accessToken');
+  // Clear admin auth (includes cookie + structured localStorage)
+  clearAdminAuth();
+
+  // Backwards-compat: clear legacy keys if any code still sets them
   localStorage.removeItem('refreshToken');
   localStorage.removeItem('user');
-  localStorage.removeItem('merchantId');
   
   // Use window.location for hard redirect to ensure clean state
   window.location.href = loginPath;
@@ -63,6 +65,16 @@ const createAuthFetcher = (loginRedirect: string) => async (url: string) => {
     if (res.status === 401) {
       clearSessionAndRedirect(loginRedirect);
       // Return a promise that never resolves to prevent further execution
+      return new Promise(() => {});
+    }
+
+    // Merchant deleted edge case: treat as invalid session and redirect
+    if (
+      res.status === 404 &&
+      (errorInfo?.error === 'MERCHANT_NOT_FOUND' ||
+        String(errorInfo?.message || '').toLowerCase().includes('merchant not found'))
+    ) {
+      clearSessionAndRedirect(loginRedirect);
       return new Promise(() => {});
     }
     

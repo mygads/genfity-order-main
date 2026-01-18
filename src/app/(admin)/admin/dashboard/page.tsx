@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import SuperAdminDashboard from '@/components/dashboard/SuperAdminDashboard';
@@ -13,6 +13,9 @@ import { useTranslation } from '@/lib/i18n/useTranslation';
 import { clearAdminAuth } from '@/lib/utils/adminAuth';
 import { clearDriverAuth } from '@/lib/utils/driverAuth';
 import ConfirmDialog from '@/components/modals/ConfirmDialog';
+import { useMerchant } from '@/context/MerchantContext';
+import { useAuth } from '@/hooks/useAuth';
+import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
 
 /**
  * GENFITY Admin Dashboard Page (CSR + SWR)
@@ -39,6 +42,40 @@ export default function AdminDashboardPage() {
   const [pendingLeaveMerchantId, setPendingLeaveMerchantId] = useState<string | null>(null);
   const { showError } = useToast();
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const { merchant } = useMerchant();
+  const { isSuspended } = useSubscriptionStatus();
+
+  const isMerchantUser = user?.role === 'MERCHANT_OWNER' || user?.role === 'MERCHANT_STAFF';
+  const isMerchantInactive = isMerchantUser && merchant?.isActive === false;
+  const isLocked = isMerchantUser && (isMerchantInactive || isSuspended);
+
+  const wrapLocked = (node: ReactNode) => {
+    if (!isLocked) return <>{node}</>;
+
+    return (
+      <div className="relative">
+        <div className="pointer-events-none select-none opacity-50 grayscale">
+          {node}
+        </div>
+        <div className="absolute inset-0 z-10 flex items-start justify-center p-4">
+          <div className="mt-2 w-full max-w-2xl rounded-xl border border-gray-200 bg-white/90 p-4 shadow-lg backdrop-blur dark:border-gray-800 dark:bg-gray-900/90">
+            <div className="flex items-start gap-3">
+              <div className="shrink-0 mt-0.5">
+                <svg className="h-5 w-5 text-gray-700 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('admin.dashboard.locked.title')}</p>
+                <p className="mt-0.5 text-sm text-gray-700 dark:text-gray-300">{t('admin.dashboard.locked.message')}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const executeLeaveDisabledMerchant = async (merchantId: string) => {
     if (!merchantId) return;
@@ -216,7 +253,7 @@ export default function AdminDashboardPage() {
 
   // Render dashboard based on role
   if (dashboardData.role === 'SUPER_ADMIN') {
-    return (
+    return wrapLocked(
       <SuperAdminDashboard
         stats={dashboardData.stats}
         recentMerchants={dashboardData.recentMerchants}
@@ -225,7 +262,7 @@ export default function AdminDashboardPage() {
   }
 
   if (dashboardData.role === 'MERCHANT_OWNER') {
-    return (
+    return wrapLocked(
       <MerchantOwnerDashboard
         merchant={dashboardData.merchant}
         stats={dashboardData.stats}
@@ -239,7 +276,7 @@ export default function AdminDashboardPage() {
   }
 
   if (dashboardData.role === 'MERCHANT_STAFF') {
-    return (
+    return wrapLocked(
       <MerchantStaffDashboard
         merchant={dashboardData.merchant}
         stats={dashboardData.stats}
@@ -248,7 +285,7 @@ export default function AdminDashboardPage() {
   }
 
   if (dashboardData.role === 'DELIVERY') {
-    return (
+    return wrapLocked(
       <DeliveryDriverDashboard
         merchant={dashboardData.merchant}
         stats={dashboardData.stats}

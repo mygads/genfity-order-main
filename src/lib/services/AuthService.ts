@@ -129,29 +129,34 @@ class AuthService {
     // Step 6: Update last login timestamp
     await userRepository.updateLastLogin(user.id);
 
-    // Build merchant context from merchant_users (filtered by active links + active merchants)
-    const allActiveMerchantUsers = (user.merchantUsers ?? []).filter(
-      (mu: { isActive: boolean; merchant: { isActive: boolean } }) => mu.isActive && mu.merchant.isActive
-    );
+    const allMerchantUsers = user.merchantUsers ?? [];
 
     // Staff invitations must be accepted before login.
-    // We keep WAITING links out of the active context, but still detect them to show a clear error.
-    const pendingStaffInvite = allActiveMerchantUsers.find(
+    // Detect WAITING invites regardless of whether the merchant/link is active.
+    const pendingStaffInvite = allMerchantUsers.find(
       (mu: { role: string; invitationStatus?: string; inviteTokenExpiresAt?: Date | null }) =>
         mu.role === 'STAFF' && mu.invitationStatus === 'WAITING'
     );
 
-    const activeMerchantUsers = allActiveMerchantUsers.filter(
+    const nonWaitingMerchantUsers = allMerchantUsers.filter(
       (mu: { role: string; invitationStatus?: string }) =>
         mu.role !== 'STAFF' || mu.invitationStatus !== 'WAITING'
     );
 
-    const adminMerchantUsers = activeMerchantUsers.filter(
+    // Admin context: include linked merchants even if inactive.
+    const adminMerchantUsersAll = nonWaitingMerchantUsers.filter(
       (mu: { role: string }) => mu.role === 'OWNER' || mu.role === 'STAFF'
     );
 
-    const driverMerchantUsers = activeMerchantUsers.filter(
-      (mu: { role: string }) => mu.role === 'DRIVER'
+    // Operational context: requires active link + active merchant.
+    const adminMerchantUsersOperational = adminMerchantUsersAll.filter(
+      (mu: { isActive: boolean; merchant: { isActive: boolean } }) => mu.isActive && mu.merchant.isActive
+    );
+
+    // Driver portal requires active driver link + active merchant.
+    const driverMerchantUsers = nonWaitingMerchantUsers.filter(
+      (mu: { role: string; isActive: boolean; merchant: { isActive: boolean } }) =>
+        mu.role === 'DRIVER' && mu.isActive && mu.merchant.isActive
     );
 
     let effectiveRole = user.role;
@@ -182,8 +187,10 @@ class AuthService {
         );
       }
 
-      if (adminMerchantUsers.length > 0) {
-        merchants = adminMerchantUsers.map((mu: {
+      if (adminMerchantUsersAll.length > 0) {
+        const merchantContext = adminMerchantUsersOperational.length > 0 ? adminMerchantUsersOperational : adminMerchantUsersAll;
+
+        merchants = merchantContext.map((mu: {
           merchantId: bigint;
           role: string;
           permissions: string[];
@@ -195,6 +202,7 @@ class AuthService {
             address: string | null;
             city: string | null;
             isOpen: boolean;
+            isActive: boolean;
           };
         }) => ({
           merchantId: mu.merchantId.toString(),
@@ -228,13 +236,13 @@ class AuthService {
             currentMerchantPermissions = targetMerchant.permissions;
             currentMerchantRole = targetMerchant.role;
           } else {
-            merchantId = adminMerchantUsers[0].merchantId;
+            merchantId = merchantContext[0].merchantId;
             merchantIdString = merchantId.toString();
             currentMerchantPermissions = merchants[0]?.permissions || [];
             currentMerchantRole = merchants[0]?.role;
           }
         } else {
-          merchantId = adminMerchantUsers[0].merchantId;
+          merchantId = merchantContext[0].merchantId;
           merchantIdString = merchantId.toString();
           currentMerchantPermissions = merchants[0]?.permissions || [];
           currentMerchantRole = merchants[0]?.role;
@@ -286,7 +294,7 @@ class AuthService {
         merchantIdString = merchantId.toString();
       } else if (user.role === 'MERCHANT_STAFF') {
         // Staff can access driver portal ONLY when explicitly granted.
-        if (adminMerchantUsers.length === 0) {
+        if (adminMerchantUsersOperational.length === 0) {
           if (pendingStaffInvite) {
             const isExpired = pendingStaffInvite.inviteTokenExpiresAt && pendingStaffInvite.inviteTokenExpiresAt < new Date();
             throw new AuthenticationError(
@@ -303,14 +311,14 @@ class AuthService {
           );
         }
 
-        if (adminMerchantUsers.length > 1) {
+        if (adminMerchantUsersOperational.length > 1) {
           throw new AuthenticationError(
             'Your account is linked to multiple merchants. Staff accounts must have exactly one merchant.',
             ERROR_CODES.FORBIDDEN
           );
         }
 
-        const staffLink = adminMerchantUsers[0];
+        const staffLink = adminMerchantUsersOperational[0];
         const hasDriverAccess = (staffLink.permissions ?? []).includes(STAFF_PERMISSIONS.DRIVER_DASHBOARD);
         if (!hasDriverAccess) {
           throw new AuthenticationError(

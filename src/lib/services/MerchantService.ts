@@ -14,6 +14,7 @@ import {
   ERROR_CODES,
 } from '@/lib/constants/errors';
 import { DEFAULT_RECEIPT_SETTINGS, type ReceiptSettings } from '@/lib/types/receiptSettings';
+import type { Prisma } from '@prisma/client';
 import type { Merchant, MerchantOpeningHour, User } from '@/lib/types';
 
 /**
@@ -161,8 +162,11 @@ class MerchantService {
     validateRequired(input.ownerEmail, 'Owner email');
     validateRequired(input.ownerPassword, 'Owner password');
 
+    // Normalize merchant code (URLs are canonicalized to uppercase in middleware)
+    const normalizedCode = input.code.trim().toUpperCase();
+
     // Validate merchant code format
-    validateMerchantCode(input.code);
+    validateMerchantCode(normalizedCode);
 
     // Validate owner email format
     validateEmail(input.ownerEmail);
@@ -178,7 +182,7 @@ class MerchantService {
     }
 
     // Check merchant code uniqueness and auto-regenerate if collision
-    let merchantCode = input.code;
+    let merchantCode = normalizedCode;
     let codeExists = await merchantRepository.codeExists(merchantCode);
     let attempts = 0;
     const maxAttempts = 10;
@@ -278,12 +282,14 @@ class MerchantService {
         // Feature defaults for NEW merchants:
         // - Dine-in + Takeaway enabled
         // - Delivery OFF
+        // - Enforce delivery zones ON (when delivery enabled later)
         // - Dine-in requires table number
         // - Scheduled orders OFF
         // - Reservations OFF
         isDineInEnabled: true,
         isTakeawayEnabled: true,
         isDeliveryEnabled: false,
+        enforceDeliveryZones: true,
         requireTableNumberForDineIn: true,
         // POS: pay immediately ON, custom items OFF (in features)
         posPayImmediately: true,
@@ -293,7 +299,7 @@ class MerchantService {
         reservationMinItemCount: 0,
         // JSON settings
         features,
-        receiptSettings,
+        receiptSettings: receiptSettings as unknown as Prisma.InputJsonValue,
         isActive: true,
       },
       owner.id, // Pass userId
@@ -318,7 +324,7 @@ class MerchantService {
       // Create initial balance (0) with merchantId only
       await balanceRepository.getOrCreateBalance(merchant.id);
 
-      console.log(`✅ Created ${trialDays}-day trial subscription for merchant ${merchant.code}`);
+      // console.log(`✅ Created ${trialDays}-day trial subscription for merchant ${merchant.code}`);
 
       // Create template data (sample category, menu, addon, opening hours)
       try {
@@ -327,13 +333,13 @@ class MerchantService {
           owner.id,
           currency
         );
-        console.log(`✅ Created template data for merchant ${merchant.code}:`, {
-          categories: templateResult.categories.map((c) => c.name),
-          menus: templateResult.menus.map((m) => m.name),
-          addonCategory: templateResult.addonCategory.name,
-          addonItems: templateResult.addonItems.map((a) => a.name),
-          openingHours: `${templateResult.openingHoursCount} days`,
-        });
+        // console.log(`✅ Created template data for merchant ${merchant.code}:`, {
+        //   categories: templateResult.categories.map((c) => c.name),
+        //   menus: templateResult.menus.map((m) => m.name),
+        //   addonCategory: templateResult.addonCategory.name,
+        //   addonItems: templateResult.addonItems.map((a) => a.name),
+        //   openingHours: `${templateResult.openingHoursCount} days`,
+        // });
       } catch (templateError) {
         console.warn('⚠️ Failed to create template data:', templateError);
         // Don't fail registration if template creation fails
@@ -379,15 +385,16 @@ class MerchantService {
     }
 
     // Validate and check merchant code uniqueness if changing
-    if (input.code !== undefined && input.code !== existing.code) {
+    const nextCode = input.code !== undefined ? input.code.trim().toUpperCase() : undefined;
+    if (nextCode !== undefined && nextCode !== existing.code) {
       // Validate merchant code format
-      validateMerchantCode(input.code);
+      validateMerchantCode(nextCode);
 
       // Check if the new code is already in use by another merchant
-      const codeExists = await merchantRepository.codeExists(input.code);
+      const codeExists = await merchantRepository.codeExists(nextCode);
       if (codeExists) {
         throw new ConflictError(
-          `Merchant code '${input.code}' is already in use by another merchant`,
+          `Merchant code '${nextCode}' is already in use by another merchant`,
           ERROR_CODES.MERCHANT_CODE_EXISTS
         );
       }
@@ -434,7 +441,7 @@ class MerchantService {
 
     // Map input fields to Prisma schema fields
     const updateData: Record<string, unknown> = {};
-    if (input.code !== undefined) updateData.code = input.code; // Super admin can update merchant code
+    if (nextCode !== undefined) updateData.code = nextCode; // Super admin can update merchant code
     if (input.name !== undefined) updateData.name = input.name;
     if (input.description !== undefined) updateData.description = input.description;
     if (input.address !== undefined) updateData.address = input.address;

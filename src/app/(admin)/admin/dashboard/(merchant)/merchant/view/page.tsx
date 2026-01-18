@@ -9,12 +9,15 @@ import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { useAuth } from "@/hooks/useAuth";
 import MerchantQRCodeModal from "@/components/merchants/MerchantQRCodeModal";
 import { isStoreEffectivelyOpen } from "@/lib/utils/storeStatus";
-import { StatusToggle } from "@/components/common/StatusToggle";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { formatCurrency } from "@/lib/utils/format";
 import { useContextualHint, CONTEXTUAL_HINTS } from "@/lib/tutorial/components/ContextualHint";
 import { useToast } from "@/hooks/useToast";
 import ToastContainer from "@/components/ui/ToastContainer";
+import { useSubscriptionStatus } from "@/hooks/useSubscriptionStatus";
+import StoreStatusChip from "@/components/merchants/StoreStatusChip";
+import { Modal } from "@/components/ui/modal";
+import { FaQuestionCircle } from "react-icons/fa";
 
 // Dynamically import map component
 const MapContent = dynamic(() => import("@/components/maps/MapContent"), { ssr: false });
@@ -62,7 +65,12 @@ interface MerchantData {
   }>;
 }
 
-const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+interface TeamSummary {
+  ownerCount: number;
+  staffCount: number;
+  owners: Array<{ id: string; name: string; email: string }>;
+  staff: Array<{ id: string; name: string; email: string }>;
+}
 
 /**
  * Merchant View Page
@@ -75,12 +83,85 @@ export default function ViewMerchantPage() {
   const { t } = useTranslation();
   const { showHint } = useContextualHint();
   const { toasts, success: showSuccess, error: showError } = useToast();
+  const {
+    isSuspended: isSubscriptionSuspended,
+    isLoading: isSubscriptionLoading,
+    hasNoSubscription,
+    subscriptionType,
+    daysRemaining,
+    suspendReason,
+  } = useSubscriptionStatus();
   const [merchant, setMerchant] = useState<MerchantData | null>(null);
   const [loading, setLoading] = useState(true);
   const [showQRModal, setShowQRModal] = useState(false);
   const [isTogglingOpen, setIsTogglingOpen] = useState(false);
+  const [showStatusHelp, setShowStatusHelp] = useState(false);
 
   const isMerchantOwner = user?.role === "MERCHANT_OWNER";
+  const isMerchantLocked = Boolean(isSubscriptionSuspended || merchant?.isActive === false);
+
+  const getSubscriptionTypeLabel = () => {
+    if (!subscriptionType) return "-";
+
+    switch (subscriptionType) {
+      case "TRIAL":
+        return t("subscription.status.trial");
+      case "DEPOSIT":
+        return t("subscription.status.deposit");
+      case "MONTHLY":
+        return t("subscription.status.monthly");
+      case "NONE":
+        return t("admin.merchant.subscriptionNone");
+      default:
+        return "-";
+    }
+  };
+
+  const renderSubscriptionChip = () => {
+    if (isSubscriptionLoading) {
+      return (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+          <div className="h-2 w-2 rounded-full bg-gray-400 animate-pulse"></div>
+          {t("admin.merchant.subscriptionChecking")}
+        </span>
+      );
+    }
+
+    if (hasNoSubscription) {
+      return (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+          <div className="h-2 w-2 rounded-full bg-gray-500"></div>
+          {t("admin.merchant.subscriptionNone")}
+        </span>
+      );
+    }
+
+    if (isSubscriptionSuspended) {
+      return (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-warning-100 px-3 py-1.5 text-xs font-medium text-warning-800 dark:bg-warning-900/20 dark:text-warning-300">
+          <div className="h-2 w-2 rounded-full bg-warning-500"></div>
+          {t("admin.merchant.subscriptionSuspended")}
+        </span>
+      );
+    }
+
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-success-100 px-3 py-1.5 text-xs font-medium text-success-700 dark:bg-success-900/20 dark:text-success-400">
+        <div className="h-2 w-2 rounded-full bg-success-500"></div>
+        {t("admin.merchant.subscriptionActive")}
+      </span>
+    );
+  };
+
+  const days = [
+    t("common.days.sunday"),
+    t("common.days.monday"),
+    t("common.days.tuesday"),
+    t("common.days.wednesday"),
+    t("common.days.thursday"),
+    t("common.days.friday"),
+    t("common.days.saturday"),
+  ];
 
   // Show contextual hint on first visit
   useEffect(() => {
@@ -113,39 +194,9 @@ export default function ViewMerchantPage() {
         const data = await response.json();
         const merchantData = data.data?.merchant || data.data;
 
-        // Fetch users associated with this merchant
-        const usersResponse = await fetch("/api/merchant/users", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        let owners: Array<{ id: string; name: string; email: string }> = [];
-        let staff: Array<{ id: string; name: string; email: string }> = [];
-
-        if (usersResponse.ok) {
-          const usersData = await usersResponse.json();
-          const users = usersData.data?.users || [];
-
-          interface UserItem {
-            id: string;
-            name: string;
-            email: string;
-            role: string;
-          }
-
-          owners = users.filter((u: UserItem) => u.role === 'MERCHANT_OWNER').map((u: UserItem) => ({
-            id: u.id,
-            name: u.name,
-            email: u.email,
-          }));
-
-          staff = users.filter((u: UserItem) => u.role === 'MERCHANT_STAFF').map((u: UserItem) => ({
-            id: u.id,
-            name: u.name,
-            email: u.email,
-          }));
-        }
+        const teamSummary = (merchantData?.teamSummary ?? null) as TeamSummary | null;
+        const owners = teamSummary?.owners ?? [];
+        const staff = teamSummary?.staff ?? [];
 
         setMerchant({
           id: merchantData.id,
@@ -382,48 +433,40 @@ export default function ViewMerchantPage() {
               {merchant.name}
             </h1>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Code: <span className="font-mono font-semibold">{merchant.code}</span>
+              {t("admin.merchant.code")}: <span className="font-mono font-semibold">{merchant.code}</span>
             </p>
 
             {/* Status Badges */}
-            <div className="mt-3 flex items-center gap-2">
-              <StatusToggle
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+              {!merchant.isActive && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1.5 text-xs font-medium text-red-700 dark:bg-red-900/20 dark:text-red-400">
+                  <div className="h-2 w-2 rounded-full bg-red-500"></div>
+                  {t("admin.merchant.statusInactive")}
+                </span>
+              )}
+
+              {renderSubscriptionChip()}
+
+              <StoreStatusChip
                 isActive={merchant.isActive}
-                onToggle={() => {}}
-                disabled
-                size="sm"
-                activeLabel={t("admin.merchant.statusActive")}
-                inactiveLabel={t("admin.merchant.statusInactive")}
+                isOpen={merchant.isOpen}
+                isManualOverride={merchant.isManualOverride}
+                openingHours={merchant.openingHours.map((h) => ({
+                  dayOfWeek: h.dayOfWeek,
+                  openTime: h.openTime,
+                  closeTime: h.closeTime,
+                  isClosed: h.isClosed,
+                }))}
+                timezone={merchant.timezone}
               />
 
-              {merchant.isActive && (
-                (() => {
-                  const effectivelyOpen = isStoreEffectivelyOpen({
-                    isOpen: merchant.isOpen,
-                    isManualOverride: merchant.isManualOverride,
-                    openingHours: merchant.openingHours.map(h => ({
-                      dayOfWeek: h.dayOfWeek,
-                      openTime: h.openTime,
-                      closeTime: h.closeTime,
-                      isClosed: h.isClosed,
-                    })),
-                    timezone: merchant.timezone,
-                  });
-                  return effectivelyOpen ? (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-success-100 px-3 py-1.5 text-xs font-medium text-success-700 dark:bg-success-900/20 dark:text-success-400">
-                      <div className="h-2 w-2 rounded-full bg-success-500 animate-pulse"></div>
-                      {t("admin.merchant.storeOpen")}
-                      {merchant.isManualOverride && <span className="ml-1 opacity-70">(Manual)</span>}
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1.5 text-xs font-medium text-red-700 dark:bg-red-900/20 dark:text-red-400">
-                      <div className="h-2 w-2 rounded-full bg-red-500"></div>
-                      {t("admin.merchant.storeClosed")}
-                      {merchant.isManualOverride && <span className="ml-1 opacity-70">(Manual)</span>}
-                    </span>
-                  );
-                })()
-              )}
+              <button
+                type="button"
+                onClick={() => setShowStatusHelp(true)}
+                className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+              >
+                <FaQuestionCircle className="h-3.5 w-3.5 text-gray-400" />
+              </button>
             </div>
 
             {/* Description */}
@@ -436,7 +479,7 @@ export default function ViewMerchantPage() {
 
           {/* Quick Actions - Centered */}
           <div className="mt-6 flex flex-wrap justify-center gap-3">
-            {isMerchantOwner && (
+            {isMerchantOwner && !isMerchantLocked && (
               <>
                 <Link
                   href="/admin/dashboard/merchant/edit"
@@ -482,7 +525,7 @@ export default function ViewMerchantPage() {
                       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      Switch to Auto
+                      {t("admin.merchant.switchToAuto")}
                     </>
                   ) : isStoreEffectivelyOpen({
                       isOpen: merchant.isOpen,
@@ -510,12 +553,6 @@ export default function ViewMerchantPage() {
                     </>
                   )}
                 </button>
-
-                {!merchant.isActive && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {t("admin.merchant.storeMustBeActive")}
-                  </p>
-                )}
               </>
             )}
 
@@ -607,7 +644,7 @@ export default function ViewMerchantPage() {
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
               {t("admin.merchant.feesCharges")}
             </h2>
-            {isMerchantOwner && (
+            {isMerchantOwner && !isMerchantLocked && (
               <Link
                 href="/admin/dashboard/merchant/edit"
                 className="text-sm font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
@@ -696,7 +733,7 @@ export default function ViewMerchantPage() {
               </div>
               <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-900/50">
                 <div>
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">GPS Coordinates</p>
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">{t("admin.merchant.gpsCoordinates")}</p>
                   <p className="mt-1 text-sm text-gray-900 dark:text-white">
                     {parseFloat(merchant.latitude).toFixed(6)}, {parseFloat(merchant.longitude).toFixed(6)}
                   </p>
@@ -711,7 +748,7 @@ export default function ViewMerchantPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
-                  View in Maps
+                  {t("admin.merchant.viewInMaps")}
                 </a>
               </div>
             </div>
@@ -728,7 +765,7 @@ export default function ViewMerchantPage() {
               {merchant.openingHours.map((hour) => (
                 <div key={hour.dayOfWeek} className="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
                   <p className="mb-1 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                    {DAYS[hour.dayOfWeek]}
+                    {days[hour.dayOfWeek]}
                   </p>
                   {hour.isClosed ? (
                     <p className="text-sm text-gray-400 dark:text-gray-500">{t("admin.merchant.closed")}</p>
@@ -745,13 +782,13 @@ export default function ViewMerchantPage() {
               <svg className="mx-auto h-10 w-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">No opening hours set</p>
-              {isMerchantOwner && (
+              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">{t("admin.merchant.noOpeningHoursSet")}</p>
+              {isMerchantOwner && !isMerchantLocked && (
                 <Link
                   href="/admin/dashboard/merchant/edit"
                   className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
                 >
-                  Set opening hours
+                  {t("admin.merchant.setOpeningHours")}
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
@@ -826,6 +863,113 @@ export default function ViewMerchantPage() {
         merchantCode={merchant.code}
         merchantUrl={getMerchantUrl()}
       />
+
+      {/* Status Help Modal */}
+      <Modal
+        isOpen={showStatusHelp}
+        onClose={() => setShowStatusHelp(false)}
+        className="max-w-[680px] p-6 lg:p-8"
+      >
+        <div className="space-y-5">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              {t("admin.merchant.statusHelpTitle")}
+            </h3>
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+              {t("admin.merchant.statusHelpIntro")}
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/30">
+            <p className="text-sm font-semibold text-gray-900 dark:text-white">
+              {t("admin.merchant.statusHelpCurrentTitle")}
+            </p>
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="rounded-lg bg-white p-3 dark:bg-gray-900">
+                <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  {t("admin.merchant.statusHelpSubscriptionLabel")}
+                </p>
+                <p className="mt-1 text-sm font-medium text-gray-900 dark:text-white">
+                  {isSubscriptionLoading
+                    ? t("admin.merchant.subscriptionChecking")
+                    : hasNoSubscription
+                      ? t("admin.merchant.subscriptionNone")
+                      : isSubscriptionSuspended
+                        ? t("admin.merchant.subscriptionSuspended")
+                        : t("admin.merchant.subscriptionActive")}
+                </p>
+              </div>
+
+              <div className="rounded-lg bg-white p-3 dark:bg-gray-900">
+                <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  {t("admin.merchant.statusHelpPlanLabel")}
+                </p>
+                <p className="mt-1 text-sm font-medium text-gray-900 dark:text-white">
+                  {getSubscriptionTypeLabel()}
+                </p>
+              </div>
+
+              <div className="rounded-lg bg-white p-3 dark:bg-gray-900">
+                <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  {t("admin.merchant.statusHelpDaysRemainingLabel")}
+                </p>
+                <p className="mt-1 text-sm font-medium text-gray-900 dark:text-white">
+                  {typeof daysRemaining === "number"
+                    ? t("subscription.status.daysRemaining", { days: daysRemaining })
+                    : "-"}
+                </p>
+              </div>
+
+              <div className="rounded-lg bg-white p-3 dark:bg-gray-900">
+                <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  {t("admin.merchant.statusHelpSuspendReasonLabel")}
+                </p>
+                <p className="mt-1 text-sm font-medium text-gray-900 dark:text-white">
+                  {suspendReason || "-"}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 flex justify-end">
+              <Link
+                href="/admin/dashboard/subscription"
+                className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-600"
+              >
+                {t("admin.merchant.statusHelpViewSubscription")}
+              </Link>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                {t("admin.merchant.statusHelpSectionAccountTitle")}
+              </p>
+              <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                {t("admin.merchant.statusHelpSectionAccountBody")}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                {t("admin.merchant.statusHelpSectionSubscriptionTitle")}
+              </p>
+              <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                {t("admin.merchant.statusHelpSectionSubscriptionBody")}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                {t("admin.merchant.statusHelpSectionStoreTitle")}
+              </p>
+              <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                {t("admin.merchant.statusHelpSectionStoreBody")}
+              </p>
+            </div>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

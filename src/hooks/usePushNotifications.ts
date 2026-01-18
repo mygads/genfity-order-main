@@ -12,7 +12,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { getAdminToken } from '@/lib/utils/adminAuth';
+import { clearAdminAuth, getAdminToken } from '@/lib/utils/adminAuth';
 
 interface UsePushNotificationsReturn {
     isSupported: boolean;
@@ -138,15 +138,26 @@ export function usePushNotifications(): UsePushNotificationsReturn {
                 }),
             });
 
-            const data = await response.json();
-            if (!data.success) {
-                throw new Error(data.error || 'Failed to save subscription');
+            // If auth became invalid (e.g. merchant deleted), logout cleanly
+            if (response.status === 401) {
+                clearAdminAuth();
+                window.location.href = '/admin/login?error=expired';
+                return false;
+            }
+
+            const data = await response.json().catch(() => ({} as any));
+            if (!response.ok || !data.success) {
+                const message = data?.message || data?.error || 'Failed to save subscription';
+                setError(message);
+                setIsLoading(false);
+                return false;
             }
 
             setIsSubscribed(true);
             setIsLoading(false);
             return true;
         } catch (err) {
+            // Avoid spamming console for expected auth/permission failures
             console.error('Push subscription error:', err);
             setError(err instanceof Error ? err.message : 'Failed to subscribe');
             setIsLoading(false);

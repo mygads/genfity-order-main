@@ -254,6 +254,12 @@ class SubscriptionAutoSwitchService {
     // No fallback available - suspend subscription
     await subscriptionRepository.suspendSubscription(merchantId, 'Trial expired - no payment method available');
 
+    // Close store immediately when subscription is suspended
+    await subscriptionRepository.closeMerchantStore(
+      merchantId,
+      'Store closed due to expired trial'
+    );
+
     // Record history
     await subscriptionHistoryService.recordSuspension(
       merchantId,
@@ -361,6 +367,12 @@ class SubscriptionAutoSwitchService {
     // No balance - suspend subscription
     await subscriptionRepository.suspendSubscription(merchantId, 'Monthly subscription expired - insufficient balance');
 
+    // Close store immediately when subscription is suspended
+    await subscriptionRepository.closeMerchantStore(
+      merchantId,
+      'Store closed due to expired monthly subscription'
+    );
+
     // Record history
     await subscriptionHistoryService.recordSuspension(
       merchantId,
@@ -453,6 +465,12 @@ class SubscriptionAutoSwitchService {
 
       // No monthly fallback - suspend
       await subscriptionRepository.suspendSubscription(merchantId, 'Deposit balance exhausted');
+
+      // Close store immediately when subscription is suspended
+      await subscriptionRepository.closeMerchantStore(
+        merchantId,
+        'Store closed due to exhausted deposit balance'
+      );
 
       // Record history
       await subscriptionHistoryService.recordSuspension(
@@ -810,10 +828,9 @@ class SubscriptionAutoSwitchService {
       return false; // Already open
     }
 
-    await prisma.merchant.update({
-      where: { id: merchantId },
-      data: { isOpen: true },
-    });
+    // When a store was force-closed due to subscription/balance issues,
+    // restore normal operation by re-opening and clearing manual override.
+    await subscriptionRepository.reopenMerchantStore(merchantId);
 
     console.log(`🏪 Auto-opened store for merchant ${merchantId}`);
     return true;

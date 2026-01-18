@@ -35,6 +35,35 @@ async function main() {
     console.log('   Password: 1234abcd');
     console.log('   ⚠️  Please change this password in production!\n');
   }
+
+  // ============================================
+  // 1.1 CREATE SYSTEM ACCOUNT (for ownership reassignment)
+  // ============================================
+  const systemEmail = 'system@genfity.com';
+  const existingSystem = await prisma.user.findUnique({
+    where: { email: systemEmail },
+  });
+  if (existingSystem) {
+    console.log('✅ System account already exists');
+  } else {
+    const hashedPassword = await bcrypt.hash(
+      // Not intended for interactive login; must satisfy NOT NULL constraint.
+      // Keep deterministic-ish for dev, but still non-trivial.
+      'change-me-system-password',
+      10
+    );
+    await prisma.user.create({
+      data: {
+        name: 'System',
+        email: systemEmail,
+        passwordHash: hashedPassword,
+        role: 'SUPER_ADMIN',
+        isActive: false,
+        mustChangePassword: false,
+      },
+    });
+    console.log('✅ System account created: system@genfity.com (inactive)');
+  }
   // ============================================
   // 2. CREATE MERCHANTS
   // ============================================

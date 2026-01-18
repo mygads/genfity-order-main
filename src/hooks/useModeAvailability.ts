@@ -46,12 +46,57 @@ export function useModeAvailability(
             const data = await response.json();
 
             if (!data.success) {
+                setResult({
+                    isAvailable: false,
+                    modeClosesAt: null,
+                    minutesUntilClose: null,
+                    estimatedPickupTime: estimatedMinutes,
+                    canOrderForPickup: false,
+                    warningMessage: null,
+                });
                 return;
             }
 
             const merchant = data.data;
             const now = new Date();
             const dayOfWeek = now.getDay();
+
+            // Subscription lock: store may be visible but ordering must be disabled.
+            if (merchant.subscriptionStatus && merchant.subscriptionStatus !== 'ACTIVE') {
+                const reason = merchant.subscriptionSuspendReason
+                    ? String(merchant.subscriptionSuspendReason)
+                    : 'Subscription is not active';
+
+                setResult({
+                    isAvailable: false,
+                    modeClosesAt: null,
+                    minutesUntilClose: null,
+                    estimatedPickupTime: estimatedMinutes,
+                    canOrderForPickup: false,
+                    warningMessage: reason,
+                });
+                return;
+            }
+
+            // Mode enable flags
+            const modeEnabled =
+                mode === 'dinein'
+                    ? merchant.isDineInEnabled !== false
+                    : mode === 'takeaway'
+                        ? merchant.isTakeawayEnabled !== false
+                        : merchant.isDeliveryEnabled === true;
+
+            if (!modeEnabled) {
+                setResult({
+                    isAvailable: false,
+                    modeClosesAt: null,
+                    minutesUntilClose: null,
+                    estimatedPickupTime: estimatedMinutes,
+                    canOrderForPickup: false,
+                    warningMessage: 'This ordering mode is currently unavailable',
+                });
+                return;
+            }
 
             // ✅ FIRST: Check if store is manually opened (isOpen flag)
             // If isOpen is true, store is open regardless of schedule

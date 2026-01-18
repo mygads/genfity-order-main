@@ -8,6 +8,7 @@ import { EyeIcon, EyeCloseIcon } from "@/icons";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { TranslationKeys } from "@/lib/i18n";
 import { useGeolocation } from "@/hooks/useGeolocation";
+import { FaArrowRight, FaCheckCircle, FaSignInAlt } from "react-icons/fa";
 
 interface FormData {
     merchantName: string;
@@ -194,12 +195,15 @@ function MerchantRegisterContent() {
     // Auto-detect location from timezone on mount
     useEffect(() => {
         const initialLocation = geolocation.detectFromTimezone();
-        if (initialLocation.country && initialLocation.currency && initialLocation.timezone) {
+        const detectedCountry = initialLocation.country;
+        const detectedCurrency = initialLocation.currency;
+        const detectedTimezone = initialLocation.timezone;
+        if (detectedCountry && detectedCurrency && detectedTimezone) {
             setFormData(prev => ({
                 ...prev,
-                country: normalizeCountry(initialLocation.country, prev.country),
-                currency: normalizeCurrency(initialLocation.currency, prev.currency),
-                timezone: normalizeTimezone(initialLocation.timezone, initialLocation.country, prev.timezone),
+                country: normalizeCountry(detectedCountry, prev.country),
+                currency: normalizeCurrency(detectedCurrency, prev.currency),
+                timezone: normalizeTimezone(detectedTimezone, detectedCountry, prev.timezone),
             }));
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -398,25 +402,48 @@ function MerchantRegisterContent() {
 
     if (success) {
         return (
-            <div
-                className="min-h-screen flex items-center justify-center p-4"
-                style={{ background: "linear-gradient(109.78deg, #FFFFFF 2.1%, #E7EEF5 100%)" }}
-            >
-                <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
-                    <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-green-100 flex items-center justify-center">
-                        <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
+            <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
+                {/* Background Pattern */}
+                <div className="fixed inset-0 pointer-events-none overflow-hidden">
+                    <div className="absolute -top-40 -right-40 w-96 h-96 bg-[#173C82]/5 rounded-full blur-3xl" />
+                    <div className="absolute top-1/2 -left-40 w-80 h-80 bg-brand-500/5 rounded-full blur-3xl" />
+                </div>
+
+                <div className="relative z-10 min-h-screen flex items-center justify-center p-4 md:p-8">
+                    <div className="w-full max-w-md bg-white dark:bg-gray-800 rounded-2xl shadow-2xl shadow-gray-200/50 dark:shadow-none border border-gray-100 dark:border-gray-700 overflow-hidden">
+                        <div className="p-8 text-center">
+                            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-success-100 text-success-700 dark:bg-success-900/20 dark:text-success-400">
+                                <FaCheckCircle className="h-8 w-8" />
+                            </div>
+
+                            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                                {t("register.success")}
+                            </h1>
+                            <p className="text-gray-600 dark:text-gray-300 mb-4">
+                                {t("register.successMessage")}
+                            </p>
+                            <div className="inline-flex items-center gap-2 rounded-lg bg-gray-50 dark:bg-gray-900/30 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 mb-6">
+                                <FaArrowRight className="h-4 w-4" />
+                                {t("register.redirecting")}
+                            </div>
+
+                            <div className="flex flex-col gap-3">
+                                <Link
+                                    href="/admin/login"
+                                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-brand-600"
+                                >
+                                    <FaSignInAlt className="h-4 w-4" />
+                                    {t("register.loginNow")}
+                                </Link>
+                                <Link
+                                    href="/"
+                                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-6 py-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                                >
+                                    {t("common.backHome")}
+                                </Link>
+                            </div>
+                        </div>
                     </div>
-                    <h1 className="text-2xl font-bold text-gray-900 mb-2">{t("register.success")} 🎉</h1>
-                    <p className="text-gray-600 mb-4">{t("register.successMessage")}</p>
-                    <p className="text-gray-500 text-sm mb-6">{t("register.redirecting")}</p>
-                    <Link
-                        href="/admin/login"
-                        className="inline-block px-6 py-3 bg-brand-500 text-white rounded-lg font-medium hover:bg-brand-600 transition-colors"
-                    >
-                        {t("register.loginNow")}
-                    </Link>
                 </div>
             </div>
         );

@@ -22,6 +22,31 @@ import prisma from '@/lib/db/client';
 import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 import authService from '@/lib/services/AuthService';
 import emailService from '@/lib/services/EmailService';
+import { Prisma } from '@prisma/client';
+
+const SYSTEM_USER_EMAIL = 'system@genfity.com';
+
+async function getOrCreateSystemUser(tx: Prisma.TransactionClient): Promise<{ id: bigint; email: string }> {
+  const existing = await tx.user.findUnique({
+    where: { email: SYSTEM_USER_EMAIL },
+    select: { id: true, email: true },
+  });
+  if (existing) return existing;
+
+  const passwordHash = await hashPassword('change-me-system-password');
+  const created = await tx.user.create({
+    data: {
+      name: 'System',
+      email: SYSTEM_USER_EMAIL,
+      passwordHash,
+      role: 'SUPER_ADMIN',
+      isActive: false,
+      mustChangePassword: false,
+    },
+    select: { id: true, email: true },
+  });
+  return created;
+}
 
 /**
  * GET handler - Get user by ID
@@ -159,19 +184,112 @@ async function deleteUserHandler(
     throw new NotFoundError('User not found', ERROR_CODES.USER_NOT_FOUND);
   }
 
-  // Soft delete user (set isActive = false)
-  const updated = await userRepository.update(userId, { isActive: false });
+  // Prevent deleting the system account used for reassignment.
+  if (user.email === SYSTEM_USER_EMAIL) {
+    throw new ValidationError('You cannot delete the system account', ERROR_CODES.VALIDATION_ERROR);
+  }
 
-  // Revoke all sessions + notify
-  await authService.logoutAll(userId);
-  await emailService.sendUserDeactivatedByAdmin({
-    to: updated.email,
-    name: updated.name,
-    email: updated.email,
-    locale: 'id',
+  // Prevent deleting self
+  if (authContext.userId === userId) {
+    throw new ValidationError('You cannot delete your own account', ERROR_CODES.VALIDATION_ERROR);
+  }
+
+  // Prevent deleting the last active SUPER_ADMIN
+  if (user.role === 'SUPER_ADMIN' && user.isActive) {
+    const otherActiveSuperAdmins = await prisma.user.count({
+      where: {
+        role: 'SUPER_ADMIN',
+        isActive: true,
+        id: { not: userId },
+      },
+    });
+
+    if (otherActiveSuperAdmins === 0) {
+      throw new ValidationError('You cannot delete the last active Super Admin', ERROR_CODES.VALIDATION_ERROR);
+    }
+  }
+
+  const result = await prisma.$transaction(async (tx) => {
+    const systemUser = await getOrCreateSystemUser(tx);
+
+    // Reassign non-nullable ownership/audit links that must keep a valid User.
+    const stockPhotosReassigned = await tx.stockPhoto.updateMany({
+      where: { uploadedByUserId: userId },
+      data: { uploadedByUserId: systemUser.id },
+    });
+    const influencerApprovalLogsReassigned = await tx.influencerApprovalLog.updateMany({
+      where: { actedByUserId: userId },
+      data: { actedByUserId: systemUser.id },
+    });
+
+    // Revoke all sessions first
+    await tx.userSession.deleteMany({ where: { userId } });
+
+    // Detach optional references
+    await tx.payment.updateMany({
+      where: { paidByUserId: userId },
+      data: { paidByUserId: null },
+    });
+    await tx.order.updateMany({
+      where: { deliveryDriverUserId: userId },
+      data: { deliveryDriverUserId: null },
+    });
+    await tx.orderDiscount.updateMany({
+      where: { appliedByUserId: userId },
+      data: { appliedByUserId: null },
+    });
+
+    // Clear audit trail references (optional FK fields)
+    await tx.menuCategory.updateMany({ where: { createdByUserId: userId }, data: { createdByUserId: null } });
+    await tx.menuCategory.updateMany({ where: { updatedByUserId: userId }, data: { updatedByUserId: null } });
+    await tx.menuCategory.updateMany({ where: { deletedByUserId: userId }, data: { deletedByUserId: null } });
+    await tx.menuCategory.updateMany({ where: { restoredByUserId: userId }, data: { restoredByUserId: null } });
+
+    await tx.menu.updateMany({ where: { createdByUserId: userId }, data: { createdByUserId: null } });
+    await tx.menu.updateMany({ where: { updatedByUserId: userId }, data: { updatedByUserId: null } });
+    await tx.menu.updateMany({ where: { deletedByUserId: userId }, data: { deletedByUserId: null } });
+    await tx.menu.updateMany({ where: { restoredByUserId: userId }, data: { restoredByUserId: null } });
+
+    await tx.addonCategory.updateMany({ where: { createdByUserId: userId }, data: { createdByUserId: null } });
+    await tx.addonCategory.updateMany({ where: { updatedByUserId: userId }, data: { updatedByUserId: null } });
+    await tx.addonCategory.updateMany({ where: { deletedByUserId: userId }, data: { deletedByUserId: null } });
+    await tx.addonCategory.updateMany({ where: { restoredByUserId: userId }, data: { restoredByUserId: null } });
+
+    await tx.addonItem.updateMany({ where: { createdByUserId: userId }, data: { createdByUserId: null } });
+    await tx.addonItem.updateMany({ where: { updatedByUserId: userId }, data: { updatedByUserId: null } });
+    await tx.addonItem.updateMany({ where: { deletedByUserId: userId }, data: { deletedByUserId: null } });
+    await tx.addonItem.updateMany({ where: { restoredByUserId: userId }, data: { restoredByUserId: null } });
+
+    // Clean up other direct relations
+    await tx.merchantUser.deleteMany({ where: { userId } });
+    await tx.userNotification.deleteMany({ where: { userId } });
+    await tx.notificationRetryQueue.deleteMany({ where: { userId } });
+    await tx.userPreference.deleteMany({ where: { userId } });
+
+    // Finally delete user record
+    await tx.user.delete({ where: { id: userId } });
+
+    const totalReassigned =
+      stockPhotosReassigned.count + influencerApprovalLogsReassigned.count;
+
+    return {
+      systemUserEmail: systemUser.email,
+      reassigned: {
+        stockPhotos: stockPhotosReassigned.count,
+        influencerApprovalLogs: influencerApprovalLogsReassigned.count,
+        total: totalReassigned,
+      },
+    };
   });
 
-  return successResponse(null, 'User deleted successfully', 200);
+  return successResponse(
+    {
+      reassigned: result.reassigned,
+      systemUserEmail: result.systemUserEmail,
+    },
+    'User deleted successfully',
+    200
+  );
 }
 
 export const GET = withSuperAdmin(getUserHandler);

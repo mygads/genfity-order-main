@@ -7,11 +7,25 @@ import { NextRequest, NextResponse } from 'next/server';
 import authService from '@/lib/services/AuthService';
 import customerAuthService from '@/lib/services/CustomerAuthService';
 import influencerAuthService from '@/lib/services/InfluencerAuthService';
+import prisma from '@/lib/db/client';
 import { extractTokenFromHeader } from '@/lib/utils/jwtManager';
 import { normalizeRouteContext, type NextRouteContext, type NormalizedRouteContext } from '@/lib/utils/routeContext';
 import { AuthenticationError, AuthorizationError, ERROR_CODES } from '@/lib/constants/errors';
 import { handleError } from '@/lib/middleware/errorHandler';
 import type { UserRole } from '@/lib/types/auth';
+
+function isMerchantLockExempt(pathname: string, method: string): boolean {
+  // Allow subscription management while locked.
+  if (pathname.startsWith('/api/merchant/subscription')) return true;
+
+  // Allow querying lock state so the UI can render the correct lock reason.
+  if (pathname === '/api/merchant/lock-status' && method === 'GET') return true;
+
+  // Allow profile read for banner/sidebar context.
+  if (pathname === '/api/merchant/profile' && method === 'GET') return true;
+
+  return false;
+}
 
 /**
  * Authenticated user context
@@ -236,7 +250,37 @@ export function withMerchantPermission(
         );
       }
 
-      // If owner, always allow
+      // If this is a merchant-role account but the merchant was deleted, treat as invalid session
+      if (!authContext.merchantId) {
+        throw new AuthenticationError('Merchant not found', ERROR_CODES.MERCHANT_NOT_FOUND);
+      }
+
+      const merchantRecord = await prisma.merchant.findUnique({
+        where: { id: authContext.merchantId },
+        select: { isActive: true },
+      });
+
+      if (!merchantRecord) {
+        throw new AuthenticationError('Merchant not found', ERROR_CODES.MERCHANT_NOT_FOUND);
+      }
+
+      // Enforce merchant-level lock rules (inactive merchant, suspended subscription)
+      // while allowlisting subscription endpoints and read-only profile.
+      if (!isMerchantLockExempt(request.nextUrl.pathname, request.method)) {
+        if (merchantRecord.isActive === false) {
+          throw new AuthorizationError('Merchant is currently disabled', ERROR_CODES.MERCHANT_DISABLED);
+        }
+
+        const { default: subscriptionRepository } = await import('@/lib/repositories/SubscriptionRepository');
+        const subscription = await subscriptionRepository.getMerchantSubscription(authContext.merchantId);
+        const isSuspended = !subscription || subscription.status === 'SUSPENDED';
+
+        if (isSuspended) {
+          throw new AuthorizationError('Subscription is suspended. Please renew to continue.', ERROR_CODES.FORBIDDEN);
+        }
+      }
+
+      // If owner, always allow (after lock checks)
       if (authContext.role === 'MERCHANT_OWNER') {
         return await handler(request, authContext, normalizeRouteContext(routeContext));
       }

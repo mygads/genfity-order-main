@@ -474,6 +474,9 @@ export function TutorialSpotlight() {
   // Auto-navigate when a step specifies navigateTo.
   // This keeps the spotlight on the intended UI even for tab-based pages that use query params.
   useEffect(() => {
+    // Important: only auto-navigate while the tutorial overlay is actually visible.
+    // If we auto-navigate while hidden, it can "pull" the user back when they click the sidebar.
+    if (!isOverlayVisible) return;
     if (!activeTutorial || !currentStep?.navigateTo) return;
     if (isNavigating) return;
 
@@ -487,7 +490,7 @@ export function TutorialSpotlight() {
         setIsNavigating(false);
       }, 600);
     }
-  }, [activeTutorial, currentStep?.navigateTo, getCurrentPathWithSearch, isNavigating, router]);
+  }, [activeTutorial, currentStep?.navigateTo, getCurrentPathWithSearch, isNavigating, isOverlayVisible, router]);
 
   // Handle navigation with action - Use Next.js router to preserve tutorial state
   const handleNext = useCallback(() => {
@@ -661,10 +664,55 @@ export function TutorialSpotlight() {
           height="100%"
           fill="rgba(0, 0, 0, 0.75)"
           mask="url(#spotlight-mask)"
-          className="pointer-events-auto"
-          onClick={skipTutorial}
+          className="pointer-events-none"
         />
       </svg>
+
+      {/* Click-catcher panes (outside spotlight only).
+          This keeps the spotlight area clickable (fixes "need multiple clicks" on sidebar items). */}
+      {spotlightRect ? (
+        <>
+          {/* Top */}
+          <div
+            className="fixed left-0 right-0 bg-black/75 pointer-events-auto"
+            style={{ top: 0, height: Math.max(0, spotlightRect.top) }}
+            onClick={skipTutorial}
+          />
+          {/* Bottom */}
+          <div
+            className="fixed left-0 right-0 bg-black/75 pointer-events-auto"
+            style={{
+              top: spotlightRect.top + spotlightRect.height,
+              bottom: 0,
+            }}
+            onClick={skipTutorial}
+          />
+          {/* Left */}
+          <div
+            className="fixed bg-black/75 pointer-events-auto"
+            style={{
+              top: spotlightRect.top,
+              left: 0,
+              width: Math.max(0, spotlightRect.left),
+              height: spotlightRect.height,
+            }}
+            onClick={skipTutorial}
+          />
+          {/* Right */}
+          <div
+            className="fixed bg-black/75 pointer-events-auto"
+            style={{
+              top: spotlightRect.top,
+              left: spotlightRect.left + spotlightRect.width,
+              right: 0,
+              height: spotlightRect.height,
+            }}
+            onClick={skipTutorial}
+          />
+        </>
+      ) : (
+        <div className="fixed inset-0 bg-black/75 pointer-events-auto" onClick={skipTutorial} />
+      )}
 
       {/* Spotlight Border Glow with pulse animation */}
       {spotlightRect && (

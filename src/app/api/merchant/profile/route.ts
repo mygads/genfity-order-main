@@ -52,6 +52,37 @@ async function handleGet(req: NextRequest, authContext: AuthContext) {
       );
     }
 
+    // Team summary (read-only): enough to render view pages without calling /api/merchant/users
+    const merchantUsers = await prisma.merchantUser.findMany({
+      where: { merchantId: merchantUser.merchantId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+          },
+        },
+      },
+    });
+
+    const owners = merchantUsers
+      .filter((mu) => mu.user.role === 'MERCHANT_OWNER')
+      .map((mu) => ({
+        id: mu.user.id.toString(),
+        name: mu.user.name,
+        email: mu.user.email,
+      }));
+
+    const staff = merchantUsers
+      .filter((mu) => mu.user.role === 'MERCHANT_STAFF')
+      .map((mu) => ({
+        id: mu.user.id.toString(),
+        name: mu.user.name,
+        email: mu.user.email,
+      }));
+
     // Add hasDeletePin flag (don't expose the actual PIN)
     // Map phone to phoneNumber for frontend compatibility
     const merchantData = serializeBigInt(merchant) as Record<string, unknown>;
@@ -60,6 +91,12 @@ async function handleGet(req: NextRequest, authContext: AuthContext) {
       ...restMerchantData,
       phoneNumber: phone || '', // Map phone -> phoneNumber for frontend
       hasDeletePin: !!merchant.deletePin,
+      teamSummary: {
+        ownerCount: owners.length,
+        staffCount: staff.length,
+        owners,
+        staff,
+      },
       completedOrderEmailFee: (await subscriptionService.getPlanPricing((merchant as any)?.currency || 'IDR'))
         .completedOrderEmailFee,
     };

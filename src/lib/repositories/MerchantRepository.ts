@@ -48,8 +48,13 @@ export class MerchantRepository {
    * Find merchant by code
    */
   async findByCode(code: string) {
-    const result = await prisma.merchant.findUnique({
-      where: { code },
+    const result = await prisma.merchant.findFirst({
+      where: {
+        code: {
+          equals: code,
+          mode: 'insensitive',
+        },
+      },
       include: {
         openingHours: {
           orderBy: {
@@ -64,9 +69,9 @@ export class MerchantRepository {
   /**
    * Get all merchants
    */
-  async findAll(includeInactive = false) {
+  async findAll(activeOnly = false) {
     const results = await prisma.merchant.findMany({
-      where: includeInactive ? {} : { isActive: true },
+      where: activeOnly ? { isActive: true } : {},
       include: {
         openingHours: {
           orderBy: {
@@ -161,7 +166,12 @@ export class MerchantRepository {
    */
   async codeExists(code: string): Promise<boolean> {
     const count = await prisma.merchant.count({
-      where: { code },
+      where: {
+        code: {
+          equals: code,
+          mode: 'insensitive',
+        },
+      },
     });
     return count > 0;
   }

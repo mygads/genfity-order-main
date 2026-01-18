@@ -45,8 +45,10 @@ import {
   FaSmile,
   FaTruck,
   FaCalendarAlt,
+  FaLock,
 } from "react-icons/fa";
 import MerchantBanner from "../components/merchants/MerchantBanner";
+import { useSubscriptionStatus } from "../hooks/useSubscriptionStatus";
 
 type NavItem = {
   nameKey: TranslationKeys; // Translation key for name
@@ -334,6 +336,13 @@ const merchantNavGroups: NavGroup[] = [
     titleKey: "admin.nav.settings",
     items: [
       {
+        icon: <FaStore />,
+        nameKey: "admin.nav.merchantView",
+        path: "/admin/dashboard/merchant/view",
+        roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+        // No permission required: should remain accessible even when locked
+      },
+      {
         icon: <FaCogs />,
         nameKey: "admin.nav.merchantSettings",
         path: "/admin/dashboard/merchant/edit",
@@ -402,8 +411,11 @@ const AppSidebar: React.FC = () => {
   const { user, hasPermission, isOwner } = useAuth();
   const { t } = useTranslation();
   const [hasMerchant, setHasMerchant] = React.useState<boolean | null>(null);
+  const [merchantIsActive, setMerchantIsActive] = React.useState<boolean | null>(null);
   const [showScrollIndicator, setShowScrollIndicator] = useState(false);
   const [pendingReservationCount, setPendingReservationCount] = useState<number | null>(null);
+
+  const { isSuspended: isSubscriptionSuspended } = useSubscriptionStatus();
 
   // Check if merchant owner/staff has merchant association
   React.useEffect(() => {
@@ -418,15 +430,43 @@ const AppSidebar: React.FC = () => {
           });
 
           setHasMerchant(response.ok);
+
+          if (response.ok) {
+            try {
+              const json = await response.json();
+              const merchantData = json?.data?.merchant || json?.data;
+              setMerchantIsActive(typeof merchantData?.isActive === 'boolean' ? merchantData.isActive : null);
+            } catch {
+              setMerchantIsActive(null);
+            }
+          } else {
+            setMerchantIsActive(null);
+          }
         } catch {
           setHasMerchant(false);
+          setMerchantIsActive(null);
         }
       };
       checkMerchant();
     } else {
       setHasMerchant(true); // Super admin always has access
+      setMerchantIsActive(null);
     }
   }, [user]);
+
+  const isMerchantUser = user?.role === "MERCHANT_OWNER" || user?.role === "MERCHANT_STAFF";
+  const isMerchantLocked = Boolean(
+    isMerchantUser &&
+    hasMerchant !== false &&
+    (isSubscriptionSuspended || merchantIsActive === false)
+  );
+
+  const isLockExemptPath = (path: string) => {
+    if (path === '/admin/dashboard') return true;
+    if (path === '/admin/dashboard/merchant/view') return true;
+    if (path.startsWith('/admin/dashboard/subscription')) return true;
+    return false;
+  };
 
   // Fetch active reservation count for conditional nav visibility.
   useEffect(() => {
@@ -673,17 +713,27 @@ const AppSidebar: React.FC = () => {
                   <ul className="flex flex-col gap-2">
                     {group.items.map((nav) => (
                       <li key={nav.nameKey}>
+                        {(() => {
+                          const itemLocked = isMerchantLocked && !isLockExemptPath(nav.path);
+
+                          return (
                         <Link
                           href={nav.path}
                           prefetch={true}
                           data-nav-item={nav.path}
-                          onClick={() => {
+                          onClick={(e) => {
+                            if (itemLocked) {
+                              e.preventDefault();
+                              return;
+                            }
                             // Auto-close sidebar on mobile when menu item is clicked
                             if (window.innerWidth < 1024) {
                               closeMobileSidebar();
                             }
                           }}
-                          className={`menu-item group ${isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"} ${!(isExpanded || isHovered || isMobileOpen) ? "lg:justify-center" : ""}`}
+                          aria-disabled={itemLocked}
+                          tabIndex={itemLocked ? -1 : 0}
+                          className={`menu-item group ${isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"} ${!(isExpanded || isHovered || isMobileOpen) ? "lg:justify-center" : ""} ${itemLocked ? "opacity-50 cursor-not-allowed" : ""}`}
                         >
                           <span
                             className={`${isActive(nav.path)
@@ -703,6 +753,11 @@ const AppSidebar: React.FC = () => {
                           {(isExpanded || isHovered || isMobileOpen) && (
                             <>
                               <span className="menu-item-text">{t(nav.nameKey)}</span>
+                              {itemLocked && (
+                                <span className="ml-auto text-gray-400 dark:text-gray-500">
+                                  <FaLock className="w-3.5 h-3.5" />
+                                </span>
+                              )}
                               {nav.path === '/admin/dashboard/reservations' && (pendingReservationCount ?? 0) > 0 && (
                                 <span className="ml-auto min-w-[24px] h-6 px-2 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">
                                   {pendingReservationCount}
@@ -711,6 +766,8 @@ const AppSidebar: React.FC = () => {
                             </>
                           )}
                         </Link>
+                          );
+                        })()}
                       </li>
                     ))}
                   </ul>

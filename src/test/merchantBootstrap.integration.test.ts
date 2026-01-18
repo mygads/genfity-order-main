@@ -94,6 +94,7 @@ describe('New merchant bootstrap (repo-mocked integration)', () => {
     expect(merchantCreateArg.isDineInEnabled).toBe(true);
     expect(merchantCreateArg.isTakeawayEnabled).toBe(true);
     expect(merchantCreateArg.isDeliveryEnabled).toBe(false);
+    expect(merchantCreateArg.enforceDeliveryZones).toBe(true);
     expect(merchantCreateArg.requireTableNumberForDineIn).toBe(true);
 
     // Scheduled/reservation

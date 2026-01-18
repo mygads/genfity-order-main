@@ -10,6 +10,7 @@ import { useTranslation } from '@/lib/i18n/useTranslation';
 import { TranslationKeys } from '@/lib/i18n';
 import type { MerchantInfo } from '@/lib/types/auth';
 import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
+import { ERROR_CODES } from '@/lib/constants/errors';
 
 // Carousel data with translation keys
 const carouselSlides: Array<{
@@ -357,7 +358,12 @@ function AdminLoginForm() {
 
       // Handle API errors without throwing
       if (!response.ok) {
-        setError(data.message || t('auth.error.invalidCredentials'));
+        const errorCode = data?.error;
+        if (errorCode === ERROR_CODES.MERCHANT_NOT_FOUND) {
+          setError(t('admin.login.error.noMerchantAssigned'));
+        } else {
+          setError(data.message || t('auth.error.invalidCredentials'));
+        }
         setIsLoading(false);
         return;
       }
