@@ -39,6 +39,8 @@ interface OrderData {
     isScheduled?: boolean;
     scheduledDate?: string | null;
     scheduledTime?: string | null;
+    editedAt?: string | null;
+    changedByAdmin?: boolean;
     customerName: string;
     subtotal?: number;
     taxAmount?: number;
@@ -265,6 +267,8 @@ export default function OrderTrackPage() {
                 orderType: data.data.orderType,
                 tableNumber: data.data.tableNumber,
                 customerName: data.data.customerName,
+                editedAt: data.data.editedAt ?? null,
+                changedByAdmin: Boolean(data.data.editedAt),
                 subtotal: convertDecimal(data.data.subtotal),
                 taxAmount: convertDecimal(data.data.taxAmount),
                 serviceChargeAmount: convertDecimal(data.data.serviceChargeAmount),
@@ -628,6 +632,11 @@ export default function OrderTrackPage() {
                                                         : tOr(t, 'customer.orderSummary.pickupAt', 'Pickup at'))}{' '}
                                                     {order.scheduledTime}
                                                 </span>
+                        </div>
+                    )}
+                    {order.changedByAdmin && (
+                        <div className="mt-2 inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[11px] font-semibold text-amber-700">
+                            {t('common.changedByAdmin') || 'Changed by admin'}
                         </div>
                     )}
                     <p className="text-xs text-gray-500 mt-1">

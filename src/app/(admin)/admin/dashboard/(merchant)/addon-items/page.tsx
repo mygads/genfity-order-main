@@ -34,6 +34,7 @@ interface AddonItem {
   isActive: boolean;
   trackStock: boolean;
   stockQty: number | null;
+  lowStockThreshold?: number | null;
   dailyStockTemplate: number | null;
   autoResetStock: boolean;
   lastStockResetAt: string | null;
@@ -49,6 +50,7 @@ interface AddonItemFormData {
   inputType: "SELECT" | "QTY";
   trackStock: boolean;
   stockQty: string;
+  lowStockThreshold: string;
   dailyStockTemplate: string;
   autoResetStock: boolean;
 }
@@ -86,11 +88,13 @@ function AddonItemsPageContent() {
     inputType: "SELECT",
     trackStock: false,
     stockQty: "",
+    lowStockThreshold: "",
     dailyStockTemplate: "",
     autoResetStock: false,
   });
 
   const [originalFormData, setOriginalFormData] = useState<AddonItemFormData | null>(null);
+  const deepLinkHandledRef = useRef(false);
 
   // Initialize pagination from URL search params
   const initialPage = parseInt(searchParams.get('page') || '1', 10);
@@ -184,7 +188,9 @@ function AddonItemsPageContent() {
         ...prev,
         [name]: checked,
         // Reset stock fields if unchecking trackStock
-        ...(name === "trackStock" && !checked ? { stockQty: "", dailyStockTemplate: "", autoResetStock: false } : {}),
+        ...(name === "trackStock" && !checked
+          ? { stockQty: "", lowStockThreshold: "", dailyStockTemplate: "", autoResetStock: false }
+          : {}),
       }));
     } else {
       setFormData(prev => ({
@@ -219,6 +225,7 @@ function AddonItemsPageContent() {
         inputType: formData.inputType,
         trackStock: formData.trackStock,
         stockQty: formData.trackStock && formData.stockQty ? parseInt(formData.stockQty) : undefined,
+        lowStockThreshold: formData.trackStock && formData.lowStockThreshold ? parseInt(formData.lowStockThreshold) : undefined,
         dailyStockTemplate: formData.trackStock && formData.dailyStockTemplate ? parseInt(formData.dailyStockTemplate) : undefined,
         autoResetStock: formData.trackStock ? formData.autoResetStock : false,
       };
@@ -260,6 +267,7 @@ function AddonItemsPageContent() {
       inputType: "SELECT",
       trackStock: false,
       stockQty: "",
+      lowStockThreshold: "",
       dailyStockTemplate: "",
       autoResetStock: false,
     });
@@ -274,6 +282,9 @@ function AddonItemsPageContent() {
       inputType: item.inputType || "SELECT",
       trackStock: item.trackStock,
       stockQty: item.stockQty !== null ? item.stockQty.toString() : "",
+      lowStockThreshold: item.lowStockThreshold !== null && item.lowStockThreshold !== undefined
+        ? item.lowStockThreshold.toString()
+        : "",
       dailyStockTemplate: item.dailyStockTemplate !== null ? item.dailyStockTemplate.toString() : "",
       autoResetStock: item.autoResetStock,
     };
@@ -282,6 +293,28 @@ function AddonItemsPageContent() {
     setOriginalFormData(editFormData);
     setShowForm(true);
   };
+
+  useEffect(() => {
+    if (loading) return;
+    if (deepLinkHandledRef.current) return;
+
+    const targetId = searchParams.get("addonItemId");
+    if (!targetId) return;
+
+    deepLinkHandledRef.current = true;
+    const target = items.find(item => String(item.id) === String(targetId));
+
+    if (target) {
+      handleEdit(target);
+    } else {
+      showError(t("admin.addonItems.notFound"));
+    }
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("addonItemId");
+    const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
+    window.history.replaceState(null, "", newUrl);
+  }, [items, loading, searchParams, showError, t, handleEdit]);
 
   const handleToggleActive = async (id: string, currentStatus: boolean) => {
     try {
@@ -583,6 +616,8 @@ function AddonItemsPageContent() {
             inputType: "SELECT",
             trackStock: false,
             stockQty: "",
+            lowStockThreshold: "",
+            lowStockThreshold: "",
             dailyStockTemplate: "",
             autoResetStock: false,
           });
@@ -646,6 +681,7 @@ function AddonItemsPageContent() {
             inputType: item.inputType,
             trackStock: item.trackStock,
             stockQty: item.stockQty?.toString() || "",
+            lowStockThreshold: item.lowStockThreshold?.toString() || "",
             dailyStockTemplate: item.dailyStockTemplate?.toString() || "",
             autoResetStock: item.autoResetStock,
           });

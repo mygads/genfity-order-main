@@ -197,6 +197,9 @@ export class AddonService {
       if (data.stockQty !== undefined && data.stockQty < 0) {
         throw new Error('Stock quantity cannot be negative');
       }
+      if (data.lowStockThreshold !== undefined && data.lowStockThreshold !== null && data.lowStockThreshold < 0) {
+        throw new Error('Low stock threshold cannot be negative');
+      }
     }
 
     return await this.repository.createAddonItem(merchantId, data, userId);
@@ -231,6 +234,10 @@ export class AddonService {
 
     if (data.stockQty !== undefined && data.stockQty < 0) {
       throw new Error('Stock quantity cannot be negative');
+    }
+
+    if (data.lowStockThreshold !== undefined && data.lowStockThreshold !== null && data.lowStockThreshold < 0) {
+      throw new Error('Low stock threshold cannot be negative');
     }
 
     return await this.repository.updateAddonItem(id, merchantId, data, userId);

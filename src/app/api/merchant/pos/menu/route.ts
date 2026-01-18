@@ -11,7 +11,7 @@ import { withMerchant } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/middleware/auth';
 import prisma from '@/lib/db/client';
 import { serializeBigInt } from '@/lib/utils/serializer';
-import { getPosCustomItemsSettings } from '@/lib/utils/posCustomItemsSettings';
+import { getPosCustomItemsSettings, getPosEditOrderSettings } from '@/lib/utils/posCustomItemsSettings';
 
 /**
  * GET /api/merchant/pos/menu
@@ -82,6 +82,10 @@ async function handleGet(req: NextRequest, context: AuthContext) {
     const customItems = getPosCustomItemsSettings({
       features: (merchant as any).features,
       currency: merchant.currency,
+    });
+
+    const editOrderSettings = getPosEditOrderSettings({
+      features: (merchant as any).features,
     });
 
     // Fetch menu items with addon categories
@@ -200,6 +204,7 @@ async function handleGet(req: NextRequest, context: AuthContext) {
         merchant: serializeBigInt({
           ...merchant,
           posCustomItems: customItems,
+          posEditOrder: editOrderSettings,
         }),
         categories: serializeBigInt(categories),
         menuItems: serializeBigInt(transformedMenuItems),

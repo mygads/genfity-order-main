@@ -122,6 +122,7 @@ async function handlePut(
         isActive: body.isActive,
         trackStock: body.trackStock,
         stockQty: body.stockQty,
+        lowStockThreshold: body.lowStockThreshold,
         dailyStockTemplate: body.dailyStockTemplate,
         autoResetStock: body.autoResetStock,
       }

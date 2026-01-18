@@ -138,6 +138,7 @@ async function handlePost(
         inputType: body.inputType || 'SELECT',
         trackStock: body.trackStock || false,
         stockQty: body.stockQty,
+        lowStockThreshold: body.lowStockThreshold,
         dailyStockTemplate: body.dailyStockTemplate,
         autoResetStock: body.autoResetStock || false,
       },

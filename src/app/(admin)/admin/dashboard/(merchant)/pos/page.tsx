@@ -12,7 +12,7 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   FaArrowLeft,
   FaReceipt,
@@ -94,6 +94,9 @@ interface MerchantSettings {
     maxNameLength: number;
     maxPrice: number;
   };
+  posEditOrder?: {
+    enabled: boolean;
+  };
 }
 
 interface POSMenuData {
@@ -133,8 +136,12 @@ const DEFAULT_GRID_COLUMNS = 5;
 export default function POSPage() {
   const { t, locale } = useTranslation();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { merchant, isLoading: merchantLoading } = useMerchant();
   const { showSuccess, showError, showWarning } = useToast();
+
+  const editOrderId = searchParams.get('editOrderId');
+  const isEditMode = Boolean(editOrderId);
 
   type ReplaceCartAction =
     | { kind: 'PENDING_OFFLINE_ORDER'; orderId: string }
@@ -176,6 +183,9 @@ export default function POSPage() {
   const [tableNumber, setTableNumber] = useState<string>('');
   const [orderNotes, setOrderNotes] = useState<string>('');
   const [customerInfo, setCustomerInfo] = useState<CartCustomerInfo>({});
+
+  const [editOrderNumber, setEditOrderNumber] = useState<string>('');
+  const [isLoadingEditOrder, setIsLoadingEditOrder] = useState(false);
 
   // Discount state
   const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage');
@@ -399,6 +409,7 @@ export default function POSPage() {
   useEffect(() => {
     if (!merchant?.id) return;
     if (cartItems.length > 0) return;
+    if (isEditMode) return;
 
     const savedCart = loadCartFromStorage(merchant.id);
     if (savedCart && Array.isArray(savedCart.items) && savedCart.items.length > 0) {
@@ -419,7 +430,7 @@ export default function POSPage() {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [merchant?.id]);
+    }, [merchant?.id]);
 
   // Hold current order (Save as draft)
   const handleHoldOrder = useCallback(() => {
@@ -616,6 +627,7 @@ export default function POSPage() {
   const currency = merchantSettings?.currency || 'AUD';
 
   const isTableNumberEnabled = orderType === 'DINE_IN' && merchantSettings?.requireTableNumberForDineIn === true;
+  const isEditOrderEnabled = merchantSettings?.posEditOrder?.enabled === true;
 
   useEffect(() => {
     if (!isTableNumberEnabled) {
@@ -623,6 +635,85 @@ export default function POSPage() {
       if (showTableModal) setShowTableModal(false);
     }
   }, [isTableNumberEnabled, showTableModal, tableNumber]);
+
+  useEffect(() => {
+    if (!editOrderId) {
+      setEditOrderNumber('');
+      return;
+    }
+
+    if (!merchantSettings) return;
+
+    if (!isEditOrderEnabled) {
+      showError(t('pos.editOrderDisabled') || 'Edit order is disabled for this merchant.', t('common.error'));
+      router.push(`/admin/dashboard/orders?orderId=${encodeURIComponent(editOrderId)}`);
+      return;
+    }
+
+    let cancelled = false;
+    setIsLoadingEditOrder(true);
+
+    const loadEditOrder = async () => {
+      try {
+        const token = localStorage.getItem('accessToken');
+        const response = await fetch(`/api/merchant/orders/pos/${editOrderId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const data = await response.json();
+        if (!response.ok || !data?.success) {
+          throw new Error(data?.message || 'Failed to load order for editing');
+        }
+
+        if (cancelled) return;
+
+        const payload = data.data;
+        const mappedItems: CartItem[] = (payload.items || []).map((item: any) => ({
+          id: generateCartItemId(),
+          type: item.type === 'CUSTOM' ? 'CUSTOM' : 'MENU',
+          menuId: item.type === 'CUSTOM' ? '__custom__' : item.menuId,
+          menuName: item.menuName,
+          menuPrice: Number(item.menuPrice),
+          quantity: Number(item.quantity),
+          notes: item.notes || '',
+          addons: (item.addons || []).map((addon: any) => ({
+            addonItemId: addon.addonItemId,
+            addonName: addon.addonName,
+            addonPrice: Number(addon.addonPrice),
+            quantity: Number(addon.quantity ?? 1),
+          })),
+          imageUrl: item.imageUrl || undefined,
+        }));
+
+        setCartItems(mappedItems);
+        setOrderType(payload.orderType);
+        setTableNumber(normalizeTableNumber(payload.tableNumber || ''));
+        setOrderNotes(payload.notes || '');
+        setCustomerInfo(payload.customer || {});
+        setEditOrderNumber(payload.orderNumber || '');
+        setEditingPendingOfflineOrderId(null);
+        setShowHeldOrdersPanel(false);
+        setShowPendingOrdersPanel(false);
+      } catch (error) {
+        if (!cancelled) {
+          showError((error as Error).message || 'Failed to load order for editing', t('common.error'));
+          router.push(`/admin/dashboard/orders?orderId=${encodeURIComponent(editOrderId)}`);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingEditOrder(false);
+        }
+      }
+    };
+
+    loadEditOrder();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [editOrderId, isEditOrderEnabled, merchantSettings, router, showError, t]);
 
   // ========================================
   // HANDLERS
@@ -748,6 +839,11 @@ export default function POSPage() {
     setEditingPendingOfflineOrderId(null);
   }, [merchant?.id]);
 
+  const handleCancelEdit = useCallback(() => {
+    if (!editOrderId) return;
+    router.push(`/admin/dashboard/orders?orderId=${encodeURIComponent(editOrderId)}`);
+  }, [editOrderId, router]);
+
   const formatCurrency = useCallback(
     (amount: number): string => formatCurrencyUtil(amount, currency, locale),
     [currency, locale]
@@ -781,6 +877,208 @@ export default function POSPage() {
 
     return subtotal + taxAmount + serviceCharge + packagingFee + (Number.isFinite(deliveryFee) ? deliveryFee : 0);
   }, [cartItems, merchantSettings, orderType]);
+
+  const executeUpdateOrder = useCallback(async (overrideTableNumber?: string) => {
+    if (!editOrderId) return;
+    if (cartItems.length === 0) return;
+
+    if (!isOnline) {
+      showError(t('pos.editOrderOffline') || 'Editing is unavailable while offline.', t('common.error'));
+      return;
+    }
+
+    const effectiveTableNumber = isTableNumberEnabled
+      ? normalizeTableNumber(overrideTableNumber ?? tableNumber).trim()
+      : '';
+
+    if (isTableNumberEnabled && !effectiveTableNumber) {
+      setAutoPlaceAfterTableConfirm(true);
+      setShowTableModal(true);
+      return;
+    }
+
+    setIsPlacingOrder(true);
+
+    try {
+      const token = localStorage.getItem('accessToken');
+
+      const requestBody = {
+        orderType,
+        tableNumber: isTableNumberEnabled ? (effectiveTableNumber || undefined) : undefined,
+        notes: orderNotes || undefined,
+        customer: (customerInfo.name || customerInfo.phone || customerInfo.email)
+          ? customerInfo
+          : undefined,
+        items: cartItems.map(item => {
+          const kind = item.type || 'MENU';
+          if (kind === 'CUSTOM') {
+            return {
+              type: 'CUSTOM' as const,
+              customName: (item.menuName || '').trim(),
+              customPrice: item.menuPrice,
+              quantity: item.quantity,
+              notes: item.notes || undefined,
+            };
+          }
+
+          return {
+            type: 'MENU' as const,
+            menuId: item.menuId,
+            quantity: item.quantity,
+            notes: item.notes || undefined,
+            addons: item.addons.length > 0
+              ? item.addons.map((a: CartAddon) => ({
+                addonItemId: a.addonItemId,
+                quantity: a.quantity,
+              }))
+              : undefined,
+          };
+        }),
+      };
+
+      const response = await fetch(`/api/merchant/orders/pos/${editOrderId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        showSuccess(t('pos.editOrderSuccess') || 'Order updated', t('pos.editOrderSuccessDesc') || 'Changes saved');
+        router.push(`/admin/dashboard/orders?orderId=${encodeURIComponent(editOrderId)}`);
+        return;
+      }
+
+      const errorCode = typeof data?.errorCode === 'string' ? data.errorCode : undefined;
+      const fallback = data?.message || t('pos.editOrderFailed') || 'Failed to update order';
+      const details = (data?.details && typeof data.details === 'object')
+        ? data.details as Record<string, unknown>
+        : undefined;
+
+      const toNumber = (value: unknown): number | null => {
+        if (typeof value === 'number' && Number.isFinite(value)) return value;
+        if (typeof value === 'string' && value.trim() !== '') {
+          const parsed = Number(value);
+          if (Number.isFinite(parsed)) return parsed;
+        }
+        return null;
+      };
+
+      const formatDetailCurrency = (value: unknown): string | null => {
+        const parsed = toNumber(value);
+        return parsed !== null ? formatCurrency(parsed) : null;
+      };
+
+      const friendly = (() => {
+        switch (errorCode) {
+          case 'POS_EDIT_ORDER_DISABLED':
+            return t('pos.errors.editOrderDisabled') || fallback;
+          case 'ORDER_NOT_EDITABLE':
+            return t('pos.errors.orderNotEditable') || fallback;
+          case 'ORDER_ALREADY_PAID':
+            return t('pos.errors.orderAlreadyPaid') || fallback;
+          case 'ORDER_TYPE_NOT_SUPPORTED':
+            return t('pos.errors.orderTypeNotSupported') || fallback;
+          case 'ORDER_TYPE_MISMATCH':
+            return t('pos.errors.orderTypeMismatch') || fallback;
+          case 'POS_CUSTOM_ITEMS_DISABLED':
+            return t('pos.errors.customItemsDisabled') || fallback;
+          case 'CUSTOM_ITEM_NAME_REQUIRED':
+            return t('pos.errors.customItemNameRequired') || fallback;
+          case 'CUSTOM_ITEM_PRICE_INVALID':
+            return t('pos.errors.customItemPriceInvalid') || fallback;
+          case 'CUSTOM_ITEM_ADDONS_NOT_ALLOWED':
+            return t('pos.errors.customItemAddonsNotAllowed') || fallback;
+          case 'INVALID_QUANTITY':
+            return t('pos.errors.invalidQuantity') || fallback;
+          case 'INSUFFICIENT_STOCK':
+            return t('pos.errors.insufficientStock') || fallback;
+          case 'MENU_NOT_AVAILABLE':
+            return t('pos.errors.menuNotAvailable') || fallback;
+          case 'MENU_NOT_FOUND':
+            return t('pos.errors.menuNotFound') || fallback;
+          case 'VOUCHER_NOT_FOUND':
+            return t('pos.errors.voucherNotFound') || fallback;
+          case 'VOUCHER_INACTIVE':
+            return t('pos.errors.voucherInactive') || fallback;
+          case 'VOUCHER_NOT_APPLICABLE':
+            return t('pos.errors.voucherNotApplicable') || fallback;
+          case 'VOUCHER_ORDER_TYPE_NOT_ALLOWED':
+            return t('pos.errors.voucherOrderTypeNotAllowed') || fallback;
+          case 'VOUCHER_NOT_ACTIVE_YET':
+            return t('pos.errors.voucherNotActiveYet') || fallback;
+          case 'VOUCHER_EXPIRED':
+            return t('pos.errors.voucherExpired') || fallback;
+          case 'VOUCHER_NOT_AVAILABLE_TODAY':
+            return t('pos.errors.voucherNotAvailableToday') || fallback;
+          case 'VOUCHER_NOT_AVAILABLE_NOW':
+            return t('pos.errors.voucherNotAvailableNow') || fallback;
+          case 'VOUCHER_SCHEDULE_INVALID':
+            return t('pos.errors.voucherScheduleInvalid') || fallback;
+          case 'VOUCHER_REQUIRES_LOGIN':
+            return t('pos.errors.voucherRequiresLogin') || fallback;
+          case 'VOUCHER_MIN_ORDER_NOT_MET':
+            {
+              const amount = formatDetailCurrency(details?.minOrderAmount);
+              return amount
+                ? t('pos.errors.voucherMinOrderNotMet', { amount })
+                : (t('pos.errors.voucherMinOrderNotMet') || fallback);
+            }
+          case 'VOUCHER_USAGE_LIMIT_REACHED':
+            {
+              const limit = toNumber(details?.maxUsesPerCustomer ?? details?.maxUsesTotal);
+              const used = toNumber(details?.usedByCustomer ?? details?.used);
+              return limit !== null && used !== null
+                ? t('pos.errors.voucherUsageLimitReached', { used, limit })
+                : (t('pos.errors.voucherUsageLimitReached') || fallback);
+            }
+          case 'VOUCHER_DISCOUNT_CAP_REACHED':
+            {
+              const cap = formatDetailCurrency(details?.totalDiscountCap);
+              const used = formatDetailCurrency(details?.used);
+              return cap && used
+                ? t('pos.errors.voucherDiscountCapReached', { used, cap })
+                : (t('pos.errors.voucherDiscountCapReached') || fallback);
+            }
+          case 'VOUCHER_NOT_APPLICABLE_ITEMS':
+            return t('pos.errors.voucherNotApplicableItems') || fallback;
+          case 'VOUCHER_ALREADY_APPLIED':
+            return t('pos.errors.voucherAlreadyApplied') || fallback;
+          case 'VOUCHER_CANNOT_STACK_MANUAL':
+            return t('pos.errors.voucherCannotStackManual') || fallback;
+          case 'VOUCHER_DISCOUNT_ZERO':
+            return t('pos.errors.voucherDiscountZero') || fallback;
+          default:
+            return fallback;
+        }
+      })();
+
+      showError(friendly, t('common.error'));
+    } catch (error) {
+      console.error('[POS] Update order error:', error);
+      showError(t('pos.editOrderFailed') || 'Failed to update order', t('common.error'));
+    } finally {
+      setIsPlacingOrder(false);
+    }
+  }, [
+    editOrderId,
+    cartItems,
+    isOnline,
+    isTableNumberEnabled,
+    tableNumber,
+    orderType,
+    orderNotes,
+    customerInfo,
+    router,
+    showError,
+    showSuccess,
+    formatCurrency,
+    t,
+  ]);
 
   // Place order - with offline support
   const executePlaceOrder = useCallback(async (overrideTableNumber?: string) => {
@@ -1134,6 +1432,7 @@ export default function POSPage() {
     merchantSettings,
     orderType,
     tableNumber,
+    isEditMode,
     t,
   ]);
 
@@ -1374,7 +1673,7 @@ export default function POSPage() {
   // LOADING & ERROR STATES
   // ========================================
 
-  if (merchantLoading || posLoading) {
+  if (merchantLoading || posLoading || isLoadingEditOrder) {
     return <POSSkeleton />;
   }
 
@@ -1559,6 +1858,9 @@ export default function POSPage() {
             orderNotes={orderNotes}
             customerInfo={customerInfo}
             currency={currency}
+            isEditMode={isEditMode}
+            editOrderNumber={editOrderNumber}
+            onCancelEdit={isEditMode ? handleCancelEdit : undefined}
             isTableNumberEnabled={isTableNumberEnabled}
             taxPercentage={merchantSettings?.taxPercentage || 0}
             serviceChargePercent={merchantSettings?.serviceChargePercent || 0}
@@ -1578,9 +1880,9 @@ export default function POSPage() {
             onLookupCustomer={() => setShowCustomerLookup(true)}
             onClearCart={handleClearCart}
             onPlaceOrder={handlePlaceOrder}
-            onHoldOrder={handleHoldOrder}
-            heldOrdersCount={heldOrders.length}
-            onShowHeldOrders={() => setShowHeldOrdersPanel(true)}
+            onHoldOrder={isEditMode ? undefined : handleHoldOrder}
+            heldOrdersCount={isEditMode ? 0 : heldOrders.length}
+            onShowHeldOrders={isEditMode ? undefined : () => setShowHeldOrdersPanel(true)}
             isPlacingOrder={isPlacingOrder}
           />
         </div>
@@ -1760,10 +2062,14 @@ export default function POSPage() {
 
       <ConfirmDialog
         isOpen={placeOrderConfirmOpen}
-        title={t('pos.orderConfirm.title') || 'Confirm Create Order'}
+        title={isEditMode
+          ? (t('pos.editOrderConfirm.title') || 'Confirm Order Changes')
+          : (t('pos.orderConfirm.title') || 'Confirm Create Order')}
         message={placeOrderConfirmMessage}
         variant="info"
-        confirmText={t('pos.orderConfirm.confirm') || t('pos.createOrder') || 'Create Order'}
+        confirmText={isEditMode
+          ? (t('pos.editOrderConfirm.confirm') || 'Save Changes')
+          : (t('pos.orderConfirm.confirm') || t('pos.createOrder') || 'Create Order')}
         cancelText={t('common.cancel') || 'Cancel'}
         onCancel={() => {
           setPlaceOrderConfirmOpen(false);
@@ -1771,7 +2077,11 @@ export default function POSPage() {
         }}
         onConfirm={() => {
           setPlaceOrderConfirmOpen(false);
-          executePlaceOrder(pendingPlaceOrderTableNumber);
+          if (isEditMode) {
+            executeUpdateOrder(pendingPlaceOrderTableNumber);
+          } else {
+            executePlaceOrder(pendingPlaceOrderTableNumber);
+          }
           setPendingPlaceOrderTableNumber(undefined);
         }}
       />

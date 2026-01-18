@@ -63,6 +63,9 @@ interface POSCartPanelProps {
   orderNotes?: string;
   customerInfo?: CustomerInfo;
   currency: string;
+  isEditMode?: boolean;
+  editOrderNumber?: string;
+  onCancelEdit?: () => void;
   taxPercentage: number;
   serviceChargePercent: number;
   packagingFeeAmount: number;
@@ -93,6 +96,9 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
   orderNotes,
   customerInfo,
   currency,
+  isEditMode = false,
+  editOrderNumber,
+  onCancelEdit,
   taxPercentage,
   serviceChargePercent,
   packagingFeeAmount,
@@ -139,6 +145,31 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
     <div className="flex flex-col h-full bg-white dark:bg-gray-900 overflow-hidden">
       {/* Header */}
       <div className="shrink-0 p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+        {isEditMode && (
+          <div className="mb-3 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-xs text-brand-700 dark:border-brand-900/40 dark:bg-brand-900/20 dark:text-brand-200">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold">
+                  {t('pos.editingOrder') || 'Editing order'}
+                  {editOrderNumber ? ` #${editOrderNumber}` : ''}
+                </p>
+                <p className="text-[11px] opacity-80">
+                  {t('pos.editingOrderDesc') || 'Save changes to update the existing order.'}
+                </p>
+              </div>
+              {onCancelEdit && (
+                <button
+                  type="button"
+                  onClick={onCancelEdit}
+                  className="inline-flex items-center gap-1 rounded-md border border-brand-200 bg-white px-2 py-1 text-[11px] font-semibold text-brand-700 hover:bg-brand-100 dark:border-brand-900/60 dark:bg-brand-900/30 dark:text-brand-100"
+                >
+                  <FaTimes className="h-3 w-3" />
+                  {t('pos.exitEdit') || 'Exit'}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
             {t('pos.currentOrder')}
@@ -163,20 +194,22 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
         <div className="flex gap-2">
           <button
             onClick={() => onSetOrderType('DINE_IN')}
+            disabled={isEditMode}
             className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${orderType === 'DINE_IN'
               ? 'bg-brand-500 text-white'
               : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-              }`}
+              } ${isEditMode ? 'opacity-60 cursor-not-allowed' : ''}`}
           >
             <FaUtensils className="w-4 h-4" />
             {t('pos.dineIn')}
           </button>
           <button
             onClick={() => onSetOrderType('TAKEAWAY')}
+            disabled={isEditMode}
             className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${orderType === 'TAKEAWAY'
               ? 'bg-brand-500 text-white'
               : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-              }`}
+              } ${isEditMode ? 'opacity-60 cursor-not-allowed' : ''}`}
           >
             <FaShoppingBag className="w-4 h-4" />
             {t('pos.takeaway')}
@@ -426,7 +459,7 @@ export const POSCartPanel: React.FC<POSCartPanelProps> = ({
               </>
             ) : (
               <>
-                <span>{t('pos.createOrder') || 'Create Order'}</span>
+                <span>{isEditMode ? (t('pos.saveChanges') || 'Save Changes') : (t('pos.createOrder') || 'Create Order')}</span>
                 <span>|</span>
                 <span>{formatMoney(total)}</span>
               </>

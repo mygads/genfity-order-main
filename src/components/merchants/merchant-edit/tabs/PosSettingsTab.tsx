@@ -14,6 +14,9 @@ export interface PosSettingsTabProps {
   posPayImmediately: boolean;
   onPosPayImmediatelyChange: (checked: boolean) => void;
 
+  posEditOrdersEnabled: boolean;
+  onPosEditOrdersEnabledChange: (checked: boolean) => void;
+
   posCustomItemsEnabled: boolean;
   onPosCustomItemsEnabledChange: (checked: boolean) => void;
 
@@ -29,6 +32,8 @@ export default function PosSettingsTab({
   currency,
   posPayImmediately,
   onPosPayImmediatelyChange,
+  posEditOrdersEnabled,
+  onPosEditOrdersEnabledChange,
   posCustomItemsEnabled,
   onPosCustomItemsEnabledChange,
   posCustomItemsMaxNameLength,
@@ -159,6 +164,37 @@ export default function PosSettingsTab({
                     : ` • ${tOr(t, 'admin.merchantEdit.pos.customItemsMaxPriceDefault', 'Set 0 to use default')}`}
                 </p>
               </div>
+            </div>
+          </div>
+
+          <div
+            className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/40"
+            data-tutorial="pos-edit-orders"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                  {tOr(t, 'admin.merchantEdit.pos.editOrdersTitle', 'Edit orders in POS')}
+                </p>
+                <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                  {posEditOrdersEnabled
+                    ? tOr(
+                        t,
+                        'admin.merchantEdit.pos.editOrdersDescEnabled',
+                        'Allow staff to edit PENDING or ACCEPTED orders directly from the POS screen.'
+                      )
+                    : tOr(
+                        t,
+                        'admin.merchantEdit.pos.editOrdersDescDisabled',
+                        'Disable the Change Order button for staff and block edits from POS.'
+                      )}
+                </p>
+              </div>
+              <Switch
+                checked={posEditOrdersEnabled}
+                onCheckedChange={onPosEditOrdersEnabledChange}
+                aria-label={tOr(t, 'admin.merchantEdit.pos.editOrdersTitle', 'Edit orders in POS')}
+              />
             </div>
           </div>
         </div>

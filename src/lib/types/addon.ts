@@ -37,6 +37,7 @@ export interface AddonItem {
   isActive: boolean;
   trackStock: boolean;
   stockQty: number | null;
+  lowStockThreshold?: number | null;
   createdAt: Date | string;
   updatedAt: Date | string;
   addonCategory?: AddonCategory;
@@ -83,6 +84,7 @@ export interface CreateAddonItemDTO {
   displayOrder?: number;
   trackStock?: boolean;
   stockQty?: number;
+  lowStockThreshold?: number;
   dailyStockTemplate?: number;
   autoResetStock?: boolean;
 }
@@ -96,6 +98,7 @@ export interface UpdateAddonItemDTO {
   isActive?: boolean;
   trackStock?: boolean;
   stockQty?: number;
+  lowStockThreshold?: number | null;
   dailyStockTemplate?: number;
   autoResetStock?: boolean;
 }

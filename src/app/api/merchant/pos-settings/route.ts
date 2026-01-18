@@ -4,8 +4,8 @@ import prisma from '@/lib/db/client';
 import { withMerchant } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/middleware/auth';
 import { serializeBigInt } from '@/lib/utils/serializer';
-import { getPosCustomItemsSettings } from '@/lib/utils/posCustomItemsSettings';
-import { mergePosCustomItemsFeatures } from '@/lib/utils/posCustomItemsSettings.server';
+import { getPosCustomItemsSettings, getPosEditOrderSettings } from '@/lib/utils/posCustomItemsSettings';
+import { mergePosCustomItemsFeatures, mergePosEditOrderFeatures } from '@/lib/utils/posCustomItemsSettings.server';
 
 const CustomItemsSchema = z
   .object({
@@ -15,9 +15,16 @@ const CustomItemsSchema = z
   })
   .strict();
 
+const EditOrderSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+  })
+  .strict();
+
 const BodySchema = z
   .object({
     customItems: CustomItemsSchema,
+    editOrder: EditOrderSchema.optional(),
   })
   .strict();
 
@@ -65,10 +72,17 @@ async function handlePut(req: NextRequest, authContext: AuthContext) {
       },
     });
 
+    const nextFeaturesWithEditOrder = mergePosEditOrderFeatures({
+      existingFeatures: nextFeatures,
+      patch: {
+        enabled: parsed.data.editOrder?.enabled,
+      },
+    });
+
     const updated = await prisma.merchant.update({
       where: { id: merchantUser.merchantId },
       data: {
-        features: nextFeatures,
+        features: nextFeaturesWithEditOrder,
       },
       select: {
         id: true,
@@ -82,11 +96,16 @@ async function handlePut(req: NextRequest, authContext: AuthContext) {
       currency: updated.currency || currency,
     });
 
+    const editOrderSettings = getPosEditOrderSettings({
+      features: updated.features,
+    });
+
     return NextResponse.json({
       success: true,
       data: serializeBigInt({
         merchantId: updated.id,
         customItems: normalized,
+        editOrder: editOrderSettings,
       }),
       message: 'POS settings updated successfully',
       statusCode: 200,
@@ -116,11 +135,16 @@ async function handleGet(_req: NextRequest, authContext: AuthContext) {
       currency,
     });
 
+    const editOrderSettings = getPosEditOrderSettings({
+      features,
+    });
+
     return NextResponse.json({
       success: true,
       data: serializeBigInt({
         merchantId: merchantUser.merchantId,
         customItems: normalized,
+        editOrder: editOrderSettings,
       }),
       message: 'POS settings retrieved successfully',
       statusCode: 200,

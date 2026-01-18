@@ -252,12 +252,14 @@ async function assertUsageLimits(params: {
   maxUsesTotal: number | null;
   maxUsesPerCustomer: number | null;
   totalDiscountCap: Prisma.Decimal | null;
+  excludeOrderId?: bigint | null;
 }): Promise<void> {
-  const { merchantId, templateId, codeId, customerId, maxUsesTotal, maxUsesPerCustomer, totalDiscountCap } = params;
+  const { merchantId, templateId, codeId, customerId, maxUsesTotal, maxUsesPerCustomer, totalDiscountCap, excludeOrderId } = params;
 
   if (maxUsesTotal != null) {
+    const orderFilter = excludeOrderId ? { orderId: { not: excludeOrderId } } : {};
     const used = await prisma.orderDiscount.count({
-      where: { merchantId, voucherTemplateId: templateId },
+      where: { merchantId, voucherTemplateId: templateId, ...orderFilter },
     });
     if (used >= maxUsesTotal) {
       throw new ValidationError('Voucher usage limit reached', ERROR_CODES.VOUCHER_USAGE_LIMIT_REACHED, {
@@ -268,8 +270,9 @@ async function assertUsageLimits(params: {
   }
 
   if (codeId != null) {
+    const orderFilter = excludeOrderId ? { orderId: { not: excludeOrderId } } : {};
     const codeUsed = await prisma.orderDiscount.count({
-      where: { merchantId, voucherCodeId: codeId },
+      where: { merchantId, voucherCodeId: codeId, ...orderFilter },
     });
     const code = await prisma.orderVoucherCode.findUnique({ where: { id: codeId } });
     const codeMax = code?.maxUsesTotal ?? null;
@@ -282,8 +285,9 @@ async function assertUsageLimits(params: {
   }
 
   if (customerId != null && maxUsesPerCustomer != null) {
+    const orderFilter = excludeOrderId ? { orderId: { not: excludeOrderId } } : {};
     const usedByCustomer = await prisma.orderDiscount.count({
-      where: { merchantId, voucherTemplateId: templateId, appliedByCustomerId: customerId },
+      where: { merchantId, voucherTemplateId: templateId, appliedByCustomerId: customerId, ...orderFilter },
     });
     if (usedByCustomer >= maxUsesPerCustomer) {
       throw new ValidationError('Voucher usage limit reached', ERROR_CODES.VOUCHER_USAGE_LIMIT_REACHED, {
@@ -294,11 +298,12 @@ async function assertUsageLimits(params: {
   }
 
   if (customerId != null && codeId != null) {
+    const orderFilter = excludeOrderId ? { orderId: { not: excludeOrderId } } : {};
     const code = await prisma.orderVoucherCode.findUnique({ where: { id: codeId } });
     const codePerCustomer = code?.maxUsesPerCustomer ?? null;
     if (codePerCustomer != null) {
       const usedByCustomer = await prisma.orderDiscount.count({
-        where: { merchantId, voucherCodeId: codeId, appliedByCustomerId: customerId },
+        where: { merchantId, voucherCodeId: codeId, appliedByCustomerId: customerId, ...orderFilter },
       });
       if (usedByCustomer >= codePerCustomer) {
         throw new ValidationError('Voucher usage limit reached', ERROR_CODES.VOUCHER_USAGE_LIMIT_REACHED, {
@@ -310,8 +315,9 @@ async function assertUsageLimits(params: {
   }
 
   if (totalDiscountCap != null) {
+    const orderFilter = excludeOrderId ? { orderId: { not: excludeOrderId } } : {};
     const agg = await prisma.orderDiscount.aggregate({
-      where: { merchantId, voucherTemplateId: templateId },
+      where: { merchantId, voucherTemplateId: templateId, ...orderFilter },
       _sum: { discountAmount: true },
     });
 
@@ -396,6 +402,7 @@ export async function computeVoucherDiscount(params: {
   voucherTemplateId?: bigint;
   customerId?: bigint | null;
   orderIdForStacking?: bigint | null;
+  excludeOrderIdFromUsage?: bigint | null;
 }): Promise<{
   templateId: bigint;
   codeId: bigint | null;
@@ -417,6 +424,7 @@ export async function computeVoucherDiscount(params: {
     voucherTemplateId,
     customerId,
     orderIdForStacking,
+    excludeOrderIdFromUsage,
   } = params;
 
   const resolved = await resolveVoucher({ merchantId, audience, voucherCode, voucherTemplateId });
@@ -465,6 +473,7 @@ export async function computeVoucherDiscount(params: {
     maxUsesTotal: resolved.template.maxUsesTotal,
     maxUsesPerCustomer: resolved.template.maxUsesPerCustomer,
     totalDiscountCap: resolved.template.totalDiscountCap,
+    excludeOrderId: excludeOrderIdFromUsage ?? null,
   });
 
   // Stacking rules (only enforce if we have an existing order to inspect)

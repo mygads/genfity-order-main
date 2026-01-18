@@ -19,6 +19,7 @@ import { formatFullOrderNumber, formatOrderNumberSuffix } from '@/lib/utils/form
 import DriverQuickAssign from '@/components/orders/DriverQuickAssign';
 import { shouldConfirmUnpaidBeforeComplete, shouldConfirmUnpaidBeforeInProgress } from '@/lib/utils/orderPaymentRules';
 import { formatPaymentMethodLabel } from '@/lib/utils/paymentDisplay';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 type OrderNumberDisplayMode = 'full' | 'suffix' | 'raw';
 
@@ -49,6 +50,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
   const [showUnpaidConfirm, setShowUnpaidConfirm] = useState(false);
   const [showUnpaidCompleteConfirm, setShowUnpaidCompleteConfirm] = useState(false);
   const { merchant } = useMerchant();
+  const { t } = useTranslation();
 
   const statusConfig = ORDER_STATUS_COLORS[order.status as keyof typeof ORDER_STATUS_COLORS];
   const paymentConfig = order.payment
@@ -119,6 +121,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
   })();
   const scheduledTime = (order as any).scheduledTime as string | null | undefined;
   const isScheduled = Boolean((order as any).isScheduled && scheduledTime);
+  const hasAdminChanges = Boolean((order as any)?.editedAt || (order as any)?.editedByUserId);
 
   return (
     <div
@@ -185,6 +188,11 @@ export const OrderCard: React.FC<OrderCardProps> = ({
             >
               {statusConfig.label}
             </span>
+            {hasAdminChanges && (
+              <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-200">
+                {t('common.changedByAdmin') || 'Changed by admin'}
+              </span>
+            )}
           </div>
         </div>
       </div>

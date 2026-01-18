@@ -4,6 +4,10 @@ export interface PosCustomItemsSettings {
   maxPrice: number;
 }
 
+export interface PosEditOrderSettings {
+  enabled: boolean;
+}
+
 const DEFAULT_MAX_NAME_LENGTH = 80;
 const DEFAULT_MAX_PRICE_BY_CURRENCY: Record<string, number> = {
   IDR: 10_000_000,
@@ -42,5 +46,16 @@ export function getPosCustomItemsSettings(params: {
     enabled,
     maxNameLength,
     maxPrice,
+  };
+}
+
+export function getPosEditOrderSettings(params: {
+  features: unknown;
+}): PosEditOrderSettings {
+  const features = (params.features || {}) as any;
+  const editOrder = (features?.pos?.editOrder || {}) as any;
+
+  return {
+    enabled: editOrder?.enabled === true,
   };
 }

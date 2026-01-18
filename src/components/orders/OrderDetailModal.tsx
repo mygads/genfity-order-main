@@ -10,6 +10,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   FaTimes,
   FaUser,
@@ -43,6 +44,9 @@ import { openMerchantOrderReceiptHtmlAndPrint } from '@/lib/utils/receiptHtmlCli
 import { formatFullOrderNumber } from '@/lib/utils/format';
 import { formatPaymentMethodLabel } from '@/lib/utils/paymentDisplay';
 import OrderTotalsBreakdown from '@/components/orders/OrderTotalsBreakdown';
+import { useTranslation } from '@/lib/i18n/useTranslation';
+import { STAFF_PERMISSIONS } from '@/lib/constants/permissions';
+import { useAuth } from '@/hooks/useAuth';
 
 interface OrderDetailModalProps {
   orderId: string;
@@ -82,6 +86,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     receiptSettings?: Partial<ReceiptSettings> | null;
   } | null>(null);
   const [showCustomerDetails, setShowCustomerDetails] = useState(false);
+  const [posEditOrdersEnabled, setPosEditOrdersEnabled] = useState(false);
 
   const [isEditingAdminNote, setIsEditingAdminNote] = useState(false);
   const [adminNoteDraft, setAdminNoteDraft] = useState<string>('');
@@ -99,6 +104,9 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   const [assigningDriver, setAssigningDriver] = useState(false);
   const { showSuccess, showError } = useToast();
   const { merchant } = useMerchant();
+  const { t } = useTranslation();
+  const { hasPermission } = useAuth();
+  const router = useRouter();
 
   const isTableNumberEnabled = merchant?.requireTableNumberForDineIn === true;
 
@@ -106,6 +114,16 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   const shouldShowPrintOnly = actionMode === 'history';
 
   const isKitchenView = viewVariant === 'kitchen';
+  const canEditOrder = Boolean(
+    order &&
+    posEditOrdersEnabled &&
+    !isKitchenView &&
+    shouldShowFooterActions &&
+    hasPermission(STAFF_PERMISSIONS.ORDERS) &&
+    ['PENDING', 'ACCEPTED'].includes(order.status) &&
+    ['DINE_IN', 'TAKEAWAY'].includes(order.orderType)
+  );
+  const hasAdminChanges = Boolean((order as any)?.editedAt || (order as any)?.editedByUserId);
 
   const apiOrderId = React.useMemo(() => {
     if (/^\d+$/.test(String(orderId))) return String(orderId);
@@ -246,6 +264,35 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
       setLoading(false);
     }
   }, [apiOrderId]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const token = localStorage.getItem('accessToken');
+    if (!token) return;
+
+    let cancelled = false;
+
+    const fetchPosSettings = async () => {
+      try {
+        const response = await fetch('/api/merchant/pos-settings', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await response.json();
+        if (!response.ok || !data?.success) return;
+        if (cancelled) return;
+        setPosEditOrdersEnabled(Boolean(data?.data?.editOrder?.enabled));
+      } catch {
+        // ignore
+      }
+    };
+
+    fetchPosSettings();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen && orderId) {
@@ -480,6 +527,11 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     }
   };
 
+  const handleChangeOrder = () => {
+    if (!order) return;
+    router.push(`/admin/dashboard/pos?editOrderId=${encodeURIComponent(apiOrderId)}`);
+  };
+
   if (!isOpen) return null;
 
   const formatCurrency = (amount: number | string) => {
@@ -563,6 +615,11 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                         </>
                       )}
                     </span>
+                    {hasAdminChanges && (
+                      <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-200">
+                        {t('common.changedByAdmin') || 'Changed by admin'}
+                      </span>
+                    )}
                   </div>
 
                   {order.orderType === 'DINE_IN' && isTableNumberEnabled && (
@@ -1110,6 +1167,14 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                 </button>
               ) : shouldShowFooterActions ? (
                 <div className="space-y-2">
+                  {canEditOrder && (
+                    <button
+                      onClick={handleChangeOrder}
+                      className="flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-brand-200 bg-brand-50 text-sm font-semibold text-brand-700 hover:bg-brand-100 dark:border-brand-900/40 dark:bg-brand-900/20 dark:text-brand-200"
+                    >
+                      {t('admin.orders.changeOrder') || 'Change order'}
+                    </button>
+                  )}
                   {/* Payment Actions */}
                   {allowPaymentRecording ? (
                     (!order.payment || order.payment.status === 'PENDING') ? (

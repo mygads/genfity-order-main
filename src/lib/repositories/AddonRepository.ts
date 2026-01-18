@@ -272,6 +272,7 @@ export class AddonRepository {
         isActive: true,
         trackStock: data.trackStock || false,
         stockQty: data.trackStock ? data.stockQty || 0 : null,
+        lowStockThreshold: data.trackStock ? (data.lowStockThreshold ?? null) : null,
         dailyStockTemplate: data.trackStock && data.dailyStockTemplate ? data.dailyStockTemplate : null,
         autoResetStock: data.trackStock && data.dailyStockTemplate ? (data.autoResetStock || false) : false,
         createdByUserId: userId,
@@ -312,12 +313,14 @@ export class AddonRepository {
       updateData.trackStock = data.trackStock;
       if (data.trackStock) {
         updateData.stockQty = data.stockQty !== undefined ? data.stockQty : 0;
+        updateData.lowStockThreshold = data.lowStockThreshold !== undefined ? data.lowStockThreshold : null;
         updateData.dailyStockTemplate = data.dailyStockTemplate !== undefined ? data.dailyStockTemplate : null;
         updateData.autoResetStock = data.dailyStockTemplate !== undefined && data.dailyStockTemplate !== null
           ? (data.autoResetStock || false)
           : false;
       } else {
         updateData.stockQty = null;
+        updateData.lowStockThreshold = null;
         updateData.dailyStockTemplate = null;
         updateData.autoResetStock = false;
       }
@@ -327,6 +330,9 @@ export class AddonRepository {
 
     // Handle dailyStockTemplate and autoResetStock updates independently if trackStock is already enabled
     if (item.trackStock) {
+      if (data.lowStockThreshold !== undefined) {
+        updateData.lowStockThreshold = data.lowStockThreshold;
+      }
       if (data.dailyStockTemplate !== undefined) {
         updateData.dailyStockTemplate = data.dailyStockTemplate;
       }

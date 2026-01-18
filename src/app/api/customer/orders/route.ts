@@ -108,6 +108,8 @@ export const GET = withCustomer(async (
       isScheduled: Boolean((order as any).isScheduled),
       scheduledTime: ((order as any).scheduledTime ?? null) as string | null,
       status: order.status,
+      editedAt: order.editedAt ? order.editedAt.toISOString() : null,
+      changedByAdmin: Boolean(order.editedAt),
       discountAmount: parseFloat(order.discountAmount.toString()),
       totalAmount: parseFloat(order.totalAmount.toString()),
       placedAt: order.placedAt.toISOString(),

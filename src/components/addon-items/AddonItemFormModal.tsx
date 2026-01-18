@@ -21,6 +21,7 @@ interface AddonItemFormData {
   inputType: "SELECT" | "QTY";
   trackStock: boolean;
   stockQty: string;
+  lowStockThreshold: string;
   dailyStockTemplate: string;
   autoResetStock: boolean;
 }
@@ -72,6 +73,7 @@ export default function AddonItemFormModal({
       formData.inputType !== originalFormData.inputType ||
       formData.trackStock !== originalFormData.trackStock ||
       formData.stockQty !== originalFormData.stockQty ||
+      formData.lowStockThreshold !== originalFormData.lowStockThreshold ||
       formData.dailyStockTemplate !== originalFormData.dailyStockTemplate ||
       formData.autoResetStock !== originalFormData.autoResetStock
     );
@@ -240,6 +242,21 @@ export default function AddonItemFormModal({
                         min="0"
                         placeholder="0"
                         className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {t("admin.addonItems.modal.lowStockThresholdLabel")}
+                        <HelpTooltip content={t("admin.addonItems.modal.lowStockThresholdTooltip")} />
+                      </label>
+                      <input
+                        type="number"
+                        name="lowStockThreshold"
+                        value={formData.lowStockThreshold}
+                        onChange={onChange}
+                        min="0"
+                        placeholder={t("admin.addonItems.modal.lowStockThresholdPlaceholder")}
+                        className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
                       />
                     </div>
                     <div>

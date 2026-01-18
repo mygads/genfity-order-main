@@ -17,6 +17,7 @@ import { OrderStatus } from '@prisma/client';
 import { useMerchant } from '@/context/MerchantContext';
 import { formatFullOrderNumber, formatOrderNumberSuffix } from '@/lib/utils/format';
 import DriverQuickAssign from '@/components/orders/DriverQuickAssign';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 type OrderNumberDisplayMode = 'full' | 'suffix' | 'raw';
 
@@ -51,7 +52,9 @@ export const OrderListCard: React.FC<OrderListCardProps> = ({
     : PAYMENT_STATUS_COLORS.PENDING;
 
   const { merchant } = useMerchant();
+  const { t } = useTranslation();
   const itemCount = order._count?.orderItems || 0;
+  const hasAdminChanges = Boolean((order as any)?.editedAt || (order as any)?.editedByUserId);
 
   const formatCurrency = (amount: number | string) => {
     const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
@@ -153,6 +156,11 @@ export const OrderListCard: React.FC<OrderListCardProps> = ({
           <div className={`shrink-0 px-2 py-1 rounded text-xs font-bold ${statusConfig.bg} ${statusConfig.text}`}>
             #{displayOrderNumber}
           </div>
+          {hasAdminChanges && (
+            <span className="shrink-0 inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-200">
+              {t('common.changedByAdmin') || 'Changed by admin'}
+            </span>
+          )}
 
           {/* Order Type */}
           <div className="shrink-0">

@@ -159,6 +159,7 @@ export async function GET(
     // Never expose admin-only note fields to public tracking
     delete (serialized as any).adminNote;
     delete (serialized as any).kitchenNotes;
+    delete (serialized as any).editedByUserId;
 
     // If this order was created from a reservation, include reservation details
     // (safe because tokenized access is already validated above).

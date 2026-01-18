@@ -24,6 +24,8 @@ interface OrderHistoryItem {
   isScheduled?: boolean;
   scheduledTime?: string | null;
   status: string;
+  editedAt?: string | null;
+  changedByAdmin?: boolean;
   discountAmount?: number;
   totalAmount: number;
   placedAt: string;
@@ -852,7 +854,14 @@ export default function OrderHistoryPage() {
                         {formatDate(order.placedAt)}
                       </p>
                     </div>
-                    {getStatusBadge(order.status)}
+                    <div className="flex flex-col items-end gap-1">
+                      {getStatusBadge(order.status)}
+                      {order.changedByAdmin ? (
+                        <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                          {t('common.changedByAdmin') || 'Changed by admin'}
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
 
                   {/* Order Number */}

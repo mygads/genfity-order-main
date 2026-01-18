@@ -53,6 +53,7 @@ interface Order {
   totalAmount: number;
   placedAt: string;
   completedAt?: string;
+  editedAt?: string | null;
   payment?: {
     status: PaymentStatus;
     paymentMethod?: string;
@@ -418,7 +419,14 @@ export const OrderHistoryTable: React.FC<OrderHistoryTableProps> = ({
                     className="hover:bg-gray-50 dark:hover:bg-gray-900/30 transition-colors"
                   >
                     <td className="px-4 py-3 text-sm font-medium text-gray-800 dark:text-white/90">
-                      {formatFullOrderNumber(order.orderNumber, merchant?.code)}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span>{formatFullOrderNumber(order.orderNumber, merchant?.code)}</span>
+                        {order.editedAt ? (
+                          <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-200">
+                            {t('common.changedByAdmin') || 'Changed by admin'}
+                          </span>
+                        ) : null}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
                       <div className="flex items-center gap-2">

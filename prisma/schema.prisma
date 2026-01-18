@@ -49,6 +49,7 @@ model User {
   deliveryOrdersAssigned Order[]          @relation("DeliveryDriver")
   influencerApprovalLogs InfluencerApprovalLog[] @relation("InfluencerApprovalActedBy")
   orderDiscountsApplied OrderDiscount[]
+  ordersEdited       Order[]          @relation("OrderEditedBy")
 
   @@index([email])
   @@index([role])
@@ -722,6 +723,7 @@ model AddonItem {
   isActive           Boolean          @default(true) @map("is_active")
   trackStock         Boolean          @default(false) @map("track_stock")
   stockQty           Int?             @map("stock_qty")
+  lowStockThreshold  Int?             @map("low_stock_threshold")
   createdAt          DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt          DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
   inputType          AddonInputType   @default(SELECT) @map("input_type")
@@ -821,6 +823,8 @@ model Order {
   placedAt             DateTime    @default(now()) @map("placed_at") @db.Timestamptz(6)
   createdAt            DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt            DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+  editedAt             DateTime?   @map("edited_at") @db.Timestamptz(6)
+  editedByUserId       BigInt?     @map("edited_by_user_id")
   actualReadyAt        DateTime?   @map("actual_ready_at") @db.Timestamptz(6)
   cancelReason         String?     @map("cancel_reason")
   cancelledAt          DateTime?   @map("cancelled_at") @db.Timestamptz(6)
@@ -834,6 +838,7 @@ model Order {
   payment              Payment?
   groupOrderSession    GroupOrderSession?
   deliveryDriver        User?       @relation("DeliveryDriver", fields: [deliveryDriverUserId], references: [id])
+  editedBy              User?       @relation("OrderEditedBy", fields: [editedByUserId], references: [id])
 
   @@unique([merchantId, orderNumber])
   @@index([merchantId])
@@ -848,6 +853,7 @@ model Order {
   @@index([stockDeductedAt])
   @@index([deliveryDriverUserId])
   @@index([deliveryStatus])
+  @@index([editedByUserId])
   @@map("orders")
 }
 

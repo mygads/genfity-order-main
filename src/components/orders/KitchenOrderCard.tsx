@@ -14,6 +14,7 @@ import { OrderTimer } from './OrderTimer';
 import type { OrderListItem, OrderWithDetails } from '@/lib/types/order';
 import { useMerchant } from '@/context/MerchantContext';
 import { formatFullOrderNumber } from '@/lib/utils/format';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 
 interface KitchenOrderCardProps {
   order: OrderListItem | OrderWithDetails;
@@ -30,9 +31,11 @@ export const KitchenOrderCard: React.FC<KitchenOrderCardProps> = ({
 }) => {
   const statusConfig = ORDER_STATUS_COLORS[order.status as keyof typeof ORDER_STATUS_COLORS];
   const { merchant } = useMerchant();
+  const { t } = useTranslation();
   const displayOrderNumber = formatFullOrderNumber(order.orderNumber, merchant?.code);
   const scheduledTime = (order as any).scheduledTime as string | null | undefined;
   const isScheduled = Boolean((order as any).isScheduled && scheduledTime);
+  const hasAdminChanges = Boolean((order as any)?.editedAt || (order as any)?.editedByUserId);
   
   // Check if order has orderItems (OrderWithDetails) or just _count (OrderListItem)
   const hasOrderItems = 'orderItems' in order && Array.isArray(order.orderItems);
@@ -111,6 +114,11 @@ export const KitchenOrderCard: React.FC<KitchenOrderCardProps> = ({
             >
               {statusConfig.label}
             </span>
+            {hasAdminChanges && (
+              <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-200">
+                {t('common.changedByAdmin') || 'Changed by admin'}
+              </span>
+            )}
           </div>
         </div>
       </div>

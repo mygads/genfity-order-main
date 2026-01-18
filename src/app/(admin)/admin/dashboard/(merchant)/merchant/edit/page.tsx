@@ -32,7 +32,7 @@ import { TranslationKeys } from "@/lib/i18n";
 import SubscriptionRequired from "@/components/subscription/SubscriptionRequired";
 import { useContextualHint, CONTEXTUAL_HINTS } from "@/lib/tutorial";
 import ConfirmDialog from "@/components/modals/ConfirmDialog";
-import { getPosCustomItemsSettings } from "@/lib/utils/posCustomItemsSettings";
+import { getPosCustomItemsSettings, getPosEditOrderSettings } from "@/lib/utils/posCustomItemsSettings";
 import BasicInfoTab from "@/components/merchants/merchant-edit/tabs/BasicInfoTab";
 import PosSettingsTab from "@/components/merchants/merchant-edit/tabs/PosSettingsTab";
 import DeliveryTab from "@/components/merchants/merchant-edit/tabs/DeliveryTab";
@@ -71,6 +71,7 @@ export default function EditMerchantPage() {
   const [posCustomItemsEnabled, setPosCustomItemsEnabled] = useState(false);
   const [posCustomItemsMaxNameLength, setPosCustomItemsMaxNameLength] = useState<number>(80);
   const [posCustomItemsMaxPrice, setPosCustomItemsMaxPrice] = useState<number>(1);
+  const [posEditOrdersEnabled, setPosEditOrdersEnabled] = useState(false);
 
   const [receiptBillingInfo, setReceiptBillingInfo] = useState<{
     balance: number;
@@ -271,6 +272,7 @@ export default function EditMerchantPage() {
           setPosCustomItemsEnabled(Boolean(posSettingsData.data.customItems.enabled));
           setPosCustomItemsMaxNameLength(Number(posSettingsData.data.customItems.maxNameLength ?? 80));
           setPosCustomItemsMaxPrice(Number(posSettingsData.data.customItems.maxPrice ?? 1));
+          setPosEditOrdersEnabled(Boolean(posSettingsData.data.editOrder?.enabled));
         } else {
           // Fallback to computed defaults
           const posCustomItems = getPosCustomItemsSettings({
@@ -280,6 +282,10 @@ export default function EditMerchantPage() {
           setPosCustomItemsEnabled(posCustomItems.enabled);
           setPosCustomItemsMaxNameLength(posCustomItems.maxNameLength);
           setPosCustomItemsMaxPrice(posCustomItems.maxPrice);
+          const posEditOrder = getPosEditOrderSettings({
+            features: merchant.features,
+          });
+          setPosEditOrdersEnabled(posEditOrder.enabled);
         }
       } catch {
         const posCustomItems = getPosCustomItemsSettings({
@@ -289,6 +295,10 @@ export default function EditMerchantPage() {
         setPosCustomItemsEnabled(posCustomItems.enabled);
         setPosCustomItemsMaxNameLength(posCustomItems.maxNameLength);
         setPosCustomItemsMaxPrice(posCustomItems.maxPrice);
+        const posEditOrder = getPosEditOrderSettings({
+          features: merchant.features,
+        });
+        setPosEditOrdersEnabled(posEditOrder.enabled);
       }
 
       setFormData({
@@ -732,6 +742,9 @@ export default function EditMerchantPage() {
               ? { maxPrice: posCustomItemsMaxPrice }
               : {}),
           },
+          editOrder: {
+            enabled: posEditOrdersEnabled,
+          },
         }),
       });
 
@@ -920,6 +933,8 @@ export default function EditMerchantPage() {
             onPosPayImmediatelyChange={(checked) =>
               setFormData((prev) => ({ ...prev, posPayImmediately: checked }))
             }
+            posEditOrdersEnabled={posEditOrdersEnabled}
+            onPosEditOrdersEnabledChange={setPosEditOrdersEnabled}
             posCustomItemsEnabled={posCustomItemsEnabled}
             onPosCustomItemsEnabledChange={setPosCustomItemsEnabled}
             posCustomItemsMaxNameLength={posCustomItemsMaxNameLength}

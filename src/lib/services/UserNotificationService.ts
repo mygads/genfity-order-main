@@ -581,6 +581,64 @@ class UserNotificationService {
     }
 
     /**
+     * Notify merchant users about addon item running out of stock
+     */
+    async notifyAddonStockOut(merchantId: bigint, addonName: string, addonItemId: bigint) {
+        await this.createForMerchant(
+            merchantId,
+            'STOCK',
+            'Addon Out of Stock',
+            `Addon "${addonName}" is now out of stock.`,
+            {
+                actionUrl: `/admin/dashboard/addon-items?addonItemId=${addonItemId}`,
+                metadata: {
+                    type: 'OUT_OF_STOCK',
+                    itemType: 'ADDON',
+                    addonItemId: addonItemId.toString(),
+                    addonName,
+                },
+            }
+        );
+
+        await this.sendPushToMerchant(merchantId, { category: 'STOCK', transactionToggleKey: 'stockOut' }, async (pushService, subscription, merchant) => {
+            return pushService.sendOutOfStockNotification(subscription, merchant.name, addonName, 'en');
+        });
+    }
+
+    /**
+     * Notify merchant users about addon item low stock threshold
+     */
+    async notifyAddonLowStock(
+        merchantId: bigint,
+        addonName: string,
+        addonItemId: bigint,
+        remainingQty: number,
+        threshold: number
+    ) {
+        await this.createForMerchant(
+            merchantId,
+            'STOCK',
+            'Addon Low Stock Alert',
+            `Addon "${addonName}" is low on stock (${remainingQty} left; threshold ${threshold}).`,
+            {
+                actionUrl: `/admin/dashboard/addon-items?addonItemId=${addonItemId}`,
+                metadata: {
+                    type: 'LOW_STOCK',
+                    itemType: 'ADDON',
+                    addonItemId: addonItemId.toString(),
+                    addonName,
+                    remainingQty,
+                    threshold,
+                },
+            }
+        );
+
+        await this.sendPushToMerchant(merchantId, { category: 'STOCK', transactionToggleKey: 'lowStock' }, async (pushService, subscription, merchant) => {
+            return pushService.sendLowStockNotification(subscription, merchant.name, addonName, remainingQty, threshold, 'en');
+        });
+    }
+
+    /**
      * Notify merchant owner about staff login
      */
     async notifyStaffLogin(merchantId: bigint, staffName: string, staffEmail: string) {
