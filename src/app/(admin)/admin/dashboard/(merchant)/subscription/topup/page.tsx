@@ -237,6 +237,7 @@ function TopUpPageContent() {
         return avg;
     }, [usageSummary?.last30Days?.total, usageEstimateEpsilon]);
 
+
     const estimatedDaysRemaining = useMemo(() => {
         const currentBalance = balanceInfo?.balance ?? subscriptionResponse?.data?.balance?.amount;
         if (!(typeof currentBalance === 'number' && Number.isFinite(currentBalance)) || currentBalance <= 0) {
@@ -250,6 +251,10 @@ function TopUpPageContent() {
         // Avoid displaying absurd values when usage is extremely low.
         return Math.min(days, 3650);
     }, [avgDailyUsage, balanceInfo?.balance, subscriptionResponse?.data?.balance?.amount]);
+
+    const hasUsageEstimate = useMemo(() => {
+        return typeof avgDailyUsage === 'number' || typeof estimatedDaysRemaining === 'number';
+    }, [avgDailyUsage, estimatedDaysRemaining]);
 
     const monthlyEstimated = useMemo(() => {
         if (selectedPlan !== 'monthly') return null;
@@ -577,8 +582,8 @@ function TopUpPageContent() {
                                         </div>
                                         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                                             {t('subscription.topup.depositDescription')
-                                                .replace('{min}', formatCurrency(pricing?.depositMinimum || 0))
-                                                .replace('{fee}', formatCurrency(pricing?.orderFee || 0))}
+                                                .replace('{min}', formatCurrency(pricing?.depositMinimum || 0, currency, locale))
+                                                .replace('{fee}', formatCurrency(pricing?.orderFee || 0, currency, locale))}
                                         </p>
 
                                         {selectedPlan === 'deposit' && (
@@ -653,7 +658,7 @@ function TopUpPageContent() {
                                                 {t('subscription.topup.monthlyMode')}
                                             </h3>
                                             <span className="text-sm text-blue-600 dark:text-blue-400 font-medium">
-                                                {formatCurrency(pricing?.monthlyPrice || 0)}{t('subscription.pricing.perMonth')}
+                                                {formatCurrency(pricing?.monthlyPrice || 0, currency, locale)}{t('subscription.pricing.perMonth')}
                                             </span>
                                         </div>
                                         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -939,7 +944,7 @@ function TopUpPageContent() {
                                     </div>
                                 )}
 
-                                {showDepositInsights && (
+                                {showDepositInsights && (usageError || hasUsageEstimate) && (
                                     <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700/40">
                                         <div className="mb-2 flex items-center gap-2 text-gray-700 dark:text-gray-200">
                                             <FaChartLine className="text-gray-400" />
@@ -952,25 +957,27 @@ function TopUpPageContent() {
                                             </div>
                                         ) : (
                                             <div className="space-y-2">
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-xs text-gray-500 dark:text-gray-400">{t('subscription.topup.avgDailyUsage')}</span>
-                                                    <span className="text-xs font-semibold text-gray-900 dark:text-white">
-                                                        {typeof avgDailyUsage === 'number'
-                                                            ? formatCurrency(avgDailyUsage, currency, locale)
-                                                            : t('subscription.topup.notEnoughData')}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-xs text-gray-500 dark:text-gray-400">{t('subscription.topup.estimatedDaysRemaining')}</span>
-                                                    <span className="text-xs font-semibold text-gray-900 dark:text-white">
-                                                        {typeof estimatedDaysRemaining === 'number'
-                                                            ? `${Math.max(0, Math.floor(estimatedDaysRemaining))} ${t('subscription.topup.days')}`
-                                                            : t('subscription.topup.notEnoughData')}
-                                                    </span>
-                                                </div>
-                                                <div className="text-[11px] text-gray-400">
-                                                    {t('subscription.topup.estimateNote')}
-                                                </div>
+                                                {typeof avgDailyUsage === 'number' && (
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-xs text-gray-500 dark:text-gray-400">{t('subscription.topup.avgDailyUsage')}</span>
+                                                        <span className="text-xs font-semibold text-gray-900 dark:text-white">
+                                                            {formatCurrency(avgDailyUsage, currency, locale)}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                {typeof estimatedDaysRemaining === 'number' && (
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-xs text-gray-500 dark:text-gray-400">{t('subscription.topup.estimatedDaysRemaining')}</span>
+                                                        <span className="text-xs font-semibold text-gray-900 dark:text-white">
+                                                            {`${Math.max(0, Math.floor(estimatedDaysRemaining))} ${t('subscription.topup.days')}`}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                {(typeof avgDailyUsage === 'number' || typeof estimatedDaysRemaining === 'number') && (
+                                                    <div className="text-[11px] text-gray-400">
+                                                        {t('subscription.topup.estimateNote')}
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </div>

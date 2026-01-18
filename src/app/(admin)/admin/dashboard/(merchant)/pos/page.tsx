@@ -722,6 +722,14 @@ export default function POSPage() {
   // Generate unique cart item ID
   const generateCartItemId = () => `cart-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
+  const getAddonSignature = useCallback((addons: CartAddon[]): string => {
+    if (!addons || addons.length === 0) return '';
+    return addons
+      .map(addon => `${String(addon.addonItemId)}:${addon.quantity}`)
+      .sort()
+      .join('|');
+  }, []);
+
   // Handle adding item to cart
   const handleAddItem = useCallback((item: ProductMenuItem) => {
     // Find menu item with addons
@@ -735,20 +743,43 @@ export default function POSPage() {
       setShowAddonModal(true);
     } else {
       // Add directly to cart
-      const newCartItem: CartItem = {
-        id: generateCartItemId(),
-        type: 'MENU',
-        menuId: item.id,
-        menuName: item.name,
-        menuPrice: item.promoPrice ?? item.price,
-        quantity: 1,
-        notes: '',
-        addons: [],
-        imageUrl: item.imageUrl,
-      };
-      setCartItems(prev => [...prev, newCartItem]);
+      const menuPrice = item.promoPrice ?? item.price;
+      const addonSignature = getAddonSignature([]);
+
+      setCartItems(prev => {
+        const existingIndex = prev.findIndex(existing =>
+          (existing.type ?? 'MENU') === 'MENU'
+          && String(existing.menuId) === String(item.id)
+          && Number(existing.menuPrice) === Number(menuPrice)
+          && getAddonSignature(existing.addons) === addonSignature
+          && (existing.notes || '') === ''
+        );
+
+        if (existingIndex >= 0) {
+          const updated = [...prev];
+          updated[existingIndex] = {
+            ...updated[existingIndex],
+            quantity: updated[existingIndex].quantity + 1,
+          };
+          return updated;
+        }
+
+        const newCartItem: CartItem = {
+          id: generateCartItemId(),
+          type: 'MENU',
+          menuId: item.id,
+          menuName: item.name,
+          menuPrice,
+          quantity: 1,
+          notes: '',
+          addons: [],
+          imageUrl: item.imageUrl,
+        };
+
+        return [...prev, newCartItem];
+      });
     }
-  }, [menuItems]);
+  }, [menuItems, getAddonSignature]);
 
   // Handle addon modal confirm
   const handleAddonConfirm = useCallback((addons: SelectedAddon[], notes: string, quantity: number) => {
@@ -761,23 +792,46 @@ export default function POSPage() {
       quantity: a.quantity,
     }));
 
-    const newCartItem: CartItem = {
-      id: generateCartItemId(),
-      type: 'MENU',
-      menuId: selectedMenuItem.id,
-      menuName: selectedMenuItem.name,
-      menuPrice: selectedMenuItem.promoPrice ?? selectedMenuItem.price,
-      quantity: quantity,
-      notes: notes,
-      addons: cartAddons,
-      imageUrl: selectedMenuItem.imageUrl,
-    };
+    const menuPrice = selectedMenuItem.promoPrice ?? selectedMenuItem.price;
+    const addonSignature = getAddonSignature(cartAddons);
+    const normalizedNotes = notes || '';
 
-    setCartItems(prev => [...prev, newCartItem]);
+    setCartItems(prev => {
+      const existingIndex = prev.findIndex(existing =>
+        (existing.type ?? 'MENU') === 'MENU'
+        && String(existing.menuId) === String(selectedMenuItem.id)
+        && Number(existing.menuPrice) === Number(menuPrice)
+        && getAddonSignature(existing.addons) === addonSignature
+        && (existing.notes || '') === normalizedNotes
+      );
+
+      if (existingIndex >= 0) {
+        const updated = [...prev];
+        updated[existingIndex] = {
+          ...updated[existingIndex],
+          quantity: updated[existingIndex].quantity + quantity,
+        };
+        return updated;
+      }
+
+      const newCartItem: CartItem = {
+        id: generateCartItemId(),
+        type: 'MENU',
+        menuId: selectedMenuItem.id,
+        menuName: selectedMenuItem.name,
+        menuPrice,
+        quantity,
+        notes: normalizedNotes,
+        addons: cartAddons,
+        imageUrl: selectedMenuItem.imageUrl,
+      };
+
+      return [...prev, newCartItem];
+    });
     setShowAddonModal(false);
     setSelectedMenuItem(null);
     setSelectedMenuItemAddons([]);
-  }, [selectedMenuItem]);
+  }, [selectedMenuItem, getAddonSignature]);
 
   const handleAddCustomItem = useCallback(() => {
     setShowCustomItemModal(true);
