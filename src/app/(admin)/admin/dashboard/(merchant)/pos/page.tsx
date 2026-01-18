@@ -9,9 +9,10 @@
  * - Adjustable grid columns for product display
  */
 
+
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { Suspense, useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   FaArrowLeft,
@@ -144,6 +145,14 @@ const DEFAULT_GRID_COLUMNS = 5;
 // ============================================
 
 export default function POSPage() {
+  return (
+    <Suspense fallback={<POSSkeleton />}>
+      <POSPageContent />
+    </Suspense>
+  );
+}
+
+function POSPageContent() {
   const { t, locale } = useTranslation();
   const router = useRouter();
   const searchParams = useSearchParams();
