@@ -9,6 +9,7 @@ export interface MerchantFormData {
   phoneNumber: string;
   logoUrl?: string;
   bannerUrl?: string;
+  promoBannerUrls: string[];
   country: string;
   currency: string;
   timezone: string;

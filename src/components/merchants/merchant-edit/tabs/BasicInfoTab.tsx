@@ -1,6 +1,6 @@
 import React from 'react';
 import Image from 'next/image';
-import { FaImage } from 'react-icons/fa';
+import { FaArrowDown, FaArrowUp, FaImage, FaTimes } from 'react-icons/fa';
 
 import type { TranslationKeys } from '@/lib/i18n';
 import { tOr } from '@/lib/i18n/useTranslation';
@@ -14,12 +14,17 @@ export interface BasicInfoTabProps {
 
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   bannerInputRef: React.RefObject<HTMLInputElement | null>;
+  promoInputRef: React.RefObject<HTMLInputElement | null>;
 
   uploading: boolean;
   uploadingBanner: boolean;
+  uploadingPromoBanners: boolean;
 
   onLogoUpload: React.ChangeEventHandler<HTMLInputElement>;
   onBannerUpload: React.ChangeEventHandler<HTMLInputElement>;
+  onPromoBannerUpload: React.ChangeEventHandler<HTMLInputElement>;
+  onRemovePromoBanner: (index: number) => void;
+  onMovePromoBanner: (fromIndex: number, toIndex: number) => void;
   onChange: React.ChangeEventHandler<HTMLInputElement | HTMLTextAreaElement>;
 }
 
@@ -28,12 +33,21 @@ export default function BasicInfoTab({
   formData,
   fileInputRef,
   bannerInputRef,
+  promoInputRef,
   uploading,
   uploadingBanner,
+  uploadingPromoBanners,
   onLogoUpload,
   onBannerUpload,
+  onPromoBannerUpload,
+  onRemovePromoBanner,
+  onMovePromoBanner,
   onChange,
 }: BasicInfoTabProps) {
+  const promoCount = formData.promoBannerUrls?.length || 0;
+  const promoLimit = 10;
+  const promoLimitReached = promoCount >= promoLimit;
+
   return (
     <div className="space-y-6">
       <SettingsCard
@@ -113,6 +127,103 @@ export default function BasicInfoTab({
             </div>
             <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">{t('admin.merchantEdit.bannerFormats')}</p>
           </div>
+        </div>
+      </SettingsCard>
+
+      <SettingsCard
+        title={tOr(t, 'admin.merchantEdit.promoBannerTitle', 'Promotion banners')}
+        description={tOr(
+          t,
+          'admin.merchantEdit.promoBannerDesc',
+          'Upload up to 10 promotional images to show on the customer display screen when idle.'
+        )}
+      >
+        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/40">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                {tOr(t, 'admin.merchantEdit.promoBannerLabel', 'Promotion banners')}
+              </p>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                {tOr(t, 'admin.merchantEdit.promoBannerCount', '{count} / 10 images', { count: promoCount })}
+              </p>
+            </div>
+            <input
+              ref={promoInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={onPromoBannerUpload}
+              className="hidden"
+            />
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              isLoading={uploadingPromoBanners}
+              disabled={promoLimitReached}
+              onClick={() => promoInputRef.current?.click()}
+            >
+              {promoLimitReached
+                ? tOr(t, 'admin.merchantEdit.promoBannerLimitReached', 'Limit reached')
+                : tOr(t, 'admin.merchantEdit.promoBannerUpload', 'Upload banners')}
+            </Button>
+          </div>
+
+          {promoCount === 0 ? (
+            <div className="mt-4 flex items-center gap-3 rounded-lg border border-dashed border-gray-200 bg-white px-4 py-5 text-sm text-gray-500 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-400">
+              <FaImage className="h-4 w-4" />
+              {tOr(t, 'admin.merchantEdit.promoBannerEmpty', 'No promotional banners uploaded yet.')}
+            </div>
+          ) : (
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {formData.promoBannerUrls.map((url, index) => (
+                <div
+                  key={`${url}-${index}`}
+                  className="group relative overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-950"
+                  style={{ aspectRatio: '16 / 9' }}
+                >
+                  <Image src={url} alt={`Promo banner ${index + 1}`} fill className="object-cover" />
+                  <div className="absolute right-2 top-2 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                    <button
+                      type="button"
+                      onClick={() => onMovePromoBanner(index, index - 1)}
+                      disabled={index === 0}
+                      className="flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white disabled:opacity-40"
+                      aria-label={tOr(t, 'admin.merchantEdit.promoBannerMoveUp', 'Move up')}
+                    >
+                      <FaArrowUp className="h-3 w-3" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onMovePromoBanner(index, index + 1)}
+                      disabled={index === promoCount - 1}
+                      className="flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white disabled:opacity-40"
+                      aria-label={tOr(t, 'admin.merchantEdit.promoBannerMoveDown', 'Move down')}
+                    >
+                      <FaArrowDown className="h-3 w-3" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onRemovePromoBanner(index)}
+                      className="flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white"
+                      aria-label={tOr(t, 'admin.merchantEdit.promoBannerRemove', 'Remove banner')}
+                    >
+                      <FaTimes className="h-3 w-3" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+            {tOr(
+              t,
+              'admin.merchantEdit.promoBannerFormats',
+              'All image formats supported. Max 5MB each. Recommended: 1920x1080 (16:9).'
+            )}
+          </p>
         </div>
       </SettingsCard>
 

@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useInfluencer } from '../layout';
 import InfluencerHeader from '@/layout/InfluencerHeader';
 import { InfluencerProfileSkeleton } from '@/components/common/SkeletonLoaders';
+import { clearInfluencerAuth, fetchInfluencerJson, fetchWithInfluencerAuth } from '@/lib/utils/influencerAuth';
 import {
   FaCamera,
   FaCheckCircle,
@@ -51,29 +52,26 @@ export default function InfluencerProfilePage() {
 
   const fetchProfile = useCallback(async () => {
     const token = localStorage.getItem('influencerAccessToken');
-    if (!token) {
+    const refreshToken = localStorage.getItem('influencerRefreshToken');
+    if (!token && !refreshToken) {
       router.push('/influencer/login');
       return;
     }
 
     try {
-      const response = await fetch('/api/influencer/auth/me', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const { response, data } = await fetchInfluencerJson<{ success: boolean; data: InfluencerProfile; message?: string }>('/api/influencer/auth/me');
 
       if (response.status === 401) {
-        localStorage.removeItem('influencerAccessToken');
         router.push('/influencer/login');
         return;
       }
 
-      const data = await response.json();
-      if (response.ok && data.success) {
+      if (response.ok && data?.success) {
         setProfile(data.data);
         setName(data.data.name);
         setPhone(data.data.phone || '');
       } else {
-        setError(data.message || 'Failed to load profile');
+        setError(data?.message || 'Failed to load profile');
       }
     } catch {
       setError('Network error. Please try again.');
@@ -93,17 +91,17 @@ export default function InfluencerProfilePage() {
     setIsSaving(true);
 
     const token = localStorage.getItem('influencerAccessToken');
-    if (!token) {
+    const refreshToken = localStorage.getItem('influencerRefreshToken');
+    if (!token && !refreshToken) {
       router.push('/influencer/login');
       return;
     }
 
     try {
-      const response = await fetch('/api/influencer/profile', {
+      const { response, data } = await fetchInfluencerJson<{ success: boolean; data: InfluencerProfile; message?: string }>('/api/influencer/profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           name: name.trim(),
@@ -111,9 +109,12 @@ export default function InfluencerProfilePage() {
         }),
       });
 
-      const data = await response.json();
+      if (response.status === 401) {
+        router.push('/influencer/login');
+        return;
+      }
 
-      if (response.ok && data.success) {
+      if (response.ok && data?.success) {
         setProfile(data.data);
         setSaveSuccess(true);
         
@@ -129,7 +130,7 @@ export default function InfluencerProfilePage() {
         
         setTimeout(() => setSaveSuccess(false), 3000);
       } else {
-        setSaveError(data.message || 'Failed to update profile');
+        setSaveError(data?.message || 'Failed to update profile');
       }
     } catch {
       setSaveError('Network error. Please try again.');
@@ -158,7 +159,8 @@ export default function InfluencerProfilePage() {
     setSaveError('');
 
     const token = localStorage.getItem('influencerAccessToken');
-    if (!token) {
+    const refreshToken = localStorage.getItem('influencerRefreshToken');
+    if (!token && !refreshToken) {
       router.push('/influencer/login');
       return;
     }
@@ -167,13 +169,16 @@ export default function InfluencerProfilePage() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch('/api/influencer/profile/upload-picture', {
+      const response = await fetchWithInfluencerAuth('/api/influencer/profile/upload-picture', {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
         body: formData,
       });
+
+      if (response.status === 401) {
+        clearInfluencerAuth();
+        router.push('/influencer/login');
+        return;
+      }
 
       const data = await response.json();
 
@@ -226,7 +231,7 @@ export default function InfluencerProfilePage() {
       <>
         <InfluencerHeader title="Profile" onMenuClick={() => setIsSidebarOpen(true)} />
         <main className="p-4 lg:p-6">
-          <div className="flex items-center justify-center min-h-[400px]">
+          <div className="flex items-center justify-center min-h-100">
             <div className="text-center">
               <p className="text-red-500 mb-4">{error || 'Profile not found'}</p>
               <button

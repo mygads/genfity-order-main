@@ -340,6 +340,7 @@ class InfluencerAuthService {
   async refreshAccessToken(refreshToken: string): Promise<{
     accessToken: string;
     refreshToken: string;
+    expiresIn: number;
   }> {
     // Verify refresh token
     const payload = verifyRefreshToken(refreshToken);
@@ -383,8 +384,24 @@ class InfluencerAuthService {
       );
     }
 
-    const sessionDuration = this.getSessionDuration();
-    const refreshDuration = this.getRefreshDuration();
+    if (session.expiresAt && session.expiresAt < new Date()) {
+      await prisma.influencerSession.update({
+        where: { id: session.id },
+        data: { status: 'EXPIRED' },
+      });
+      throw new AuthenticationError(
+        'Session has expired',
+        ERROR_CODES.TOKEN_EXPIRED
+      );
+    }
+
+    const now = Date.now();
+    const accessExpiresIn = session.expiresAt
+      ? Math.max(1, Math.floor((session.expiresAt.getTime() - now) / 1000))
+      : this.getSessionDuration();
+    const refreshExpiresIn = session.refreshExpiresAt
+      ? Math.max(1, Math.floor((session.refreshExpiresAt.getTime() - now) / 1000))
+      : this.getRefreshDuration();
 
     // Generate new tokens
     const newAccessToken = generateAccessToken({
@@ -392,32 +409,24 @@ class InfluencerAuthService {
       sessionId: session.id,
       role: 'INFLUENCER',
       email: session.influencer.email,
-    }, sessionDuration);
+    }, accessExpiresIn);
 
     const newRefreshToken = generateRefreshToken({
       userId: session.influencerId,
       sessionId: session.id,
-    }, refreshDuration);
-
-    // Update session with new access token and extend expiry
-    const newExpiresAt = new Date();
-    newExpiresAt.setSeconds(newExpiresAt.getSeconds() + sessionDuration);
-
-    const newRefreshExpiresAt = new Date();
-    newRefreshExpiresAt.setSeconds(newRefreshExpiresAt.getSeconds() + refreshDuration);
+    }, refreshExpiresIn);
 
     await prisma.influencerSession.update({
       where: { id: session.id },
       data: {
         token: newAccessToken,
-        expiresAt: newExpiresAt,
-        refreshExpiresAt: newRefreshExpiresAt,
       },
     });
 
     return {
       accessToken: newAccessToken,
       refreshToken: newRefreshToken,
+      expiresIn: accessExpiresIn,
     };
   }
 

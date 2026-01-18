@@ -385,6 +385,7 @@ model Merchant {
   country                String                @default("Australia")
   logoUrl                String?               @map("logo_url")
   bannerUrl              String?               @map("banner_url")
+  promoBannerUrls        String[]              @default([]) @map("promo_banner_urls")
   mapUrl                 String?               @map("map_url")
   description            String?
   isActive               Boolean               @default(true) @map("is_active")
@@ -455,6 +456,7 @@ model Merchant {
   deliveryZones          MerchantDeliveryZone[]
   menuBooks              MenuBook[]
   specialPrices          SpecialPrice[]
+  customerDisplayState   CustomerDisplayState?
   // Subscription system relations
   subscription           MerchantSubscription?
   merchantBalance        MerchantBalance?
@@ -488,6 +490,29 @@ model Merchant {
   @@index([isActive])
   @@index([referredByInfluencerId])
   @@map("merchants")
+}
+
+enum CustomerDisplayMode {
+  CART
+  ORDER_REVIEW
+  THANK_YOU
+  IDLE
+}
+
+model CustomerDisplayState {
+  id         BigInt              @id @default(autoincrement())
+  merchantId BigInt              @unique @map("merchant_id")
+  mode       CustomerDisplayMode @default(CART)
+  isLocked   Boolean             @default(false) @map("is_locked")
+  payload    Json?               @map("payload") @db.JsonB
+  updatedAt  DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdAt  DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  merchant   Merchant            @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@index([merchantId])
+  @@index([updatedAt])
+  @@map("customer_display_state")
 }
 
 model MerchantDeliveryZone {

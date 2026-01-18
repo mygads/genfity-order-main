@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { getAdminAuth, getAdminToken } from '@/lib/utils/adminAuth';
+import { fetchWithAuth } from '@/lib/utils/apiClient';
 import { playNotificationSound } from '@/lib/utils/soundNotification';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 
@@ -63,10 +64,11 @@ export default function AdminOrderAlertListener() {
     let isCancelled = false;
 
     const fetchLatest = async (): Promise<LatestOrderNotification | null> => {
-      const response = await fetch('/api/notifications?category=ORDER&limit=1&page=1', {
+      const response = await fetchWithAuth('/api/notifications?category=ORDER&limit=1&page=1', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
+        skipRedirect: true,
       });
 
       if (!response.ok) return null;

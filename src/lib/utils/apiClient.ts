@@ -18,7 +18,7 @@
  * ```
  */
 
-import { getAdminToken, clearAdminAuth } from './adminAuth';
+import { getAdminToken, clearAdminAuth, refreshAdminSession } from './adminAuth';
 
 interface FetchOptions extends RequestInit {
   skipAuth?: boolean; // Skip adding Authorization header
@@ -65,9 +65,27 @@ export async function fetchWithAuth(
 
   // Handle 401 Unauthorized
   if (response.status === 401 && !skipRedirect) {
+    const isRefreshRequest = url.includes('/api/auth/refresh');
+    if (!isRefreshRequest) {
+      const refreshed = await refreshAdminSession();
+      if (refreshed?.accessToken) {
+        const retryHeaders: Record<string, string> = { ...requestHeaders };
+        retryHeaders['Authorization'] = `Bearer ${refreshed.accessToken}`;
+
+        const retryResponse = await fetch(url, {
+          ...fetchOptions,
+          headers: retryHeaders,
+        });
+
+        if (retryResponse.status !== 401) {
+          return retryResponse;
+        }
+      }
+    }
+
     // Clear auth and redirect to login
     clearAdminAuth();
-    
+
     if (typeof window !== 'undefined' && window.location.pathname !== '/admin/login') {
       window.location.href = '/admin/login?error=expired';
     }

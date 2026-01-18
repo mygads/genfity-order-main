@@ -617,7 +617,6 @@ function AddonItemsPageContent() {
             trackStock: false,
             stockQty: "",
             lowStockThreshold: "",
-            lowStockThreshold: "",
             dailyStockTemplate: "",
             autoResetStock: false,
           });

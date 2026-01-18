@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { getAdminAuth, clearAdminAuth } from '@/lib/utils/adminAuth';
+import { getAdminAuth, clearAdminAuth, refreshAdminSession } from '@/lib/utils/adminAuth';
 import type { AdminAuth } from '@/lib/utils/adminAuth';
 
 /**
@@ -24,31 +24,44 @@ export function useAdminAuth() {
 
   useEffect(() => {
     // Check auth on mount
-    checkAuth();
+    void checkAuth();
 
     // Check every 60 seconds
-    const interval = setInterval(checkAuth, 60000);
+    const interval = setInterval(() => {
+      void checkAuth();
+    }, 60000);
 
     return () => clearInterval(interval);
   }, []);
 
-  function checkAuth() {
-    const currentAuth = getAdminAuth({ skipRedirect: true });
-    
+  async function checkAuth() {
+    const currentAuth = getAdminAuth({ skipRedirect: true, allowExpired: true });
+
     if (!currentAuth) {
-      setAuth(null);
+      const refreshed = await refreshAdminSession();
+      if (!refreshed) {
+        setAuth(null);
+        setIsLoading(false);
+        return;
+      }
+
+      setAuth(refreshed);
       setIsLoading(false);
       return;
     }
 
-    // Check if expired
     if (new Date(currentAuth.expiresAt) < new Date()) {
-      clearAdminAuth();
-      setAuth(null);
-      
-      // Redirect to login on admin routes
-      if (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')) {
-        window.location.href = '/admin/login?error=expired';
+      const refreshed = await refreshAdminSession();
+      if (!refreshed) {
+        clearAdminAuth();
+        setAuth(null);
+
+        // Redirect to login on admin routes
+        if (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')) {
+          window.location.href = '/admin/login?error=expired';
+        }
+      } else {
+        setAuth(refreshed);
       }
     } else {
       setAuth(currentAuth);
@@ -83,7 +96,7 @@ export function useTokenExpiryWarning(warningMinutes: number = 5): boolean {
 
   useEffect(() => {
     function checkExpiry() {
-      const auth = getAdminAuth({ skipRedirect: true });
+      const auth = getAdminAuth({ skipRedirect: true, allowExpired: true });
       
       if (!auth) {
         setIsExpiringSoon(false);

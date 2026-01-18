@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, createContext, useContext } fr
 import { useRouter, usePathname } from "next/navigation";
 import { ThemeProvider } from "@/context/ThemeContext";
 import InfluencerSidebar from "@/layout/InfluencerSidebar";
+import { fetchInfluencerJson } from "@/lib/utils/influencerAuth";
 
 interface InfluencerData {
   id: string;
@@ -53,27 +54,27 @@ function InfluencerLayoutContent({ children }: { children: React.ReactNode }) {
     }
 
     const token = localStorage.getItem('influencerAccessToken');
-    if (!token) {
+    const refreshToken = localStorage.getItem('influencerRefreshToken');
+    if (!token && !refreshToken) {
       router.push('/influencer/login');
       return;
     }
 
     try {
-      const response = await fetch('/api/influencer/auth/me', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const { response, data } = await fetchInfluencerJson<{ success: boolean; data: InfluencerData }>('/api/influencer/auth/me');
 
       if (response.status === 401) {
-        localStorage.removeItem('influencerAccessToken');
-        localStorage.removeItem('influencerRefreshToken');
-        localStorage.removeItem('influencerData');
         router.push('/influencer/login');
         return;
       }
 
-      const result = await response.json();
-      if (response.ok && result.success) {
-        setInfluencer(result.data);
+      if (response.ok && data?.success) {
+        setInfluencer(data.data);
+        try {
+          localStorage.setItem('influencerData', JSON.stringify(data.data));
+        } catch {
+          // ignore storage errors
+        }
       }
     } catch {
       // Network error - stay on page but show cached data if available
@@ -135,7 +136,7 @@ function InfluencerLayoutContent({ children }: { children: React.ReactNode }) {
           onClose={() => setIsSidebarOpen(false)}
           influencer={influencer}
         />
-        <div className="lg:pl-[280px] min-h-screen">
+        <div className="lg:pl-70 min-h-screen">
           {children}
         </div>
       </div>

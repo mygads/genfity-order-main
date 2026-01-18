@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { getAdminAuth, clearAdminAuth } from '@/lib/utils/adminAuth';
+import { getAdminAuth, clearAdminAuth, refreshAdminSession } from '@/lib/utils/adminAuth';
 
 /**
  * Session Guard Component
@@ -31,25 +31,42 @@ export default function SessionGuard() {
     }
 
     // Check immediately on mount
-    checkSession();
+    void checkSession();
 
     // Then check every 10 seconds (reduced from 60s for faster expiry detection)
-    const interval = setInterval(checkSession, 10000);
+    const interval = setInterval(() => {
+      void checkSession();
+    }, 10000);
 
     return () => clearInterval(interval);
   }, [pathname, router]);
 
-  function checkSession() {
+  async function checkSession() {
     // Check if token exists and is valid
-    const auth = getAdminAuth({ skipRedirect: true });
+    const auth = getAdminAuth({ skipRedirect: true, allowExpired: true });
 
-    // If no auth or expired, redirect to login
     if (!auth) {
-      clearAdminAuth();
-      
-      // Redirect to login with expired error
-      if (typeof window !== 'undefined' && window.location.pathname !== '/admin/login') {
-        window.location.href = '/admin/login?error=expired';
+      const refreshed = await refreshAdminSession();
+      if (!refreshed) {
+        clearAdminAuth();
+
+        // Redirect to login with expired error
+        if (typeof window !== 'undefined' && window.location.pathname !== '/admin/login') {
+          window.location.href = '/admin/login?error=expired';
+        }
+      }
+      return;
+    }
+
+    if (new Date(auth.expiresAt) < new Date()) {
+      const refreshed = await refreshAdminSession();
+      if (!refreshed) {
+        clearAdminAuth();
+
+        // Redirect to login with expired error
+        if (typeof window !== 'undefined' && window.location.pathname !== '/admin/login') {
+          window.location.href = '/admin/login?error=expired';
+        }
       }
     }
   }

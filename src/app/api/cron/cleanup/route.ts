@@ -16,14 +16,69 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
 import dataCleanupService from '@/lib/services/DataCleanupService';
+import { Prisma } from '@prisma/client';
 
 const CRON_SECRET = process.env.CRON_SECRET;
+const SESSION_PAYLOAD_RETENTION_HOURS = 24;
 
 interface CleanupResult {
     task: string;
     deletedCount: number;
     success: boolean;
     error?: string;
+}
+
+type JsonSessionMap = Record<string, Prisma.JsonValue>;
+
+function pruneSessionPayload(payload: Prisma.JsonValue | null): { nextPayload: Prisma.JsonValue | Prisma.NullTypes.JsonNull; prunedCount: number } {
+    if (!payload) {
+        return { nextPayload: Prisma.JsonNull, prunedCount: 0 };
+    }
+
+    if (typeof payload !== 'object' || Array.isArray(payload)) {
+        return { nextPayload: payload, prunedCount: 0 };
+    }
+
+    const sessions = (payload as { sessions?: JsonSessionMap })?.sessions;
+    if (!sessions || typeof sessions !== 'object') {
+        return { nextPayload: payload, prunedCount: 0 };
+    }
+
+    const cutoff = Date.now() - SESSION_PAYLOAD_RETENTION_HOURS * 60 * 60 * 1000;
+    let prunedCount = 0;
+
+    const nextSessions = Object.entries(sessions).reduce<JsonSessionMap>((acc, [key, value]) => {
+        if (!value || typeof value !== 'object') {
+            prunedCount += 1;
+            return acc;
+        }
+
+        const updatedAt = (value as { updatedAt?: string | null }).updatedAt;
+        if (!updatedAt) {
+            prunedCount += 1;
+            return acc;
+        }
+
+        const timestamp = new Date(updatedAt).getTime();
+        if (Number.isNaN(timestamp) || timestamp < cutoff) {
+            prunedCount += 1;
+            return acc;
+        }
+
+        acc[key] = value;
+        return acc;
+    }, {});
+
+    if (prunedCount === 0) {
+        return { nextPayload: payload, prunedCount: 0 };
+    }
+
+    const { sessions: _sessions, ...rest } = payload as Record<string, Prisma.JsonValue>;
+    const nextPayload: Prisma.JsonValue = Object.keys(nextSessions).length > 0
+        ? ({ ...rest, sessions: nextSessions } as Prisma.JsonObject)
+        : ({ ...rest } as Prisma.JsonObject);
+
+    return { nextPayload, prunedCount };
 }
 
 export async function POST(req: NextRequest) {
@@ -193,6 +248,39 @@ export async function POST(req: NextRequest) {
         } catch (error) {
             results.push({
                 task: 'Data Cleanup (Soft Deletes & Images)',
+                deletedCount: 0,
+                success: false,
+                error: error instanceof Error ? error.message : 'Unknown error',
+            });
+        }
+
+        // Task 7: Prune old customer display session payloads (>24h)
+        try {
+            const states = await prisma.customerDisplayState.findMany({
+                select: { id: true, payload: true },
+            });
+
+            let prunedTotal = 0;
+
+            for (const state of states) {
+                const { nextPayload, prunedCount } = pruneSessionPayload(state.payload as Prisma.JsonValue | null);
+                if (prunedCount === 0) continue;
+
+                prunedTotal += prunedCount;
+                await prisma.customerDisplayState.update({
+                    where: { id: state.id },
+                    data: { payload: nextPayload as Prisma.InputJsonValue | Prisma.NullTypes.JsonNull },
+                });
+            }
+
+            results.push({
+                task: 'Prune Customer Display Sessions',
+                deletedCount: prunedTotal,
+                success: true,
+            });
+        } catch (error) {
+            results.push({
+                task: 'Prune Customer Display Sessions',
                 deletedCount: 0,
                 success: false,
                 error: error instanceof Error ? error.message : 'Unknown error',

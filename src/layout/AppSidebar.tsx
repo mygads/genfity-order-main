@@ -222,6 +222,13 @@ const merchantNavGroups: NavGroup[] = [
         permission: STAFF_PERMISSIONS.ORDERS,
       },
       {
+        icon: <FaTv />,
+        nameKey: "admin.nav.customerDisplay",
+        path: "/admin/dashboard/customer-display",
+        roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
+        permission: STAFF_PERMISSIONS.CUSTOMER_DISPLAY,
+      },
+      {
         icon: <FaCalendarAlt />,
         nameKey: "admin.nav.reservations",
         path: "/admin/dashboard/reservations",

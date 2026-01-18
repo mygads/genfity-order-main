@@ -11,7 +11,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { getAdminAuth, clearAdminAuth } from '@/lib/utils/adminAuth';
+import { getAdminAuth, clearAdminAuth, refreshAdminSession } from '@/lib/utils/adminAuth';
 
 interface SessionResponse {
   success: boolean;
@@ -51,13 +51,28 @@ export function useSessionSync() {
   async function checkSessionWithServer() {
     try {
       // Get current auth from localStorage
-      const auth = getAdminAuth({ skipRedirect: true });
+      let auth = getAdminAuth({ skipRedirect: true, allowExpired: true });
 
       if (!auth) {
-        // No auth in localStorage, redirect to login
-        clearAdminAuth();
-        window.location.href = '/admin/login?error=expired';
-        return;
+        const refreshed = await refreshAdminSession();
+        if (!refreshed) {
+          // No auth in localStorage, redirect to login
+          clearAdminAuth();
+          window.location.href = '/admin/login?error=expired';
+          return;
+        }
+
+        auth = refreshed;
+      }
+
+      if (new Date(auth.expiresAt) < new Date()) {
+        const refreshed = await refreshAdminSession();
+        if (!refreshed) {
+          clearAdminAuth();
+          window.location.href = '/admin/login?error=expired';
+          return;
+        }
+        auth = refreshed;
       }
 
       // Call server to verify session and get actual expiry

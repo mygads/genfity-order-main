@@ -6,6 +6,7 @@ import { ThemeProvider } from '@/context/ThemeContext';
 import { CartProvider } from '@/context/CartContext';
 import { CustomerLanguageProvider } from '@/context/LanguageContext';
 import { Metadata } from 'next';
+import BackoffClientTools from '@/components/common/BackoffClientTools';
 
 const outfit = Outfit({
   subsets: ['latin'],
@@ -33,6 +34,7 @@ export default function RootLayout({
             <SidebarProvider>
               <CartProvider>
                 {children}
+                <BackoffClientTools />
               </CartProvider>
             </SidebarProvider>
           </CustomerLanguageProvider>

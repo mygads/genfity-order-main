@@ -3,6 +3,8 @@
  * Mirrors adminAuth behavior but for DELIVERY role.
  */
 
+import { requestSessionRefresh } from './sessionRefresh';
+
 export interface DriverUser {
   id: string;
   name: string;
@@ -21,7 +23,7 @@ export interface DriverAuth {
 const DRIVER_AUTH_KEY = 'genfity_driver_auth';
 const DRIVER_COOKIE_NAME = 'driver_auth_token';
 
-export function getDriverAuth(options?: { skipRedirect?: boolean }): DriverAuth | null {
+export function getDriverAuth(options?: { skipRedirect?: boolean; allowExpired?: boolean }): DriverAuth | null {
   if (typeof window === 'undefined') return null;
 
   try {
@@ -31,6 +33,10 @@ export function getDriverAuth(options?: { skipRedirect?: boolean }): DriverAuth 
     const auth = JSON.parse(data) as DriverAuth;
 
     if (new Date(auth.expiresAt) < new Date()) {
+      if (options?.allowExpired) {
+        return auth;
+      }
+
       clearDriverAuth();
 
       if (!options?.skipRedirect && window.location.pathname.startsWith('/driver')) {
@@ -73,12 +79,38 @@ export function clearDriverAuth(): void {
   }
 }
 
-export function getDriverToken(): string | null {
-  const auth = getDriverAuth({ skipRedirect: true });
+export function getDriverToken(options?: { allowExpired?: boolean }): string | null {
+  const auth = getDriverAuth({ skipRedirect: true, allowExpired: options?.allowExpired });
   return auth?.accessToken ?? null;
 }
 
 export function getDriverUser(): DriverUser | null {
-  const auth = getDriverAuth({ skipRedirect: true });
+  const auth = getDriverAuth({ skipRedirect: true, allowExpired: true });
   return auth?.user ?? null;
+}
+
+/**
+ * Refresh driver access token using stored refresh token.
+ */
+export async function refreshDriverSession(): Promise<DriverAuth | null> {
+  if (typeof window === 'undefined') return null;
+
+  const auth = getDriverAuth({ skipRedirect: true, allowExpired: true });
+  if (!auth?.refreshToken) return null;
+
+  const data = await requestSessionRefresh(auth.refreshToken);
+  if (!data?.accessToken) return null;
+
+  const expiresIn = Number(data.expiresIn || 0);
+  const expiresAt = new Date(Date.now() + (expiresIn > 0 ? expiresIn : 3600) * 1000).toISOString();
+
+  const updated: DriverAuth = {
+    ...auth,
+    accessToken: data.accessToken,
+    refreshToken: data.refreshToken || auth.refreshToken,
+    expiresAt,
+  };
+
+  saveDriverAuth(updated);
+  return updated;
 }

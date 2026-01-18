@@ -62,11 +62,13 @@ export default function EditMerchantPage() {
   const { showHint } = useContextualHint();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
+  const promoInputRef = useRef<HTMLInputElement>(null);
   const perDayModeScheduleRef = useRef<PerDayModeScheduleHandle>(null);
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadingPromoBanners, setUploadingPromoBanners] = useState(false);
 
   const [posCustomItemsEnabled, setPosCustomItemsEnabled] = useState(false);
   const [posCustomItemsMaxNameLength, setPosCustomItemsMaxNameLength] = useState<number>(80);
@@ -120,6 +122,7 @@ export default function EditMerchantPage() {
     phoneNumber: "",
     logoUrl: "",
     bannerUrl: "",
+    promoBannerUrls: [],
     country: "Australia",
     currency: "AUD",
     timezone: "Australia/Sydney",
@@ -310,6 +313,7 @@ export default function EditMerchantPage() {
         phoneNumber: merchant.phoneNumber || "",
         logoUrl: merchant.logoUrl || "",
         bannerUrl: merchant.bannerUrl || "",
+        promoBannerUrls: Array.isArray(merchant.promoBannerUrls) ? merchant.promoBannerUrls : [],
         country: merchant.country || "Australia",
         currency: merchantCurrency,
         timezone: merchant.timezone || "Australia/Sydney",
@@ -424,6 +428,7 @@ export default function EditMerchantPage() {
         phoneNumber: merchant.phoneNumber || "",
         logoUrl: merchant.logoUrl || "",
         bannerUrl: merchant.bannerUrl || "",
+        promoBannerUrls: Array.isArray(merchant.promoBannerUrls) ? merchant.promoBannerUrls : [],
         country: merchant.country || "Australia",
         currency: merchant.currency || "AUD",
         timezone: merchant.timezone || "Australia/Sydney",
@@ -647,6 +652,103 @@ export default function EditMerchantPage() {
     }
   };
 
+  const handlePromoBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    const currentCount = formData.promoBannerUrls.length;
+    const maxCount = 10;
+
+    if (currentCount >= maxCount) {
+      showError('Limit Reached', 'Maximum 10 promotional banners allowed.');
+      if (promoInputRef.current) {
+        promoInputRef.current.value = '';
+      }
+      return;
+    }
+
+    const filesToUpload = files.slice(0, Math.max(0, maxCount - currentCount));
+
+    setUploadingPromoBanners(true);
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        router.push('/admin/login');
+        return;
+      }
+
+      const nextUrls: string[] = [];
+
+      for (const file of filesToUpload) {
+        if (!file.type.startsWith('image/')) {
+          showError('Invalid File', 'Please upload an image file');
+          continue;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+          showError('File Too Large', 'Each file must be less than 5MB');
+          continue;
+        }
+
+        const formDataUpload = new FormData();
+        formDataUpload.append('file', file);
+
+        const response = await fetch('/api/merchant/upload/promo-banner', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formDataUpload,
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success && data.data?.url) {
+          nextUrls.push(String(data.data.url));
+        } else {
+          showError('Upload Failed', data.message || 'Failed to upload banner');
+        }
+      }
+
+      if (nextUrls.length > 0) {
+        setFormData(prev => ({
+          ...prev,
+          promoBannerUrls: [...prev.promoBannerUrls, ...nextUrls].slice(0, maxCount),
+        }));
+        showSuccess('Success', 'Promotional banners uploaded');
+      }
+    } catch {
+      showError('Error', 'Failed to upload promotional banners');
+    } finally {
+      setUploadingPromoBanners(false);
+      if (promoInputRef.current) {
+        promoInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleRemovePromoBanner = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      promoBannerUrls: prev.promoBannerUrls.filter((_, idx) => idx !== index),
+    }));
+  };
+
+  const handleMovePromoBanner = (fromIndex: number, toIndex: number) => {
+    setFormData(prev => {
+      const next = [...prev.promoBannerUrls];
+      if (fromIndex < 0 || toIndex < 0 || fromIndex >= next.length || toIndex >= next.length) {
+        return prev;
+      }
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return {
+        ...prev,
+        promoBannerUrls: next,
+      };
+    });
+  };
+
   const openReservationsWizard = () => {
     setReservationsWizardError("");
     setReservationsWizardRequirePreorder(Boolean(formData.reservationMenuRequired));
@@ -709,6 +811,7 @@ export default function EditMerchantPage() {
         deliveryScheduleStart: formData.deliveryScheduleStart || null,
         deliveryScheduleEnd: formData.deliveryScheduleEnd || null,
         reservationMinItemCount: Number.isFinite(Number(formData.reservationMinItemCount)) ? Number(formData.reservationMinItemCount) : 0,
+        promoBannerUrls: formData.promoBannerUrls,
       };
 
       const merchantResponse = await fetch("/api/merchant/profile", {
@@ -917,10 +1020,15 @@ export default function EditMerchantPage() {
             formData={formData}
             fileInputRef={fileInputRef}
             bannerInputRef={bannerInputRef}
+            promoInputRef={promoInputRef}
             uploading={uploading}
             uploadingBanner={uploadingBanner}
+            uploadingPromoBanners={uploadingPromoBanners}
             onLogoUpload={handleLogoUpload}
             onBannerUpload={handleBannerUpload}
+            onPromoBannerUpload={handlePromoBannerUpload}
+            onRemovePromoBanner={handleRemovePromoBanner}
+            onMovePromoBanner={handleMovePromoBanner}
             onChange={handleChange}
           />
         );
@@ -1048,10 +1156,15 @@ export default function EditMerchantPage() {
             formData={formData}
             fileInputRef={fileInputRef}
             bannerInputRef={bannerInputRef}
+            promoInputRef={promoInputRef}
             uploading={uploading}
             uploadingBanner={uploadingBanner}
+            uploadingPromoBanners={uploadingPromoBanners}
             onLogoUpload={handleLogoUpload}
             onBannerUpload={handleBannerUpload}
+            onPromoBannerUpload={handlePromoBannerUpload}
+            onRemovePromoBanner={handleRemovePromoBanner}
+            onMovePromoBanner={handleMovePromoBanner}
             onChange={handleChange}
           />
         );

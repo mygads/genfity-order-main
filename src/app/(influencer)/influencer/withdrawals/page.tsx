@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useInfluencer } from '../layout';
 import InfluencerHeader from '@/layout/InfluencerHeader';
 import { InfluencerWithdrawalsSkeleton } from '@/components/common/SkeletonLoaders';
+import { fetchInfluencerJson } from '@/lib/utils/influencerAuth';
 import {
   FaPlus,
   FaCheckCircle,
@@ -97,25 +98,22 @@ function WithdrawalsContent() {
 
   const fetchData = useCallback(async () => {
     const token = localStorage.getItem('influencerAccessToken');
-    if (!token) {
+    const refreshToken = localStorage.getItem('influencerRefreshToken');
+    if (!token && !refreshToken) {
       router.push('/influencer/login');
       return;
     }
 
     try {
       // Fetch dashboard data for balances
-      const dashboardRes = await fetch('/api/influencer/dashboard', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      
+      const { response: dashboardRes, data: dashboardData } = await fetchInfluencerJson<{ data: any; message?: string }>('/api/influencer/dashboard');
+
       if (dashboardRes.status === 401) {
-        localStorage.removeItem('influencerAccessToken');
         router.push('/influencer/login');
         return;
       }
 
-      const dashboardData = await dashboardRes.json();
-      if (dashboardRes.ok) {
+      if (dashboardRes.ok && dashboardData?.data) {
         setBankDetails({
           bankNameIdr: dashboardData.data.influencer.bankNameIdr,
           bankAccountNumberIdr: dashboardData.data.influencer.bankAccountNumberIdr,
@@ -129,12 +127,14 @@ function WithdrawalsContent() {
       }
 
       // Fetch withdrawals
-      const withdrawalsRes = await fetch('/api/influencer/withdrawals', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      
-      const withdrawalsData = await withdrawalsRes.json();
-      if (withdrawalsRes.ok) {
+      const { response: withdrawalsRes, data: withdrawalsData } = await fetchInfluencerJson<{ data: Withdrawal[]; message?: string }>('/api/influencer/withdrawals');
+
+      if (withdrawalsRes.status === 401) {
+        router.push('/influencer/login');
+        return;
+      }
+
+      if (withdrawalsRes.ok && withdrawalsData?.data) {
         setWithdrawals(withdrawalsData.data);
       }
     } catch {
@@ -154,7 +154,8 @@ function WithdrawalsContent() {
     setIsSubmitting(true);
 
     const token = localStorage.getItem('influencerAccessToken');
-    if (!token) {
+    const refreshToken = localStorage.getItem('influencerRefreshToken');
+    if (!token && !refreshToken) {
       router.push('/influencer/login');
       return;
     }
@@ -190,23 +191,28 @@ function WithdrawalsContent() {
     }
 
     try {
-      const response = await fetch('/api/influencer/withdrawals', {
+      const { response, data } = await fetchInfluencerJson<{ message?: string }>(
+        '/api/influencer/withdrawals',
+        {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           amount,
           currency: formData.currency,
           notes: formData.notes || undefined,
         }),
-      });
+        }
+      );
 
-      const data = await response.json();
+      if (response.status === 401) {
+        router.push('/influencer/login');
+        return;
+      }
 
       if (!response.ok) {
-        setSubmitError(data.message || 'Failed to submit withdrawal request');
+        setSubmitError(data?.message || 'Failed to submit withdrawal request');
         setIsSubmitting(false);
         return;
       }
@@ -242,7 +248,7 @@ function WithdrawalsContent() {
       <>
         <InfluencerHeader title="Withdrawals" onMenuClick={() => setIsSidebarOpen(true)} />
         <main className="p-4 lg:p-6">
-          <div className="flex items-center justify-center min-h-[400px]">
+          <div className="flex items-center justify-center min-h-100">
             <div className="text-center">
               <p className="text-red-500 mb-4">{error}</p>
               <button onClick={fetchData} className="px-4 py-2 bg-brand-500 text-white rounded-lg">

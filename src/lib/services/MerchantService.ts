@@ -60,6 +60,7 @@ export interface UpdateMerchantInput {
   address?: string;
   phoneNumber?: string;
   email?: string;
+  promoBannerUrls?: string[];
   // Sale mode settings
   isDineInEnabled?: boolean;
   isTakeawayEnabled?: boolean;
@@ -415,6 +416,13 @@ class MerchantService {
       validateEmail(input.email);
     }
 
+    if (input.promoBannerUrls && input.promoBannerUrls.length > 10) {
+      throw new ValidationError(
+        'Maximum 10 promotional banners allowed',
+        ERROR_CODES.VALIDATION_FAILED
+      );
+    }
+
     // Delivery requires merchant coordinates (existing or incoming).
     // Also prevents clearing coordinates while delivery is enabled.
     const willEnableDelivery = input.isDeliveryEnabled !== undefined ? input.isDeliveryEnabled : existing.isDeliveryEnabled;
@@ -447,6 +455,7 @@ class MerchantService {
     if (input.address !== undefined) updateData.address = input.address;
     if (input.phoneNumber !== undefined) updateData.phone = input.phoneNumber; // Map to phone
     if (input.email !== undefined) updateData.email = input.email;
+    if (input.promoBannerUrls !== undefined) updateData.promoBannerUrls = input.promoBannerUrls;
     // Sale mode settings
     if (input.isDineInEnabled !== undefined) updateData.isDineInEnabled = input.isDineInEnabled;
     if (input.isTakeawayEnabled !== undefined) updateData.isTakeawayEnabled = input.isTakeawayEnabled;

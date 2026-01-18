@@ -12,6 +12,7 @@ import type { AuthContext } from '@/lib/middleware/auth';
 import { ValidationError } from '@/lib/constants/errors';
 import { serializeBigInt } from '@/lib/utils/serializer';
 import subscriptionService from '@/lib/services/SubscriptionService';
+import { BlobService } from '@/lib/services/BlobService';
 
 /**
  * GET /api/merchant/profile
@@ -178,6 +179,25 @@ async function handlePut(req: NextRequest, authContext: AuthContext) {
       }
     }
 
+    // Cleanup removed promo banners
+    const existingPromoUrls = Array.isArray((merchantUser.merchant as any)?.promoBannerUrls)
+      ? (merchantUser.merchant as any).promoBannerUrls
+      : [];
+    const nextPromoUrls = Array.isArray(body?.promoBannerUrls) ? body.promoBannerUrls : existingPromoUrls;
+
+    const removedPromoUrls = existingPromoUrls.filter((url: string) => !nextPromoUrls.includes(url));
+    if (removedPromoUrls.length > 0) {
+      await Promise.all(
+        removedPromoUrls.map(async (url: string) => {
+          try {
+            await BlobService.deleteFile(url);
+          } catch {
+            // Ignore cleanup failures
+          }
+        })
+      );
+    }
+
     // Update merchant (isActive is excluded - only super admin can change it)
     const updatedMerchant = await merchantService.updateMerchant(
       merchantUser.merchantId,
@@ -187,6 +207,8 @@ async function handlePut(req: NextRequest, authContext: AuthContext) {
         address: body.address,
         phoneNumber: body.phoneNumber,
         email: body.email,
+        promoBannerUrls: nextPromoUrls,
+            // promoBannerUrls: body.promoBannerUrls, // Removed duplicate assignment
         // Sale mode settings
         isDineInEnabled: body.isDineInEnabled,
         isTakeawayEnabled: body.isTakeawayEnabled,

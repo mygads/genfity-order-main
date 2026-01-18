@@ -16,6 +16,7 @@ export const STAFF_PERMISSIONS = {
   ORDERS: 'orders',                    // View and manage orders (Kanban)
   ORDERS_KITCHEN: 'orders_kitchen',    // Kitchen display
   ORDERS_HISTORY: 'orders_history',    // Order history
+  CUSTOMER_DISPLAY: 'customer_display', // Customer display screen
 
   // Delivery / Driver
   DRIVER_DASHBOARD: 'driver_dashboard', // Allow staff to login to Driver portal
@@ -104,6 +105,7 @@ export const PERMISSION_TEMPLATES = {
       STAFF_PERMISSIONS.ORDERS,
       STAFF_PERMISSIONS.ORDERS_KITCHEN,
       STAFF_PERMISSIONS.MENU_STOCK,
+      STAFF_PERMISSIONS.CUSTOMER_DISPLAY,
     ] as StaffPermission[],
   },
   MANAGER: {
@@ -114,6 +116,7 @@ export const PERMISSION_TEMPLATES = {
       STAFF_PERMISSIONS.ORDERS,
       STAFF_PERMISSIONS.ORDERS_KITCHEN,
       STAFF_PERMISSIONS.ORDERS_HISTORY,
+      STAFF_PERMISSIONS.CUSTOMER_DISPLAY,
       STAFF_PERMISSIONS.MENU,
       STAFF_PERMISSIONS.MENU_STOCK,
       STAFF_PERMISSIONS.MENU_BUILDER,
@@ -144,6 +147,7 @@ export const PERMISSION_GROUPS = {
       { key: STAFF_PERMISSIONS.ORDERS, nameKey: 'admin.permissions.orders', descKey: 'admin.permissions.ordersDesc' },
       { key: STAFF_PERMISSIONS.ORDERS_KITCHEN, nameKey: 'admin.permissions.ordersKitchen', descKey: 'admin.permissions.ordersKitchenDesc' },
       { key: STAFF_PERMISSIONS.ORDERS_HISTORY, nameKey: 'admin.permissions.ordersHistory', descKey: 'admin.permissions.ordersHistoryDesc' },
+      { key: STAFF_PERMISSIONS.CUSTOMER_DISPLAY, nameKey: 'admin.permissions.customerDisplay', descKey: 'admin.permissions.customerDisplayDesc' },
     ],
   },
   delivery: {
@@ -203,6 +207,7 @@ export const PATH_PERMISSION_MAP: Record<string, StaffPermission> = {
   '/admin/dashboard/orders': STAFF_PERMISSIONS.ORDERS,
   '/admin/dashboard/orders/kitchen': STAFF_PERMISSIONS.ORDERS_KITCHEN,
   '/admin/dashboard/orders/queue': STAFF_PERMISSIONS.ORDERS,
+  '/admin/dashboard/customer-display': STAFF_PERMISSIONS.CUSTOMER_DISPLAY,
   '/admin/dashboard/orders/history': STAFF_PERMISSIONS.ORDERS_HISTORY,
   '/admin/dashboard/reservations': STAFF_PERMISSIONS.ORDERS,
   '/admin/dashboard/customer-feedback': STAFF_PERMISSIONS.CUSTOMER_FEEDBACK,
@@ -259,6 +264,7 @@ export const API_PERMISSION_MAP: Record<string, StaffPermission> = {
   '/api/merchant/reservations': STAFF_PERMISSIONS.ORDERS,
   '/api/merchant/drivers': STAFF_PERMISSIONS.ORDERS,
   '/api/merchant/pos': STAFF_PERMISSIONS.ORDERS,
+  '/api/merchant/customer-display': STAFF_PERMISSIONS.CUSTOMER_DISPLAY,
   '/api/merchant/menu': STAFF_PERMISSIONS.MENU,
   '/api/merchant/menu/stock': STAFF_PERMISSIONS.MENU_STOCK,
   '/api/merchant/menu/builder': STAFF_PERMISSIONS.MENU_BUILDER,

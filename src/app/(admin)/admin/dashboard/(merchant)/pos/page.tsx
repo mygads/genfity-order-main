@@ -23,6 +23,7 @@ import {
   FaEye,
   FaMinus,
   FaPlus,
+  FaLock,
   FaWifi,
   FaSync,
   FaExclamationTriangle,
@@ -31,6 +32,7 @@ import { useTranslation } from '@/lib/i18n/useTranslation';
 import { formatCurrency as formatCurrencyUtil } from '@/lib/utils/format';
 import { useMerchant } from '@/context/MerchantContext';
 import { useToast } from '@/context/ToastContext';
+import Switch from '@/components/ui/Switch';
 import useSWR, { mutate } from 'swr';
 import {
   useOfflineSync,
@@ -72,6 +74,14 @@ import ConfirmDialog from '@/components/modals/ConfirmDialog';
 
 import { openMerchantOrderReceiptHtmlAndPrint } from '@/lib/utils/receiptHtmlClient';
 import { normalizeTableNumber } from '@/lib/utils/posTableNumber';
+import type {
+  CustomerDisplayCartPayload,
+  CustomerDisplayOrderPayload,
+  CustomerDisplayPayload,
+  CustomerDisplayThankYouPayload,
+  CustomerDisplayTotals,
+  CustomerDisplayMode,
+} from '@/lib/types/customerDisplay';
 
 // ============================================
 // INTERFACES
@@ -173,6 +183,12 @@ export default function POSPage() {
 
   // Display mode
   const [displayMode, setDisplayMode] = useState<DisplayMode>('normal');
+
+  // Live cart tracking
+  const [isLiveCartEnabled, setIsLiveCartEnabled] = useState(false);
+  const [liveCartStorageKey, setLiveCartStorageKey] = useState<string | null>(null);
+  const [isDisplayLocked, setIsDisplayLocked] = useState(false);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
 
   // Grid columns for product display
   const [gridColumns, setGridColumns] = useState(DEFAULT_GRID_COLUMNS);
@@ -311,6 +327,87 @@ export default function POSPage() {
       if (breadcrumb) breadcrumb.style.display = '';
     };
   }, [displayMode]);
+
+  // Load live cart tracking preference
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!merchant?.id) return;
+
+    const userId = localStorage.getItem('userId') || 'unknown';
+    const key = `pos_live_cart_enabled:${merchant.id}:${userId}`;
+    setLiveCartStorageKey(key);
+
+    const stored = localStorage.getItem(key);
+    if (stored !== null) {
+      setIsLiveCartEnabled(stored === 'true');
+    }
+  }, [merchant?.id]);
+
+  const getJwtSessionId = useCallback((token: string | null): string | null => {
+    if (!token) return null;
+    const parts = token.split('.');
+    if (parts.length < 2) return null;
+
+    try {
+      const base64Url = parts[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+
+      const json = decodeURIComponent(
+        atob(padded)
+          .split('')
+          .map((c) => `%${`00${c.charCodeAt(0).toString(16)}`.slice(-2)}`)
+          .join(''),
+      );
+
+      const payload = JSON.parse(json) as Record<string, unknown>;
+      const sessionId = payload.sessionId ?? payload.sid;
+      return typeof sessionId === 'string' ? sessionId : null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const token = localStorage.getItem('accessToken');
+    setCurrentSessionId(getJwtSessionId(token));
+  }, [getJwtSessionId]);
+
+  useEffect(() => {
+    const loadDisplayLock = async () => {
+      if (!merchant?.id) return;
+      if (!currentSessionId) return;
+      const token = localStorage.getItem('accessToken');
+      if (!token) return;
+
+      try {
+        const response = await fetch('/api/merchant/customer-display/state', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (!response.ok) return;
+        const json = await response.json();
+        const sessions = json?.data?.payload?.sessions as Record<string, { isLocked?: boolean }> | undefined;
+        const sessionEntry = sessions?.[currentSessionId];
+
+        if (typeof sessionEntry?.isLocked === 'boolean') {
+          setIsDisplayLocked(sessionEntry.isLocked);
+        }
+      } catch {
+        // Ignore fetch errors for display lock state
+      }
+    };
+
+    loadDisplayLock();
+  }, [currentSessionId, merchant?.id]);
+
+  // Persist live cart tracking preference
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!liveCartStorageKey) return;
+    localStorage.setItem(liveCartStorageKey, String(isLiveCartEnabled));
+  }, [isLiveCartEnabled, liveCartStorageKey]);
 
   // Listen to fullscreen changes (ESC key)
   useEffect(() => {
@@ -903,6 +1000,138 @@ export default function POSPage() {
     [currency, locale]
   );
 
+  const buildDisplayTotals = useCallback((): CustomerDisplayTotals => {
+    const subtotal = cartItems.reduce((total: number, item: CartItem) => {
+      const itemTotal = item.menuPrice * item.quantity;
+      const addonsTotal = item.addons.reduce((sum: number, addon: CartAddon) =>
+        sum + (addon.addonPrice * addon.quantity), 0
+      );
+      return total + itemTotal + addonsTotal;
+    }, 0);
+
+    const taxAmount = merchantSettings?.enableTax
+      ? subtotal * ((merchantSettings.taxPercentage || 0) / 100)
+      : 0;
+    const serviceChargeAmount = merchantSettings?.enableServiceCharge
+      ? subtotal * ((merchantSettings.serviceChargePercent || 0) / 100)
+      : 0;
+    const packagingFeeAmount = ((orderType === 'TAKEAWAY' || String(orderType) === 'DELIVERY') && merchantSettings?.enablePackagingFee)
+      ? (merchantSettings.packagingFeeAmount || 0)
+      : 0;
+
+    const isDeliveryOrder = String(orderType) === 'DELIVERY';
+    const deliveryFeeAmount = isDeliveryOrder && (merchantSettings as any)?.enableDeliveryFee
+      ? Number((merchantSettings as any)?.deliveryFeeAmount || 0)
+      : 0;
+
+    const discountAmount = 0;
+    const totalAmount = subtotal + taxAmount + serviceChargeAmount + packagingFeeAmount + deliveryFeeAmount - discountAmount;
+
+    const itemCount = cartItems.length;
+    const quantityCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+
+    return {
+      subtotal,
+      taxAmount,
+      serviceChargeAmount,
+      packagingFeeAmount,
+      deliveryFeeAmount,
+      discountAmount,
+      totalAmount,
+      itemCount,
+      quantityCount,
+    };
+  }, [cartItems, merchantSettings, orderType]);
+
+  const buildCartDisplayPayload = useCallback((): CustomerDisplayCartPayload | null => {
+    if (!merchantSettings || cartItems.length === 0) return null;
+
+    const totals = buildDisplayTotals();
+    const normalizedTable = isTableNumberEnabled ? normalizeTableNumber(tableNumber).trim() : '';
+
+    return {
+      orderType: orderType as CustomerDisplayCartPayload['orderType'],
+      tableNumber: normalizedTable || undefined,
+      customerName: customerInfo.name || undefined,
+      notes: orderNotes || undefined,
+      items: cartItems.map((item) => {
+        const addons = item.addons.map((addon) => ({
+          name: addon.addonName,
+          quantity: addon.quantity,
+          unitPrice: addon.addonPrice,
+          lineTotal: addon.addonPrice * addon.quantity,
+        }));
+        const addonsTotal = addons.reduce((sum, addon) => sum + addon.lineTotal, 0);
+        const lineTotal = (item.menuPrice * item.quantity) + addonsTotal;
+
+        return {
+          name: item.menuName,
+          quantity: item.quantity,
+          unitPrice: item.menuPrice,
+          lineTotal,
+          notes: item.notes || undefined,
+          addons: addons.length > 0 ? addons : undefined,
+        };
+      }),
+      totals,
+    };
+  }, [merchantSettings, cartItems, buildDisplayTotals, orderType, isTableNumberEnabled, tableNumber, customerInfo.name, orderNotes]);
+
+  const buildOrderDisplayPayload = useCallback((orderNumber: string): CustomerDisplayOrderPayload | null => {
+    const cartPayload = buildCartDisplayPayload();
+    if (!cartPayload) return null;
+
+    return {
+      orderNumber,
+      orderType: cartPayload.orderType,
+      tableNumber: cartPayload.tableNumber,
+      customerName: cartPayload.customerName,
+      paymentStatus: 'PENDING',
+      items: cartPayload.items,
+      totals: cartPayload.totals,
+    };
+  }, [buildCartDisplayPayload]);
+
+  const buildThankYouPayload = useCallback((orderNumber: string): CustomerDisplayThankYouPayload => {
+    const normalizedTable = isTableNumberEnabled ? normalizeTableNumber(tableNumber).trim() : '';
+    return {
+      orderNumber,
+      orderType: (pendingOrderDetails?.orderType || orderType) as CustomerDisplayThankYouPayload['orderType'],
+      tableNumber: normalizedTable || pendingOrderDetails?.tableNumber || undefined,
+      customerName: customerInfo.name || undefined,
+    };
+  }, [customerInfo.name, isTableNumberEnabled, orderType, pendingOrderDetails?.orderType, pendingOrderDetails?.tableNumber, tableNumber]);
+
+  const updateCustomerDisplayState = useCallback(async (
+    mode: CustomerDisplayMode,
+    payload: CustomerDisplayPayload,
+    options?: { force?: boolean; isLocked?: boolean }
+  ) => {
+    if (!isLiveCartEnabled && !options?.force) return;
+    if (isDisplayLocked && !options?.force && typeof options?.isLocked !== 'boolean') return;
+
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) return;
+
+      await fetch('/api/merchant/customer-display/state', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          mode,
+          payload,
+          source: 'pos',
+          ...(typeof options?.isLocked === 'boolean' ? { isLocked: options.isLocked } : {}),
+        }),
+      });
+    } catch {
+      // Silent: customer display updates are best-effort
+    }
+  }, [isDisplayLocked, isLiveCartEnabled]);
+
   // Calculate order total for display
   const calculateOrderTotal = useCallback(() => {
     const subtotal = cartItems.reduce((total: number, item: CartItem) => {
@@ -931,6 +1160,56 @@ export default function POSPage() {
 
     return subtotal + taxAmount + serviceCharge + packagingFee + (Number.isFinite(deliveryFee) ? deliveryFee : 0);
   }, [cartItems, merchantSettings, orderType]);
+
+  // Push live cart updates to customer display (debounced)
+  useEffect(() => {
+    if (!isLiveCartEnabled) return;
+    if (!merchantSettings) return;
+    if (isDisplayLocked) return;
+    if (cartItems.length === 0) return;
+
+    const timer = window.setTimeout(() => {
+      const cartPayload = buildCartDisplayPayload();
+      if (!cartPayload) return;
+      updateCustomerDisplayState('CART', { cart: cartPayload });
+    }, 250);
+
+    return () => window.clearTimeout(timer);
+  }, [cartItems, orderType, tableNumber, orderNotes, customerInfo, merchantSettings, isDisplayLocked, isLiveCartEnabled, buildCartDisplayPayload, updateCustomerDisplayState]);
+
+  useEffect(() => {
+    if (!isLiveCartEnabled) return;
+    if (!merchantSettings) return;
+    if (isDisplayLocked) return;
+    if (cartItems.length > 0) return;
+
+    const timer = window.setTimeout(() => {
+      updateCustomerDisplayState('IDLE', {});
+    }, 250);
+
+    return () => window.clearTimeout(timer);
+  }, [cartItems.length, isDisplayLocked, isLiveCartEnabled, merchantSettings, updateCustomerDisplayState]);
+
+  useEffect(() => {
+    if (!merchantSettings) return;
+    if (isLiveCartEnabled) return;
+    if (isDisplayLocked) {
+      setIsDisplayLocked(false);
+    }
+    updateCustomerDisplayState('IDLE', {}, { force: true, isLocked: false });
+  }, [isDisplayLocked, isLiveCartEnabled, merchantSettings, updateCustomerDisplayState]);
+
+  const handleToggleDisplayLock = useCallback(async (nextLocked: boolean) => {
+    if (!isLiveCartEnabled) return;
+
+    setIsDisplayLocked(nextLocked);
+
+    const cartPayload = buildCartDisplayPayload();
+    const mode: CustomerDisplayMode = cartPayload ? 'CART' : 'IDLE';
+    const payload: CustomerDisplayPayload = cartPayload ? { cart: cartPayload } : {};
+
+    await updateCustomerDisplayState(mode, payload, { force: true, isLocked: nextLocked });
+  }, [buildCartDisplayPayload, isLiveCartEnabled, updateCustomerDisplayState]);
 
   const executeUpdateOrder = useCallback(async (overrideTableNumber?: string) => {
     if (!editOrderId) return;
@@ -1308,8 +1587,14 @@ export default function POSPage() {
 
         const shouldPayImmediately = merchantSettings?.posPayImmediately ?? true;
         if (shouldPayImmediately) {
+          const orderPayload = buildOrderDisplayPayload(String(data.data.orderNumber || ''));
+          if (orderPayload) {
+            updateCustomerDisplayState('ORDER_REVIEW', { order: orderPayload });
+          }
           setShowPaymentModal(true);
         } else {
+          const thankYouPayload = buildThankYouPayload(String(data.data.orderNumber || ''));
+          updateCustomerDisplayState('THANK_YOU', { thankYou: thankYouPayload });
           setLastOrderTotal(formatCurrency(createdTotal));
           setShowSuccessModal(true);
         }
@@ -1406,6 +1691,9 @@ export default function POSPage() {
     editingPendingOfflineOrderId,
     merchantSettings,
     t,
+    buildOrderDisplayPayload,
+    buildThankYouPayload,
+    updateCustomerDisplayState,
   ]);
 
   const handlePlaceOrder = useCallback((overrideTableNumber?: string) => {
@@ -1568,6 +1856,9 @@ export default function POSPage() {
         setLastOrderTotal(formatCurrency(paymentData.finalTotal || pendingOrderTotal));
         setShowSuccessModal(true);
 
+        const thankYouPayload = buildThankYouPayload(lastOrderNumber || String(pendingOrderId || ''));
+        updateCustomerDisplayState('THANK_YOU', { thankYou: thankYouPayload });
+
         // Refresh POS history + active orders so payment status updates everywhere
         mutate('/api/merchant/orders/pos/history?today=true');
         mutate('/api/merchant/orders/active');
@@ -1583,7 +1874,7 @@ export default function POSPage() {
       console.error('[POS] Payment error:', error);
       showError(t('pos.paymentFailed') || 'Payment failed', t('common.error'));
     }
-  }, [pendingOrderId, pendingOrderTotal, formatCurrency, showError, t]);
+  }, [pendingOrderId, pendingOrderTotal, formatCurrency, showError, t, buildThankYouPayload, lastOrderNumber, updateCustomerDisplayState]);
 
   // Handle payment cancel (order already created, just skip payment recording)
   const handlePaymentCancel = useCallback(() => {
@@ -1822,6 +2113,42 @@ export default function POSPage() {
               <FaPlus className="w-3 h-3" />
             </button>
           </div>
+
+          {/* Live cart toggle */}
+          <div
+            className="flex items-center gap-2 px-3 py-1.5 bg-white/20 rounded-lg text-white"
+            title={t('pos.liveCartHint') || 'Send live cart updates to customer display'}
+          >
+            <span className="text-xs font-semibold">{t('pos.liveCart') || 'Live cart'}</span>
+            <Switch
+              checked={isLiveCartEnabled}
+              onCheckedChange={setIsLiveCartEnabled}
+              aria-label={t('pos.liveCart') || 'Live cart'}
+            />
+          </div>
+
+          {isLiveCartEnabled && (
+            <div
+              className="flex items-center gap-2 px-3 py-1.5 bg-white/20 rounded-lg text-white"
+              title={t('admin.customerDisplay.controlsHint') || 'Lock this screen to prevent POS updates.'}
+            >
+              <FaLock className="w-3.5 h-3.5" />
+              <span className="text-xs font-semibold">
+                {t('admin.customerDisplay.controlsTitle') || 'Display control'}
+              </span>
+              <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${isDisplayLocked ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                {isDisplayLocked
+                  ? (t('admin.customerDisplay.lockedStatus') || 'Locked')
+                  : (t('admin.customerDisplay.unlockedStatus') || 'Auto')}
+              </span>
+              <Switch
+                checked={isDisplayLocked}
+                onCheckedChange={handleToggleDisplayLock}
+                aria-label={t('admin.customerDisplay.lockDisplay') || 'Lock display'}
+                size="sm"
+              />
+            </div>
+          )}
 
           {/* Display mode toggle - Progressive: Normal → Clean → Fullscreen */}
           <button

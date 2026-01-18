@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { clearDriverAuth, getDriverAuth, getDriverToken } from '@/lib/utils/driverAuth';
+import { clearDriverAuth, getDriverAuth, refreshDriverSession } from '@/lib/utils/driverAuth';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { LanguageToggle } from '@/components/common/LanguageSelector';
 import { formatCurrency } from '@/lib/utils/format';
@@ -105,6 +105,17 @@ export default function DriverDashboardPage() {
 
   const abortRef = useRef<AbortController | null>(null);
 
+  const ensureDriverAuth = useCallback(async () => {
+    const auth = getDriverAuth({ skipRedirect: true, allowExpired: true });
+    if (!auth) return null;
+
+    if (new Date(auth.expiresAt) < new Date()) {
+      return refreshDriverSession();
+    }
+
+    return auth;
+  }, []);
+
   const merchantLabel = useMemo(() => {
     if (!data?.merchant) return t('driver.dashboard.title');
     return `${data.merchant.name} • ${t('driver.dashboard.title')}`;
@@ -140,7 +151,8 @@ export default function DriverDashboardPage() {
         setError('');
       }
 
-      const token = getDriverToken();
+      const auth = await ensureDriverAuth();
+      const token = auth?.accessToken;
       if (!token) {
         clearDriverAuth();
         router.replace('/driver/login?error=expired');
@@ -155,7 +167,7 @@ export default function DriverDashboardPage() {
         }
         abortRef.current = new AbortController();
 
-        const res = await fetch(`/api/driver/dashboard?history=${encodeURIComponent(history)}`, {
+        let res = await fetch(`/api/driver/dashboard?history=${encodeURIComponent(history)}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -163,9 +175,25 @@ export default function DriverDashboardPage() {
         });
 
         if (res.status === 401 || res.status === 403) {
-          clearDriverAuth();
-          router.replace('/driver/login?error=expired');
-          return;
+          const refreshed = await refreshDriverSession();
+          if (!refreshed?.accessToken) {
+            clearDriverAuth();
+            router.replace('/driver/login?error=expired');
+            return;
+          }
+
+          res = await fetch(`/api/driver/dashboard?history=${encodeURIComponent(history)}`, {
+            headers: {
+              Authorization: `Bearer ${refreshed.accessToken}`,
+            },
+            signal: abortRef.current.signal,
+          });
+
+          if (res.status === 401 || res.status === 403) {
+            clearDriverAuth();
+            router.replace('/driver/login?error=expired');
+            return;
+          }
         }
 
         const json = (await res.json()) as DriverDashboardResponse;
@@ -196,25 +224,29 @@ export default function DriverDashboardPage() {
         }
       }
     },
-    [historyFilter, router, t]
+    [ensureDriverAuth, historyFilter, router, t]
   );
 
   useEffect(() => {
-    const auth = getDriverAuth();
-    if (!auth) {
-      router.replace('/driver/login?error=unauthorized');
-      return;
-    }
+    const bootstrap = async () => {
+      const auth = await ensureDriverAuth();
+      if (!auth) {
+        router.replace('/driver/login?error=unauthorized');
+        return;
+      }
 
-    if (auth.user.role !== 'DELIVERY') {
-      clearDriverAuth();
-      router.replace('/driver/login');
-      return;
-    }
+      if (auth.user.role !== 'DELIVERY') {
+        clearDriverAuth();
+        router.replace('/driver/login');
+        return;
+      }
 
-    void load();
-    setPollingEnabled(true);
-  }, [load, router]);
+      void load();
+      setPollingEnabled(true);
+    };
+
+    void bootstrap();
+  }, [ensureDriverAuth, load, router]);
 
   useEffect(() => {
     if (!pollingEnabled) return;
@@ -247,7 +279,8 @@ export default function DriverDashboardPage() {
     deliveryStatus: 'PICKED_UP' | 'DELIVERED' | 'FAILED',
     options?: { confirmCodReceived?: boolean }
   ) {
-    const token = getDriverToken();
+    const auth = await ensureDriverAuth();
+    const token = auth?.accessToken;
     if (!token) {
       clearDriverAuth();
       router.replace('/driver/login?error=expired');
@@ -256,7 +289,7 @@ export default function DriverDashboardPage() {
 
     setIsUpdatingId(orderId);
     try {
-      const res = await fetch(`/api/delivery/orders/${encodeURIComponent(orderId)}/status`, {
+      let res = await fetch(`/api/delivery/orders/${encodeURIComponent(orderId)}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -266,9 +299,27 @@ export default function DriverDashboardPage() {
       });
 
       if (res.status === 401 || res.status === 403) {
-        clearDriverAuth();
-        router.replace('/driver/login?error=expired');
-        return;
+        const refreshed = await refreshDriverSession();
+        if (!refreshed?.accessToken) {
+          clearDriverAuth();
+          router.replace('/driver/login?error=expired');
+          return;
+        }
+
+        res = await fetch(`/api/delivery/orders/${encodeURIComponent(orderId)}/status`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${refreshed.accessToken}`,
+          },
+          body: JSON.stringify({ deliveryStatus, ...(options?.confirmCodReceived ? { confirmCodReceived: true } : null) }),
+        });
+
+        if (res.status === 401 || res.status === 403) {
+          clearDriverAuth();
+          router.replace('/driver/login?error=expired');
+          return;
+        }
       }
 
       const json = await res.json();

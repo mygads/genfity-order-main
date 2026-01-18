@@ -31,6 +31,7 @@ import {
   FaStickyNote,
   FaCalendarCheck,
   FaUsers,
+  FaEye,
 } from 'react-icons/fa';
 import Image from 'next/image';
 import { ORDER_STATUS_COLORS } from '@/lib/constants/orderConstants';
@@ -47,6 +48,12 @@ import OrderTotalsBreakdown from '@/components/orders/OrderTotalsBreakdown';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { STAFF_PERMISSIONS } from '@/lib/constants/permissions';
 import { useAuth } from '@/hooks/useAuth';
+import type {
+  CustomerDisplayPayload,
+  CustomerDisplayOrderPayload,
+  CustomerDisplayThankYouPayload,
+  CustomerDisplayTotals,
+} from '@/lib/types/customerDisplay';
 
 interface OrderDetailModalProps {
   orderId: string;
@@ -91,6 +98,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   const [isEditingAdminNote, setIsEditingAdminNote] = useState(false);
   const [adminNoteDraft, setAdminNoteDraft] = useState<string>('');
   const [savingAdminNote, setSavingAdminNote] = useState(false);
+  const [pushingCustomerDisplay, setPushingCustomerDisplay] = useState(false);
 
   const [isEditingTableNumber, setIsEditingTableNumber] = useState(false);
   const [tableNumberDraft, setTableNumberDraft] = useState('');
@@ -124,6 +132,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     ['DINE_IN', 'TAKEAWAY'].includes(order.orderType)
   );
   const hasAdminChanges = Boolean((order as any)?.editedAt || (order as any)?.editedByUserId);
+  const isPaymentPending = !order?.payment || order.payment.status === 'PENDING';
 
   const apiOrderId = React.useMemo(() => {
     if (/^\d+$/.test(String(orderId))) return String(orderId);
@@ -462,6 +471,15 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
         onUpdate?.();
         setShowPaymentModal(false);
 
+        const thankYouPayload = buildThankYouDisplayPayload(order);
+        if (thankYouPayload) {
+          try {
+            await updateCustomerDisplayState('THANK_YOU', { thankYou: thankYouPayload });
+          } catch {
+            // Ignore display update failure
+          }
+        }
+
         const methodLabel = formatPaymentMethodLabel({
           orderType: order.orderType,
           paymentStatus: 'COMPLETED',
@@ -505,6 +523,14 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
 
       await fetchOrderDetails();
       onUpdate?.();
+      const thankYouPayload = buildThankYouDisplayPayload(order);
+      if (thankYouPayload) {
+        try {
+          await updateCustomerDisplayState('THANK_YOU', { thankYou: thankYouPayload });
+        } catch {
+          // Ignore display update failure
+        }
+      }
       showSuccess('Cash on Delivery marked as paid', 'Payment Completed');
     } catch (error) {
       console.error('Error confirming COD payment:', error);
@@ -530,6 +556,113 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   const handleChangeOrder = () => {
     if (!order) return;
     router.push(`/admin/dashboard/pos?editOrderId=${encodeURIComponent(apiOrderId)}`);
+  };
+
+  const buildTotalsFromOrder = useCallback((source: OrderWithDetails): CustomerDisplayTotals => {
+    const subtotal = Number(source.subtotal || 0);
+    const taxAmount = Number(source.taxAmount || 0);
+    const serviceChargeAmount = Number((source as any).serviceChargeAmount || 0);
+    const packagingFeeAmount = Number((source as any).packagingFeeAmount || 0);
+    const deliveryFeeAmount = Number((source as any).deliveryFeeAmount || 0);
+    const discountAmount = Number((source as any).discountAmount || 0);
+    const totalAmount = Number(source.totalAmount || 0);
+    const itemCount = Array.isArray(source.orderItems) ? source.orderItems.length : 0;
+    const quantityCount = Array.isArray(source.orderItems)
+      ? source.orderItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0)
+      : 0;
+
+    return {
+      subtotal,
+      taxAmount,
+      serviceChargeAmount,
+      packagingFeeAmount,
+      deliveryFeeAmount,
+      discountAmount,
+      totalAmount,
+      itemCount,
+      quantityCount,
+    };
+  }, []);
+
+  const buildOrderDisplayPayload = useCallback((source: OrderWithDetails): CustomerDisplayOrderPayload => {
+    return {
+      orderNumber: String(source.orderNumber || ''),
+      orderType: source.orderType as CustomerDisplayOrderPayload['orderType'],
+      tableNumber: source.tableNumber || undefined,
+      customerName: source.customer?.name || (source as unknown as { customerName?: string }).customerName || undefined,
+      paymentStatus: source.payment?.status || 'PENDING',
+      items: (source.orderItems || []).map((item) => {
+        const addons = (item.addons || []).map((addon) => ({
+          name: addon.addonName,
+          quantity: Number(addon.quantity || 0),
+          unitPrice: Number(addon.addonPrice || 0),
+          lineTotal: Number(addon.subtotal || (Number(addon.addonPrice || 0) * Number(addon.quantity || 0))),
+        }));
+
+        return {
+          name: item.menuName,
+          quantity: Number(item.quantity || 0),
+          unitPrice: Number(item.menuPrice || 0),
+          lineTotal: Number(item.subtotal || 0),
+          notes: item.notes || undefined,
+          addons: addons.length > 0 ? addons : undefined,
+        };
+      }),
+      totals: buildTotalsFromOrder(source),
+    };
+  }, [buildTotalsFromOrder]);
+
+  const buildThankYouDisplayPayload = useCallback((source: OrderWithDetails): CustomerDisplayThankYouPayload => {
+    return {
+      orderNumber: String(source.orderNumber || ''),
+      orderType: source.orderType as CustomerDisplayThankYouPayload['orderType'],
+      tableNumber: source.tableNumber || undefined,
+      customerName: source.customer?.name || (source as unknown as { customerName?: string }).customerName || undefined,
+    };
+  }, []);
+
+  const updateCustomerDisplayState = useCallback(async (
+    mode: 'ORDER_REVIEW' | 'THANK_YOU',
+    payload: CustomerDisplayPayload,
+    options?: { isLocked?: boolean }
+  ) => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) return;
+
+    const response = await fetch('/api/merchant/customer-display/state', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        mode,
+        payload,
+        isLocked: options?.isLocked,
+        source: 'manual',
+      }),
+    });
+
+    const json = await response.json().catch(() => ({}));
+    if (!response.ok || !json?.success) {
+      throw new Error(json?.message || 'Failed to update customer display');
+    }
+  }, []);
+
+  const handleShowToCustomer = async () => {
+    if (!order) return;
+    if (pushingCustomerDisplay) return;
+
+    setPushingCustomerDisplay(true);
+    try {
+      const payload = buildOrderDisplayPayload(order);
+      await updateCustomerDisplayState('ORDER_REVIEW', { order: payload }, { isLocked: true });
+      showSuccess(t('admin.orders.showToCustomerSuccess') || 'Order shown on customer display', 'Success');
+    } catch (error) {
+      showError((error as Error)?.message || (t('admin.orders.showToCustomerFailed') || 'Failed to update customer display'), 'Display');
+    } finally {
+      setPushingCustomerDisplay(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -1167,6 +1300,16 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                 </button>
               ) : shouldShowFooterActions ? (
                 <div className="space-y-2">
+                  {order.status === 'PENDING' && isPaymentPending && !isKitchenView ? (
+                    <button
+                      onClick={handleShowToCustomer}
+                      disabled={pushingCustomerDisplay || updating}
+                      className="flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-brand-200 bg-brand-50 text-sm font-semibold text-brand-700 hover:bg-brand-100 disabled:opacity-50 dark:border-brand-900/40 dark:bg-brand-900/20 dark:text-brand-200"
+                    >
+                      {pushingCustomerDisplay ? <FaSpinner className="h-4 w-4 animate-spin" /> : <FaEye className="h-4 w-4" />}
+                      {t('admin.orders.showToCustomer') || 'Show to customer'}
+                    </button>
+                  ) : null}
                   {canEditOrder && (
                     <button
                       onClick={handleChangeOrder}

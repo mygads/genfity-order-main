@@ -21,7 +21,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import useSWR, { SWRConfiguration, KeyedMutator } from 'swr';
-import { clearAdminAuth } from '@/lib/utils/adminAuth';
+import { clearAdminAuth, refreshAdminSession } from '@/lib/utils/adminAuth';
 
 // Custom error class with additional info
 interface FetchError extends Error {
@@ -63,6 +63,29 @@ const createAuthFetcher = (loginRedirect: string) => async (url: string) => {
     
     // 401 Unauthorized - Token invalid/expired, clear session and redirect
     if (res.status === 401) {
+      const refreshed = await refreshAdminSession();
+      if (refreshed?.accessToken) {
+        const retryRes = await fetch(url, {
+          headers: {
+            Authorization: `Bearer ${refreshed.accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (retryRes.ok) {
+          return retryRes.json();
+        }
+
+        const retryInfo = await retryRes.json().catch(() => ({}));
+        const retryError: FetchError = new Error(
+          retryInfo?.message || 'An error occurred while fetching the data.'
+        );
+        retryError.info = retryInfo;
+        retryError.status = retryRes.status;
+        retryError.isAuthError = retryRes.status === 401;
+        throw retryError;
+      }
+
       clearSessionAndRedirect(loginRedirect);
       // Return a promise that never resolves to prevent further execution
       return new Promise(() => {});

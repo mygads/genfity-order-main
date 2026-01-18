@@ -114,6 +114,27 @@ export class BlobService {
   }
 
   /**
+   * Upload merchant promo banner
+   * @param merchantId Merchant ID
+   * @param file Image file
+   * @returns Upload result
+   */
+  static async uploadMerchantPromoBanner(
+    merchantId: string | number,
+    file: File | Buffer
+  ): Promise<UploadResult> {
+    const timestamp = Date.now();
+    const pathname = `merchants/promo-banners/merchant-${merchantId}/promo-${timestamp}.jpg`;
+
+    return this.uploadFile(file, pathname, {
+      access: 'public',
+      addRandomSuffix: true,
+      cacheControlMaxAge: 86400,
+      contentType: 'image/jpeg',
+    });
+  }
+
+  /**
    * Upload menu item image
    * @param merchantId Merchant ID
    * @param menuId Menu ID

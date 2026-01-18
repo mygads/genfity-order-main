@@ -14,6 +14,7 @@ interface AddonItem {
   isActive: boolean;
   trackStock: boolean;
   stockQty: number | null;
+  lowStockThreshold?: number | null;
   dailyStockTemplate: number | null;
   autoResetStock: boolean;
   addonCategory?: {

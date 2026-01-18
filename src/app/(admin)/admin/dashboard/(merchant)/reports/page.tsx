@@ -46,6 +46,7 @@ export default function ReportsPage() {
       netRevenue: number;
       totalOrders: number;
       completedOrders: number;
+      cancelledOrders: number;
       completionRate: number;
       averageOrderValue: number;
       subtotal: number;

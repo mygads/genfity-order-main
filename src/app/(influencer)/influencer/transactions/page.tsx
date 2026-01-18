@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useInfluencer } from '../layout';
 import InfluencerHeader from '@/layout/InfluencerHeader';
 import { InfluencerTransactionsSkeleton } from '@/components/common/SkeletonLoaders';
+import { fetchInfluencerJson } from '@/lib/utils/influencerAuth';
 import {
   FaCheckCircle,
   FaSyncAlt,
@@ -83,7 +84,8 @@ export default function InfluencerTransactionsPage() {
 
   const fetchTransactions = useCallback(async () => {
     const token = localStorage.getItem('influencerAccessToken');
-    if (!token) {
+    const refreshToken = localStorage.getItem('influencerRefreshToken');
+    if (!token && !refreshToken) {
       router.push('/influencer/login');
       return;
     }
@@ -93,21 +95,23 @@ export default function InfluencerTransactionsPage() {
       if (filter !== 'all') params.append('type', filter);
       if (currencyFilter !== 'all') params.append('currency', currencyFilter);
 
-      const response = await fetch(`/api/influencer/transactions?${params}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const { response, data } = await fetchInfluencerJson<{ data: { transactions?: Transaction[] } | Transaction[]; message?: string }>(
+        `/api/influencer/transactions?${params}`
+      );
 
       if (response.status === 401) {
-        localStorage.removeItem('influencerAccessToken');
         router.push('/influencer/login');
         return;
       }
 
-      const data = await response.json();
       if (response.ok) {
-        setTransactions(data.data.transactions || data.data);
+        if (Array.isArray(data?.data)) {
+          setTransactions(data.data as Transaction[]);
+        } else {
+          setTransactions(data?.data?.transactions || []);
+        }
       } else {
-        setError(data.message || 'Failed to load transactions');
+        setError(data?.message || 'Failed to load transactions');
       }
     } catch {
       setError('Network error. Please try again.');

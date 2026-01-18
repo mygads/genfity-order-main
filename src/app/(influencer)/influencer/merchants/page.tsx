@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import InfluencerHeader from '@/layout/InfluencerHeader';
 import { useInfluencer } from '../layout';
+import { fetchInfluencerJson } from '@/lib/utils/influencerAuth';
 import {
   FaSearch,
   FaDownload,
@@ -108,7 +109,8 @@ export default function InfluencerMerchantsPage() {
 
   const fetchMerchants = useCallback(async () => {
     const token = localStorage.getItem('influencerAccessToken');
-    if (!token) {
+    const refreshToken = localStorage.getItem('influencerRefreshToken');
+    if (!token && !refreshToken) {
       router.push('/influencer/login');
       return;
     }
@@ -117,26 +119,22 @@ export default function InfluencerMerchantsPage() {
     setError('');
 
     try {
-      const response = await fetch(`/api/influencer/merchants?${queryParams.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const { response, data } = await fetchInfluencerJson<ApiResponse>(
+        `/api/influencer/merchants?${queryParams.toString()}`
+      );
 
       if (response.status === 401) {
-        localStorage.removeItem('influencerAccessToken');
-        localStorage.removeItem('influencerRefreshToken');
-        localStorage.removeItem('influencerData');
         router.push('/influencer/login');
         return;
       }
 
-      const result = (await response.json()) as ApiResponse;
-      if (!response.ok || !result.success) {
-        setError((result as any).message || 'Failed to load merchants');
+      if (!response.ok || !data?.success) {
+        setError((data as any)?.message || 'Failed to load merchants');
         return;
       }
 
-      setMerchants(result.data.merchants || []);
-      setTotalPages(result.data.pagination?.totalPages || 1);
+      setMerchants(data.data.merchants || []);
+      setTotalPages(data.data.pagination?.totalPages || 1);
     } catch {
       setError('Network error. Please try again.');
     } finally {
@@ -191,7 +189,7 @@ export default function InfluencerMerchantsPage() {
 
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 mb-6">
           <div className="flex flex-wrap gap-4 items-end">
-            <div className="min-w-[240px]">
+            <div className="min-w-60">
               <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Search</label>
               <div className="relative">
                 <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />

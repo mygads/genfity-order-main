@@ -85,6 +85,15 @@ async function switchMerchantHandler(
       );
     }
 
+    const session = await sessionRepository.findById(authContext.sessionId);
+    const now = Date.now();
+    const accessExpiresIn = session?.expiresAt
+      ? Math.max(1, Math.floor((session.expiresAt.getTime() - now) / 1000))
+      : parseInt(process.env.JWT_EXPIRY || '3600');
+    const refreshExpiresIn = session?.refreshExpiresAt
+      ? Math.max(1, Math.floor((session.refreshExpiresAt.getTime() - now) / 1000))
+      : parseInt(process.env.JWT_REFRESH_EXPIRY || '604800');
+
     // Generate new tokens with new merchantId
     const accessToken = generateAccessToken({
       userId: authContext.userId,
@@ -92,12 +101,12 @@ async function switchMerchantHandler(
       role: authContext.role,
       email: authContext.email,
       merchantId: targetMerchantId,
-    });
+    }, accessExpiresIn);
 
     const refreshToken = generateRefreshToken({
       userId: authContext.userId,
       sessionId: authContext.sessionId,
-    });
+    }, refreshExpiresIn);
 
     // Update session with new token
     await sessionRepository.update(authContext.sessionId, {

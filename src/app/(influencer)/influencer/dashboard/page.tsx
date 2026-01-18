@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useInfluencer } from '../layout';
 import InfluencerHeader from '@/layout/InfluencerHeader';
 import { InfluencerDashboardSkeleton } from '@/components/common/SkeletonLoaders';
+import { clearInfluencerAuth, fetchInfluencerJson } from '@/lib/utils/influencerAuth';
 import {
   FaExclamationCircle,
   FaClock,
@@ -95,23 +96,34 @@ export default function InfluencerDashboardPage() {
 
   const fetchDashboard = useCallback(async () => {
     const token = localStorage.getItem('influencerAccessToken');
-    if (!token) return;
+    const refreshToken = localStorage.getItem('influencerRefreshToken');
+    if (!token && !refreshToken) {
+      clearInfluencerAuth();
+      if (typeof window !== 'undefined') {
+        window.location.href = '/influencer/login';
+      }
+      return;
+    }
 
     try {
-      const response = await fetch('/api/influencer/dashboard', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const { response, data } = await fetchInfluencerJson<{ data: DashboardData; message?: string }>('/api/influencer/dashboard');
 
-      const result = await response.json();
-      if (response.ok) {
+      if (response.status === 401) {
+        if (typeof window !== 'undefined') {
+          window.location.href = '/influencer/login';
+        }
+        return;
+      }
+
+      if (response.ok && data?.data) {
         setData({
-          balances: result.data.balances,
-          stats: result.data.stats,
-          referredMerchants: result.data.referredMerchants,
-          recentTransactions: result.data.recentTransactions,
+          balances: data.data.balances,
+          stats: data.data.stats,
+          referredMerchants: data.data.referredMerchants,
+          recentTransactions: data.data.recentTransactions,
         });
       } else {
-        setError(result.message || 'Failed to load dashboard');
+        setError(data?.message || 'Failed to load dashboard');
       }
     } catch {
       setError('Network error. Please try again.');
@@ -157,7 +169,7 @@ export default function InfluencerDashboardPage() {
       <>
         <InfluencerHeader title="Dashboard" onMenuClick={() => setIsSidebarOpen(true)} />
         <main className="p-4 lg:p-6">
-          <div className="flex items-center justify-center min-h-[400px]">
+          <div className="flex items-center justify-center min-h-100">
             <div className="text-center max-w-md">
               <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
                 <FaExclamationCircle className="w-8 h-8 text-red-500" />
@@ -199,7 +211,7 @@ export default function InfluencerDashboardPage() {
 
       <main className="p-4 lg:p-6">
         {/* Welcome Banner */}
-        <div className="bg-gradient-to-r from-brand-500 to-brand-600 rounded-2xl p-6 mb-8 text-white relative overflow-hidden">
+        <div className="bg-linear-to-r from-brand-500 to-brand-600 rounded-2xl p-6 mb-8 text-white relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
           <div className="relative z-10">
             <h2 className="text-2xl font-bold mb-2">Welcome back, {influencer.name}!</h2>

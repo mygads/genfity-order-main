@@ -476,6 +476,7 @@ class AuthService {
   async refreshAccessToken(refreshToken: string): Promise<{
     accessToken: string;
     refreshToken: string;
+    expiresIn: number;
   }> {
     // Verify refresh token
     const payload = verifyRefreshToken(refreshToken);
@@ -513,6 +514,23 @@ class AuthService {
       );
     }
 
+    // Check if session is expired
+    if (session.expiresAt && session.expiresAt < new Date()) {
+      await sessionRepository.updateStatus(session.id, 'EXPIRED');
+      throw new AuthenticationError(
+        'Session has expired',
+        ERROR_CODES.TOKEN_EXPIRED
+      );
+    }
+
+    const now = Date.now();
+    const accessExpiresIn = session.expiresAt
+      ? Math.max(1, Math.floor((session.expiresAt.getTime() - now) / 1000))
+      : parseInt(process.env.JWT_EXPIRY || '3600');
+    const refreshExpiresIn = session.refreshExpiresAt
+      ? Math.max(1, Math.floor((session.refreshExpiresAt.getTime() - now) / 1000))
+      : parseInt(process.env.JWT_REFRESH_EXPIRY || '604800');
+
     // Get merchant info if user is merchant owner/staff
     let merchantId: bigint | undefined;
     // Note: merchantUsers may be included by session repository but not in static type
@@ -528,22 +546,22 @@ class AuthService {
       role: session.user.role,
       email: session.user.email,
       merchantId,
-    });
+    }, accessExpiresIn);
 
     const newRefreshToken = generateRefreshToken({
       userId: session.userId,
       sessionId: session.id,
-    });
+    }, refreshExpiresIn);
 
     // Update session with new access token
     await sessionRepository.update(session.id, {
       token: newAccessToken,
-      expiresAt: new Date(Date.now() + parseInt(process.env.JWT_EXPIRY || '3600') * 1000),
     });
 
     return {
       accessToken: newAccessToken,
       refreshToken: newRefreshToken,
+      expiresIn: accessExpiresIn,
     };
   }
 
@@ -650,14 +668,15 @@ class AuthService {
       mustChangePassword: false,
     });
 
+    const sessionDuration = this.getSessionDuration(user.role, false);
+    const refreshDuration = this.getRefreshDuration(user.role, false);
+
     // Create session and login (same as normal login flow)
     const expiresAt = new Date();
-    expiresAt.setSeconds(expiresAt.getSeconds() + parseInt(process.env.JWT_EXPIRY || '3600'));
+    expiresAt.setSeconds(expiresAt.getSeconds() + sessionDuration);
 
     const refreshExpiresAt = new Date();
-    refreshExpiresAt.setSeconds(
-      refreshExpiresAt.getSeconds() + parseInt(process.env.JWT_REFRESH_EXPIRY || '604800')
-    );
+    refreshExpiresAt.setSeconds(refreshExpiresAt.getSeconds() + refreshDuration);
 
     // Generate temporary token for session creation
     const tempToken = `temp_${user.id}_${Date.now()}`;
@@ -680,12 +699,12 @@ class AuthService {
       sessionId: session.id,
       role: user.role,
       email: user.email,
-    });
+    }, sessionDuration);
 
     const refreshToken = generateRefreshToken({
       userId: user.id,
       sessionId: session.id,
-    });
+    }, refreshDuration);
 
     // Update session with actual access token
     await sessionRepository.update(session.id, {
@@ -711,6 +730,7 @@ class AuthService {
       },
       accessToken,
       refreshToken,
+      expiresIn: sessionDuration,
     };
   }
 

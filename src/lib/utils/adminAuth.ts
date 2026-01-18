@@ -14,6 +14,8 @@
  * - Role validation (SUPER_ADMIN, MERCHANT_OWNER, MERCHANT_STAFF)
  */
 
+import { requestSessionRefresh } from './sessionRefresh';
+
 export interface AdminUser {
   id: string;
   name: string;
@@ -37,7 +39,7 @@ const ADMIN_AUTH_KEY = 'genfity_admin_auth';
  * Returns null if not authenticated or token expired
  * Auto-redirects to login if expired (for admin routes only)
  */
-export function getAdminAuth(options?: { skipRedirect?: boolean }): AdminAuth | null {
+export function getAdminAuth(options?: { skipRedirect?: boolean; allowExpired?: boolean }): AdminAuth | null {
   if (typeof window === 'undefined') return null;
 
   try {
@@ -48,13 +50,17 @@ export function getAdminAuth(options?: { skipRedirect?: boolean }): AdminAuth | 
 
     // Check if token expired
     if (new Date(auth.expiresAt) < new Date()) {
+      if (options?.allowExpired) {
+        return auth;
+      }
+
       clearAdminAuth();
-      
+
       // Auto-redirect to login if on admin route and not skipping redirect
       if (!options?.skipRedirect && window.location.pathname.startsWith('/admin')) {
         window.location.href = '/admin/login?error=expired';
       }
-      
+
       return null;
     }
 
@@ -204,7 +210,7 @@ export function isAdminAuthenticated(): boolean {
  * Get admin access token
  */
 export function getAdminToken(): string | null {
-  const auth = getAdminAuth();
+  const auth = getAdminAuth({ skipRedirect: true, allowExpired: true });
   return auth?.accessToken ?? null;
 }
 
@@ -249,4 +255,30 @@ export function isMerchantOwner(): boolean {
  */
 export function isMerchantStaff(): boolean {
   return hasRole('MERCHANT_STAFF');
+}
+
+/**
+ * Refresh admin access token using stored refresh token.
+ */
+export async function refreshAdminSession(): Promise<ExtendedAdminAuth | null> {
+  if (typeof window === 'undefined') return null;
+
+  const auth = getAdminAuth({ skipRedirect: true, allowExpired: true }) as ExtendedAdminAuth | null;
+  if (!auth?.refreshToken) return null;
+
+  const data = await requestSessionRefresh(auth.refreshToken);
+  if (!data?.accessToken) return null;
+
+  const expiresIn = Number(data.expiresIn || 0);
+  const expiresAt = new Date(Date.now() + (expiresIn > 0 ? expiresIn : 3600) * 1000).toISOString();
+
+  const updated: ExtendedAdminAuth = {
+    ...auth,
+    accessToken: data.accessToken,
+    refreshToken: data.refreshToken || auth.refreshToken,
+    expiresAt,
+  };
+
+  saveAdminAuth(updated);
+  return updated;
 }

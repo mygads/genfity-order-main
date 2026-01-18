@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useInfluencer } from '../layout';
 import InfluencerHeader from '@/layout/InfluencerHeader';
 import { InfluencerSettingsSkeleton } from '@/components/common/SkeletonLoaders';
+import { fetchInfluencerJson } from '@/lib/utils/influencerAuth';
 import { FaCheckCircle, FaSpinner } from 'react-icons/fa';
 
 interface InfluencerData {
@@ -48,24 +49,21 @@ export default function InfluencerSettingsPage() {
 
   const fetchData = useCallback(async () => {
     const token = localStorage.getItem('influencerAccessToken');
-    if (!token) {
+    const refreshToken = localStorage.getItem('influencerRefreshToken');
+    if (!token && !refreshToken) {
       router.push('/influencer/login');
       return;
     }
 
     try {
-      const response = await fetch('/api/influencer/auth/me', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const { response, data } = await fetchInfluencerJson<{ data: InfluencerData; message?: string }>('/api/influencer/auth/me');
       
       if (response.status === 401) {
-        localStorage.removeItem('influencerAccessToken');
         router.push('/influencer/login');
         return;
       }
 
-      const data = await response.json();
-      if (response.ok) {
+      if (response.ok && data?.data) {
         setInfluencer(data.data);
         setFormData({
           bankNameIdr: data.data.bankNameIdr || '',
@@ -94,25 +92,31 @@ export default function InfluencerSettingsPage() {
     setIsSaving(true);
 
     const token = localStorage.getItem('influencerAccessToken');
-    if (!token) {
+    const refreshToken = localStorage.getItem('influencerRefreshToken');
+    if (!token && !refreshToken) {
       router.push('/influencer/login');
       return;
     }
 
     try {
-      const response = await fetch('/api/influencer/bank-details', {
+      const { response, data } = await fetchInfluencerJson<{ message?: string }>(
+        '/api/influencer/bank-details',
+        {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(formData),
-      });
+        }
+      );
 
-      const data = await response.json();
+      if (response.status === 401) {
+        router.push('/influencer/login');
+        return;
+      }
 
       if (!response.ok) {
-        setSaveError(data.message || 'Failed to save bank details');
+        setSaveError(data?.message || 'Failed to save bank details');
         setIsSaving(false);
         return;
       }
@@ -143,7 +147,7 @@ export default function InfluencerSettingsPage() {
       <>
         <InfluencerHeader title="Settings" onMenuClick={() => setIsSidebarOpen(true)} />
         <main className="p-4 lg:p-6">
-          <div className="flex items-center justify-center min-h-[400px]">
+          <div className="flex items-center justify-center min-h-100">
             <div className="text-center">
               <p className="text-red-500 mb-4">{error || 'Failed to load data'}</p>
               <button onClick={fetchData} className="px-4 py-2 bg-brand-500 text-white rounded-lg">
