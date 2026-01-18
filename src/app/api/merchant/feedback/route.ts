@@ -12,6 +12,47 @@ import prisma from '@/lib/db/client';
 import { withMerchant, AuthContext } from '@/lib/middleware/auth';
 import { serializeBigInt } from '@/lib/utils/serializer';
 
+const POSITIVE_WORDS = [
+    'good', 'great', 'excellent', 'amazing', 'love', 'friendly', 'fast', 'quick',
+    'tasty', 'delicious', 'nice', 'satisfied', 'mantap', 'enak', 'lezat', 'ramah',
+    'cepat', 'bagus', 'puas', 'mantul', 'recommended', 'recommend'
+];
+const NEGATIVE_WORDS = [
+    'bad', 'slow', 'late', 'cold', 'rude', 'burnt', 'dirty', 'expensive', 'small',
+    'poor', 'not good', 'delay', 'overpriced', 'mahal', 'lama', 'dingin', 'kurang',
+    'kecewa', 'jelek', 'kotor', 'asin', 'gosong'
+];
+
+const TAG_KEYWORDS: Record<string, string[]> = {
+    service: ['service', 'staff', 'waiter', 'cashier', 'ramah', 'pelayanan', 'kasir'],
+    food: ['food', 'taste', 'flavor', 'tasty', 'delicious', 'enak', 'lezat', 'rasa', 'makanan'],
+    delivery: ['delivery', 'driver', 'courier', 'antar', 'pengantaran'],
+    price: ['price', 'expensive', 'cheap', 'mahal', 'murah', 'value'],
+    portion: ['portion', 'portion size', 'small', 'besar', 'porsi', 'portion'],
+    cleanliness: ['clean', 'dirty', 'kotor', 'bersih'],
+    packaging: ['packaging', 'package', 'kemasan', 'bungkus'],
+    speed: ['fast', 'quick', 'slow', 'late', 'cepat', 'lama'],
+};
+
+const normalizeText = (value?: string | null) => (value || '').toLowerCase();
+
+const getSentiment = (comment: string | null | undefined, rating: number) => {
+    const text = normalizeText(comment);
+    const hasPositive = POSITIVE_WORDS.some((word) => text.includes(word));
+    const hasNegative = NEGATIVE_WORDS.some((word) => text.includes(word));
+
+    if (rating >= 4 && hasPositive && !hasNegative) return 'positive';
+    if (rating <= 2 || hasNegative) return 'negative';
+    return 'neutral';
+};
+
+const getTags = (comment: string | null | undefined) => {
+    const text = normalizeText(comment);
+    return Object.entries(TAG_KEYWORDS)
+        .filter(([, keywords]) => keywords.some((keyword) => text.includes(keyword)))
+        .map(([tag]) => tag);
+};
+
 /**
  * GET /api/merchant/feedback
  * Get feedback list for merchant
@@ -36,6 +77,9 @@ export const GET = withMerchant(async (
         const maxRating = parseInt(searchParams.get('maxRating') || '5', 10);
         const startDate = searchParams.get('startDate');
         const endDate = searchParams.get('endDate');
+        const sentiment = searchParams.get('sentiment');
+        const tagFilter = searchParams.get('tag');
+        const search = searchParams.get('search');
 
         // Ensure merchantId is defined
         if (!context.merchantId) {
@@ -50,6 +94,7 @@ export const GET = withMerchant(async (
             merchantId: bigint;
             overallRating?: { gte?: number; lte?: number };
             createdAt?: { gte?: Date; lte?: Date };
+            OR?: Array<{ comment?: { contains: string; mode: 'insensitive' }; orderNumber?: { contains: string; mode: 'insensitive' } }>;
         } = {
             merchantId: context.merchantId,
         };
@@ -69,20 +114,46 @@ export const GET = withMerchant(async (
             if (endDate) where.createdAt.lte = new Date(endDate);
         }
 
-        // Get total count
-        const totalCount = await prisma.orderFeedback.count({ where });
+        if (search) {
+            where.OR = [
+                { comment: { contains: search, mode: 'insensitive' } },
+                { orderNumber: { contains: search, mode: 'insensitive' } },
+            ];
+        }
 
-        // Get feedback
+        const requiresClientFilter = Boolean(sentiment || tagFilter);
+
         const feedback = await prisma.orderFeedback.findMany({
             where,
             orderBy: { createdAt: 'desc' },
-            skip: (page - 1) * limit,
-            take: limit,
+            skip: requiresClientFilter ? 0 : (page - 1) * limit,
+            take: requiresClientFilter ? undefined : limit,
         });
+
+        const feedbackWithTags = feedback
+            .map((item) => {
+                const sentimentValue = getSentiment(item.comment, item.overallRating);
+                const tags = getTags(item.comment);
+                return {
+                    ...item,
+                    sentiment: sentimentValue,
+                    tags,
+                };
+            })
+            .filter((item) => {
+                if (sentiment && item.sentiment !== sentiment) return false;
+                if (tagFilter && !item.tags.includes(tagFilter)) return false;
+                return true;
+            });
+
+        const totalCount = requiresClientFilter ? feedbackWithTags.length : await prisma.orderFeedback.count({ where });
+        const paginated = requiresClientFilter
+            ? feedbackWithTags.slice((page - 1) * limit, (page - 1) * limit + limit)
+            : feedbackWithTags;
 
         return NextResponse.json({
             success: true,
-            data: serializeBigInt(feedback),
+            data: serializeBigInt(paginated),
             meta: {
                 page,
                 limit,

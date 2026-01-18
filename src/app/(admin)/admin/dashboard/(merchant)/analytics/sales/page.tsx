@@ -20,6 +20,7 @@ import { useTranslation } from '@/lib/i18n/useTranslation';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import dynamic from 'next/dynamic';
 import { ApexOptions } from 'apexcharts';
+import { formatCurrency } from '@/lib/utils/format';
 
 // Dynamic import for ApexCharts (SSR safe)
 const ReactApexChart = dynamic(() => import('react-apexcharts'), {
@@ -36,6 +37,20 @@ interface SalesAnalytics {
     cancelledOrders: number;
     completionRate: number;
   };
+  customerMetrics: {
+    totalCustomers: number;
+    newCustomers: number;
+    returningCustomers: number;
+    repeatPurchaseRate: number;
+    averageOrdersPerCustomer: number;
+  };
+  cohortRetention: Array<{
+    cohortMonth: string;
+    size: number;
+    month1: number;
+    month2: number;
+    month3: number;
+  }>;
   revenueTrend: Array<{
     date: string;
     revenue: number;
@@ -70,9 +85,15 @@ interface SalesAnalytics {
     revenue: number;
     percentage: number;
   }>;
+  categoryMix: Array<{
+    category: string;
+    revenue: number;
+    quantity: number;
+    percentage: number;
+  }>;
 }
 
-type PeriodType = 'today' | 'week' | 'month' | 'quarter' | 'year';
+type PeriodType = 'today' | 'week' | 'month' | 'quarter' | 'year' | 'custom';
 
 export default function SalesAnalyticsPage() {
   const router = useRouter();
@@ -82,6 +103,22 @@ export default function SalesAnalyticsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [period, setPeriod] = useState<PeriodType>('month');
   const [currency, setCurrency] = useState('AUD');
+  const [timezone, setTimezone] = useState('Asia/Jakarta');
+  const [startDate, setStartDate] = useState(() => {
+    const date = new Date();
+    date.setDate(date.getDate() - 30);
+    return date.toISOString().split('T')[0];
+  });
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [orderType, setOrderType] = useState('');
+  const [status, setStatus] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('');
+  const [scheduledOnly, setScheduledOnly] = useState(false);
+  const [presetName, setPresetName] = useState('');
+  const [selectedPreset, setSelectedPreset] = useState('');
+  const [presets, setPresets] = useState<Array<{ id: string; name: string; filters: Record<string, unknown> }>>([]);
+
+  const presetsStorageKey = 'genfity_sales_analytics_presets';
 
   // Fetch analytics data
   const fetchAnalytics = useCallback(async () => {
@@ -104,7 +141,17 @@ export default function SalesAnalyticsPage() {
         }
       }
 
-      const response = await fetch(`/api/merchant/analytics/sales?period=${period}`, {
+      const params = new URLSearchParams({ period });
+      if (period === 'custom') {
+        params.append('startDate', startDate);
+        params.append('endDate', endDate);
+      }
+      if (orderType) params.append('orderType', orderType);
+      if (status) params.append('status', status);
+      if (paymentMethod) params.append('paymentMethod', paymentMethod);
+      if (scheduledOnly) params.append('scheduledOnly', 'true');
+
+      const response = await fetch(`/api/merchant/analytics/sales?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -112,6 +159,9 @@ export default function SalesAnalyticsPage() {
         const data = await response.json();
         if (data.success) {
           setAnalytics(data.data);
+          if (data.meta?.timezone) {
+            setTimezone(data.meta.timezone);
+          }
         }
       }
     } catch (error) {
@@ -119,26 +169,25 @@ export default function SalesAnalyticsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [period, router]);
+  }, [period, router, startDate, endDate, orderType, status, paymentMethod, scheduledOnly]);
 
   useEffect(() => {
     fetchAnalytics();
   }, [fetchAnalytics]);
 
+  useEffect(() => {
+    const stored = localStorage.getItem(presetsStorageKey);
+    if (stored) {
+      try {
+        setPresets(JSON.parse(stored));
+      } catch {
+        setPresets([]);
+      }
+    }
+  }, []);
+
   // Format currency
-  const formatCurrency = (amount: number) => {
-    if (currency === 'IDR') {
-      return `Rp ${new Intl.NumberFormat('id-ID').format(Math.round(amount))}`;
-    }
-    if (currency === 'AUD') {
-      return `A$${new Intl.NumberFormat('en-AU', { minimumFractionDigits: 0 }).format(amount)}`;
-    }
-    return new Intl.NumberFormat('en-AU', {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: 0,
-    }).format(amount);
-  };
+  const formatMoney = (amount: number) => formatCurrency(amount, currency, 'en');
 
   // Format percentage
   const formatPercent = (value: number) => {
@@ -154,6 +203,58 @@ export default function SalesAnalyticsPage() {
   function formatStatus(status: string) {
     return status.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
   }
+
+  const savePreset = () => {
+    const trimmed = presetName.trim();
+    if (!trimmed) return;
+    const nextPreset = {
+      id: `${Date.now()}`,
+      name: trimmed,
+      filters: {
+        period,
+        startDate,
+        endDate,
+        orderType,
+        status,
+        paymentMethod,
+        scheduledOnly,
+      },
+    };
+    const nextPresets = [...presets, nextPreset];
+    setPresets(nextPresets);
+    setPresetName('');
+    localStorage.setItem(presetsStorageKey, JSON.stringify(nextPresets));
+  };
+
+  const applyPreset = (presetId: string) => {
+    const preset = presets.find((item) => item.id === presetId);
+    if (!preset) return;
+    const filters = preset.filters as Record<string, any>;
+    setPeriod(filters.period || 'month');
+    setStartDate(filters.startDate || startDate);
+    setEndDate(filters.endDate || endDate);
+    setOrderType(filters.orderType || '');
+    setStatus(filters.status || '');
+    setPaymentMethod(filters.paymentMethod || '');
+    setScheduledOnly(Boolean(filters.scheduledOnly));
+  };
+
+  const removePreset = (presetId: string) => {
+    const nextPresets = presets.filter((item) => item.id !== presetId);
+    setPresets(nextPresets);
+    if (selectedPreset === presetId) {
+      setSelectedPreset('');
+    }
+    localStorage.setItem(presetsStorageKey, JSON.stringify(nextPresets));
+  };
+
+  const heatColor = (value: number) => {
+    if (value >= 75) return 'rgba(34, 197, 94, 0.85)';
+    if (value >= 50) return 'rgba(34, 197, 94, 0.6)';
+    if (value >= 25) return 'rgba(34, 197, 94, 0.35)';
+    if (value > 0) return 'rgba(34, 197, 94, 0.2)';
+    return 'rgba(148, 163, 184, 0.2)';
+  };
 
   // Revenue Trend Chart Options
   const revenueTrendOptions: ApexOptions = {
@@ -174,10 +275,7 @@ export default function SalesAnalyticsPage() {
     },
     dataLabels: { enabled: false },
     xaxis: {
-      categories: analytics?.revenueTrend.map(d => {
-        const date = new Date(d.date);
-        return date.toLocaleDateString('en-AU', { month: 'short', day: 'numeric' });
-      }) || [],
+      categories: analytics?.revenueTrend.map(d => d.date) || [],
       axisBorder: { show: false },
       axisTicks: { show: false },
       labels: {
@@ -201,7 +299,7 @@ export default function SalesAnalyticsPage() {
     },
     tooltip: {
       y: {
-        formatter: (val: number) => formatCurrency(val),
+        formatter: (val: number) => formatMoney(val),
       },
     },
   };
@@ -261,6 +359,31 @@ export default function SalesAnalyticsPage() {
     },
   };
 
+  const categoryMixOptions: ApexOptions = {
+    chart: {
+      type: 'bar',
+      toolbar: { show: false },
+      fontFamily: 'Outfit, sans-serif',
+    },
+    colors: ['#22c55e'],
+    plotOptions: {
+      bar: { borderRadius: 4, columnWidth: '60%' },
+    },
+    dataLabels: { enabled: false },
+    xaxis: {
+      categories: analytics?.categoryMix.map((item) => item.category) || [],
+      axisBorder: { show: false },
+      axisTicks: { show: false },
+    },
+    yaxis: {
+      labels: { formatter: (val: number) => Math.round(val).toString() },
+    },
+    grid: { borderColor: '#e5e7eb', strokeDashArray: 4 },
+    tooltip: {
+      y: { formatter: (val: number) => formatMoney(val) },
+    },
+  };
+
   if (isLoading) {
     return (
       <div className="animate-pulse">
@@ -289,13 +412,13 @@ export default function SalesAnalyticsPage() {
             {t('admin.analytics.sales')}
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Track your revenue, orders, and sales performance
+            {t('admin.analytics.salesSubtitle')}
           </p>
         </div>
 
         {/* Period Selector */}
-        <div className="flex gap-2">
-          {(['today', 'week', 'month', 'quarter', 'year'] as PeriodType[]).map((p) => (
+        <div className="flex flex-wrap items-center gap-2">
+          {(['today', 'week', 'month', 'quarter', 'year', 'custom'] as PeriodType[]).map((p) => (
             <button
               key={p}
               onClick={() => setPeriod(p)}
@@ -305,45 +428,186 @@ export default function SalesAnalyticsPage() {
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
             >
-              {p.charAt(0).toUpperCase() + p.slice(1)}
+              {t(`admin.analytics.period.${p}`)}
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+        {period === 'custom' && (
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 dark:border-gray-800 dark:bg-gray-950 dark:text-white"
+            />
+            <span className="text-sm text-gray-400">→</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 dark:border-gray-800 dark:bg-gray-950 dark:text-white"
+            />
+          </div>
+        )}
+
+        <select
+          value={orderType}
+          onChange={(e) => setOrderType(e.target.value)}
+          className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 dark:border-gray-800 dark:bg-gray-950 dark:text-white"
+        >
+          <option value="">{t('admin.analytics.allOrderTypes')}</option>
+          <option value="DINE_IN">{t('admin.analytics.orderTypeDineIn')}</option>
+          <option value="TAKEAWAY">{t('admin.analytics.orderTypeTakeaway')}</option>
+          <option value="DELIVERY">{t('admin.analytics.orderTypeDelivery')}</option>
+          <option value="PICKUP">{t('admin.analytics.orderTypePickup')}</option>
+        </select>
+
+        <select
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+          className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 dark:border-gray-800 dark:bg-gray-950 dark:text-white"
+        >
+          <option value="">{t('admin.analytics.allStatuses')}</option>
+          <option value="COMPLETED">{t('admin.analytics.statusCompleted')}</option>
+          <option value="CANCELLED">{t('admin.analytics.statusCancelled')}</option>
+          <option value="PENDING">{t('admin.analytics.statusPending')}</option>
+          <option value="CONFIRMED">{t('admin.analytics.statusConfirmed')}</option>
+        </select>
+
+        <select
+          value={paymentMethod}
+          onChange={(e) => setPaymentMethod(e.target.value)}
+          className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 dark:border-gray-800 dark:bg-gray-950 dark:text-white"
+        >
+          <option value="">{t('admin.analytics.allPaymentMethods')}</option>
+          <option value="CASH">{t('admin.analytics.paymentCash')}</option>
+          <option value="CARD">{t('admin.analytics.paymentCard')}</option>
+          <option value="QRIS">{t('admin.analytics.paymentQris')}</option>
+          <option value="BANK_TRANSFER">{t('admin.analytics.paymentBank')}</option>
+        </select>
+
+        <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+          <input
+            type="checkbox"
+            checked={scheduledOnly}
+            onChange={(e) => setScheduledOnly(e.target.checked)}
+            className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-400"
+          />
+          {t('admin.analytics.scheduledOnly')}
+        </label>
+      </div>
+
+      {/* Presets */}
+      <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('admin.analytics.presetsTitle')}</h3>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <input
+              type="text"
+              value={presetName}
+              onChange={(e) => setPresetName(e.target.value)}
+              placeholder={t('admin.analytics.presetNamePlaceholder')}
+              className="h-10 flex-1 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 dark:border-gray-800 dark:bg-gray-950 dark:text-white"
+            />
+            <button
+              onClick={savePreset}
+              className="h-10 rounded-lg bg-brand-500 px-4 text-sm font-medium text-white"
+            >
+              {t('admin.analytics.savePreset')}
+            </button>
+          </div>
+          <div className="mt-3 flex items-center gap-2">
+            <select
+              value={selectedPreset}
+              onChange={(e) => {
+                setSelectedPreset(e.target.value);
+                applyPreset(e.target.value);
+              }}
+              className="h-10 flex-1 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 dark:border-gray-800 dark:bg-gray-950 dark:text-white"
+            >
+              <option value="">{t('admin.analytics.selectPreset')}</option>
+              {presets.map((preset) => (
+                <option key={preset.id} value={preset.id}>{preset.name}</option>
+              ))}
+            </select>
+            <button
+              onClick={() => removePreset(selectedPreset)}
+              disabled={!selectedPreset}
+              className="h-10 rounded-lg border border-gray-200 px-3 text-sm text-gray-600 disabled:opacity-50 dark:border-gray-800 dark:text-gray-300"
+            >
+              {t('admin.analytics.deletePreset')}
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6" data-tutorial="customer-insights">
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-          <div className="text-sm text-gray-500 dark:text-gray-400">Total Revenue</div>
+          <div className="text-sm text-gray-500 dark:text-gray-400">{t('admin.analytics.totalRevenue')}</div>
           <div className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-            {formatCurrency(analytics?.summary.totalRevenue || 0)}
+            {formatMoney(analytics?.summary.totalRevenue || 0)}
           </div>
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-          <div className="text-sm text-gray-500 dark:text-gray-400">Total Orders</div>
+          <div className="text-sm text-gray-500 dark:text-gray-400">{t('admin.analytics.totalOrders')}</div>
           <div className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
             {analytics?.summary.totalOrders || 0}
           </div>
           <div className="text-xs text-green-500 mt-1">
-            {analytics?.summary.completedOrders} completed
+            {t('admin.analytics.completedOrders', { count: analytics?.summary.completedOrders || 0 })}
           </div>
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-          <div className="text-sm text-gray-500 dark:text-gray-400">Average Order Value</div>
+          <div className="text-sm text-gray-500 dark:text-gray-400">{t('admin.analytics.averageOrderValue')}</div>
           <div className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-            {formatCurrency(analytics?.summary.averageOrderValue || 0)}
+            {formatMoney(analytics?.summary.averageOrderValue || 0)}
           </div>
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-          <div className="text-sm text-gray-500 dark:text-gray-400">Completion Rate</div>
+          <div className="text-sm text-gray-500 dark:text-gray-400">{t('admin.analytics.completionRate')}</div>
           <div className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
             {formatPercent(analytics?.summary.completionRate || 0)}
           </div>
           <div className="text-xs text-red-500 mt-1">
-            {analytics?.summary.cancelledOrders} cancelled
+            {t('admin.analytics.cancelledOrders', { count: analytics?.summary.cancelledOrders || 0 })}
+          </div>
+        </div>
+      </div>
+
+      {/* Customer Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+          <div className="text-sm text-gray-500 dark:text-gray-400">{t('admin.analytics.totalCustomers')}</div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+            {analytics?.customerMetrics.totalCustomers || 0}
+          </div>
+        </div>
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+          <div className="text-sm text-gray-500 dark:text-gray-400">{t('admin.analytics.newCustomers')}</div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+            {analytics?.customerMetrics.newCustomers || 0}
+          </div>
+        </div>
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+          <div className="text-sm text-gray-500 dark:text-gray-400">{t('admin.analytics.repeatPurchaseRate')}</div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+            {formatPercent(analytics?.customerMetrics.repeatPurchaseRate || 0)}
+          </div>
+        </div>
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+          <div className="text-sm text-gray-500 dark:text-gray-400">{t('admin.analytics.avgOrdersPerCustomer')}</div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+            {analytics?.customerMetrics
+              ? analytics.customerMetrics.averageOrdersPerCustomer.toFixed(1)
+              : '0.0'}
           </div>
         </div>
       </div>
@@ -352,13 +616,16 @@ export default function SalesAnalyticsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* Revenue Trend */}
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5" data-tutorial="trends-chart">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Revenue Trend
-          </h3>
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              {t('admin.analytics.revenueTrend')}
+            </h3>
+            <p className="text-xs text-gray-500">{t('admin.analytics.timezoneLabel', { timezone })}</p>
+          </div>
           <ReactApexChart
             options={revenueTrendOptions}
             series={[{
-              name: 'Revenue',
+              name: t('admin.analytics.revenueSeries'),
               data: analytics?.revenueTrend.map(d => d.revenue) || [],
             }]}
             type="area"
@@ -368,13 +635,16 @@ export default function SalesAnalyticsPage() {
 
         {/* Peak Hours */}
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Peak Hours
-          </h3>
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              {t('admin.analytics.peakHours')}
+            </h3>
+            <p className="text-xs text-gray-500">{t('admin.analytics.timezoneLabel', { timezone })}</p>
+          </div>
           <ReactApexChart
             options={peakHoursOptions}
             series={[{
-              name: 'Orders',
+              name: t('admin.analytics.ordersSeries'),
               data: analytics?.peakHours.map(h => h.orders) || [],
             }]}
             type="bar"
@@ -383,12 +653,98 @@ export default function SalesAnalyticsPage() {
         </div>
       </div>
 
+      {/* Cohort Retention & Category Mix */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            {t('admin.analytics.cohortRetention')}
+          </h3>
+          {analytics?.cohortRetention?.length ? (
+            <div className="overflow-auto">
+              <table className="min-w-full text-sm">
+                <thead className="text-gray-500">
+                  <tr>
+                    <th className="px-3 py-2 text-left">{t('admin.analytics.cohortMonth')}</th>
+                    <th className="px-3 py-2 text-right">{t('admin.analytics.cohortSize')}</th>
+                    <th className="px-3 py-2 text-right">{t('admin.analytics.month1')}</th>
+                    <th className="px-3 py-2 text-right">{t('admin.analytics.month2')}</th>
+                    <th className="px-3 py-2 text-right">{t('admin.analytics.month3')}</th>
+                  </tr>
+                </thead>
+                <tbody className="text-gray-700 dark:text-gray-200">
+                  {analytics.cohortRetention.map((cohort) => (
+                    <tr key={cohort.cohortMonth} className="border-t border-gray-100 dark:border-gray-700">
+                      <td className="px-3 py-2">{cohort.cohortMonth}</td>
+                      <td className="px-3 py-2 text-right">{cohort.size}</td>
+                      <td className="px-3 py-2 text-right">{formatPercent(cohort.month1)}</td>
+                      <td className="px-3 py-2 text-right">{formatPercent(cohort.month2)}</td>
+                      <td className="px-3 py-2 text-right">{formatPercent(cohort.month3)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500">{t('admin.analytics.noCohortData')}</p>
+          )}
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            {t('admin.analytics.categoryMix')}
+          </h3>
+          {analytics?.categoryMix?.length ? (
+            <ReactApexChart
+              options={categoryMixOptions}
+              series={[{ name: t('admin.analytics.revenueSeries'), data: analytics.categoryMix.map((item) => item.revenue) }]}
+              type="bar"
+              height={280}
+            />
+          ) : (
+            <p className="text-sm text-gray-500">{t('admin.analytics.noCategoryData')}</p>
+          )}
+        </div>
+      </div>
+
+      {/* Cohort Heatmap */}
+      <div className="mb-6 rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          {t('admin.analytics.cohortHeatmap')}
+        </h3>
+        {analytics?.cohortRetention?.length ? (
+          <div className="overflow-auto">
+            <div className="grid grid-cols-[140px_repeat(3,minmax(80px,1fr))] gap-2 text-xs text-gray-600 dark:text-gray-300">
+              <div></div>
+              <div className="text-center">{t('admin.analytics.month1')}</div>
+              <div className="text-center">{t('admin.analytics.month2')}</div>
+              <div className="text-center">{t('admin.analytics.month3')}</div>
+              {analytics.cohortRetention.map((row) => (
+                <div key={row.cohortMonth} className="contents">
+                  <div className="text-sm text-gray-600 dark:text-gray-300">{row.cohortMonth}</div>
+                  {[row.month1, row.month2, row.month3].map((value, idx) => (
+                    <div
+                      key={`${row.cohortMonth}-${idx}`}
+                      className="flex items-center justify-center rounded-md border border-gray-200 text-gray-900 dark:border-gray-700 dark:text-white"
+                      style={{ backgroundColor: heatColor(value) }}
+                    >
+                      {formatPercent(value)}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500">{t('admin.analytics.noCohortData')}</p>
+        )}
+      </div>
+
       {/* Bottom Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Top Selling Items */}
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5" data-tutorial="menu-performance">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Top Selling Items
+            {t('admin.analytics.topSellingItems')}
           </h3>
           <div className="space-y-3">
             {analytics?.topSellingItems.slice(0, 5).map((item, index) => (
@@ -401,7 +757,7 @@ export default function SalesAnalyticsPage() {
                     {item.menuName}
                   </div>
                   <div className="text-xs text-gray-500">
-                    {item.quantity} sold · {formatCurrency(item.revenue)}
+                    {t('admin.analytics.itemsSold', { count: item.quantity })} · {formatMoney(item.revenue)}
                   </div>
                 </div>
                 <div className="text-sm text-gray-500">
@@ -410,7 +766,7 @@ export default function SalesAnalyticsPage() {
               </div>
             ))}
             {(!analytics?.topSellingItems || analytics.topSellingItems.length === 0) && (
-              <p className="text-sm text-gray-500 text-center py-4">No sales data yet</p>
+              <p className="text-sm text-gray-500 text-center py-4">{t('admin.analytics.noSalesData')}</p>
             )}
           </div>
         </div>
@@ -418,7 +774,7 @@ export default function SalesAnalyticsPage() {
         {/* Payment Methods */}
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Payment Methods
+            {t('admin.analytics.paymentMethods')}
           </h3>
           {analytics?.paymentMethods && analytics.paymentMethods.length > 0 ? (
             <ReactApexChart
@@ -429,7 +785,7 @@ export default function SalesAnalyticsPage() {
             />
           ) : (
             <div className="flex items-center justify-center h-[250px]">
-              <p className="text-sm text-gray-500">No payment data yet</p>
+              <p className="text-sm text-gray-500">{t('admin.analytics.noPaymentData')}</p>
             </div>
           )}
         </div>
@@ -437,7 +793,7 @@ export default function SalesAnalyticsPage() {
         {/* Order Status Distribution */}
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Order Status
+            {t('admin.analytics.orderStatus')}
           </h3>
           <div className="space-y-3">
             {analytics?.ordersByStatus.map((status) => (
@@ -464,7 +820,7 @@ export default function SalesAnalyticsPage() {
               </div>
             ))}
             {(!analytics?.ordersByStatus || analytics.ordersByStatus.length === 0) && (
-              <p className="text-sm text-gray-500 text-center py-4">No order data yet</p>
+              <p className="text-sm text-gray-500 text-center py-4">{t('admin.analytics.noOrderData')}</p>
             )}
           </div>
 
@@ -472,7 +828,7 @@ export default function SalesAnalyticsPage() {
           {analytics?.orderTypes && analytics.orderTypes.length > 0 && (
             <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
               <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
-                Order Types
+                {t('admin.analytics.orderTypes')}
               </h4>
               <div className="flex gap-4">
                 {analytics.orderTypes.map((type) => (
@@ -481,7 +837,7 @@ export default function SalesAnalyticsPage() {
                       {type.count}
                     </div>
                     <div className="text-xs text-gray-500">
-                      {type.type === 'DINE_IN' ? 'Dine In' : 'Takeaway'}
+                      {t(`admin.analytics.orderType.${type.type}`) || type.type}
                     </div>
                   </div>
                 ))}

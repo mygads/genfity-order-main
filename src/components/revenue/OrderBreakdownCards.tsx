@@ -2,6 +2,8 @@
 
 import React from "react";
 import { formatCurrency } from "@/lib/utils/format";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import { FaCheckCircle, FaClock, FaBan, FaUtensils, FaShoppingBag, FaTruck, FaStoreAlt } from "react-icons/fa";
 
 interface OrderStatusItem {
   status: string;
@@ -29,6 +31,7 @@ export default function OrderBreakdownCards({
   typeBreakdown,
   currency = "AUD" 
 }: OrderBreakdownCardsProps) {
+  const { t } = useTranslation();
 
   const statusColors: Record<string, { bg: string; text: string; border: string }> = {
     PENDING: { 
@@ -63,20 +66,99 @@ export default function OrderBreakdownCards({
     },
   };
 
+  const normalizeOrderType = (type: string) => {
+    const normalized = type?.trim().toUpperCase();
+    return normalized || "OTHER";
+  };
+
+  const normalizedTypeBreakdown = typeBreakdown.reduce<OrderTypeItem[]>((acc, item) => {
+    const normalizedType = normalizeOrderType(item.type);
+    const existing = acc.find((entry) => entry.type === normalizedType);
+
+    if (existing) {
+      existing.count += item.count;
+      existing.revenue += item.revenue;
+    } else {
+      acc.push({
+        ...item,
+        type: normalizedType,
+      });
+    }
+
+    return acc;
+  }, []);
+
   const totalStatusCount = statusBreakdown.reduce((sum, item) => sum + item.count, 0);
-  const totalTypeCount = typeBreakdown.reduce((sum, item) => sum + item.count, 0);
+  const totalTypeCount = normalizedTypeBreakdown.reduce((sum, item) => sum + item.count, 0);
+
+  const statusIconMap: Record<string, React.ReactNode> = {
+    COMPLETED: <FaCheckCircle className="text-success-600 dark:text-success-400" />,
+    PENDING: <FaClock className="text-yellow-600 dark:text-yellow-400" />,
+    ACCEPTED: <FaClock className="text-blue-600 dark:text-blue-400" />,
+    IN_PROGRESS: <FaClock className="text-purple-600 dark:text-purple-400" />,
+    READY: <FaClock className="text-indigo-600 dark:text-indigo-400" />,
+    CANCELLED: <FaBan className="text-error-600 dark:text-error-400" />,
+  };
+
+  const orderTypeMeta = (type: string) => {
+    switch (type) {
+      case 'DINE_IN':
+        return {
+          label: t('admin.revenue.orderTypeDineIn'),
+          icon: <FaUtensils className="text-brand-600 dark:text-brand-400" />,
+          accent: 'border-brand-200 bg-brand-50 dark:border-brand-800 dark:bg-brand-900/20',
+          text: 'text-brand-700 dark:text-brand-400',
+          bar: 'bg-brand-500',
+        };
+      case 'TAKEAWAY':
+        return {
+          label: t('admin.revenue.orderTypeTakeaway'),
+          icon: <FaShoppingBag className="text-amber-600 dark:text-amber-400" />,
+          accent: 'border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20',
+          text: 'text-amber-800 dark:text-amber-300',
+          bar: 'bg-amber-500',
+        };
+      case 'PICKUP':
+        return {
+          label: t('admin.revenue.orderTypePickup'),
+          icon: <FaStoreAlt className="text-sky-600 dark:text-sky-400" />,
+          accent: 'border-sky-200 bg-sky-50 dark:border-sky-800 dark:bg-sky-900/20',
+          text: 'text-sky-800 dark:text-sky-300',
+          bar: 'bg-sky-500',
+        };
+      case 'DELIVERY':
+        return {
+          label: t('admin.revenue.orderTypeDelivery'),
+          icon: <FaTruck className="text-emerald-600 dark:text-emerald-400" />,
+          accent: 'border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/20',
+          text: 'text-emerald-800 dark:text-emerald-300',
+          bar: 'bg-emerald-500',
+        };
+      default:
+        return {
+          label: t('admin.revenue.orderTypeOther'),
+          icon: <FaShoppingBag className="text-gray-500 dark:text-gray-300" />,
+          accent: 'border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-900/20',
+          text: 'text-gray-700 dark:text-gray-300',
+          bar: 'bg-gray-500',
+        };
+    }
+  };
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       {/* Order Status Breakdown */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6">
-        <h2 className="mb-5 text-lg font-semibold text-gray-800 dark:text-white/90">
-          Order Status Breakdown
-        </h2>
+      <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-white/3 lg:p-6">
+        <div className="mb-5 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">
+            {t('admin.revenue.orderStatusBreakdown')}
+          </h2>
+          <span className="text-xs text-gray-500">{t('admin.revenue.totalOrders')}: {totalStatusCount}</span>
+        </div>
         {statusBreakdown.length === 0 ? (
           <div className="py-10 text-center">
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              No order data available
+              {t('admin.revenue.noOrderData')}
             </p>
           </div>
         ) : (
@@ -94,11 +176,12 @@ export default function OrderBreakdownCards({
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className={`font-semibold ${colorScheme.text}`}>
-                        {item.status.replace('_', ' ')}
+                      <div className={`flex items-center gap-2 font-semibold ${colorScheme.text}`}>
+                        <span className="text-base">{statusIconMap[item.status] || statusIconMap.PENDING}</span>
+                        <span>{t(`admin.revenue.status.${item.status}`) || item.status.replace('_', ' ')}</span>
                       </div>
                       <div className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                        {percentage}% of total orders
+                        {t('admin.revenue.percentageOfOrders', { value: percentage })}
                       </div>
                     </div>
                     <div className={`text-2xl font-bold ${colorScheme.text}`}>
@@ -120,53 +203,44 @@ export default function OrderBreakdownCards({
       </div>
 
       {/* Order Type Breakdown */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/3 lg:p-6">
-        <h2 className="mb-5 text-lg font-semibold text-gray-800 dark:text-white/90">
-          Order Type Breakdown
-        </h2>
-        {typeBreakdown.length === 0 ? (
+      <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-white/3 lg:p-6">
+        <div className="mb-5 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">
+            {t('admin.revenue.orderTypeBreakdown')}
+          </h2>
+          <span className="text-xs text-gray-500">{t('admin.revenue.completedOrders')}: {totalTypeCount}</span>
+        </div>
+        {normalizedTypeBreakdown.length === 0 ? (
           <div className="py-10 text-center">
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              No order type data available
+              {t('admin.revenue.noOrderTypeData')}
             </p>
           </div>
         ) : (
           <div className="space-y-4">
-            {typeBreakdown.map((item) => {
+            {normalizedTypeBreakdown.map((item) => {
               const percentage = totalTypeCount > 0 
                 ? ((item.count / totalTypeCount) * 100).toFixed(1)
                 : '0';
-              const isDineIn = item.type === 'DINE_IN';
+              const meta = orderTypeMeta(item.type);
               
               return (
                 <div 
                   key={item.type}
-                  className={`rounded-lg border p-4 ${
-                    isDineIn 
-                      ? 'border-brand-200 bg-brand-50 dark:border-brand-800 dark:bg-brand-900/20'
-                      : 'border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20'
-                  }`}
+                  className={`rounded-lg border p-4 ${meta.accent}`}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <div className={`text-2xl ${
-                          isDineIn 
-                            ? 'text-brand-600 dark:text-brand-400'
-                            : 'text-amber-600 dark:text-amber-400'
-                        }`}>
-                          {isDineIn ? '🍽️' : '🛍️'}
+                        <div className="text-xl">
+                          {meta.icon}
                         </div>
                         <div>
-                          <div className={`text-lg font-semibold ${
-                            isDineIn 
-                              ? 'text-brand-700 dark:text-brand-400'
-                              : 'text-amber-800 dark:text-amber-300'
-                          }`}>
-                            {item.type === 'DINE_IN' ? 'Dine In' : 'Takeaway'}
+                          <div className={`text-lg font-semibold ${meta.text}`}>
+                            {meta.label}
                           </div>
                           <div className="text-sm text-gray-600 dark:text-gray-400">
-                            {percentage}% of completed orders
+                            {t('admin.revenue.percentageOfCompleted', { value: percentage })}
                           </div>
                         </div>
                       </div>
@@ -174,25 +248,17 @@ export default function OrderBreakdownCards({
                       <div className="mt-4 grid grid-cols-2 gap-4">
                         <div>
                           <div className="text-sm text-gray-600 dark:text-gray-400">
-                            Orders
+                            {t('admin.revenue.orders')}
                           </div>
-                          <div className={`text-xl font-bold ${
-                            isDineIn 
-                              ? 'text-brand-700 dark:text-brand-400'
-                              : 'text-amber-800 dark:text-amber-300'
-                          }`}>
+                          <div className={`text-xl font-bold ${meta.text}`}>
                             {item.count}
                           </div>
                         </div>
                         <div>
                           <div className="text-sm text-gray-600 dark:text-gray-400">
-                            Revenue
+                            {t('admin.revenue.revenue')}
                           </div>
-                          <div className={`text-xl font-bold ${
-                            isDineIn 
-                              ? 'text-brand-700 dark:text-brand-400'
-                              : 'text-amber-800 dark:text-amber-300'
-                          }`}>
+                          <div className={`text-xl font-bold ${meta.text}`}>
                             {formatCurrency(item.revenue, currency)}
                           </div>
                         </div>
@@ -203,7 +269,7 @@ export default function OrderBreakdownCards({
                   {/* Progress Bar */}
                   <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
                     <div 
-                      className={isDineIn ? 'bg-brand-500' : 'bg-amber-500'}
+                      className={meta.bar}
                       style={{ width: `${percentage}%` }}
                     />
                   </div>

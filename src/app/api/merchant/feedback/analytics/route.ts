@@ -12,6 +12,47 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
 import { withMerchant, AuthContext } from '@/lib/middleware/auth';
+import { formatInTimeZone } from 'date-fns-tz';
+
+const POSITIVE_WORDS = [
+    'good', 'great', 'excellent', 'amazing', 'love', 'friendly', 'fast', 'quick',
+    'tasty', 'delicious', 'nice', 'satisfied', 'mantap', 'enak', 'lezat', 'ramah',
+    'cepat', 'bagus', 'puas', 'mantul', 'recommended', 'recommend'
+];
+const NEGATIVE_WORDS = [
+    'bad', 'slow', 'late', 'cold', 'rude', 'burnt', 'dirty', 'expensive', 'small',
+    'poor', 'not good', 'delay', 'overpriced', 'mahal', 'lama', 'dingin', 'kurang',
+    'kecewa', 'jelek', 'kotor', 'asin', 'gosong'
+];
+const TAG_KEYWORDS: Record<string, string[]> = {
+    service: ['service', 'staff', 'waiter', 'cashier', 'ramah', 'pelayanan', 'kasir'],
+    food: ['food', 'taste', 'flavor', 'tasty', 'delicious', 'enak', 'lezat', 'rasa', 'makanan'],
+    delivery: ['delivery', 'driver', 'courier', 'antar', 'pengantaran'],
+    price: ['price', 'expensive', 'cheap', 'mahal', 'murah', 'value'],
+    portion: ['portion', 'portion size', 'small', 'besar', 'porsi', 'portion'],
+    cleanliness: ['clean', 'dirty', 'kotor', 'bersih'],
+    packaging: ['packaging', 'package', 'kemasan', 'bungkus'],
+    speed: ['fast', 'quick', 'slow', 'late', 'cepat', 'lama'],
+};
+
+const normalizeText = (value?: string | null) => (value || '').toLowerCase();
+
+const getSentiment = (comment: string | null | undefined, rating: number) => {
+    const text = normalizeText(comment);
+    const hasPositive = POSITIVE_WORDS.some((word) => text.includes(word));
+    const hasNegative = NEGATIVE_WORDS.some((word) => text.includes(word));
+
+    if (rating >= 4 && hasPositive && !hasNegative) return 'positive';
+    if (rating <= 2 || hasNegative) return 'negative';
+    return 'neutral';
+};
+
+const getTags = (comment: string | null | undefined) => {
+    const text = normalizeText(comment);
+    return Object.entries(TAG_KEYWORDS)
+        .filter(([, keywords]) => keywords.some((keyword) => text.includes(keyword)))
+        .map(([tag]) => tag);
+};
 
 interface FeedbackAnalytics {
     summary: {
@@ -21,6 +62,16 @@ interface FeedbackAnalytics {
         averageFoodRating: number | null;
         averageCompletionTime: number | null;
     };
+    sentimentDistribution: Array<{
+        sentiment: 'positive' | 'neutral' | 'negative';
+        count: number;
+        percentage: number;
+    }>;
+    topTags: Array<{
+        tag: string;
+        count: number;
+        percentage: number;
+    }>;
     ratingDistribution: Array<{
         rating: number;
         count: number;
@@ -67,6 +118,13 @@ export const GET = withMerchant(async (
                 startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
         }
 
+        const merchant = await prisma.merchant.findUnique({
+            where: { id: context.merchantId },
+            select: { timezone: true },
+        });
+
+        const timezone = merchant?.timezone || 'Asia/Jakarta';
+
         // Get all feedback in period
         const feedback = await prisma.orderFeedback.findMany({
             where: {
@@ -95,6 +153,40 @@ export const GET = withMerchant(async (
             ? completionTimes.reduce((sum, f) => sum + (f.orderCompletionMinutes || 0), 0) / completionTimes.length
             : null;
 
+        // Sentiment distribution
+        const sentimentMap = new Map<'positive' | 'neutral' | 'negative', number>([
+            ['positive', 0],
+            ['neutral', 0],
+            ['negative', 0],
+        ]);
+
+        const tagMap = new Map<string, number>();
+
+        feedback.forEach((item) => {
+            const sentiment = getSentiment(item.comment, item.overallRating);
+            sentimentMap.set(sentiment, (sentimentMap.get(sentiment) || 0) + 1);
+
+            const tags = getTags(item.comment);
+            tags.forEach((tag) => {
+                tagMap.set(tag, (tagMap.get(tag) || 0) + 1);
+            });
+        });
+
+        const sentimentDistribution = Array.from(sentimentMap.entries()).map(([sentiment, count]) => ({
+            sentiment,
+            count,
+            percentage: totalFeedback > 0 ? (count / totalFeedback) * 100 : 0,
+        }));
+
+        const topTags = Array.from(tagMap.entries())
+            .map(([tag, count]) => ({
+                tag,
+                count,
+                percentage: totalFeedback > 0 ? (count / totalFeedback) * 100 : 0,
+            }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 8);
+
         // Rating distribution (1-5 stars)
         const ratingCounts = new Map<number, number>();
         for (let i = 1; i <= 5; i++) {
@@ -113,7 +205,7 @@ export const GET = withMerchant(async (
         // Recent trends (group by day)
         const trendMap = new Map<string, { count: number; sumRating: number }>();
         feedback.forEach(f => {
-            const date = f.createdAt.toISOString().split('T')[0];
+            const date = formatInTimeZone(f.createdAt, timezone, 'yyyy-MM-dd');
             const current = trendMap.get(date) || { count: 0, sumRating: 0 };
             trendMap.set(date, {
                 count: current.count + 1,
@@ -137,6 +229,8 @@ export const GET = withMerchant(async (
                 averageFoodRating: averageFoodRating ? Math.round(averageFoodRating * 10) / 10 : null,
                 averageCompletionTime: averageCompletionTime ? Math.round(averageCompletionTime) : null,
             },
+            sentimentDistribution,
+            topTags,
             ratingDistribution,
             recentTrends,
         };
@@ -148,6 +242,7 @@ export const GET = withMerchant(async (
                 period,
                 startDate: startDate.toISOString(),
                 endDate: now.toISOString(),
+                timezone,
             },
         });
     } catch (error) {

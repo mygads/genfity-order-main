@@ -20,6 +20,7 @@ import { ApexOptions } from 'apexcharts';
 import { FaStar, FaClock, FaConciergeBell, FaUtensils, FaCommentAlt, FaFilter } from 'react-icons/fa';
 import { useMerchant } from '@/context/MerchantContext';
 import { formatFullOrderNumber } from '@/lib/utils/format';
+import { formatInTimeZone } from 'date-fns-tz';
 
 // Dynamic import for ApexCharts (SSR safe)
 const ReactApexChart = dynamic(() => import('react-apexcharts'), {
@@ -35,6 +36,16 @@ interface FeedbackAnalytics {
         averageFoodRating: number | null;
         averageCompletionTime: number | null;
     };
+    sentimentDistribution: Array<{
+        sentiment: 'positive' | 'neutral' | 'negative';
+        count: number;
+        percentage: number;
+    }>;
+    topTags: Array<{
+        tag: string;
+        count: number;
+        percentage: number;
+    }>;
     ratingDistribution: Array<{
         rating: number;
         count: number;
@@ -56,6 +67,8 @@ interface FeedbackItem {
     comment: string | null;
     orderCompletionMinutes: number | null;
     createdAt: string;
+    sentiment?: 'positive' | 'neutral' | 'negative';
+    tags?: string[];
 }
 
 type PeriodType = 'week' | 'month' | 'quarter' | 'year';
@@ -72,6 +85,32 @@ export default function CustomerFeedbackPage() {
     const [listPage, setListPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [ratingFilter, setRatingFilter] = useState<number | null>(null);
+    const [sentimentFilter, setSentimentFilter] = useState('');
+    const [tagFilter, setTagFilter] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
+    const [startDate, setStartDate] = useState(() => {
+        const date = new Date();
+        date.setDate(date.getDate() - 30);
+        return date.toISOString().split('T')[0];
+    });
+    const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+
+    const buildFeedbackParams = (page: number, limit: number) => {
+        const params = new URLSearchParams({
+            page: page.toString(),
+            limit: limit.toString(),
+        });
+        if (ratingFilter) {
+            params.append('minRating', ratingFilter.toString());
+            params.append('maxRating', ratingFilter.toString());
+        }
+        if (sentimentFilter) params.append('sentiment', sentimentFilter);
+        if (tagFilter) params.append('tag', tagFilter);
+        if (searchTerm) params.append('search', searchTerm);
+        if (startDate) params.append('startDate', startDate);
+        if (endDate) params.append('endDate', endDate);
+        return params;
+    };
 
     // Fetch analytics data
     const fetchAnalytics = useCallback(async () => {
@@ -103,14 +142,7 @@ export default function CustomerFeedbackPage() {
             const token = localStorage.getItem('accessToken');
             if (!token) return;
 
-            const params = new URLSearchParams({
-                page: listPage.toString(),
-                limit: '10',
-            });
-            if (ratingFilter) {
-                params.append('minRating', ratingFilter.toString());
-                params.append('maxRating', ratingFilter.toString());
-            }
+            const params = buildFeedbackParams(listPage, 10);
 
             const response = await fetch(`/api/merchant/feedback?${params}`, {
                 headers: { Authorization: `Bearer ${token}` },
@@ -126,7 +158,67 @@ export default function CustomerFeedbackPage() {
         } catch (error) {
             console.error('Error fetching feedback list:', error);
         }
-    }, [listPage, ratingFilter]);
+    }, [listPage, ratingFilter, sentimentFilter, tagFilter, searchTerm, startDate, endDate]);
+
+    const handleExport = async (format: 'csv' | 'xlsx') => {
+        try {
+            const token = localStorage.getItem('accessToken');
+            if (!token) return;
+
+            const limit = 100;
+            let currentPage = 1;
+            let totalPagesLocal = 1;
+            const allRows: FeedbackItem[] = [];
+
+            while (currentPage <= totalPagesLocal) {
+                const params = buildFeedbackParams(currentPage, limit);
+                const response = await fetch(`/api/merchant/feedback?${params}`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+
+                if (!response.ok) break;
+                const result = await response.json();
+                if (!result.success) break;
+
+                allRows.push(...result.data);
+                totalPagesLocal = result.meta.totalPages || 1;
+                currentPage += 1;
+            }
+
+            const XLSX = await import('xlsx');
+            const rows = allRows.map((item) => ({
+                orderNumber: item.orderNumber,
+                overallRating: item.overallRating,
+                serviceRating: item.serviceRating ?? '',
+                foodRating: item.foodRating ?? '',
+                sentiment: item.sentiment ?? '',
+                tags: item.tags?.join(', ') ?? '',
+                comment: item.comment ?? '',
+                completionMinutes: item.orderCompletionMinutes ?? '',
+                createdAt: item.createdAt,
+            }));
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Feedback');
+            const filename = `feedback_${startDate}_${endDate}.${format}`;
+
+            if (format === 'xlsx') {
+                XLSX.writeFile(wb, filename);
+                return;
+            }
+
+            const csv = XLSX.utils.sheet_to_csv(wb.Sheets.Feedback);
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            link.click();
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('Feedback export error:', error);
+        }
+    };
 
     // Initial load
     useEffect(() => {
@@ -155,13 +247,8 @@ export default function CustomerFeedbackPage() {
 
     // Format date
     const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('en-AU', {
-            day: 'numeric',
-            month: 'short',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-        });
+        const timezone = merchant?.timezone || 'Asia/Jakarta';
+        return formatInTimeZone(new Date(dateString), timezone, 'dd MMM yyyy, HH:mm');
     };
 
     // Rating Distribution Chart Options
@@ -171,7 +258,13 @@ export default function CustomerFeedbackPage() {
             fontFamily: 'Outfit, sans-serif',
         },
         colors: ['#ef4444', '#f97316', '#facc15', '#84cc16', '#22c55e'],
-        labels: ['1 Star', '2 Stars', '3 Stars', '4 Stars', '5 Stars'],
+        labels: [
+            t('admin.feedback.star1'),
+            t('admin.feedback.star2'),
+            t('admin.feedback.star3'),
+            t('admin.feedback.star4'),
+            t('admin.feedback.star5'),
+        ],
         legend: {
             position: 'bottom',
             fontSize: '12px',
@@ -184,7 +277,7 @@ export default function CustomerFeedbackPage() {
                         show: true,
                         total: {
                             show: true,
-                            label: 'Total',
+                            label: t('admin.feedback.totalLabel'),
                             formatter: () => analytics?.summary.totalFeedback.toString() || '0',
                         },
                     },
@@ -215,10 +308,7 @@ export default function CustomerFeedbackPage() {
         },
         dataLabels: { enabled: false },
         xaxis: {
-            categories: analytics?.recentTrends.map(d => {
-                const date = new Date(d.date);
-                return date.toLocaleDateString('en-AU', { month: 'short', day: 'numeric' });
-            }) || [],
+            categories: analytics?.recentTrends.map(d => d.date) || [],
             axisBorder: { show: false },
             axisTicks: { show: false },
         },
@@ -235,7 +325,7 @@ export default function CustomerFeedbackPage() {
         },
         tooltip: {
             y: {
-                formatter: (val: number) => `${val.toFixed(1)} stars`,
+                formatter: (val: number) => t('admin.feedback.starsTooltip', { value: val.toFixed(1) }),
             },
         },
     };
@@ -268,7 +358,7 @@ export default function CustomerFeedbackPage() {
                         {t('admin.nav.customerFeedback') || 'Customer Feedback'}
                     </h1>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        View and analyze customer ratings and reviews
+                        {t('admin.feedback.subtitle')}
                     </p>
                 </div>
 
@@ -283,10 +373,76 @@ export default function CustomerFeedbackPage() {
                                     : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                                 }`}
                         >
-                            {p.charAt(0).toUpperCase() + p.slice(1)}
+                            {t(`admin.feedback.period.${p}`)}
                         </button>
                     ))}
                 </div>
+            </div>
+
+            {/* Filters */}
+            <div className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+                <div className="flex items-center gap-2">
+                    <input
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => {
+                            setStartDate(e.target.value);
+                            setListPage(1);
+                        }}
+                        className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 dark:border-gray-800 dark:bg-gray-950 dark:text-white"
+                    />
+                    <span className="text-sm text-gray-400">→</span>
+                    <input
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => {
+                            setEndDate(e.target.value);
+                            setListPage(1);
+                        }}
+                        className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 dark:border-gray-800 dark:bg-gray-950 dark:text-white"
+                    />
+                </div>
+
+                <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => {
+                        setSearchTerm(e.target.value);
+                        setListPage(1);
+                    }}
+                    placeholder={t('admin.feedback.searchPlaceholder')}
+                    className="h-10 w-full max-w-xs rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 dark:border-gray-800 dark:bg-gray-950 dark:text-white"
+                />
+
+                <select
+                    value={sentimentFilter}
+                    onChange={(e) => {
+                        setSentimentFilter(e.target.value);
+                        setListPage(1);
+                    }}
+                    className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 dark:border-gray-800 dark:bg-gray-950 dark:text-white"
+                >
+                    <option value="">{t('admin.feedback.allSentiments')}</option>
+                    <option value="positive">{t('admin.feedback.sentimentPositive')}</option>
+                    <option value="neutral">{t('admin.feedback.sentimentNeutral')}</option>
+                    <option value="negative">{t('admin.feedback.sentimentNegative')}</option>
+                </select>
+
+                <select
+                    value={tagFilter}
+                    onChange={(e) => {
+                        setTagFilter(e.target.value);
+                        setListPage(1);
+                    }}
+                    className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 dark:border-gray-800 dark:bg-gray-950 dark:text-white"
+                >
+                    <option value="">{t('admin.feedback.allTags')}</option>
+                    {analytics?.topTags?.map((tag) => (
+                        <option key={tag.tag} value={tag.tag}>
+                            {t(`admin.feedback.tag.${tag.tag}`) || tag.tag}
+                        </option>
+                    ))}
+                </select>
             </div>
 
             {/* Summary Cards */}
@@ -295,7 +451,7 @@ export default function CustomerFeedbackPage() {
                 <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
                     <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-1">
                         <FaStar className="text-yellow-400" />
-                        <span>Average Rating</span>
+                        <span>{t('admin.feedback.averageRating')}</span>
                     </div>
                     <div className="text-2xl font-bold text-gray-900 dark:text-white">
                         {analytics?.summary.averageOverallRating?.toFixed(1) || '0.0'}
@@ -307,13 +463,13 @@ export default function CustomerFeedbackPage() {
                 <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
                     <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-1">
                         <FaCommentAlt className="text-blue-500" />
-                        <span>Total Feedback</span>
+                        <span>{t('admin.feedback.totalFeedback')}</span>
                     </div>
                     <div className="text-2xl font-bold text-gray-900 dark:text-white">
                         {analytics?.summary.totalFeedback || 0}
                     </div>
                     <div className="text-xs text-gray-500 mt-1">
-                        In selected period
+                        {t('admin.feedback.inSelectedPeriod')}
                     </div>
                 </div>
 
@@ -321,7 +477,7 @@ export default function CustomerFeedbackPage() {
                 <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
                     <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-1">
                         <FaConciergeBell className="text-purple-500" />
-                        <span>Service Rating</span>
+                        <span>{t('admin.feedback.serviceRating')}</span>
                     </div>
                     <div className="text-2xl font-bold text-gray-900 dark:text-white">
                         {analytics?.summary.averageServiceRating?.toFixed(1) || 'N/A'}
@@ -335,7 +491,7 @@ export default function CustomerFeedbackPage() {
                 <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
                     <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-1">
                         <FaClock className="text-green-500" />
-                        <span>Avg. Completion</span>
+                        <span>{t('admin.feedback.avgCompletion')}</span>
                     </div>
                     <div className="text-2xl font-bold text-gray-900 dark:text-white">
                         {analytics?.summary.averageCompletionTime
@@ -343,17 +499,17 @@ export default function CustomerFeedbackPage() {
                             : 'N/A'}
                     </div>
                     <div className="text-xs text-gray-500 mt-1">
-                        Order to completion
+                        {t('admin.feedback.orderToCompletion')}
                     </div>
                 </div>
             </div>
 
             {/* Charts Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                 {/* Rating Distribution */}
                 <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                        Rating Distribution
+                        {t('admin.feedback.ratingDistribution')}
                     </h3>
                     {analytics?.summary.totalFeedback && analytics.summary.totalFeedback > 0 ? (
                         <ReactApexChart
@@ -364,21 +520,49 @@ export default function CustomerFeedbackPage() {
                         />
                     ) : (
                         <div className="flex items-center justify-center h-62.5">
-                            <p className="text-sm text-gray-500">No feedback data yet</p>
+                            <p className="text-sm text-gray-500">{t('admin.feedback.noFeedbackData')}</p>
+                        </div>
+                    )}
+                </div>
+
+                {/* Sentiment Distribution */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                        {t('admin.feedback.sentimentDistribution')}
+                    </h3>
+                    {analytics?.sentimentDistribution?.length ? (
+                        <ReactApexChart
+                            options={{
+                                chart: { type: 'donut', fontFamily: 'Outfit, sans-serif' },
+                                colors: ['#22c55e', '#facc15', '#ef4444'],
+                                labels: analytics.sentimentDistribution.map((item) => item.sentiment),
+                                legend: { position: 'bottom', fontSize: '12px' },
+                                dataLabels: { enabled: false },
+                            }}
+                            series={analytics.sentimentDistribution.map((item) => item.count)}
+                            type="donut"
+                            height={250}
+                        />
+                    ) : (
+                        <div className="flex items-center justify-center h-62.5">
+                            <p className="text-sm text-gray-500">{t('admin.feedback.noSentimentData')}</p>
                         </div>
                     )}
                 </div>
 
                 {/* Rating Trend */}
                 <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                        Rating Trend
-                    </h3>
+                    <div className="mb-4">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                            {t('admin.feedback.ratingTrend')}
+                        </h3>
+                        <p className="text-xs text-gray-500">{t('admin.feedback.timezoneLabel', { timezone: merchant?.timezone || 'Asia/Jakarta' })}</p>
+                    </div>
                     {analytics?.recentTrends && analytics.recentTrends.length > 0 ? (
                         <ReactApexChart
                             options={trendChartOptions}
                             series={[{
-                                name: 'Rating',
+                                name: t('admin.feedback.ratingSeries'),
                                 data: analytics.recentTrends.map(d => d.averageRating),
                             }]}
                             type="area"
@@ -386,17 +570,38 @@ export default function CustomerFeedbackPage() {
                         />
                     ) : (
                         <div className="flex items-center justify-center h-62.5">
-                            <p className="text-sm text-gray-500">No trend data available</p>
+                            <p className="text-sm text-gray-500">{t('admin.feedback.noTrendData')}</p>
                         </div>
                     )}
                 </div>
+            </div>
+
+            {/* Top Tags */}
+            <div className="mb-6 rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                    {t('admin.feedback.topTags')}
+                </h3>
+                {analytics?.topTags?.length ? (
+                    <div className="flex flex-wrap gap-2">
+                        {analytics.topTags.map((tag) => (
+                            <span
+                                key={tag.tag}
+                                className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                            >
+                                {t(`admin.feedback.tag.${tag.tag}`) || tag.tag} · {tag.count}
+                            </span>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-sm text-gray-500">{t('admin.feedback.noTags')}</p>
+                )}
             </div>
 
             {/* Feedback List */}
             <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                        Recent Feedback
+                        {t('admin.feedback.recentFeedback')}
                     </h3>
 
                     {/* Rating Filter */}
@@ -410,11 +615,25 @@ export default function CustomerFeedbackPage() {
                             }}
                             className="text-sm border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-1.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                         >
-                            <option value="">All Ratings</option>
+                            <option value="">{t('admin.feedback.allRatings')}</option>
                             {[5, 4, 3, 2, 1].map(r => (
-                                <option key={r} value={r}>{r} Star{r !== 1 ? 's' : ''}</option>
+                                <option key={r} value={r}>
+                                    {t('admin.feedback.ratingOption', { rating: r })}
+                                </option>
                             ))}
                         </select>
+                        <button
+                            onClick={() => handleExport('csv')}
+                            className="ml-2 h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
+                        >
+                            {t('admin.feedback.exportCsv')}
+                        </button>
+                        <button
+                            onClick={() => handleExport('xlsx')}
+                            className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
+                        >
+                            {t('admin.feedback.exportXlsx')}
+                        </button>
                     </div>
                 </div>
 
@@ -431,14 +650,16 @@ export default function CustomerFeedbackPage() {
                                             <div className="flex items-center gap-2 mb-1">
                                                 <StarDisplay rating={feedback.overallRating} size="lg" />
                                                 <span className="text-sm font-medium text-gray-900 dark:text-white">
-                                                    Order #{formatFullOrderNumber(feedback.orderNumber, merchant?.code)}
+                                                    {t('admin.feedback.orderLabel', {
+                                                        orderNumber: formatFullOrderNumber(feedback.orderNumber, merchant?.code),
+                                                    })}
                                                 </span>
                                             </div>
                                             <p className="text-xs text-gray-500">
                                                 {formatDate(feedback.createdAt)}
                                                 {feedback.orderCompletionMinutes && (
                                                     <span className="ml-2">
-                                                        • Completed in {feedback.orderCompletionMinutes} min
+                                                        • {t('admin.feedback.completedIn', { minutes: feedback.orderCompletionMinutes })}
                                                     </span>
                                                 )}
                                             </p>
@@ -458,6 +679,26 @@ export default function CustomerFeedbackPage() {
                                             )}
                                         </div>
                                     </div>
+                                    {feedback.sentiment && (
+                                        <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                                            <span
+                                                className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                                                    feedback.sentiment === 'positive'
+                                                        ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200'
+                                                        : feedback.sentiment === 'negative'
+                                                            ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200'
+                                                            : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-200'
+                                                }`}
+                                            >
+                                                {t(`admin.feedback.sentiment.${feedback.sentiment}`)}
+                                            </span>
+                                            {feedback.tags?.map((tag) => (
+                                                <span key={tag} className="rounded-full border border-gray-200 px-2 py-0.5 text-xs text-gray-600 dark:border-gray-700 dark:text-gray-300">
+                                                    {t(`admin.feedback.tag.${tag}`) || tag}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
                                     {feedback.comment && (
                                         <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 italic">
                                             &quot;{feedback.comment}&quot;
@@ -493,9 +734,9 @@ export default function CustomerFeedbackPage() {
                 ) : (
                     <div className="text-center py-8">
                         <FaCommentAlt className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-                        <p className="text-sm text-gray-500">No feedback received yet</p>
+                        <p className="text-sm text-gray-500">{t('admin.feedback.noFeedbackYet')}</p>
                         <p className="text-xs text-gray-400 mt-1">
-                            Feedback will appear here when customers rate their orders
+                            {t('admin.feedback.noFeedbackHint')}
                         </p>
                     </div>
                 )}
