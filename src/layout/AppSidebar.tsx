@@ -614,6 +614,8 @@ const AppSidebar: React.FC = () => {
     }
   }, [user, hasMerchant]);
 
+  const hasMultipleMerchants = (merchantOptions?.length ?? 0) > 1;
+
   // Get menu groups based on user role
   const getMenuGroups = (): NavGroup[] => {
     if (!user) return [];
@@ -631,6 +633,10 @@ const AppSidebar: React.FC = () => {
           items: group.items.filter(item => {
             // First check role
             if (!item.roles?.includes(user.role)) return false;
+
+            if (item.path === '/admin/dashboard/subscription/group' && !hasMultipleMerchants) {
+              return false;
+            }
 
             // If no permission required, allow
             if (!item.permission) return true;
@@ -652,6 +658,18 @@ const AppSidebar: React.FC = () => {
   const isActive = useCallback((path: string) => {
     // Exact match first (most important)
     if (path === pathname) return true;
+
+    // Subscription group should not activate subscription root
+    if (path === '/admin/dashboard/subscription/group') {
+      return pathname.startsWith('/admin/dashboard/subscription/group');
+    }
+
+    if (path === '/admin/dashboard/subscription') {
+      return (
+        pathname.startsWith('/admin/dashboard/subscription') &&
+        !pathname.startsWith('/admin/dashboard/subscription/group')
+      );
+    }
 
     // Special handling for menu builder
     if (path === "/admin/dashboard/menu/builder/new") {
@@ -689,10 +707,10 @@ const AppSidebar: React.FC = () => {
       data-sidebar
       className={`fixed top-0 left-0 flex flex-col bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-50 border-r border-gray-200 
         ${isExpanded || isMobileOpen
-          ? "w-[280px]"
+          ? "w-70"
           : isHovered
-            ? "w-[280px]"
-            : "w-[90px]"
+            ? "w-70"
+            : "w-22.5"
         }
         ${isMobileOpen ? "translate-x-0" : "-translate-x-full"}
         lg:translate-x-0`}
@@ -846,7 +864,7 @@ const AppSidebar: React.FC = () => {
                             <span className="relative inline-flex">
                               {nav.icon}
                               {nav.path === '/admin/dashboard/reservations' && (pendingReservationCount ?? 0) > 0 && !(isExpanded || isHovered || isMobileOpen) && (
-                                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+                                <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
                                   {pendingReservationCount}
                                 </span>
                               )}
@@ -861,7 +879,7 @@ const AppSidebar: React.FC = () => {
                                 </span>
                               )}
                               {nav.path === '/admin/dashboard/reservations' && (pendingReservationCount ?? 0) > 0 && (
-                                <span className="ml-auto min-w-[24px] h-6 px-2 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">
+                                <span className="ml-auto min-w-6 h-6 px-2 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">
                                   {pendingReservationCount}
                                 </span>
                               )}

@@ -7,6 +7,7 @@ import { useTranslation } from '@/lib/i18n/useTranslation';
 import { formatCurrency } from '@/lib/utils/format';
 import { getCurrencyConfig } from '@/lib/constants/location';
 import ConfirmDialog from '@/components/modals/ConfirmDialog';
+import { useMerchant } from '@/context/MerchantContext';
 
 interface ApiResponse<T> {
   success: boolean;
@@ -46,8 +47,10 @@ interface GroupData {
 
 export default function GroupBillingPage() {
   const { t, locale } = useTranslation();
+  const { merchant } = useMerchant();
+  const isMerchantInactive = merchant?.isActive === false;
   const { data, error, isLoading, mutate } = useSWRStatic<ApiResponse<GroupData>>(
-    '/api/merchant/balance/group'
+    isMerchantInactive ? null : '/api/merchant/balance/group'
   );
 
   const [fromMerchantId, setFromMerchantId] = useState('');

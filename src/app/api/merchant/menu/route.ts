@@ -128,6 +128,12 @@ async function handlePost(req: NextRequest, context: AuthContext) {
       imageUrl: body.imageUrl,
       imageThumbUrl: body.imageThumbUrl,
       imageThumbMeta: body.imageThumbMeta,
+      stockPhotoId:
+        body.stockPhotoId === null
+          ? null
+          : body.stockPhotoId
+          ? BigInt(body.stockPhotoId)
+          : undefined,
       isActive: body.isActive !== undefined ? body.isActive : true,
       isSpicy: body.isSpicy || false,
       isBestSeller: body.isBestSeller || false,

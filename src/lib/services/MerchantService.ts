@@ -1016,21 +1016,128 @@ class MerchantService {
   }
 
   /**
-   * Delete merchant (soft delete)
+   * Delete merchant (hard delete)
    * 
    * @param merchantId Merchant ID
    */
   async deleteMerchant(merchantId: bigint): Promise<void> {
-    // Validate merchant exists
-    const existing = await merchantRepository.findById(merchantId);
-    if (!existing) {
+    const merchant = (await prisma.merchant.findUnique({
+      where: { id: merchantId },
+      select: {
+        id: true,
+        code: true,
+        parentMerchantId: true,
+      },
+    } as Prisma.MerchantFindUniqueArgs)) as {
+      id: bigint;
+      code: string;
+      parentMerchantId: bigint | null;
+    } | null;
+
+    if (!merchant) {
       throw new NotFoundError(
         'Merchant not found',
         ERROR_CODES.MERCHANT_NOT_FOUND
       );
     }
 
-    await merchantRepository.delete(merchantId);
+    const branchMerchants = merchant.parentMerchantId
+      ? []
+      : await prisma.merchant.findMany({
+          where: { parentMerchantId: merchant.id },
+          select: { id: true, code: true },
+        } as Prisma.MerchantFindManyArgs);
+
+    const branchIds = branchMerchants.map((branch) => branch.id);
+    const merchantIds = [merchant.id, ...branchIds];
+    const merchantCodes = [
+      merchant.code,
+      ...branchMerchants.map((branch) => branch.code),
+    ].filter(Boolean);
+
+    const merchantUsers = await prisma.merchantUser.findMany({
+      where: { merchantId: { in: merchantIds } },
+      select: {
+        userId: true,
+        user: {
+          select: {
+            role: true,
+            isSystem: true,
+          },
+        },
+      },
+    });
+
+    const userInfoMap = new Map<
+      string,
+      { id: bigint; role: string; isSystem: boolean }
+    >();
+
+    for (const link of merchantUsers) {
+      if (!link.user) continue;
+      const key = link.userId.toString();
+      if (!userInfoMap.has(key)) {
+        userInfoMap.set(key, {
+          id: link.userId,
+          role: link.user.role,
+          isSystem: link.user.isSystem,
+        });
+      }
+    }
+
+    const candidateUserIds = Array.from(userInfoMap.values()).map(
+      (info) => info.id
+    );
+
+    const otherLinks = candidateUserIds.length
+      ? await prisma.merchantUser.findMany({
+          where: {
+            userId: { in: candidateUserIds },
+            merchantId: { notIn: merchantIds },
+          },
+          select: { userId: true },
+        })
+      : [];
+
+    const usersWithOtherLinks = new Set(
+      otherLinks.map((link) => link.userId.toString())
+    );
+
+    const deletableRoles = new Set([
+      'MERCHANT_OWNER',
+      'MERCHANT_STAFF',
+      'DELIVERY',
+    ]);
+
+    const deletableUserIds = Array.from(userInfoMap.values())
+      .filter((info) => !info.isSystem)
+      .filter((info) => deletableRoles.has(info.role))
+      .filter((info) => !usersWithOtherLinks.has(info.id.toString()))
+      .map((info) => info.id);
+
+    await prisma.$transaction(async (tx) => {
+      if (branchIds.length > 0) {
+        await tx.merchant.deleteMany({
+          where: { id: { in: branchIds } },
+        });
+      }
+
+      await tx.merchant.delete({ where: { id: merchant.id } });
+
+      if (deletableUserIds.length > 0) {
+        await tx.user.deleteMany({
+          where: { id: { in: deletableUserIds } },
+        });
+      }
+    });
+
+    for (const code of merchantCodes) {
+      await BlobService.deletePrefix(`merchants/${code}/`);
+    }
+
+    for (const userId of deletableUserIds) {
+      await BlobService.deleteOldProfilePicture(userId.toString());
+    }
   }
 
   /**

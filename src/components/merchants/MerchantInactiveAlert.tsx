@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { useMerchant } from "@/context/MerchantContext";
@@ -16,14 +16,15 @@ export default function MerchantInactiveAlert() {
   const { user } = useAuth();
   const { merchant } = useMerchant();
   const { t } = useTranslation();
+  const [isDismissed, setIsDismissed] = useState(false);
 
   const isMerchantUser = user?.role === "MERCHANT_OWNER" || user?.role === "MERCHANT_STAFF";
   const isInactive = isMerchantUser && merchant?.isActive === false;
 
-  if (!isInactive) return null;
+  if (!isInactive || isDismissed) return null;
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-60 border-b-2 border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-800/50 dark:bg-gray-900/95 shadow-lg">
+    <div className="fixed top-14 md:top-16 left-0 right-0 z-60 border-b-2 border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-800/50 dark:bg-gray-900/95 shadow-lg">
       <div className="max-w-screen-2xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-start gap-3">
           <div className="shrink-0 w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-900/40 flex items-center justify-center">
@@ -43,14 +44,27 @@ export default function MerchantInactiveAlert() {
           </div>
         </div>
 
-        <Link
-          href="/admin/dashboard"
-          className="shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2 
-            bg-gray-800 hover:bg-gray-900 text-white font-medium rounded-lg transition-colors
-            text-sm sm:text-base"
-        >
-          {t("admin.merchantInactive.backToDashboard")}
-        </Link>
+        <div className="shrink-0 flex items-center gap-2">
+          <Link
+            href="/admin/dashboard"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 
+              bg-gray-800 hover:bg-gray-900 text-white font-medium rounded-lg transition-colors
+              text-sm sm:text-base"
+          >
+            {t("admin.merchantInactive.backToDashboard")}
+          </Link>
+          <button
+            type="button"
+            onClick={() => setIsDismissed(true)}
+            aria-label={t("common.close")}
+            title={t("common.close")}
+            className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
   );

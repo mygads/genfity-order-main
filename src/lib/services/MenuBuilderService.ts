@@ -16,6 +16,7 @@ export interface MenuBuilderInput {
   imageUrl?: string | null;
   imageThumbUrl?: string | null;
   imageThumbMeta?: Prisma.InputJsonValue | null;
+  stockPhotoId?: number | null;
   isActive?: boolean;
   // Note: Promo pricing is now managed via SpecialPrice table
   
@@ -63,6 +64,27 @@ export class MenuBuilderService {
     input: MenuBuilderInput
   ): Promise<MenuBuilderResult> {
     return await prisma.$transaction(async (tx) => {
+      const stockPhotoId = input.stockPhotoId
+        ? BigInt(input.stockPhotoId)
+        : null;
+      let imageUrl = input.imageUrl;
+      let imageThumbUrl = input.imageThumbUrl;
+      let imageThumbMeta = input.imageThumbMeta ?? undefined;
+
+      if (stockPhotoId) {
+        const stockPhoto = await tx.stockPhoto.findUnique({
+          where: { id: stockPhotoId },
+        });
+
+        if (!stockPhoto || !stockPhoto.isActive) {
+          throw new Error('Foto stok tidak ditemukan');
+        }
+
+        imageUrl = stockPhoto.imageUrl;
+        imageThumbUrl = stockPhoto.thumbnailUrl;
+        imageThumbMeta = stockPhoto.thumbnailMeta ?? Prisma.DbNull;
+      }
+
       // 1. Create the menu
       const menu = await tx.menu.create({
         data: {
@@ -70,9 +92,10 @@ export class MenuBuilderService {
           name: input.name,
           description: input.description,
           price: new Prisma.Decimal(input.price),
-          imageUrl: input.imageUrl,
-          imageThumbUrl: input.imageThumbUrl,
-          imageThumbMeta: input.imageThumbMeta ?? undefined,
+          imageUrl,
+          imageThumbUrl,
+          imageThumbMeta,
+          stockPhotoId: stockPhotoId ?? undefined,
           isActive: input.isActive ?? true,
           // Promo fields removed - use SpecialPrice table
           trackStock: input.trackStock ?? false,
@@ -88,6 +111,20 @@ export class MenuBuilderService {
           updatedByUserId: userId,
         },
       });
+
+      if (stockPhotoId) {
+        const usageCount = await tx.menu.count({
+          where: {
+            stockPhotoId,
+            deletedAt: null,
+          },
+        });
+
+        await tx.stockPhoto.update({
+          where: { id: stockPhotoId },
+          data: { usageCount },
+        });
+      }
 
       // 2. Associate with categories (many-to-many)
       if (input.categoryIds && input.categoryIds.length > 0) {
@@ -209,6 +246,31 @@ export class MenuBuilderService {
         throw new Error('Menu tidak ditemukan');
       }
 
+      const previousStockPhotoId = existingMenu.stockPhotoId;
+      const hasStockPhotoUpdate = typeof input.stockPhotoId !== 'undefined';
+      const nextStockPhotoId = hasStockPhotoUpdate
+        ? input.stockPhotoId
+          ? BigInt(input.stockPhotoId)
+          : null
+        : previousStockPhotoId;
+      let imageUrl = input.imageUrl;
+      let imageThumbUrl = input.imageThumbUrl;
+      let imageThumbMeta = input.imageThumbMeta ?? undefined;
+
+      if (hasStockPhotoUpdate && nextStockPhotoId) {
+        const stockPhoto = await tx.stockPhoto.findUnique({
+          where: { id: nextStockPhotoId },
+        });
+
+        if (!stockPhoto || !stockPhoto.isActive) {
+          throw new Error('Foto stok tidak ditemukan');
+        }
+
+        imageUrl = stockPhoto.imageUrl;
+        imageThumbUrl = stockPhoto.thumbnailUrl;
+        imageThumbMeta = stockPhoto.thumbnailMeta ?? Prisma.DbNull;
+      }
+
       // 2. Update the menu
       const menu = await tx.menu.update({
         where: { id: menuId },
@@ -216,9 +278,10 @@ export class MenuBuilderService {
           name: input.name,
           description: input.description,
           price: new Prisma.Decimal(input.price),
-          imageUrl: input.imageUrl,
-          imageThumbUrl: input.imageThumbUrl,
-          imageThumbMeta: input.imageThumbMeta ?? undefined,
+          imageUrl,
+          imageThumbUrl,
+          imageThumbMeta,
+          stockPhotoId: hasStockPhotoUpdate ? nextStockPhotoId : undefined,
           isActive: input.isActive,
           // Promo fields removed - use SpecialPrice table
           trackStock: input.trackStock,
@@ -233,6 +296,36 @@ export class MenuBuilderService {
           updatedByUserId: userId,
         },
       });
+
+      if (hasStockPhotoUpdate) {
+        if (previousStockPhotoId) {
+          const usageCount = await tx.menu.count({
+            where: {
+              stockPhotoId: previousStockPhotoId,
+              deletedAt: null,
+            },
+          });
+
+          await tx.stockPhoto.update({
+            where: { id: previousStockPhotoId },
+            data: { usageCount },
+          });
+        }
+
+        if (nextStockPhotoId) {
+          const usageCount = await tx.menu.count({
+            where: {
+              stockPhotoId: nextStockPhotoId,
+              deletedAt: null,
+            },
+          });
+
+          await tx.stockPhoto.update({
+            where: { id: nextStockPhotoId },
+            data: { usageCount },
+          });
+        }
+      }
 
       // 3. Update categories (delete all + recreate)
       if (input.categoryIds !== undefined) {

@@ -6,7 +6,7 @@
  * Update user details
  * 
  * DELETE /api/admin/users/:id
- * Delete user (soft delete)
+ * Delete user (hard delete)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -22,6 +22,7 @@ import prisma from '@/lib/db/client';
 import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 import authService from '@/lib/services/AuthService';
 import emailService from '@/lib/services/EmailService';
+import { BlobService } from '@/lib/services/BlobService';
 import { Prisma } from '@prisma/client';
 
 const SYSTEM_USER_EMAIL = 'system@genfity.com';
@@ -252,6 +253,8 @@ async function deleteUserHandler(
       throw new ValidationError('You cannot delete the last active Super Admin', ERROR_CODES.VALIDATION_ERROR);
     }
   }
+
+  await BlobService.deleteOldProfilePicture(userId.toString());
 
   const result = await prisma.$transaction(async (tx) => {
     const systemUser = await getOrCreateSystemUser(tx);

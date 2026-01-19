@@ -54,6 +54,7 @@ interface MenuFormData {
   imageUrl: string;
   imageThumbUrl: string;
   imageThumbMeta?: Record<string, unknown> | null;
+  stockPhotoId?: string | null;
   isActive: boolean;
   isSpicy: boolean;
   isBestSeller: boolean;
@@ -134,6 +135,7 @@ export default function EditMenuPage() {
     imageUrl: "",
     imageThumbUrl: "",
     imageThumbMeta: null,
+    stockPhotoId: null,
     isActive: true,
     isSpicy: false,
     isBestSeller: false,
@@ -161,6 +163,7 @@ export default function EditMenuPage() {
       formData.description !== originalFormData.description ||
       formData.price !== originalFormData.price ||
       formData.imageUrl !== originalFormData.imageUrl ||
+      formData.stockPhotoId !== originalFormData.stockPhotoId ||
       formData.isActive !== originalFormData.isActive ||
       formData.isSpicy !== originalFormData.isSpicy ||
       formData.isBestSeller !== originalFormData.isBestSeller ||
@@ -224,6 +227,7 @@ export default function EditMenuPage() {
             imageUrl: menu.imageUrl || "",
             imageThumbUrl: menu.imageThumbUrl || "",
             imageThumbMeta: menu.imageThumbMeta || null,
+            stockPhotoId: menu.stockPhotoId || null,
             isActive: menu.isActive !== undefined ? menu.isActive : true,
             isSpicy: menu.isSpicy !== undefined ? menu.isSpicy : false,
             isBestSeller: menu.isBestSeller !== undefined ? menu.isBestSeller : false,
@@ -236,6 +240,7 @@ export default function EditMenuPage() {
           };
           setFormData(initialFormData);
           setOriginalFormData(initialFormData); // Store original data for comparison
+          setImageSource(menu.stockPhotoId ? 'stock' : 'upload');
 
           if (menu.addonCategories) {
             setAddonCategories(menu.addonCategories);
@@ -376,6 +381,7 @@ export default function EditMenuPage() {
         imageUrl: mainPresign.publicUrl,
         imageThumbUrl: thumbPresign.publicUrl,
         imageThumbMeta,
+        stockPhotoId: null,
       }));
       setImageSource('upload');
       setSuccess('Image uploaded successfully!');
@@ -431,6 +437,7 @@ export default function EditMenuPage() {
         imageUrl: formData.imageUrl || undefined,
         imageThumbUrl: formData.imageThumbUrl || undefined,
         imageThumbMeta: formData.imageThumbMeta || undefined,
+        stockPhotoId: formData.stockPhotoId || null,
         isActive: formData.isActive,
         isSpicy: formData.isSpicy,
         isBestSeller: formData.isBestSeller,
@@ -670,7 +677,7 @@ export default function EditMenuPage() {
                     />
                     <button
                       type="button"
-                      onClick={() => setFormData(prev => ({ ...prev, imageUrl: '', imageThumbUrl: '', imageThumbMeta: null }))}
+                      onClick={() => setFormData(prev => ({ ...prev, imageUrl: '', imageThumbUrl: '', imageThumbMeta: null, stockPhotoId: null }))}
                       className="absolute right-2 top-2 rounded-full bg-white/90 p-2 text-gray-600 shadow-lg transition-all hover:bg-error-100 hover:text-error-600 dark:bg-gray-800/90 dark:text-gray-300"
                     >
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -749,10 +756,13 @@ export default function EditMenuPage() {
                 imageUrl: selection.imageUrl,
                 imageThumbUrl: selection.thumbnailUrl || '',
                 imageThumbMeta: null,
+                stockPhotoId: selection.stockPhotoId,
               }));
+              setImageSource('stock');
               setShowStockPhotoPicker(false);
             }}
             currentImageUrl={formData.imageUrl}
+            currentStockPhotoId={formData.stockPhotoId || undefined}
           />
 
           {/* Divider */}

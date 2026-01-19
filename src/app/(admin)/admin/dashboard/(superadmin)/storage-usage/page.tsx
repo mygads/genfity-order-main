@@ -16,10 +16,22 @@ interface MerchantUsage {
   objectCount: number;
 }
 
+interface SystemAssetUsage {
+  key: string;
+  prefix: string;
+  totalBytes: number;
+  objectCount: number;
+}
+
 interface StorageUsageResponse {
   success: boolean;
   data: {
     merchants: MerchantUsage[];
+    systemAssets: SystemAssetUsage[];
+    systemTotals: {
+      totalBytes: number;
+      objectCount: number;
+    };
     totals: {
       totalBytes: number;
       objectCount: number;
@@ -62,6 +74,15 @@ export default function StorageUsagePage() {
     ? usageResponse.data?.totals
     : { totalBytes: 0, objectCount: 0 };
 
+  const systemTotals = usageResponse?.success
+    ? usageResponse.data?.systemTotals
+    : { totalBytes: 0, objectCount: 0 };
+
+  const systemAssets = useMemo(() => {
+    if (!usageResponse?.success) return [];
+    return usageResponse.data?.systemAssets ?? [];
+  }, [usageResponse]);
+
   const filteredMerchants = useMemo(() => {
     if (!searchQuery) return merchants;
     const query = searchQuery.toLowerCase();
@@ -74,6 +95,17 @@ export default function StorageUsagePage() {
   const sortedMerchants = useMemo(() => {
     return [...filteredMerchants].sort((a, b) => b.totalBytes - a.totalBytes);
   }, [filteredMerchants]);
+
+  const getSystemAssetLabel = (key: string) => {
+    switch (key) {
+      case "avatars":
+        return t("admin.storageUsage.systemAssets.avatars");
+      case "stockPhotos":
+        return t("admin.storageUsage.systemAssets.stockPhotos");
+      default:
+        return key;
+    }
+  };
 
   return (
     <div className="w-full min-w-0">
@@ -135,6 +167,95 @@ export default function StorageUsagePage() {
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-300">
                 <FaStore className="h-5 w-5" />
               </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900/40">
+          <div className="mb-4">
+            <h4 className="text-base font-semibold text-gray-800 dark:text-white/90">
+              {t("admin.storageUsage.systemTitle")}
+            </h4>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              {t("admin.storageUsage.systemSubtitle")}
+            </p>
+          </div>
+
+          <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900/60">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    {t("admin.storageUsage.systemTotalStorage")}
+                  </p>
+                  <p className="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">
+                    {formatBytes(systemTotals?.totalBytes ?? 0)}
+                  </p>
+                </div>
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-300">
+                  <FaDatabase className="h-5 w-5" />
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900/60">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    {t("admin.storageUsage.systemTotalObjects")}
+                  </p>
+                  <p className="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">
+                    {(systemTotals?.objectCount ?? 0).toLocaleString()}
+                  </p>
+                </div>
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-300">
+                  <FaFolderOpen className="h-5 w-5" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
+            <div className="overflow-x-auto">
+              <table className="w-full whitespace-nowrap">
+                <thead className="bg-gray-50 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:bg-gray-800/50 dark:text-gray-400">
+                  <tr>
+                    <th className="px-4 py-3">{t("admin.storageUsage.table.asset")}</th>
+                    <th className="px-4 py-3">{t("admin.storageUsage.table.prefix")}</th>
+                    <th className="px-4 py-3 text-right">{t("admin.storageUsage.table.objects")}</th>
+                    <th className="px-4 py-3 text-right">{t("admin.storageUsage.table.storage")}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
+                  {systemAssets.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={4}
+                        className="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400"
+                      >
+                        {t("admin.storageUsage.systemEmpty")}
+                      </td>
+                    </tr>
+                  ) : (
+                    systemAssets.map((asset) => (
+                      <tr key={asset.key} className="hover:bg-gray-50 dark:hover:bg-gray-800/40">
+                        <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                          {getSystemAssetLabel(asset.key)}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                          {asset.prefix}
+                        </td>
+                        <td className="px-4 py-3 text-right text-sm text-gray-600 dark:text-gray-300">
+                          {asset.objectCount.toLocaleString()}
+                        </td>
+                        <td className="px-4 py-3 text-right text-sm font-medium text-gray-900 dark:text-white">
+                          {formatBytes(asset.totalBytes)}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>

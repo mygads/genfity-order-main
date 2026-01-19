@@ -927,18 +927,27 @@ const id = {
 
   // Super Admin - Storage Usage
   "admin.storageUsage.title": "Penggunaan Penyimpanan",
-  "admin.storageUsage.subtitle": "Pantau penggunaan penyimpanan R2 per merchant",
+  "admin.storageUsage.subtitle": "Pantau penggunaan penyimpanan R2 untuk merchant dan aset sistem",
   "admin.storageUsage.totalStorage": "Total Penyimpanan",
   "admin.storageUsage.totalObjects": "Total Objek",
   "admin.storageUsage.totalMerchants": "Total Merchant",
+  "admin.storageUsage.systemTitle": "Aset Sistem",
+  "admin.storageUsage.systemSubtitle": "Aset bersama seperti avatar pengguna dan foto stok",
+  "admin.storageUsage.systemTotalStorage": "Penyimpanan Sistem",
+  "admin.storageUsage.systemTotalObjects": "Objek Sistem",
   "admin.storageUsage.searchPlaceholder": "Cari nama merchant atau kode...",
   "admin.storageUsage.refresh": "Muat Ulang",
+  "admin.storageUsage.table.asset": "Aset",
+  "admin.storageUsage.table.prefix": "Prefix",
   "admin.storageUsage.table.merchant": "Merchant",
   "admin.storageUsage.table.code": "Kode",
   "admin.storageUsage.table.status": "Status",
   "admin.storageUsage.table.objects": "Objek",
   "admin.storageUsage.table.storage": "Penyimpanan",
   "admin.storageUsage.empty": "Tidak ada data penyimpanan",
+  "admin.storageUsage.systemEmpty": "Tidak ada aset sistem",
+  "admin.storageUsage.systemAssets.avatars": "Avatar pengguna",
+  "admin.storageUsage.systemAssets.stockPhotos": "Foto stok",
 
   // Subscription Settings Page (Super Admin)
   "admin.subscriptionSettings.title": "Pengaturan Langganan",

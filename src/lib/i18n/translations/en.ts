@@ -868,18 +868,27 @@ const en = {
 
   // Super Admin - Storage Usage
   "admin.storageUsage.title": "Storage Usage",
-  "admin.storageUsage.subtitle": "Track R2 storage usage per merchant",
+  "admin.storageUsage.subtitle": "Track R2 storage usage across merchants and system assets",
   "admin.storageUsage.totalStorage": "Total Storage",
   "admin.storageUsage.totalObjects": "Total Objects",
   "admin.storageUsage.totalMerchants": "Total Merchants",
+  "admin.storageUsage.systemTitle": "System Assets",
+  "admin.storageUsage.systemSubtitle": "Shared assets such as user avatars and stock photos",
+  "admin.storageUsage.systemTotalStorage": "System Storage",
+  "admin.storageUsage.systemTotalObjects": "System Objects",
   "admin.storageUsage.searchPlaceholder": "Search by merchant or code...",
   "admin.storageUsage.refresh": "Refresh",
+  "admin.storageUsage.table.asset": "Asset",
+  "admin.storageUsage.table.prefix": "Prefix",
   "admin.storageUsage.table.merchant": "Merchant",
   "admin.storageUsage.table.code": "Code",
   "admin.storageUsage.table.status": "Status",
   "admin.storageUsage.table.objects": "Objects",
   "admin.storageUsage.table.storage": "Storage",
   "admin.storageUsage.empty": "No storage data found",
+  "admin.storageUsage.systemEmpty": "No system assets found",
+  "admin.storageUsage.systemAssets.avatars": "User avatars",
+  "admin.storageUsage.systemAssets.stockPhotos": "Stock photos",
 
   // Subscription Settings Page (Super Admin)
   "admin.subscriptionSettings.title": "Subscription Settings",

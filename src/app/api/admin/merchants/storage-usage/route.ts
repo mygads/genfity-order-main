@@ -19,6 +19,13 @@ interface MerchantStorageUsage {
   objectCount: number;
 }
 
+interface SystemAssetUsage {
+  key: string;
+  prefix: string;
+  totalBytes: number;
+  objectCount: number;
+}
+
 async function handleGet(
   _request: NextRequest,
   _authContext: AuthContext
@@ -42,7 +49,24 @@ async function handleGet(
     })
   );
 
-  const totals = usageList.reduce(
+  const systemPrefixes: Array<{ key: string; prefix: string }> = [
+    { key: 'avatars', prefix: 'avatars/' },
+    { key: 'stockPhotos', prefix: 'stock-photos/' },
+  ];
+
+  const systemAssets: SystemAssetUsage[] = await Promise.all(
+    systemPrefixes.map(async (asset) => {
+      const usage = await BlobService.getPrefixUsage(asset.prefix);
+      return {
+        key: asset.key,
+        prefix: asset.prefix,
+        totalBytes: usage.totalBytes,
+        objectCount: usage.objectCount,
+      };
+    })
+  );
+
+  const merchantTotals = usageList.reduce(
     (acc, item) => {
       acc.totalBytes += item.totalBytes;
       acc.objectCount += item.objectCount;
@@ -51,9 +75,25 @@ async function handleGet(
     { totalBytes: 0, objectCount: 0 }
   );
 
+  const systemTotals = systemAssets.reduce(
+    (acc, item) => {
+      acc.totalBytes += item.totalBytes;
+      acc.objectCount += item.objectCount;
+      return acc;
+    },
+    { totalBytes: 0, objectCount: 0 }
+  );
+
+  const totals = {
+    totalBytes: merchantTotals.totalBytes + systemTotals.totalBytes,
+    objectCount: merchantTotals.objectCount + systemTotals.objectCount,
+  };
+
   return successResponse(
     {
       merchants: usageList,
+      systemAssets,
+      systemTotals,
       totals,
     },
     'Storage usage retrieved successfully',

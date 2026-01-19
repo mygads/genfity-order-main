@@ -44,6 +44,7 @@ const menuBuilderSchema = z.object({
   imageUrl: z.string().url().optional().or(z.literal('')),
   imageThumbUrl: z.string().url().optional().or(z.literal('')),
   imageThumbMeta: z.any().optional().nullable(),
+  stockPhotoId: z.number().int().positive().optional().nullable(),
   isActive: z.boolean(),
   // Note: Promo is now managed via Special Prices page, not on individual menu items
   trackStock: z.boolean(),
@@ -152,6 +153,7 @@ export default function MenuBuilderTabs({
       imageUrl: initialData?.imageUrl || '',
       imageThumbUrl: (initialData as Partial<MenuBuilderFormData> | undefined)?.imageThumbUrl || '',
       imageThumbMeta: (initialData as Partial<MenuBuilderFormData> | undefined)?.imageThumbMeta ?? null,
+      stockPhotoId: (initialData as Partial<MenuBuilderFormData> | undefined)?.stockPhotoId ?? null,
       isActive: initialData?.isActive ?? true,
       // Note: Promo is now managed via Special Prices page
       trackStock: initialData?.trackStock || false,
@@ -171,6 +173,7 @@ export default function MenuBuilderTabs({
   const watchTrackStock = watch('trackStock');
   const watchImageUrl = watch('imageUrl');
   const watchImageThumbUrl = watch('imageThumbUrl');
+  const watchStockPhotoId = watch('stockPhotoId');
   const watchIsActive = watch('isActive');
 
   const [previewViewMode, setPreviewViewMode] = useState<ViewMode>('list');
@@ -241,6 +244,10 @@ export default function MenuBuilderTabs({
       setUploadedImageThumb2xUrl(null);
     }
 
+    if (nextSource !== 'stock') {
+      setValue('stockPhotoId', null, { shouldValidate: true, shouldDirty: true });
+    }
+
     setImageSource(nextSource);
   };
 
@@ -291,6 +298,7 @@ export default function MenuBuilderTabs({
           imageUrl: parsed.form.imageUrl ?? initialData?.imageUrl ?? '',
           imageThumbUrl: parsed.form.imageThumbUrl ?? (initialData as Partial<MenuBuilderFormData> | undefined)?.imageThumbUrl ?? '',
           imageThumbMeta: parsed.form.imageThumbMeta ?? (initialData as Partial<MenuBuilderFormData> | undefined)?.imageThumbMeta ?? null,
+          stockPhotoId: parsed.form.stockPhotoId ?? (initialData as Partial<MenuBuilderFormData> | undefined)?.stockPhotoId ?? null,
           isActive: parsed.form.isActive ?? initialData?.isActive ?? true,
           trackStock: parsed.form.trackStock ?? initialData?.trackStock ?? false,
           stockQty: parsed.form.stockQty ?? initialData?.stockQty ?? null,
@@ -393,6 +401,10 @@ export default function MenuBuilderTabs({
       ...data,
       categoryIds: selectedCategories.map(id => typeof id === 'string' ? parseInt(id) : id),
       addonCategoryIds: selectedAddonCategories.map(id => typeof id === 'string' ? parseInt(id) : id),
+      stockPhotoId:
+        typeof data.stockPhotoId === 'string'
+          ? parseInt(data.stockPhotoId)
+          : data.stockPhotoId ?? null,
     };
 
     try {
@@ -418,6 +430,7 @@ export default function MenuBuilderTabs({
           imageUrl: '',
           imageThumbUrl: '',
           imageThumbMeta: null,
+          stockPhotoId: null,
           isActive: true,
           trackStock: false,
           stockQty: null,
@@ -812,6 +825,7 @@ export default function MenuBuilderTabs({
                           setValue('imageUrl', '', { shouldValidate: true, shouldDirty: true });
                           setValue('imageThumbUrl', '', { shouldValidate: true, shouldDirty: true });
                           setValue('imageThumbMeta', null, { shouldValidate: true, shouldDirty: true });
+                          setValue('stockPhotoId', null, { shouldValidate: true, shouldDirty: true });
 
                           // Keep these reads to avoid unused vars in some TS configurations
                           void currentThumbUrl;
@@ -1493,8 +1507,10 @@ export default function MenuBuilderTabs({
           setValue('imageUrl', selection.imageUrl, { shouldValidate: true, shouldDirty: true });
           setValue('imageThumbUrl', selection.thumbnailUrl || '', { shouldValidate: true, shouldDirty: true });
           setValue('imageThumbMeta', null, { shouldValidate: true, shouldDirty: true });
+          setValue('stockPhotoId', parseInt(selection.stockPhotoId), { shouldValidate: true, shouldDirty: true });
           setShowStockPhotoPicker(false);
         }}
+        currentStockPhotoId={watchStockPhotoId ? String(watchStockPhotoId) : undefined}
       />
     </div>
   );

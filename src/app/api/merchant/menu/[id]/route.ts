@@ -88,6 +88,12 @@ async function handlePut(
       imageUrl: body.imageUrl,
       imageThumbUrl: body.imageThumbUrl,
       imageThumbMeta: body.imageThumbMeta,
+      stockPhotoId:
+        body.stockPhotoId === null
+          ? null
+          : body.stockPhotoId
+          ? BigInt(body.stockPhotoId)
+          : undefined,
       isActive: body.isActive,
       isSpicy: body.isSpicy,
       isBestSeller: body.isBestSeller,

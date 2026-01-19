@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
 import { withSuperAdmin } from '@/lib/middleware/auth';
 import { serializeBigInt } from '@/lib/utils/serializer';
+import { Prisma } from '@prisma/client';
 import type { AuthContext } from '@/lib/middleware/auth';
 import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
 
@@ -126,6 +127,30 @@ async function putHandler(
     },
   });
 
+  await prisma.menu.updateMany({
+    where: {
+      stockPhotoId: photoId,
+      deletedAt: null,
+    },
+    data: {
+      imageUrl: photo.imageUrl,
+      imageThumbUrl: photo.thumbnailUrl ?? null,
+      imageThumbMeta: photo.thumbnailMeta ?? Prisma.DbNull,
+    },
+  });
+
+  const usageCount = await prisma.menu.count({
+    where: {
+      stockPhotoId: photoId,
+      deletedAt: null,
+    },
+  });
+
+  await (prisma as any).stockPhoto.update({
+    where: { id: photoId },
+    data: { usageCount },
+  });
+
   return NextResponse.json({
     success: true,
     data: serializeBigInt(photo),
@@ -163,11 +188,24 @@ async function deleteHandler(
     }, { status: 404 });
   }
 
+  await prisma.menu.updateMany({
+    where: {
+      stockPhotoId: photoId,
+      deletedAt: null,
+    },
+    data: {
+      stockPhotoId: null,
+      imageUrl: null,
+      imageThumbUrl: null,
+      imageThumbMeta: Prisma.DbNull,
+    },
+  });
+
   // Soft delete by setting isActive to false
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await (prisma as any).stockPhoto.update({
     where: { id: photoId },
-    data: { isActive: false },
+    data: { isActive: false, usageCount: 0 },
   });
 
   return NextResponse.json({

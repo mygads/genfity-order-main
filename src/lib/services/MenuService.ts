@@ -5,6 +5,7 @@
 
 import menuRepository from '@/lib/repositories/MenuRepository';
 import merchantRepository from '@/lib/repositories/MerchantRepository';
+import prisma from '@/lib/db/client';
 import {
   ValidationError,
   NotFoundError,
@@ -44,6 +45,7 @@ export interface MenuInput {
   imageUrl?: string;
   imageThumbUrl?: string;
   imageThumbMeta?: Prisma.InputJsonValue;
+  stockPhotoId?: bigint | null;
   isActive?: boolean;
   // Promo fields removed - use SpecialPrice table instead
   isSpicy?: boolean;
@@ -86,6 +88,44 @@ export interface AddonItemInput {
  * Menu Service Class
  */
 class MenuService {
+  private async resolveStockPhotoPayload(stockPhotoId?: bigint | null) {
+    if (!stockPhotoId) {
+      return null;
+    }
+
+    const stockPhoto = await prisma.stockPhoto.findUnique({
+      where: { id: stockPhotoId },
+    });
+
+    if (!stockPhoto || !stockPhoto.isActive) {
+      throw new ValidationError(
+        'Stock photo not found',
+        ERROR_CODES.NOT_FOUND
+      );
+    }
+
+    return {
+      stockPhotoId,
+      imageUrl: stockPhoto.imageUrl,
+      imageThumbUrl: stockPhoto.thumbnailUrl ?? undefined,
+      imageThumbMeta: stockPhoto.thumbnailMeta ?? null,
+    };
+  }
+
+  private async syncStockPhotoUsage(stockPhotoId: bigint): Promise<void> {
+    const usageCount = await prisma.menu.count({
+      where: {
+        stockPhotoId,
+        deletedAt: null,
+      },
+    });
+
+    await prisma.stockPhoto.update({
+      where: { id: stockPhotoId },
+      data: { usageCount },
+    });
+  }
+
   // ========================================
   // MENU CATEGORIES
   // ========================================
@@ -244,15 +284,23 @@ class MenuService {
       );
     }
 
-    return await menuRepository.createMenu({
+    const stockPhotoPayload = await this.resolveStockPhotoPayload(
+      input.stockPhotoId
+    );
+
+    const menu = await menuRepository.createMenu({
       merchantId: input.merchantId,
       categoryId: input.categoryId,
       name: input.name.trim(),
       description: input.description?.trim(),
       price: input.price,
-      imageUrl: input.imageUrl,
-      imageThumbUrl: input.imageThumbUrl,
-      imageThumbMeta: input.imageThumbMeta,
+      imageUrl: stockPhotoPayload ? stockPhotoPayload.imageUrl : input.imageUrl,
+      imageThumbUrl: stockPhotoPayload ? stockPhotoPayload.imageThumbUrl : input.imageThumbUrl,
+      imageThumbMeta: stockPhotoPayload ? stockPhotoPayload.imageThumbMeta : input.imageThumbMeta,
+      stockPhotoId:
+        typeof input.stockPhotoId === 'undefined'
+          ? undefined
+          : input.stockPhotoId,
       isActive: input.isActive ?? true,
       // Promo fields removed - use SpecialPrice table
       isSpicy: input.isSpicy ?? false,
@@ -265,6 +313,12 @@ class MenuService {
       autoResetStock: input.autoResetStock ?? false,
       createdByUserId: input.userId,
     });
+
+    if (stockPhotoPayload?.stockPhotoId) {
+      await this.syncStockPhotoUsage(stockPhotoPayload.stockPhotoId);
+    }
+
+    return menu;
   }
 
   /**
@@ -305,14 +359,27 @@ class MenuService {
       );
     }
 
-    return await menuRepository.updateMenu(menuId, {
+    const existingStockPhotoId = existing.stockPhotoId
+      ? BigInt(existing.stockPhotoId)
+      : null;
+    const hasStockPhotoUpdate = typeof input.stockPhotoId !== 'undefined';
+    const nextStockPhotoId = hasStockPhotoUpdate
+      ? input.stockPhotoId
+      : existingStockPhotoId;
+
+    const stockPhotoPayload = hasStockPhotoUpdate
+      ? await this.resolveStockPhotoPayload(nextStockPhotoId)
+      : null;
+
+    const menu = await menuRepository.updateMenu(menuId, {
       categoryId: input.categoryId,
       name: input.name?.trim(),
       description: input.description?.trim(),
       price: input.price,
-      imageUrl: input.imageUrl,
-      imageThumbUrl: input.imageThumbUrl,
-      imageThumbMeta: input.imageThumbMeta,
+      imageUrl: stockPhotoPayload ? stockPhotoPayload.imageUrl : input.imageUrl,
+      imageThumbUrl: stockPhotoPayload ? stockPhotoPayload.imageThumbUrl : input.imageThumbUrl,
+      imageThumbMeta: stockPhotoPayload ? stockPhotoPayload.imageThumbMeta : input.imageThumbMeta,
+      stockPhotoId: hasStockPhotoUpdate ? (input.stockPhotoId ?? null) : undefined,
       isActive: input.isActive,
       // Promo fields removed - use SpecialPrice table
       isSpicy: input.isSpicy,
@@ -325,6 +392,17 @@ class MenuService {
       autoResetStock: input.autoResetStock,
       updatedByUserId: input.userId,
     });
+
+    if (hasStockPhotoUpdate) {
+      if (existingStockPhotoId) {
+        await this.syncStockPhotoUsage(existingStockPhotoId);
+      }
+      if (input.stockPhotoId) {
+        await this.syncStockPhotoUsage(input.stockPhotoId);
+      }
+    }
+
+    return menu;
   }
 
   /**
@@ -342,6 +420,10 @@ class MenuService {
     }
 
     await menuRepository.deleteMenu(menuId, userId);
+
+    if (existing.stockPhotoId) {
+      await this.syncStockPhotoUsage(BigInt(existing.stockPhotoId));
+    }
   }
 
   /**

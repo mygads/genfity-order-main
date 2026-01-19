@@ -667,6 +667,7 @@ model Menu {
   imageUrl           String?             @map("image_url")
   imageThumbUrl      String?             @map("image_thumb_url")
   imageThumbMeta     Json?               @map("image_thumb_meta")
+  stockPhotoId       BigInt?             @map("stock_photo_id")
   isActive           Boolean             @default(true) @map("is_active")
   // Note: Promo fields removed - use SpecialPrice/SpecialPriceItem tables instead
   trackStock         Boolean             @default(false) @map("track_stock")
@@ -701,6 +702,7 @@ model Menu {
   createdBy          User?               @relation("MenuCreatedBy", fields: [createdByUserId], references: [id])
   deletedBy          User?               @relation("MenuDeletedBy", fields: [deletedByUserId], references: [id])
   merchant           Merchant            @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  stockPhoto         StockPhoto?         @relation("StockPhotoMenus", fields: [stockPhotoId], references: [id], onDelete: SetNull)
   updatedBy          User?               @relation("MenuUpdatedBy", fields: [updatedByUserId], references: [id])
   restoredBy         User?               @relation("MenuRestoredBy", fields: [restoredByUserId], references: [id])
   orderItems         OrderItem[]
@@ -710,6 +712,7 @@ model Menu {
 
   @@index([merchantId])
   @@index([categoryId])
+  @@index([stockPhotoId])
   @@index([isActive])
   @@index([deletedAt])
   @@index([scheduleEnabled])
@@ -1914,6 +1917,7 @@ model StockPhoto {
   updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
   
   uploadedBy      User      @relation("StockPhotoUploadedBy", fields: [uploadedByUserId], references: [id])
+  menus           Menu[]    @relation("StockPhotoMenus")
   
   @@index([category])
   @@index([name])

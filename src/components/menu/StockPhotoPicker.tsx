@@ -36,8 +36,9 @@ interface StockPhotosApiResponse {
 interface StockPhotoPickerProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (selection: { imageUrl: string; thumbnailUrl?: string }) => void;
+  onSelect: (selection: { stockPhotoId: string; imageUrl: string; thumbnailUrl?: string }) => void;
   currentImageUrl?: string;
+  currentStockPhotoId?: string;
 }
 
 /**
@@ -50,6 +51,7 @@ export default function StockPhotoPicker({
   onClose,
   onSelect,
   currentImageUrl,
+  currentStockPhotoId,
 }: StockPhotoPickerProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
@@ -111,6 +113,7 @@ export default function StockPhotoPicker({
     }
 
     onSelect({
+      stockPhotoId: selectedPhoto.id,
       imageUrl: selectedPhoto.imageUrl,
       thumbnailUrl: selectedPhoto.thumbnailUrl,
     });
@@ -178,7 +181,7 @@ export default function StockPhotoPicker({
             </div>
 
             {/* Category Dropdown */}
-            <div className="relative min-w-[180px]">
+            <div className="relative min-w-45">
               <select
                 value={selectedCategory}
                 onChange={(e) => handleCategoryChange(e.target.value)}
@@ -233,7 +236,7 @@ export default function StockPhotoPicker({
                     className={`group relative aspect-square overflow-hidden rounded-lg border-2 transition-all hover:shadow-lg ${
                       selectedPhoto?.id === photo.id
                         ? "border-brand-500 ring-2 ring-brand-500"
-                        : currentImageUrl === photo.imageUrl
+                        : currentStockPhotoId === photo.id || currentImageUrl === photo.imageUrl
                         ? "border-green-500 ring-2 ring-green-500"
                         : "border-transparent hover:border-brand-300"
                     }`}
@@ -246,7 +249,7 @@ export default function StockPhotoPicker({
                       unoptimized
                     />
                     {/* Overlay with name */}
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2 opacity-0 transition-opacity group-hover:opacity-100">
+                    <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/70 to-transparent p-2 opacity-0 transition-opacity group-hover:opacity-100">
                       <p className="truncate text-xs font-medium text-white">
                         {photo.name}
                       </p>
@@ -258,7 +261,7 @@ export default function StockPhotoPicker({
                       </div>
                     )}
                     {/* Current image indicator */}
-                    {currentImageUrl === photo.imageUrl && selectedPhoto?.id !== photo.id && (
+                    {(currentStockPhotoId === photo.id || currentImageUrl === photo.imageUrl) && selectedPhoto?.id !== photo.id && (
                       <div className="absolute right-1 top-1 rounded-full bg-green-500 p-1">
                         <FaCheck className="h-3 w-3 text-white" />
                       </div>
@@ -360,6 +363,7 @@ interface ImageSourceSelectorProps {
   imageUrl?: string;
   onImageChange: (url: string) => void;
   onUploadClick: () => void;
+  onStockPhotoChange?: (stockPhotoId: string | null) => void;
   label?: string;
 }
 
@@ -367,13 +371,15 @@ export function ImageSourceSelector({
   imageUrl,
   onImageChange,
   onUploadClick,
+  onStockPhotoChange,
   label = "Menu Image",
 }: ImageSourceSelectorProps) {
   const [isStockPickerOpen, setIsStockPickerOpen] = useState(false);
   const [imageSource, setImageSource] = useState<"upload" | "stock">("upload");
 
-  const handleStockSelect = (selection: { imageUrl: string; thumbnailUrl?: string }) => {
+  const handleStockSelect = (selection: { stockPhotoId: string; imageUrl: string; thumbnailUrl?: string }) => {
     onImageChange(selection.imageUrl);
+    onStockPhotoChange?.(selection.stockPhotoId);
     setImageSource("stock");
   };
 
@@ -389,6 +395,7 @@ export function ImageSourceSelector({
           type="button"
           onClick={() => {
             setImageSource("upload");
+            onStockPhotoChange?.(null);
             onUploadClick();
           }}
           className={`flex-1 inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${

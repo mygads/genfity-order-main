@@ -50,6 +50,7 @@ interface MenuFormData {
   imageUrl: string;
   imageThumbUrl: string;
   imageThumbMeta?: Record<string, unknown> | null;
+  stockPhotoId?: string | null;
   isActive: boolean;
   isSpicy: boolean;
   isBestSeller: boolean;
@@ -101,6 +102,7 @@ export default function CreateMenuPage() {
     imageUrl: "",
     imageThumbUrl: "",
     imageThumbMeta: null,
+    stockPhotoId: null,
     isActive: true,
     isSpicy: false,
     isBestSeller: false,
@@ -231,6 +233,9 @@ export default function CreateMenuPage() {
       setUploadedImageThumbUrl(null);
       setUploadedImageThumb2xUrl(null);
     }
+    if (nextSource !== 'stock') {
+      setFormData(prev => ({ ...prev, stockPhotoId: null }));
+    }
     setImageSource(nextSource);
   };
 
@@ -340,6 +345,7 @@ export default function CreateMenuPage() {
         imageUrl: mainPresign.publicUrl,
         imageThumbUrl: thumbPresign.publicUrl,
         imageThumbMeta,
+        stockPhotoId: null,
       }));
       setUploadedImageUrl(mainPresign.publicUrl);
       setUploadedImageThumbUrl(thumbPresign.publicUrl);
@@ -395,6 +401,7 @@ export default function CreateMenuPage() {
         imageUrl: formData.imageUrl || undefined,
         imageThumbUrl: formData.imageThumbUrl || undefined,
         imageThumbMeta: formData.imageThumbMeta || undefined,
+        stockPhotoId: formData.stockPhotoId || null,
         isActive: formData.isActive,
         isSpicy: formData.isSpicy,
         isBestSeller: formData.isBestSeller,
@@ -665,7 +672,7 @@ export default function CreateMenuPage() {
                           setUploadedImageThumbUrl(null);
                           setUploadedImageThumb2xUrl(null);
                         }
-                        setFormData(prev => ({ ...prev, imageUrl: '', imageThumbUrl: '', imageThumbMeta: null }));
+                        setFormData(prev => ({ ...prev, imageUrl: '', imageThumbUrl: '', imageThumbMeta: null, stockPhotoId: null }));
                       }}
                       className="absolute right-2 top-2 rounded-full bg-white/90 p-2 text-gray-600 shadow-lg transition-all hover:bg-error-100 hover:text-error-600 dark:bg-gray-800/90 dark:text-gray-300"
                     >
@@ -750,10 +757,12 @@ export default function CreateMenuPage() {
                 imageUrl: selection.imageUrl,
                 imageThumbUrl: selection.thumbnailUrl || '',
                 imageThumbMeta: null,
+                stockPhotoId: selection.stockPhotoId,
               }));
               setShowStockPhotoPicker(false);
             }}
             currentImageUrl={formData.imageUrl}
+            currentStockPhotoId={formData.stockPhotoId || undefined}
           />
 
           {/* Divider */}
@@ -1191,6 +1200,7 @@ export default function CreateMenuPage() {
             price: typeof menu.price === "number" ? menu.price.toString() : menu.price,
             imageUrl: menu.imageUrl || "",
             imageThumbUrl: menu.imageThumbUrl || "",
+            stockPhotoId: menu.stockPhotoId || null,
             isActive: menu.isActive,
             isSpicy: menu.isSpicy,
             isBestSeller: menu.isBestSeller,

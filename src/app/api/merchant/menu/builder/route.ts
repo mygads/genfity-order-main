@@ -22,6 +22,7 @@ const menuBuilderSchema = z.object({
   imageUrl: z.string().url().optional().or(z.literal('')).nullable(),
   imageThumbUrl: z.string().url().optional().or(z.literal('')).nullable(),
   imageThumbMeta: z.any().optional().nullable(),
+  stockPhotoId: z.number().int().positive().optional().nullable(),
   isActive: z.boolean().optional().default(true),
   // Note: Promo fields removed - use SpecialPrice table instead
   trackStock: z.boolean().optional().default(false),

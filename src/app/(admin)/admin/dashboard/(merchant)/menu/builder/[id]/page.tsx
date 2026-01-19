@@ -44,6 +44,7 @@ interface MenuFormData {
   imageUrl?: string;
   imageThumbUrl?: string;
   imageThumbMeta?: Record<string, unknown> | null;
+  stockPhotoId?: number | null;
   isActive: boolean;
   // Note: Promo fields removed - use SpecialPrice table
   trackStock: boolean;
@@ -165,6 +166,9 @@ export default function MenuBuilderPage() {
             imageUrl: menuData.data.imageUrl,
             imageThumbUrl: menuData.data.imageThumbUrl,
             imageThumbMeta: menuData.data.imageThumbMeta || null,
+            stockPhotoId: menuData.data.stockPhotoId
+              ? parseInt(menuData.data.stockPhotoId)
+              : null,
             isActive: menuData.data.isActive,
             // Note: Promo fields removed - use SpecialPrice table
             trackStock: menuData.data.trackStock,
@@ -212,6 +216,7 @@ export default function MenuBuilderPage() {
         ...data,
         imageUrl: data.imageUrl || null,
         imageThumbMeta: data.imageThumbMeta ?? null,
+        stockPhotoId: data.stockPhotoId ?? null,
         description: data.description || undefined,
         // Note: Promo fields removed - use SpecialPrice table
         stockQty: data.trackStock ? data.stockQty : null,

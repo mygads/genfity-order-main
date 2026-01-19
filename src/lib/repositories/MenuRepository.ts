@@ -162,6 +162,7 @@ export class MenuRepository {
     imageUrl?: string;
     imageThumbUrl?: string;
     imageThumbMeta?: Prisma.InputJsonValue | null;
+    stockPhotoId?: bigint | null;
     isActive?: boolean;
     // Note: Promo fields removed - use SpecialPrice table
     isSpicy?: boolean;
@@ -195,6 +196,7 @@ export class MenuRepository {
     imageUrl?: string;
     imageThumbUrl?: string;
     imageThumbMeta?: Prisma.InputJsonValue | null;
+    stockPhotoId?: bigint | null;
     isActive?: boolean;
     // Note: Promo fields removed - use SpecialPrice table
     isSpicy?: boolean;

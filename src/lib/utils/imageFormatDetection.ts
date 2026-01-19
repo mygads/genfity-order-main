@@ -283,9 +283,8 @@ export async function getOptimalImageSrc(
   const format = await getBestFormat();
   const type = getContentType(format);
   
-  // If URL supports format conversion (e.g., Vercel Image Optimization)
-  const supportsConversion = baseUrl.includes('vercel') || 
-                             baseUrl.includes('cloudinary') ||
+  // If URL supports format conversion (e.g., Cloudinary or Imgix)
+  const supportsConversion = baseUrl.includes('cloudinary') ||
                              baseUrl.includes('imgix');
   
   if (supportsConversion) {

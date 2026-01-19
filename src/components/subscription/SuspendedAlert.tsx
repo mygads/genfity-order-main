@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useAuth } from "@/hooks/useAuth";
@@ -21,13 +21,18 @@ interface SuspendedAlertProps {
 export default function SuspendedAlert({ reason, type, graceDaysRemaining }: SuspendedAlertProps) {
     const { t } = useTranslation();
     const { hasPermission } = useAuth();
+    const [isDismissed, setIsDismissed] = useState(false);
 
     const canManageSubscription = hasPermission(STAFF_PERMISSIONS.SUBSCRIPTION);
+
+    if (isDismissed) {
+        return null;
+    }
 
     // If in grace period, show grace period warning instead
     if (graceDaysRemaining !== undefined && graceDaysRemaining > 0) {
         return (
-            <div className="fixed top-0 left-0 right-0 z-60 border-b-2 border-brand-200 bg-brand-50 px-4 py-3 dark:border-brand-800/50 dark:bg-brand-900/95 shadow-lg">
+            <div className="fixed top-14 md:top-16 left-0 right-0 z-60 border-b-2 border-brand-200 bg-brand-50 px-4 py-3 dark:border-brand-800/50 dark:bg-brand-900/95 shadow-lg">
                 <div className="max-w-screen-2xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div className="flex items-start gap-3">
                         <div className="shrink-0 w-10 h-10 rounded-lg bg-brand-100 dark:bg-brand-900/40 flex items-center justify-center">
@@ -49,25 +54,38 @@ export default function SuspendedAlert({ reason, type, graceDaysRemaining }: Sus
                             </p>
                         </div>
                     </div>
-                    {canManageSubscription ? (
-                        <Link
-                            href="/admin/dashboard/subscription/topup"
-                            className="shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2 
-                                bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-lg transition-colors
-                                text-sm sm:text-base"
+                    <div className="shrink-0 flex items-center gap-2">
+                        {canManageSubscription ? (
+                            <Link
+                                href="/admin/dashboard/subscription/topup"
+                                className="inline-flex items-center justify-center gap-2 px-4 py-2 
+                                    bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-lg transition-colors
+                                    text-sm sm:text-base"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                    />
+                                </svg>
+                                {t("subscription.grace.renewNow")}
+                            </Link>
+                        ) : (
+                            <div className="text-sm text-brand-700 dark:text-brand-300">
+                                {t("subscription.alert.contactOwner")}
+                            </div>
+                        )}
+                        <button
+                            type="button"
+                            onClick={() => setIsDismissed(true)}
+                            aria-label={t("common.close")}
+                            title={t("common.close")}
+                            className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-brand-200 bg-white text-brand-700 hover:bg-brand-100 dark:border-brand-700 dark:bg-brand-900/30 dark:text-brand-200 dark:hover:bg-brand-900/60 transition-colors"
                         >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                />
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                             </svg>
-                            {t("subscription.grace.renewNow")}
-                        </Link>
-                    ) : (
-                        <div className="shrink-0 text-sm text-brand-700 dark:text-brand-300">
-                            {t("subscription.alert.contactOwner")}
-                        </div>
-                    )}
+                        </button>
+                    </div>
                 </div>
             </div>
         );
@@ -89,7 +107,7 @@ export default function SuspendedAlert({ reason, type, graceDaysRemaining }: Sus
     };
 
     return (
-        <div className="fixed top-0 left-0 right-0 z-60 border-b-2 border-red-200 bg-red-50 px-4 py-3 dark:border-red-800/50 dark:bg-red-900/95 shadow-lg">
+        <div className="fixed top-14 md:top-16 left-0 right-0 z-60 border-b-2 border-red-200 bg-red-50 px-4 py-3 dark:border-red-800/50 dark:bg-red-900/95 shadow-lg">
             <div className="max-w-screen-2xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div className="flex items-start gap-3">
                     {/* Warning icon */}
@@ -111,25 +129,38 @@ export default function SuspendedAlert({ reason, type, graceDaysRemaining }: Sus
                     </div>
                 </div>
 
-                {canManageSubscription ? (
-                    <Link
-                        href="/admin/dashboard/subscription/topup"
-                        className="shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2 
-                            bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors
-                            text-sm sm:text-base"
+                <div className="shrink-0 flex items-center gap-2">
+                    {canManageSubscription ? (
+                        <Link
+                            href="/admin/dashboard/subscription/topup"
+                            className="inline-flex items-center justify-center gap-2 px-4 py-2 
+                                bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors
+                                text-sm sm:text-base"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                />
+                            </svg>
+                            {t("subscription.alert.renewButton")}
+                        </Link>
+                    ) : (
+                        <div className="text-sm text-red-700 dark:text-red-300">
+                            {t("subscription.alert.contactOwner")}
+                        </div>
+                    )}
+                    <button
+                        type="button"
+                        onClick={() => setIsDismissed(true)}
+                        aria-label={t("common.close")}
+                        title={t("common.close")}
+                        className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-red-200 bg-white text-red-700 hover:bg-red-100 dark:border-red-700 dark:bg-red-900/30 dark:text-red-200 dark:hover:bg-red-900/60 transition-colors"
                     >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                            />
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
-                        {t("subscription.alert.renewButton")}
-                    </Link>
-                ) : (
-                    <div className="shrink-0 text-sm text-red-700 dark:text-red-300">
-                        {t("subscription.alert.contactOwner")}
-                    </div>
-                )}
+                    </button>
+                </div>
             </div>
         </div>
     );

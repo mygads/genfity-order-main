@@ -57,7 +57,7 @@ export class MerchantRepository {
           },
         },
       },
-    });
+    } as Prisma.MerchantFindUniqueArgs);
     return serializeData(result);
   }
 
@@ -96,7 +96,7 @@ export class MerchantRepository {
           },
         },
       },
-    });
+    } as Prisma.MerchantFindFirstArgs);
     return serializeData(result);
   }
 
@@ -148,7 +148,7 @@ export class MerchantRepository {
       orderBy: {
         createdAt: 'desc',
       },
-    });
+    } as Prisma.MerchantFindManyArgs);
     return serializeData(results);
   }
 

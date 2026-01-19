@@ -40,11 +40,17 @@ async function postHandler(
     }, { status: 404 });
   }
 
-  // Increment usage count
+  const usageCount = await prisma.menu.count({
+    where: {
+      stockPhotoId: photoId,
+      deletedAt: null,
+    },
+  });
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await (prisma as any).stockPhoto.update({
     where: { id: photoId },
-    data: { usageCount: { increment: 1 } },
+    data: { usageCount },
   });
 
   return NextResponse.json({

@@ -18,6 +18,9 @@ function isMerchantLockExempt(pathname: string, method: string): boolean {
   // Allow subscription management while locked.
   if (pathname.startsWith('/api/merchant/subscription')) return true;
 
+  // Allow billing and balance management while locked.
+  if (pathname.startsWith('/api/merchant/balance')) return true;
+
   // Allow querying lock state so the UI can render the correct lock reason.
   if (pathname === '/api/merchant/lock-status' && method === 'GET') return true;
 
@@ -167,7 +170,44 @@ export function withMerchantOwner(
     routeContext: NormalizedRouteContext
   ) => Promise<NextResponse>
 ) {
-  return withAuth(handler, ['MERCHANT_OWNER']);
+  return async (request: NextRequest, routeContext: NextRouteContext) => {
+    try {
+      const authContext = await authenticate(request);
+
+      requireRole(authContext, ['MERCHANT_OWNER']);
+
+      if (!authContext.merchantId) {
+        throw new AuthenticationError('Merchant not found', ERROR_CODES.MERCHANT_NOT_FOUND);
+      }
+
+      const merchantRecord = await prisma.merchant.findUnique({
+        where: { id: authContext.merchantId },
+        select: { isActive: true },
+      });
+
+      if (!merchantRecord) {
+        throw new AuthenticationError('Merchant not found', ERROR_CODES.MERCHANT_NOT_FOUND);
+      }
+
+      if (!isMerchantLockExempt(request.nextUrl.pathname, request.method)) {
+        if (merchantRecord.isActive === false) {
+          throw new AuthorizationError('Merchant is currently disabled', ERROR_CODES.MERCHANT_DISABLED);
+        }
+
+        const { default: subscriptionRepository } = await import('@/lib/repositories/SubscriptionRepository');
+        const subscription = await subscriptionRepository.getMerchantSubscription(authContext.merchantId);
+        const isSuspended = !subscription || subscription.status === 'SUSPENDED';
+
+        if (isSuspended) {
+          throw new AuthorizationError('Subscription is suspended. Please renew to continue.', ERROR_CODES.FORBIDDEN);
+        }
+      }
+
+      return await handler(request, authContext, normalizeRouteContext(routeContext));
+    } catch (error) {
+      return handleError(error);
+    }
+  };
 }
 
 /**

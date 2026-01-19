@@ -1,6 +1,6 @@
 {
   "name": "genfity-order",
-  "version": "2.0.1",
+  "version": "2.1.1",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -12,8 +12,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "db:push": "prisma db push",
-    "db:reset": "prisma migrate reset",
-    "migrate:vercel-blob-to-r2": "tsx scripts/migrate-vercel-blob-to-r2.ts"
+    "db:reset": "prisma migrate reset"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

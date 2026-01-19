@@ -23,7 +23,7 @@
  * }
  * 
  * DELETE /api/admin/merchants/:id
- * Soft delete merchant (Super Admin only)
+ * Hard delete merchant (Super Admin only)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -80,7 +80,7 @@ async function deleteMerchantHandler(
   }
   const merchantId = merchantIdResult.value;
 
-  // Delete merchant (soft delete)
+  // Delete merchant (hard delete)
   await merchantService.deleteMerchant(merchantId);
 
   return successResponse(null, 'Merchant deleted successfully', 200);

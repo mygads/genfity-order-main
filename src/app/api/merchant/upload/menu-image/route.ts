@@ -152,7 +152,7 @@ async function handlePost(req: NextRequest, context: AuthContext) {
 
     const imageKey = menuId ? String(menuId) : String(Date.now());
 
-    // Upload to Vercel Blob
+    // Upload to R2 storage
     const result = await BlobService.uploadMenuImage(merchantCode, imageKey, fullJpegBuffer);
 
     const thumbResult = await BlobService.uploadMenuImageThumbnail(merchantCode, imageKey, thumbJpegBuffer);
