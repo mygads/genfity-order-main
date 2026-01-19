@@ -28,6 +28,21 @@ type MigrationReportRow = {
   error: string;
 };
 
+class DownloadNotFoundError extends Error {
+  url: string;
+  status: number;
+
+  constructor(url: string, status: number) {
+    super(`Source not found (${status})`);
+    this.url = url;
+    this.status = status;
+  }
+}
+
+function isDownloadNotFoundError(error: unknown): error is DownloadNotFoundError {
+  return error instanceof DownloadNotFoundError;
+}
+
 async function fetchWithTimeout(url: string, timeoutMs: number) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -87,6 +102,9 @@ async function downloadBuffer(url: string) {
   return withRetry(async () => {
     const response = await fetchWithTimeout(url, DEFAULT_TIMEOUT_MS);
     if (!response.ok) {
+      if (response.status === 404) {
+        throw new DownloadNotFoundError(url, response.status);
+      }
       throw new Error(`Failed to download ${url} (${response.status})`);
     }
 
@@ -164,23 +182,40 @@ async function migrateMerchantAssets(reportRows: MigrationReportRow[]): Promise<
 
     try {
       if (isVercelBlobUrl(merchant.logoUrl)) {
-        const { buffer, contentType } = await downloadBuffer(merchant.logoUrl as string);
-        const ext = getExtensionFromContentType(contentType);
-        const pathname = `merchants/${merchant.code}/logos/logo-${Date.now()}.${ext}`;
-        if (!DRY_RUN) {
-          const upload = await uploadBuffer(pathname, buffer, contentType);
-          updates.logoUrl = upload.url;
-          reportRows.push({
-            entity: 'merchant',
-            entityId: merchant.id.toString(),
-            field: 'logoUrl',
-            oldUrl: merchant.logoUrl || '',
-            newUrl: upload.url,
-            status: 'migrated',
-            error: '',
-          });
+        try {
+          const { buffer, contentType } = await downloadBuffer(merchant.logoUrl as string);
+          const ext = getExtensionFromContentType(contentType);
+          const pathname = `merchants/${merchant.code}/logos/logo-${Date.now()}.${ext}`;
+          if (!DRY_RUN) {
+            const upload = await uploadBuffer(pathname, buffer, contentType);
+            updates.logoUrl = upload.url;
+            reportRows.push({
+              entity: 'merchant',
+              entityId: merchant.id.toString(),
+              field: 'logoUrl',
+              oldUrl: merchant.logoUrl || '',
+              newUrl: upload.url,
+              status: 'migrated',
+              error: '',
+            });
+          }
+          result.migrated += 1;
+        } catch (error) {
+          if (isDownloadNotFoundError(error)) {
+            reportRows.push({
+              entity: 'merchant',
+              entityId: merchant.id.toString(),
+              field: 'logoUrl',
+              oldUrl: merchant.logoUrl || '',
+              newUrl: merchant.logoUrl || '',
+              status: 'skipped',
+              error: error.message,
+            });
+            result.skipped += 1;
+          } else {
+            throw error;
+          }
         }
-        result.migrated += 1;
       } else if (merchant.logoUrl) {
         reportRows.push({
           entity: 'merchant',
@@ -194,23 +229,40 @@ async function migrateMerchantAssets(reportRows: MigrationReportRow[]): Promise<
       }
 
       if (isVercelBlobUrl(merchant.bannerUrl)) {
-        const { buffer, contentType } = await downloadBuffer(merchant.bannerUrl as string);
-        const ext = getExtensionFromContentType(contentType);
-        const pathname = `merchants/${merchant.code}/banners/banner-${Date.now()}.${ext}`;
-        if (!DRY_RUN) {
-          const upload = await uploadBuffer(pathname, buffer, contentType);
-          updates.bannerUrl = upload.url;
-          reportRows.push({
-            entity: 'merchant',
-            entityId: merchant.id.toString(),
-            field: 'bannerUrl',
-            oldUrl: merchant.bannerUrl || '',
-            newUrl: upload.url,
-            status: 'migrated',
-            error: '',
-          });
+        try {
+          const { buffer, contentType } = await downloadBuffer(merchant.bannerUrl as string);
+          const ext = getExtensionFromContentType(contentType);
+          const pathname = `merchants/${merchant.code}/banners/banner-${Date.now()}.${ext}`;
+          if (!DRY_RUN) {
+            const upload = await uploadBuffer(pathname, buffer, contentType);
+            updates.bannerUrl = upload.url;
+            reportRows.push({
+              entity: 'merchant',
+              entityId: merchant.id.toString(),
+              field: 'bannerUrl',
+              oldUrl: merchant.bannerUrl || '',
+              newUrl: upload.url,
+              status: 'migrated',
+              error: '',
+            });
+          }
+          result.migrated += 1;
+        } catch (error) {
+          if (isDownloadNotFoundError(error)) {
+            reportRows.push({
+              entity: 'merchant',
+              entityId: merchant.id.toString(),
+              field: 'bannerUrl',
+              oldUrl: merchant.bannerUrl || '',
+              newUrl: merchant.bannerUrl || '',
+              status: 'skipped',
+              error: error.message,
+            });
+            result.skipped += 1;
+          } else {
+            throw error;
+          }
         }
-        result.migrated += 1;
       } else if (merchant.bannerUrl) {
         reportRows.push({
           entity: 'merchant',
@@ -239,23 +291,43 @@ async function migrateMerchantAssets(reportRows: MigrationReportRow[]): Promise<
             });
             continue;
           }
-          const { buffer, contentType } = await downloadBuffer(url);
-          const ext = getExtensionFromContentType(contentType);
-          const pathname = `merchants/${merchant.code}/promos/promo-${Date.now()}.${ext}`;
-          if (!DRY_RUN) {
-            const upload = await uploadBuffer(pathname, buffer, contentType);
-            nextPromoUrls.push(upload.url);
-            reportRows.push({
-              entity: 'merchant',
-              entityId: merchant.id.toString(),
-              field: 'promoBannerUrls',
-              oldUrl: url,
-              newUrl: upload.url,
-              status: 'migrated',
-              error: '',
-            });
+          try {
+            const { buffer, contentType } = await downloadBuffer(url);
+            const ext = getExtensionFromContentType(contentType);
+            const pathname = `merchants/${merchant.code}/promos/promo-${Date.now()}.${ext}`;
+            if (!DRY_RUN) {
+              const upload = await uploadBuffer(pathname, buffer, contentType);
+              nextPromoUrls.push(upload.url);
+              reportRows.push({
+                entity: 'merchant',
+                entityId: merchant.id.toString(),
+                field: 'promoBannerUrls',
+                oldUrl: url,
+                newUrl: upload.url,
+                status: 'migrated',
+                error: '',
+              });
+            } else {
+              nextPromoUrls.push(url);
+            }
+            result.migrated += 1;
+          } catch (error) {
+            if (isDownloadNotFoundError(error)) {
+              nextPromoUrls.push(url);
+              reportRows.push({
+                entity: 'merchant',
+                entityId: merchant.id.toString(),
+                field: 'promoBannerUrls',
+                oldUrl: url,
+                newUrl: url,
+                status: 'skipped',
+                error: error.message,
+              });
+              result.skipped += 1;
+            } else {
+              throw error;
+            }
           }
-          result.migrated += 1;
         }
         if (!DRY_RUN) {
           updates.promoBannerUrls = nextPromoUrls;
@@ -327,23 +399,40 @@ async function migrateMenuAssets(reportRows: MigrationReportRow[]): Promise<Migr
 
     try {
       if (isVercelBlobUrl(menu.imageUrl)) {
-        const { buffer, contentType } = await downloadBuffer(menu.imageUrl as string);
-        const ext = getExtensionFromContentType(contentType);
-        const pathname = `merchants/${menu.merchant.code}/menus/menu-${menu.id.toString()}-${Date.now()}.${ext}`;
-        if (!DRY_RUN) {
-          const upload = await uploadBuffer(pathname, buffer, contentType);
-          updates.imageUrl = upload.url;
-          reportRows.push({
-            entity: 'menu',
-            entityId: menu.id.toString(),
-            field: 'imageUrl',
-            oldUrl: menu.imageUrl || '',
-            newUrl: upload.url,
-            status: 'migrated',
-            error: '',
-          });
+        try {
+          const { buffer, contentType } = await downloadBuffer(menu.imageUrl as string);
+          const ext = getExtensionFromContentType(contentType);
+          const pathname = `merchants/${menu.merchant.code}/menus/menu-${menu.id.toString()}-${Date.now()}.${ext}`;
+          if (!DRY_RUN) {
+            const upload = await uploadBuffer(pathname, buffer, contentType);
+            updates.imageUrl = upload.url;
+            reportRows.push({
+              entity: 'menu',
+              entityId: menu.id.toString(),
+              field: 'imageUrl',
+              oldUrl: menu.imageUrl || '',
+              newUrl: upload.url,
+              status: 'migrated',
+              error: '',
+            });
+          }
+          result.migrated += 1;
+        } catch (error) {
+          if (isDownloadNotFoundError(error)) {
+            reportRows.push({
+              entity: 'menu',
+              entityId: menu.id.toString(),
+              field: 'imageUrl',
+              oldUrl: menu.imageUrl || '',
+              newUrl: menu.imageUrl || '',
+              status: 'skipped',
+              error: error.message,
+            });
+            result.skipped += 1;
+          } else {
+            throw error;
+          }
         }
-        result.migrated += 1;
       } else if (menu.imageUrl) {
         reportRows.push({
           entity: 'menu',
@@ -357,35 +446,52 @@ async function migrateMenuAssets(reportRows: MigrationReportRow[]): Promise<Migr
       }
 
       if (isVercelBlobUrl(menu.imageThumbUrl)) {
-        const { buffer, contentType } = await downloadBuffer(menu.imageThumbUrl as string);
-        const ext = getExtensionFromContentType(contentType);
-        const pathname = `merchants/${menu.merchant.code}/menus/menu-${menu.id.toString()}-thumb-${Date.now()}.${ext}`;
-        if (!DRY_RUN) {
-          const upload = await uploadBuffer(pathname, buffer, contentType);
-          updates.imageThumbUrl = upload.url;
-          if (menu.imageThumbMeta && typeof menu.imageThumbMeta === 'object') {
-            const nextMeta = JSON.parse(JSON.stringify(menu.imageThumbMeta));
-            if (Array.isArray(nextMeta.variants)) {
-              nextMeta.variants = nextMeta.variants.map((variant: { url?: string }) => {
-                if (variant.url === menu.imageThumbUrl) {
-                  return { ...variant, url: upload.url };
-                }
-                return variant;
-              });
+        try {
+          const { buffer, contentType } = await downloadBuffer(menu.imageThumbUrl as string);
+          const ext = getExtensionFromContentType(contentType);
+          const pathname = `merchants/${menu.merchant.code}/menus/menu-${menu.id.toString()}-thumb-${Date.now()}.${ext}`;
+          if (!DRY_RUN) {
+            const upload = await uploadBuffer(pathname, buffer, contentType);
+            updates.imageThumbUrl = upload.url;
+            if (menu.imageThumbMeta && typeof menu.imageThumbMeta === 'object') {
+              const nextMeta = JSON.parse(JSON.stringify(menu.imageThumbMeta));
+              if (Array.isArray(nextMeta.variants)) {
+                nextMeta.variants = nextMeta.variants.map((variant: { url?: string }) => {
+                  if (variant.url === menu.imageThumbUrl) {
+                    return { ...variant, url: upload.url };
+                  }
+                  return variant;
+                });
+              }
+              updates.imageThumbMeta = nextMeta;
             }
-            updates.imageThumbMeta = nextMeta;
+            reportRows.push({
+              entity: 'menu',
+              entityId: menu.id.toString(),
+              field: 'imageThumbUrl',
+              oldUrl: menu.imageThumbUrl || '',
+              newUrl: upload.url,
+              status: 'migrated',
+              error: '',
+            });
           }
-          reportRows.push({
-            entity: 'menu',
-            entityId: menu.id.toString(),
-            field: 'imageThumbUrl',
-            oldUrl: menu.imageThumbUrl || '',
-            newUrl: upload.url,
-            status: 'migrated',
-            error: '',
-          });
+          result.migrated += 1;
+        } catch (error) {
+          if (isDownloadNotFoundError(error)) {
+            reportRows.push({
+              entity: 'menu',
+              entityId: menu.id.toString(),
+              field: 'imageThumbUrl',
+              oldUrl: menu.imageThumbUrl || '',
+              newUrl: menu.imageThumbUrl || '',
+              status: 'skipped',
+              error: error.message,
+            });
+            result.skipped += 1;
+          } else {
+            throw error;
+          }
         }
-        result.migrated += 1;
       } else if (menu.imageThumbUrl) {
         reportRows.push({
           entity: 'menu',
@@ -456,17 +562,30 @@ async function migrateUserProfiles(reportRows: MigrationReportRow[]): Promise<Mi
       }
       result.migrated += 1;
     } catch (error) {
-      console.error(`User migration failed (${user.id.toString()}):`, error);
-      reportRows.push({
-        entity: 'user',
-        entityId: user.id.toString(),
-        field: 'profilePictureUrl',
-        oldUrl: user.profilePictureUrl || '',
-        newUrl: '',
-        status: 'failed',
-        error: error instanceof Error ? error.message : String(error),
-      });
-      result.failed += 1;
+      if (isDownloadNotFoundError(error)) {
+        reportRows.push({
+          entity: 'user',
+          entityId: user.id.toString(),
+          field: 'profilePictureUrl',
+          oldUrl: user.profilePictureUrl || '',
+          newUrl: user.profilePictureUrl || '',
+          status: 'skipped',
+          error: error.message,
+        });
+        result.skipped += 1;
+      } else {
+        console.error(`User migration failed (${user.id.toString()}):`, error);
+        reportRows.push({
+          entity: 'user',
+          entityId: user.id.toString(),
+          field: 'profilePictureUrl',
+          oldUrl: user.profilePictureUrl || '',
+          newUrl: '',
+          status: 'failed',
+          error: error instanceof Error ? error.message : String(error),
+        });
+        result.failed += 1;
+      }
     }
   }
 
@@ -505,17 +624,30 @@ async function migrateInfluencerProfiles(reportRows: MigrationReportRow[]): Prom
       }
       result.migrated += 1;
     } catch (error) {
-      console.error(`Influencer migration failed (${influencer.id.toString()}):`, error);
-      reportRows.push({
-        entity: 'influencer',
-        entityId: influencer.id.toString(),
-        field: 'profilePictureUrl',
-        oldUrl: influencer.profilePictureUrl || '',
-        newUrl: '',
-        status: 'failed',
-        error: error instanceof Error ? error.message : String(error),
-      });
-      result.failed += 1;
+      if (isDownloadNotFoundError(error)) {
+        reportRows.push({
+          entity: 'influencer',
+          entityId: influencer.id.toString(),
+          field: 'profilePictureUrl',
+          oldUrl: influencer.profilePictureUrl || '',
+          newUrl: influencer.profilePictureUrl || '',
+          status: 'skipped',
+          error: error.message,
+        });
+        result.skipped += 1;
+      } else {
+        console.error(`Influencer migration failed (${influencer.id.toString()}):`, error);
+        reportRows.push({
+          entity: 'influencer',
+          entityId: influencer.id.toString(),
+          field: 'profilePictureUrl',
+          oldUrl: influencer.profilePictureUrl || '',
+          newUrl: '',
+          status: 'failed',
+          error: error instanceof Error ? error.message : String(error),
+        });
+        result.failed += 1;
+      }
     }
   }
 
@@ -539,23 +671,40 @@ async function migrateStockPhotos(reportRows: MigrationReportRow[]): Promise<Mig
     const updates: { imageUrl?: string; thumbnailUrl?: string } = {};
     try {
       if (isVercelBlobUrl(photo.imageUrl)) {
-        const { buffer, contentType } = await downloadBuffer(photo.imageUrl as string);
-        const ext = getExtensionFromContentType(contentType);
-        const pathname = `stock-photos/stock-photo-${photo.id.toString()}-${Date.now()}.${ext}`;
-        if (!DRY_RUN) {
-          const upload = await uploadBuffer(pathname, buffer, contentType);
-          updates.imageUrl = upload.url;
-          reportRows.push({
-            entity: 'stock_photo',
-            entityId: photo.id.toString(),
-            field: 'imageUrl',
-            oldUrl: photo.imageUrl || '',
-            newUrl: upload.url,
-            status: 'migrated',
-            error: '',
-          });
+        try {
+          const { buffer, contentType } = await downloadBuffer(photo.imageUrl as string);
+          const ext = getExtensionFromContentType(contentType);
+          const pathname = `stock-photos/stock-photo-${photo.id.toString()}-${Date.now()}.${ext}`;
+          if (!DRY_RUN) {
+            const upload = await uploadBuffer(pathname, buffer, contentType);
+            updates.imageUrl = upload.url;
+            reportRows.push({
+              entity: 'stock_photo',
+              entityId: photo.id.toString(),
+              field: 'imageUrl',
+              oldUrl: photo.imageUrl || '',
+              newUrl: upload.url,
+              status: 'migrated',
+              error: '',
+            });
+          }
+          result.migrated += 1;
+        } catch (error) {
+          if (isDownloadNotFoundError(error)) {
+            reportRows.push({
+              entity: 'stock_photo',
+              entityId: photo.id.toString(),
+              field: 'imageUrl',
+              oldUrl: photo.imageUrl || '',
+              newUrl: photo.imageUrl || '',
+              status: 'skipped',
+              error: error.message,
+            });
+            result.skipped += 1;
+          } else {
+            throw error;
+          }
         }
-        result.migrated += 1;
       } else if (photo.imageUrl) {
         reportRows.push({
           entity: 'stock_photo',
@@ -569,23 +718,40 @@ async function migrateStockPhotos(reportRows: MigrationReportRow[]): Promise<Mig
       }
 
       if (isVercelBlobUrl(photo.thumbnailUrl)) {
-        const { buffer, contentType } = await downloadBuffer(photo.thumbnailUrl as string);
-        const ext = getExtensionFromContentType(contentType);
-        const pathname = `stock-photos/thumbs/stock-photo-${photo.id.toString()}-${Date.now()}.${ext}`;
-        if (!DRY_RUN) {
-          const upload = await uploadBuffer(pathname, buffer, contentType);
-          updates.thumbnailUrl = upload.url;
-          reportRows.push({
-            entity: 'stock_photo',
-            entityId: photo.id.toString(),
-            field: 'thumbnailUrl',
-            oldUrl: photo.thumbnailUrl || '',
-            newUrl: upload.url,
-            status: 'migrated',
-            error: '',
-          });
+        try {
+          const { buffer, contentType } = await downloadBuffer(photo.thumbnailUrl as string);
+          const ext = getExtensionFromContentType(contentType);
+          const pathname = `stock-photos/thumbs/stock-photo-${photo.id.toString()}-${Date.now()}.${ext}`;
+          if (!DRY_RUN) {
+            const upload = await uploadBuffer(pathname, buffer, contentType);
+            updates.thumbnailUrl = upload.url;
+            reportRows.push({
+              entity: 'stock_photo',
+              entityId: photo.id.toString(),
+              field: 'thumbnailUrl',
+              oldUrl: photo.thumbnailUrl || '',
+              newUrl: upload.url,
+              status: 'migrated',
+              error: '',
+            });
+          }
+          result.migrated += 1;
+        } catch (error) {
+          if (isDownloadNotFoundError(error)) {
+            reportRows.push({
+              entity: 'stock_photo',
+              entityId: photo.id.toString(),
+              field: 'thumbnailUrl',
+              oldUrl: photo.thumbnailUrl || '',
+              newUrl: photo.thumbnailUrl || '',
+              status: 'skipped',
+              error: error.message,
+            });
+            result.skipped += 1;
+          } else {
+            throw error;
+          }
         }
-        result.migrated += 1;
       } else if (photo.thumbnailUrl) {
         reportRows.push({
           entity: 'stock_photo',
