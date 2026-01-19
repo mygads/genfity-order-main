@@ -25,11 +25,11 @@ const nextConfig: NextConfig = {
         hostname: '**.public.blob.vercel-storage.com',
         pathname: '/**',
       },
-      // {
-      //   protocol: 'https',
-      //   hostname: 't03h0x5v48mc1tqh.public.blob.vercel-storage.com',
-      //   pathname: '/**',
-      // },
+      {
+        protocol: 'https',
+        hostname: 'cdn.genfity.com',
+        pathname: '/**',
+      },
     ],
     // Increase timeout for slow connections
     minimumCacheTTL: 60,
