@@ -1,31 +1,16 @@
 /**
- * Super Admin Utility: Global Thumbnail Missing Summary
- *
- * GET /api/superadmin/thumbnails/missing-summary
+ * Deprecated: Global thumbnail rebuild summary has been removed.
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { withSuperAdmin } from '@/lib/middleware/auth';
-import type { AuthContext } from '@/lib/middleware/auth';
-import {
-  getGlobalThumbnailMissingSummary,
-  getGlobalThumbnailRebuildJob,
-} from '@/lib/services/GlobalThumbnailRebuildService';
+import { NextResponse } from 'next/server';
 
-async function getHandler(_req: NextRequest, _ctx: AuthContext) {
-  const [summary, job] = await Promise.all([
-    getGlobalThumbnailMissingSummary(),
-    getGlobalThumbnailRebuildJob(),
-  ]);
-
-  return NextResponse.json({
-    success: true,
-    data: {
-      summary,
-      job,
+export const GET = async () =>
+  NextResponse.json(
+    {
+      success: false,
+      error: 'GONE',
+      message: 'Global thumbnail rebuild summary has been removed',
+      statusCode: 410,
     },
-    statusCode: 200,
-  });
-}
-
-export const GET = withSuperAdmin(getHandler);
+    { status: 410 }
+  );
